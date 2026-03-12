@@ -16,7 +16,12 @@ from typing import Optional
 import requests
 
 from utils import slugify
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_existing_event_for_insert,
+    get_or_create_venue,
+    insert_event,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 from extractors.structured import extract_jsonld_event_fields, extract_open_graph_fields
 
@@ -65,11 +70,28 @@ GENRE_MAP = {
     "Punk": "punk",
 }
 
+CLASSIFICATION_CATEGORY_KEYWORDS: list[tuple[tuple[str, ...], str]] = [
+    (("comedy", "stand-up", "standup", "improv"), "nightlife"),
+    (("broadway", "musical", "theater", "theatre", "play", "opera", "ballet", "dance"), "theater"),
+    (("film", "movie", "cinema"), "film"),
+    (("family", "children", "childrens", "kids", "kid", "circus", "magic", "ice show", "monster jam"), "family"),
+    (("festival", "fair", "expo", "convention", "conference"), "community"),
+]
+
+VENUE_NAME_ALIASES = {
+    "The Eastern-GA": "The Eastern",
+}
+
 
 def _clean_text(value: Optional[str]) -> str:
     if not value:
         return ""
     return " ".join(str(value).split()).strip()
+
+
+def _normalize_venue_name(name: Optional[str]) -> str:
+    cleaned = _clean_text(name)
+    return VENUE_NAME_ALIASES.get(cleaned, cleaned)
 
 
 def _normalize_tm_title(title: str) -> str:
@@ -90,6 +112,13 @@ def _normalize_tm_title(title: str) -> str:
     """
     if not title:
         return title
+    # Strip presenter prefixes: "Presents: ", "Live Nation Presents - "
+    title = re.sub(
+        r'^(?:presents?:\s*|presented\s+by\s+.+?[-:]\s*|live\s+nation\s+presents?\s*[-:]\s*)',
+        '',
+        title,
+        flags=re.IGNORECASE,
+    )
     # Strip bare numeric suffixes: " (2)", " (10)", etc.
     title = re.sub(r'\s*\(\d+\)\s*$', '', title)
     # Strip named ticket-tier / section suffixes (case-insensitive).
@@ -100,6 +129,13 @@ def _normalize_tm_title(title: str) -> str:
         flags=re.IGNORECASE,
     )
     return title.strip()
+
+
+def _normalize_sports_matchup_title(title: str) -> str:
+    """Normalize sports matchup punctuation so official and aggregator titles hash the same."""
+    if not title:
+        return title
+    return re.sub(r"\s+v(?:s)?\.?\s+", " vs. ", title, flags=re.IGNORECASE).strip()
 
 
 _ATTRACTION_REJECT_TERMS = {
@@ -113,13 +149,33 @@ _ATTRACTION_REJECT_TERMS = {
 
 _NON_EVENT_TITLE_PATTERNS = [
     re.compile(r"\bsuite pass(?:es)?\b", re.IGNORECASE),
+    re.compile(r"\bsuites?\b", re.IGNORECASE),
+    re.compile(r"\bgroup deposits?\b", re.IGNORECASE),
+    re.compile(r"\bchildcare pass(?:es)?\b", re.IGNORECASE),
+    re.compile(r"\bmolly b'?s pass(?:es)?\b", re.IGNORECASE),
+    re.compile(r"\bpremium seating\b", re.IGNORECASE),
+    re.compile(r"\btraining event\b", re.IGNORECASE),
+    re.compile(r"\baip\s*900\s*build\b", re.IGNORECASE),
     re.compile(r"\bitem voucher\b", re.IGNORECASE),
     re.compile(r"\bpost game access\b", re.IGNORECASE),
+    re.compile(r"\brental event\b", re.IGNORECASE),
+    re.compile(r"\bfevo\b", re.IGNORECASE),
     re.compile(r"\b(?:ticket|experience)\s*add[- ]?on\b", re.IGNORECASE),
     re.compile(r"\bhospitality\b.*\badd[- ]?ons?\b", re.IGNORECASE),
     re.compile(r"\badd[- ]?ons?\b", re.IGNORECASE),
     re.compile(r"\bnot a concert ticket\b", re.IGNORECASE),
     re.compile(r"\bparking\b", re.IGNORECASE),
+    re.compile(r"\bsouvenir ticket\b", re.IGNORECASE),
+    re.compile(r"\breplica game ball\b", re.IGNORECASE),
+    re.compile(r"\bdelta sky\s*360 club experience\b", re.IGNORECASE),
+    re.compile(r"\bred carpet experience\b", re.IGNORECASE),
+]
+
+_TOUR_CATEGORY_PATTERNS = [
+    re.compile(r"^tours?:", re.IGNORECASE),
+    re.compile(r"\btruist park tour\b", re.IGNORECASE),
+    re.compile(r"\bhistorian tour\b", re.IGNORECASE),
+    re.compile(r"\bbats? & bites tour\b", re.IGNORECASE),
 ]
 
 
@@ -131,6 +187,28 @@ def _should_skip_event_title(title: str) -> bool:
     if lowered in {"tbd", "to be announced"}:
         return True
     return any(pattern.search(text) for pattern in _NON_EVENT_TITLE_PATTERNS)
+
+
+def _should_force_tours_category(title: str) -> bool:
+    text = _clean_text(title)
+    if not text:
+        return False
+    return any(pattern.search(text) for pattern in _TOUR_CATEGORY_PATTERNS)
+
+
+def _should_skip_low_fidelity_placeholder(
+    title: str,
+    *,
+    classifications: list[dict],
+    attractions: list[dict],
+) -> bool:
+    text = _clean_text(title)
+    if not text or classifications or attractions:
+        return False
+    if text != text.upper():
+        return False
+    token_count = len(re.findall(r"[A-Z0-9]+", text))
+    return token_count >= 2 and len(text) >= 8
 
 
 def _build_parsed_artists(attractions: list[dict]) -> list[dict]:
@@ -155,6 +233,69 @@ def _build_parsed_artists(attractions: list[dict]) -> list[dict]:
             }
         )
     return parsed
+
+
+def _classification_names(classifications: list[dict]) -> list[str]:
+    names: list[str] = []
+    for classification in classifications:
+        if not isinstance(classification, dict):
+            continue
+        for key in ("segment", "genre", "subGenre", "type", "subType", "family"):
+            value = classification.get(key)
+            if not isinstance(value, dict):
+                continue
+            name = _clean_text(value.get("name"))
+            if name:
+                names.append(name)
+    return names
+
+
+def _infer_category(
+    *,
+    title: str,
+    segment: str,
+    classification_names: list[str],
+) -> str:
+    if _should_force_tours_category(title):
+        return "tours"
+
+    mapped_segment = SEGMENT_MAP.get(segment, "other")
+    if mapped_segment != "other":
+        if mapped_segment == "theater":
+            lowered_names = " ".join(classification_names).lower()
+            if any(token in lowered_names for token in ("comedy", "stand-up", "standup", "improv")):
+                return "nightlife"
+            if any(token in lowered_names for token in ("family", "children", "kids")):
+                return "family"
+        return mapped_segment
+
+    searchable = " ".join([title, *classification_names]).lower()
+    for keywords, category in CLASSIFICATION_CATEGORY_KEYWORDS:
+        if any(keyword in searchable for keyword in keywords):
+            return category
+    return "other"
+
+
+def _extract_genres(classifications: list[dict]) -> tuple[list[str], Optional[str]]:
+    genres: list[str] = []
+    primary: Optional[str] = None
+    seen: set[str] = set()
+    for classification in classifications:
+        if not isinstance(classification, dict):
+            continue
+        for key in ("genre", "subGenre"):
+            value = classification.get(key)
+            if not isinstance(value, dict):
+                continue
+            raw_name = _clean_text(value.get("name"))
+            mapped = GENRE_MAP.get(raw_name)
+            if not mapped or mapped in seen:
+                continue
+            seen.add(mapped)
+            genres.append(mapped)
+            if primary is None:
+                primary = mapped
+    return genres, primary
 
 
 def _format_time_label(time_value: Optional[str]) -> Optional[str]:
@@ -254,23 +395,32 @@ def _build_structured_description(
     return " ".join(parts)[:1600]
 
 
-def _fetch_detail_description(url: str) -> Optional[str]:
+def _fetch_detail_enrichment(url: str) -> dict:
+    """Fetch structured quality fields from the Ticketmaster detail page."""
+    result: dict = {}
     if not url:
-        return None
+        return result
     try:
         resp = requests.get(url, headers={"User-Agent": DETAIL_UA}, timeout=DETAIL_TIMEOUT)
         if not resp.ok:
-            return None
+            return result
         html = resp.text
         jsonld = extract_jsonld_event_fields(html)
-        description = jsonld.get("description")
-        if description:
-            return description
         og = extract_open_graph_fields(html)
-        return og.get("description")
+
+        result["description"] = jsonld.get("description") or og.get("description")
+        result["image_url"] = jsonld.get("image_url") or og.get("image_url")
+        if jsonld.get("images"):
+            result["images"] = jsonld["images"]
+        for field in ("price_min", "price_max", "price_note", "ticket_status", "ticket_url", "is_free"):
+            if jsonld.get(field) is not None:
+                result[field] = jsonld[field]
+        if jsonld.get("artists"):
+            result["artists"] = jsonld["artists"]
+        return result
     except Exception as e:
         logger.debug("Ticketmaster detail fetch failed for %s: %s", url, e)
-        return None
+        return result
 
 
 def fetch_events(page: int = 0, size: int = 200) -> dict:
@@ -332,8 +482,8 @@ def parse_event(event_data: dict) -> Optional[dict]:
             state = v.get("state", {})
 
             venue_data = {
-                "name": v.get("name", ""),
-                "slug": slugify(v.get("name", "")),
+                "name": _normalize_venue_name(v.get("name", "")),
+                "slug": slugify(_normalize_venue_name(v.get("name", ""))),
                 "address": address.get("line1"),
                 "city": city.get("name", "Atlanta"),
                 "state": state.get("stateCode", "GA"),
@@ -343,22 +493,19 @@ def parse_event(event_data: dict) -> Optional[dict]:
             }
 
         # Category from segment
-        classifications = event_data.get("classifications", [])
-        category = "other"
-        genres = []
-        genre = None
+        classifications = event_data.get("classifications") or []
+        classification_names = _classification_names(classifications)
+        segment = ""
+        if classifications and isinstance(classifications[0], dict):
+            segment = _clean_text(classifications[0].get("segment", {}).get("name"))
+        category = _infer_category(
+            title=title,
+            segment=segment,
+            classification_names=classification_names,
+        )
+        genres, genre = _extract_genres(classifications)
 
-        if classifications:
-            c = classifications[0]
-            segment = c.get("segment", {}).get("name", "")
-            category = SEGMENT_MAP.get(segment, "other")
-
-            genre_data = c.get("genre", {})
-            genre = genre_data.get("name")
-            if genre:
-                mapped = GENRE_MAP.get(genre)
-                if mapped:
-                    genres = [mapped]
+        title = _normalize_sports_matchup_title(title)
 
         # Prices
         price_ranges = event_data.get("priceRanges", [])
@@ -374,8 +521,9 @@ def parse_event(event_data: dict) -> Optional[dict]:
         images_list = []
         if images:
             # Filter out generic TM category placeholders (/dam/c/ = category, /dam/a/ = attraction)
-            event_specific = [img for img in images if "/dam/c/" not in (img.get("url") or "")]
-            pool = event_specific if event_specific else images
+            event_specific = [img for img in images if "/dam/c/" not in (img.get("url") or "") and "/dam/a/" not in (img.get("url") or "")]
+            attraction_only = [img for img in images if "/dam/a/" in (img.get("url") or "")]
+            pool = event_specific if event_specific else (attraction_only if attraction_only else images)
             # Sort by width descending and get largest
             sorted_images = sorted(
                 pool, key=lambda x: x.get("width", 0), reverse=True
@@ -409,25 +557,61 @@ def parse_event(event_data: dict) -> Optional[dict]:
                 description = attr.get("description") or attr.get("additionalInfo")
 
         attractions = event_data.get("_embedded", {}).get("attractions", [])
+        if _should_skip_low_fidelity_placeholder(
+            title,
+            classifications=[c for c in classifications if isinstance(c, dict)],
+            attractions=[a for a in attractions if isinstance(a, dict)],
+        ):
+            return None
         parsed_artists = _build_parsed_artists(
             [a for a in attractions if isinstance(a, dict)]
         )
+        ticket_status = None
+        ticket_url = source_url
+        price_note = None
+        is_free = None
 
-        # Try detail page enrichment if description is low quality
-        if DETAIL_ENRICH and source_url and _is_low_quality_description(description):
-            enriched_description = _fetch_detail_description(source_url)
+        # Ticketmaster API rows are often thin even when the detail page publishes
+        # structured image, price, availability, and performer data.
+        needs_detail_enrichment = (
+            _is_low_quality_description(description)
+            or not image_url
+            or price_min is None
+            or category == "other"
+            or not parsed_artists
+        )
+        if DETAIL_ENRICH and source_url and needs_detail_enrichment:
+            detail = _fetch_detail_enrichment(source_url)
+            enriched_description = detail.get("description")
             if enriched_description and (not description or len(enriched_description) > len(description)):
                 description = enriched_description
+            if not image_url and detail.get("image_url"):
+                image_url = detail["image_url"]
+            if not images_list and detail.get("images"):
+                images_list = detail["images"]
+            if price_min is None and detail.get("price_min") is not None:
+                price_min = detail["price_min"]
+            if price_max is None and detail.get("price_max") is not None:
+                price_max = detail["price_max"]
+            if not parsed_artists and detail.get("artists"):
+                parsed_artists = _build_parsed_artists(
+                    [{"name": name} for name in detail.get("artists") or []]
+                )
+            ticket_status = detail.get("ticket_status")
+            ticket_url = detail.get("ticket_url") or source_url
+            price_note = detail.get("price_note")
+            is_free = detail.get("is_free")
 
         # If still low quality, store None — no description is better than
         # auto-generated boilerplate like "X is a Other event."
         if _is_low_quality_description(description):
             description = None
 
-        links = []
+        links: list[dict[str, str]] = []
         if source_url:
             links.append({"type": "event", "url": source_url})
-            links.append({"type": "ticket", "url": source_url})
+        if ticket_url:
+            links.append({"type": "ticket", "url": ticket_url})
 
         return {
             "title": title,
@@ -435,14 +619,18 @@ def parse_event(event_data: dict) -> Optional[dict]:
             "start_date": start_date,
             "start_time": start_time,
             "source_url": source_url,
-            "ticket_url": source_url,
+            "ticket_url": ticket_url,
             "image_url": image_url,
             "images": images_list,
             "links": links,
             "category": category,
             "genres": genres,
+            "genre": genre,
             "price_min": price_min,
             "price_max": price_max,
+            "price_note": price_note,
+            "ticket_status": ticket_status,
+            "is_free": is_free,
             "venue": venue_data,
             "ticketmaster_id": event_data.get("id"),
             "_parsed_artists": parsed_artists,
@@ -540,29 +728,37 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "start_time": parsed.get("start_time"),
                     "end_date": None,
                     "end_time": None,
-                    "is_all_day": parsed.get("start_time") is None,
+                    "is_all_day": False,
                     "category": parsed.get("category", "other"),
                     "genres": parsed.get("genres") or [],
                     "tags": tags,
                     "price_min": parsed.get("price_min"),
                     "price_max": parsed.get("price_max"),
-                    "price_note": None,
+                    "price_note": parsed.get("price_note"),
                     "is_free": (
-                        parsed.get("price_min") == 0
-                        if parsed.get("price_min") is not None
-                        else False
+                        parsed.get("is_free")
+                        if parsed.get("is_free") is not None
+                        else (
+                            parsed.get("price_min") == 0
+                            if parsed.get("price_min") is not None
+                            else False
+                        )
                     ),
                     "source_url": parsed["source_url"],
                     "ticket_url": parsed["ticket_url"],
+                    "ticket_status": parsed.get("ticket_status"),
                     "image_url": parsed.get("image_url"),
+                    "images": parsed.get("images") or [],
+                    "links": parsed.get("links") or [],
                     "raw_text": None,
                     "extraction_confidence": 0.95,  # High confidence from structured API
                     "is_recurring": False,
                     "recurrence_rule": None,
                     "content_hash": content_hash,
+                    "_parsed_artists": parsed.get("_parsed_artists") or [],
                 }
 
-                existing = find_event_by_hash(content_hash)
+                existing = find_existing_event_for_insert(event_record)
                 if existing:
                     smart_update_existing_event(existing, event_record)
                     events_updated += 1

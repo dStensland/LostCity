@@ -16,7 +16,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, get_client, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import enrich_event_record
 
@@ -34,9 +34,35 @@ VENUE_DATA = {
     "state": "GA",
     "zip": "30315",
     "lat": 33.7328,
-    "lng": -84.3697,
+    "lng": -84.3696,
     "venue_type": "zoo",
+    "spot_type": "zoo",
     "website": BASE_URL,
+    # Hours vary seasonally; 9:00-17:00 is the standard off-peak schedule.
+    # Summer/holiday hours extend to 18:00 — see zooatlanta.org/visit for current times.
+    "hours": {
+        "monday": "09:00-17:00",
+        "tuesday": "09:00-17:00",
+        "wednesday": "09:00-17:00",
+        "thursday": "09:00-17:00",
+        "friday": "09:00-17:00",
+        "saturday": "09:00-17:00",
+        "sunday": "09:00-17:00",
+    },
+    "vibes": [
+        "family-friendly",
+        "outdoor",
+        "animals",
+        "nature",
+        "Grant Park",
+        "all-ages",
+    ],
+    # Fallback description — overridden at runtime by og:description if available
+    "description": (
+        "Zoo Atlanta is home to more than 1,500 animals representing over 220 species, "
+        "set within historic Grant Park. Giant pandas, gorillas, and immersive natural "
+        "habitats make it one of the South's premier family destinations."
+    ),
 }
 
 
@@ -182,7 +208,41 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
+            # ----------------------------------------------------------------
+            # 0. Homepage — extract og:image / og:description for venue record
+            # ----------------------------------------------------------------
+            try:
+                page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
+                og_image = page.evaluate(
+                    "() => { const m = document.querySelector('meta[property=\"og:image\"]'); return m ? m.content : null; }"
+                )
+                og_desc = page.evaluate(
+                    "() => { const m = document.querySelector('meta[property=\"og:description\"]') "
+                    "|| document.querySelector('meta[name=\"description\"]'); return m ? m.content : null; }"
+                )
+                if og_image:
+                    VENUE_DATA["image_url"] = og_image
+                    logger.debug("Zoo Atlanta: og:image = %s", og_image)
+                if og_desc:
+                    VENUE_DATA["description"] = og_desc
+                    logger.debug("Zoo Atlanta: og:description captured")
+            except Exception as _meta_exc:
+                logger.debug("Zoo Atlanta: could not extract og meta from homepage: %s", _meta_exc)
+
             venue_id = get_or_create_venue(VENUE_DATA)
+
+            # Persist any og: enrichment to the venue record
+            try:
+                venue_update: dict = {}
+                if VENUE_DATA.get("image_url"):
+                    venue_update["image_url"] = VENUE_DATA["image_url"]
+                if VENUE_DATA.get("description"):
+                    venue_update["description"] = VENUE_DATA["description"]
+                if venue_update:
+                    get_client().table("venues").update(venue_update).eq("id", venue_id).execute()
+                    logger.info("Zoo Atlanta: enriched venue record from homepage og: metadata")
+            except Exception as _upd_exc:
+                logger.warning("Zoo Atlanta: venue update failed: %s", _upd_exc)
 
             logger.info(f"Fetching Zoo Atlanta: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

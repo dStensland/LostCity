@@ -112,6 +112,23 @@ def parse_date_from_text(date_text: str) -> Optional[tuple[str, Optional[str]]]:
     return None
 
 
+def is_valid_candidate_title(title: str) -> bool:
+    clean = " ".join(title.split()).strip()
+    if not clean:
+        return False
+    if re.fullmatch(r"\d{4}", clean):
+        return False
+    if clean.lower() in {
+        "events search and views navigation",
+        "event views navigation",
+        "latest past events",
+        "upcoming upcoming",
+        "test event",
+    }:
+        return False
+    return len(clean) >= 4
+
+
 def determine_category(title: str, description: str = "") -> str:
     """Determine event category based on title and description."""
     text = f"{title} {description}".lower()
@@ -251,13 +268,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Check previous line for title
                     if i > 0:
                         potential_title = lines[i - 1]
-                        if len(potential_title) > 3 and not parse_date_from_text(potential_title):
+                        if is_valid_candidate_title(potential_title) and not parse_date_from_text(potential_title):
                             title = potential_title
 
                     # Check next line for title if we didn't find one
                     if not title and i + 1 < len(lines):
                         potential_title = lines[i + 1]
-                        if len(potential_title) > 3 and not parse_date_from_text(potential_title):
+                        if is_valid_candidate_title(potential_title) and not parse_date_from_text(potential_title):
                             title = potential_title
 
                     # Check following lines for description
@@ -267,7 +284,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 description = lines[j]
                                 break
 
-                    if title and len(title) > 3:
+                    if title and is_valid_candidate_title(title):
+                        if start_date < datetime.now().strftime("%Y-%m-%d"):
+                            i += 1
+                            continue
+
                         events_found += 1
 
                         category = determine_category(title, description)

@@ -6,6 +6,7 @@ Extracts current and upcoming art exhibitions from the HBCU university museum.
 import logging
 import re
 from datetime import datetime
+from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
@@ -28,8 +29,45 @@ VENUE_DATA = {
     "lat": 33.7517,
     "lng": -84.4123,
     "venue_type": "museum",
+    "spot_type": "museum",
     "website": "https://www.cau.edu/art-museum/",
+    # Description populated dynamically at crawl time from og:description.
+    # Fallback for offline/test runs:
+    "description": (
+        "The Clark Atlanta University Art Museum is a free HBCU museum on the historic Clark Atlanta University campus, "
+        "home to a significant collection of African American art documenting the cultural and historical contributions "
+        "of Black Americans. Exhibitions rotate throughout the year with free public admission."
+    ),
+    # Hours verified 2026-03-11 from cau.edu/art-museum; call ahead to confirm
+    "hours": {
+        "monday": "closed",
+        "tuesday": "11:00-16:00",
+        "wednesday": "11:00-16:00",
+        "thursday": "11:00-16:00",
+        "friday": "11:00-16:00",
+        "saturday": "closed",
+        "sunday": "closed",
+    },
+    "vibes": ["free", "cultural", "art", "educational"],
 }
+
+
+def normalize_ongoing_exhibit_dates(start_date: str, end_date: Optional[str]) -> tuple[str, Optional[str]]:
+    """
+    Keep ongoing exhibits active by normalizing the visible start date to today
+    once the run has already started.
+    """
+    if not start_date or not end_date:
+        return start_date, end_date
+
+    today = datetime.now().date()
+    start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
+
+    if start_dt < today <= end_dt:
+        return today.strftime("%Y-%m-%d"), end_date
+
+    return start_date, end_date
 
 
 def parse_exhibition_date(date_text: str) -> tuple[str, str]:
@@ -189,6 +227,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
         }
 
+        # ----------------------------------------------------------------
+        # 0. Homepage — extract og:image / og:description for venue record
+        # ----------------------------------------------------------------
+        try:
+            home_resp = requests.get(VENUE_DATA["website"], headers=headers, timeout=20)
+            if home_resp.status_code == 200:
+                home_soup = BeautifulSoup(home_resp.text, "html.parser")
+                og_img = home_soup.find("meta", property="og:image")
+                og_desc = home_soup.find("meta", property="og:description") or home_soup.find("meta", attrs={"name": "description"})
+                if og_img and og_img.get("content"):
+                    VENUE_DATA["image_url"] = og_img["content"]
+                    logger.debug("Clark Atlanta Art Museum: og:image = %s", og_img["content"])
+                if og_desc and og_desc.get("content") and len(og_desc["content"]) > 30:
+                    VENUE_DATA["description"] = og_desc["content"]
+                    logger.debug("Clark Atlanta Art Museum: og:description captured")
+        except Exception as _meta_exc:
+            logger.debug("Clark Atlanta Art Museum: could not extract og meta from homepage: %s", _meta_exc)
+
         # Fetch current exhibitions page
         logger.info(f"Fetching exhibitions from {CURRENT_EXHIBITIONS_URL}")
         response = requests.get(CURRENT_EXHIBITIONS_URL, headers=headers, timeout=30)
@@ -218,6 +274,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if not start_date:
                     logger.debug(f"Could not parse date for exhibition: {title} - {date_text}")
                     continue
+
+                start_date, end_date = normalize_ongoing_exhibit_dates(start_date, end_date)
 
                 # Build description
                 description = exhibition_data.get('description')
@@ -254,6 +312,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "end_date": end_date,
                     "end_time": None,
                     "is_all_day": True,
+                    "content_kind": "exhibit",
                     "category": "art",
                     "tags": tags,
                     "price_min": None,

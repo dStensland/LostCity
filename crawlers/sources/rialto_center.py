@@ -1,26 +1,37 @@
 """
-Crawler for Rialto Center for the Arts at Georgia State (rialto.gsu.edu).
+Crawler for Rialto Center for the Arts at Georgia State.
 
-Site uses JavaScript rendering - must use Playwright.
+Uses official Georgia State calendar JSON-LD event data rather than scraping the
+old dead events page.
 """
 
 from __future__ import annotations
 
-import re
+import json
+import html as html_lib
 import logging
+import re
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_event_by_hash,
+    get_or_create_venue,
+    insert_event,
+    remove_stale_source_events,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
+from utils import parse_price
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://rialto.gsu.edu"
-EVENTS_URL = f"{BASE_URL}/events"
+EVENTS_URL = "https://calendar.gsu.edu/rialto"
+REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"}
 
 VENUE_DATA = {
     "name": "Rialto Center for the Arts",
@@ -34,188 +45,255 @@ VENUE_DATA = {
     "lng": -84.3909,
     "venue_type": "theater",
     "spot_type": "theater",
-    "website": BASE_URL,
+    "website": EVENTS_URL,
 }
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
+def parse_jsonld_events(html: str) -> list[dict]:
+    """Extract Event JSON-LD blocks from the official calendar page."""
+    events: list[dict] = []
+    soup = BeautifulSoup(html, "html.parser")
+    for script in soup.select('script[type="application/ld+json"]'):
+        raw = (script.string or script.get_text() or "").strip()
+        if not raw:
+            continue
+        try:
+            data = json.loads(raw)
+        except Exception:
+            continue
+        items = data if isinstance(data, list) else [data]
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            event_type = item.get("@type")
+            if event_type == "Event" or (
+                isinstance(event_type, list) and "Event" in event_type
+            ):
+                events.append(item)
+    return events
+
+
+def parse_iso_datetime(value: str | None) -> tuple[Optional[str], Optional[str]]:
+    if not value:
+        return None, None
+    text = str(value).strip()
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", text):
+        return text, None
+    try:
+        dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
+    except ValueError:
+        return None, None
+
+
+def clean_description(value: str | None) -> str:
+    if not value:
+        return ""
+    text = html_lib.unescape(str(value))
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def parse_offer_fields(
+    offers: dict | list | None,
+) -> tuple[Optional[float], Optional[float], Optional[str], Optional[str], bool]:
+    """Extract price range, note, ticket URL, and free flag from schema offers."""
+    if not offers:
+        return None, None, None, None, False
+
+    ticket_url: Optional[str] = None
+    if isinstance(offers, dict):
+        ticket_url = offers.get("url") or None
+        raw_price = str(offers.get("price") or "").strip()
+        if not raw_price:
+            return None, None, None, ticket_url, False
+        price_min, price_max, price_note = parse_price(raw_price)
+        return price_min, price_max, price_note or raw_price, ticket_url, (
+            price_min == 0 and price_max == 0
+        )
+
+    normalized_names: list[str] = []
+    mins: list[float] = []
+    maxes: list[float] = []
+    is_free = False
+    for offer in offers:
+        if not isinstance(offer, dict):
+            continue
+        ticket_url = ticket_url or offer.get("url") or None
+        label = str(offer.get("name") or "").strip()
+        price_value = offer.get("price")
+        display = label
+        if price_value not in (None, ""):
+            try:
+                price_num = float(price_value)
+                mins.append(price_num)
+                maxes.append(price_num)
+                display = f"{label} (${price_num:g})" if label else f"${price_num:g}"
+                if price_num == 0 and label.lower().startswith("free"):
+                    is_free = False
+                elif price_num == 0 and not label:
+                    is_free = True
+            except Exception:
+                display = f"{label} ({price_value})" if label else str(price_value)
+        if display:
+            normalized_names.append(display)
+
+    price_note = ", ".join(normalized_names) if normalized_names else None
+    if mins and maxes:
+        return min(mins), max(maxes), price_note, ticket_url, is_free
+    return None, None, price_note, ticket_url, False
+
+
+def determine_category(title: str, description: str) -> tuple[str, Optional[str], list[str]]:
+    combined = f"{title} {description}".lower()
+    tags = ["rialto-center", "georgia-state", "gsu", "downtown", "performing-arts"]
+
+    if any(word in combined for word in ("jazz", "band", "orchestra", "music", "concert", "trio", "quartet", "choir")):
+        tags.extend(["music", "live-music"])
+        return "music", "live", sorted(set(tags))
+
+    if "dance" in combined or "ballet" in combined:
+        tags.append("dance")
+        return "dance", None, sorted(set(tags))
+
+    if any(word in combined for word in ("opera", "theater", "theatre", "play", "comedy")):
+        tags.append("theater")
+        return "theater", None, sorted(set(tags))
+
+    if any(word in combined for word in ("film", "screening", "documentary")):
+        tags.append("film")
+        return "film", None, sorted(set(tags))
+
+    if "free and open to the public" in combined or "student showcase" in combined:
+        tags.append("community")
+        return "community", None, sorted(set(tags))
+
+    return "art", None, sorted(set(tags))
+
+
+def _normalize_image_url(image: object) -> Optional[str]:
+    if isinstance(image, str):
+        return image.strip() or None
+    if isinstance(image, list):
+        for item in image:
+            normalized = _normalize_image_url(item)
+            if normalized:
+                return normalized
+        return None
+    if isinstance(image, dict):
+        return str(image.get("url") or image.get("contentUrl") or "").strip() or None
     return None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Rialto Center for the Arts events using Playwright."""
+    """Crawl Rialto events from the official GSU calendar page."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
+    seen_hashes: set[str] = set()
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        venue_id = get_or_create_venue(VENUE_DATA)
+        logger.info("Fetching Rialto Center for the Arts: %s", EVENTS_URL)
+        response = requests.get(EVENTS_URL, timeout=30, headers=REQUEST_HEADERS)
+        response.raise_for_status()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+        jsonld_events = parse_jsonld_events(response.text)
+        logger.info("Found %s JSON-LD events", len(jsonld_events))
 
-            logger.info(f"Fetching Rialto Center for the Arts: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+        today = datetime.now().date()
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+        for event_data in jsonld_events:
+            title = str(event_data.get("name") or "").strip()
+            if not title:
+                continue
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+            start_date, start_time = parse_iso_datetime(event_data.get("startDate"))
+            end_date, end_time = parse_iso_datetime(event_data.get("endDate"))
+            if not start_date:
+                continue
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
+            try:
+                if datetime.strptime(start_date, "%Y-%m-%d").date() < today:
                     continue
+            except ValueError:
+                continue
 
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
+            description = clean_description(event_data.get("description"))
+            category, subcategory, tags = determine_category(title, description)
 
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
+            price_min, price_max, price_note, ticket_url, is_free = parse_offer_fields(
+                event_data.get("offers")
+            )
+            if is_free:
+                tags.append("free")
+            elif "free and open to the public" in description.lower():
+                is_free = True
+                tags.append("free")
 
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
+            source_url = str(event_data.get("url") or EVENTS_URL).strip() or EVENTS_URL
+            image_url = _normalize_image_url(event_data.get("image"))
 
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
+            hash_key = f"{start_date}|{start_time}" if start_time else start_date
+            content_hash = generate_content_hash(
+                title,
+                "Rialto Center for the Arts",
+                hash_key,
+            )
+            seen_hashes.add(content_hash)
+            events_found += 1
 
-                    if not title:
-                        i += 1
-                        continue
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title,
+                "description": description or f"{title} at Rialto Center for the Arts",
+                "start_date": start_date,
+                "start_time": start_time,
+                "end_date": end_date,
+                "end_time": end_time,
+                "is_all_day": False,
+                "category": category,
+                "subcategory": subcategory,
+                "tags": sorted(set(tags)),
+                "price_min": price_min,
+                "price_max": price_max,
+                "price_note": price_note,
+                "is_free": is_free,
+                "source_url": source_url,
+                "ticket_url": ticket_url,
+                "image_url": image_url,
+                "raw_text": None,
+                "extraction_confidence": 0.94,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
 
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
-                    events_found += 1
+            insert_event(event_record)
+            events_new += 1
 
-                    content_hash = generate_content_hash(title, "Rialto Center for the Arts", start_date)
-
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Event at Rialto Center for the Arts",
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "community",
-                        "subcategory": None,
-                        "tags": [
-                        "rialto-center",
-                        "georgia-state",
-                        "gsu",
-                        "performing-arts",
-                        "downtown",
-                    ],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            browser.close()
+        if seen_hashes:
+            stale_removed = remove_stale_source_events(source_id, seen_hashes)
+            if stale_removed:
+                logger.info("Removed %s stale Rialto events", stale_removed)
 
         logger.info(
-            f"Rialto Center for the Arts crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            "Rialto Center crawl complete: %s found, %s new, %s updated",
+            events_found,
+            events_new,
+            events_updated,
         )
-
-    except Exception as e:
-        logger.error(f"Failed to crawl Rialto Center for the Arts: {e}")
+    except Exception as exc:
+        logger.error("Failed to crawl Rialto Center for the Arts: %s", exc)
         raise
 
     return events_found, events_new, events_updated

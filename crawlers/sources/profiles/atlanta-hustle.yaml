@@ -1,0 +1,20 @@
+version: 1
+slug: atlanta-hustle
+name: Atlanta Hustle
+integration_method: python
+defaults:
+  category: sports
+  tags:
+  - ultimate-frisbee
+  - ufa
+  - atlanta-hustle
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://www.watchufa.com/hustle/schedule
+detail:
+  enabled: false
+data_goals:
+- events
+- tickets

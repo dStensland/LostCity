@@ -1,0 +1,19 @@
+version: 1
+slug: gwinnett-active-adult-cardio
+name: Gwinnett Active Adult Cardio
+integration_method: python
+defaults:
+  category: fitness
+  tags:
+  - cardio
+  - public-fitness
+  - gwinnett
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://secure.rec1.com/GA/gwinnett-county-parks-recreation/catalog
+detail:
+  enabled: false
+data_goals:
+- events

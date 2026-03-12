@@ -1,0 +1,19 @@
+version: 1
+slug: gwinnett-adaptive-sports
+name: Gwinnett Adaptive Sports
+integration_method: python
+defaults:
+  category: sports
+  tags:
+  - adaptive-sports
+  - accessible
+  - public-play
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://secure.rec1.com/GA/gwinnett-county-parks-recreation/catalog
+detail:
+  enabled: false
+data_goals:
+- events

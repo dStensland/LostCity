@@ -11,6 +11,8 @@ import re
 from datetime import datetime
 from typing import Optional
 
+import requests
+from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
@@ -35,6 +37,20 @@ VENUE_DATA = {
     "venue_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
+    "vibes": ["historic", "storytelling", "family-friendly", "literary", "west-end"],
+    "description": (
+        "Atlanta's oldest house museum and the Victorian home of Joel Chandler Harris, author of the "
+        "Uncle Remus stories. Located in the historic West End neighborhood, the Wren's Nest hosts "
+        "storytelling performances, guided tours, family programs, and community events celebrating "
+        "Southern literary heritage and African American folklore traditions."
+    ),
+    "hours": {
+        "tuesday": {"open": "10:00", "close": "14:30"},
+        "wednesday": {"open": "10:00", "close": "14:30"},
+        "thursday": {"open": "10:00", "close": "14:30"},
+        "friday": {"open": "10:00", "close": "14:30"},
+        "saturday": {"open": "10:00", "close": "14:30"},
+    },
 }
 
 
@@ -160,6 +176,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
+        # Fetch og:image from homepage to enrich venue record
+        venue_data = dict(VENUE_DATA)
+        try:
+            _headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+            }
+            _home_resp = requests.get(BASE_URL, headers=_headers, timeout=15)
+            if _home_resp.status_code == 200:
+                _home_soup = BeautifulSoup(_home_resp.text, "html.parser")
+                _og_image = _home_soup.find("meta", attrs={"property": "og:image"})
+                if _og_image and _og_image.get("content"):
+                    venue_data["image_url"] = _og_image["content"]
+                    logger.debug("Fetched og:image for Wren's Nest")
+        except Exception as _e:
+            logger.debug(f"Could not fetch og:image for Wren's Nest: {_e}")
+
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
@@ -180,7 +212,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1500)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_venue(venue_data)
 
             # Wren's Nest uses .summary-item for their event listings
             event_items = page.query_selector_all(".summary-item")

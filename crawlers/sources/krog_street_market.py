@@ -1,33 +1,48 @@
 """
 Crawler for The Krog District (thekrogdistrict.com).
-Formerly Krog Street Market - popular food hall in Inman Park with restaurants and events.
+Food hall and mixed-use district in the Krog Street corridor with multiple venues and events.
 
 Site uses Squarespace with JavaScript rendering - must use Playwright.
 Events are in .eventlist-event containers with structured date/time fields.
+
+Sub-venues: Krog Street Market (food hall), BrewDog ATL (brewery),
+Guac y Margys (restaurant), Patagonia (retail), Hop City (bottle shop),
+Atlanta Stove Works (event space), Pour Taproom (bar), FP Movement (retail).
+
+Also generates recurring weekly events (Tue trivia, Tue run club, Tue yoga, Sat run club).
 """
 
 from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
+from db import (
+    get_or_create_venue,
+    insert_event,
+    find_event_by_hash,
+    find_existing_event_for_insert,
+    smart_update_existing_event,
+    remove_stale_source_events,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.thekrogdistrict.com"
 EVENTS_URL = f"{BASE_URL}/events"
+WEEKS_AHEAD = 6
 
+# -- Primary venue (default for unmapped events) --
 VENUE_DATA = {
     "name": "Krog Street Market",
     "slug": "krog-street-market",
     "address": "99 Krog St NE",
-    "neighborhood": "Inman Park",
+    "neighborhood": "Krog Street",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30307",
@@ -36,7 +51,98 @@ VENUE_DATA = {
     "venue_type": "food_hall",
     "spot_type": "food_hall",
     "website": BASE_URL,
+    "vibes": ["food-hall", "inman-park", "beltline", "krog-street"],
 }
+
+# -- Sub-venues within Krog District --
+BREWDOG_VENUE_DATA = {
+    "name": "BrewDog Atlanta",
+    "slug": "brewdog-atlanta",
+    "address": "112 Krog St NE Suite 9",
+    "neighborhood": "Krog Street",
+    "city": "Atlanta",
+    "state": "GA",
+    "zip": "30307",
+    "lat": 33.7581,
+    "lng": -84.3636,
+    "venue_type": "brewery",
+    "spot_type": "brewery",
+    "website": "https://www.brewdog.com/usa/bars/atlanta",
+    "vibes": ["brewery", "craft-beer", "krog-street", "inman-park", "patio", "dog-friendly"],
+}
+
+GUAC_Y_MARGYS_VENUE_DATA = {
+    "name": "Guac y Margys",
+    "slug": "guac-y-margys",
+    "address": "99 Krog St NE Suite R",
+    "neighborhood": "Krog Street",
+    "city": "Atlanta",
+    "state": "GA",
+    "zip": "30307",
+    "lat": 33.7575,
+    "lng": -84.3641,
+    "venue_type": "restaurant",
+    "spot_type": "restaurant",
+    "website": "https://www.guacymargys.com",
+    "vibes": ["mexican", "margaritas", "krog-street", "inman-park", "trivia"],
+}
+
+# Sub-venue keyword mapping: (keyword_in_location, venue_data_dict)
+SUB_VENUE_MAP = [
+    ("brewdog", BREWDOG_VENUE_DATA),
+    ("brew dog", BREWDOG_VENUE_DATA),
+    ("guac", GUAC_Y_MARGYS_VENUE_DATA),
+    ("margys", GUAC_Y_MARGYS_VENUE_DATA),
+    ("spx alley", GUAC_Y_MARGYS_VENUE_DATA),
+]
+
+WEEKLY_SCHEDULE = [
+    {
+        "venue_data": VENUE_DATA,
+        "day": 1,  # Tuesday
+        "title": "Tuesday Night Trivia at Krog Street Market",
+        "description": (
+            "Tuesday night trivia at Krog Street Market in the Krog Street corridor. "
+            "Free to play with prizes from district businesses. 7-9pm."
+        ),
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "nightlife", "weekly", "krog-street", "inman-park", "beltline", "free"],
+    },
+    {
+        "venue_data": BREWDOG_VENUE_DATA,
+        "day": 1,  # Tuesday
+        "title": "Adidas Run Club at BrewDog Atlanta",
+        "description": (
+            "Tuesday run/walk club at BrewDog Atlanta in the Krog District. "
+            "Adidas community run — every pace has a place. 6:30pm."
+        ),
+        "start_time": "18:30",
+        "category": "fitness",
+        "subcategory": "fitness.running",
+        "tags": ["run-club", "running", "fitness", "weekly", "krog-street", "inman-park", "free"],
+    },
+]
+
+DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+
+def _get_next_weekday(start_date: datetime, weekday: int) -> datetime:
+    days_ahead = weekday - start_date.weekday()
+    if days_ahead < 0:
+        days_ahead += 7
+    return start_date + timedelta(days=days_ahead)
+
+
+def _resolve_venue(title: str, full_text: str) -> dict:
+    """Route event to the correct sub-venue based on location keywords."""
+    search_text = (title + " " + full_text).lower()
+    for keyword, venue_data in SUB_VENUE_MAP:
+        if keyword in search_text:
+            return venue_data
+    return VENUE_DATA
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -95,26 +201,29 @@ def parse_full_date(date_text: str) -> Optional[str]:
 def determine_category(title: str) -> tuple[str, Optional[str], list[str]]:
     """Determine category based on event title."""
     title_lower = title.lower()
-    tags = ["krog-street-market", "food-hall", "inman-park", "beltline"]
+    tags = ["krog-street", "inman-park", "beltline"]
 
-    # Check specific event types first before generic terms
     if any(w in title_lower for w in ["trivia", "quiz"]):
-        return "nightlife", "trivia", tags + ["trivia"]
+        return "nightlife", "nightlife.trivia", tags + ["trivia"]
     if any(w in title_lower for w in ["comedy", "punchlines"]):
-        return "nightlife", "comedy", tags + ["comedy"]
-    if any(w in title_lower for w in ["yoga", "fitness"]):
-        return "fitness", None, tags + ["fitness"]
+        return "comedy", "comedy.standup", tags + ["comedy"]
+    if any(w in title_lower for w in ["run club", "run/walk", "running"]):
+        return "fitness", "fitness.running", tags + ["run-club", "running"]
+    if any(w in title_lower for w in ["yoga"]):
+        return "fitness", "fitness.yoga", tags + ["yoga"]
     if any(w in title_lower for w in ["kids", "family", "children"]):
         return "family", None, tags + ["family"]
     if any(w in title_lower for w in ["music", "concert", "live", "dj", "band"]):
-        return "music", "live", tags + ["live-music"]
+        return "music", "concert", tags + ["live-music"]
     if any(w in title_lower for w in ["tasting", "wine", "chef", "dinner", "brunch"]):
-        return "food_drink", "tasting", tags + ["food"]
+        return "food_drink", None, tags + ["food"]
     # Only match "market" if it's not part of "Krog Street Market"
     if "market" in title_lower and "krog street market" not in title_lower:
-        return "community", "market", tags + ["market"]
+        return "community", None, tags + ["market"]
     if any(w in title_lower for w in ["pop-up", "vendor", "makers"]):
-        return "community", "market", tags + ["market"]
+        return "community", None, tags + ["market"]
+    if any(w in title_lower for w in ["sculpt", "workshop", "craft", "pottery"]):
+        return "arts", None, tags + ["workshop"]
 
     return "community", None, tags
 
@@ -127,6 +236,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     seen_hashes: set[str] = set()
 
+    # Ensure all sub-venue records exist
+    venue_ids: dict[str, int] = {}
+    for vdata in [VENUE_DATA, BREWDOG_VENUE_DATA, GUAC_Y_MARGYS_VENUE_DATA]:
+        venue_ids[vdata["slug"]] = get_or_create_venue(vdata)
+
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -135,8 +249,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 viewport={"width": 1920, "height": 1080},
             )
             page = context.new_page()
-
-            venue_id = get_or_create_venue(VENUE_DATA)
 
             logger.info(f"Fetching The Krog District events: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
@@ -191,27 +303,26 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 try:
                     event_date = datetime.strptime(start_date, "%Y-%m-%d").date()
                     if event_date < datetime.now().date():
-                        logger.debug(f"Skipping past event: {title} on {start_date}")
                         continue
                 except ValueError:
-                    logger.debug(f"Invalid date format: {start_date}")
                     continue
 
                 events_found += 1
 
-                # Parse time - if not found, default to 6:00 PM for food hall events
+                # Route to correct sub-venue
+                matched_venue = _resolve_venue(title, full_text)
+                venue_id = venue_ids[matched_venue["slug"]]
+
+                # Parse time
                 start_time = parse_time(time_text) if time_text else None
                 if not start_time:
                     start_time = "18:00"
-                    logger.debug(f"No time found for {title}, defaulting to 6:00 PM")
 
                 # Generate content hash for deduplication
                 content_hash = generate_content_hash(
-                    title, "Krog Street Market", start_date
+                    title, matched_venue["name"], start_date
                 )
                 seen_hashes.add(content_hash)
-
-                # Check for existing event
 
                 # Determine category
                 category, subcategory, tags = determine_category(title)
@@ -221,7 +332,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 description = None
                 lines = full_text.split("\n")
                 if len(lines) > 3:
-                    # Skip title, date, time/location lines, get description
                     desc_lines = [l.strip() for l in lines[3:] if l.strip() and "View Event" not in l]
                     if desc_lines:
                         description = " ".join(desc_lines)
@@ -230,12 +340,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title,
-                    "description": description or "Event at The Krog District",
+                    "description": description or f"Event at {matched_venue['name']}",
                     "start_date": start_date,
                     "start_time": start_time,
                     "end_date": None,
                     "end_time": None,
-                    "is_all_day": False,  # All events have times or default time
+                    "is_all_day": False,
                     "category": category,
                     "subcategory": subcategory,
                     "tags": tags,
@@ -262,7 +372,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 try:
                     insert_event(event_record)
                     events_new += 1
-                    logger.info(f"Added: {title} on {start_date} at {start_time}")
+                    logger.info(f"Added: {title} at {matched_venue['name']} on {start_date}")
                 except Exception as e:
                     logger.error(f"Failed to insert event {title}: {e}")
 
@@ -277,12 +387,97 @@ def crawl(source: dict) -> tuple[int, int, int]:
             browser.close()
 
         logger.info(
-            f"Krog Street Market crawl complete: {events_found} found, "
+            f"Krog District scrape complete: {events_found} found, "
             f"{events_new} new, {events_updated} updated"
         )
 
     except Exception as e:
-        logger.error(f"Failed to crawl Krog Street Market: {e}")
+        logger.error(f"Failed to crawl Krog District: {e}")
         raise
+
+    # Generate recurring weekly events
+    r_found, r_new, r_updated = _generate_recurring_events(source_id, venue_ids)
+    events_found += r_found
+    events_new += r_new
+    events_updated += r_updated
+
+    logger.info(
+        f"Krog District crawl complete (incl. recurring): {events_found} found, "
+        f"{events_new} new, {events_updated} updated"
+    )
+    return events_found, events_new, events_updated
+
+
+def _generate_recurring_events(
+    source_id: int, venue_ids: dict[str, int]
+) -> tuple[int, int, int]:
+    """Generate recurring weekly events for Krog District venues."""
+    events_found = 0
+    events_new = 0
+    events_updated = 0
+
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    for template in WEEKLY_SCHEDULE:
+        venue_data = template["venue_data"]
+        venue_id = venue_ids[venue_data["slug"]]
+        next_date = _get_next_weekday(today, template["day"])
+        day_code = DAY_CODES[template["day"]]
+        day_name = DAY_NAMES[template["day"]]
+
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": template["title"],
+            "frequency": "weekly",
+            "day_of_week": day_name.lower(),
+            "description": template["description"],
+        }
+
+        for week in range(WEEKS_AHEAD):
+            event_date = next_date + timedelta(weeks=week)
+            start_date = event_date.strftime("%Y-%m-%d")
+            events_found += 1
+
+            content_hash = generate_content_hash(
+                template["title"], venue_data["name"], start_date
+            )
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": template["title"],
+                "description": template["description"],
+                "start_date": start_date,
+                "start_time": template["start_time"],
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": template["category"],
+                "subcategory": template.get("subcategory"),
+                "tags": template["tags"],
+                "is_free": True,
+                "price_min": None,
+                "price_max": None,
+                "source_url": EVENTS_URL,
+                "ticket_url": None,
+                "image_url": None,
+                "raw_text": f"{template['title']} - {start_date}",
+                "extraction_confidence": 0.90,
+                "is_recurring": True,
+                "recurrence_rule": f"FREQ=WEEKLY;BYDAY={day_code}",
+                "content_hash": content_hash,
+            }
+
+            existing = find_existing_event_for_insert(event_record)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
+            try:
+                insert_event(event_record, series_hint=series_hint)
+                events_new += 1
+            except Exception as exc:
+                logger.error(f"Failed to insert {template['title']} on {start_date}: {exc}")
 
     return events_found, events_new, events_updated

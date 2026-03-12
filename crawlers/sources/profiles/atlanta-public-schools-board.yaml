@@ -1,0 +1,21 @@
+version: 1
+slug: atlanta-public-schools-board
+name: Atlanta Public Schools Board of Education
+integration_method: html
+defaults:
+  category: community
+  tags:
+  - school-board
+  - education
+  - public-meeting
+  - government
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantapublicschools.us/boe
+detail:
+  enabled: true
+data_goals:
+- events
+- images

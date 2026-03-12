@@ -1,0 +1,19 @@
+version: 1
+slug: cobb-adult-swim-lessons
+name: Cobb Adult Swim Lessons
+integration_method: python
+defaults:
+  category: fitness
+  tags:
+  - swimming
+  - adult-swim
+  - fitness-class
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://secure.rec1.com/GA/cobb-county-ga/catalog
+detail:
+  enabled: false
+data_goals:
+- events

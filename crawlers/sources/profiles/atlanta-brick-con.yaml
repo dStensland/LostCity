@@ -1,0 +1,16 @@
+version: 1
+slug: atlanta-brick-con
+name: Atlanta Brick Con
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://atlantabrickcon.com
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets

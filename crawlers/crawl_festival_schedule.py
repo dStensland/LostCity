@@ -60,6 +60,14 @@ _UNKNOWN_VENUE_MARKERS = {
     "off campus in atl",
 }
 
+_PLACEHOLDER_PAGE_MARKERS = (
+    "available soon",
+    "stay tuned",
+    "check back soon",
+    "details soon",
+    "details, a date, and more",
+)
+
 _FESTIVAL_LLM_PROVIDER_OVERRIDES_PATH = (
     Path(__file__).resolve().parent / "config" / "festival_llm_provider_overrides.json"
 )
@@ -80,6 +88,11 @@ class SessionData:
         end_time: Optional[str] = None,
         description: Optional[str] = None,
         venue_name: Optional[str] = None,
+        venue_address: Optional[str] = None,
+        venue_city: Optional[str] = None,
+        venue_state: Optional[str] = None,
+        venue_postal_code: Optional[str] = None,
+        venue_website: Optional[str] = None,
         category: Optional[str] = None,
         image_url: Optional[str] = None,
         source_url: Optional[str] = None,
@@ -95,6 +108,11 @@ class SessionData:
         self.end_time = end_time
         self.description = description
         self.venue_name = venue_name
+        self.venue_address = venue_address
+        self.venue_city = venue_city
+        self.venue_state = venue_state
+        self.venue_postal_code = venue_postal_code
+        self.venue_website = venue_website
         self.category = category or "community"
         self.image_url = image_url
         self.source_url = source_url
@@ -172,11 +190,47 @@ def _fetch_with_requests(url: str) -> str:
         # Keep decoding predictable for parser/LLM input.
         "Accept-Encoding": "gzip, deflate",
     }
-    resp = requests.get(url, headers=headers, timeout=cfg.crawler.request_timeout)
+    try:
+        resp = requests.get(url, headers=headers, timeout=cfg.crawler.request_timeout)
+    except requests.exceptions.SSLError as exc:
+        logger.warning("requests TLS failed for %s, falling back to curl: %s", url, exc)
+        return _fetch_with_curl(url, headers, timeout=cfg.crawler.request_timeout)
     resp.raise_for_status()
     if (resp.headers.get("content-encoding") or "").lower() == "br":
         return _decode_brotli_response(resp)
     return resp.text
+
+
+def _fetch_with_curl(url: str, headers: dict[str, str], timeout: int) -> str:
+    """Fallback HTML fetch via curl for sites incompatible with local TLS bindings."""
+    curl_bin = shutil.which("curl")
+    if not curl_bin:
+        raise RuntimeError(f"curl is not available for TLS fallback: {url}")
+
+    cmd = [
+        curl_bin,
+        "-L",
+        "--silent",
+        "--show-error",
+        "--compressed",
+        "--max-time",
+        str(timeout),
+    ]
+    user_agent = headers.get("User-Agent")
+    if user_agent:
+        cmd.extend(["-A", user_agent])
+    accept_encoding = headers.get("Accept-Encoding")
+    if accept_encoding:
+        cmd.extend(["-H", f"Accept-Encoding: {accept_encoding}"])
+    cmd.append(url)
+
+    proc = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+    )
+    return proc.stdout.decode("utf-8", errors="replace")
 
 
 def _decode_brotli_response(resp: requests.Response) -> str:
@@ -289,8 +343,20 @@ def _parse_jsonld_event(item: dict, base_url: str) -> Optional[SessionData]:
     # Venue
     location = item.get("location", {})
     venue_name = None
+    venue_address = None
+    venue_city = None
+    venue_state = None
+    venue_postal_code = None
+    venue_website = None
     if isinstance(location, dict):
         venue_name = location.get("name")
+        venue_website = location.get("sameAs") or location.get("url")
+        address = location.get("address") or {}
+        if isinstance(address, dict):
+            venue_address = address.get("streetAddress")
+            venue_city = address.get("addressLocality")
+            venue_state = address.get("addressRegion")
+            venue_postal_code = address.get("postalCode")
     elif isinstance(location, str):
         venue_name = location
 
@@ -314,6 +380,11 @@ def _parse_jsonld_event(item: dict, base_url: str) -> Optional[SessionData]:
         end_time=end_time,
         description=description,
         venue_name=venue_name,
+        venue_address=venue_address,
+        venue_city=venue_city,
+        venue_state=venue_state,
+        venue_postal_code=venue_postal_code,
+        venue_website=venue_website,
         image_url=image_url,
         source_url=source_url,
     )
@@ -819,6 +890,669 @@ def extract_sessions_html_table(html: str, base_url: str) -> list[SessionData]:
     return sessions
 
 
+def _parse_time_range_text(value: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse loose schedule text containing one or two 12-hour time tokens."""
+    tokens = re.findall(
+        r"(\d{1,2}(?::\d{2})?\s*(?:am|pm))",
+        value or "",
+        flags=re.IGNORECASE,
+    )
+    if not tokens:
+        return None, None
+    start_time = _parse_clock_time(tokens[0])
+    end_time = _parse_clock_time(tokens[1]) if len(tokens) > 1 else None
+    return start_time, end_time
+
+
+def _parse_month_day_range_text(value: str) -> list[str]:
+    """Parse a month day-range block like 'June 5-7, 2026' into ISO dates."""
+    text = re.sub(r"\s+", " ", (value or "").strip())
+    if not text:
+        return []
+
+    match = re.search(
+        r"\b([A-Za-z]+)\s+(\d{1,2})\s*[-–]\s*(\d{1,2}),\s*(\d{4})\b",
+        text,
+        re.IGNORECASE,
+    )
+    if not match:
+        return []
+
+    month = MONTH_MAP.get(match.group(1).lower())
+    start_day = int(match.group(2))
+    end_day = int(match.group(3))
+    year = int(match.group(4))
+    if not month or end_day < start_day:
+        return []
+
+    try:
+        return [
+            date(year, month, day_value).isoformat()
+            for day_value in range(start_day, end_day + 1)
+        ]
+    except ValueError:
+        return []
+
+
+def extract_sessions_collect_a_con_page(html: str, base_url: str) -> list[SessionData]:
+    """Extract Atlanta fall daily hours from the official Collect-A-Con page."""
+    normalized_url = (base_url or "").rstrip("/")
+    if normalized_url not in {
+        "https://collectaconusa.com/atlanta-2",
+        "https://collectaconusa.com/atlanta-2/",
+    }:
+        return []
+
+    soup = BeautifulSoup(html, "lxml")
+    page_text = soup.get_text(" ", strip=True)
+
+    range_match = re.search(
+        r"September\s+(\d{1,2}),\s*(\d{4})\s+\d{2}:\d{2}:\d{2}",
+        page_text,
+        re.IGNORECASE,
+    )
+    if not range_match:
+        return []
+
+    start_day = int(range_match.group(1))
+    year = int(range_match.group(2))
+    saturday_date = date(year, 9, start_day).isoformat()
+    sunday_date = date(year, 9, start_day + 1).isoformat()
+
+    saturday_match = re.search(
+        r"Saturday:\s*(\d{1,2}(?::\d{2})?\s*[ap]m)\s*[–-]\s*(\d{1,2}(?::\d{2})?\s*[ap]m)",
+        page_text,
+        re.IGNORECASE,
+    )
+    sunday_match = re.search(
+        r"Sunday:\s*(\d{1,2}(?::\d{2})?\s*[ap]m)\s*[–-]\s*(\d{1,2}(?::\d{2})?\s*[ap]m)",
+        page_text,
+        re.IGNORECASE,
+    )
+    if not saturday_match or not sunday_match:
+        return []
+
+    saturday_start = _parse_clock_time(saturday_match.group(1))
+    saturday_end = _parse_clock_time(saturday_match.group(2))
+    sunday_start = _parse_clock_time(sunday_match.group(1))
+    sunday_end = _parse_clock_time(sunday_match.group(2))
+    if not saturday_start or not saturday_end or not sunday_start or not sunday_end:
+        return []
+
+    venue_match = re.search(
+        r"Venue\s+Georgia World Congress (?:Convention )?Center\s+Hall A1\s+285 Andrew Young International Blvd NW,\s*Atlanta,\s*GA\s*(\d{5})",
+        page_text,
+        re.IGNORECASE,
+    )
+    if not venue_match:
+        return []
+
+    ticket_url = None
+    for link in soup.select("a[href]"):
+        href = (link.get("href") or "").strip()
+        if "universe.com/events/collect-a-con-atlanta-2-ga-tickets" in href:
+            ticket_url = href
+            break
+
+    image_url = None
+    for image in soup.select("img[src]"):
+        alt = (image.get("alt") or "").strip().lower()
+        src = image.get("src")
+        if "atlanta 2 2026" in alt and src:
+            image_url = _normalize_image_url(src, normalized_url)
+            break
+
+    sessions = [
+        SessionData(
+            title="Collect-A-Con Atlanta (Fall)",
+            start_date=saturday_date,
+            start_time=saturday_start,
+            end_time=saturday_end,
+            venue_name="Georgia World Congress Center",
+            venue_address="285 Andrew Young International Blvd NW",
+            venue_city="Atlanta",
+            venue_state="GA",
+            venue_postal_code=venue_match.group(1),
+            description=(
+                "Collect-A-Con brings trading cards, anime merch, comic books, vintage toys, "
+                "video games, celebrity guests, cosplay, and vendor tables to Atlanta."
+            ),
+            category="community",
+            image_url=image_url,
+            source_url=normalized_url,
+            tags=["collectibles", "trading-cards", "pop-culture", "shopping", "cosplay"],
+            ticket_url=ticket_url,
+        ),
+        SessionData(
+            title="Collect-A-Con Atlanta (Fall)",
+            start_date=sunday_date,
+            start_time=sunday_start,
+            end_time=sunday_end,
+            venue_name="Georgia World Congress Center",
+            venue_address="285 Andrew Young International Blvd NW",
+            venue_city="Atlanta",
+            venue_state="GA",
+            venue_postal_code=venue_match.group(1),
+            description=(
+                "Collect-A-Con brings trading cards, anime merch, comic books, vintage toys, "
+                "video games, celebrity guests, cosplay, and vendor tables to Atlanta."
+            ),
+            category="community",
+            image_url=image_url,
+            source_url=normalized_url,
+            tags=["collectibles", "trading-cards", "pop-culture", "shopping", "cosplay"],
+            ticket_url=ticket_url,
+        ),
+    ]
+
+    logger.info("Collect-A-Con page: extracted %s sessions", len(sessions))
+    return sessions
+
+
+def extract_sessions_blade_show_schedule(html: str, base_url: str) -> list[SessionData]:
+    """Extract daily public admission hours for Blade Show from official pages."""
+    normalized_url = (base_url or "").rstrip("/")
+    if "bladeshow.com/show-info" not in normalized_url:
+        return []
+
+    try:
+        home_html = fetch_html("https://www.bladeshow.com/home/", render_js=False)
+    except Exception as exc:
+        logger.warning("Blade Show home page fetch failed: %s", exc)
+        return []
+
+    home_text = BeautifulSoup(home_html, "lxml").get_text(" ", strip=True)
+    event_dates = _parse_month_day_range_text(home_text)
+    if len(event_dates) < 3:
+        return []
+
+    day_dates = {
+        "friday": event_dates[0],
+        "saturday": event_dates[1],
+        "sunday": event_dates[2],
+    }
+
+    venue_name = "Cobb Galleria Centre"
+    venue_address = "2 Galleria Pkwy SE"
+    venue_city = "Atlanta"
+    venue_state = "GA"
+    venue_postal_code = "30339"
+
+    try:
+        travel_html = fetch_html("https://www.bladeshow.com/travel/", render_js=False)
+        travel_text = BeautifulSoup(travel_html, "lxml").get_text("\n", strip=True)
+        address_match = re.search(
+            r"Cobb Convention Center Atlanta\s+2 Galleria Pkwy SE\s+Atlanta,\s*GA\s*(30339)?",
+            travel_text,
+            re.IGNORECASE,
+        )
+        if not address_match:
+            address_match = re.search(
+                r"Cobb Convention Center Atlanta\s+2 Galleria Parkway Southeast\s+Atlanta,\s*GA\s*(30339)?",
+                travel_text,
+                re.IGNORECASE,
+            )
+        if address_match:
+            venue_postal_code = address_match.group(1) or venue_postal_code
+    except Exception as exc:
+        logger.debug("Blade Show travel page fetch failed: %s", exc)
+
+    page_text = BeautifulSoup(html, "lxml").get_text("\n", strip=True)
+    sessions: list[SessionData] = []
+    for day_name in ("Friday", "Saturday", "Sunday"):
+        match = re.search(
+            rf"\b{day_name}:\s*(\d{{1,2}}(?::\d{{2}})?\s*(?:AM|PM))\s*-\s*(\d{{1,2}}(?::\d{{2}})?\s*(?:AM|PM))\b",
+            page_text,
+            re.IGNORECASE,
+        )
+        if not match:
+            continue
+
+        start_time = _parse_clock_time(match.group(1))
+        end_time = _parse_clock_time(match.group(2))
+        start_date = day_dates.get(day_name.lower())
+        if not start_date or not start_time:
+            continue
+
+        sessions.append(
+            SessionData(
+                title="Blade Show",
+                start_date=start_date,
+                start_time=start_time,
+                end_time=end_time,
+                venue_name=venue_name,
+                venue_address=venue_address,
+                venue_city=venue_city,
+                venue_state=venue_state,
+                venue_postal_code=venue_postal_code,
+                source_url=normalized_url,
+                ticket_url="https://www.bladeshow.com/buy-tickets/",
+            )
+        )
+
+    logger.info("Blade Show schedule: extracted %s sessions", len(sessions))
+    return sessions
+
+
+def extract_sessions_conjuration_homepage(
+    html: str, base_url: str
+) -> list[SessionData]:
+    """Extract the annual CONjuration event from the official homepage."""
+    normalized_url = (base_url or "").rstrip("/")
+    if normalized_url not in {
+        "https://www.conjurationcon.com",
+        "https://conjurationcon.com",
+    }:
+        return []
+
+    soup = BeautifulSoup(html, "lxml")
+    page_text = soup.get_text(" ", strip=True)
+
+    range_match = re.search(
+        r"\b(?:Nov(?:ember)?)[\s.]+(\d{1,2})\s*[-–]\s*(\d{1,2}),\s*(\d{4})\b",
+        page_text,
+        re.IGNORECASE,
+    )
+    if not range_match:
+        range_match = re.search(
+            r"\bNovember\s+(\d{1,2})\s*[-–]\s*(\d{1,2})\s*(\d{4})\b",
+            page_text,
+            re.IGNORECASE,
+        )
+    if not range_match:
+        return []
+
+    start_day = int(range_match.group(1))
+    end_day = int(range_match.group(2))
+    year = int(range_match.group(3))
+    if end_day < start_day:
+        return []
+
+    start_date = date(year, 11, start_day).isoformat()
+    description = None
+    desc_match = re.search(
+        r"Prepare to be Immersed.*?At CONjuration,.*?(?=Learn More|Ticket Details|Book Your Room)",
+        page_text,
+        re.IGNORECASE,
+    )
+    if desc_match:
+        description = re.sub(r"\s+", " ", desc_match.group(0)).strip()[:2000]
+    else:
+        alt_match = re.search(
+            r"At CONjuration,.*?(?=Learn More|Ticket Details|Book Your Room|$)",
+            page_text,
+            re.IGNORECASE,
+        )
+        if alt_match:
+            description = re.sub(r"\s+", " ", alt_match.group(0)).strip()[:2000]
+
+    venue_name = "Sonesta Gwinnett Place Atlanta"
+    venue_address = "1775 Pleasant Hill Rd"
+    venue_city = "Duluth"
+    venue_state = "GA"
+    venue_postal_code = "30096"
+
+    try:
+        hotel_html = fetch_html("https://www.conjurationcon.com/hotel/", render_js=True)
+        hotel_text = BeautifulSoup(hotel_html, "lxml").get_text(" ", strip=True)
+        hotel_match = re.search(
+            r"Sonesta Gwinnett Place\s*1775 Pleasant Hill Rd\.?\s*Duluth,\s*GA\s*(30096)",
+            hotel_text,
+            re.IGNORECASE,
+        )
+        if hotel_match:
+            venue_postal_code = hotel_match.group(1)
+    except Exception as exc:
+        logger.debug("CONjuration hotel page fetch failed: %s", exc)
+
+    sessions = [
+        SessionData(
+            title="CONjuration 2026",
+            start_date=start_date,
+            description=description,
+            venue_name=venue_name,
+            venue_address=venue_address,
+            venue_city=venue_city,
+            venue_state=venue_state,
+            venue_postal_code=venue_postal_code,
+            source_url=normalized_url,
+        )
+    ]
+    logger.info("CONjuration homepage: extracted %s sessions", len(sessions))
+    return sessions
+
+
+def extract_sessions_toylanta_schedule(html: str, base_url: str) -> list[SessionData]:
+    """Extract public Toylanta floor hours and public after-hours swap from the schedule page."""
+    normalized_url = (base_url or "").rstrip("/")
+    if "toylanta.net/schedule" not in normalized_url:
+        return []
+
+    soup = BeautifulSoup(html, "lxml")
+    page_text = soup.get_text("\n", strip=True)
+    if "Gas South Convention Center" not in page_text or "2026" not in page_text:
+        return []
+
+    venue_name = "Gas South Convention Center"
+    venue_address = "6400 Sugarloaf Pkwy"
+    venue_city = "Duluth"
+    venue_state = "GA"
+    venue_postal_code = "30097"
+
+    schedules = [
+        (
+            "friday",
+            r"FRIDAY\s+27TH\s+MARCH\s+2026.*?6:00 PM\s*[–-]\s*8:00 PM:\s*SHOW FLOOR\(S\) OPEN FOR GENERAL ADMISSION",
+            "2026-03-27",
+            "18:00",
+            "20:00",
+            "Toylanta",
+        ),
+        (
+            "saturday",
+            r"SATURDAY\s+28TH\s+MARCH\s+2026.*?10:00 AM\s*[–-]\s*6:00 PM:\s*SHOW FLOOR\(S\) OPEN FOR GENERAL ADMISSION",
+            "2026-03-28",
+            "10:00",
+            "18:00",
+            "Toylanta",
+        ),
+        (
+            "sunday",
+            r"SUNDAY\s+29TH\s+MARCH\s+2026.*?10:30 AM\s*[–-]\s*4:30 PM:\s*SHOW FLOOR\(S\) OPEN FOR GENERAL ADMISSION",
+            "2026-03-29",
+            "10:30",
+            "16:30",
+            "Toylanta",
+        ),
+    ]
+
+    sessions: list[SessionData] = []
+    for _day_key, pattern, start_date, start_time, end_time, title in schedules:
+        if not re.search(pattern, page_text, re.IGNORECASE | re.DOTALL):
+            continue
+        sessions.append(
+            SessionData(
+                title=title,
+                start_date=start_date,
+                start_time=start_time,
+                end_time=end_time,
+                venue_name=venue_name,
+                venue_address=venue_address,
+                venue_city=venue_city,
+                venue_state=venue_state,
+                venue_postal_code=venue_postal_code,
+                source_url=normalized_url,
+                ticket_url="https://www.toylanta.net/tickets",
+            )
+        )
+
+    swap_match = re.search(
+        r"7:30 PM\s*[–-]\s*10:00 PM:\s*TOYLANTA Lobby Swap",
+        page_text,
+        re.IGNORECASE,
+    )
+    if swap_match:
+        sessions.append(
+            SessionData(
+                title="Toylanta Lobby Swap",
+                start_date="2026-03-28",
+                start_time="19:30",
+                end_time="22:00",
+                venue_name=venue_name,
+                venue_address=venue_address,
+                venue_city=venue_city,
+                venue_state=venue_state,
+                venue_postal_code=venue_postal_code,
+                source_url=normalized_url,
+                ticket_url="https://www.toylanta.net/tickets",
+            )
+        )
+
+    logger.info("Toylanta schedule: extracted %s sessions", len(sessions))
+    return sessions
+
+
+def extract_sessions_southeastern_stamp_expo_homepage(
+    html: str, base_url: str
+) -> list[SessionData]:
+    """Extract daily public hours from the current Southeastern Stamp Expo homepage."""
+    normalized_url = (base_url or "").rstrip("/")
+    if normalized_url not in {"http://www.sefsc.org", "http://sefsc.org"}:
+        return []
+
+    soup = BeautifulSoup(html, "lxml")
+    page_text = soup.get_text(" ", strip=True)
+    range_match = re.search(
+        r"January\s+(\d{1,2})\s*-\s*(\d{1,2}),\s*(\d{4})",
+        page_text,
+        re.IGNORECASE,
+    )
+    if not range_match:
+        return []
+
+    start_day = int(range_match.group(1))
+    end_day = int(range_match.group(2))
+    year = int(range_match.group(3))
+    if end_day < start_day:
+        return []
+
+    friday_hours = re.search(
+        r"10\s*am\s*-\s*5:30\s*pm\s*Friday\s*&\s*Saturday,\s*10\s*am\s*-\s*3\s*pm\s*Sunday",
+        page_text,
+        re.IGNORECASE,
+    )
+    if not friday_hours:
+        return []
+
+    venue_name = "Hilton Atlanta Northeast"
+    venue_address = "5993 Peachtree Industrial Boulevard"
+    venue_city = "Peachtree Corners"
+    venue_state = "GA"
+    venue_postal_code = "30092"
+
+    sessions = [
+        SessionData(
+            title="Southeastern Stamp Expo",
+            start_date=date(year, 1, start_day).isoformat(),
+            start_time="10:00",
+            end_time="17:30",
+            venue_name=venue_name,
+            venue_address=venue_address,
+            venue_city=venue_city,
+            venue_state=venue_state,
+            venue_postal_code=venue_postal_code,
+            source_url=normalized_url,
+        ),
+        SessionData(
+            title="Southeastern Stamp Expo",
+            start_date=date(year, 1, start_day + 1).isoformat(),
+            start_time="10:00",
+            end_time="17:30",
+            venue_name=venue_name,
+            venue_address=venue_address,
+            venue_city=venue_city,
+            venue_state=venue_state,
+            venue_postal_code=venue_postal_code,
+            source_url=normalized_url,
+        ),
+        SessionData(
+            title="Southeastern Stamp Expo",
+            start_date=date(year, 1, end_day).isoformat(),
+            start_time="10:00",
+            end_time="15:00",
+            venue_name=venue_name,
+            venue_address=venue_address,
+            venue_city=venue_city,
+            venue_state=venue_state,
+            venue_postal_code=venue_postal_code,
+            source_url=normalized_url,
+        ),
+    ]
+
+    logger.info(
+        "Southeastern Stamp Expo homepage: extracted %s sessions", len(sessions)
+    )
+    return sessions
+
+
+def extract_sessions_atlanta_pen_show_schedule(
+    html: str, base_url: str
+) -> list[SessionData]:
+    """Extract public schedule items from the Atlanta Pen Show page."""
+    normalized_url = (base_url or "").rstrip("/")
+    if "atlpenshow.com/pages/show-schedule" not in normalized_url:
+        return []
+
+    soup = BeautifulSoup(html, "lxml")
+    page_text = soup.get_text(" ", strip=True)
+    year_match = re.search(r"Atlanta Pen Show\s+(\d{4})", page_text, re.IGNORECASE)
+    range_match = re.search(
+        r"March\s+(\d{1,2})\s*[-–]\s*(\d{1,2})",
+        page_text,
+        re.IGNORECASE,
+    )
+    if not year_match or not range_match:
+        return []
+
+    year = int(year_match.group(1))
+    start_day = int(range_match.group(1))
+    end_day = int(range_match.group(2))
+    if end_day < start_day:
+        return []
+
+    day_dates = {
+        "friday": date(year, 3, start_day).isoformat(),
+        "saturday": date(year, 3, start_day + 1).isoformat(),
+        "sunday": date(year, 3, end_day).isoformat(),
+    }
+    venue_name = "Sonesta Atlanta Northwest Galleria"
+    sessions: list[SessionData] = []
+
+    hours_table = soup.select_one("table.hours-table")
+    if hours_table:
+        for row in hours_table.select("tbody tr"):
+            cells = row.find_all("td")
+            if len(cells) < 3:
+                continue
+            day_name = cells[0].get_text(" ", strip=True).lower()
+            start_date = day_dates.get(day_name)
+            if not start_date:
+                continue
+            start_time, end_time = _parse_time_range_text(
+                cells[2].get_text(" ", strip=True)
+            )
+            if not start_time:
+                continue
+            sessions.append(
+                SessionData(
+                    title="Atlanta Pen Show",
+                    start_date=start_date,
+                    start_time=start_time,
+                    end_time=end_time,
+                    venue_name=venue_name,
+                    source_url=normalized_url,
+                )
+            )
+
+    special_titles = {
+        "pen show after dark": "Pen Show After Dark",
+        "pen show door prize giveaway": "Pen Show Door Prize Giveaway",
+    }
+    for li in soup.select("div.schedule-day li"):
+        text = re.sub(r"\s+", " ", li.get_text(" ", strip=True))
+        lowered = text.lower()
+        matched = next((k for k in special_titles if k in lowered), None)
+        if not matched:
+            continue
+        day_key = "saturday" if "after dark" in matched else "sunday"
+        start_date = day_dates.get(day_key)
+        start_time, end_time = _parse_time_range_text(text)
+        if not start_date or not start_time:
+            continue
+        sessions.append(
+            SessionData(
+                title=special_titles[matched],
+                start_date=start_date,
+                start_time=start_time,
+                end_time=end_time,
+                venue_name=venue_name,
+                source_url=normalized_url,
+            )
+        )
+
+    logger.info("Atlanta Pen Show schedule: extracted %s sessions", len(sessions))
+    return sessions
+
+
+def extract_sessions_ipms_event_page(html: str, base_url: str) -> list[SessionData]:
+    """Extract a single event from an IPMS event detail page."""
+    normalized_url = (base_url or "").rstrip("/")
+    if "ipmsusa.org/event/" not in normalized_url:
+        return []
+
+    soup = BeautifulSoup(html, "lxml")
+    title_el = soup.select_one("h2.page-header")
+    date_block = soup.select_one(".field-name-field-event-date")
+    venue_name_el = soup.select_one(".field-name-field-event-location-name .field-item")
+    address_block = soup.select_one(".field-name-field-event-location .field-item")
+
+    title = title_el.get_text(" ", strip=True) if title_el else None
+    if not title or not date_block:
+        return []
+
+    start_span = date_block.select_one(".date-display-start")
+    end_span = date_block.select_one(".date-display-end")
+    start_date = start_time = end_time = None
+    if start_span:
+        start_date, start_time = _parse_iso_datetime(
+            start_span.get("content") or start_span.get_text(" ", strip=True)
+        )
+    if end_span:
+        _, end_time = _parse_iso_datetime(
+            end_span.get("content") or end_span.get_text(" ", strip=True)
+        )
+    if not start_date:
+        return []
+
+    venue_name = (
+        venue_name_el.get_text(" ", strip=True) if venue_name_el else None
+    )
+    venue_address = None
+    venue_city = None
+    venue_state = None
+    venue_postal_code = None
+    if address_block:
+        street = address_block.select_one(".thoroughfare")
+        locality = address_block.select_one(".locality")
+        state = address_block.select_one(".state")
+        postal = address_block.select_one(".postal-code")
+        venue_address = street.get_text(" ", strip=True) if street else None
+        venue_city = locality.get_text(" ", strip=True) if locality else None
+        venue_state = state.get_text(" ", strip=True) if state else None
+        venue_postal_code = postal.get_text(" ", strip=True) if postal else None
+
+    website_link = soup.select_one(".field-name-field-event-website a")
+    venue_website = website_link.get("href") if website_link else None
+
+    sessions = [
+        SessionData(
+            title=title,
+            start_date=start_date,
+            start_time=start_time,
+            end_time=end_time,
+            venue_name=venue_name,
+            venue_address=venue_address,
+            venue_city=venue_city,
+            venue_state=venue_state,
+            venue_postal_code=venue_postal_code,
+            venue_website=venue_website,
+            source_url=normalized_url,
+        )
+    ]
+    logger.info("IPMS event page: extracted %s sessions", len(sessions))
+    return sessions
+
+
 def extract_sessions_llm(html: str, url: str, festival_name: str) -> list[SessionData]:
     """Fall back to LLM extraction for unstructured schedule pages."""
     from extract import extract_events
@@ -918,7 +1652,10 @@ def _is_unknown_venue(venue_name: Optional[str]) -> bool:
     if not venue_name:
         return True
     normalized = venue_name.strip().lower()
-    return normalized in _UNKNOWN_VENUE_MARKERS
+    if normalized in _UNKNOWN_VENUE_MARKERS:
+        return True
+    # Treat bare city/state strings as too weak to create a venue record.
+    return bool(re.fullmatch(r"[a-z .'-]+,\s*[a-z]{2}", normalized))
 
 
 def _is_generic_title(title: str, festival_name: str) -> bool:
@@ -944,10 +1681,43 @@ def _parse_session_date(value: Optional[str]) -> Optional[date]:
         return None
 
 
+def _normalize_page_text(page_text: Optional[str]) -> str:
+    if not page_text:
+        return ""
+    return re.sub(r"\s+", " ", page_text).strip().lower()
+
+
+def _page_has_placeholder_language(page_text: Optional[str]) -> bool:
+    normalized = _normalize_page_text(page_text)
+    return any(marker in normalized for marker in _PLACEHOLDER_PAGE_MARKERS)
+
+
+def _page_mentions_specific_date(page_text: Optional[str], session_date: Optional[date]) -> bool:
+    if session_date is None:
+        return False
+
+    normalized = _normalize_page_text(page_text)
+    if not normalized:
+        return False
+
+    month_full = session_date.strftime("%B").lower()
+    month_short = session_date.strftime("%b").lower()
+    year = str(session_date.year)
+    day = str(session_date.day)
+    ordinal_day_patterns = [
+        rf"\b{month_full}\s+{day}(?:st|nd|rd|th)?\b",
+        rf"\b{month_short}\.?\s+{day}(?:st|nd|rd|th)?\b",
+        rf"\b{day}(?:st|nd|rd|th)?\s+of\s+{month_full}\b",
+    ]
+    has_month_day = any(re.search(pattern, normalized) for pattern in ordinal_day_patterns)
+    return has_month_day and year in normalized
+
+
 def _apply_llm_quality_gate(
     sessions: list[SessionData],
     festival_name: str,
     today: Optional[date] = None,
+    page_text: Optional[str] = None,
 ) -> tuple[list[SessionData], list[str]]:
     """Drop low-signal LLM sessions that are likely hallucinated placeholders."""
     if not sessions:
@@ -978,12 +1748,20 @@ def _apply_llm_quality_gate(
         only = kept[0]
         only_date = _parse_session_date(only.start_date)
         jan_first = bool(only_date and only_date.month == 1 and only_date.day == 1)
+        has_specific_date_evidence = _page_mentions_specific_date(page_text, only_date)
+        has_placeholder_language = _page_has_placeholder_language(page_text)
         low_signal_singleton = (
             not only.start_time
             and (
-                _is_unknown_venue(only.venue_name)
-                or _is_generic_title(only.title, festival_name)
+                has_placeholder_language
                 or jan_first
+                or (
+                    not has_specific_date_evidence
+                    and (
+                        _is_unknown_venue(only.venue_name)
+                        or _is_generic_title(only.title, festival_name)
+                    )
+                )
             )
         )
         if low_signal_singleton:
@@ -992,10 +1770,15 @@ def _apply_llm_quality_gate(
 
     unknown_venue_count = sum(1 for session in kept if _is_unknown_venue(session.venue_name))
     missing_time_count = sum(1 for session in kept if not session.start_time)
+    has_any_specific_date_evidence = any(
+        _page_mentions_specific_date(page_text, _parse_session_date(session.start_date))
+        for session in kept
+    )
     if (
         len(kept) <= 2
         and missing_time_count == len(kept)
         and unknown_venue_count == len(kept)
+        and not has_any_specific_date_evidence
     ):
         reasons.append("batch_reject:tiny_batch_all_tba_unknown_venue")
         return [], reasons
@@ -1136,9 +1919,9 @@ def resolve_session_venue(
     festival_slug: str,
     festival_name: Optional[str] = None,
     default_venue_id: Optional[int] = None,
-) -> int:
+) -> Optional[int]:
     """Map a session's venue name to an existing venue ID, or use the festival's default."""
-    if session.venue_name:
+    if session.venue_name and not _is_unknown_venue(session.venue_name):
         venue_slug = slugify(session.venue_name)
         existing = get_venue_by_slug(venue_slug)
         if existing:
@@ -1147,27 +1930,22 @@ def resolve_session_venue(
     if default_venue_id:
         return default_venue_id
 
-    # Last resort: create a minimal placeholder venue.
-    if session.venue_name:
+    if session.venue_name and not _is_unknown_venue(session.venue_name):
         venue_data = {
             "name": session.venue_name,
             "slug": slugify(session.venue_name),
-            "city": "Atlanta",
-            "state": "GA",
+            "address": session.venue_address,
+            "city": session.venue_city or "Atlanta",
+            "state": session.venue_state or "GA",
+            "zip": session.venue_postal_code,
+            "website": session.venue_website,
         }
-        return get_or_create_venue(venue_data)
+        venue_id = get_or_create_venue(venue_data)
+        if isinstance(venue_id, int) and venue_id > 0:
+            return venue_id
+        return None
 
-    fallback_name = (festival_name or festival_slug.replace("-", " ").title()).strip()
-    if not fallback_name:
-        fallback_name = "Festival Program Venue"
-
-    fallback_venue = {
-        "name": fallback_name,
-        "slug": slugify(fallback_name),
-        "city": "Atlanta",
-        "state": "GA",
-    }
-    return get_or_create_venue(fallback_venue)
+    return None
 
 
 def _find_existing_festival_session(
@@ -1192,10 +1970,11 @@ def _find_existing_festival_session(
     else:
         query = query.is_("start_time", "null")
 
-    if source_url:
-        query = query.eq("source_url", source_url)
-
     rows = query.execute().data or []
+    if source_url:
+        exact_source_rows = [row for row in rows if row.get("source_url") == source_url]
+        if exact_source_rows:
+            rows = exact_source_rows
     if not rows:
         return None
 
@@ -1399,7 +2178,10 @@ def crawl_festival_schedule(
         )
     else:
         # Try strategies in order of quality
-        sessions = extract_sessions_jsonld(html, url)
+        sessions = extract_sessions_conjuration_homepage(html, url)
+
+        if not sessions:
+            sessions = extract_sessions_jsonld(html, url)
 
         if not sessions:
             sessions = extract_sessions_wp_events_calendar(html, url)
@@ -1409,6 +2191,24 @@ def crawl_festival_schedule(
 
         if not sessions:
             sessions = extract_sessions_html_table(html, url)
+
+        if not sessions:
+            sessions = extract_sessions_collect_a_con_page(html, url)
+
+        if not sessions:
+            sessions = extract_sessions_blade_show_schedule(html, url)
+
+        if not sessions:
+            sessions = extract_sessions_toylanta_schedule(html, url)
+
+        if not sessions:
+            sessions = extract_sessions_southeastern_stamp_expo_homepage(html, url)
+
+        if not sessions:
+            sessions = extract_sessions_atlanta_pen_show_schedule(html, url)
+
+        if not sessions:
+            sessions = extract_sessions_ipms_event_page(html, url)
 
         if not sessions:
             logger.info("No structured data found, falling back to LLM extraction")
@@ -1423,7 +2223,12 @@ def crawl_festival_schedule(
             )
 
     if used_llm and sessions:
-        sessions, gate_reasons = _apply_llm_quality_gate(sessions, festival_name)
+        page_text = BeautifulSoup(html, "html.parser").get_text(" ", strip=True)
+        sessions, gate_reasons = _apply_llm_quality_gate(
+            sessions,
+            festival_name,
+            page_text=page_text,
+        )
         if gate_reasons:
             logger.info("LLM quality gate (%s): %s", slug, "; ".join(gate_reasons))
 

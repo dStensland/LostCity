@@ -30,6 +30,7 @@ import re
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
+import fnmatch
 
 from playwright.sync_api import sync_playwright, Page
 
@@ -150,6 +151,34 @@ def find_image_for_movie(title: str, image_map: dict[str, str]) -> Optional[str]
     return None
 
 
+def resolve_showtime_ticket_url(
+    page: Page,
+    button_locator,
+    *,
+    expected_pattern: str = "**/checkout/showing/**",
+) -> Optional[str]:
+    """Click a showtime button and capture the checkout URL, then return to listings."""
+    original_url = page.url
+    checkout_url = None
+
+    try:
+        button_locator.click(timeout=5000)
+        page.wait_for_url(expected_pattern, timeout=10000)
+        if fnmatch.fnmatch(page.url, expected_pattern.replace("**", "*")):
+            checkout_url = page.url
+    except Exception:
+        checkout_url = None
+    finally:
+        if page.url != original_url:
+            try:
+                page.go_back(wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_timeout(1500)
+            except Exception:
+                pass
+
+    return checkout_url
+
+
 def extract_movies_for_date(
     page: Page,
     target_date: datetime,
@@ -174,19 +203,20 @@ def extract_movies_for_date(
     date_str = target_date.strftime("%Y-%m-%d")
 
     # Try DOM-based extraction first using .movie-container elements
-    containers = page.query_selector_all(".movie-container")
-    logger.debug(f"Found {len(containers)} .movie-container elements for {date_str}")
+    container_count = page.locator(".movie-container").count()
+    logger.debug(f"Found {container_count} .movie-container elements for {date_str}")
 
     # Log a warning if no containers found (might indicate site change)
-    if len(containers) == 0:
+    if container_count == 0:
         logger.warning(f"No .movie-container elements found for {date_str} - site structure may have changed, falling back to text extraction")
 
-    if containers:
-        for container in containers:
+    if container_count:
+        for container_idx in range(container_count):
             try:
+                container = page.locator(".movie-container").nth(container_idx)
                 # Extract title
-                title_el = container.query_selector(".text-h5")
-                if not title_el:
+                title_el = container.locator(".text-h5").first
+                if title_el.count() == 0:
                     continue
                 movie_title = title_el.inner_text().strip()
                 if not movie_title or len(movie_title) < 2:
@@ -202,29 +232,38 @@ def extract_movies_for_date(
                     continue
 
                 # Extract showtimes from buttons within this container
-                buttons = container.query_selector_all("button")
-                showtimes = []
-                for btn in buttons:
+                buttons = container.locator("button")
+                showtime_rows = []
+                for button_idx in range(buttons.count()):
                     try:
+                        btn = container.locator("button").nth(button_idx)
                         btn_text = btn.inner_text().strip()
                         # Button text is like "6:30 PM\nENDS AT 8:13 PM" or just "6:30 PM"
                         first_line = btn_text.split("\n")[0].strip()
                         parsed_time = parse_time(first_line)
-                        if parsed_time and parsed_time not in showtimes:
-                            showtimes.append(parsed_time)
+                        if parsed_time and parsed_time not in [row["start_time"] for row in showtime_rows]:
+                            showtime_rows.append(
+                                {
+                                    "start_time": parsed_time,
+                                    "ticket_url": resolve_showtime_ticket_url(page, btn),
+                                }
+                            )
                     except Exception:
                         continue
 
-                if not showtimes:
+                if not showtime_rows:
                     logger.warning(f"  Movie '{movie_title}' found but has no showtimes on {date_str} - skipping")
                     continue
 
-                logger.debug(f"  Processing '{movie_title}' with {len(showtimes)} showtime(s): {', '.join(showtimes)}")
+                logger.debug(
+                    f"  Processing '{movie_title}' with {len(showtime_rows)} showtime(s): "
+                    f"{', '.join(row['start_time'] for row in showtime_rows)}"
+                )
 
                 # Extract image from this container
-                img_el = container.query_selector("img.q-img__image")
+                img_el = container.locator("img.q-img__image").first
                 container_image = None
-                if img_el:
+                if img_el.count() > 0:
                     container_image = img_el.get_attribute("src")
 
                 # Get Letterboxd enrichment
@@ -243,7 +282,8 @@ def extract_movies_for_date(
                 )
 
                 # Create event for each showtime
-                for start_time in showtimes:
+                for showtime_row in showtime_rows:
+                    start_time = showtime_row["start_time"]
                     events_found += 1
                     content_hash = generate_content_hash(
                         movie_title, "Plaza Theatre", f"{date_str}|{start_time}"
@@ -268,7 +308,7 @@ def extract_movies_for_date(
                         "price_note": None,
                         "is_free": False,
                         "source_url": f"{BASE_URL}/now-showing",
-                        "ticket_url": enrichment.get("ticket_url"),
+                        "ticket_url": showtime_row.get("ticket_url") or enrichment.get("ticket_url"),
                         "image_url": image_url,
                         "raw_text": None,
                         "extraction_confidence": 0.90,

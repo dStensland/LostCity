@@ -32,10 +32,72 @@ VENUE_DATA = {
     "zip": "30307",
     "lat": 33.7651,
     "lng": -84.3492,
-    "venue_type": "retail",
+    "venue_type": "record_store",
     "spot_type": "retail",
     "website": BASE_URL,
+    "description": (
+        "Criminal Records is Little Five Points' iconic independent record store, "
+        "hosting in-store performances, album signings, and community events. "
+        "A cornerstone of Atlanta's independent music scene since 1991."
+    ),
+    "hours": {
+        "monday": {"open": "11:00", "close": "20:00"},
+        "tuesday": {"open": "11:00", "close": "20:00"},
+        "wednesday": {"open": "11:00", "close": "20:00"},
+        "thursday": {"open": "11:00", "close": "20:00"},
+        "friday": {"open": "11:00", "close": "20:00"},
+        "saturday": {"open": "11:00", "close": "20:00"},
+        "sunday": {"open": "12:00", "close": "18:00"},
+    },
+    "vibes": ["record-store", "indie", "instore", "l5p", "community", "music", "vinyl"],
 }
+
+
+def determine_event_type(title: str) -> tuple[str, str]:
+    """Infer category and subcategory from event title."""
+    t = title.lower()
+    if any(w in t for w in ["signing", "book signing", "record signing", "autograph"]):
+        return "community", "signing"
+    if any(w in t for w in ["in-store", "instore", "in store", "performance", "live", "acoustic"]):
+        return "music", "live"
+    if any(w in t for w in ["release", "album release", "record release", "listening party"]):
+        return "music", "live"
+    if any(w in t for w in ["comedy", "stand-up", "standup"]):
+        return "comedy", None
+    if any(w in t for w in ["art", "gallery", "opening", "exhibit"]):
+        return "art", "gallery"
+    if any(w in t for w in ["trivia", "quiz"]):
+        return "community", "trivia"
+    return "music", "live"
+
+
+def extract_description_from_context(lines: list[str], title_idx: int, title: str) -> str:
+    """Try to pull a meaningful description from surrounding lines near the title."""
+    candidates = []
+    for offset in range(1, 6):
+        idx = title_idx + offset
+        if idx >= len(lines):
+            break
+        line = lines[idx]
+        # Stop at the next date line or navigation noise
+        if re.match(
+            r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|January|February|March|April|May|June|July|August|September|October|November|December)",
+            line,
+            re.IGNORECASE,
+        ):
+            break
+        if re.match(r"(tickets?|register|buy|more info|\$\d)", line, re.IGNORECASE):
+            break
+        if len(line) > 20 and line != title:
+            candidates.append(line)
+        if len(candidates) >= 2:
+            break
+    if candidates:
+        desc = " ".join(candidates)
+        if len(desc) > 400:
+            desc = desc[:397] + "..."
+        return desc
+    return ""
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -151,38 +213,44 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     content_hash = generate_content_hash(title, "Criminal Records", start_date)
 
-
-                    # Get specific event URL
-
-
                     event_url = find_event_url(title, event_links, EVENTS_URL)
 
+                    # Extract real description from surrounding lines
+                    description = extract_description_from_context(lines, i, title)
 
+                    # Detect free events from surrounding text
+                    context_text = " ".join(lines[max(0, i - 3):min(len(lines), i + 6)]).lower()
+                    is_free = any(
+                        w in context_text
+                        for w in ["free", "no cover", "no charge", "free admission", "free event"]
+                    )
+
+                    # Infer category from title
+                    category, subcategory = determine_event_type(title)
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Criminal Records",
+                        "description": description or None,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
                         "end_time": None,
                         "is_all_day": False,
-                        "category": "music",
-                        "subcategory": "concert",
+                        "category": category,
+                        "subcategory": subcategory,
                         "tags": [
-                        "criminal-records",
-                        "vinyl",
-                        "record-store",
-                        "l5p",
-                        "instore",
-                        "signing",
-                    ],
+                            "criminal-records",
+                            "vinyl",
+                            "record-store",
+                            "l5p",
+                            "instore",
+                        ],
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
-                        "is_free": False,
+                        "is_free": is_free,
                         "source_url": event_url,
                         "ticket_url": event_url,
                         "image_url": image_map.get(title),

@@ -1,0 +1,23 @@
+version: 1
+slug: 404-weekend
+name: 404 Day Weekend
+integration_method: html_jsonld
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://404weekend.com/
+  - https://404weekend.com/events/
+  - https://404weekend.com/parade/
+  fetch:
+    render_js: false
+detail:
+  enabled: true
+  use_jsonld: true
+  fetch:
+    render_js: false
+data_goals:
+- events
+- images
+- tickets

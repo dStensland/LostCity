@@ -1,26 +1,43 @@
 """
 Crawler for Georgia International Convention Center (gicc.com).
 
-Site uses JavaScript rendering - must use Playwright.
+Official source:
+- The events archive exposes paginated Event JSON-LD with clean date ranges,
+  titles, descriptions, and detail URLs.
+
+This is intentionally deterministic because the previous body-text scraper
+captured archive chrome like "This Month" instead of real events.
 """
 
 from __future__ import annotations
 
-import re
+import html
+import json
 import logging
-from datetime import datetime
+import re
+from datetime import date, datetime, time
 from typing import Optional
+from urllib.parse import urljoin
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_existing_event_for_insert,
+    get_or_create_venue,
+    insert_event,
+    remove_stale_source_events,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.gicc.com"
-EVENTS_URL = f"{BASE_URL}/events"
+EVENTS_URL = f"{BASE_URL}/events/list/"
+USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
+MAX_PAGES = 10
+MAX_EVENT_LEAD_DAYS = 270
 
 VENUE_DATA = {
     "name": "Georgia International Convention Center",
@@ -37,179 +54,246 @@ VENUE_DATA = {
     "website": BASE_URL,
 }
 
+TAG_KEYWORDS = {
+    "conference": "conference",
+    "conferences": "conference",
+    "expo": "expo",
+    "show": "show",
+    "shows": "show",
+    "market": "market",
+    "markets": "market",
+    "summit": "summit",
+    "championship": "sports",
+    "championships": "sports",
+    "tournament": "sports",
+    "tournaments": "sports",
+    "nationals": "sports",
+    "cheer": "cheerleading",
+    "dance": "dance",
+    "gymnast": "gymnastics",
+    "volleyball": "volleyball",
+    "jiu-jitsu": "martial-arts",
+    "tcg": "gaming",
+    "technology": "technology",
+    "pet": "pets",
+    "groom": "grooming",
+    "rv": "rv",
+    "commencement": "graduation",
+}
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
+DEDICATED_SOURCE_TITLES = {
+    "groom’d",
+    "groom'd",
+    "okecon tcg",
+    "smu steel summit",
+    "the georgia educational technology conference",
+    "georgia educational technology conference",
+}
+
+
+def _clean_text(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    text = BeautifulSoup(html.unescape(value), "html.parser").get_text(" ", strip=True)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _parse_event_datetime(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    normalized = value.strip().replace("Z", "+00:00")
+    return datetime.fromisoformat(normalized)
+
+
+def _is_all_day_event(start_dt: datetime, end_dt: datetime) -> bool:
+    end_time = end_dt.timetz().replace(tzinfo=None)
+    return start_dt.timetz().replace(tzinfo=None) == time(0, 0) and end_time in {
+        time(23, 59),
+        time(23, 59, 59),
+        time(0, 0),
+    }
+
+
+def _contains_keyword(text: str, keyword: str) -> bool:
+    pattern = rf"(?<![a-z0-9]){re.escape(keyword)}(?![a-z0-9])"
+    return re.search(pattern, text) is not None
+
+
+def infer_subcategory(title: str, description: str) -> Optional[str]:
+    text = f"{title} {description}".lower()
+    if any(_contains_keyword(text, keyword) for keyword in ("conference", "summit", "forum")):
+        return "conference"
+    if any(_contains_keyword(text, keyword) for keyword in ("expo", "show", "market", "convention")):
+        return "expo"
     return None
 
 
+def infer_tags(title: str, description: str) -> list[str]:
+    text = f"{title} {description}".lower()
+    tags = ["convention-center"]
+    for keyword, tag in TAG_KEYWORDS.items():
+        if _contains_keyword(text, keyword) and tag not in tags:
+            tags.append(tag)
+    return tags
+
+
+def parse_event_feed_page(html_text: str, today: date | None = None) -> tuple[list[dict], Optional[str]]:
+    """Parse one official GICC event archive page and its next-page link."""
+    today = today or datetime.now().date()
+    soup = BeautifulSoup(html_text, "html.parser")
+
+    next_url = None
+    for anchor in soup.find_all("a", href=True):
+        if anchor.get_text(" ", strip=True) == "Next Events":
+            next_url = urljoin(BASE_URL, anchor["href"])
+            break
+
+    events: list[dict] = []
+
+    for script in soup.select('script[type="application/ld+json"]'):
+        raw = script.string or script.get_text()
+        if not raw.strip():
+            continue
+
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+
+        if not isinstance(payload, list):
+            continue
+
+        for item in payload:
+            if not isinstance(item, dict) or item.get("@type") != "Event":
+                continue
+
+            title = _clean_text(item.get("name"))
+            description = _clean_text(item.get("description"))
+            if not title or title.lower() == "this month":
+                continue
+            if title.lower() in DEDICATED_SOURCE_TITLES:
+                continue
+
+            start_dt = _parse_event_datetime(item.get("startDate"))
+            end_dt = _parse_event_datetime(item.get("endDate")) or start_dt
+            if not start_dt or not end_dt:
+                continue
+            if end_dt.date() < today:
+                continue
+            if (start_dt.date() - today).days > MAX_EVENT_LEAD_DAYS:
+                continue
+
+            is_all_day = _is_all_day_event(start_dt, end_dt)
+            same_day = start_dt.date() == end_dt.date()
+
+            events.append(
+                {
+                    "title": title,
+                    "description": description or "Event at Georgia International Convention Center",
+                    "start_date": start_dt.date().isoformat(),
+                    "start_time": None if is_all_day else start_dt.strftime("%H:%M"),
+                    "end_date": None if same_day else end_dt.date().isoformat(),
+                    "end_time": None if is_all_day else end_dt.strftime("%H:%M"),
+                    "is_all_day": is_all_day,
+                    "source_url": item.get("url"),
+                    "ticket_url": item.get("url"),
+                    "subcategory": infer_subcategory(title, description),
+                    "tags": infer_tags(title, description),
+                    "raw_text": (
+                        f"{title} | {start_dt.isoformat()} | {end_dt.isoformat()} | "
+                        f"{description or 'GICC archive event'}"
+                    ),
+                }
+            )
+
+    return events, next_url
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Georgia International Convention Center events using Playwright."""
+    """Crawl Georgia International Convention Center events from the official archive."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
+    current_hashes: set[str] = set()
 
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+    venue_id = get_or_create_venue(VENUE_DATA)
+    page_url = EVENTS_URL
+    seen_pages: set[str] = set()
+    seen_event_keys: set[tuple[str, str]] = set()
+    parsed_events: list[dict] = []
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+    while page_url and page_url not in seen_pages and len(seen_pages) < MAX_PAGES:
+        seen_pages.add(page_url)
+        logger.info("Fetching GICC events page: %s", page_url)
 
-            logger.info(f"Fetching Georgia International Convention Center: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
-
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
-
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
-                        continue
-
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
-
-                    events_found += 1
-
-                    content_hash = generate_content_hash(title, "Georgia International Convention Center", start_date)
-
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Event at Georgia International Convention Center",
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "community",
-                        "subcategory": None,
-                        "tags": ["event"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            browser.close()
-
-        logger.info(
-            f"Georgia International Convention Center crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+        response = requests.get(
+            page_url,
+            headers={"User-Agent": USER_AGENT},
+            timeout=30,
         )
+        response.raise_for_status()
 
-    except Exception as e:
-        logger.error(f"Failed to crawl Georgia International Convention Center: {e}")
-        raise
+        page_events, next_url = parse_event_feed_page(response.text)
+        for event in page_events:
+            event_key = (event["title"], event["start_date"])
+            if event_key in seen_event_keys:
+                continue
+            seen_event_keys.add(event_key)
+            parsed_events.append(event)
 
+        page_url = next_url
+
+    if not parsed_events:
+        raise ValueError("GICC official event archive did not yield any future events")
+
+    for event in parsed_events:
+        title = event["title"]
+        content_hash = generate_content_hash(title, VENUE_DATA["name"], event["start_date"])
+        current_hashes.add(content_hash)
+        events_found += 1
+
+        event_record = {
+            "source_id": source_id,
+            "venue_id": venue_id,
+            "title": title,
+            "description": event["description"],
+            "start_date": event["start_date"],
+            "start_time": event["start_time"],
+            "end_date": event["end_date"],
+            "end_time": event["end_time"],
+            "is_all_day": event["is_all_day"],
+            "category": "community",
+            "subcategory": event["subcategory"],
+            "tags": event["tags"],
+            "price_min": None,
+            "price_max": None,
+            "price_note": None,
+            "is_free": False,
+            "source_url": event["source_url"],
+            "ticket_url": event["ticket_url"],
+            "image_url": None,
+            "raw_text": event["raw_text"],
+            "extraction_confidence": 0.93,
+            "content_hash": content_hash,
+        }
+
+        existing = find_existing_event_for_insert(event_record)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+        else:
+            insert_event(event_record)
+            events_new += 1
+
+    stale_removed = remove_stale_source_events(source_id, current_hashes)
+    if stale_removed:
+        logger.info("Removed %s stale GICC events after refresh", stale_removed)
+
+    logger.info(
+        "GICC crawl complete: %s found, %s new, %s updated",
+        events_found,
+        events_new,
+        events_updated,
+    )
     return events_found, events_new, events_updated

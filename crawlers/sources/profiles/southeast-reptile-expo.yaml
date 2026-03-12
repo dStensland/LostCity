@@ -1,0 +1,16 @@
+version: 1
+slug: southeast-reptile-expo
+name: Southeast Reptile Expo
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.southeastreptileexpo.com
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets

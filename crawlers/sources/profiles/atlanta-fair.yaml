@@ -1,0 +1,20 @@
+version: 1
+slug: atlanta-fair
+name: Atlanta Fair
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://atlantafair.net/
+  - https://atlantafair.net/hours
+  - https://atlantafair.net/prices
+  fetch:
+    render_js: false
+detail:
+  enabled: false
+data_goals:
+- events
+- images
+- prices

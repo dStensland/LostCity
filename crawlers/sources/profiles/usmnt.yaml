@@ -1,0 +1,15 @@
+version: 1
+slug: usmnt
+name: USMNT
+integration_method: python
+defaults: {}
+discovery:
+  enabled: false
+  type: html
+  urls:
+    - https://www.ussoccer.com/schedule-tickets/usmnt
+detail:
+  enabled: false
+data_goals:
+  - events
+  - tickets

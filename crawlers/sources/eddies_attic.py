@@ -24,6 +24,12 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://eddiesattic.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
+SOLD_OUT_TITLE_PATTERNS = [
+    re.compile(r"\s*\(\s*sold\s*out\s*\)\s*$", re.IGNORECASE),
+    re.compile(r"\s*\[\s*sold\s*out\s*\]\s*$", re.IGNORECASE),
+    re.compile(r"\s*[-:|]\s*sold\s*out\s*$", re.IGNORECASE),
+]
+
 VENUE_DATA = {
     "name": "Eddie's Attic",
     "slug": "eddies-attic",
@@ -35,6 +41,17 @@ VENUE_DATA = {
     "venue_type": "music_venue",
     "website": BASE_URL,
 }
+
+
+def clean_event_title(title: str) -> str:
+    """Normalize display-status suffixes that should not create new events."""
+    cleaned = (title or "").strip()
+    if not cleaned:
+        return ""
+    for pattern in SOLD_OUT_TITLE_PATTERNS:
+        cleaned = pattern.sub("", cleaned).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned
 
 
 def parse_date_text(date_text: str) -> Optional[str]:
@@ -238,6 +255,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         else:
                             title = title_elem.inner_text().strip()
 
+                        title = clean_event_title(title)
                         if not title or len(title) < 3:
                             continue
 

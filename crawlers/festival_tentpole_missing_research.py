@@ -110,7 +110,7 @@ CANDIDATES: tuple[Candidate, ...] = (
         target_model="tentpole_event",
         aliases=("404 day",),
         source="https://discoveratlanta.com/stories/things-to-do/ultimate-guide-to-spring-in-atlanta/",
-        source_slug_hints=("404-found-atl",),
+        source_slug_hints=("404-weekend",),
     ),
     Candidate(
         name="Atlanta Film Festival",

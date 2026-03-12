@@ -42,6 +42,9 @@ jobs:
       - name: Verify skeleton contract
         run: npm run test:skeletons
 
+      - name: Verify DB type contracts
+        run: npm run test:db-types
+
       - name: Typecheck
         run: npx tsc --noEmit
 

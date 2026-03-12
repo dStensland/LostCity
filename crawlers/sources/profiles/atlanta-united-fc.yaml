@@ -1,0 +1,15 @@
+version: 1
+slug: atlanta-united-fc
+name: Atlanta United FC
+integration_method: python
+defaults: {}
+discovery:
+  enabled: false
+  type: api
+  urls:
+    - https://www.atlutd.com/schedule
+detail:
+  enabled: false
+data_goals:
+  - events
+  - tickets

@@ -19,7 +19,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_client, get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record, parse_date_range
 
@@ -41,6 +41,24 @@ VENUE_DATA = {
     "venue_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
+    # Admission: ~$45 adult, ~$38 child (ages 3-12), free under 3
+    # Hours verified 2026-03-11 against georgiaaquarium.org (typical; vary by season)
+    "hours": {
+        "sunday": "10:00-21:00",
+        "monday": "10:00-21:00",
+        "tuesday": "10:00-21:00",
+        "wednesday": "10:00-21:00",
+        "thursday": "10:00-21:00",
+        "friday": "10:00-21:00",
+        "saturday": "10:00-21:00",
+    },
+    "vibes": [
+        "family-friendly",
+        "tourist-attraction",
+        "interactive",
+        "educational",
+        "downtown",
+    ],
 }
 
 # Month name to number mapping
@@ -174,6 +192,32 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(VENUE_DATA)
+
+            # Enrich venue with og:image and og:description from homepage on first pass
+            try:
+                page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_timeout(2000)
+                og_image = page.evaluate(
+                    "() => { const m = document.querySelector('meta[property=\"og:image\"]'); "
+                    "return m ? m.getAttribute('content') : null; }"
+                )
+                og_desc = page.evaluate(
+                    "() => { const m = document.querySelector('meta[property=\"og:description\"]') "
+                    "|| document.querySelector('meta[name=\"description\"]'); "
+                    "return m ? m.getAttribute('content') : null; }"
+                )
+                venue_update: dict = {}
+                if og_image:
+                    venue_update["image_url"] = og_image
+                if og_desc:
+                    venue_update["description"] = og_desc[:500]
+                if venue_update:
+                    get_client().table("venues").update(venue_update).eq(
+                        "id", venue_id
+                    ).execute()
+                    logger.info("Georgia Aquarium: enriched venue from homepage og: metadata")
+            except Exception as enrich_exc:
+                logger.warning("Georgia Aquarium: homepage enrichment failed: %s", enrich_exc)
 
             logger.info(f"Fetching Georgia Aquarium: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

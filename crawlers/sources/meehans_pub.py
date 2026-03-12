@@ -8,6 +8,7 @@ import logging
 from bs4 import BeautifulSoup
 import requests
 
+from sources._sports_bar_common import detect_sports_watch_party
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
@@ -93,12 +94,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     elif any(w in title_lower for w in ["live music", "band", "acoustic"]):
                         category, subcategory = "music", "live_music"
                         tags = ["music", "live-music", "irish", "downtown"]
-                    elif any(w in title_lower for w in ["watch party", "game", "football", "soccer"]):
-                        category, subcategory = "sports", "watch_party"
-                        tags = ["sports", "watch-party", "downtown"]
                     else:
-                        category, subcategory = "nightlife", "bar_event"
-                        tags = ["nightlife", "irish-pub", "downtown"]
+                        watch_party = detect_sports_watch_party(
+                            title,
+                            event_data.get("description", ""),
+                            extra_tags=["downtown"],
+                        )
+                        if watch_party:
+                            category, subcategory, tags = watch_party
+                        else:
+                            category, subcategory = "nightlife", "bar_event"
+                            tags = ["nightlife", "irish-pub", "downtown"]
 
                     event_record = {
                         "source_id": source_id,

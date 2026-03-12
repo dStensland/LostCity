@@ -53,6 +53,22 @@ CATEGORY_MAP = {
 }
 
 
+def goto_with_retry(page: Page, url: str, *, attempts: int = 3, timeout_ms: int = 45000) -> None:
+    """Navigate with retry/backoff for transient renderer/network failures."""
+    last_exc: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
+            return
+        except Exception as exc:  # noqa: BLE001 - crawler retry guard
+            last_exc = exc
+            if attempt >= attempts:
+                raise
+            page.wait_for_timeout(1500 * attempt)
+    if last_exc:
+        raise last_exc
+
+
 def parse_date(date_text: str) -> Optional[str]:
     """Parse date from various formats."""
     # Match patterns like "Monday, February 16, 2026"
@@ -349,14 +365,14 @@ def crawl_category(page: Page, category: str, source_id: int, portal_id: str) ->
                 logger.error(f"Failed to insert: {title}: {e}")
 
         # Go back to main page for next category
-        page.goto(CLASSES_URL, wait_until="domcontentloaded", timeout=30000)
+        goto_with_retry(page, CLASSES_URL, attempts=3, timeout_ms=45000)
         page.wait_for_timeout(1000)
 
     except Exception as e:
         logger.error(f"Error crawling category {category}: {e}")
         # Try to recover by going back to main page
         try:
-            page.goto(CLASSES_URL, wait_until="domcontentloaded", timeout=30000)
+            goto_with_retry(page, CLASSES_URL, attempts=3, timeout_ms=45000)
             page.wait_for_timeout(1000)
         except:
             pass
@@ -384,7 +400,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             logger.info(f"Fetching Piedmont Classes: {CLASSES_URL}")
-            page.goto(CLASSES_URL, wait_until="domcontentloaded", timeout=30000)
+            goto_with_retry(page, CLASSES_URL, attempts=3, timeout_ms=45000)
             page.wait_for_timeout(2000)
 
             # Crawl each category

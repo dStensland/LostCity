@@ -1,0 +1,20 @@
+version: 1
+slug: gwinnett-adult-swim-lessons
+name: Gwinnett Adult Swim Lessons
+integration_method: python
+defaults:
+  category: fitness
+  tags:
+  - swimming
+  - swim-lessons
+  - public-fitness
+  - gwinnett
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://secure.rec1.com/GA/gwinnett-county-parks-recreation/catalog
+detail:
+  enabled: false
+data_goals:
+- events

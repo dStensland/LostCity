@@ -1,29 +1,66 @@
 """
 Crawler for Spruill Center for the Arts (spruillarts.org).
 
-Dunwoody-based community arts center offering workshops, classes, and events
-in pottery, glassblowing, jewelry, fiber arts, yoga, and creative activities.
+Dunwoody-based community arts center offering classes, workshops, and events
+in pottery, ceramics, glass art, jewelry, fiber arts, painting, drawing,
+photography, woodturning, blacksmithing, yoga, and youth programs.
 
-Uses The Events Calendar WordPress plugin with REST API.
+Data sources:
+  1. Class schedule: registration.spruillarts.org ActiveNetwork/WebConnect
+     system — structured HTML table with 600+ class sessions, start dates,
+     meeting times, and instructor names.
+  2. Special events: WP v2 REST API (mec-events post type) + JSON-LD
+     structured data on each event detail page for accurate start/end dates.
+
+The site uses the Modern Events Calendar (MEC) plugin, not Tribe Events
+Calendar, so the tribe REST endpoint is absent. Dates live in MEC custom
+post meta which is not exposed via the WP v2 API — hence the JSON-LD
+strategy for special events.
 """
 
 from __future__ import annotations
 
-import re
+import html
 import logging
-from datetime import datetime
+import re
+import time
+from datetime import date, datetime
 from typing import Optional
+
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_event_by_hash,
+    get_or_create_venue,
+    insert_event,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import enrich_event_record, parse_date_range
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
 BASE_URL = "https://www.spruillarts.org"
-API_URL = f"{BASE_URL}/wp-json/tribe/events/v1/events"
+_REG_BASE = "https://registration.spruillarts.org/wconnect/ace"
+_CLASSES_URL = f"{_REG_BASE}/ShowSchedule.awp?Mode=GROUP&Group=:FULL&Title=All+Courses"
+_WP_API_URL = f"{BASE_URL}/wp-json/wp/v2/mec-events"
+
+_USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/122.0.0.0 Safari/537.36"
+)
+_HEADERS = {
+    "User-Agent": _USER_AGENT,
+    "Accept": "text/html,application/json,*/*",
+}
+
+# Polite delay between event page fetches (seconds)
+_REQUEST_DELAY = 0.6
 
 VENUE_DATA = {
     "name": "Spruill Center for the Arts",
@@ -35,374 +72,812 @@ VENUE_DATA = {
     "zip": "30338",
     "lat": 33.9205,
     "lng": -84.3102,
-    "venue_type": "community_center",
-    "spot_type": "community_center",
+    "venue_type": "arts_center",
+    "spot_type": "arts_center",
     "website": BASE_URL,
-    "vibes": [
-        "workshop",
-        "creative",
-        "hands-on",
-        "art-class",
-        "pottery",
-        "glassblowing",
-        "jewelry",
-        "fiber-arts",
-    ],
+    "vibes": ["artsy", "family-friendly", "all-ages", "casual"],
 }
 
-# Skip staff meetings and internal events
-SKIP_KEYWORDS = [
-    "staff meeting",
-    "board meeting",
-    "committee",
-    "internal",
-    "closed",
-    "private",
-    "members only",
+# Skip these title markers — closed registration is fine to still show;
+# skip only true internal/admin entries
+_SKIP_TITLE_RE = re.compile(
+    r"\b(staff meeting|board meeting|committee|internal|private|members only|before care|after care)\b",
+    re.IGNORECASE,
+)
+
+# Course code prefix → (category, extra_tags)
+# Derived from registration system course code patterns
+_CODE_CATEGORY_MAP: dict[str, tuple[str, list[str]]] = {
+    "PT": ("learning", ["painting", "hands-on", "class"]),
+    "DW": ("learning", ["drawing", "hands-on", "class"]),
+    "CE": ("learning", ["pottery", "hands-on", "class"]),
+    "GL": ("learning", ["glass", "hands-on", "class"]),
+    "JE": ("learning", ["jewelry", "hands-on", "class"]),
+    "FA": ("learning", ["fiber-arts", "hands-on", "class"]),
+    "SC": ("learning", ["blacksmithing", "hands-on", "class"]),
+    "PH": ("learning", ["photography", "class"]),
+    "MM": ("learning", ["mixed-media", "hands-on", "class"]),
+    "WW": ("learning", ["woodworking", "hands-on", "class"]),
+    "DA": ("learning", ["decorative-arts", "hands-on", "class"]),
+    "DI": ("learning", ["digital-arts", "class"]),
+    "AS": ("learning", ["art-history", "class"]),
+    "YC": ("learning", ["kids", "family-friendly", "class"]),
+    "YT": ("learning", ["teen", "class"]),
+    "MJ": ("community", ["games", "social"]),
+    "YOGA": ("wellness", ["yoga", "class"]),
+    "TC": ("wellness", ["class"]),
+    "AFA": ("community", ["educational", "accessible"]),
+    "GP": ("community", ["hands-on", "family-friendly"]),
+    "MINI": ("learning", ["kids", "family-friendly", "hands-on"]),
+    "CRA": ("community", ["hands-on", "family-friendly"]),
+    "FF": ("learning", ["kids", "family-friendly", "hands-on"]),
+    "RAM": ("community", ["market", "arts"]),
+}
+
+# Keyword → (category, extra_tags) — used when code map doesn't match
+_KEYWORD_RULES: list[tuple[re.Pattern, str, list[str]]] = [
+    (
+        re.compile(r"\b(pottery|ceramic|clay|kiln|wheel|raku)\b", re.I),
+        "learning",
+        ["pottery", "hands-on", "class"],
+    ),
+    (
+        re.compile(
+            r"\b(glass|stained glass|kiln.form|fused glass|glassblowing|beadmaking)\b",
+            re.I,
+        ),
+        "learning",
+        ["glass", "hands-on", "class"],
+    ),
+    (
+        re.compile(r"\b(jewelry|metalsmith|silver clay|ring|pendant)\b", re.I),
+        "learning",
+        ["jewelry", "hands-on", "class"],
+    ),
+    (
+        re.compile(r"\b(painting|watercolor|acrylic|oil paint|pastel|gouache)\b", re.I),
+        "learning",
+        ["painting", "hands-on", "class"],
+    ),
+    (
+        re.compile(r"\b(drawing|sketch|figure draw|portrait|pencil)\b", re.I),
+        "learning",
+        ["drawing", "hands-on", "class"],
+    ),
+    (
+        re.compile(r"\b(photograph|camera|darkroom|digital photo)\b", re.I),
+        "learning",
+        ["photography", "class"],
+    ),
+    (
+        re.compile(r"\b(fiber|weave|crochet|knit|quilt|sewing|mending)\b", re.I),
+        "learning",
+        ["fiber-arts", "hands-on", "class"],
+    ),
+    (
+        re.compile(r"\b(blacksmith|forge|metalwork|anvil)\b", re.I),
+        "learning",
+        ["blacksmithing", "hands-on", "class"],
+    ),
+    (
+        re.compile(r"\b(woodwork|woodturn|lathe)\b", re.I),
+        "learning",
+        ["woodworking", "hands-on", "class"],
+    ),
+    (
+        re.compile(r"\b(collage|mixed media|art journal|mosaic)\b", re.I),
+        "learning",
+        ["mixed-media", "hands-on", "class"],
+    ),
+    (
+        re.compile(r"\b(yoga|pilates|mindfulness|meditation)\b", re.I),
+        "wellness",
+        ["yoga", "class"],
+    ),
+    (re.compile(r"\btai chi\b", re.I), "wellness", ["class"]),
+    (
+        re.compile(r"\b(mahjongg|mah jongg|mahjong)\b", re.I),
+        "community",
+        ["games", "social"],
+    ),
+    (
+        re.compile(r"\b(camp|summer camp|spring camp|winter camp)\b", re.I),
+        "programs",
+        ["kids", "family-friendly", "educational"],
+    ),
+    (
+        re.compile(r"\b(kid|child|youth|toddler|preschool|elementary)\b", re.I),
+        "learning",
+        ["kids", "family-friendly"],
+    ),
+    (
+        re.compile(
+            r"\b(teen|teenager|ages 13|ages 14|ages 15|ages 16|ages 17)\b", re.I
+        ),
+        "learning",
+        ["teen"],
+    ),
+    (
+        re.compile(r"\b(workshop|class|lesson|instruction|studio)\b", re.I),
+        "learning",
+        ["hands-on", "class"],
+    ),
+    (
+        re.compile(r"\b(gallery|exhibit|reception|opening|show)\b", re.I),
+        "art",
+        ["gallery"],
+    ),
+    (
+        re.compile(r"\b(concert|performance|recital|live music)\b", re.I),
+        "music",
+        ["live-music"],
+    ),
+    (re.compile(r"\b(market|fair|festival)\b", re.I), "community", ["market"]),
 ]
 
+# Age range pattern
+_AGE_RE = re.compile(r"ages?\s+(\d+)(?:\s*[-–&]\s*(\d+))?", re.IGNORECASE)
+_AGE_SINGLE_RE = re.compile(
+    r"(\d+)\s*(?:yrs?|years?)\s*(?:&\s*up|\+|and\s+up|or\s+older)?", re.IGNORECASE
+)
 
-def parse_datetime(dt_str: str) -> tuple[Optional[str], Optional[str]]:
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _strip_html(raw: str, max_len: int = 600) -> str:
+    """Strip HTML tags, decode entities, normalise whitespace."""
+    if not raw:
+        return ""
+    text = html.unescape(raw)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:max_len]
+
+
+def _parse_age_range(text: str) -> tuple[Optional[int], Optional[int]]:
+    """Extract age_min / age_max from a title string."""
+    m = _AGE_RE.search(text)
+    if m:
+        lo = int(m.group(1))
+        hi = int(m.group(2)) if m.group(2) else None
+        return lo, hi
+    # "17 yrs & up"
+    m2 = _AGE_SINGLE_RE.search(text)
+    if m2:
+        return int(m2.group(1)), None
+    # Keyword inference
+    t = text.lower()
+    if re.search(r"\b(toddler)\b", t):
+        return 1, 3
+    if re.search(r"\b(preschool|pre.?k)\b", t):
+        return 3, 5
+    if (
+        re.search(r"\b(kids?|children|elementary)\b", t)
+        and re.search(r"\b(teen|adult)\b", t) is None
+    ):
+        return 5, 12
+    return None, None
+
+
+def _infer_category_and_tags(
+    course_code_prefix: str,
+    title: str,
+    default_category: str = "learning",
+    default_tags: Optional[list[str]] = None,
+) -> tuple[str, list[str]]:
+    """Return (category, tags) from course code prefix + title keywords."""
+    tags: list[str] = list(default_tags or [])
+    category = default_category
+
+    # 1. Course code prefix match (longest prefix first)
+    matched_code = None
+    for prefix in sorted(_CODE_CATEGORY_MAP, key=len, reverse=True):
+        if course_code_prefix.upper().startswith(prefix):
+            cat, extra = _CODE_CATEGORY_MAP[prefix]
+            category = cat
+            for t in extra:
+                if t not in tags:
+                    tags.append(t)
+            matched_code = prefix
+            break
+
+    # 2. Keyword scan (always runs — can add additional tags)
+    combined = title.lower()
+    for pattern, cat, extra_tags in _KEYWORD_RULES:
+        if pattern.search(combined):
+            # Only override category if code didn't match
+            if matched_code is None:
+                category = cat
+            for t in extra_tags:
+                if t not in tags:
+                    tags.append(t)
+            # Only use first keyword match for category
+            if matched_code is None:
+                break
+
+    return category, tags
+
+
+def _parse_meets_time(meets: str) -> Optional[str]:
     """
-    Parse ISO datetime string to date and time.
-    Returns (YYYY-MM-DD, HH:MM) tuple.
+    Extract start time from the 'Meets' column string.
+
+    Examples:
+      "Saturday : Sat 10:00 AM - 2:30 PM, 1 Session"  → "10:00"
+      "Fri : 10:00 AM - 12:30 PM, 10 Sessions"        → "10:00"
+      "M, Tu, W, Th, F : 8:00 AM - 9:30 AM, 5 Sess"  → "08:00"
+      "Friday : Fri 12 N - 1:30 PM, 1 Session"        → "12:00"
+    """
+    if not meets:
+        return None
+
+    # "12 N" (noon)
+    if re.search(r"\b12\s*N\b", meets, re.IGNORECASE):
+        return "12:00"
+
+    m = re.search(r"(\d{1,2}):(\d{2})\s*(AM|PM)", meets, re.IGNORECASE)
+    if not m:
+        return None
+
+    hour, minute, ampm = int(m.group(1)), int(m.group(2)), m.group(3).upper()
+    if ampm == "PM" and hour != 12:
+        hour += 12
+    elif ampm == "AM" and hour == 12:
+        hour = 0
+    return f"{hour:02d}:{minute:02d}"
+
+
+def _parse_class_date(date_str: str) -> Optional[str]:
+    """
+    Parse registration system date format "MM/DD/YY" → "YYYY-MM-DD".
+    """
+    date_str = date_str.strip()
+    if not date_str:
+        return None
+    try:
+        dt = datetime.strptime(date_str, "%m/%d/%y")
+        return dt.strftime("%Y-%m-%d")
+    except ValueError:
+        # Try MM/DD/YYYY
+        try:
+            dt = datetime.strptime(date_str, "%m/%d/%Y")
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            return None
+
+
+def _is_closed(title: str) -> bool:
+    """Return True if the course title indicates fully closed enrollment."""
+    return bool(re.search(r"\b%?\(Closed\)", title))
+
+
+def _is_internal(title: str) -> bool:
+    """Return True if the course looks like an internal/admin item."""
+    return bool(_SKIP_TITLE_RE.search(title))
+
+
+def _clean_title(title: str) -> str:
+    """Strip trailing markers like '^', '*', '%(Closed)', '(Closed)'."""
+    t = re.sub(r"\s*%?\(Closed\)\s*$", "", title)
+    t = re.sub(r"[\s*^]+$", "", t)
+    return t.strip()
+
+
+def _extract_course_code_prefix(href: str) -> str:
+    """
+    Extract the alphabetic course code prefix from a registration href.
+
+    href examples:
+      "CourseStatus.awp?&course=261PTPT210"  → "PTPT"
+      "CourseStatus.awp?&course=262YOGA001"  → "YOGA"
+    """
+    m = re.search(r"course=\d+([A-Z]{2,8})", href, re.IGNORECASE)
+    return m.group(1).upper() if m else ""
+
+
+# ---------------------------------------------------------------------------
+# Class schedule crawler (registration system)
+# ---------------------------------------------------------------------------
+
+
+def _crawl_classes(
+    session: requests.Session,
+    source_id: int,
+    venue_id: int,
+    today: date,
+) -> tuple[int, int, int]:
+    """Crawl the ActiveNetwork class schedule page."""
+    found = new = updated = 0
+
+    logger.info("[spruill/classes] Fetching class schedule: %s", _CLASSES_URL)
+    try:
+        resp = session.get(_CLASSES_URL, headers=_HEADERS, timeout=30)
+        resp.raise_for_status()
+    except requests.RequestException as exc:
+        logger.error("[spruill/classes] Failed to fetch class schedule: %s", exc)
+        return 0, 0, 0
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    rows = soup.select("tr.awAltRow, tr.awRow")
+    logger.info("[spruill/classes] Found %d class rows in schedule", len(rows))
+
+    for row in rows:
+        cols = row.find_all("td")
+        if len(cols) < 3:
+            continue
+
+        raw_title = cols[0].get_text(strip=True)
+        date_str = cols[1].get_text(strip=True) if len(cols) > 1 else ""
+        meets_str = cols[2].get_text(strip=True) if len(cols) > 2 else ""
+
+        # Skip internal/admin items
+        if _is_internal(raw_title):
+            continue
+
+        # Note if closed but still include — the class is still on the calendar
+        # and users may want to know about it for waitlisting or future sessions.
+        # We'll flag closed classes with a price_note.
+        is_closed = _is_closed(raw_title)
+        title = _clean_title(raw_title)
+
+        if not title or len(title) < 4:
+            continue
+
+        start_date = _parse_class_date(date_str)
+        if not start_date:
+            logger.debug(
+                "[spruill/classes] Could not parse date %r for: %s",
+                date_str,
+                title[:50],
+            )
+            continue
+
+        # Skip past events
+        try:
+            ev_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        if ev_date < today:
+            continue
+
+        start_time = _parse_meets_time(meets_str)
+
+        # Course URL
+        anchor = row.find("a")
+        course_href = anchor["href"] if anchor and anchor.get("href") else ""
+        course_code_prefix = _extract_course_code_prefix(course_href)
+
+        # Build full URL
+        source_url = (
+            f"{_REG_BASE}/{course_href}"
+            if course_href and not course_href.startswith("http")
+            else course_href or _CLASSES_URL
+        )
+
+        # Category and tags
+        category, tags = _infer_category_and_tags(
+            course_code_prefix, title, default_category="learning"
+        )
+
+        # Age range
+        age_min, age_max = _parse_age_range(title)
+        if age_max is not None and age_max <= 17:
+            if "kids" not in tags and age_max <= 12:
+                tags.append("kids")
+            if "teen" not in tags and age_max > 12:
+                tags.append("teen")
+            if "family-friendly" not in tags:
+                tags.append("family-friendly")
+        if age_min is not None and age_min >= 18 and "adults" not in tags:
+            tags.append("adults")
+
+        # Series hint — every class is a class series
+        series_hint = {
+            "series_type": "class_series",
+            "series_title": title,
+            "frequency": "weekly",
+        }
+
+        # Price: unknown unless we hit detail page. Most classes are paid.
+        price_note = "Registration required; fees vary"
+        if is_closed:
+            price_note = "Closed — check for future sessions"
+
+        content_hash = generate_content_hash(
+            title,
+            "Spruill Center for the Arts",
+            f"{start_date}|{start_time or ''}",
+        )
+
+        record: dict = {
+            "source_id": source_id,
+            "venue_id": venue_id,
+            "title": title[:200],
+            "description": None,
+            "start_date": start_date,
+            "end_date": None,
+            "start_time": start_time,
+            "end_time": None,
+            "is_all_day": False,
+            "category": category,
+            "tags": tags,
+            "is_free": False,
+            "price_min": None,
+            "price_max": None,
+            "price_note": price_note,
+            "source_url": source_url,
+            "ticket_url": source_url,
+            "image_url": None,
+            "raw_text": f"{title} | {meets_str}",
+            "extraction_confidence": 0.85,
+            "is_recurring": True,
+            "content_hash": content_hash,
+        }
+
+        if age_min is not None:
+            record["age_min"] = age_min
+        if age_max is not None:
+            record["age_max"] = age_max
+
+        found += 1
+
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, record)
+            updated += 1
+        else:
+            try:
+                insert_event(record, series_hint=series_hint)
+                new += 1
+                logger.debug(
+                    "[spruill/classes] Added: %s on %s",
+                    title[:50],
+                    start_date,
+                )
+            except Exception as exc:
+                logger.error(
+                    "[spruill/classes] Failed to insert %r: %s",
+                    title[:50],
+                    exc,
+                )
+
+    return found, new, updated
+
+
+# ---------------------------------------------------------------------------
+# Special events crawler (MEC via WP v2 API + JSON-LD)
+# ---------------------------------------------------------------------------
+
+
+def _fetch_event_json_ld(session: requests.Session, event_url: str) -> Optional[dict]:
+    """
+    Fetch an event detail page and extract the JSON-LD Event block.
+
+    Returns the parsed dict or None on failure.
+    """
+    try:
+        resp = session.get(event_url, headers=_HEADERS, timeout=20)
+        resp.raise_for_status()
+    except requests.RequestException as exc:
+        logger.debug("[spruill/events] Failed to fetch %s: %s", event_url, exc)
+        return None
+
+    page_html = resp.text
+    for match in re.finditer(
+        r"<script[^>]*application/ld\+json[^>]*>(.*?)</script>",
+        page_html,
+        re.DOTALL,
+    ):
+        try:
+            import json as _json
+
+            data = _json.loads(match.group(1).strip())
+            if isinstance(data, dict) and data.get("@type") == "Event":
+                return data
+        except (ValueError, KeyError):
+            continue
+    return None
+
+
+def _parse_iso_datetime(dt_str: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Parse an ISO 8601 datetime string with timezone offset to
+    (YYYY-MM-DD, HH:MM) in Atlanta local time.
+
+    MEC stores times in UTC in JSON-LD (e.g. "2026-03-18T06:30:00-04:00"
+    for a 10:30 AM EDT event). We convert to local time by applying the
+    offset: local = UTC_time + offset_hours  (offset is negative for EDT).
+
+    Examples:
+      "2026-04-18T07:00:00-04:00" → apply -4h: 07:00 + (-(-4)) = 11:00 AM
+        → ("2026-04-18", "11:00")
+      "2026-03-18T06:30:00-04:00" → 06:30 + 4 = 10:30 AM
+        → ("2026-03-18", "10:30")
+      "2026-04-18T00:00:00+00:00" → midnight UTC → treat as unknown time
+        → ("2026-04-18", None)
     """
     if not dt_str:
         return None, None
 
-    try:
-        # Parse ISO format: "2026-02-14 10:00:00"
-        dt = datetime.fromisoformat(dt_str.replace("T", " ").split("+")[0].split("Z")[0].strip())
-        return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
-    except (ValueError, AttributeError) as e:
-        logger.debug(f"Could not parse datetime '{dt_str}': {e}")
+    dt_str = dt_str.strip()
+
+    # Extract TZ offset if present
+    tz_match = re.search(r"([+-])(\d{2}):(\d{2})$", dt_str)
+    tz_offset_minutes = 0
+    if tz_match:
+        sign = 1 if tz_match.group(1) == "+" else -1
+        tz_offset_minutes = sign * (
+            int(tz_match.group(2)) * 60 + int(tz_match.group(3))
+        )
+
+    dt_str_clean = re.sub(r"[+-]\d{2}:\d{2}$", "", dt_str)
+
+    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M"):
+        try:
+            dt = datetime.strptime(dt_str_clean, fmt)
+            break
+        except ValueError:
+            continue
+    else:
         return None, None
 
+    # Convert to local time by subtracting the UTC offset
+    # (if offset is -04:00, local = UTC_naive - (-240min) = UTC_naive + 240min)
+    from datetime import timedelta
 
-def strip_html(html: str) -> str:
-    """Strip HTML tags and clean up text."""
-    if not html:
-        return ""
+    local_dt = dt - timedelta(minutes=tz_offset_minutes)
 
-    soup = BeautifulSoup(html, "html.parser")
-    text = soup.get_text(separator=" ", strip=True)
-    # Clean up multiple spaces
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
+    date_part = local_dt.strftime("%Y-%m-%d")
+
+    # Midnight local → treat as unknown time
+    if local_dt.hour == 0 and local_dt.minute == 0:
+        return date_part, None
+
+    return date_part, local_dt.strftime("%H:%M")
 
 
-def parse_cost(cost_str: str) -> tuple[Optional[float], Optional[float], bool]:
-    """
-    Parse cost field into price_min, price_max, is_free.
-    Examples:
-    - "Free" → (None, None, True)
-    - "$15" → (15.0, 15.0, False)
-    - "$10 - $20" → (10.0, 20.0, False)
-    - "$5 suggested donation" → (5.0, 5.0, False)
-    """
-    if not cost_str:
-        return None, None, False
+def _crawl_special_events(
+    session: requests.Session,
+    source_id: int,
+    venue_id: int,
+    today: date,
+) -> tuple[int, int, int]:
+    """Crawl special events from the MEC WordPress calendar."""
+    found = new = updated = 0
 
-    cost_lower = cost_str.lower().strip()
+    logger.info("[spruill/events] Fetching MEC event list from WP v2 API")
 
-    # Check for free
-    if cost_lower in ["free", "no cost", "no charge"] or "free" in cost_lower:
-        return None, None, True
-
-    # Extract dollar amounts
-    amounts = re.findall(r"\$?\s*(\d+(?:\.\d{2})?)", cost_str)
-    if not amounts:
-        return None, None, False
-
+    # Fetch all events (total is small — 12 as of March 2026)
     try:
-        prices = [float(amt) for amt in amounts]
-        if len(prices) == 1:
-            return prices[0], prices[0], False
-        elif len(prices) >= 2:
-            return min(prices), max(prices), False
-    except ValueError:
-        pass
+        resp = session.get(
+            _WP_API_URL,
+            headers=_HEADERS,
+            params={
+                "per_page": 100,
+                "_embed": "true",
+                "_fields": "id,title,slug,link,content,excerpt,featured_media,_embedded",
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        raw_events = resp.json()
+    except (requests.RequestException, ValueError) as exc:
+        logger.error("[spruill/events] WP v2 API failed: %s", exc)
+        return 0, 0, 0
 
-    return None, None, False
+    logger.info("[spruill/events] %d events from WP v2 API", len(raw_events))
+
+    for raw in raw_events:
+        title_raw = raw.get("title", {}).get("rendered", "").strip()
+        if not title_raw:
+            continue
+
+        title = html.unescape(title_raw)
+        event_url = raw.get("link", "")
+
+        if not event_url:
+            continue
+
+        # Skip internal/admin
+        if _is_internal(title):
+            continue
+
+        # Fetch event page for JSON-LD (reliable dates)
+        time.sleep(_REQUEST_DELAY)
+        ld = _fetch_event_json_ld(session, event_url)
+
+        if not ld:
+            logger.debug("[spruill/events] No JSON-LD for: %s", title)
+            continue
+
+        start_date, start_time = _parse_iso_datetime(ld.get("startDate", ""))
+        end_date, end_time = _parse_iso_datetime(ld.get("endDate", ""))
+
+        if not start_date:
+            logger.debug("[spruill/events] No valid date in JSON-LD for: %s", title)
+            continue
+
+        # Skip past events
+        try:
+            ev_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        if ev_date < today:
+            continue
+
+        # Same start/end date → don't store redundant end_date
+        effective_end_date = end_date if end_date and end_date != start_date else None
+
+        # Description from content
+        description_html = raw.get("content", {}).get("rendered", "") or ""
+        description = _strip_html(description_html, max_len=600)
+        if not description:
+            excerpt_html = raw.get("excerpt", {}).get("rendered", "") or ""
+            description = _strip_html(excerpt_html, max_len=400)
+
+        # Description from JSON-LD (often cleaner)
+        if not description and ld.get("description"):
+            description = ld["description"][:600]
+
+        # Image: prefer embedded media, fall back to JSON-LD
+        image_url: Optional[str] = None
+        embedded = raw.get("_embedded", {})
+        media_list = embedded.get("wp:featuredmedia", [])
+        if media_list and isinstance(media_list[0], dict):
+            image_url = media_list[0].get("source_url")
+        if not image_url and ld.get("image"):
+            image_url = ld["image"] if isinstance(ld["image"], str) else None
+
+        # Price
+        is_free = False
+        price_min: Optional[float] = None
+        price_max: Optional[float] = None
+        offers = ld.get("offers")
+        if isinstance(offers, dict):
+            price_str = str(offers.get("price", ""))
+            try:
+                price_val = float(price_str)
+                if price_val == 0.0:
+                    is_free = True
+                    price_min = price_max = 0.0
+                else:
+                    price_min = price_max = price_val
+            except ValueError:
+                pass
+
+        # Category and tags
+        category, tags = _infer_category_and_tags(
+            "",  # no course code for special events
+            title,
+            default_category="art",
+        )
+
+        # Content kind for exhibitions
+        content_kind: Optional[str] = None
+        if re.search(
+            r"\b(exhibit|exhibition|gallery|on view|residency)\b",
+            f"{title} {description}",
+            re.I,
+        ):
+            content_kind = "exhibit"
+
+        content_hash = generate_content_hash(
+            title,
+            "Spruill Center for the Arts",
+            f"{start_date}|{start_time or ''}",
+        )
+
+        record: dict = {
+            "source_id": source_id,
+            "venue_id": venue_id,
+            "title": title[:200],
+            "description": description if description else None,
+            "start_date": start_date,
+            "end_date": effective_end_date,
+            "start_time": start_time,
+            "end_time": end_time,
+            "is_all_day": start_time is None and content_kind == "exhibit",
+            "category": category,
+            "tags": tags,
+            "is_free": is_free,
+            "price_min": price_min,
+            "price_max": price_max,
+            "price_note": None,
+            "source_url": event_url,
+            "ticket_url": event_url,
+            "image_url": image_url,
+            "raw_text": f"{title} | spruill-center",
+            "extraction_confidence": 0.92,
+            "is_recurring": False,
+            "content_hash": content_hash,
+        }
+
+        if content_kind:
+            record["content_kind"] = content_kind
+
+        found += 1
+
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, record)
+            updated += 1
+        else:
+            try:
+                insert_event(record)
+                new += 1
+                logger.info("[spruill/events] Added: %s on %s", title[:50], start_date)
+            except Exception as exc:
+                logger.error(
+                    "[spruill/events] Failed to insert %r: %s", title[:50], exc
+                )
+
+    return found, new, updated
 
 
-def determine_category_and_tags(title: str, description: str) -> tuple[str, Optional[str], list[str]]:
-    """Determine category based on title and description."""
-    text = f"{title} {description}".lower()
-    tags = []
-
-    # Yoga/Tai Chi → fitness
-    if any(kw in text for kw in ["yoga", "yogic"]):
-        tags.extend(["yoga", "wellness"])
-        return "fitness", None, tags
-
-    if any(kw in text for kw in ["tai chi", "taichi", "tai-chi"]):
-        tags.extend(["tai-chi", "wellness"])
-        return "fitness", None, tags
-
-    # Mah Jongg / games → community
-    if any(kw in text for kw in ["mah jongg", "mahjong", "game night", "board game"]):
-        tags.extend(["games", "social"])
-        return "community", None, tags
-
-    # Artist talks / exhibitions → art
-    if any(kw in text for kw in [
-        "artist talk",
-        "gallery",
-        "exhibition",
-        "opening",
-        "reception",
-        "show",
-        "exhibit",
-    ]):
-        tags.extend(["gallery", "talk"])
-        return "art", None, tags
-
-    # Art classes / workshops
-    if any(kw in text for kw in [
-        "workshop",
-        "class",
-        "pottery",
-        "ceramics",
-        "glassblowing",
-        "glass",
-        "jewelry",
-        "fiber",
-        "weaving",
-        "painting",
-        "drawing",
-        "sculpture",
-        "craft",
-    ]):
-        tags.extend(["art-class", "hands-on"])
-        return "learning", "workshop", tags
-
-    # Crafternoon / Mini Makers → kids/family workshops
-    if any(kw in text for kw in ["crafternoon", "mini makers", "kids", "children", "family"]):
-        tags.extend(["hands-on", "family-friendly"])
-        return "learning", "workshop", tags
-
-    # Default: learning/class
-    return "learning", "class", tags
-
-
-def is_public_event(title: str, description: str) -> bool:
-    """Determine if event is public vs. internal."""
-    text = f"{title} {description}".lower()
-
-    # Skip internal events
-    if any(kw in text for kw in SKIP_KEYWORDS):
-        return False
-
-    return True
+# ---------------------------------------------------------------------------
+# Main entry point
+# ---------------------------------------------------------------------------
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Spruill Center for the Arts events using The Events Calendar REST API."""
+    """
+    Crawl Spruill Center for the Arts.
+
+    Combines:
+      - Class schedule from the ActiveNetwork registration system
+        (600+ class sessions with dates, times, and course codes)
+      - Special events from the MEC WordPress calendar
+        (12–20 special events with JSON-LD structured dates)
+
+    Returns (events_found, events_new, events_updated).
+    """
     source_id = source["id"]
-    events_found = 0
-    events_new = 0
-    events_updated = 0
 
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
+    except Exception as exc:
+        logger.error("[spruill] Failed to create/find venue: %s", exc)
+        return 0, 0, 0
 
-        # Fetch events from API
-        headers = {
-            "User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)",
-        }
+    today = date.today()
+    http_session = requests.Session()
 
-        page = 1
-        per_page = 50
-        seen_events = set()
+    total_found = total_new = total_updated = 0
 
-        while True:
-            params = {
-                "per_page": per_page,
-                "page": page,
-                "start_date": datetime.now().strftime("%Y-%m-%d"),
-            }
+    # --- Classes ---
+    c_found, c_new, c_updated = _crawl_classes(http_session, source_id, venue_id, today)
+    total_found += c_found
+    total_new += c_new
+    total_updated += c_updated
+    logger.info(
+        "[spruill/classes] Complete: %d found, %d new, %d updated",
+        c_found,
+        c_new,
+        c_updated,
+    )
 
-            logger.info(f"Fetching Spruill Center events API page {page}")
-            response = requests.get(API_URL, params=params, headers=headers, timeout=30)
-            response.raise_for_status()
+    # --- Special events ---
+    e_found, e_new, e_updated = _crawl_special_events(
+        http_session, source_id, venue_id, today
+    )
+    total_found += e_found
+    total_new += e_new
+    total_updated += e_updated
+    logger.info(
+        "[spruill/events] Complete: %d found, %d new, %d updated",
+        e_found,
+        e_new,
+        e_updated,
+    )
 
-            data = response.json()
-            events = data.get("events", [])
+    logger.info(
+        "[spruill] Crawl complete: %d found, %d new, %d updated",
+        total_found,
+        total_new,
+        total_updated,
+    )
 
-            if not events:
-                logger.info(f"No more events on page {page}")
-                break
-
-            logger.info(f"Processing {len(events)} events from page {page}")
-
-            for event_data in events:
-                try:
-                    title = event_data.get("title", "").strip()
-
-                    if not title or len(title) < 5:
-                        continue
-
-                    # Parse dates and times
-                    start_date_str = event_data.get("start_date")
-                    end_date_str = event_data.get("end_date")
-
-                    start_date, start_time = parse_datetime(start_date_str)
-                    end_date, end_time = parse_datetime(end_date_str) if end_date_str else (None, None)
-
-                    if not start_date:
-                        logger.debug(f"No valid date for: {title}")
-                        continue
-
-                    # Extract description (HTML)
-                    description_html = event_data.get("description", "")
-                    description = strip_html(description_html)[:500]
-
-                    # Get URL
-                    event_url = event_data.get("url", f"{BASE_URL}/events/")
-
-                    # Check if public
-                    if not is_public_event(title, description):
-                        logger.debug(f"Skipping internal event: {title}")
-                        continue
-
-                    # Dedupe by title and date
-                    event_key = f"{title}|{start_date}"
-                    if event_key in seen_events:
-                        continue
-                    seen_events.add(event_key)
-
-                    events_found += 1
-
-                    # Generate content hash
-                    content_hash = generate_content_hash(
-                        title, "Spruill Center for the Arts", start_date
-                    )
-
-                    # Check for existing
-
-                    # Determine category and tags
-                    category, subcategory, tags = determine_category_and_tags(title, description)
-
-                    # Add family-friendly tag if applicable
-                    if any(kw in f"{title} {description}".lower() for kw in [
-                        "family",
-                        "kid",
-                        "children",
-                        "all ages",
-                        "mini makers",
-                    ]):
-                        if "family-friendly" not in tags:
-                            tags.append("family-friendly")
-
-                    # Check if all day
-                    all_day = event_data.get("all_day", False)
-                    is_all_day = bool(all_day)
-
-                    # Parse cost
-                    cost_str = event_data.get("cost", "")
-                    price_min, price_max, is_free = parse_cost(cost_str)
-
-                    # Build price_note from cost string if present
-                    price_note = None
-                    if cost_str and not is_free:
-                        price_note = cost_str[:100]
-
-                    # Get image
-                    image_url = None
-                    if event_data.get("image"):
-                        image_url = event_data["image"].get("url")
-
-                    # Build event record
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title[:200],
-                        "description": description if description else None,
-                        "start_date": start_date,
-                        "start_time": start_time if not is_all_day else None,
-                        "end_date": end_date if end_date != start_date else None,
-                        "end_time": end_time if not is_all_day else None,
-                        "is_all_day": is_all_day,
-                        "category": category,
-                        "subcategory": subcategory,
-                        "tags": tags,
-                        "price_min": price_min,
-                        "price_max": price_max,
-                        "price_note": price_note,
-                        "is_free": is_free,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_url,
-                        "raw_text": f"{title} {description}"[:500],
-                        "extraction_confidence": 0.9,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    # Enrich from detail page
-                    enrich_event_record(event_record, source_name="Spruill Center for the Arts")
-
-                    # Determine is_free if still unknown after enrichment
-                    if event_record.get("is_free") is None:
-                        desc_lower = (event_record.get("description") or "").lower()
-                        title_lower = event_record.get("title", "").lower()
-                        combined = f"{title_lower} {desc_lower}"
-                        if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
-                            event_record["is_free"] = True
-                            event_record["price_min"] = event_record.get("price_min") or 0
-                            event_record["price_max"] = event_record.get("price_max") or 0
-                        else:
-                            event_record["is_free"] = False
-
-                    # Detect exhibits and set content_kind
-                    _exhibit_kw = ["exhibit", "exhibition", "on view", "collection", "installation"]
-                    _check = f"{event_record.get('title', '')} {event_record.get('description') or ''}".lower()
-                    if any(kw in _check for kw in _exhibit_kw):
-                        event_record["content_kind"] = "exhibit"
-                        event_record["is_all_day"] = True
-                        event_record["start_time"] = None
-
-                    # Extract end_date from date range patterns
-                    range_text = f"{event_record.get('title', '')} {event_record.get('description') or ''}"
-                    _, range_end = parse_date_range(range_text)
-                    if range_end:
-                        event_record["end_date"] = range_end
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title[:50]}... on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                except Exception as e:
-                    logger.error(f"Error processing event: {e}")
-                    continue
-
-            # Check if there are more pages
-            total_pages = data.get("total_pages", 1)
-            if page >= total_pages:
-                break
-
-            page += 1
-
-        logger.info(
-            f"Spruill Center crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
-        )
-
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Failed to fetch Spruill Center events: {e}")
-        raise
-    except Exception as e:
-        logger.error(f"Failed to crawl Spruill Center: {e}")
-        raise
-
-    return events_found, events_new, events_updated
+    return total_found, total_new, total_updated

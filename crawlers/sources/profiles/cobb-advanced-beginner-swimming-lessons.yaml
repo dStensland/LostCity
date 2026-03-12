@@ -1,0 +1,19 @@
+version: 1
+slug: cobb-advanced-beginner-swimming-lessons
+name: Cobb Advanced Beginner Swimming Lessons
+integration_method: python
+defaults:
+  category: fitness
+  tags:
+  - swimming
+  - swim-lessons
+  - fitness-class
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://secure.rec1.com/GA/cobb-county-ga/catalog
+detail:
+  enabled: false
+data_goals:
+- events

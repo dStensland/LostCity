@@ -1,0 +1,19 @@
+version: 1
+slug: gwinnett-waltz-workshop
+name: Gwinnett Waltz Workshop
+integration_method: python
+defaults:
+  category: fitness
+  tags:
+  - dance
+  - ballroom
+  - gwinnett
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://secure.rec1.com/GA/gwinnett-county-parks-recreation/catalog
+detail:
+  enabled: false
+data_goals:
+- events

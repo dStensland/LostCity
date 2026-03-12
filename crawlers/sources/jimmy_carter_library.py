@@ -32,7 +32,24 @@ VENUE_DATA = {
     "lat": 33.7679,
     "lng": -84.3582,
     "venue_type": "museum",
+    "spot_type": "museum",
     "website": "https://www.jimmycarterlibrary.gov/",
+    "vibes": ["historic", "museum", "presidential", "gardens", "free-parking"],
+    "description": (
+        "The Jimmy Carter Presidential Library and Museum preserves the legacy of the 39th President "
+        "of the United States. Set on 35 acres of gardens in Atlanta's Old Fourth Ward, the museum "
+        "features permanent and rotating exhibitions on the Carter presidency, human rights, and "
+        "global peace initiatives. Open to the public Monday–Saturday and Sunday afternoons."
+    ),
+    "hours": {
+        "monday": {"open": "09:00", "close": "16:45"},
+        "tuesday": {"open": "09:00", "close": "16:45"},
+        "wednesday": {"open": "09:00", "close": "16:45"},
+        "thursday": {"open": "09:00", "close": "16:45"},
+        "friday": {"open": "09:00", "close": "16:45"},
+        "saturday": {"open": "09:00", "close": "16:45"},
+        "sunday": {"open": "12:00", "close": "16:45"},
+    },
 }
 
 
@@ -140,8 +157,24 @@ def crawl(source: dict) -> Tuple[int, int, int]:
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
         }
 
+        # Fetch og:image from homepage to enrich venue record
+        venue_data = dict(VENUE_DATA)
+        try:
+            _home_resp = requests.get(BASE_URL, headers=headers, timeout=15)
+            if _home_resp.status_code == 200:
+                _home_soup = BeautifulSoup(_home_resp.text, "html.parser")
+                _og_image = _home_soup.find("meta", attrs={"property": "og:image"})
+                if _og_image and _og_image.get("content"):
+                    img_src = _og_image["content"]
+                    if img_src and not img_src.startswith("http"):
+                        img_src = BASE_URL + "/" + img_src.lstrip("/")
+                    venue_data["image_url"] = img_src
+                    logger.debug("Fetched og:image for Jimmy Carter Library")
+        except Exception as _e:
+            logger.debug(f"Could not fetch og:image for Jimmy Carter Library: {_e}")
+
         # Get or create venue
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_venue(venue_data)
 
         # Fetch events page
         logger.info(f"Fetching events from {EVENTS_URL}")

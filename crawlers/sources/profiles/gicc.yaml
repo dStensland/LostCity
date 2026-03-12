@@ -7,7 +7,7 @@ discovery:
   enabled: true
   type: html
   urls:
-  - https://www.gicc.com
+  - https://www.gicc.com/events/list/
 detail:
   enabled: true
 data_goals:

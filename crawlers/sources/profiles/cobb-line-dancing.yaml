@@ -1,0 +1,19 @@
+version: 1
+slug: cobb-line-dancing
+name: Cobb Line Dancing
+integration_method: python
+defaults:
+  category: dance
+  tags:
+  - line-dancing
+  - dance-class
+  - public-fitness
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://secure.rec1.com/GA/cobb-county-ga/catalog
+detail:
+  enabled: false
+data_goals:
+- events

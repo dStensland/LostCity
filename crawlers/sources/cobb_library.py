@@ -489,20 +489,36 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 venue_id = get_or_create_venue(venue_data)
 
-                # Determine category
+                # Determine category from title/description keywords
                 category = determine_category(final_title, description)
 
-                # Build tags
+                # Build tags and refine category using audience inference
                 tags = ["library", "free", "public"]
 
-                # Add age-appropriate tags
+                # Search both title and description for audience signals
+                search_text = f"{final_title} {description or ''}".lower()
                 title_lower = final_title.lower()
-                if any(word in title_lower for word in ["kids", "children", "storytime", "baby", "toddler"]):
-                    tags.append("kids")
-                    tags.append("family-friendly")
-                if "teen" in title_lower or "tween" in title_lower:
-                    tags.append("teens")
-                if "adult" in title_lower and "young adult" not in title_lower:
+
+                baby_words = ["baby", "infant", "toddler", "preschool", "birth to five"]
+                child_words = ["kids", "children", "storytime", "story time", "elementary"]
+                teen_words = ["teen", "tween", "young adult"]
+
+                if any(word in search_text for word in baby_words):
+                    # Add granular age-band tags for birth-to-five content
+                    if "baby" in search_text or "infant" in search_text:
+                        tags.append("infant")
+                    if "toddler" in search_text:
+                        tags.append("toddler")
+                    if "preschool" in search_text or "birth to five" in search_text:
+                        tags.append("preschool")
+                    tags += ["kids", "family-friendly"]
+                    category = "family"
+                elif any(word in search_text for word in child_words):
+                    tags += ["elementary", "kids", "family-friendly"]
+                    category = "family"
+                elif any(word in search_text for word in teen_words):
+                    tags.append("teen")
+                elif "adult" in title_lower and "young adult" not in title_lower:
                     tags.append("adults")
 
                 # Add activity tags

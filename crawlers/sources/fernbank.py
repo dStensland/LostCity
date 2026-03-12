@@ -35,8 +35,38 @@ VENUE_DATA = {
     "lat": 33.7739,
     "lng": -84.3281,
     "venue_type": "museum",
+    "spot_type": "museum",
     "website": BASE_URL,
+    # description and image_url are extracted dynamically from og: tags on the homepage
+    # at crawl time — see _enrich_venue_data() called before get_or_create_venue().
+    # Hours verified 2026-03-11: Wed-Sun 10am-5pm (closed Mon-Tue)
+    "hours": {
+        "wednesday": "10:00-17:00",
+        "thursday": "10:00-17:00",
+        "friday": "10:00-17:00",
+        "saturday": "10:00-17:00",
+        "sunday": "10:00-17:00",
+    },
+    "vibes": ["family-friendly", "educational", "interactive", "nature", "dinosaurs"],
 }
+
+
+def _enrich_venue_data(page) -> None:
+    """
+    Fetch og:description and og:image from the Fernbank homepage and inject them
+    into VENUE_DATA so get_or_create_venue() stores them on first creation.
+    Only fills fields that are not already set.
+    """
+    try:
+        page.goto(BASE_URL, wait_until="domcontentloaded", timeout=20000)
+        og_desc = page.get_attribute('meta[property="og:description"]', "content")
+        og_image = page.get_attribute('meta[property="og:image"]', "content")
+        if og_desc and not VENUE_DATA.get("description"):
+            VENUE_DATA["description"] = re.sub(r"\s+", " ", og_desc).strip()
+        if og_image and not VENUE_DATA.get("image_url"):
+            VENUE_DATA["image_url"] = og_image.strip()
+    except Exception as exc:
+        logger.debug("Fernbank homepage og: fetch failed: %s", exc)
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -93,6 +123,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
+            _enrich_venue_data(page)
             venue_id = get_or_create_venue(VENUE_DATA)
 
             logger.info(f"Fetching Fernbank Museum: {EVENTS_URL}")
@@ -269,6 +300,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         event_record["is_all_day"] = True
                         event_record["start_time"] = None
 
+                    # Group "Fernbank After Dark" (Museum Nights) into a recurring series
+                    title_lower = title.lower()
+                    series_hint = None
+                    if "after dark" in title_lower or (
+                        "museum nights" in (current_type or "").lower()
+                        and "museum nights" in title_lower
+                    ):
+                        event_record["is_recurring"] = True
+                        series_hint = {
+                            "series_type": "recurring_show",
+                            "series_title": "Fernbank After Dark",
+                            "frequency": "biweekly",
+                        }
+
                     existing = find_event_by_hash(content_hash)
                     if existing:
                         smart_update_existing_event(existing, event_record)
@@ -277,7 +322,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
                         logger.info(f"Added: {title} on {start_date}")
                     except Exception as e:

@@ -1,0 +1,20 @@
+version: 1
+slug: atlanta-bead-show
+name: Atlanta Bead Show
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://beadshows.com/georgia-bead-shows/
+  fetch:
+    render_js: true
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+data_goals:
+- events
+- images
+- tickets

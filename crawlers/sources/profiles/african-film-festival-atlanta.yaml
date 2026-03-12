@@ -1,0 +1,23 @@
+version: 1
+slug: african-film-festival-atlanta
+name: African Film Festival Atlanta
+integration_method: html_json
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://africanfilmfestatl.com/press/african-film-festival-atlanta-opens-call-for-submissions-for-2026-edition/
+  - https://africanfilmfestatl.com/press/2026-african-film-festival-atlanta-announces-its-official-film-selections-and-ticket-sales/
+  - https://www.eventbrite.com/cc/african-film-festival-atlanta-2026-4819851
+  fetch:
+    render_js: false
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+data_goals:
+- events
+- images
+- tickets
+- showtimes

@@ -23,7 +23,13 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_venue,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+    remove_stale_source_events,
+)
 from dedupe import generate_content_hash
 from description_fetcher import fetch_description_from_url
 from utils import extract_images_from_page, enrich_event_record
@@ -269,6 +275,22 @@ def should_skip_event(title: str) -> bool:
     ]):
         return True
 
+    # ── Join-first sports programs and league play ──
+    if any(p in title_lower for p in [
+        'young professionals basketball league',
+        "adult women's basketball league",
+        "adult womens basketball league",
+        "men's soccer league",
+        "mens soccer league",
+        "women's soccer league",
+        "womens soccer league",
+        'alta pickleball',
+        'soar pickleball',
+        'slow pitch softball league',
+        'modified softball league',
+    ]):
+        return True
+
     # ── Session/year patterns (ongoing multi-week programs) ──
     if re.search(r'session [1-9]|sessions [1-9]|20\d{2}\s*[-–]\s*20\d{2}', title_lower):
         return True
@@ -375,6 +397,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_found = 0
     events_new = 0
     events_updated = 0
+    current_hashes: set[str] = set()
 
     try:
         with sync_playwright() as p:
@@ -473,6 +496,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     content_hash = generate_content_hash(
                         title, "Marcus Jewish Community Center of Atlanta", start_date
                     )
+                    current_hashes.add(content_hash)
 
 
                     # Fetch description from detail page
@@ -539,6 +563,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
             browser.close()
+
+        if current_hashes:
+            stale_removed = remove_stale_source_events(source_id, current_hashes)
+            if stale_removed:
+                logger.info(f"Removed {stale_removed} stale MJCCA events")
 
         logger.info(
             f"MJCCA crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

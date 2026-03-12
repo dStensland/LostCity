@@ -35,8 +35,50 @@ VENUE_DATA = {
     "venue_type": "bar",
     "spot_type": "bar",
     "website": BASE_URL,
-    "vibes": ["lgbtq", "arcade", "games", "bar-games", "casual", "retro"],
+    "description": (
+        "Joystick Gamebar is a LGBTQ-inclusive retro arcade bar on Edgewood Ave, "
+        "packed with classic arcade and pinball machines, craft drinks, and a weekly "
+        "calendar of bingo nights, tournaments, and themed events."
+    ),
+    "hours": {
+        "monday": {"open": "17:00", "close": "02:00"},
+        "tuesday": {"open": "17:00", "close": "02:00"},
+        "wednesday": {"open": "17:00", "close": "02:00"},
+        "thursday": {"open": "17:00", "close": "02:00"},
+        "friday": {"open": "17:00", "close": "03:00"},
+        "saturday": {"open": "14:00", "close": "03:00"},
+        "sunday": {"open": "14:00", "close": "02:00"},
+    },
+    "vibes": ["lgbtq", "arcade", "games", "bar-games", "casual", "retro", "edgewood"],
 }
+
+
+def extract_description_from_context(lines: list[str], title_idx: int, title: str) -> str:
+    """Pull a meaningful description from lines surrounding the event title."""
+    candidates = []
+    for offset in range(1, 6):
+        idx = title_idx + offset
+        if idx >= len(lines):
+            break
+        line = lines[idx]
+        if re.match(
+            r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|January|February|March|April|May|June|July|August|September|October|November|December)",
+            line,
+            re.IGNORECASE,
+        ):
+            break
+        if re.match(r"(tickets?|register|buy|more info|\$\d|reserve)", line, re.IGNORECASE):
+            break
+        if len(line) > 20 and line != title:
+            candidates.append(line)
+        if len(candidates) >= 2:
+            break
+    if candidates:
+        desc = " ".join(candidates)
+        if len(desc) > 400:
+            desc = desc[:397] + "..."
+        return desc
+    return ""
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -156,6 +198,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Get specific event URL
                     event_url = find_event_url(title, event_links, EVENTS_URL)
 
+                    # Extract real description from surrounding lines
+                    description = extract_description_from_context(lines, i, title)
+
+                    # Detect free events from surrounding context
+                    context_text = " ".join(lines[max(0, i - 3):min(len(lines), i + 6)]).lower()
+                    is_free = any(
+                        w in context_text
+                        for w in ["free", "no cover", "no charge", "free admission", "free event"]
+                    )
+
                     # Infer subcategory and genres from title
                     title_lower = title.lower()
                     subcategory = "nightlife.bar_games"
@@ -166,8 +218,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         subcategory = "nightlife.bingo"
                         genres = ["bingo", "bar-games"]
                         tags.append("bingo")
+                    elif "trivia" in title_lower or "quiz" in title_lower:
+                        subcategory = "nightlife.bar_games"
+                        genres = ["trivia", "bar-games"]
+                        tags.extend(["trivia", "bar-games"])
                     elif "tournament" in title_lower or "compete" in title_lower:
                         tags.extend(["bar-games", "tournament"])
+                    elif "karaoke" in title_lower:
+                        subcategory = "nightlife.karaoke"
+                        genres = ["karaoke"]
+                        tags.append("karaoke")
+                    elif "drag" in title_lower or "show" in title_lower:
+                        subcategory = "nightlife.drag"
+                        genres = ["drag"]
+                        tags.append("drag")
                     else:
                         tags.append("bar-games")
 
@@ -175,7 +239,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Joystick Gamebar",
+                        "description": description or None,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
@@ -188,7 +252,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
-                        "is_free": False,
+                        "is_free": is_free,
                         "source_url": event_url,
                         "ticket_url": event_url,
                         "image_url": image_map.get(title),

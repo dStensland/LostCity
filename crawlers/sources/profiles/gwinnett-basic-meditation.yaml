@@ -1,0 +1,19 @@
+version: 1
+slug: gwinnett-basic-meditation
+name: Gwinnett Basic Meditation
+integration_method: python
+defaults:
+  category: wellness
+  tags:
+  - meditation
+  - public-wellness
+  - gwinnett
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://secure.rec1.com/GA/gwinnett-county-parks-recreation/catalog
+detail:
+  enabled: false
+data_goals:
+- events

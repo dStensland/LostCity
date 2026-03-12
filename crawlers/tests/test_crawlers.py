@@ -56,8 +56,9 @@ class TestDateParsing:
         assert "-02-20" in result
 
     def test_no_comma(self):
-        result = self.parse_date("March 10 2026")
-        assert result == "2026-03-10"
+        # Use a future date to avoid year bumping logic
+        result = self.parse_date("December 25 2026")
+        assert result == "2026-12-25"
 
     def test_invalid_date(self):
         result = self.parse_date("Not a date")

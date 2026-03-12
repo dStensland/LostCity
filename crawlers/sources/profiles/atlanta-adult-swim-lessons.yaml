@@ -1,0 +1,21 @@
+version: 1
+slug: atlanta-adult-swim-lessons
+name: Atlanta Adult Swim Lessons
+integration_method: python
+defaults:
+  category: fitness
+  tags:
+  - swim
+  - adult-swim
+  - aquatics
+  - public-fitness
+  - atlanta-dpr
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://anc.apm.activecommunities.com/atlantadprca/Activity_Search
+detail:
+  enabled: false
+data_goals:
+- events

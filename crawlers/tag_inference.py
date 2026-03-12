@@ -275,6 +275,59 @@ def infer_tags(
     ):
         tags.add("all-ages")
 
+    # --- Age band tags (additive — an event can have multiple) ---
+    # Used by the Hooky family portal for per-kid filtering.
+
+    if any(
+        phrase in text
+        for phrase in [
+            "baby", "infant", "newborn", "0-1", "0-2",
+        ]
+    ):
+        tags.add("infant")
+
+    if any(
+        phrase in text
+        for phrase in [
+            "toddler", "ages 1-3", "ages 2-4", "mommy and me", "parent and tot",
+        ]
+    ):
+        tags.add("toddler")
+
+    if any(
+        phrase in text
+        for phrase in [
+            "preschool", "pre-k", "prek", "ages 3-5", "ages 4-5",
+        ]
+    ):
+        tags.add("preschool")
+
+    if any(
+        phrase in text
+        for phrase in [
+            "elementary", "ages 5-10", "ages 6-10", "ages 6-12",
+            "grades k-5", "grades 1-5",
+        ]
+    ):
+        tags.add("elementary")
+
+    if any(
+        phrase in text
+        for phrase in [
+            "tween", "ages 10-13", "ages 9-12", "middle school", "grades 6-8",
+        ]
+    ):
+        tags.add("tween")
+
+    if any(
+        phrase in text
+        for phrase in [
+            "teen", "ages 13-17", "ages 14-18", "high school",
+            "grades 9-12", "young adult",
+        ]
+    ):
+        tags.add("teen")
+
     # Opening/closing nights
     if any(phrase in text for phrase in ["opening night", "opening weekend"]):
         tags.add("opening-night")

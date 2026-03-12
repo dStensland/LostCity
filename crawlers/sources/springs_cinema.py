@@ -40,6 +40,44 @@ VENUE_DATA = {
 }
 
 IMAGE_BASE = "https://indy-systems.imgix.net"
+_GRAPHQL_AUTH_KEYS = ("circuit-id", "site-id", "client-type")
+
+
+def goto_with_retry(
+    page,
+    url: str,
+    *,
+    attempts: int = 3,
+    timeout_ms: int = 90000,
+    wait_until: str = "domcontentloaded",
+) -> None:
+    """Navigate with retry/backoff for transient renderer/network failures."""
+    last_exc: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            page.goto(url, wait_until=wait_until, timeout=timeout_ms)
+            return
+        except Exception as exc:  # noqa: BLE001 - crawler retry guard
+            last_exc = exc
+            if attempt >= attempts:
+                raise
+            page.wait_for_timeout(2000 * attempt)
+    if last_exc:
+        raise last_exc
+
+
+def merge_graphql_auth_headers(
+    auth_headers: dict[str, str],
+    request_headers: dict[str, str],
+) -> bool:
+    """Merge required GraphQL auth headers from a browser request."""
+    changed = False
+    for key in _GRAPHQL_AUTH_KEYS:
+        val = request_headers.get(key)
+        if val and auth_headers.get(key) != val:
+            auth_headers[key] = val
+            changed = True
+    return changed
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -66,20 +104,34 @@ def crawl(source: dict) -> tuple[int, int, int]:
             auth_headers = {}
 
             def capture_headers(request):
-                if "/graphql" in request.url and request.method == "POST":
-                    body = request.post_data or ""
-                    if "showingsForDate" in body or "datesWithShowing" in body:
-                        for key in ("circuit-id", "site-id", "client-type"):
-                            val = request.headers.get(key)
-                            if val:
-                                auth_headers[key] = val
+                if "/graphql" not in request.url or request.method != "POST":
+                    return
+                if merge_graphql_auth_headers(auth_headers, request.headers):
+                    logger.info("Captured Springs GraphQL auth headers from browser request")
 
             page.on("request", capture_headers)
 
             # Load the page to establish session
             logger.info(f"Fetching: {BASE_URL}/showtimes")
-            page.goto(f"{BASE_URL}/showtimes", wait_until="networkidle", timeout=60000)
-            page.wait_for_timeout(8000)
+            goto_with_retry(
+                page,
+                f"{BASE_URL}/showtimes",
+                attempts=3,
+                timeout_ms=90000,
+                wait_until="domcontentloaded",
+            )
+            for _ in range(20):
+                if auth_headers.get("circuit-id") and auth_headers.get("site-id"):
+                    break
+                page.wait_for_timeout(1000)
+
+            if not auth_headers:
+                logger.info("No GraphQL headers captured on first load; retrying showtimes bootstrap")
+                page.reload(wait_until="domcontentloaded", timeout=90000)
+                for _ in range(20):
+                    if auth_headers.get("circuit-id") and auth_headers.get("site-id"):
+                        break
+                    page.wait_for_timeout(1000)
 
             if not auth_headers:
                 logger.warning("Failed to capture auth headers from page requests")

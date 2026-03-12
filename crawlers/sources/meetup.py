@@ -406,9 +406,27 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         except Exception as e:
                             logger.debug(f"Could not create venue: {e}")
 
+                    # Fall back to group name as organization venue
+                    if venue_id is None and not is_online and group_name:
+                        fallback_venue = {
+                            "name": group_name,
+                            "slug": re.sub(r"[^a-z0-9]+", "-", group_name.lower()).strip("-"),
+                            "city": "Atlanta",
+                            "state": "GA",
+                            "venue_type": "organization",
+                        }
+                        try:
+                            venue_id = get_or_create_venue(fallback_venue)
+                        except Exception as e:
+                            logger.debug(f"Could not create fallback venue from group: {e}")
+
                     # Assign virtual venue for online events with no venue
                     if venue_id is None and is_online:
                         venue_id = get_or_create_virtual_venue()
+
+                    if venue_id is None and not is_online:
+                        logger.warning(f"Skipping event with no venue: {title[:60]}")
+                        continue
 
                     # Generate content hash
                     venue_for_hash = location_text or group_name or "Meetup"

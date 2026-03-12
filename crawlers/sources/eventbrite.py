@@ -30,6 +30,10 @@ BROWSE_URLS = [
     "https://www.eventbrite.com/d/ga--atlanta/food-and-drink/",
     "https://www.eventbrite.com/d/ga--atlanta/classes/",
     "https://www.eventbrite.com/d/ga--atlanta/hobbies/",
+    "https://www.eventbrite.com/d/ga--atlanta/charity-and-causes/",
+    "https://www.eventbrite.com/d/ga--atlanta/family-activities/",
+    "https://www.eventbrite.com/d/ga--atlanta/kids-activities/",
+    "https://www.eventbrite.com/d/ga--atlanta/camps-and-retreats/",
 ]
 
 # Category mapping from Eventbrite to Lost City

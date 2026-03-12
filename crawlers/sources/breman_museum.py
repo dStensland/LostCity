@@ -40,7 +40,15 @@ VENUE_DATA = {
     "lat": 33.7873,
     "lng": -84.3880,
     "venue_type": "museum",
+    "spot_type": "museum",
     "website": BASE_URL,
+    "vibes": ["cultural", "museum", "history", "jewish-heritage", "midtown"],
+    "description": (
+        "Atlanta's Jewish heritage museum dedicated to preserving and sharing the stories of the "
+        "Southern Jewish experience, the Holocaust, and Jewish life in America. Features permanent "
+        "and rotating exhibitions, film screenings, educational programs through the Weinberg Center "
+        "for Holocaust Education, and community events in the heart of Midtown Atlanta."
+    ),
 }
 
 
@@ -215,7 +223,23 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        # Fetch og:image from homepage to enrich venue record
+        venue_data = dict(VENUE_DATA)
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+            }
+            home_resp = requests.get(BASE_URL, headers=headers, timeout=15)
+            if home_resp.status_code == 200:
+                home_soup = BeautifulSoup(home_resp.text, "html.parser")
+                og_image = home_soup.find("meta", attrs={"property": "og:image"})
+                if og_image and og_image.get("content"):
+                    venue_data["image_url"] = og_image["content"]
+                    logger.debug("Fetched og:image for Breman Museum")
+        except Exception as _e:
+            logger.debug(f"Could not fetch og:image for Breman Museum: {_e}")
+
+        venue_id = get_or_create_venue(venue_data)
 
         # Fetch events from API (get up to 100 events)
         params = {"per_page": 100, "status": "publish"}

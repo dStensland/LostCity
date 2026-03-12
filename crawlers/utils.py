@@ -4,6 +4,7 @@ Utility functions for Lost City crawlers.
 
 from __future__ import annotations
 
+import random
 import re
 import time
 import socket
@@ -19,6 +20,21 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from config import get_config
 
 logger = logging.getLogger(__name__)
+
+# Modern Chrome UA strings — rotated per-request to avoid fingerprinting.
+# Keep this list updated when Chrome releases new major versions.
+_CHROME_USER_AGENTS = [
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+]
+
+
+def random_user_agent() -> str:
+    """Return a random modern Chrome user-agent string."""
+    return random.choice(_CHROME_USER_AGENTS)
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -729,98 +745,13 @@ def is_junk_description(description: str | None) -> bool:
     """Check if a description is actually scraped boilerplate/footer/cookie text.
 
     Returns True if the description should be rejected and set to None.
+    Delegates to description_quality.classify_description() for the actual check.
     """
     if not description:
         return False
 
-    JUNK_MARKERS = [
-        # Cookie consent / GDPR
-        'technical storage or access is strictly necessary',
-        'cookie policy',
-        'we use cookies',
-        # Footer / legal boilerplate
-        'All Rights Reserved',
-        'Privacy Policy',
-        'Terms of Service',
-        'Terms of Use',
-        'Site Map',
-        'Equal Opportunity, Nondiscrimination',
-        'Human Trafficking Notice',
-        'Hazing Public Disclosures',
-        'Anti-Harassment Policy',
-        # Scraped nav elements
-        'Back to All Events Add',
-        'Skip to content',
-        'Toggle navigation',
-        'JavaScript is required',
-        'Skip Navigation',
-        'Filter By\nSearch By',
-        # Copyright footers
-        'a carbonhouse experience',
-        # Bot-block interstitials
-        'something about your browser made us think you were a bot',
-        'To regain access, please make sure that cookies and JavaScript',
-        'please enable cookies and JavaScript',
-        'enable JavaScript to run this app',
-        'Please enable JS and disable any ad blocker',
-        'Checking if the site connection is secure',
-        # Venue navigation dumps
-        'Other Location\nHeaven',
-        'Heaven, Hell, Purgatory, and Altar at The Masquerade',
-        'Not a band. Not DJ',
-        # Ticketing UI chrome
-        'FAQ BUY TICKETS DONATE',
-        'sign up for our thrilling email',
-        # Cookie consent / GDPR gates
-        'cookie consent',
-        'accept cookies',
-        'manage cookies',
-        'necessary cookies',
-        # Venue boilerplate (address/phone in description = scraped contact section)
-        'Reservations are required, and you must be 21',
-        'comedy destination since 1982',
-    ]
-
-    # Case-insensitive check for common junk patterns
-    JUNK_MARKERS_CI = [
-        'buy tickets',
-        'add to cart',
-        'upcoming shows',
-        'upcoming events',
-        'view all events',
-    ]
-
-    if any(marker in description for marker in JUNK_MARKERS):
-        return True
-
-    desc_lower = description.lower()
-
-    # Case-insensitive markers — flag in short-to-medium descriptions (< 200 chars)
-    if len(description) < 200:
-        if any(marker in desc_lower for marker in JUNK_MARKERS_CI):
-            return True
-
-    # Multiple "buy tickets" = scraped page with ticket buttons
-    if desc_lower.count('buy tickets') >= 2:
-        return True
-
-    # Auto-generated filler descriptions that just restate structured fields
-    FILLER_PATTERNS = [
-        'is a local event',
-        'is a local event.',
-        'Location details are listed on the official event page',
-    ]
-    if any(marker in description for marker in FILLER_PATTERNS):
-        return True
-
-    # Nav-dump heuristic: if 3+ ticketing/nav phrases appear, it's a nav dump
-    nav_phrases = ['buy tickets', 'sold out', 'doors', 'all ages', 'add to cart',
-                   'view more', 'see all', 'filter by', 'sort by', 'load more']
-    nav_hits = sum(1 for phrase in nav_phrases if phrase in desc_lower)
-    if nav_hits >= 3:
-        return True
-
-    return False
+    from description_quality import classify_description
+    return classify_description(description) in ("junk", "boilerplate")
 
 
 def enrich_event_record(event_record: dict, source_name: str = "") -> dict:
@@ -906,6 +837,7 @@ def enrich_event_record(event_record: dict, source_name: str = "") -> dict:
         return event_record
 
     try:
+        from db import _should_promote_incoming_ticket_url
         from pipeline.fetch import fetch_html
         from pipeline.detail_enrich import enrich_from_detail
         from pipeline.models import DetailConfig
@@ -946,8 +878,13 @@ def enrich_event_record(event_record: dict, source_name: str = "") -> dict:
             event_record["end_time"] = enriched["end_time"]
         if not event_record.get("end_date") and enriched.get("end_date"):
             event_record["end_date"] = enriched["end_date"]
-        if not event_record.get("ticket_url") and enriched.get("ticket_url"):
+        if _should_promote_incoming_ticket_url(event_record.get("ticket_url"), enriched.get("ticket_url")):
             event_record["ticket_url"] = enriched["ticket_url"]
+        for signal_field in ("doors_time", "age_policy", "ticket_status", "reentry_policy"):
+            if not event_record.get(signal_field) and enriched.get(signal_field):
+                event_record[signal_field] = enriched[signal_field]
+        if event_record.get("set_times_mentioned") is None and enriched.get("set_times_mentioned") is not None:
+            event_record["set_times_mentioned"] = enriched["set_times_mentioned"]
         if not event_record.get("_parsed_artists") and enriched.get("artists"):
             parsed_artists = _normalize_enriched_artists(enriched.get("artists"))
             if parsed_artists:

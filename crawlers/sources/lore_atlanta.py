@@ -35,16 +35,23 @@ VENUE_DATA = {
     "state": "GA",
     "zip": "30312",
     "venue_type": "bar",
+    "spot_type": "bar",
     "website": BASE_URL,
+    "vibes": ["lgbtq-friendly", "drag", "karaoke", "edgewood", "late-night"],
 }
 
 # Weekly recurring events
 WEEKLY_EVENTS = [
-    {"weekday": 1, "title": "Karaoke Night", "time": "20:00", "description": "Weekly karaoke night at Lore Atlanta. Sing your heart out!"},
-    {"weekday": 2, "title": "Trivia Night", "time": "20:00", "description": "Weekly trivia night at Lore Atlanta. Test your knowledge!"},
-    {"weekday": 3, "title": "Drag Bingo", "time": "20:00", "description": "Weekly drag bingo at Lore Atlanta. Fun, prizes, and fabulous hosts!"},
-    {"weekday": 4, "title": "The Other Show", "time": "21:00", "description": "Weekly drag and variety show at Lore Atlanta."},
-    {"weekday": 6, "title": "Tossed Salad", "time": "21:00", "description": "Weekly Sunday night drag show at Lore Atlanta."},
+    {"weekday": 1, "title": "Karaoke at Lore Atlanta", "time": "20:00", "subcategory": "nightlife.karaoke",
+     "description": "Tuesday karaoke night at Lore Atlanta on Edgewood Ave. LGBTQ+ club with full bar and late-night vibes."},
+    {"weekday": 2, "title": "Trivia at Lore Atlanta", "time": "20:00", "subcategory": "nightlife.trivia",
+     "description": "Wednesday trivia night at Lore Atlanta on Edgewood Ave. Test your knowledge at this LGBTQ+ nightlife spot."},
+    {"weekday": 3, "title": "Drag Bingo at Lore Atlanta", "time": "20:00", "subcategory": "nightlife.bingo",
+     "description": "Thursday drag bingo at Lore Atlanta hosted by Tugboat. Prizes, cocktails, and fabulous hosts on Edgewood Ave."},
+    {"weekday": 4, "title": "The Other Show at Lore Atlanta", "time": "21:00", "subcategory": "nightlife.drag",
+     "description": "Friday drag and variety show at Lore Atlanta on Edgewood Ave. Live performances from Atlanta's queens."},
+    {"weekday": 6, "title": "Tossed Salad at Lore Atlanta", "time": "21:00", "subcategory": "nightlife.drag",
+     "description": "Sunday night drag show at Lore Atlanta on Edgewood Ave. End the weekend with Atlanta's best drag performers."},
 ]
 
 
@@ -166,14 +173,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "end_time": None,
                         "is_all_day": False,
                         "category": "nightlife",
-                        "subcategory": "lgbtq",
+                        "subcategory": event_info.get("subcategory"),
                         "tags": ["lgbtq", "queer", "drag", "edgewood", "nightlife"],
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
                         "is_free": True,
                         "source_url": event_url,
-                        "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
+                        "ticket_url": event_url if event_url and event_url != EVENTS_URL else None,
                         "image_url": image_url,
                         "raw_text": f"{title} at Lore Atlanta - {start_date_str}",
                         "extraction_confidence": 0.90,
@@ -182,7 +189,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "content_hash": content_hash,
                     }
 
-                    day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+                    day_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
                     series_hint = {
                         "series_type": "recurring_show",
                         "series_title": title,

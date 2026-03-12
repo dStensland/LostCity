@@ -7,9 +7,12 @@ Also generates recurring Sunday live music events.
 import json
 import logging
 from datetime import datetime, timedelta
+from urllib.parse import urljoin
+from typing import Optional
 from bs4 import BeautifulSoup
 import requests
 
+from sources._sports_bar_common import detect_sports_watch_party
 from db import get_or_create_venue, insert_event, find_event_by_hash, find_existing_event_for_insert, smart_update_existing_event
 from dedupe import generate_content_hash
 
@@ -52,6 +55,95 @@ def parse_jsonld_events(soup: BeautifulSoup) -> list[dict]:
     return events
 
 
+def parse_event_links_from_html(html: str) -> list[str]:
+    soup = BeautifulSoup(html, "html.parser")
+    links: list[str] = []
+    for anchor in soup.find_all("a", href=True):
+        href = anchor["href"].strip()
+        if "/event/" not in href:
+            continue
+        if not href.startswith("http"):
+            href = urljoin(BASE_URL, href)
+        if href not in links:
+            links.append(href)
+    return links
+
+
+def parse_detail_page(html: str, source_url: str) -> Optional[dict]:
+    soup = BeautifulSoup(html, "html.parser")
+    events = parse_jsonld_events(soup)
+    if not events:
+        return None
+
+    event_data = events[0]
+    title = (event_data.get("name") or "").strip()
+    if not title:
+        return None
+
+    start_raw = (event_data.get("startDate") or "").strip()
+    if not start_raw:
+        return None
+
+    start_dt = datetime.strptime(start_raw[:19], "%Y-%m-%d %H:%M:%S")
+    start_date = start_dt.strftime("%Y-%m-%d")
+    start_time = start_dt.strftime("%H:%M")
+
+    end_raw = (event_data.get("endDate") or "").strip()
+    end_date = None
+    end_time = None
+    if end_raw:
+        end_dt = datetime.strptime(end_raw[:19], "%Y-%m-%d %H:%M:%S")
+        end_date = end_dt.strftime("%Y-%m-%d")
+        end_time = end_dt.strftime("%H:%M")
+
+    description_html = event_data.get("description") or ""
+    description = " ".join(BeautifulSoup(description_html, "html.parser").get_text(" ").split())
+
+    watch_party = detect_sports_watch_party(title, description, extra_tags=["piedmont-park"])
+    if watch_party:
+        category, subcategory, tags = watch_party
+    elif "sports/" in source_url:
+        category, subcategory, tags = "sports", "watch_party", ["sports", "watch-party", "piedmont-park"]
+    elif any(word in title.lower() for word in ["trivia", "bingo"]):
+        category, subcategory = "nightlife", "trivia"
+        tags = ["nightlife", "trivia", "piedmont-park"]
+    else:
+        category, subcategory = "nightlife", "bar_event"
+        tags = ["nightlife", "piedmont-park"]
+
+    ticket_url = None
+    for anchor in soup.find_all("a", href=True):
+        link_text = " ".join(anchor.get_text(" ", strip=True).split()).lower()
+        href = anchor["href"].strip()
+        if "ticket" in link_text or "buy" in link_text:
+            ticket_url = href
+            break
+
+    image_url = None
+    image = event_data.get("image")
+    if isinstance(image, list) and image:
+        image_url = image[0]
+    elif isinstance(image, str):
+        image_url = image
+
+    return {
+        "title": title,
+        "description": description[:500] if description else "Event at Park Tavern overlooking Piedmont Park",
+        "start_date": start_date,
+        "start_time": start_time,
+        "end_date": end_date,
+        "end_time": end_time,
+        "category": category,
+        "subcategory": subcategory,
+        "tags": tags,
+        "is_free": False if ticket_url else True,
+        "source_url": source_url,
+        "ticket_url": ticket_url,
+        "image_url": image_url,
+        "raw_text": json.dumps(event_data),
+    }
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Park Tavern events."""
     source_id = source["id"]
@@ -70,54 +162,44 @@ def crawl(source: dict) -> tuple[int, int, int]:
         soup = BeautifulSoup(response.text, "html.parser")
         venue_id = get_or_create_venue(VENUE_DATA)
 
-        # Try JSON-LD first
-        json_events = parse_jsonld_events(soup)
+        event_links = parse_event_links_from_html(response.text)
 
-        for event_data in json_events:
+        for event_url in event_links:
+            detail_response = requests.get(event_url, headers=headers, timeout=30)
+            if not detail_response.ok:
+                continue
+
+            parsed = parse_detail_page(detail_response.text, event_url)
+            if not parsed:
+                continue
+
             events_found += 1
-            title = event_data.get("name", "").strip()
-            if not title:
-                continue
-
-            start_date = event_data.get("startDate", "")[:10] if event_data.get("startDate") else None
-            if not start_date:
-                continue
+            title = parsed["title"]
+            start_date = parsed["start_date"]
 
             content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
-
-            # Determine category
-            title_lower = title.lower()
-            if any(w in title_lower for w in ["uga", "georgia", "football", "game day", "watch party"]):
-                category, subcategory = "sports", "watch_party"
-                tags = ["sports", "uga", "watch-party", "piedmont-park"]
-            elif any(w in title_lower for w in ["trivia", "bingo"]):
-                category, subcategory = "nightlife", "trivia"
-                tags = ["nightlife", "trivia", "piedmont-park"]
-            else:
-                category, subcategory = "nightlife", "bar_event"
-                tags = ["nightlife", "piedmont-park"]
 
             event_record = {
                 "source_id": source_id,
                 "venue_id": venue_id,
                 "title": title,
-                "description": event_data.get("description", "Event at Park Tavern overlooking Piedmont Park")[:500],
+                "description": parsed["description"],
                 "start_date": start_date,
-                "start_time": None,
-                "end_date": None,
-                "end_time": None,
-                "is_all_day": True,
-                "category": category,
-                "subcategory": subcategory,
-                "tags": tags,
+                "start_time": parsed["start_time"],
+                "end_date": parsed["end_date"],
+                "end_time": parsed["end_time"],
+                "is_all_day": False,
+                "category": parsed["category"],
+                "subcategory": parsed["subcategory"],
+                "tags": parsed["tags"],
                 "price_min": None,
                 "price_max": None,
                 "price_note": None,
-                "is_free": True,
-                "source_url": EVENTS_URL,
-                "ticket_url": None,
-                "image_url": event_data.get("image"),
-                "raw_text": json.dumps(event_data),
+                "is_free": parsed["is_free"],
+                "source_url": parsed["source_url"],
+                "ticket_url": parsed["ticket_url"],
+                "image_url": parsed["image_url"],
+                "raw_text": parsed["raw_text"],
                 "extraction_confidence": 0.85,
                 "is_recurring": False,
                 "recurrence_rule": None,

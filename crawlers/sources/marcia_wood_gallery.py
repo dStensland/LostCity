@@ -36,6 +36,16 @@ VENUE_DATA = {
     "website": BASE_URL,
 }
 
+
+def normalize_ongoing_exhibit_dates(start_date: datetime, end_date: datetime) -> tuple[str, str]:
+    """
+    Keep ongoing exhibits active by normalizing the start date to today once
+    the run has started.
+    """
+    today = datetime.now().date()
+    normalized_start = max(start_date.date(), today)
+    return normalized_start.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
+
 MONTH_MAP = {
     'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6,
     'JUL': 7, 'AUG': 8, 'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12,
@@ -172,9 +182,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if title:
                         events_found += 1
 
-                        # Use start date for event
-                        start_date_str = start_date.strftime("%Y-%m-%d")
-                        end_date_str = end_date.strftime("%Y-%m-%d")
+                        # Keep ongoing exhibits active instead of inserting them
+                        # as already-past inventory.
+                        start_date_str, end_date_str = normalize_ongoing_exhibit_dates(start_date, end_date)
 
                         full_title = f"{artist}: {title}" if artist else title
                         if full_title.isupper():
@@ -201,10 +211,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "title": full_title,
                             "description": description,
                             "start_date": start_date_str,
-                            "start_time": "11:00",  # Gallery opens 11am
+                            "start_time": None,
                             "end_date": end_date_str,
-                            "end_time": "17:00",  # Gallery closes 5pm
+                            "end_time": None,
                             "is_all_day": True,
+                            "content_kind": "exhibit",
                             "category": "art",
                             "subcategory": "gallery",
                             "tags": ["art", "gallery", "contemporary-art", "exhibition", "buckhead"],

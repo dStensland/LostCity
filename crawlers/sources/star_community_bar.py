@@ -8,7 +8,8 @@ rock, comedy, karaoke, DJ nights, and drag shows.
 Website: https://www.starbaratl.bar (Squarespace; events listed on homepage)
 Note: The original domain starbaratlanta.com is parked/for-sale as of 2026.
 
-The homepage is the shows listing — Squarespace eventlist-event articles.
+Scrapes one-off shows from the homepage (Squarespace eventlist-event articles)
+and generates recurring Monday comedy + Tuesday funk events.
 Each event has:
   - time[datetime] attributes for ISO date (YYYY-MM-DD)
   - .eventlist-meta-time for start time text (e.g. "7:00 PM")
@@ -26,14 +27,15 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, insert_event, find_event_by_hash, find_existing_event_for_insert, smart_update_existing_event
 from dedupe import generate_content_hash
+from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +81,63 @@ VENUE_DATA = {
 
 # Ticket platforms Star Bar uses (for extracting ticket URLs)
 TICKET_DOMAINS = ("freshtix.com", "zeffy.com", "eventbrite.com", "ticketweb.com")
+
+# Confirmed weekly recurring events (may not always appear as dated Squarespace articles)
+WEEKS_AHEAD = 6
+WEEKLY_SCHEDULE = [
+    {
+        "day": 0,  # Monday
+        "title": "Rotknee Presents Comedy at Star Bar",
+        "description": (
+            "Monday comedy night at Star Bar in Little Five Points. "
+            "Atlanta's longest-running inner-city comedy show — free, doors 8pm, show 9pm."
+        ),
+        "start_time": "21:00",
+        "category": "comedy",
+        "subcategory": "comedy.standup",
+        "tags": ["comedy", "stand-up", "free", "weekly", "little-five-points"],
+        "is_free": True,
+    },
+    {
+        "day": 1,  # Tuesday
+        "title": "Disco Funk Night at Star Bar",
+        "description": (
+            "Tuesday disco and funk DJ night at Star Bar in Little Five Points. "
+            "Free dance party starting at 10pm — no cover."
+        ),
+        "start_time": "22:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.dj",
+        "tags": ["dj", "disco", "funk", "dance", "free", "weekly", "little-five-points"],
+        "is_free": True,
+    },
+    {
+        "day": 2,  # Wednesday
+        "title": "Karaoke Night at Star Bar",
+        "description": (
+            "Wednesday karaoke night at Star Bar in Little Five Points. "
+            "$5 cover, doors 8pm, singing starts at 9pm."
+        ),
+        "start_time": "21:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.karaoke",
+        "tags": ["karaoke", "nightlife", "weekly", "little-five-points"],
+        "is_free": False,
+        "price_min": 5.0,
+        "price_max": 5.0,
+        "price_note": "$5 cover",
+    },
+]
+
+DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+
+def _get_next_weekday(start_date: datetime, weekday: int) -> datetime:
+    days_ahead = weekday - start_date.weekday()
+    if days_ahead < 0:
+        days_ahead += 7
+    return start_date + timedelta(days=days_ahead)
 
 # Map title keywords to (category, subcategory, genres, tags)
 CATEGORY_RULES: list[tuple[list[str], str, Optional[str], list[str], list[str]]] = [
@@ -322,6 +381,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "content_hash": content_hash,
             }
 
+            # Enrich from detail page when listing data is incomplete
+            if event_url and event_url != SHOWS_URL and (not event_record["description"] or not event_record["image_url"]):
+                enrich_event_record(event_record, "Star Community Bar")
+
             existing = find_event_by_hash(content_hash)
             if existing:
                 smart_update_existing_event(existing, event_record)
@@ -338,6 +401,70 @@ def crawl(source: dict) -> tuple[int, int, int]:
         except Exception as exc:
             logger.debug(f"Star Bar: error parsing article: {exc}")
             continue
+
+    # Generate recurring weekly events (comedy Mon, funk Tue)
+    today_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    for template in WEEKLY_SCHEDULE:
+        next_date = _get_next_weekday(today_dt, template["day"])
+        day_code = DAY_CODES[template["day"]]
+        day_name = DAY_NAMES[template["day"]]
+
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": template["title"],
+            "frequency": "weekly",
+            "day_of_week": day_name.lower(),
+            "description": template["description"],
+        }
+
+        for week in range(WEEKS_AHEAD):
+            event_date = next_date + timedelta(weeks=week)
+            start_date = event_date.strftime("%Y-%m-%d")
+            events_found += 1
+
+            content_hash = generate_content_hash(
+                template["title"], VENUE_DATA["name"], start_date
+            )
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": template["title"],
+                "description": template["description"],
+                "start_date": start_date,
+                "start_time": template["start_time"],
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": template["category"],
+                "subcategory": template.get("subcategory"),
+                "tags": template["tags"],
+                "is_free": template.get("is_free", False),
+                "price_min": template.get("price_min"),
+                "price_max": template.get("price_max"),
+                "price_note": template.get("price_note"),
+                "source_url": BASE_URL,
+                "ticket_url": None,
+                "image_url": None,
+                "raw_text": f"{template['title']} - {start_date}",
+                "extraction_confidence": 0.90,
+                "is_recurring": True,
+                "recurrence_rule": f"FREQ=WEEKLY;BYDAY={day_code}",
+                "content_hash": content_hash,
+            }
+
+            existing = find_existing_event_for_insert(event_record)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
+            try:
+                insert_event(event_record, series_hint=series_hint)
+                events_new += 1
+            except Exception as exc:
+                logger.error(f"Star Bar: failed to insert recurring '{template['title']}' on {start_date}: {exc}")
 
     logger.info(
         f"Star Community Bar crawl complete: "

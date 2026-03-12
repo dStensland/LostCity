@@ -1,0 +1,20 @@
+version: 1
+slug: gwinnett-tap-classes
+name: Gwinnett Tap Classes
+integration_method: python
+defaults:
+  category: fitness
+  tags:
+  - dance
+  - tap-dance
+  - public-fitness
+  - gwinnett
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://secure.rec1.com/GA/gwinnett-county-parks-recreation/catalog
+detail:
+  enabled: false
+data_goals:
+- events

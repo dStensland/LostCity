@@ -55,9 +55,9 @@ RECURRING_SCHEDULE = [
         "title": "Piedmont Park Pickleball Open Play",
         "start_time": "17:00",
         "description": "Friday open pickleball at the Sharon Lester Tennis & Pickleball Center in Piedmont Park. 5-9pm, free, 2.5+ skill level.",
-        "category": "fitness",
-        "subcategory": "fitness.pickleball",
-        "tags": ["pickleball", "free", "outdoor", "pickup", "weekly"],
+        "category": "sports",
+        "subcategory": "sports.pickleball",
+        "tags": ["sports", "pickleball", "free", "outdoor", "pickup", "weekly"],
         "is_free": True,
     },
     {
@@ -65,9 +65,9 @@ RECURRING_SCHEDULE = [
         "title": "Piedmont Park Pickleball Open Play",
         "start_time": "14:00",
         "description": "Saturday open pickleball at the Sharon Lester Tennis & Pickleball Center in Piedmont Park. 2-5pm, free, 2.5+ skill level.",
-        "category": "fitness",
-        "subcategory": "fitness.pickleball",
-        "tags": ["pickleball", "free", "outdoor", "pickup", "weekly"],
+        "category": "sports",
+        "subcategory": "sports.pickleball",
+        "tags": ["sports", "pickleball", "free", "outdoor", "pickup", "weekly"],
         "is_free": True,
     },
     {
@@ -75,9 +75,9 @@ RECURRING_SCHEDULE = [
         "title": "Piedmont Park Ultimate Frisbee Pickup",
         "start_time": "10:00",
         "description": "Saturday morning pickup ultimate frisbee at the Active Oval in Piedmont Park. All levels welcome, free, cleats recommended.",
-        "category": "fitness",
-        "subcategory": "fitness.pickup_sports",
-        "tags": ["ultimate-frisbee", "free", "outdoor", "pickup", "weekly"],
+        "category": "sports",
+        "subcategory": "sports.pickup_sports",
+        "tags": ["sports", "ultimate-frisbee", "free", "outdoor", "pickup", "weekly"],
         "is_free": True,
     },
     {
@@ -85,9 +85,9 @@ RECURRING_SCHEDULE = [
         "title": "Piedmont Park Ultimate Frisbee Pickup",
         "start_time": "10:00",
         "description": "Sunday morning pickup ultimate frisbee at the Active Oval in Piedmont Park. All levels welcome, free, cleats recommended.",
-        "category": "fitness",
-        "subcategory": "fitness.pickup_sports",
-        "tags": ["ultimate-frisbee", "free", "outdoor", "pickup", "weekly"],
+        "category": "sports",
+        "subcategory": "sports.pickup_sports",
+        "tags": ["sports", "ultimate-frisbee", "free", "outdoor", "pickup", "weekly"],
         "is_free": True,
     },
     {
@@ -95,9 +95,9 @@ RECURRING_SCHEDULE = [
         "title": "Piedmont Park Ultimate Frisbee Pickup",
         "start_time": "18:00",
         "description": "Wednesday evening pickup ultimate frisbee at the Active Oval in Piedmont Park. All levels welcome, free, cleats recommended.",
-        "category": "fitness",
-        "subcategory": "fitness.pickup_sports",
-        "tags": ["ultimate-frisbee", "free", "outdoor", "pickup", "weekly"],
+        "category": "sports",
+        "subcategory": "sports.pickup_sports",
+        "tags": ["sports", "ultimate-frisbee", "free", "outdoor", "pickup", "weekly"],
         "is_free": True,
     },
     {
@@ -105,9 +105,9 @@ RECURRING_SCHEDULE = [
         "title": "Piedmont Park Pickup Soccer",
         "start_time": "09:00",
         "description": "Saturday morning pickup soccer at Piedmont Park. Free, all skill levels, just show up.",
-        "category": "fitness",
-        "subcategory": "fitness.pickup_sports",
-        "tags": ["soccer", "free", "outdoor", "pickup", "weekly"],
+        "category": "sports",
+        "subcategory": "sports.pickup_sports",
+        "tags": ["sports", "soccer", "free", "outdoor", "pickup", "weekly"],
         "is_free": True,
     },
 ]
@@ -215,6 +215,8 @@ def categorize_event(title: str, description: str) -> str:
     """Determine category based on title and description."""
     text = (title + " " + description).lower()
 
+    if any(w in text for w in ["pickleball", "soccer", "ultimate frisbee", "ultimate", "open play", "pickup"]):
+        return "sports"
     if any(w in text for w in ["yoga", "fitness", "run", "5k", "race", "walk", "hike"]):
         return "fitness"
     elif any(w in text for w in ["concert", "music", "band", "jazz", "festival"]):

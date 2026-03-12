@@ -36,8 +36,69 @@ VENUE_DATA = {
     "venue_type": "bar",
     "spot_type": "bar",
     "website": BASE_URL,
-    "vibes": ["dive-bar", "burlesque", "iconic", "late-night", "karaoke"],
+    "description": (
+        "The Clermont Lounge is Atlanta's most iconic dive bar and burlesque club, "
+        "operating since 1965 in the basement of the historic Clermont Hotel. "
+        "Home to legendary performances, themed nights, karaoke, and some of the city's most "
+        "beloved characters. A true Atlanta institution."
+    ),
+    "hours": {
+        "monday": {"open": "16:00", "close": "03:00"},
+        "tuesday": {"open": "16:00", "close": "03:00"},
+        "wednesday": {"open": "16:00", "close": "03:00"},
+        "thursday": {"open": "16:00", "close": "03:00"},
+        "friday": {"open": "16:00", "close": "03:00"},
+        "saturday": {"open": "16:00", "close": "03:00"},
+        "sunday": {"closed": True},
+    },
+    "vibes": ["dive-bar", "burlesque", "iconic", "late-night", "karaoke", "lgbtq-friendly", "poncey-highland"],
 }
+
+
+def determine_event_type(title: str) -> tuple[str, Optional[str]]:
+    """Infer subcategory from event title for Clermont Lounge programming."""
+    t = title.lower()
+    if any(w in t for w in ["burlesque", "show", "performance", "revue"]):
+        return "nightlife", "nightlife.burlesque"
+    if any(w in t for w in ["karaoke"]):
+        return "nightlife", "nightlife.karaoke"
+    if any(w in t for w in ["drag", "drag show", "drag night"]):
+        return "nightlife", "nightlife.drag"
+    if any(w in t for w in ["dj", "dance", "party", "night"]):
+        return "nightlife", None
+    if any(w in t for w in ["trivia", "quiz"]):
+        return "community", "trivia"
+    if any(w in t for w in ["live", "band", "concert", "music"]):
+        return "music", "live"
+    return "nightlife", None
+
+
+def extract_description_from_context(lines: list[str], title_idx: int, title: str) -> str:
+    """Pull a meaningful description from lines surrounding the event title."""
+    candidates = []
+    for offset in range(1, 6):
+        idx = title_idx + offset
+        if idx >= len(lines):
+            break
+        line = lines[idx]
+        if re.match(
+            r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|January|February|March|April|May|June|July|August|September|October|November|December)",
+            line,
+            re.IGNORECASE,
+        ):
+            break
+        if re.match(r"(tickets?|register|buy|more info|\$\d|reserve|rsvp)", line, re.IGNORECASE):
+            break
+        if len(line) > 20 and line != title:
+            candidates.append(line)
+        if len(candidates) >= 2:
+            break
+    if candidates:
+        desc = " ".join(candidates)
+        if len(desc) > 400:
+            desc = desc[:397] + "..."
+        return desc
+    return ""
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -165,30 +226,51 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         title, "Clermont Lounge", start_date
                     )
 
-
                     event_url = find_event_url(title, event_links, EVENTS_URL)
+
+                    # Extract real description from surrounding lines
+                    description = extract_description_from_context(lines, i, title)
+
+                    # Detect free events from surrounding context
+                    context_text = " ".join(lines[max(0, i - 3):min(len(lines), i + 6)]).lower()
+                    is_free = any(
+                        w in context_text
+                        for w in ["free", "no cover", "no charge", "free admission", "free event"]
+                    )
+
+                    # Detect price
+                    price_min = None
+                    price_max = None
+                    price_match = re.search(r"\$(\d+(?:\.\d{2})?)", context_text)
+                    if price_match and not is_free:
+                        price_min = float(price_match.group(1))
+                        price_max = price_min
+
+                    # Infer subcategory
+                    category, subcategory = determine_event_type(title)
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": None,
+                        "description": description or None,
                         "start_date": start_date,
                         "start_time": start_time or "22:00",
                         "end_date": None,
                         "end_time": None,
                         "is_all_day": False,
-                        "category": "nightlife",
+                        "category": category,
+                        "subcategory": subcategory,
                         "tags": [
                             "clermont-lounge",
                             "dive-bar",
                             "burlesque",
                             "poncey-highland",
                         ],
-                        "price_min": None,
-                        "price_max": None,
+                        "price_min": price_min,
+                        "price_max": price_max,
                         "price_note": None,
-                        "is_free": False,
+                        "is_free": is_free,
                         "source_url": event_url,
                         "ticket_url": event_url,
                         "image_url": image_map.get(title),

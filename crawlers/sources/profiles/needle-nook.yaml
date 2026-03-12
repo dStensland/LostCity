@@ -29,6 +29,7 @@ detail:
   selectors:
     description: .woocommerce-product-details__short-description, .product-description
     price: .price .woocommerce-Price-amount
+    links: a.mkdf-social-icon-widget-holder[href*='instagram.com'], a.mkdf-social-icon-widget-holder[href*='facebook.com'], a[href*='/contact-us/'], a[href*='/about/']@href
   use_jsonld: true
   use_open_graph: false
   use_heuristic: true

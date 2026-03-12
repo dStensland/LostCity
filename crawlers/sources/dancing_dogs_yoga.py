@@ -1,26 +1,37 @@
 """
 Crawler for Dancing Dogs Yoga (dancingdogsyoga.com).
 
-Site uses JavaScript rendering - must use Playwright.
+The workshops landing page uses a Squarespace calendar block, so we use
+Playwright only to collect the visible event detail URLs. Each event detail page
+then exposes stable event metadata directly in HTML / JSON-LD.
 """
 
 from __future__ import annotations
 
+import json
 import re
 import logging
 from datetime import datetime
 from typing import Optional
 
+import requests
+from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_existing_event_for_insert,
+    get_or_create_venue,
+    insert_event,
+    remove_stale_source_events,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.dancingdogsyoga.com"
-EVENTS_URL = f"{BASE_URL}/workshops"
+BASE_URL = "https://dancingdogsyoga.com"
+EVENTS_URL = f"{BASE_URL}/atlanta-yoga-workshops"
+HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"}
 
 VENUE_DATA = {
     "name": "Dancing Dogs Yoga",
@@ -38,28 +49,138 @@ VENUE_DATA = {
 }
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
+def _clean_text(value: str) -> str:
+    return " ".join((value or "").split())
+
+
+def _parse_event_datetime(value: str) -> datetime:
+    return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S%z")
+
+
+def _extract_price_info(description: str) -> tuple[Optional[float], Optional[float], Optional[str]]:
+    matches = []
+    for token in re.findall(r"\$\s*\d+(?:\.\d{2})?", description or ""):
+        try:
+            matches.append(float(token.replace("$", "").strip()))
+        except ValueError:
+            continue
+
+    if not matches:
+        return None, None, None
+
+    note_match = re.search(
+        r"(\$[\d.]+\s*[^.\n|]*(?:\|\s*\$[\d.]+\s*[^.\n|]*)?)",
+        description,
+        re.IGNORECASE,
+    )
+    return min(matches), max(matches), note_match.group(1).strip() if note_match else None
+
+
+def extract_event_urls(page) -> list[str]:
+    urls = page.evaluate(
+        """() => Array.from(
+            new Set(
+              Array.from(document.querySelectorAll('a[href*="/events/"]'))
+                .map((a) => a.href)
+                .filter((href) =>
+                  href &&
+                  !href.includes('?format=ical') &&
+                  !href.endsWith('/events')
+                )
+            )
+          )"""
+    )
+    return [url for url in urls if isinstance(url, str) and url.startswith(BASE_URL)]
+
+
+def parse_event_detail_html(html: str, event_url: str) -> Optional[dict]:
+    soup = BeautifulSoup(html, "html.parser")
+
+    event_ld = None
+    for script in soup.select('script[type="application/ld+json"]'):
+        raw = (script.string or script.get_text() or "").strip()
+        if not raw:
+            continue
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        candidates = payload if isinstance(payload, list) else [payload]
+        for candidate in candidates:
+            if isinstance(candidate, dict) and candidate.get("@type") == "Event":
+                event_ld = candidate
+                break
+        if event_ld:
+            break
+
+    title = _clean_text(
+        (soup.select_one("h1.eventitem-title") or {}).get_text(" ", strip=True)
+        if soup.select_one("h1.eventitem-title")
+        else (event_ld or {}).get("name", "")
+    )
+    if not title:
+        return None
+
+    start_date_raw = (event_ld or {}).get("startDate")
+    if not start_date_raw:
+        return None
+
+    start_dt = _parse_event_datetime(start_date_raw)
+    end_dt = None
+    if (event_ld or {}).get("endDate"):
+        end_dt = _parse_event_datetime(event_ld["endDate"])
+
+    paragraphs = [
+        _clean_text(p.get_text(" ", strip=True))
+        for p in soup.select(".eventitem-column-content p")
+    ]
+    paragraphs = [p for p in paragraphs if p and p != "Grab Your Spot!"]
+    description = " ".join(paragraphs)
+    if not description:
+        description = _clean_text(
+            (soup.select_one(".eventitem-column-content") or {}).get_text(" ", strip=True)
+            if soup.select_one(".eventitem-column-content")
+            else ""
+        )
+    description = description.replace(" Grab Your Spot!", "").strip()
+
+    price_min, price_max, price_note = _extract_price_info(description)
+
+    reserve_link = soup.select_one('.eventitem-column-content a[href]:not([href*="calendar"]):not([href*="format=ical"])')
+    ticket_url = reserve_link.get("href") if reserve_link else event_url
+
+    image = (event_ld or {}).get("image")
+    if isinstance(image, list):
+        image_url = image[0] if image else None
+    else:
+        image_url = image
+
+    return {
+        "title": title,
+        "description": description or f"Workshop at {VENUE_DATA['name']}",
+        "start_date": start_dt.strftime("%Y-%m-%d"),
+        "start_time": start_dt.strftime("%H:%M"),
+        "end_time": end_dt.strftime("%H:%M") if end_dt else None,
+        "source_url": event_url,
+        "ticket_url": ticket_url,
+        "image_url": image_url,
+        "price_min": price_min,
+        "price_max": price_max,
+        "price_note": price_note,
+    }
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Dancing Dogs Yoga events using Playwright."""
+    """Crawl Dancing Dogs Yoga workshops using calendar event detail pages."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
+    current_hashes: set[str] = set()
 
     try:
+        venue_id = get_or_create_venue(VENUE_DATA)
+
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
@@ -68,156 +189,89 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
-
             logger.info(f"Fetching Dancing Dogs Yoga: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
-
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
-
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
-                        continue
-
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
-
-                    events_found += 1
-
-                    content_hash = generate_content_hash(title, "Dancing Dogs Yoga", start_date)
-
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    description = "Event at Dancing Dogs Yoga"
-                    image_url = image_map.get(title)
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": description,
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "fitness",
-                        "subcategory": None,
-                        "tags": ["dancing-dogs", "yoga", "decatur", "workshop", "wellness"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_url,
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                        "is_class": True,
-                        "class_category": "fitness",
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    # Build series hint for class enrichment
-                    series_hint = {
-                        "series_type": "class_series",
-                        "series_title": title,
-                    }
-                    if description:
-                        series_hint["description"] = description
-                    if image_url:
-                        series_hint["image_url"] = image_url
-
-                    try:
-                        insert_event(event_record, series_hint=series_hint)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
+            page.goto(EVENTS_URL, wait_until="networkidle", timeout=60000)
+            event_urls = extract_event_urls(page)
 
             browser.close()
+
+        for event_url in event_urls:
+            try:
+                response = requests.get(event_url, headers=HEADERS, timeout=20)
+                response.raise_for_status()
+            except Exception as exc:
+                logger.warning(f"[dancing-dogs-yoga] Failed to fetch {event_url}: {exc}")
+                continue
+
+            parsed = parse_event_detail_html(response.text, event_url)
+            if not parsed:
+                continue
+
+            events_found += 1
+            content_hash = generate_content_hash(
+                parsed["title"], VENUE_DATA["name"], parsed["start_date"]
+            )
+            current_hashes.add(content_hash)
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": parsed["title"],
+                "description": parsed["description"],
+                "start_date": parsed["start_date"],
+                "start_time": parsed["start_time"],
+                "end_date": None,
+                "end_time": parsed["end_time"],
+                "is_all_day": False,
+                "category": "fitness",
+                "subcategory": "yoga_workshop",
+                "tags": ["dancing-dogs", "yoga", "decatur", "workshop", "wellness"],
+                "price_min": parsed["price_min"],
+                "price_max": parsed["price_max"],
+                "price_note": parsed["price_note"],
+                "is_free": parsed["price_min"] == 0 and parsed["price_max"] == 0,
+                "source_url": parsed["source_url"],
+                "ticket_url": parsed["ticket_url"],
+                "image_url": parsed["image_url"],
+                "raw_text": parsed["description"],
+                "extraction_confidence": 0.95,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+                "is_class": True,
+                "class_category": "fitness",
+            }
+
+            existing = find_existing_event_for_insert(event_record)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
+            series_hint = {
+                "series_type": "class_series",
+                "series_title": parsed["title"],
+                "description": parsed["description"],
+            }
+            if parsed["image_url"]:
+                series_hint["image_url"] = parsed["image_url"]
+
+            try:
+                insert_event(event_record, series_hint=series_hint)
+                events_new += 1
+                logger.info(
+                    f"[dancing-dogs-yoga] Added: {parsed['title']} on {parsed['start_date']}"
+                )
+            except Exception as exc:
+                logger.error(
+                    f"[dancing-dogs-yoga] Failed to insert {parsed['title']}: {exc}"
+                )
+
+        stale_removed = remove_stale_source_events(source_id, current_hashes)
+        if stale_removed:
+            logger.info(
+                f"[dancing-dogs-yoga] Removed {stale_removed} stale workshop rows"
+            )
 
         logger.info(
             f"Dancing Dogs Yoga crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

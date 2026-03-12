@@ -49,6 +49,101 @@ CATEGORY_MAP = {
     "gaming": "play",
 }
 
+# BiblioCommons audience label → age band tags
+# Audience label strings are lowercased for matching.
+AUDIENCE_TAG_MAP: dict[str, list[str]] = {
+    "birth to five": ["infant", "toddler", "preschool", "kids", "family-friendly"],
+    "babies": ["infant", "kids", "family-friendly"],
+    "toddlers": ["toddler", "kids", "family-friendly"],
+    "preschool": ["preschool", "kids", "family-friendly"],
+    "children": ["elementary", "kids", "family-friendly"],
+    "kids": ["elementary", "kids", "family-friendly"],
+    "elementary": ["elementary", "kids", "family-friendly"],
+    "middle school": ["teen", "kids", "family-friendly"],
+    "tweens": ["teen", "kids", "family-friendly"],
+    "teens": ["teen"],
+    "young adults": ["teen"],
+    "adults": ["adults"],
+    "seniors": ["adults", "seniors"],
+    "all ages": ["family-friendly"],
+    "families": ["family-friendly", "kids"],
+}
+
+# Audience labels that indicate child/family content → override category to "family"
+FAMILY_AUDIENCE_KEYWORDS = {
+    "birth to five",
+    "babies",
+    "toddlers",
+    "preschool",
+    "children",
+    "kids",
+    "elementary",
+    "middle school",
+    "tweens",
+    "families",
+    "all ages",
+}
+
+
+def audience_tags_and_category(
+    audience_ids: list, entities: dict
+) -> tuple[list[str], bool]:
+    """
+    Derive age-band tags and whether to set category="family" from BiblioCommons
+    audience data.
+
+    Args:
+        audience_ids: list of audience ID strings from the event definition.
+        entities: the full entities dict from the API response (contains
+                  "eventAudiences" keyed by ID).
+
+    Returns:
+        (tags, is_family_category) tuple.
+        tags: list of age-band tag strings to add.
+        is_family_category: True when at least one child/family audience is present.
+    """
+    if not audience_ids:
+        return [], False
+
+    audience_lookup = entities.get("eventAudiences", {})
+    tags: list[str] = []
+    is_family = False
+
+    for aud_id in audience_ids:
+        aud_obj = audience_lookup.get(str(aud_id), {})
+        # BiblioCommons returns the label in a "name" field
+        label = (aud_obj.get("name") or aud_obj.get("label") or "").strip().lower()
+        if not label:
+            continue
+
+        # Match against known audience labels
+        matched = False
+        for key, tag_list in AUDIENCE_TAG_MAP.items():
+            if key in label:
+                for t in tag_list:
+                    if t not in tags:
+                        tags.append(t)
+                if key in FAMILY_AUDIENCE_KEYWORDS:
+                    is_family = True
+                matched = True
+                break
+
+        if not matched:
+            # Partial fallback: detect child-related words in the label
+            if any(w in label for w in ["child", "kid", "baby", "infant", "toddler", "preschool", "storytime"]):
+                for t in ["kids", "family-friendly"]:
+                    if t not in tags:
+                        tags.append(t)
+                is_family = True
+            elif "teen" in label or "tween" in label or "young adult" in label:
+                if "teen" not in tags:
+                    tags.append("teen")
+            elif "adult" in label and "young adult" not in label:
+                if "adults" not in tags:
+                    tags.append("adults")
+
+    return tags, is_family
+
 
 def determine_category(title: str, description: str, type_ids: list) -> str:
     """Determine event category from title and description."""
@@ -230,7 +325,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 break
 
             # Extract events from entities
-            entities = data.get("entities", {}).get("events", {})
+            all_entities = data.get("entities", {})
+            entities = all_entities.get("events", {})
             if not entities:
                 logger.info(f"No events found on page {page}")
                 break
@@ -308,8 +404,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if defn.get("featuredImageId"):
                         image_url = f"{IMAGE_BASE}/{defn['featuredImageId']}"
 
-                    # Determine category
+                    # Determine category from title/description keywords
                     category = determine_category(title, description, defn.get("typeIds", []))
+
+                    # Derive age-band tags and family category from BiblioCommons audience data
+                    audience_ids = defn.get("audienceIds", [])
+                    audience_tags, is_family_audience = audience_tags_and_category(
+                        audience_ids, all_entities
+                    )
+
+                    # Audience data overrides category to "family" when child/family content
+                    if is_family_audience:
+                        category = "family"
+
+                    # Build tag list: base tags + audience-derived tags (deduplicated)
+                    base_tags = ["library", "free", "public"]
+                    tags = base_tags + [t for t in audience_tags if t not in base_tags]
 
                     # Check for registration info
                     reg_info = defn.get("registrationInfo", {})
@@ -344,7 +454,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_all_day": False,
                         "category": category,
                         "subcategory": None,
-                        "tags": ["library", "free", "public"],
+                        "tags": tags,
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,

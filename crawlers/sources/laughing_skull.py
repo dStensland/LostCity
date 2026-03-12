@@ -202,10 +202,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # First line is typically the event title
                 title = lines[0]
 
-                # Skip navigation/header items
-                skip_words = ["PAST EVENT", "View All", "Select date", "Event Views"]
+                # Skip navigation/header items and junk labels
+                skip_words = [
+                    "PAST EVENT", "View All", "Select date", "Event Views",
+                    "Limited Tickets Remaining", "Sold Out", "Get Tickets",
+                    "Buy Tickets", "No Events",
+                ]
                 if any(w.lower() in title.lower() for w in skip_words):
                     continue
+
+                # Normalize website titles to match recurring template titles
+                # so content hashes align and dedup works
+                title_lower = title.lower().strip()
+                if "open mic" in title_lower:
+                    title = "Open Mic Comedy Night"
+                elif "best of atlanta" in title_lower or "comedy showcase" in title_lower:
+                    title = "Best of Atlanta Comedy Showcase"
 
                 # Look for date/time line: "Tuesday, January 13, 8:00 pm"
                 date_line = None

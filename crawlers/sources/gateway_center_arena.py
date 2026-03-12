@@ -39,6 +39,11 @@ VENUE_DATA = {
 }
 
 
+def should_skip_official_lovb_match(title: str) -> bool:
+    normalized = " ".join((title or "").lower().replace(".", "").split())
+    return normalized.startswith("lovb atlanta vs ") or normalized.startswith("lovb atlanta v ")
+
+
 def parse_event_datetime(event_data: dict) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
     """
     Parse event datetime from Tribe Events API response.
@@ -193,6 +198,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title = re.sub(r'&#\d+;', '', title)
                     title = re.sub(r'&[a-z]+;', '', title)
                     title = title.strip()
+
+                    if should_skip_official_lovb_match(title):
+                        logger.debug(f"Skipping official LOVB Atlanta placeholder: {title}")
+                        continue
 
                     # Parse dates
                     start_date, start_time, end_date, end_time = parse_event_datetime(event_data)

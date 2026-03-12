@@ -1594,6 +1594,51 @@ VENUES = {
         "venue_type": "venue",
         "website": "https://www.wwa4.com",
     },
+    # ========== REDDIT RESTAURANT VENUES WITH RECURRING EVENTS ==========
+    "jenchans": {
+        "name": "JenChan's",
+        "slug": "jenchans",
+        "address": "186 Carroll St SE",
+        "neighborhood": "Cabbagetown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30312",
+        "venue_type": "restaurant",
+        "website": "https://www.jenchans.com",
+    },
+    "whelan": {
+        "name": "The Whelan",
+        "slug": "whelan",
+        "address": "1133 Huff Rd NW",
+        "neighborhood": "West Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30318",
+        "venue_type": "bar",
+        "website": "http://www.thewhelan.com/",
+    },
+    "piassa-ethiopian": {
+        "name": "Piassa Ethiopian Restaurant",
+        "slug": "piassa-ethiopian",
+        "address": "3086 E Ponce de Leon Ave",
+        "neighborhood": "Scottdale",
+        "city": "Scottdale",
+        "state": "GA",
+        "zip": "30079",
+        "venue_type": "restaurant",
+        "website": "https://www.piassaethiopianrestaurant.com",
+    },
+    "hamp-and-harrys": {
+        "name": "Hamp & Harry's",
+        "slug": "hamp-and-harrys",
+        "address": "29 W Park Sq NE",
+        "neighborhood": "Marietta Square",
+        "city": "Marietta",
+        "state": "GA",
+        "zip": "30060",
+        "venue_type": "restaurant",
+        "website": "https://www.hampandharrys.com",
+    },
 }
 
 # ============================================
@@ -3155,8 +3200,8 @@ EVENT_TEMPLATES = [
         "description": "Premier League Saturday morning watch at Brewhouse Cafe in Little Five Points. Voted America's Best Soccer Bar. 27 large-screen TVs, opens early for EPL, Bundesliga, and Champions League matches.",
         "start_time": "07:30",
         "category": "sports",
-        "subcategory": None,
-        "tags": ["viewing-party", "soccer", "weekly"],
+        "subcategory": "watch_party",
+        "tags": ["sports", "watch-party", "viewing-party", "soccer", "weekly"],
         "is_free": True,
         "active_months": [1, 2, 3, 4, 5, 8, 9, 10, 11, 12],
     },
@@ -3167,8 +3212,8 @@ EVENT_TEMPLATES = [
         "description": "Premier League Sunday morning matches at Brewhouse Cafe in Little Five Points. America's Best Soccer Bar opens early for all major European football leagues.",
         "start_time": "09:00",
         "category": "sports",
-        "subcategory": None,
-        "tags": ["viewing-party", "soccer", "weekly"],
+        "subcategory": "watch_party",
+        "tags": ["sports", "watch-party", "viewing-party", "soccer", "weekly"],
         "is_free": True,
         "active_months": [1, 2, 3, 4, 5, 8, 9, 10, 11, 12],
     },
@@ -3179,20 +3224,20 @@ EVENT_TEMPLATES = [
         "description": "Premier League Saturday morning watch party at Fado Irish Pub Midtown. Official Atlanta United Pub Partner and home of Manchester United Supporters Club Atlanta. Opens early for EPL, Bundesliga, and La Liga.",
         "start_time": "07:30",
         "category": "sports",
-        "subcategory": None,
-        "tags": ["viewing-party", "soccer", "weekly"],
+        "subcategory": "watch_party",
+        "tags": ["sports", "watch-party", "viewing-party", "soccer", "weekly"],
         "is_free": True,
         "active_months": [1, 2, 3, 4, 5, 8, 9, 10, 11, 12],
     },
     {
         "venue_key": "ri-ra-midtown",
         "day": 5,  # Saturday
-        "title": "EPL Morning Watch at Ri Ra",
+        "title": "EPL Morning Watch at Ri Ra Irish Pub Midtown",
         "description": "Premier League Saturday morning watch at Ri Ra Irish Pub Midtown. Official Atlanta United Pub Partner. Popular with Chelsea FC fans. Opens early for all EPL and European matches.",
         "start_time": "07:30",
         "category": "sports",
-        "subcategory": None,
-        "tags": ["viewing-party", "soccer", "weekly"],
+        "subcategory": "watch_party",
+        "tags": ["sports", "watch-party", "viewing-party", "soccer", "weekly"],
         "is_free": True,
         "active_months": [1, 2, 3, 4, 5, 8, 9, 10, 11, 12],
     },
@@ -3203,8 +3248,8 @@ EVENT_TEMPLATES = [
         "description": "NFL Sunday watch party at Park Tavern overlooking Piedmont Park. 25+ HD TVs with all games. Official Atlanta United Pub Partner. Large projection screen for marquee matchups.",
         "start_time": "13:00",
         "category": "sports",
-        "subcategory": None,
-        "tags": ["viewing-party", "football", "nfl", "weekly"],
+        "subcategory": "watch_party",
+        "tags": ["sports", "watch-party", "viewing-party", "football", "nfl", "weekly"],
         "is_free": True,
         "active_months": [1, 2, 9, 10, 11, 12],
     },
@@ -3216,8 +3261,8 @@ EVENT_TEMPLATES = [
         "description": "NFL Sunday watch party at STATS Brewpub Downtown. 16,000 sq ft with 70 HD TVs across five bars. Part of Atlanta Falcons and Hawks Bar Networks. Self-pour beer tap system.",
         "start_time": "13:00",
         "category": "sports",
-        "subcategory": None,
-        "tags": ["viewing-party", "football", "nfl", "weekly"],
+        "subcategory": "watch_party",
+        "tags": ["sports", "watch-party", "viewing-party", "football", "nfl", "weekly"],
         "is_free": True,
         "active_months": [1, 2, 9, 10, 11, 12],
     },
@@ -3228,8 +3273,8 @@ EVENT_TEMPLATES = [
         "description": "Soccer watch party at Der Biergarten Downtown. Official Atlanta United Pub Partner and longtime supporters headquarters. 7,000 sq ft beer hall with big screens. Opens early for EPL and international fixtures.",
         "start_time": "10:00",
         "category": "sports",
-        "subcategory": None,
-        "tags": ["viewing-party", "soccer", "weekly"],
+        "subcategory": "watch_party",
+        "tags": ["sports", "watch-party", "viewing-party", "soccer", "weekly"],
         "is_free": True,
         "active_months": [1, 2, 3, 4, 5, 8, 9, 10, 11, 12],
     },
@@ -3371,6 +3416,63 @@ EVENT_TEMPLATES = [
         "tags": ["pro-wrestling", "free", "weekly"],
         "is_free": True,
     },
+    # ==================================================================
+    # REDDIT RESTAURANT RECURRING EVENTS (Mar 2026)
+    # ==================================================================
+    # ---------- MAHJONG ----------
+    {
+        "venue_key": "jenchans",
+        "day": 0,  # Monday
+        "title": "Mahjong Mondays at JenChan's",
+        "description": "Weekly mahjong night at JenChan's in Cabbagetown. All skill levels welcome. Dim sum and cocktails available while you play.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.bar_games",
+        "tags": ["game-night", "weekly"],
+    },
+    # ---------- KARAOKE ----------
+    {
+        "venue_key": "whelan",
+        "day": 3,  # Thursday
+        "title": "Karaoke at The Whelan",
+        "description": "Weekly karaoke night at The Whelan in West Midtown. Full bar and late-night menu.",
+        "start_time": "21:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.karaoke",
+        "tags": ["karaoke", "nightlife", "weekly"],
+    },
+    # ---------- LIVE MUSIC AT RESTAURANTS ----------
+    {
+        "venue_key": "piassa-ethiopian",
+        "day": 5,  # Saturday
+        "title": "Live Music at Piassa Ethiopian",
+        "description": "Live Ethiopian music at Piassa Ethiopian Restaurant in Scottdale. Traditional and contemporary performances accompany dinner service.",
+        "start_time": "19:00",
+        "category": "music",
+        "subcategory": None,
+        "tags": ["live-music", "world", "weekly", "date-night"],
+    },
+    {
+        "venue_key": "piassa-ethiopian",
+        "day": 6,  # Sunday
+        "title": "Coffee Ceremony & Music at Piassa Ethiopian",
+        "description": "Sunday traditional Ethiopian coffee ceremony with live music at Piassa Ethiopian Restaurant. A cultural dining experience with freshly roasted coffee.",
+        "start_time": "14:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["live-music", "world", "weekly", "chill"],
+    },
+    # ---------- TRIVIA AT RESTAURANTS ----------
+    {
+        "venue_key": "hamp-and-harrys",
+        "day": 3,  # Thursday
+        "title": "Trivia at Hamp & Harry's",
+        "description": "Weekly pub trivia at Hamp & Harry's on Marietta Square. Themed rounds including Harry Potter specials. Prizes and drink specials.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "weekly"],
+    },
 ]
 
 
@@ -3484,6 +3586,32 @@ def _build_recurrence_rule(event_template: dict) -> str:
     return f"FREQ=WEEKLY;BYDAY={day_code}"
 
 
+def _build_display_title(raw_title: str, venue_name: str) -> str:
+    """Expand short venue aliases to the full venue name without double-appending."""
+    normalized_title = " ".join((raw_title or "").split())
+    normalized_venue = " ".join((venue_name or "").split())
+
+    if not normalized_title or not normalized_venue:
+        return normalized_title or normalized_venue
+
+    title_lower = normalized_title.lower()
+    venue_lower = normalized_venue.lower()
+    if venue_lower in title_lower:
+        return normalized_title
+
+    venue_words = normalized_venue.split()
+    max_alias_words = min(3, max(len(venue_words) - 1, 0))
+    for word_count in range(max_alias_words, 0, -1):
+        alias = " ".join(venue_words[:word_count]).strip()
+        alias_lower = alias.lower()
+        if not alias_lower or alias_lower == venue_lower:
+            continue
+        if title_lower.endswith(f" at {alias_lower}"):
+            return f"{normalized_title[: -len(alias)].rstrip()} {normalized_venue}".strip()
+
+    return f"{normalized_title} at {normalized_venue}"
+
+
 def _format_time_label(time_24: str) -> str:
     try:
         return datetime.strptime(time_24, "%H:%M").strftime("%-I:%M %p")
@@ -3578,6 +3706,16 @@ def _slugs_related(a: Optional[str], b: Optional[str]) -> bool:
     return sa == sb or sa.startswith(sb) or sb.startswith(sa)
 
 
+def _source_blocks_recurring_suppression(source: dict) -> bool:
+    """Return whether an active source is healthy enough to suppress recurring templates."""
+    health_tags = {str(tag).strip().lower() for tag in (source.get("health_tags") or [])}
+    if "profile-hardened-zero-signal" in health_tags:
+        return False
+    if "inactive-gated-crawler" in health_tags:
+        return False
+    return True
+
+
 def _compute_venue_suppressions(source_slug: str) -> dict[str, str]:
     """
     Determine recurring venue templates to skip because another dedicated source is active.
@@ -3591,7 +3729,7 @@ def _compute_venue_suppressions(source_slug: str) -> dict[str, str]:
         client = get_client()
         active_sources = (
             client.table("sources")
-            .select("slug,url,is_active")
+            .select("slug,url,is_active,health_tags")
             .eq("is_active", True)
             .execute()
             .data
@@ -3608,6 +3746,7 @@ def _compute_venue_suppressions(source_slug: str) -> dict[str, str]:
         s
         for s in active_sources
         if _normalize_slug(s.get("slug")) != _normalize_slug(source_slug)
+        and _source_blocks_recurring_suppression(s)
     ]
 
     for venue_key, venue in VENUES.items():
@@ -3783,12 +3922,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if genre_part:
                 derived_genres = [genre_part]
 
-        # Auto-append venue name to generic titles
+        # Auto-append venue name to generic titles, while expanding short aliases.
         raw_title = event_template["title"]
-        venue_words = venue_name.lower().split()
-        title_lower = raw_title.lower()
-        title_has_venue = any(w in title_lower for w in venue_words if len(w) > 2)
-        display_title = raw_title if title_has_venue else f"{raw_title} at {venue_name}"
+        display_title = _build_display_title(raw_title, venue_name)
 
         price_min = event_template.get("price_min")
         price_max = event_template.get("price_max")

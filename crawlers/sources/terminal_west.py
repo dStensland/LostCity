@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from datetime import datetime
 from html import unescape
 from typing import Any, Optional
@@ -116,9 +117,22 @@ def _extract_calendar_feed_url(page) -> str:
 
 
 def _fetch_events_payload(feed_url: str) -> list[dict[str, Any]]:
-    request = Request(feed_url, headers={"User-Agent": REQUEST_USER_AGENT})
-    with urlopen(request, timeout=30) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+    payload: Any = []
+    last_exc: Exception | None = None
+    for attempt in range(1, 4):
+        try:
+            request = Request(feed_url, headers={"User-Agent": REQUEST_USER_AGENT})
+            with urlopen(request, timeout=45) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            break
+        except Exception as exc:  # noqa: BLE001 - source fetch retry guard
+            last_exc = exc
+            if attempt >= 3:
+                raise
+            time.sleep(1.5 * attempt)
+
+    if last_exc:
+        logger.debug("Terminal West feed fetch recovered after retry: %s", last_exc)
 
     if isinstance(payload, dict):
         events = payload.get("events") or []
@@ -476,8 +490,28 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
+            def goto_with_retry(
+                target_url: str,
+                *,
+                attempts: int = 3,
+                timeout_ms: int = 45000,
+                wait_until: str = "domcontentloaded",
+            ) -> None:
+                last_exc: Exception | None = None
+                for attempt in range(1, attempts + 1):
+                    try:
+                        page.goto(target_url, wait_until=wait_until, timeout=timeout_ms)
+                        return
+                    except Exception as exc:  # noqa: BLE001 - crawler retry guard
+                        last_exc = exc
+                        if attempt >= attempts:
+                            raise
+                        page.wait_for_timeout(1500 * attempt)
+                if last_exc:
+                    raise last_exc
+
             logger.info(f"Fetching Terminal West calendar: {CALENDAR_URL}")
-            page.goto(CALENDAR_URL, wait_until="domcontentloaded", timeout=30000)
+            goto_with_retry(CALENDAR_URL, attempts=3, timeout_ms=45000)
             page.wait_for_timeout(3000)
 
             feed_url = _extract_calendar_feed_url(page)

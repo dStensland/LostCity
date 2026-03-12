@@ -180,7 +180,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     )
 
 
-                    # Determine subcategory
+                    # Determine subcategory and age-band tags from title keywords
                     title_lower = title.lower()
                     if "book club" in title_lower or "reading group" in title_lower:
                         subcategory = "words.bookclub"
@@ -194,6 +194,25 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         subcategory = "words.workshop"
                     else:
                         subcategory = "words.lecture"
+
+                    # Infer age-band tags and category from title keywords
+                    tags = ["library", "free", "dekalb"]
+                    category = "words"
+
+                    baby_words = ["baby", "infant", "toddler", "preschool", "birth to five"]
+                    child_words = ["storytime", "story time", "children", "kids", "elementary"]
+                    teen_words = ["teen", "tween", "young adult", "ya "]
+
+                    if any(w in title_lower for w in baby_words):
+                        tags += ["infant", "toddler", "preschool", "kids", "family-friendly"]
+                        category = "family"
+                    elif any(w in title_lower for w in child_words):
+                        tags += ["elementary", "kids", "family-friendly"]
+                        category = "family"
+                    elif any(w in title_lower for w in teen_words):
+                        tags.append("teen")
+                    elif "adult" in title_lower and "young adult" not in title_lower:
+                        tags.append("adults")
 
                     event_url = (
                         f"{BASE_URL}{href}"
@@ -211,9 +230,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "end_date": None,
                         "end_time": None,
                         "is_all_day": False,
-                        "category": "words",
+                        "category": category,
                         "subcategory": subcategory,
-                        "tags": ["library", "free", "dekalb"],
+                        "tags": tags,
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,

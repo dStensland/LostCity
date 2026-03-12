@@ -1,0 +1,16 @@
+version: 1
+slug: greater-atlanta-coin-show
+name: Greater Atlanta Coin Show
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - http://atlcoin.com/
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets

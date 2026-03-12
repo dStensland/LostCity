@@ -1,0 +1,16 @@
+version: 1
+slug: frolicon
+name: Frolicon
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://frolicon.com/registration/
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets
