@@ -797,7 +797,10 @@ export default async function PortalSpotPage({ params }: Props) {
 
           {/* ── 5b. ACCOLADES — editorial mentions ───────────────── */}
           {editorialMentions.length > 0 && (
-            <AccoladesSection mentions={editorialMentions} />
+            <AccoladesSection
+              mentions={editorialMentions}
+              title={isYonderPortal ? "Field Guides" : "Accolades"}
+            />
           )}
 
           {/* ── 6. EVENTS (promoted for event-heavy venue types) ──── */}

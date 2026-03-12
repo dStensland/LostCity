@@ -179,6 +179,10 @@ Initial research output:
 - grouped by artifact type
 - grouped by destination parent where applicable
 
+Current supporting docs:
+
+- `prds/034u-yonder-artifact-candidate-sheet.md`
+
 ## Track B: Parent-child relationship model
 
 Decide how artifacts hang off the existing destination graph.
@@ -206,6 +210,10 @@ Selection criteria:
 - low explanation burden
 - enough seeded artifact density to feel real
 
+Current supporting docs:
+
+- `prds/034v-yonder-quest-slate.md`
+
 ## Track D: Source and enrichment plan
 
 Decide how artifact facts will be acquired and verified.
@@ -221,6 +229,12 @@ The important point:
 
 Artifacts are probably research-led and editorial-led at launch.
 That is acceptable.
+
+See also:
+
+- `prds/034t-yonder-artifact-source-and-linking-strategy.md`
+- `prds/034w-yonder-artifact-reference-contract.md`
+- `prds/034y-yonder-artifact-relationship-model.md`
 
 ---
 
@@ -302,6 +316,7 @@ The immediate artifact / landmark / quest research deliverables should be:
 3. a first `8-12` quest slate
 4. a recommendation on which `5` quests are strong enough for eventual launch
 5. a minimal artifact metadata contract for editorial seeding
+6. a source-pack and linking plan for third-party guide references
 
 ---
 

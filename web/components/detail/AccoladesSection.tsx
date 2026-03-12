@@ -19,7 +19,7 @@ export type EditorialMention = {
   snippet: string | null;
 };
 
-const EDITORIAL_SOURCE_LABELS: Record<string, string> = {
+export const EDITORIAL_SOURCE_LABELS: Record<string, string> = {
   eater_atlanta: "Eater Atlanta",
   infatuation_atlanta: "The Infatuation",
   rough_draft_atlanta: "Rough Draft Atlanta",
@@ -29,6 +29,9 @@ const EDITORIAL_SOURCE_LABELS: Record<string, string> = {
   whatnow_atlanta: "What Now Atlanta",
   axios_atlanta: "Axios Atlanta",
   atl_bucket_list: "ATL Bucket List",
+  atlas_obscura: "Atlas Obscura",
+  atlanta_trails: "Atlanta Trails",
+  explore_georgia: "Explore Georgia",
 };
 
 const MENTION_TYPE_WEIGHT: Record<string, number> = {
@@ -45,14 +48,20 @@ const SOURCE_ACCENT: Record<string, string> = {
   opening: "var(--neon-green)",
 };
 
+export function getEditorialSourceLabel(sourceKey: string): string {
+  return EDITORIAL_SOURCE_LABELS[sourceKey] || sourceKey;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export function AccoladesSection({
   mentions,
+  title = "Accolades",
 }: {
   mentions: EditorialMention[];
+  title?: string;
 }) {
   const sorted = [...mentions].sort(
     (a, b) =>
@@ -62,7 +71,7 @@ export function AccoladesSection({
 
   return (
     <div>
-      <SectionHeader title="Accolades" variant="divider" />
+      <SectionHeader title={title} variant="divider" />
       <div className="space-y-2">
         {sorted.map((m) => {
           const accent = SOURCE_ACCENT[m.mention_type] ?? "var(--soft)";
@@ -80,7 +89,7 @@ export function AccoladesSection({
                   className="font-mono text-xs font-bold uppercase tracking-[0.12em]"
                   style={{ color: accent }}
                 >
-                  {EDITORIAL_SOURCE_LABELS[m.source_key] || m.source_key}
+                  {getEditorialSourceLabel(m.source_key)}
                 </span>
                 {m.mention_type === "best_of" && (
                   <Badge

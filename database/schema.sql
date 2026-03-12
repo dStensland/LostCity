@@ -727,7 +727,15 @@ CREATE TABLE IF NOT EXISTS editorial_mentions (
       'eater_atlanta',
       'infatuation_atlanta',
       'rough_draft_atlanta',
-      'atlanta_eats'
+      'atlanta_eats',
+      'atlanta_magazine',
+      'thrillist_atlanta',
+      'whatnow_atlanta',
+      'axios_atlanta',
+      'atl_bucket_list',
+      'atlas_obscura',
+      'atlanta_trails',
+      'explore_georgia'
     )
   ),
   CONSTRAINT editorial_mentions_mention_type_check CHECK (

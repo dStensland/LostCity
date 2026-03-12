@@ -54,6 +54,7 @@ import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 import ExperiencesSection from "./sections/ExperiencesSection";
 import FestivalsSection from "./sections/FestivalsSection";
 import YonderRegionalEscapesSection from "./sections/YonderRegionalEscapesSection";
+import YonderArtifactQuestsSection from "./sections/YonderArtifactQuestsSection";
 import ActiveContestSection from "./sections/ActiveContestSection";
 import FeedTimeMachine from "./FeedTimeMachine";
 import FeedPageIndex from "./FeedPageIndex";
@@ -516,12 +517,15 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
       <ActiveContestSection portalSlug={portalSlug} />
 
       {portalSlug === "yonder" && (
-        <YonderRegionalEscapesSection
-          portalSlug={portalSlug}
-          weatherSignal={context.weather_signal ?? null}
-          dayOfWeek={context.day_of_week ?? null}
-          timeSlot={context.time_slot ?? null}
-        />
+        <>
+          <YonderRegionalEscapesSection
+            portalSlug={portalSlug}
+            weatherSignal={context.weather_signal ?? null}
+            dayOfWeek={context.day_of_week ?? null}
+            timeSlot={context.time_slot ?? null}
+          />
+          <YonderArtifactQuestsSection portalSlug={portalSlug} />
+        </>
       )}
 
       {/* Middle sections — order + visibility controlled by feedLayout */}
