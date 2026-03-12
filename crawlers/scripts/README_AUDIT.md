@@ -42,6 +42,8 @@ City-scoped runs add a scope suffix (example Atlanta):
 
 - Duplicate integrity (same-source and cross-source overlap)
 - Event coverage signals (showtimes, specials/happy-hours, genres)
+- Destination readiness signals (venue website/image/hours coverage, specials depth,
+  parking/transit/walkability context)
 - Description depth quality (`short` is measured as `<220` chars)
 - Participant coverage quality (music/comedy/sports event_artists coverage)
   - Reported in both raw and actionable-expected views.
@@ -55,6 +57,8 @@ City-scoped runs add a scope suffix (example Atlanta):
 Feed policy alignment:
 - Keep section-level de-duplication strict.
 - Favor user-controlled filtering/taste controls over forced diversity balancing.
+- Do not treat "zero future events" as automatic venue failure. Destination-only
+  value is part of portal quality when venue data is complete and useful.
 
 ## Current Schema Expectations
 
