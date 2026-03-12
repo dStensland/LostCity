@@ -16,6 +16,19 @@ type GaStateParkHandle = {
   parkId: string;
 };
 
+type VenueIdRow = {
+  id: number;
+};
+
+type PersistedInventorySnapshotRow = {
+  arrival_date: string;
+  nights: number;
+  window_label: string | null;
+  total_results: number | null;
+  records: unknown;
+  metadata: unknown;
+};
+
 export type YonderRuntimeInventoryRecord = {
   unitType:
     | "tent_site"
@@ -245,28 +258,21 @@ async function fetchPersistedSnapshot(
       .limit(1)
       .maybeSingle();
 
-    if (venueResult.error || !venueResult.data) {
+    const venueRow = (venueResult.data as VenueIdRow | null) ?? null;
+
+    if (venueResult.error || !venueRow) {
       return null;
     }
 
     const selectColumns =
       "arrival_date, nights, window_label, total_results, records, metadata";
     const inventoryScope = getInventoryScopeForSource(source);
-    let snapshotData:
-      | {
-          arrival_date: string;
-          nights: number;
-          window_label: string | null;
-          total_results: number | null;
-          records: unknown;
-          metadata: unknown;
-        }
-      | null = null;
+    let snapshotData: PersistedInventorySnapshotRow | null = null;
 
     const currentResult = await supabase
       .from("current_venue_inventory_snapshots")
       .select(selectColumns)
-      .eq("venue_id", venueResult.data.id)
+      .eq("venue_id", venueRow.id)
       .eq("provider_id", source.providerId)
       .eq("inventory_scope", inventoryScope)
       .eq("arrival_date", arrivalDateIso)
@@ -275,14 +281,14 @@ async function fetchPersistedSnapshot(
       .maybeSingle();
 
     if (!currentResult.error && currentResult.data) {
-      snapshotData = currentResult.data;
+      snapshotData = currentResult.data as PersistedInventorySnapshotRow;
     }
 
     if (!snapshotData) {
       const snapshotResult = await supabase
         .from("venue_inventory_snapshots")
         .select(selectColumns + ", captured_for_date, captured_at")
-        .eq("venue_id", venueResult.data.id)
+        .eq("venue_id", venueRow.id)
         .eq("provider_id", source.providerId)
         .eq("inventory_scope", inventoryScope)
         .eq("arrival_date", arrivalDateIso)
@@ -296,7 +302,7 @@ async function fetchPersistedSnapshot(
         return null;
       }
 
-      snapshotData = snapshotResult.data;
+      snapshotData = snapshotResult.data as PersistedInventorySnapshotRow;
     }
 
     const persistedRecords = Array.isArray(snapshotData.records)

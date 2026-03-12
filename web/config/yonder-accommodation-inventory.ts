@@ -111,6 +111,38 @@ function buildStateParkInventorySource(
   const cabinBand = options?.cabinBand ?? "limited";
   const includeRv = options?.includeRv ?? false;
   const rvBand = options?.rvBand ?? "limited";
+  const unitSummaries: YonderInventoryUnitSummary[] = [
+    {
+      unitType: "tent_site",
+      label: "Campground",
+      inventoryBand: tentBand,
+      reservable: true,
+      priceSignal: "$",
+      note:
+        "Core bookable state-park camping inventory. Treat as the main overnight option for comparison.",
+    },
+    {
+      unitType: "cabin",
+      label: "Cabins",
+      inventoryBand: cabinBand,
+      reservable: true,
+      priceSignal: "$$$",
+      note:
+        "Higher-friction, lower-count overnight option that usually needs more lead time than campground inventory.",
+    },
+  ];
+
+  if (includeRv) {
+    unitSummaries.splice(1, 0, {
+      unitType: "rv_site",
+      label: "RV / Trailer Pads",
+      inventoryBand: rvBand,
+      reservable: true,
+      priceSignal: "$$",
+      note:
+        "Present in the official park inventory flow, but still secondary to campsite-first Yonder framing.",
+    });
+  }
 
   return {
     slug,
@@ -119,39 +151,7 @@ function buildStateParkInventorySource(
     integrationStatus: "manual_link",
     comparisonAxis: "campground_vs_cabin",
     sourceNote,
-    unitSummaries: [
-      {
-        unitType: "tent_site",
-        label: "Campground",
-        inventoryBand: tentBand,
-        reservable: true,
-        priceSignal: "$",
-        note:
-          "Core bookable state-park camping inventory. Treat as the main overnight option for comparison.",
-      },
-      ...(includeRv
-        ? [
-            {
-              unitType: "rv_site" as const,
-              label: "RV / Trailer Pads",
-              inventoryBand: rvBand,
-              reservable: true,
-              priceSignal: "$$",
-              note:
-                "Present in the official park inventory flow, but still secondary to campsite-first Yonder framing.",
-            },
-          ]
-        : []),
-      {
-        unitType: "cabin",
-        label: "Cabins",
-        inventoryBand: cabinBand,
-        reservable: true,
-        priceSignal: "$$$",
-        note:
-          "Higher-friction, lower-count overnight option that usually needs more lead time than campground inventory.",
-      },
-    ],
+    unitSummaries,
   };
 }
 
