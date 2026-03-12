@@ -10,6 +10,16 @@ type RouteContext = {
   params: Promise<{ slug: string }>;
 };
 
+type NetworkSourceRow = {
+  id: number;
+  name: string;
+  slug: string;
+  website_url: string | null;
+  description: string | null;
+  categories: string[] | null;
+  portal_id: string | null;
+};
+
 // GET /api/portals/[slug]/network-feed
 export async function GET(request: NextRequest, context: RouteContext) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
@@ -35,7 +45,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       "network-feed:access",
       slug,
       5 * 60 * 1000,
-      async () => resolveNetworkFeedAccess(supabase, portal),
+      async () => resolveNetworkFeedAccess(supabase, {
+        id: portal.id,
+        slug: portal.slug,
+        parent_portal_id: portal.parent_portal_id ?? null,
+      }),
       { maxEntries: 50 },
     );
 
@@ -70,7 +84,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Failed to fetch network feed" }, { status: 500 });
     }
 
-    const accessibleSourceIds = (accessibleSources || []).map((row) => row.id);
+    const accessibleSourceRows = ((accessibleSources || []) as unknown as NetworkSourceRow[]);
+    const accessibleSourceIds = accessibleSourceRows.map((row) => row.id);
     if (accessibleSourceIds.length === 0) {
       const emptyBody: Record<string, unknown> = { posts: [], has_more: false };
       if (includeSources) {
@@ -133,7 +148,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // Optionally include the source directory
     if (includeSources) {
-      responseBody.sources = accessibleSources || [];
+        responseBody.sources = accessibleSourceRows;
     }
 
     return NextResponse.json(

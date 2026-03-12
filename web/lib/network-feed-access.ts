@@ -1,3 +1,5 @@
+import type { AnySupabase } from "@/lib/api-utils";
+
 export type NetworkFeedPortal = {
   id: string;
   slug: string;
@@ -33,15 +35,7 @@ export function buildNetworkFeedAccessSummary(params: {
 }
 
 async function countActiveNetworkSources(
-  supabase: {
-    from: (table: string) => {
-      select: (columns: string, options?: { count?: "exact"; head?: boolean }) => {
-        eq: (column: string, value: string | boolean) => {
-          eq: (column: string, value: string | boolean) => Promise<{ count: number | null; error: { message: string } | null }>;
-        };
-      };
-    };
-  },
+  supabase: AnySupabase,
   portalId: string,
 ): Promise<number> {
   const { count, error } = await supabase
@@ -58,17 +52,7 @@ async function countActiveNetworkSources(
 }
 
 export async function resolveNetworkFeedAccess(
-  supabase: {
-    from: (table: string) => {
-      select: (columns: string, options?: { count?: "exact"; head?: boolean }) => {
-        eq: (column: string, value: string | boolean) => {
-          eq?: (column: string, value: string | boolean) => Promise<{ count: number | null; error: { message: string } | null }>;
-          maybeSingle?: () => Promise<{ data: NetworkFeedPortal | null; error: { message: string } | null }>;
-        };
-        maybeSingle?: () => Promise<{ data: NetworkFeedPortal | null; error: { message: string } | null }>;
-      };
-    };
-  },
+  supabase: AnySupabase,
   portal: NetworkFeedPortal,
 ): Promise<NetworkFeedAccessSummary> {
   const localSourceCount = await countActiveNetworkSources(supabase, portal.id);
@@ -82,7 +66,7 @@ export async function resolveNetworkFeedAccess(
     });
   }
 
-  const { data: parentPortal, error: parentError } = await supabase
+  const { data: parentPortalData, error: parentError } = await supabase
     .from("portals")
     .select("id, slug, parent_portal_id")
     .eq("id", portal.parent_portal_id)
@@ -92,6 +76,8 @@ export async function resolveNetworkFeedAccess(
   if (parentError) {
     throw new Error(`Failed loading parent portal for ${portal.slug}: ${parentError.message}`);
   }
+
+  const parentPortal = (parentPortalData as NetworkFeedPortal | null) ?? null;
 
   if (!parentPortal) {
     return buildNetworkFeedAccessSummary({

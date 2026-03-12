@@ -704,3 +704,109 @@ CREATE INDEX IF NOT EXISTS idx_school_calendar_school_year ON school_calendar_ev
 CREATE INDEX IF NOT EXISTS idx_school_calendar_event_type ON school_calendar_events(event_type, start_date);
 
 ALTER TABLE school_calendar_events ENABLE ROW LEVEL SECURITY;
+
+-- -------------------------------------------------------
+-- Editorial mentions + venue occasions (migrations 433, 442)
+-- -------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS editorial_mentions (
+  id SERIAL PRIMARY KEY,
+  venue_id INT REFERENCES venues(id) ON DELETE CASCADE,
+  source_key TEXT NOT NULL,
+  article_url TEXT NOT NULL,
+  article_title TEXT NOT NULL,
+  mention_type TEXT NOT NULL DEFAULT 'feature',
+  published_at TIMESTAMPTZ,
+  guide_name TEXT,
+  snippet TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT editorial_mentions_source_key_check CHECK (
+    source_key IN (
+      'eater_atlanta',
+      'infatuation_atlanta',
+      'rough_draft_atlanta',
+      'atlanta_eats'
+    )
+  ),
+  CONSTRAINT editorial_mentions_mention_type_check CHECK (
+    mention_type IN (
+      'review',
+      'guide_inclusion',
+      'best_of',
+      'opening',
+      'closing',
+      'feature'
+    )
+  ),
+  CONSTRAINT editorial_mentions_snippet_length CHECK (
+    snippet IS NULL OR length(snippet) <= 500
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_editorial_mentions_venue_id
+  ON editorial_mentions(venue_id)
+  WHERE is_active = true;
+
+CREATE INDEX IF NOT EXISTS idx_editorial_mentions_published
+  ON editorial_mentions(published_at DESC)
+  WHERE is_active = true AND venue_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_editorial_mentions_source
+  ON editorial_mentions(source_key);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_editorial_mentions_article_venue
+  ON editorial_mentions(article_url, venue_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_editorial_mentions_article_unmatched
+  ON editorial_mentions(article_url)
+  WHERE venue_id IS NULL;
+
+CREATE TRIGGER update_editorial_mentions_updated_at
+  BEFORE UPDATE ON editorial_mentions
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+ALTER TABLE editorial_mentions ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS venue_occasions (
+  id SERIAL PRIMARY KEY,
+  venue_id INT NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+  occasion TEXT NOT NULL,
+  confidence DECIMAL(3,2) NOT NULL DEFAULT 1.0,
+  source TEXT NOT NULL DEFAULT 'manual',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT venue_occasions_occasion_check CHECK (
+    occasion IN (
+      'date_night',
+      'groups',
+      'solo',
+      'outdoor_dining',
+      'late_night',
+      'quick_bite',
+      'special_occasion',
+      'beltline',
+      'pre_game',
+      'brunch',
+      'family_friendly',
+      'dog_friendly',
+      'live_music'
+    )
+  ),
+  CONSTRAINT venue_occasions_source_check CHECK (
+    source IN ('manual', 'inferred', 'editorial')
+  ),
+  CONSTRAINT venue_occasions_confidence_range CHECK (
+    confidence >= 0.0 AND confidence <= 1.0
+  ),
+  UNIQUE (venue_id, occasion)
+);
+
+CREATE INDEX IF NOT EXISTS idx_venue_occasions_occasion
+  ON venue_occasions(occasion);
+
+CREATE INDEX IF NOT EXISTS idx_venue_occasions_venue
+  ON venue_occasions(venue_id);
+
+ALTER TABLE venue_occasions ENABLE ROW LEVEL SECURITY;
