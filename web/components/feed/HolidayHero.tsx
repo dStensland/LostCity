@@ -16,13 +16,16 @@ import {
 function HolidayCard({
   holiday,
   eventCount,
+  portalSlug,
 }: {
   holiday: HolidayConfig & { countdown: string; daysUntil: number };
   eventCount: number | null;
+  portalSlug: string;
 }) {
   const isToday = !holiday.countdownOverride && holiday.daysUntil === 0;
   const isTomorrow = !holiday.countdownOverride && holiday.daysUntil === 1;
   const hasImageIcon = holiday.icon.startsWith("/");
+  const hasQuickLinks = holiday.quickLinks && holiday.quickLinks.length > 0;
 
   return (
     <>
@@ -76,7 +79,11 @@ function HolidayCard({
         </div>
       )}
 
-      <div className="relative flex items-center gap-5 px-5 py-5 sm:px-6 sm:py-6">
+      {/* Main content area — links to events page */}
+      <Link
+        href={`/${portalSlug}?tags=${holiday.tag}&view=find`}
+        className="relative flex items-center gap-5 px-5 py-5 sm:px-6 sm:py-6 group/main"
+      >
         {/* Icon */}
         <div className="flex-shrink-0 relative">
           <div
@@ -154,7 +161,7 @@ function HolidayCard({
 
           {/* Title */}
           <h3
-            className="text-xl sm:text-2xl font-bold leading-tight"
+            className="text-xl sm:text-2xl font-bold leading-tight group-hover/main:text-white transition-colors"
             style={{
               color: "var(--cream)",
               textShadow: `0 0 30px ${holiday.glowColor}30`,
@@ -166,8 +173,8 @@ function HolidayCard({
           {/* Subtitle */}
           <p className="text-sm text-[var(--soft)] mt-0.5 italic">{holiday.subtitle}</p>
 
-          {/* Event count pill */}
-          {eventCount !== null && eventCount > 0 && (
+          {/* Event count pill (only when no quick links) */}
+          {!hasQuickLinks && eventCount !== null && eventCount > 0 && (
             <div className="flex items-center gap-3 mt-3">
               <span
                 className="font-mono text-xs font-medium px-2 py-0.5 rounded-full"
@@ -182,16 +189,47 @@ function HolidayCard({
           )}
         </div>
 
-        {/* Arrow */}
-        <svg
-          className="w-6 h-6 text-[var(--muted)] group-hover:text-[var(--cream)] transition-colors flex-shrink-0 group-hover:translate-x-1 transition-transform"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </div>
+        {/* Arrow (only when no quick links — pills replace it) */}
+        {!hasQuickLinks && (
+          <svg
+            className="w-6 h-6 text-[var(--muted)] group-hover/main:text-[var(--cream)] transition-colors flex-shrink-0 group-hover/main:translate-x-1 transition-transform"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        )}
+      </Link>
+
+      {/* Quick-link CTA pills */}
+      {hasQuickLinks && (
+        <div className="relative flex items-center gap-2 px-5 pb-4 sm:px-6 -mt-2 overflow-x-auto scrollbar-hide">
+          {holiday.quickLinks!.map((link, i) => {
+            const isFirst = i === 0;
+            const pillLabel = isFirst && eventCount !== null && eventCount > 0
+              ? `${eventCount} ${link.label}`
+              : link.label;
+
+            return (
+              <Link
+                key={link.label}
+                href={`/${portalSlug}${link.href}`}
+                className="flex-shrink-0 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all hover:scale-105 active:scale-95"
+                style={{
+                  color: isFirst ? "#fff" : holiday.accentColor,
+                  backgroundColor: isFirst
+                    ? `color-mix(in srgb, ${holiday.glowColor} 40%, transparent)`
+                    : `color-mix(in srgb, ${holiday.glowColor} 15%, transparent)`,
+                  border: `1px solid color-mix(in srgb, ${holiday.glowColor} ${isFirst ? "50" : "25"}%, transparent)`,
+                }}
+              >
+                {pillLabel}
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }
@@ -241,13 +279,28 @@ export default function HolidayHero({ portalSlug, position = 1, eventCount: pref
 
   if (!holiday) return null;
 
+  const hasQuickLinks = holiday.quickLinks && holiday.quickLinks.length > 0;
+
+  // When there are quick links, the card has multiple <Link> inside — use a div wrapper.
+  // Otherwise, the whole card is one link.
+  if (hasQuickLinks) {
+    return (
+      <div
+        className="relative rounded-2xl overflow-hidden"
+        style={{ background: holiday.gradient }}
+      >
+        <HolidayCard holiday={holiday} eventCount={eventCount} portalSlug={portalSlug} />
+      </div>
+    );
+  }
+
   return (
     <Link
       href={`/${portalSlug}?tags=${holiday.tag}&view=find`}
       className="block relative rounded-2xl overflow-hidden group"
       style={{ background: holiday.gradient }}
     >
-      <HolidayCard holiday={holiday} eventCount={eventCount} />
+      <HolidayCard holiday={holiday} eventCount={eventCount} portalSlug={portalSlug} />
     </Link>
   );
 }
