@@ -38,6 +38,36 @@ type OpportunityRow = {
   } | null;
 };
 
+type OpportunityJoinShape = {
+  id: string;
+  slug: string;
+  title: string;
+  commitment_level: string;
+  updated_at: string;
+  source_id: number | null;
+  portal_id: string | null;
+  organization:
+    | {
+        name: string;
+        slug: string;
+      }
+    | Array<{
+        name: string;
+        slug: string;
+      }>
+    | null;
+  source:
+    | {
+        name: string;
+        slug: string;
+      }
+    | Array<{
+        name: string;
+        slug: string;
+      }>
+    | null;
+};
+
 type InteractionRow = {
   target_id: string | null;
   target_kind: string | null;
@@ -76,6 +106,11 @@ async function requirePortalAccess(portalId: string, context: string) {
 function diffDays(fromIso: string, to = new Date()): number {
   const from = new Date(fromIso);
   return Math.floor((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function firstJoinRow<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
 }
 
 // GET /api/admin/portals/[id]/volunteer/quality
@@ -133,7 +168,25 @@ export async function GET(request: NextRequest, { params }: Props) {
     return adminErrorResponse(opportunitiesError, "GET /api/admin/portals/[id]/volunteer/quality (opportunities)");
   }
 
-  const volunteerRows = ((opportunityRows || []) as OpportunityRow[]).filter((opportunity) => {
+  const volunteerRows = ((opportunityRows || []) as unknown as OpportunityJoinShape[])
+    .map((opportunity): OpportunityRow | null => {
+      const organization = firstJoinRow(opportunity.organization);
+      if (!organization) return null;
+
+      return {
+        id: opportunity.id,
+        slug: opportunity.slug,
+        title: opportunity.title,
+        commitment_level: opportunity.commitment_level,
+        updated_at: opportunity.updated_at,
+        source_id: opportunity.source_id,
+        portal_id: opportunity.portal_id,
+        organization,
+        source: firstJoinRow(opportunity.source),
+      };
+    })
+    .filter((opportunity): opportunity is OpportunityRow => Boolean(opportunity))
+    .filter((opportunity) => {
     if (opportunity.source_id === null) return true;
     if (opportunity.portal_id === portal.id) return true;
     if (accessibleSourceIds.size === 0) return true;
