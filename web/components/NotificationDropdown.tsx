@@ -98,14 +98,21 @@ export default function NotificationDropdown() {
     return () => controller.abort();
   }, [user, isOpen, authLoading]);
 
-  // Poll for unread count periodically
+  // Poll for unread count periodically — backs off after repeated failures
   useEffect(() => {
     // Wait for auth to settle before starting polls
     if (authLoading || !user) return;
 
     const controller = new AbortController();
+    let failures = 0;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
     async function fetchUnreadCount() {
+      // Stop polling after 3 consecutive failures
+      if (failures >= 3) {
+        if (intervalId) clearInterval(intervalId);
+        return;
+      }
       try {
         const res = await fetch("/api/notifications?limit=1&unread=true", {
           signal: controller.signal,
@@ -113,19 +120,22 @@ export default function NotificationDropdown() {
         if (res.ok) {
           const data = await res.json();
           setUnreadCount(data.unreadCount || 0);
+          failures = 0;
+        } else {
+          failures++;
         }
       } catch (err) {
         // Ignore abort errors (expected during unmount/navigation)
         if (err instanceof Error && err.name === "AbortError") return;
-        // Silent fail for other polling errors
+        failures++;
       }
     }
 
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 60000); // Poll every minute
+    intervalId = setInterval(fetchUnreadCount, 60000); // Poll every minute
     return () => {
       controller.abort();
-      clearInterval(interval);
+      if (intervalId) clearInterval(intervalId);
     };
   }, [user, authLoading]);
 

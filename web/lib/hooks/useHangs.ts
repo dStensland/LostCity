@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthenticatedFetch } from "./useAuthenticatedFetch";
+import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
 import type {
   HangWithVenue,
   FriendHang,
@@ -38,13 +39,14 @@ export function useMyHangs() {
     queryKey: ["hangs", "mine"],
     queryFn: async () => {
       const res = await fetch("/api/hangs");
-      if (!res.ok) throw new Error("Failed to fetch hangs");
+      if (!res.ok) return { active: null, planned: [] };
       return res.json();
     },
-    enabled: !!user,
+    enabled: !!user && ENABLE_HANGS_V1,
     staleTime: 30_000,
     refetchInterval: 90_000,
     gcTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
 
@@ -253,13 +255,14 @@ export function useFriendHangs() {
     queryKey: ["hangs", "friends"],
     queryFn: async () => {
       const res = await fetch("/api/hangs/friends");
-      if (!res.ok) throw new Error("Failed to fetch friend hangs");
+      if (!res.ok) return { friends: [], count: 0 };
       return res.json();
     },
-    enabled: !!user,
+    enabled: !!user && ENABLE_HANGS_V1,
     staleTime: 30_000,
     refetchInterval: 90_000,
     gcTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
 
@@ -274,11 +277,13 @@ export function useVenueHangs(venueId: number) {
     queryKey: ["hangs", "venue", venueId],
     queryFn: async () => {
       const res = await fetch(`/api/hangs/venue/${venueId}`);
-      if (!res.ok) throw new Error("Failed to fetch venue hangs");
+      if (!res.ok) return { venue_id: venueId, total_count: 0, friend_hangs: [], public_count: 0 };
       return res.json();
     },
+    enabled: ENABLE_HANGS_V1,
     staleTime: 30_000,
     gcTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
 
@@ -301,10 +306,12 @@ export function useHotVenues(portalSlug?: string, limit?: number) {
       if (limit !== undefined) params.set("limit", String(limit));
       const qs = params.toString();
       const res = await fetch(`/api/hangs/hot${qs ? `?${qs}` : ""}`);
-      if (!res.ok) throw new Error("Failed to fetch hot venues");
+      if (!res.ok) return { venues: [] };
       return res.json();
     },
+    enabled: ENABLE_HANGS_V1,
     staleTime: 60_000,
     gcTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
