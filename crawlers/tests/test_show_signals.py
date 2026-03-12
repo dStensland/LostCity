@@ -1,4 +1,4 @@
-from show_signals import derive_show_signals
+from show_signals import derive_show_signals, extract_ticket_status
 
 
 def test_extracts_doors_and_sold_out():
@@ -26,6 +26,40 @@ def test_detects_age_policy_with_precedence():
     )
 
     assert signals["age_policy"] == "21+"
+
+
+def test_detects_cancelled_ticket_status():
+    signals = derive_show_signals(
+        {
+            "title": "Touring Artist Live",
+            "description": "This event has been postponed. Original tickets will be honored.",
+        },
+        preserve_existing=False,
+    )
+
+    assert signals["ticket_status"] == "cancelled"
+
+
+def test_extract_ticket_status_maps_schema_org_availability_values():
+    assert extract_ticket_status("https://schema.org/InStock") == "tickets-available"
+    assert extract_ticket_status("https://schema.org/SoldOut") == "sold-out"
+    assert extract_ticket_status("https://schema.org/LimitedAvailability") == "low-tickets"
+    assert extract_ticket_status("https://schema.org/EventCancelled") == "cancelled"
+    assert extract_ticket_status("https://schema.org/EventPostponed") == "cancelled"
+    assert extract_ticket_status("https://schema.org/EventRescheduled") == "cancelled"
+
+
+def test_detects_sold_out_from_price_note_text() -> None:
+    signals = derive_show_signals(
+        {
+            "title": "Touring Artist Live",
+            "price_note": "Sales Ended",
+            "ticket_url": "https://tickets.example.com/event/123",
+        },
+        preserve_existing=False,
+    )
+
+    assert signals["ticket_status"] == "sold-out"
 
 
 def test_preserves_existing_values_when_requested():

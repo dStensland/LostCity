@@ -31,6 +31,15 @@ _REENTRY_ALLOWED_PATTERN = re.compile(
     r"\bre[\s-]?entry\s*(?:allowed|welcome|permitted)\b",
     re.IGNORECASE,
 )
+_STATUS_CANCELLED_PATTERN = re.compile(r"\bcancel+ed\b|\bpostponed\b|\brescheduled\b", re.IGNORECASE)
+_STATUS_SOLD_OUT_PATTERN = re.compile(
+    r"\bsold[\s-]?out\b|\boff[\s-]?sale\b|\bsales?\s*ended\b",
+    re.IGNORECASE,
+)
+_STATUS_LOW_TICKETS_PATTERN = re.compile(
+    r"\blow\s*tickets?\b|\bfew\s*tickets?\s*left\b|\blimited\s*tickets?\b|\balmost\s*sold\s*out\b",
+    re.IGNORECASE,
+)
 
 
 def _normalize_text(*parts: Optional[str]) -> str:
@@ -108,20 +117,66 @@ def _normalize_ticket_status(value: Optional[str]) -> Optional[str]:
     raw = str(value).strip().lower()
     if not raw:
         return None
+    if "schema.org/" in raw:
+        raw = raw.rstrip("/").split("/")[-1]
+    raw = raw.replace("#", "").strip()
     mapping = {
         "sold-out": "sold-out",
         "sold_out": "sold-out",
         "sold out": "sold-out",
+        "soldout": "sold-out",
         "low-tickets": "low-tickets",
         "low_tickets": "low-tickets",
         "low tickets": "low-tickets",
+        "limitedavailability": "low-tickets",
+        "limited-availability": "low-tickets",
+        "limited availability": "low-tickets",
         "free": "free",
+        "cancelled": "cancelled",
+        "canceled": "cancelled",
+        "postponed": "cancelled",
+        "rescheduled": "cancelled",
+        "eventcancelled": "cancelled",
+        "eventcanceled": "cancelled",
+        "eventpostponed": "cancelled",
+        "eventrescheduled": "cancelled",
         "tickets-available": "tickets-available",
         "tickets_available": "tickets-available",
         "tickets available": "tickets-available",
         "available": "tickets-available",
+        "instock": "tickets-available",
+        "in-stock": "tickets-available",
+        "in stock": "tickets-available",
+        "onlineonly": "tickets-available",
+        "online-only": "tickets-available",
+        "online only": "tickets-available",
+        "offlineonly": "tickets-available",
+        "offline-only": "tickets-available",
+        "offline only": "tickets-available",
     }
     return mapping.get(raw)
+
+
+def extract_ticket_status(value: Optional[str]) -> Optional[str]:
+    """Normalize explicit or status-like ticket messaging into canonical values."""
+    normalized = _normalize_ticket_status(value)
+    if normalized in {"cancelled", "sold-out", "low-tickets", "tickets-available"}:
+        return normalized
+
+    if not value:
+        return None
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    if _STATUS_CANCELLED_PATTERN.search(text):
+        return "cancelled"
+    if _STATUS_SOLD_OUT_PATTERN.search(text):
+        return "sold-out"
+    if _STATUS_LOW_TICKETS_PATTERN.search(text):
+        return "low-tickets"
+    return None
 
 
 def _normalize_reentry_policy(value: Optional[str]) -> Optional[str]:
@@ -175,15 +230,16 @@ def _detect_ticket_status(
     is_free: Optional[bool],
     has_ticket_url: bool,
 ) -> Optional[str]:
-    if "sold-out" in tags or re.search(r"\bsold[\s-]?out\b", text):
+    detected = extract_ticket_status(text)
+    if detected == "cancelled":
+        return detected
+
+    if "sold-out" in tags or detected == "sold-out":
         return "sold-out"
 
     if (
         "limited-seating" in tags
-        or re.search(
-            r"\blow\s*tickets?\b|\bfew\s*tickets?\s*left\b|\blimited\s*tickets?\b|\balmost\s*sold\s*out\b",
-            text,
-        )
+        or detected == "low-tickets"
     ):
         return "low-tickets"
 
@@ -203,7 +259,7 @@ def derive_show_signals(event_data: dict, preserve_existing: bool = True) -> dic
     Keys:
       - doors_time (HH:MM:SS)
       - age_policy (21+ | 18+ | all-ages | adults-only)
-      - ticket_status (sold-out | low-tickets | free | tickets-available)
+      - ticket_status (cancelled | sold-out | low-tickets | free | tickets-available)
       - reentry_policy (no-reentry | reentry-allowed)
       - set_times_mentioned (bool)
     """

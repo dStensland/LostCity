@@ -14,10 +14,18 @@ from typing import Any, Optional
 _AGGREGATOR_SLUG_PREFIXES = ("ticketmaster", "eventbrite", "mobilize")
 _AGGREGATOR_SLUGS = {
     "atlanta-recurring-social",
+    "arts-atl",
+    "artsatl-calendar",
+    "access-atlanta",
+    "discover-atlanta",
     "instagram-captions",
     "creative-loafing",
+    "nashville-scene",
 }
 _AGGREGATOR_HOST_TOKENS = (
+    "accessatlanta",
+    "artsatl",
+    "discoveratlanta",
     "eventbrite",
     "ticketmaster",
     "facebook",
@@ -26,6 +34,7 @@ _AGGREGATOR_HOST_TOKENS = (
     "mommypoppins",
     "kidsoutandabout",
     "nextdoor",
+    "nashvillescene",
     "patch.",
     "campsearch",
     "mykidcamp",
@@ -33,6 +42,10 @@ _AGGREGATOR_HOST_TOKENS = (
 )
 
 _REG_STATUS_MAP = {
+    "cancelled": "cancelled",
+    "canceled": "cancelled",
+    "postponed": "cancelled",
+    "rescheduled": "cancelled",
     "sold-out": "sold_out",
     "sold_out": "sold_out",
     "sold out": "sold_out",
