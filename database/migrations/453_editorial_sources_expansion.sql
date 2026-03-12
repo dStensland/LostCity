@@ -20,6 +20,9 @@ ALTER TABLE editorial_mentions
       'thrillist_atlanta',
       'whatnow_atlanta',
       'axios_atlanta',
-      'atl_bucket_list'
+      'atl_bucket_list',
+      'atlanta_trails',
+      'atlas_obscura',
+      'explore_georgia'
     )
   );

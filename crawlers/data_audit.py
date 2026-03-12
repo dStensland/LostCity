@@ -16,8 +16,8 @@ from rapidfuzz import fuzz
 VALID_CATEGORIES = [
     'music', 'art', 'comedy', 'theater', 'film', 'sports',
     'food_drink', 'nightlife', 'community', 'fitness', 'family',
-    'learning', 'dance', 'tours', 'meetup', 'words', 'religious',
-    'markets', 'wellness', 'gaming', 'outdoors', 'activism', 'other'
+    'learning', 'words', 'religious', 'wellness', 'support_group',
+    'outdoors', 'other'
 ]
 
 # Subcategories by category - matches frontend SUBCATEGORIES in web/lib/search.ts

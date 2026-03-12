@@ -300,17 +300,11 @@ VALID_CATEGORIES = {
     "fitness",
     "family",
     "learning",
-    "dance",
-    "tours",
-    "meetup",
     "words",
     "religious",
-    "markets",
     "wellness",
     "support_group",
-    "gaming",
     "outdoors",
-    "programs",  # Structured programs: camps, enrichment, leagues, classes (Hooky)
     "other",
 }
 

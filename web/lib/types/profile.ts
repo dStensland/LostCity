@@ -72,6 +72,8 @@ export interface PublicProfile {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  city_moment_url: string | null;
+  city_moment_thumbnail_url: string | null;
   privacy_mode: PrivacyMode;
   created_at: string;
   hang_count: number;

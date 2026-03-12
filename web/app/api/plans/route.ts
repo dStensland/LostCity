@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
       plan_time: plan_time || null,
       portal_id: portal_id || null,
     } as never)
-    .select("id, title, plan_date, plan_time, status, created_at")
+    .select("id, title, plan_date, plan_time, status, share_token, created_at")
     .single();
 
   if (error) {

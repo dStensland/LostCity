@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { ShareNetwork } from "@phosphor-icons/react";
 import { usePlan, useRespondToPlan, useAddPlanItem, useInviteToPlan } from "@/lib/hooks/usePlans";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/Toast";
@@ -12,9 +13,10 @@ import { format, parseISO } from "date-fns";
 interface PlanDetailViewProps {
   planId: string;
   onBack: () => void;
+  portalSlug?: string;
 }
 
-export function PlanDetailView({ planId, onBack }: PlanDetailViewProps) {
+export function PlanDetailView({ planId, onBack, portalSlug = "atlanta" }: PlanDetailViewProps) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const { data, isLoading } = usePlan(planId);
@@ -25,6 +27,28 @@ export function PlanDetailView({ planId, onBack }: PlanDetailViewProps) {
   const [showAddItem, setShowAddItem] = useState(false);
   const [newItemTitle, setNewItemTitle] = useState("");
   const [showInvite, setShowInvite] = useState(false);
+
+  const handleShareLink = useCallback(async () => {
+    const shareToken = data?.plan?.share_token;
+    if (!shareToken) return;
+    const url = `${window.location.origin}/${portalSlug}/plans/share/${shareToken}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: data.plan.title, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        showToast("Link copied!", "success");
+      }
+    } catch {
+      // User cancelled or clipboard failed
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast("Link copied!", "success");
+      } catch {
+        // Last resort
+      }
+    }
+  }, [data, portalSlug, showToast]);
 
   if (isLoading) {
     return (
@@ -100,6 +124,15 @@ export function PlanDetailView({ planId, onBack }: PlanDetailViewProps) {
             {dateStr}{timeStr ? ` · ${timeStr}` : ""} · by {plan.creator.display_name || plan.creator.username}
           </p>
         </div>
+        {isCreator && data?.plan?.share_token && (
+          <button
+            onClick={handleShareLink}
+            className="p-2 rounded-lg bg-[var(--twilight)]/50 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors"
+            title="Share plan"
+          >
+            <ShareNetwork weight="bold" className="w-4.5 h-4.5" />
+          </button>
+        )}
       </div>
 
       {plan.description && (

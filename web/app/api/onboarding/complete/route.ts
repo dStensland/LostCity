@@ -4,13 +4,11 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limi
 import { checkBodySize } from "@/lib/api-utils";
 import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 import { logger } from "@/lib/logger";
-
-// Valid categories from search-constants.ts
-const VALID_CATEGORIES = [
-  "music", "film", "comedy", "theater", "art", "sports", "food_drink", "nightlife",
-  "community", "fitness", "family", "learning", "dance", "tours", "meetup", "words",
-  "religious", "markets", "wellness", "gaming", "outdoors", "other"
-];
+import {
+  isPublicEventCategoryId,
+  type PublicEventCategoryId,
+  normalizeEventCategory,
+} from "@/lib/event-taxonomy";
 
 export async function POST(request: NextRequest) {
   const bodySizeResult = checkBodySize(request);
@@ -38,15 +36,43 @@ export async function POST(request: NextRequest) {
     const isValidGenre = (g: string): boolean => /^[a-z0-9._-]+$/i.test(g);
 
     // Validate input
-    const selectedCategories = Array.isArray(body.selectedCategories)
-      ? body.selectedCategories.filter((c: unknown) => typeof c === "string" && VALID_CATEGORIES.includes(c)).slice(0, 20)
+    const rawSelectedCategories = Array.isArray(body.selectedCategories)
+      ? (body.selectedCategories as unknown[])
       : [];
+    const selectedCategories = rawSelectedCategories
+          .map((category: unknown) =>
+            typeof category === "string" ? normalizeEventCategory(category) : null
+          )
+          .filter(
+            (category): category is PublicEventCategoryId =>
+              isPublicEventCategoryId(category)
+          )
+          .slice(0, 20);
     const selectedGenres: Record<string, string[]> | undefined =
       body.selectedGenres && typeof body.selectedGenres === "object" && !Array.isArray(body.selectedGenres)
         ? Object.fromEntries(
             Object.entries(body.selectedGenres as Record<string, unknown>)
-              .filter(([k, v]) => VALID_CATEGORIES.includes(k) && Array.isArray(v))
-              .map(([k, v]) => [k, (v as string[]).filter((g) => typeof g === "string" && isValidGenre(g)).slice(0, 20)])
+              .map(([k, v]) => {
+                const normalizedCategory = normalizeEventCategory(k);
+                if (
+                  !isPublicEventCategoryId(normalizedCategory) ||
+                  !Array.isArray(v)
+                ) {
+                  return null;
+                }
+
+                return [
+                  normalizedCategory,
+                  (v as string[])
+                    .filter((g) => typeof g === "string" && isValidGenre(g))
+                    .slice(0, 20),
+                ] as const satisfies readonly [PublicEventCategoryId, string[]];
+              })
+              .filter(
+                (
+                  entry
+                ): entry is readonly [PublicEventCategoryId, string[]] => Boolean(entry)
+              )
               .slice(0, 20)
           )
         : undefined;

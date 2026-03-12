@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth, type Profile } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
 import AvatarUpload from "@/components/AvatarUpload";
+import CityMomentUpload from "@/components/CityMomentUpload";
 import { RegularSpotsSection } from "@/components/settings/RegularSpotsSection";
 
 type EditableProfile = {
@@ -12,6 +13,7 @@ type EditableProfile = {
   location: string;
   website: string;
   avatarUrl: string | null;
+  momentUrl: string | null;
 };
 
 function getEditableProfile(profile: Profile | null): EditableProfile {
@@ -21,6 +23,7 @@ function getEditableProfile(profile: Profile | null): EditableProfile {
     location: profile?.location || "",
     website: profile?.website || "",
     avatarUrl: profile?.avatar_url || null,
+    momentUrl: profile?.city_moment_url || null,
   };
 }
 
@@ -126,6 +129,13 @@ function ProfileForm({
             setAvatarUrl(null);
             void onRefreshProfile();
           }}
+        />
+      </div>
+
+      <div className="border-t border-[var(--twilight)] pt-6">
+        <CityMomentUpload
+          currentMomentUrl={initialProfile.momentUrl}
+          onUploadComplete={() => void onRefreshProfile()}
         />
       </div>
 

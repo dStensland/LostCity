@@ -22,10 +22,9 @@ supabase = create_client(config.database.supabase_url, config.database.supabase_
 
 # Valid categories from the codebase
 VALID_CATEGORIES = {
-    "music", "film", "comedy", "theater", "art", "sports", "food_drink", 
-    "nightlife", "community", "fitness", "family", "learning", "dance", 
-    "tours", "meetup", "words", "religious", "markets", "wellness", 
-    "support_group", "gaming", "outdoors", "other"
+    "music", "film", "comedy", "theater", "art", "sports", "food_drink",
+    "nightlife", "community", "fitness", "family", "learning", "words",
+    "religious", "wellness", "support_group", "outdoors", "other"
 }
 
 category_rows = supabase.table("categories").select("id,name").execute().data or []

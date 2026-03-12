@@ -2,22 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
-// In-memory cache for activity data (simple TTL cache)
-const activityCache = new Map<string, { data: unknown; expiry: number }>();
-const CACHE_TTL_MS = 30_000; // 30 seconds
-
-function getCachedData<T>(key: string): T | null {
-  const cached = activityCache.get(key);
-  if (cached && cached.expiry > Date.now()) {
-    return cached.data as T;
-  }
-  activityCache.delete(key);
-  return null;
-}
-
-function setCachedData(key: string, data: unknown): void {
-  activityCache.set(key, { data, expiry: Date.now() + CACHE_TTL_MS });
-}
+// No server-side cache — TanStack Query on the client handles caching (30s staleTime).
+// Server-side caching created double-caching (server 30s + client 30s = 60s worst-case
+// staleness) which is too stale for a "recent activity" feed.
 
 // Profile type for user data
 type ProfileData = {
@@ -94,7 +81,7 @@ type ActivityItem = {
   };
 };
 
-// GET /api/dashboard/activity - Get activity from friends
+// GET /api/dashboard/activity - Get activity from mutual friends
 // Optimized: Combined follows query, in-memory caching
 // Supports cursor-based pagination for infinite scroll
 export async function GET(request: NextRequest) {
@@ -110,32 +97,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Check cache for non-cursor requests (first page)
-  const cacheKey = cursor ? null : `activity:${user.id}:${limit}`;
-  if (cacheKey) {
-    const cached = getCachedData<{
-      activities: ActivityItem[];
-      groupedByEvent: unknown[];
-      nextCursor: string | null;
-      hasMore: boolean;
-    }>(cacheKey);
-    if (cached) {
-      return NextResponse.json(cached);
-    }
-  }
-
   const supabase = await createClient();
 
-  // Get users we follow (friends) - people whose activity we want to see
-  const { data: friendsData } = await supabase
-    .from("follows")
-    .select("followed_user_id")
-    .eq("follower_id", user.id)
-    .not("followed_user_id", "is", null);
+  // Get mutual friends — activity feed should match the same friend set as hangs
+  const { data: friendIdsData } = await supabase.rpc(
+    "get_friend_ids" as never,
+    { user_id: user.id } as never
+  ) as { data: { friend_id: string }[] | null; error: unknown };
 
-  const friendIds = (friendsData || [])
-    .map((f) => (f as { followed_user_id: string | null }).followed_user_id)
-    .filter(Boolean) as string[];
+  const friendIds = (friendIdsData || []).map((r) => r.friend_id);
 
   if (friendIds.length === 0) {
     const emptyResult = {
@@ -144,7 +114,6 @@ export async function GET(request: NextRequest) {
       nextCursor: null,
       hasMore: false,
     };
-    if (cacheKey) setCachedData(cacheKey, emptyResult);
     return NextResponse.json(emptyResult);
   }
 
@@ -326,11 +295,6 @@ export async function GET(request: NextRequest) {
     nextCursor,
     hasMore,
   };
-
-  // Cache first page results
-  if (cacheKey) {
-    setCachedData(cacheKey, result);
-  }
 
   return NextResponse.json(result);
 }

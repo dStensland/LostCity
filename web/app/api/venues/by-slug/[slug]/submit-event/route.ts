@@ -14,27 +14,12 @@ import {
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { getSiteUrl } from "@/lib/site-url";
 import { getLocalDateString } from "@/lib/formats";
+import {
+  SUBMISSION_EVENT_CATEGORY_IDS,
+  normalizeEventCategory,
+} from "@/lib/event-taxonomy";
 
 export const dynamic = "force-dynamic";
-
-// Valid categories (should match your taxonomy)
-const VALID_CATEGORIES = [
-  "music",
-  "nightlife",
-  "food-drink",
-  "arts",
-  "sports",
-  "community",
-  "film",
-  "theater",
-  "comedy",
-  "markets",
-  "kids-family",
-  "wellness",
-  "learning",
-  "outdoor",
-  "tours",
-] as const;
 
 interface SubmitEventBody {
   title: string;
@@ -125,6 +110,7 @@ export async function POST(request: NextRequest, { params }: Props) {
   } catch {
     return validationError("Invalid JSON in request body");
   }
+  const normalizedCategory = normalizeEventCategory(body.category);
 
   // Validate required fields
   if (!isValidString(body.title, 1, 500)) {
@@ -147,9 +133,9 @@ export async function POST(request: NextRequest, { params }: Props) {
     return validationError("Start date must be in the future");
   }
 
-  if (!isValidEnum(body.category, VALID_CATEGORIES)) {
+  if (!normalizedCategory || !isValidEnum(normalizedCategory, SUBMISSION_EVENT_CATEGORY_IDS)) {
     return validationError(
-      `Invalid category. Must be one of: ${VALID_CATEGORIES.join(", ")}`
+      `Invalid category. Must be one of: ${SUBMISSION_EVENT_CATEGORY_IDS.join(", ")}`
     );
   }
 
@@ -223,7 +209,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     end_date: body.end_date || null,
     end_time: body.end_time || null,
     description: body.description ? sanitizeString(body.description) : null,
-    category_id: body.category,
+    category_id: normalizedCategory,
     genres: body.genre ? [body.genre] : [],
     ticket_url: body.ticket_url || null,
     image_url: body.image_url || null,

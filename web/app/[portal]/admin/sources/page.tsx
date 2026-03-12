@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePortal } from "@/lib/portal-context";
 import { formatDistanceToNow } from "date-fns";
+import { ADMIN_EVENT_CATEGORY_IDS as CATEGORIES } from "@/lib/event-taxonomy";
 
 type Source = {
   id: number;
@@ -17,13 +18,6 @@ type Source = {
   } | null;
   subscriberCount?: number;
 };
-
-const CATEGORIES = [
-  "music", "film", "comedy", "theater", "art", "sports",
-  "food_drink", "nightlife", "community", "fitness", "family",
-  "learning", "dance", "tours", "meetup", "words", "religious",
-  "markets", "wellness", "gaming", "outdoors", "other"
-];
 
 export default function PortalSourcesPage() {
   const { portal } = usePortal();

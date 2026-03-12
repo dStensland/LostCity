@@ -228,6 +228,9 @@ export const ProfileView = memo(function ProfileView({ profile, portalSlug }: Pr
                 name={displayName}
                 size="xl"
                 glow
+                momentUrl={profile.city_moment_url}
+                momentThumbnailUrl={profile.city_moment_thumbnail_url}
+                momentPlayMode="auto"
               />
             </div>
             {/* Green dot indicator when hanging */}

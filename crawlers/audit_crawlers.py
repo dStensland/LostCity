@@ -13,9 +13,8 @@ from pathlib import Path
 # Valid categories from CLAUDE.md
 VALID_CATEGORIES = {
     'music', 'film', 'comedy', 'theater', 'art', 'sports', 'food_drink',
-    'nightlife', 'community', 'fitness', 'family', 'learning', 'dance',
-    'tours', 'meetup', 'words', 'religious', 'markets', 'wellness',
-    'support_group', 'gaming', 'outdoors', 'other'
+    'nightlife', 'community', 'fitness', 'family', 'learning', 'words',
+    'religious', 'wellness', 'support_group', 'outdoors', 'other'
 }
 
 # Patterns that might indicate permanent attractions

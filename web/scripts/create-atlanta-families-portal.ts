@@ -43,10 +43,8 @@ const PORTAL_CONFIG = {
       "food_drink",
       "learning",
       "outdoors",
-      "markets",
-      "wellness",
     ],
-    exclude_categories: ["nightlife", "gaming"],
+    exclude_categories: ["nightlife"],
   },
   branding: {
     visual_preset: "family_friendly",

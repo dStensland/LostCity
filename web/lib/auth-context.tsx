@@ -10,6 +10,8 @@ export type Profile = {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  city_moment_url: string | null;
+  city_moment_thumbnail_url: string | null;
   bio: string | null;
   location: string | null;
   website: string | null;

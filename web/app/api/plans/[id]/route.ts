@@ -21,12 +21,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const { data: plan, error } = await supabase
     .from("plans")
     .select(`
-      id, title, description, plan_date, plan_time, status, created_at, updated_at,
+      id, title, description, plan_date, plan_time, status, share_token, created_at, updated_at,
       creator:profiles!plans_creator_id_fkey(id, username, display_name, avatar_url),
       items:plan_items(
         id, title, sort_order, event_id, venue_id, note, start_time, created_at,
         event:events(id, title, start_date, start_time),
-        venue:venues(id, name, slug)
+        venue:venues(id, name, slug, image_url, neighborhood)
       ),
       participants:plan_participants(
         id, status, responded_at, created_at,

@@ -57,6 +57,11 @@ def test_normalize_category_maps_programs_to_family():
     from db import normalize_category
 
     assert normalize_category("programs") == "family"
+    assert normalize_category("meetup") == "community"
+    assert normalize_category("gaming") == "community"
+    assert normalize_category("markets") == "community"
+    assert normalize_category("dance") == "learning"
+    assert normalize_category("tours") == "learning"
 
 
 def test_convention_source_hints_capture_unconventional_expo_types():
