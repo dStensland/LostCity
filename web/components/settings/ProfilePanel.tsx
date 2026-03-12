@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth, type Profile } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
 import AvatarUpload from "@/components/AvatarUpload";
+import { RegularSpotsSection } from "@/components/settings/RegularSpotsSection";
 
 type EditableProfile = {
   displayName: string;
@@ -129,13 +130,13 @@ function ProfileForm({
       </div>
 
       {success && (
-        <div className="p-4 rounded-lg bg-green-500/10 border border-green-500 text-green-400 font-mono text-sm">
+        <div className="p-4 rounded-lg bg-[var(--neon-green)]/10 border border-[var(--neon-green)] text-[var(--neon-green)] font-mono text-sm">
           Profile saved successfully!
         </div>
       )}
 
       {error && (
-        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500 text-red-400 font-mono text-sm">
+        <div className="p-4 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)] text-[var(--coral)] font-mono text-sm">
           {error}
         </div>
       )}
@@ -209,6 +210,10 @@ function ProfileForm({
         >
           {saving ? "Saving..." : "Save Profile"}
         </button>
+      </div>
+
+      <div className="border-t border-[var(--twilight)] pt-6">
+        <RegularSpotsSection />
       </div>
     </div>
   );

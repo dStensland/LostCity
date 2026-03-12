@@ -3,9 +3,9 @@
 import {
   type VenueFeature,
   type FeatureType,
-  getFeatureSectionConfig,
   FEATURE_TYPE_LABELS,
 } from "@/lib/venue-features";
+import { getFeatureSectionConfig } from "@/lib/venue-features-config";
 import { SectionHeader } from "./SectionHeader";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";

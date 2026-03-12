@@ -3,13 +3,15 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { X, Clock, ShareNetwork } from "@phosphor-icons/react";
+import { X, Clock, ShareNetwork, Users } from "@phosphor-icons/react";
 import { formatTime } from "@/lib/formats";
+import { useAuth } from "@/lib/auth-context";
 import OutingPlannerProvider, { useOutingPlannerContext } from "./OutingPlannerProvider";
 import OutingTimeline from "./OutingTimeline";
 import OutingSuggestionList from "./OutingSuggestionList";
 import OutingShareModal from "./OutingShareModal";
 import OutingEmptyState from "./OutingEmptyState";
+import OutingCrewPanel from "./OutingCrewPanel";
 import type { AnchorInput } from "./useOutingPlanner";
 import { resolveLabel } from "./outing-copy";
 
@@ -76,6 +78,8 @@ function AnchorCard({ anchor }: { anchor: AnchorInput }) {
 // Sheet content (uses context)
 // ---------------------------------------------------------------------------
 
+type SheetTab = "stops" | "crew";
+
 function SheetContent({
   anchor,
   onClose,
@@ -86,6 +90,7 @@ function SheetContent({
   portalSlug: string;
 }) {
   const router = useRouter();
+  const { user } = useAuth();
   const {
     phase,
     items,
@@ -104,9 +109,13 @@ function SheetContent({
     anchorHour,
     anchorCategory,
     copy,
+    itineraryId,
+    makeShareable,
   } = useOutingPlannerContext();
 
   const [shareOpen, setShareOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<SheetTab>("stops");
+  const [sharingInProgress, setSharingInProgress] = useState(false);
 
   const handleNavigateToSpot = (slug: string) => {
     onClose();
@@ -131,7 +140,15 @@ function SheetContent({
           <div className="flex items-center gap-1">
             {shareUrl && items.length > 0 && (
               <button
-                onClick={() => setShareOpen(true)}
+                onClick={async () => {
+                  if (user) {
+                    setSharingInProgress(true);
+                    await makeShareable();
+                    setSharingInProgress(false);
+                  }
+                  setShareOpen(true);
+                }}
+                disabled={sharingInProgress}
                 className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-[var(--twilight)] transition-colors"
                 aria-label="Share outing"
               >
@@ -154,62 +171,99 @@ function SheetContent({
         )}
       </div>
 
+      {/* Tab toggle — only in planning phase with items */}
+      {phase === "planning" && items.length > 0 && user && (
+        <div className="flex items-center gap-1 px-4 mb-2">
+          <button
+            onClick={() => setActiveTab("stops")}
+            className={`px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-colors ${
+              activeTab === "stops"
+                ? "bg-[var(--twilight)] text-[var(--cream)]"
+                : "text-[var(--muted)] hover:text-[var(--soft)]"
+            }`}
+          >
+            Stops
+          </button>
+          <button
+            onClick={() => setActiveTab("crew")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-colors ${
+              activeTab === "crew"
+                ? "bg-[var(--twilight)] text-[var(--cream)]"
+                : "text-[var(--muted)] hover:text-[var(--soft)]"
+            }`}
+          >
+            <Users size={13} weight="bold" />
+            Crew
+          </button>
+        </div>
+      )}
+
       {/* Scrollable content */}
       <div className="overflow-y-auto max-h-[calc(85vh-120px)] md:max-h-[calc(100vh-100px)]">
         <div className="px-4 pb-6 space-y-5">
-          {/* Anchor card — only show in suggestions phase (timeline has it as first item) */}
-          {phase === "suggestions" && <AnchorCard anchor={anchor} />}
-
-          {/* Timeline — visible in planning phase, animated entry */}
-          {phase === "planning" && items.length > 0 && (
-            <div className="animate-fade-in">
-              <OutingTimeline
-                items={items}
-                onRemoveItem={removeItem}
-                saving={saving}
-              />
-            </div>
-          )}
-
-          {/* Error state */}
-          {suggestionsError && (
-            <div className="text-center py-6">
-              <p className="text-sm text-[var(--muted)]">{suggestionsError}</p>
-            </div>
-          )}
-
-          {/* No coords/time — can't suggest */}
-          {!canSuggest && (
-            <OutingEmptyState
-              title="Not enough info to suggest spots nearby"
-              subtitle="Browse all nearby spots"
-              onBrowse={handleBrowseAll}
+          {/* Crew tab */}
+          {activeTab === "crew" && phase === "planning" ? (
+            <OutingCrewPanel
+              itineraryId={itineraryId}
+              isOwner={true}
             />
-          )}
+          ) : (
+            <>
+              {/* Anchor card — only show in suggestions phase (timeline has it as first item) */}
+              {phase === "suggestions" && <AnchorCard anchor={anchor} />}
 
-          {/* Suggestions — always visible when available */}
-          {canSuggest && !isEmpty && (
-            <OutingSuggestionList
-              beforeSuggestions={beforeSuggestions}
-              afterSuggestions={afterSuggestions}
-              beforeLabel={resolveLabel(copy.beforeLabel, anchorCategory)}
-              afterLabel={resolveLabel(copy.afterLabel, anchorCategory)}
-              loading={suggestionsLoading}
-              onAdd={addSuggestion}
-              onNavigate={handleNavigateToSpot}
-              addingId={addingId}
-              creating={creating}
-              anchorHour={anchorHour}
-            />
-          )}
+              {/* Timeline — visible in planning phase, animated entry */}
+              {phase === "planning" && items.length > 0 && (
+                <div className="animate-fade-in">
+                  <OutingTimeline
+                    items={items}
+                    onRemoveItem={removeItem}
+                    saving={saving}
+                  />
+                </div>
+              )}
 
-          {/* True empty — both slots empty */}
-          {isEmpty && canSuggest && (
-            <OutingEmptyState
-              title={copy.emptyTitle}
-              subtitle={copy.emptySubtitle}
-              onBrowse={handleBrowseAll}
-            />
+              {/* Error state */}
+              {suggestionsError && (
+                <div className="text-center py-6">
+                  <p className="text-sm text-[var(--muted)]">{suggestionsError}</p>
+                </div>
+              )}
+
+              {/* No coords/time — can't suggest */}
+              {!canSuggest && (
+                <OutingEmptyState
+                  title="Not enough info to suggest spots nearby"
+                  subtitle="Browse all nearby spots"
+                  onBrowse={handleBrowseAll}
+                />
+              )}
+
+              {/* Suggestions — always visible when available */}
+              {canSuggest && !isEmpty && (
+                <OutingSuggestionList
+                  beforeSuggestions={beforeSuggestions}
+                  afterSuggestions={afterSuggestions}
+                  beforeLabel={resolveLabel(copy.beforeLabel, anchorCategory)}
+                  afterLabel={resolveLabel(copy.afterLabel, anchorCategory)}
+                  loading={suggestionsLoading}
+                  onAdd={addSuggestion}
+                  onNavigate={handleNavigateToSpot}
+                  addingId={addingId}
+                  creating={creating}
+                  anchorHour={anchorHour}
+                />
+              )}
+
+              {/* True empty — both slots empty */}
+              {isEmpty && canSuggest && (
+                <OutingEmptyState
+                  title={copy.emptyTitle}
+                  subtitle={copy.emptySubtitle}
+                  onBrowse={handleBrowseAll}
+                />
+              )}
+            </>
           )}
         </div>
       </div>

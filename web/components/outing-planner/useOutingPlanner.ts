@@ -63,6 +63,8 @@ export interface UseOutingPlannerReturn {
   anchorName: string | null;
   anchorHour: number | null;
   anchorCategory: string | null;
+  itineraryId: string | null;
+  makeShareable: () => Promise<string | null>;
 }
 
 // ---------------------------------------------------------------------------
@@ -82,6 +84,7 @@ export function useOutingPlanner(
     addItem,
     removeItem: removeItineraryItem,
     getShareUrl,
+    makeShareable,
   } = useItinerary(portalId, portalSlug);
 
   const [phase, setPhase] = useState<OutingPhase>("suggestions");
@@ -328,5 +331,7 @@ export function useOutingPlanner(
     anchorName,
     anchorHour,
     anchorCategory,
+    itineraryId: itineraryCreatedRef.current || activeItinerary?.id || null,
+    makeShareable,
   };
 }
