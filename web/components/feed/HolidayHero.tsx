@@ -223,15 +223,12 @@ export default function HolidayHero({ portalSlug, position = 1, eventCount: pref
 
     async function fetchCount() {
       try {
-        const res = await fetch(`/api/portals/${portalSlug}/feed`);
+        // Lightweight tag-count endpoint — avoids loading entire feed
+        const res = await fetch(`/api/events/tag-count?tag=${encodeURIComponent(holiday!.tag)}`);
         if (!res.ok) return;
         const data = await res.json();
-        const sections = data?.sections ?? [];
-        const section = sections.find(
-          (s: { slug?: string }) => s.slug === holiday!.slug
-        );
-        if (section?.events) {
-          setFetchedCount(section.events.length);
+        if (typeof data.count === "number" && data.count > 0) {
+          setFetchedCount(data.count);
         }
       } catch {
         // Silently fail — hero still renders without count
