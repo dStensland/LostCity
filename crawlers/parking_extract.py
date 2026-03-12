@@ -63,6 +63,17 @@ TRANSIT_RE = re.compile(
     re.IGNORECASE,
 )
 
+PARKING_NOTE_SIGNAL_RE = re.compile(
+    r"\b(parking|garage|valet|deck|lot|street\s+parking|marta|beltline|bike\s+parking|transit)\b",
+    re.IGNORECASE,
+)
+
+PARKING_NOTE_NOISE_RE = re.compile(
+    r"\b(learn more|upcoming events?|weekly special|valentine'?s|happy hour|brunch|private event|"
+    r"reservations?\b(?![^.]{0,80}\bparking\b)|copyright)\b",
+    re.IGNORECASE,
+)
+
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -201,6 +212,151 @@ def _score_text(text: str) -> int:
     return score
 
 
+def _focused_parking_snippet(text: str) -> str:
+    normalized = re.sub(r"\s+", " ", text).strip()
+    if not normalized:
+        return ""
+
+    def _strip_known_noise(snippet: str) -> str:
+        cleaned = snippet.strip(" \"'")
+        cleaned = re.sub(
+            r"\b(?:Rates\s*&\s*Additional\s*Information|View Calendar|©\s*Copyright|"
+            r"All Rights Reserved|Dot slide navigation|slideshow start stop playing)\b.*$",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
+        ).strip(" \"';,")
+        cleaned = re.sub(r"https?://\S+", "", cleaned, flags=re.IGNORECASE).strip(" \"';,")
+        cleaned = re.split(
+            r"\b(?:Gift Cards|Facebook|Twitter|Instagram|Join Our Mailing List|"
+            r"Concentrics Restaurants|Book An Event|Careers|The Menu|Reservations|Map|"
+            r"SUPPORT OUR NONPROFIT|DONATE NOW|Buy tickets|Open Menu|Close Menu|Skip to Content)\b",
+            cleaned,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0].strip(" \"';,")
+        cleaned = re.split(
+            r"\b(?:HAVE FUN, LIFE IS WILD|Life is wild)\b",
+            cleaned,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0].strip(" \"';,")
+
+        if re.match(
+            r"^(?:Home\s*[|/]|Getting Here\b|\d+\s+DIRECTIONS\b|Festival Venue\b|"
+            r"Restaurants and Coffee\b|Venue Details\b|Address:|VISITING OUR LIBRARY\b|"
+            r"Showtimes for:)",
+            cleaned,
+            flags=re.IGNORECASE,
+        ):
+            parking_match = re.search(
+                r"\b(?:parking prices|parking garage address|parking information|"
+                r"parking info(?:rmation)?|parking available|parking is available|"
+                r"closest parking|free parking|validated parking|valet parking|"
+                r"paid parking|parking deck|parking garage)\b",
+                cleaned,
+                flags=re.IGNORECASE,
+            )
+            if parking_match:
+                cleaned = cleaned[parking_match.start():].strip(" \"';,")
+
+        cleaned = re.sub(
+            r"^(?:Home\s*[|/]\s*Plan Your Visit\s*[|/]\s*(?:Arena\s+)?Parking\s+)+",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
+        ).strip(" \"';,")
+        cleaned = re.sub(
+            r"^(?:Arena\s+Parking\s+)+",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
+        ).strip(" \"';,")
+        cleaned = re.sub(
+            r"^(?:Parking\s+Parking\s+)",
+            "Parking ",
+            cleaned,
+            flags=re.IGNORECASE,
+        ).strip(" \"';,")
+        return cleaned
+
+    def _restore_terminal_punctuation(snippet: str) -> str:
+        stripped = snippet.rstrip()
+        if stripped.endswith((".", "!", "?")):
+            return stripped
+        if f"{stripped}." in normalized:
+            return f"{stripped}."
+        if f"{stripped}!" in normalized:
+            return f"{stripped}!"
+        if f"{stripped}?" in normalized:
+            return f"{stripped}?"
+        return stripped
+
+    targeted_patterns = (
+        r"(parking garage address:[^©]{0,140}?\b\d{5}(?:-\d{4})?)",
+        r"(from the underground parking deck[^.|©]{0,220})",
+        r"(parking info[^.|©]{0,220})",
+        r"(free parking[^.|©]{0,220})",
+        r"(valet parking[^.|©]{0,220})",
+        r"(validated parking[^.|©]{0,220})",
+        r"(parking is available[^.|©]{0,220})",
+    )
+    for pattern in targeted_patterns:
+        match = re.search(pattern, normalized, flags=re.IGNORECASE)
+        if match:
+            focused = _strip_known_noise(match.group(1))
+            return _restore_terminal_punctuation(focused)
+
+    parts = re.split(r"(?<=[.!?])\s+|(?<=;)\s+", normalized)
+    focused: list[str] = []
+    for part in parts:
+        snippet = part.strip(" \"'")
+        if not snippet:
+            continue
+        if PARKING_RE.search(snippet) or TRANSIT_RE.search(snippet):
+            focused.append(snippet)
+    if not focused:
+        return normalized
+
+    joined = " ".join(focused[:2]).strip()
+    joined = re.sub(
+        r"^(?:reference the policies page for further details[:;,\s-]*)",
+        "",
+        joined,
+        flags=re.IGNORECASE,
+    ).strip()
+    joined = _strip_known_noise(joined)
+    return _restore_terminal_punctuation(joined)
+
+
+def is_valid_parking_note(text: Optional[str]) -> bool:
+    if not text:
+        return False
+
+    normalized = re.sub(r"\s+", " ", text).strip()
+    if re.match(
+        r"^(?:Book Event Name\b|Become a Member\b|on day of show only\b|"
+        r"Venue Details\b|Reviews review by\b|What are the parking options\b)",
+        normalized,
+        flags=re.IGNORECASE,
+    ):
+        return False
+    if len(normalized) < 20:
+        if not re.search(r"\b(parking|garage|valet|deck|lot)\b", normalized, re.IGNORECASE):
+            return False
+        if not re.search(r"(free|validated|\$\d+)", normalized, re.IGNORECASE):
+            return False
+    if not PARKING_NOTE_SIGNAL_RE.search(normalized):
+        return False
+    if PARKING_NOTE_NOISE_RE.search(normalized) and not re.search(
+        r"\b(parking|garage|valet|deck|lot|street parking)\b", normalized, re.IGNORECASE
+    ):
+        return False
+    if normalized.lower().count("learn more") >= 2:
+        return False
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -253,7 +409,9 @@ def extract_parking_info(url: str) -> Optional[dict]:
     if scored[0][1] < 3:
         return None
 
-    best_text = scored[0][0]
+    best_text = _focused_parking_snippet(scored[0][0])
+    if not is_valid_parking_note(best_text):
+        return None
     all_text = " ".join(texts).lower()
 
     # Infer free/paid
