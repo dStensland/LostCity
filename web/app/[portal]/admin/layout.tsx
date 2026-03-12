@@ -83,6 +83,18 @@ export default async function PortalAdminLayout({ children, params }: Props) {
             Analytics
           </Link>
           <Link
+            href={`/${slug}/admin/contests`}
+            className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+          >
+            Contests
+          </Link>
+          <Link
+            href={`/${slug}/admin/volunteer`}
+            className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+          >
+            Volunteer
+          </Link>
+          <Link
             href={`/${slug}`}
             className="font-mono text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
           >

@@ -482,6 +482,13 @@ export const SUPPORT_SOURCE_POLICY_ITEMS: SupportSourcePolicyItem[] = [
     focus: "Free transportation to medical appointments for underserved patients",
     url: "https://commoncourtesy.org/",
   },
+  {
+    id: "marta-mobility",
+    name: "MARTA Mobility",
+    track: "transportation",
+    focus: "Paratransit service and mobility support for riders who cannot use fixed-route transit",
+    url: "https://itsmarta.com/marta-mobility.aspx",
+  },
 
   // ── immigrant_refugee ──
   {
@@ -701,6 +708,41 @@ export const SUPPORT_SOURCE_POLICY_ITEMS: SupportSourcePolicyItem[] = [
     focus: "Job fairs, reentry programs, and career center workshops",
     url: "https://dol.georgia.gov/",
   },
+  {
+    id: "urban-league-atlanta",
+    name: "Urban League of Greater Atlanta",
+    track: "employment_workforce",
+    focus: "Workforce development, job readiness, and employer-connected career programs",
+    url: "https://ulgatl.org/",
+  },
+  {
+    id: "center-working-families",
+    name: "Center for Working Families",
+    track: "employment_workforce",
+    focus: "Career coaching, financial mobility services, and family economic stability support",
+    url: "https://www.tcwfi.org/",
+  },
+  {
+    id: "first-step-staffing",
+    name: "First Step Staffing",
+    track: "employment_workforce",
+    focus: "Job placement and workforce support for people facing barriers to employment",
+    url: "https://www.firststepstaffing.com/",
+  },
+  {
+    id: "jfcs-atlanta",
+    name: "Jewish Family & Career Services Atlanta",
+    track: "employment_workforce",
+    focus: "Career coaching, job search support, and reskilling services for metro Atlanta residents",
+    url: "https://jfcsatl.org/",
+  },
+  {
+    id: "per-scholas-atlanta",
+    name: "Per Scholas Atlanta",
+    track: "employment_workforce",
+    focus: "Tuition-free tech training and career pathways into IT jobs",
+    url: "https://perscholas.org/locations/atlanta/",
+  },
 
   // ── financial_assistance ──
   {
@@ -723,6 +765,13 @@ export const SUPPORT_SOURCE_POLICY_ITEMS: SupportSourcePolicyItem[] = [
     track: "financial_assistance",
     focus: "Rent and utility assistance, food pantry, and furniture distribution",
     url: "https://svdpgeorgia.org/",
+  },
+  {
+    id: "operation-hope",
+    name: "Operation HOPE",
+    track: "financial_assistance",
+    focus: "Financial coaching, credit support, small-business guidance, and money-management education",
+    url: "https://operationhope.org/",
   },
 
   // ── senior_services ──
@@ -755,6 +804,20 @@ export const SUPPORT_SOURCE_POLICY_ITEMS: SupportSourcePolicyItem[] = [
     track: "adult_education",
     focus: "Adult literacy tutoring, ESL, digital literacy, and family literacy events",
     url: "https://literacyaction.org/",
+  },
+  {
+    id: "latin-american-assoc",
+    name: "Latin American Association",
+    track: "adult_education",
+    focus: "Adult ESL, digital skills, and workforce-readiness classes for Latino and immigrant communities",
+    url: "https://www.thelaa.org/",
+  },
+  {
+    id: "atlanta-tech-adult-ed",
+    name: "Atlanta Technical College Adult Education",
+    track: "adult_education",
+    focus: "Adult education, GED preparation, ESL, and career-transition support",
+    url: "https://atlantatech.edu/adult-education/",
   },
 
   // ── neurological ──
@@ -1395,17 +1458,47 @@ export function getSourcesByTrack(track: SupportTrackKey): SupportSourcePolicyIt
   return SUPPORT_SOURCE_POLICY_ITEMS.filter((item) => item.track === track);
 }
 
+function normalizeSupportUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
+    const pathname = parsed.pathname.replace(/\/+$/, "").toLowerCase() || "/";
+    return `${host}${pathname}`;
+  } catch {
+    return url.trim().toLowerCase().replace(/\/+$/, "");
+  }
+}
+
+function supportIdentityKey(item: SupportSourcePolicyItem): string {
+  return `${item.name.trim().toLowerCase()}|${normalizeSupportUrl(item.url)}`;
+}
+
+function dedupeSupportPolicyItems(items: readonly SupportSourcePolicyItem[]): SupportSourcePolicyItem[] {
+  const unique = new Map<string, SupportSourcePolicyItem>();
+  for (const item of items) {
+    const key = supportIdentityKey(item);
+    if (!unique.has(key)) {
+      unique.set(key, item);
+    }
+  }
+  return Array.from(unique.values());
+}
+
 export function getSupportPolicyCounts(): {
   totalOrganizations: number;
   totalTracks: number;
   trackCounts: Record<SupportTrackKey, number>;
 } {
   const trackCounts = {} as Record<SupportTrackKey, number>;
+  const perTrack = new Map<SupportTrackKey, SupportSourcePolicyItem[]>();
   for (const item of SUPPORT_SOURCE_POLICY_ITEMS) {
-    trackCounts[item.track] = (trackCounts[item.track] || 0) + 1;
+    perTrack.set(item.track, [...(perTrack.get(item.track) || []), item]);
+  }
+  for (const [track, items] of perTrack.entries()) {
+    trackCounts[track] = dedupeSupportPolicyItems(items).length;
   }
   return {
-    totalOrganizations: SUPPORT_SOURCE_POLICY_ITEMS.length,
+    totalOrganizations: dedupeSupportPolicyItems(SUPPORT_SOURCE_POLICY_ITEMS).length,
     totalTracks: Object.keys(trackCounts).length,
     trackCounts,
   };
