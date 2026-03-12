@@ -1,26 +1,31 @@
 """
 Crawler for Sandy Springs Performing Arts Center (sandyspringspac.com).
 
-Site uses JavaScript rendering - must use Playwright.
+The site exposes server-rendered event cards and detail pages, so the crawler
+should parse that structure directly instead of scraping noisy page text.
 """
 
 from __future__ import annotations
 
-import re
 import logging
+import re
 from datetime import datetime
 from typing import Optional
+from urllib.parse import urljoin
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.sandyspringspac.com"
 EVENTS_URL = f"{BASE_URL}/events"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+}
 
 VENUE_DATA = {
     "name": "Sandy Springs Performing Arts Center",
@@ -39,177 +44,221 @@ VENUE_DATA = {
 
 
 def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
+    """Parse time from '7:00 PM' or '7 PM' format."""
+    match = re.search(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)", time_text, re.IGNORECASE)
+    if not match:
+        return None
+
+    hour = int(match.group(1))
+    minute = int(match.group(2) or 0)
+    period = match.group(3).lower()
+    if period == "pm" and hour != 12:
+        hour += 12
+    elif period == "am" and hour == 12:
+        hour = 0
+    return f"{hour:02d}:{minute:02d}"
+
+
+def parse_date_range(date_text: str, now: Optional[datetime] = None) -> tuple[Optional[str], Optional[str]]:
+    """Parse list/detail date text into start and end dates."""
+    now = now or datetime.now()
+    cleaned = " ".join(date_text.split()).replace("–", "-").replace(" ,", ",").strip()
+    if not cleaned:
+        return None, None
+
+    single_match = re.search(
+        r"^([A-Za-z]+)\s+(\d{1,2})(?:,\s*(\d{4}))?$",
+        cleaned,
+        re.IGNORECASE,
+    )
+    if single_match:
+        month, day, year = single_match.groups()
+        event_year = int(year) if year else now.year
+        start = datetime.strptime(f"{month[:3]} {day} {event_year}", "%b %d %Y")
+        return start.strftime("%Y-%m-%d"), start.strftime("%Y-%m-%d")
+
+    cross_month_range = re.search(
+        r"^([A-Za-z]+)\s+(\d{1,2})\s*-\s*([A-Za-z]+)\s+(\d{1,2})(?:,\s*(\d{4}))?$",
+        cleaned,
+        re.IGNORECASE,
+    )
+    if cross_month_range:
+        start_month, start_day, end_month, end_day, year = cross_month_range.groups()
+        event_year = int(year) if year else now.year
+        start = datetime.strptime(f"{start_month[:3]} {start_day} {event_year}", "%b %d %Y")
+        end = datetime.strptime(f"{end_month[:3]} {end_day} {event_year}", "%b %d %Y")
+        if end < start:
+            end = end.replace(year=end.year + 1)
+        return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
+
+    same_month_range = re.search(
+        r"^([A-Za-z]+)\s+(\d{1,2})\s*-\s*(\d{1,2})(?:,\s*(\d{4}))?$",
+        cleaned,
+        re.IGNORECASE,
+    )
+    if same_month_range:
+        month, start_day, end_day, year = same_month_range.groups()
+        event_year = int(year) if year else now.year
+        start = datetime.strptime(f"{month[:3]} {start_day} {event_year}", "%b %d %Y")
+        end = datetime.strptime(f"{month[:3]} {end_day} {event_year}", "%b %d %Y")
+        return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
+
+    logger.warning("Could not parse Sandy Springs PAC date text: %s", date_text)
+    return None, None
+
+
+def extract_detail_fields(soup: BeautifulSoup) -> dict[str, str]:
+    """Map sidebar detail labels to values."""
+    fields: dict[str, str] = {}
+    for item in soup.select(".eventDetailList .item"):
+        label = item.select_one(".label")
+        value = item.find("span")
+        if not label or not value:
+            continue
+        key = " ".join(label.get_text(" ", strip=True).split())
+        val = " ".join(value.get_text(" ", strip=True).split())
+        if key and val:
+            fields[key] = val
+    return fields
+
+
+def determine_category(title: str, description: str) -> tuple[str, Optional[str], list[str]]:
+    """Determine category based on the event title/description."""
+    text = f"{title} {description}".lower()
+    tags = ["sandy-springs", "city-springs", "performing-arts"]
+
+    if any(word in text for word in ["film festival", "screening", "cinema", "movie"]):
+        return "film", "screening", tags + ["film"]
+    if any(word in text for word in ["meditation", "sound bath", "pilates", "wellness", "yoga"]):
+        return "wellness", None, tags + ["wellness"]
+    if any(word in text for word in ["live", "concert", "symphony", "music", "orchestra"]):
+        return "music", "live", tags + ["music"]
+    if any(word in text for word in ["play", "musical", "theatre", "theater"]):
+        return "theater", None, tags + ["theater"]
+
+    return "community", None, tags
+
+
+def parse_detail_page(detail_url: str) -> Optional[dict]:
+    """Fetch and parse a Sandy Springs PAC detail page."""
+    response = requests.get(detail_url, headers=HEADERS, timeout=30)
+    response.raise_for_status()
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    description_node = soup.select_one(".event_description")
+    description = description_node.get_text(" ", strip=True) if description_node else ""
+    fields = extract_detail_fields(soup)
+
+    ticket_link = soup.select_one(".details .buttons a.tickets[href]")
+    ticket_url = None
+    if ticket_link:
+        href = ticket_link.get("href", "").strip()
+        if href and href != "/events":
+            ticket_url = urljoin(detail_url, href)
+
+    image_node = soup.select_one(".hero_img img, .hero img, meta[property='og:image']")
+    image_url = None
+    if image_node:
+        image_url = image_node.get("content") or image_node.get("src")
+        if image_url:
+            image_url = urljoin(detail_url, image_url)
+
+    return {
+        "description": description,
+        "fields": fields,
+        "ticket_url": ticket_url,
+        "image_url": image_url,
+    }
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Sandy Springs Performing Arts Center events using Playwright."""
+    """Crawl Sandy Springs Performing Arts Center events."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+    venue_id = get_or_create_venue(VENUE_DATA)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+    response = requests.get(EVENTS_URL, headers=HEADERS, timeout=30)
+    response.raise_for_status()
+    soup = BeautifulSoup(response.text, "html.parser")
 
-            logger.info(f"Fetching Sandy Springs Performing Arts Center: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+    for card in soup.select(".eventItem"):
+        title_link = card.select_one(".title a[href]")
+        if not title_link:
+            continue
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+        title = title_link.get_text(" ", strip=True)
+        if not title or title.lower() == "calendar":
+            continue
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+        detail_url = urljoin(EVENTS_URL, title_link.get("href", ""))
+        date_text = card.select_one(".date")
+        listing_date_text = date_text.get_text(" ", strip=True) if date_text else ""
+        image_node = card.select_one("img[src]")
+        fallback_image = urljoin(EVENTS_URL, image_node.get("src")) if image_node else None
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+        detail = parse_detail_page(detail_url)
+        if not detail:
+            continue
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+        fields = detail["fields"]
+        start_date, end_date = parse_date_range(fields.get("Date", listing_date_text))
+        if not start_date:
+            continue
 
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
+        start_time = parse_time(fields.get("Event Starts", ""))
+        description = detail["description"] or f"Event at {VENUE_DATA['name']}"
+        category, subcategory, tags = determine_category(title, description)
 
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
+        events_found += 1
+        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
 
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
+        event_record = {
+            "source_id": source_id,
+            "venue_id": venue_id,
+            "title": title,
+            "description": description,
+            "start_date": start_date,
+            "start_time": start_time,
+            "end_date": end_date,
+            "end_time": None,
+            "is_all_day": start_time is None,
+            "category": category,
+            "subcategory": subcategory,
+            "tags": tags,
+            "price_min": None,
+            "price_max": None,
+            "price_note": None,
+            "is_free": False,
+            "source_url": detail_url,
+            "ticket_url": detail["ticket_url"],
+            "image_url": detail["image_url"] or fallback_image,
+            "raw_text": f"{title} | {fields.get('Date', listing_date_text)}",
+            "extraction_confidence": 0.9,
+            "is_recurring": False,
+            "recurrence_rule": None,
+            "content_hash": content_hash,
+        }
 
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+            continue
 
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
+        try:
+            insert_event(event_record)
+            events_new += 1
+            logger.info("Added Sandy Springs PAC event: %s on %s", title, start_date)
+        except Exception as exc:
+            logger.error("Failed to insert Sandy Springs PAC event %s: %s", title, exc)
 
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
-                        continue
-
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
-
-                    events_found += 1
-
-                    content_hash = generate_content_hash(title, "Sandy Springs Performing Arts Center", start_date)
-
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Event at Sandy Springs Performing Arts Center",
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "community",
-                        "subcategory": None,
-                        "tags": ["sandy-springs", "city-springs", "performing-arts"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            browser.close()
-
-        logger.info(
-            f"Sandy Springs Performing Arts Center crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to crawl Sandy Springs Performing Arts Center: {e}")
-        raise
-
+    logger.info(
+        "Sandy Springs Performing Arts Center crawl complete: %s found, %s new, %s updated",
+        events_found,
+        events_new,
+        events_updated,
+    )
     return events_found, events_new, events_updated
