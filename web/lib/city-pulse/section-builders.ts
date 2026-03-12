@@ -17,7 +17,6 @@ import type {
   FriendGoingInfo,
   UserSignals,
   TimeSlot,
-  SectionLayout,
 } from "./types";
 import type { FeedEventData } from "@/components/EventCard";
 import type { Spot } from "@/lib/spots-constants";
@@ -25,6 +24,7 @@ import { THINGS_TO_DO_TILES } from "@/lib/spots-constants";
 import { getTimeSlotLabel, isNightlifeTime } from "./time-slots";
 import { scoreEvent, scoreDestination, applyWildCardSorting } from "./scoring";
 import { getWeatherContextLabel } from "./weather-mapping";
+import { SPORTS_SIGNAL_GENRES, SPORTS_TITLE_PATTERN } from "./sports-signals";
 import type { WeatherData } from "@/lib/weather-utils";
 import type { RecommendationReason } from "@/components/ReasonBadge";
 import { isOpenAt, type HoursData } from "@/lib/hours";
@@ -933,9 +933,9 @@ export const SCENE_ACTIVITY_TYPES: SceneActivityType[] = [
   { id: "poker", label: "Poker", iconName: "Club", color: "#86EFAC", matchGenres: ["poker", "texas-holdem", "freeroll"], matchTitle: /poker/i },
   // --- Fitness (run_club before fitness — outdoor group activities are more specific) ---
   { id: "run_club", label: "Run Club", iconName: "PersonSimpleRun", color: "#5EEAD4", matchGenres: ["run-club", "running", "cycling", "bike-ride"], matchTitle: /run club|running club|bike ride|cycling/i },
-  { id: "fitness", label: "Fitness", iconName: "Barbell", color: "#86EFAC", matchGenres: ["yoga", "pickleball", "tennis", "hiking"], matchCategories: ["fitness"], matchTitle: /walk(ing)?\s*(club|group)/i },
+  { id: "fitness", label: "Fitness", iconName: "Barbell", color: "#86EFAC", matchGenres: ["yoga", "hiking"], matchCategories: ["fitness"], matchTitle: /walk(ing)?\s*(club|group)/i },
   // --- Social / community ---
-  { id: "sports", label: "Sports", iconName: "Trophy", color: "#A78BFA", matchGenres: ["viewing-party", "football", "nfl", "soccer", "basketball", "baseball", "hockey", "mma", "ufc", "boxing", "wrestling"], matchTitle: /viewing party|watch party|\b(nfl|nba|mlb|nhl|mls|ufc|mma)\b|game\s*day|fight night/i },
+  { id: "sports", label: "Sports", iconName: "Trophy", color: "#A78BFA", matchGenres: [...SPORTS_SIGNAL_GENRES], matchTitle: SPORTS_TITLE_PATTERN },
   { id: "skate_night", label: "Skate Night", iconName: "Disc", color: "#7DD3FC", matchGenres: ["skating", "roller-skating"], matchTitle: /skate night|skating/i },
   // --- Listening / vinyl ---
   { id: "vinyl_night", label: "Vinyl Night", iconName: "VinylRecord", color: "#E879F9", matchGenres: ["vinyl", "listening-party", "hi-fi"], matchTitle: /vinyl|listening (session|party|night|bar)|hi.?fi|record (night|spin)/i },

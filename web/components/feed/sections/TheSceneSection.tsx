@@ -276,7 +276,7 @@ export default function TheSceneSection({ portalSlug }: Props) {
   if (allEvents.length === 0) return null;
 
   return (
-    <section className="animate-fade-in">
+    <section>
       {/* Section header */}
       <FeedSectionHeader
         title="Regular Hangs"

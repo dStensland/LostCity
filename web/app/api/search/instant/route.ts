@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { instantSearch } from "@/lib/unified-search";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import {
+  getCachedPortalQueryContext,
+  resolvePortalQueryContext,
+} from "@/lib/portal-query-context";
 import {
   type SearchContext,
   rankResults,
@@ -12,7 +14,18 @@ import {
 } from "@/lib/search-ranking";
 import type { ViewMode, FindType } from "@/lib/search-context";
 import { logger } from "@/lib/logger";
-import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { buildStableInstantSearchCacheKey } from "@/lib/search-cache-key";
+import { createServerTimingRecorder } from "@/lib/server-timing";
+import {
+  runSearchPreview,
+  type PreviewSearchType,
+} from "@/lib/search-preview";
+import {
+  getSearchSuggestionsWithFallback,
+} from "@/lib/search-suggestions";
+import type { SearchResult } from "@/lib/unified-search";
+import { mapSuggestionToSearchResult } from "@/lib/search-suggestion-results";
 
 // Helper to safely parse integers with validation
 function safeParseInt(
@@ -30,6 +43,15 @@ function safeParseInt(
 const INSTANT_SEARCH_CACHE_TTL_MS = 30 * 1000;
 const INSTANT_SEARCH_CACHE_MAX_ENTRIES = 200;
 const INSTANT_SEARCH_CACHE_NAMESPACE = "api:search-instant";
+const INSTANT_SEARCH_CACHE_CONTROL = "public, s-maxage=30, stale-while-revalidate=60";
+const INSTANT_SEARCH_IN_FLIGHT_LOADS = new Map<
+  string,
+  Promise<{
+    payload: Record<string, unknown>;
+    serverTiming: string;
+    status?: number;
+  }>
+>();
 
 /**
  * Instant search API endpoint.
@@ -67,6 +89,7 @@ export async function GET(request: NextRequest) {
   if (rateLimitResult) return rateLimitResult;
 
   try {
+    const timing = createServerTimingRecorder();
     const { searchParams } = new URL(request.url);
 
     const query = searchParams.get("q") || "";
@@ -87,41 +110,101 @@ export async function GET(request: NextRequest) {
     }
 
     const limit = safeParseInt(searchParams.get("limit"), 6, 1, 12);
-    const supabase = await createClient();
-    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
-    if (portalContext.hasPortalParamMismatch) {
-      return NextResponse.json(
-        {
-          suggestions: [],
-          topResults: [],
-          quickActions: [],
-          groupedResults: {},
-          groupOrder: [],
-          error: "portal and portal_id parameters must reference the same portal",
-        },
-        { status: 400 }
-      );
-    }
-    const portalId = portalContext.portalId || undefined;
-    const portalSlug = portalContext.portalSlug || searchParams.get("portalSlug") || "atlanta";
     const viewMode = (searchParams.get("viewMode") as ViewMode) || "feed";
     const findType = (searchParams.get("findType") as FindType) || null;
     const includeOrganizers = searchParams.get("include_organizers") === "true";
+    const typesParam = searchParams.get("types");
+    const validTypes = [
+      "event",
+      "venue",
+      "organizer",
+      "series",
+      "list",
+      "festival",
+    ] as const;
+    const requestedTypes = typesParam
+      ? (typesParam
+          .split(",")
+          .filter((value) =>
+            validTypes.includes(value as (typeof validTypes)[number]),
+          ) as (
+            | "event"
+            | "venue"
+            | "organizer"
+            | "series"
+            | "list"
+            | "festival"
+          )[])
+      : undefined;
 
-    const cacheKey = [
-      query.trim().toLowerCase(),
-      String(limit),
-      portalId || "",
-      portalSlug,
-      viewMode,
-      findType || "",
-      includeOrganizers ? "with-organizers" : "core-only",
-    ].join("|");
-    const response = await getOrSetSharedCacheJson<Record<string, unknown>>(
-      INSTANT_SEARCH_CACHE_NAMESPACE,
-      cacheKey,
-      INSTANT_SEARCH_CACHE_TTL_MS,
-      async () => {
+    const cacheKey = buildStableInstantSearchCacheKey(searchParams);
+
+    const cachedPayload = await timing.measure("cache_lookup", () =>
+      getSharedCacheJson<Record<string, unknown>>(
+        INSTANT_SEARCH_CACHE_NAMESPACE,
+        cacheKey,
+      )
+    );
+    if (cachedPayload) {
+      timing.addMetric("cache_hit", 0, "shared");
+      return NextResponse.json(cachedPayload, {
+        headers: {
+          "Cache-Control": INSTANT_SEARCH_CACHE_CONTROL,
+          "Server-Timing": timing.toHeader(),
+        },
+      });
+    }
+
+    const existingLoad = INSTANT_SEARCH_IN_FLIGHT_LOADS.get(cacheKey);
+    if (existingLoad) {
+      const result = await existingLoad;
+      timing.addMetric("coalesced", 0, "inflight");
+      return NextResponse.json(result.payload, {
+        headers: {
+          "Cache-Control": INSTANT_SEARCH_CACHE_CONTROL,
+          "Server-Timing": `${result.serverTiming}, ${timing.toHeader()}`,
+        },
+      });
+    }
+
+    const searchLoadPromise = (async (): Promise<{
+      payload: Record<string, unknown>;
+      serverTiming: string;
+      status?: number;
+    }> => {
+      let supabaseClientPromise: ReturnType<typeof createClient> | null = null;
+      const getSupabase = async () => {
+        if (!supabaseClientPromise) {
+          supabaseClientPromise = createClient();
+        }
+        return supabaseClientPromise;
+      };
+      const portalContext = await timing.measure("bootstrap", async () => {
+        const cachedContext = await getCachedPortalQueryContext(searchParams);
+        if (cachedContext) {
+          timing.addMetric("portal_context_cache_hit", 0, "shared");
+          return cachedContext;
+        }
+        return resolvePortalQueryContext(await getSupabase(), searchParams);
+      });
+      if (portalContext.hasPortalParamMismatch) {
+        return {
+          payload: {
+            suggestions: [],
+            topResults: [],
+            quickActions: [],
+            groupedResults: {},
+            groupOrder: [],
+            error: "portal and portal_id parameters must reference the same portal",
+          },
+          serverTiming: timing.toHeader(),
+          status: 400,
+        };
+      }
+      const portalId = portalContext.portalId || undefined;
+      const portalSlug =
+        portalContext.portalSlug || searchParams.get("portalSlug") || "atlanta";
+
         // Build search context
         const context: SearchContext = {
           viewMode,
@@ -130,24 +213,70 @@ export async function GET(request: NextRequest) {
           portalId,
         };
 
-        // Perform instant search
         const trimmedQuery = query.trim();
-        const instantTypes: ("event" | "venue" | "organizer")[] = includeOrganizers
-          ? trimmedQuery.length >= 4
-            ? ["event", "venue", "organizer"]
-            : ["event", "venue"]
-          : ["event", "venue"];
-        const result = await instantSearch(query, {
-          portalId,
-          limit: Math.min(limit * 2, limit + 4), // Keep autocomplete lean
-          types: instantTypes,
-          includeSocialProof: false,
-          includeFacets: false,
-          includeDidYouMean: false,
+        const instantTypes =
+          requestedTypes && requestedTypes.length > 0
+            ? requestedTypes
+            : includeOrganizers
+              ? trimmedQuery.length >= 4
+              ? (["event", "venue", "organizer"] as const)
+                : (["event", "venue"] as const)
+              : (["event", "venue"] as const);
+        const searchLimit = Math.min(limit * 2, limit + 4);
+        const suggestionFastPathEligible =
+          trimmedQuery.length <= 24 && !typesParam && !includeOrganizers;
+        const result = await timing.measure("instant_search", async () => {
+          if (suggestionFastPathEligible) {
+            const suggestionRows = await timing.measure("instant_suggestions", () =>
+              getSearchSuggestionsWithFallback(
+                trimmedQuery,
+                searchLimit,
+                portalContext.filters.city || undefined,
+              )
+            );
+            const shouldUseSuggestions =
+              suggestionRows.length > 0 &&
+              (
+                trimmedQuery.length <= 5 ||
+                /\s/.test(trimmedQuery) ||
+                suggestionRows.length >= Math.min(4, limit)
+              );
+
+            if (shouldUseSuggestions) {
+              const mappedResults = suggestionRows
+                .map((suggestion) =>
+                  mapSuggestionToSearchResult(suggestion, portalSlug, "instant"),
+                )
+                .filter((result): result is SearchResult => result !== null);
+
+              const grouped = groupResultsByType(mappedResults);
+              return {
+                results: mappedResults,
+                facets: Object.entries(grouped)
+                  .filter(([, items]) => items.length > 0)
+                  .map(([type, items]) => ({
+                    type: type as SearchResult["type"],
+                    count: items.length,
+                  })),
+                total: mappedResults.length,
+              };
+            }
+          }
+
+          return runSearchPreview({
+            getSupabase,
+            query,
+            limit: searchLimit, // Keep autocomplete lean
+            requestedTypes: instantTypes as PreviewSearchType[],
+            portalId: portalId ?? null,
+            portalSlug,
+            portalCity: portalContext.filters.city || undefined,
+            timing,
+          });
         });
 
         // Apply context-aware ranking
-        const rankedResults = rankResults(result.suggestions, context);
+        const rankedResults = rankResults(result.results, context);
 
         // Detect quick actions based on query
         const quickActions = detectQuickActions(query, portalSlug);
@@ -160,24 +289,50 @@ export async function GET(request: NextRequest) {
 
         // Build response with facet counts
         const facets = result.facets ?? [];
-        return {
+        const payload = {
           suggestions: rankedResults.slice(0, limit),
           topResults: rankedResults.slice(limit, limit * 2),
           quickActions,
           groupedResults,
           groupOrder,
           facets,
-          intent: result.intent,
+          intent: "intent" in result ? result.intent : undefined,
         };
-      },
-      { maxEntries: INSTANT_SEARCH_CACHE_MAX_ENTRIES }
-    );
+        await setSharedCacheJson(
+          INSTANT_SEARCH_CACHE_NAMESPACE,
+          cacheKey,
+          payload,
+          INSTANT_SEARCH_CACHE_TTL_MS,
+          { maxEntries: INSTANT_SEARCH_CACHE_MAX_ENTRIES },
+        );
+
+        return {
+          payload,
+          serverTiming: timing.toHeader(),
+        };
+      })();
+
+    INSTANT_SEARCH_IN_FLIGHT_LOADS.set(cacheKey, searchLoadPromise);
+    let result: {
+      payload: Record<string, unknown>;
+      serverTiming: string;
+      status?: number;
+    };
+    try {
+      result = await searchLoadPromise;
+    } finally {
+      const currentLoad = INSTANT_SEARCH_IN_FLIGHT_LOADS.get(cacheKey);
+      if (currentLoad === searchLoadPromise) {
+        INSTANT_SEARCH_IN_FLIGHT_LOADS.delete(cacheKey);
+      }
+    }
 
     // Return with aggressive caching for fast autocomplete
-    return NextResponse.json(response, {
+    return NextResponse.json(result.payload, {
+      status: result.status,
       headers: {
-        // Short cache with stale-while-revalidate for instant feel
-        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+        "Cache-Control": INSTANT_SEARCH_CACHE_CONTROL,
+        "Server-Timing": result.serverTiming,
       },
     });
   } catch (error) {

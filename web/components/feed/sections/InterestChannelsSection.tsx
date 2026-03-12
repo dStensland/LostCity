@@ -7,6 +7,7 @@ import {
   type PortalChannel,
 } from "@/lib/hooks/usePortalInterestChannels";
 import { usePortal } from "@/lib/portal-context";
+import { getInterestChannelPresentation, getInterestChannelTypeLabel } from "@/lib/interest-channel-presentation";
 
 type InterestChannelsSectionProps = {
   portalSlug: string;
@@ -26,18 +27,6 @@ type InterestChannelsSectionProps = {
    */
   compact?: boolean;
 };
-
-const CHANNEL_TYPE_LABELS: Record<string, string> = {
-  jurisdiction: "Jurisdiction",
-  institution: "Institution",
-  topic: "Topic",
-  community: "Community",
-  intent: "Intent",
-};
-
-function getChannelTypeLabel(channelType: string): string {
-  return CHANNEL_TYPE_LABELS[channelType] || channelType;
-}
 
 function isSchoolBoardChannel(channel: PortalChannel): boolean {
   const sourceText = `${channel.slug} ${channel.name} ${channel.description || ""}`.toLowerCase();
@@ -73,6 +62,7 @@ export default function InterestChannelsSection({
   if (isDisabled) return null;
   if (!isLoading && orderedChannels.length === 0) return null;
 
+  const presentation = getInterestChannelPresentation(portal);
   const defaultSubtitle = typeof portal.settings.interest_channels_subtitle === "string"
     ? portal.settings.interest_channels_subtitle
     : "Follow city, county, school board, and civic groups";
@@ -86,8 +76,10 @@ export default function InterestChannelsSection({
   // When compact=false (default), joined channels occupy grid slots too.
   const unjoinedChannels = orderedChannels.filter((ch) => !ch.is_subscribed);
   const joinedInGrid = compact ? [] : joinedChannels;
-  const unjoinedSlots = maxVisible !== undefined
-    ? Math.max(0, maxVisible - joinedInGrid.length)
+  // In compact mode, default to showing only 4 channels to keep the section tight
+  const effectiveMaxVisible = maxVisible ?? (compact ? 4 : undefined);
+  const unjoinedSlots = effectiveMaxVisible !== undefined
+    ? Math.max(0, effectiveMaxVisible - joinedInGrid.length)
     : undefined;
   const visibleUnjoined = unjoinedSlots !== undefined
     ? unjoinedChannels.slice(0, unjoinedSlots)
@@ -95,7 +87,7 @@ export default function InterestChannelsSection({
   const gridChannels = [...joinedInGrid, ...visibleUnjoined];
 
   const totalChannels = orderedChannels.length;
-  const showSeeAll = maxVisible !== undefined && totalChannels > maxVisible;
+  const showSeeAll = effectiveMaxVisible !== undefined && totalChannels > effectiveMaxVisible;
 
   // Compact pill strip: joined channels rendered as a scrollable row.
   const showCompactPills = compact && joinedChannels.length > 0;
@@ -103,11 +95,11 @@ export default function InterestChannelsSection({
   return (
     <section className="mt-4">
       <FeedSectionHeader
-        title="Join Groups"
+        title={presentation.feedTitle}
         subtitle={subtitle}
         priority="secondary"
         seeAllHref={`/${portalSlug}/groups`}
-        seeAllLabel="All groups"
+        seeAllLabel={presentation.allGroupsLabel}
       />
 
       {/* Compact pill strip for joined channels (civic/compact mode) */}
@@ -115,7 +107,7 @@ export default function InterestChannelsSection({
         <div className="mb-3">
           <div className="flex items-center justify-between gap-2 mb-2">
             <p className="font-mono text-2xs uppercase tracking-[0.14em] text-[var(--muted)]">
-              My Groups
+              {presentation.joinedGroupsLabel}
             </p>
             <Link
               href={`/${portalSlug}/groups`}
@@ -143,7 +135,7 @@ export default function InterestChannelsSection({
         <div className="mb-3 rounded-xl border border-[var(--twilight)]/75 bg-[var(--night)]/50 p-3">
           <div className="flex items-center justify-between gap-2">
             <p className="font-mono text-2xs uppercase tracking-[0.14em] text-[var(--muted)]">
-              My Groups
+              {presentation.joinedGroupsLabel}
             </p>
             <Link
               href={`/${portalSlug}/groups`}
@@ -184,6 +176,7 @@ export default function InterestChannelsSection({
                 <ChannelCard
                   key={channel.id}
                   channel={channel}
+                  portal={portal}
                   updatingChannelId={updatingChannelId}
                   onToggle={toggleSubscription}
                 />
@@ -219,16 +212,17 @@ export default function InterestChannelsSection({
 
 type ChannelCardProps = {
   channel: PortalChannel;
+  portal: ReturnType<typeof usePortal>["portal"];
   updatingChannelId: string | null;
   onToggle: (channel: PortalChannel) => void;
 };
 
-function ChannelCard({ channel, updatingChannelId, onToggle }: ChannelCardProps) {
+function ChannelCard({ channel, portal, updatingChannelId, onToggle }: ChannelCardProps) {
   return (
     <div className="p-3 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg,var(--night))] flex items-start justify-between gap-3">
       <div className="min-w-0">
         <p className="font-mono text-xs uppercase tracking-[0.12em] text-[var(--muted)] flex items-center gap-1.5">
-          {getChannelTypeLabel(channel.channel_type)}
+          {getInterestChannelTypeLabel(portal, channel.channel_type)}
           {channel.scope === "global" ? " • Global" : ""}
           {isSchoolBoardChannel(channel) && (
             <span className="rounded-full border border-[var(--action-primary)]/35 bg-[var(--action-primary)]/10 px-1.5 py-0.5 text-2xs text-[var(--action-primary)] normal-case tracking-normal">
