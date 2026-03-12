@@ -66,6 +66,41 @@ HISTORIC_TYPES = {
     "museum",
 }
 
+FIXED_HOURS_VENUE_TYPES = {
+    "aquarium",
+    "bar",
+    "botanical_garden",
+    "brewery",
+    "cafe",
+    "cinema",
+    "food_hall",
+    "gallery",
+    "garden",
+    "market",
+    "museum",
+    "restaurant",
+    "zoo",
+}
+
+EVENT_LED_DESTINATION_TYPES = {
+    "amphitheater",
+    "amphitheatre",
+    "arts_center",
+    "comedy_club",
+    "event_space",
+    "music_venue",
+    "performing_arts",
+    "theater",
+    "theatre",
+}
+
+TIME_SENSITIVE_DUPLICATE_CATEGORIES = {
+    "family",
+    "fitness",
+    "learning",
+    "wellness",
+}
+
 LAUNCH_GATE_THRESHOLDS = {
     "visible_cross_source_duplicate_groups": {"warn_gt": 0, "fail_gt": 5},
     "visible_same_source_duplicate_groups": {"warn_gt": 0, "fail_gt": 25},
@@ -196,6 +231,23 @@ def pct(numerator: int, denominator: int) -> float:
     if denominator == 0:
         return 0.0
     return round((numerator / denominator) * 100, 1)
+
+
+def normalized_venue_type(row: dict[str, Any]) -> str:
+    return str(row.get("venue_type") or "").strip().lower()
+
+
+def has_usable_hours(value: Any) -> bool:
+    if not value:
+        return False
+    if isinstance(value, dict):
+        for day in value.values():
+            if not isinstance(day, dict):
+                continue
+            if day.get("open") or day.get("close"):
+                return True
+        return False
+    return True
 
 
 def has_column(client, table: str, column: str) -> bool:
@@ -430,13 +482,9 @@ def build_scope(
 
 
 def _group_duplicate_metrics(rows: list[dict[str, Any]]) -> dict[str, int]:
-    groups: dict[tuple[str, str, int], list[dict[str, Any]]] = defaultdict(list)
+    groups: dict[tuple[Any, ...], list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
-        key = (
-            normalize_text(row.get("title") or ""),
-            str(row.get("start_date") or ""),
-            int(row.get("venue_id") or 0),
-        )
+        key = duplicate_group_key(row)
         groups[key].append(row)
 
     def source_time_key(row: dict[str, Any]) -> tuple[int, str]:
@@ -489,19 +537,18 @@ def _extract_duplicate_clusters(
     venue_name_map: dict[int, str],
     max_clusters: int = 15,
 ) -> list[dict[str, Any]]:
-    grouped: dict[tuple[str, str, int], list[dict[str, Any]]] = defaultdict(list)
+    grouped: dict[tuple[Any, ...], list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
-        key = (
-            normalize_text(row.get("title") or ""),
-            str(row.get("start_date") or ""),
-            int(row.get("venue_id") or 0),
-        )
+        key = duplicate_group_key(row)
         grouped[key].append(row)
 
     clusters: list[dict[str, Any]] = []
-    for (normalized_title, start_date, venue_id), group_rows in grouped.items():
+    for group_key, group_rows in grouped.items():
         if len(group_rows) < 2:
             continue
+        normalized_title = str(group_key[0])
+        start_date = str(group_key[1])
+        venue_id = int(group_key[2])
         source_ids = [int(r.get("source_id") or 0) for r in group_rows]
         source_slugs = sorted({source_name_map.get(sid, str(sid)) for sid in source_ids if sid})
         unique_sources = set(source_ids)
@@ -544,6 +591,17 @@ def _extract_duplicate_clusters(
         )
     )
     return clusters[:max_clusters]
+
+
+def duplicate_group_key(row: dict[str, Any]) -> tuple[Any, ...]:
+    title = normalize_text(row.get("title") or "")
+    start_date = str(row.get("start_date") or "")
+    venue_id = int(row.get("venue_id") or 0)
+    category = normalize_text(row.get("category_id") or row.get("category") or "")
+    if category in TIME_SENSITIVE_DUPLICATE_CATEGORIES:
+        start_time = str(row.get("start_time") or "").strip() or "__none__"
+        return (title, start_date, venue_id, start_time)
+    return (title, start_date, venue_id)
 
 
 def build_metrics(scope: DateScope) -> dict[str, Any]:
@@ -620,7 +678,7 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
     venue_rows_all = paged_select(
         client,
         "venues",
-        "id,slug,name,active,city,neighborhood,venue_type,vibes,description,genres,parking_note,transit_note,transit_score,walkable_neighbor_count,image_url,hours,website",
+        "id,slug,name,active,city,neighborhood,venue_type,vibes,description,genres,parking_note,transit_note,transit_score,walkable_neighbor_count,image_url,hours,website,planning_notes",
     )
     if city_scope_active:
         venue_rows = [
@@ -979,9 +1037,19 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
 
     # Enrichment fill rates (venue-level).
     venues_with_image = sum(1 for row in venue_rows if (row.get("image_url") or "").strip())
-    venues_with_hours = sum(1 for row in venue_rows if row.get("hours") is not None)
+    venues_with_hours = sum(1 for row in venue_rows if has_usable_hours(row.get("hours")))
     venues_with_website = sum(1 for row in venue_rows if (row.get("website") or "").strip())
     venues_with_description = sum(1 for row in venue_rows if (row.get("description") or "").strip())
+    fixed_hours_rows = [
+        row for row in venue_rows if normalized_venue_type(row) in FIXED_HOURS_VENUE_TYPES
+    ]
+    fixed_hours_with_hours = sum(1 for row in fixed_hours_rows if has_usable_hours(row.get("hours")))
+    event_led_rows = [
+        row for row in venue_rows if normalized_venue_type(row) in EVENT_LED_DESTINATION_TYPES
+    ]
+    event_led_with_planning = sum(
+        1 for row in event_led_rows if (row.get("planning_notes") or "").strip()
+    )
 
     # Enrichment fill rates (event-level): descriptions >= SHORT_DESCRIPTION_MAX_LEN.
     event_long_descriptions = sum(
@@ -1249,13 +1317,21 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
         "enrichment": {
             "venue_image_fill_rate_pct": pct(venues_with_image, venues_total),
             "venue_hours_fill_rate_pct": pct(venues_with_hours, venues_total),
+            "fixed_hours_venue_fill_rate_pct": pct(fixed_hours_with_hours, len(fixed_hours_rows)),
             "venue_website_fill_rate_pct": pct(venues_with_website, venues_total),
             "venue_description_fill_rate_pct": pct(venues_with_description, venues_total),
+            "event_led_destination_planning_fill_rate_pct": pct(
+                event_led_with_planning, len(event_led_rows)
+            ),
             "event_description_fill_rate_pct": pct(event_long_descriptions, future_events_visible),
             "venues_with_image": venues_with_image,
             "venues_with_hours": venues_with_hours,
+            "fixed_hours_venues_total": len(fixed_hours_rows),
+            "fixed_hours_venues_with_hours": fixed_hours_with_hours,
             "venues_with_website": venues_with_website,
             "venues_with_description": venues_with_description,
+            "event_led_destinations_total": len(event_led_rows),
+            "event_led_destinations_with_planning": event_led_with_planning,
             "event_long_descriptions": event_long_descriptions,
         },
         "historic": {
@@ -1443,9 +1519,19 @@ def evaluate_launch_gate(metrics: dict[str, Any], *, gate_profile: str) -> dict[
     # Enrichment quality gates
     venue_image_pct = float(deep_get(metrics, "enrichment.venue_image_fill_rate_pct", 0.0))
     venue_hours_pct = float(deep_get(metrics, "enrichment.venue_hours_fill_rate_pct", 0.0))
+    fixed_hours_pct = float(deep_get(metrics, "enrichment.fixed_hours_venue_fill_rate_pct", 0.0))
+    event_led_planning_pct = float(
+        deep_get(metrics, "enrichment.event_led_destination_planning_fill_rate_pct", 0.0)
+    )
     event_desc_pct = float(deep_get(metrics, "enrichment.event_description_fill_rate_pct", 0.0))
     venues_with_image = int(deep_get(metrics, "enrichment.venues_with_image", 0))
     venues_with_hours = int(deep_get(metrics, "enrichment.venues_with_hours", 0))
+    fixed_hours_total = int(deep_get(metrics, "enrichment.fixed_hours_venues_total", 0))
+    fixed_hours_with_hours = int(deep_get(metrics, "enrichment.fixed_hours_venues_with_hours", 0))
+    event_led_total = int(deep_get(metrics, "enrichment.event_led_destinations_total", 0))
+    event_led_with_planning = int(
+        deep_get(metrics, "enrichment.event_led_destinations_with_planning", 0)
+    )
     event_long_descs = int(deep_get(metrics, "enrichment.event_long_descriptions", 0))
     venues_total_for_context = int(deep_get(metrics, "counts.venues_total", 0))
     events_visible_for_context = int(deep_get(metrics, "counts.future_events_visible", 0))
@@ -1463,6 +1549,18 @@ def evaluate_launch_gate(metrics: dict[str, Any], *, gate_profile: str) -> dict[
         venue_hours_pct,
         "venue_hours_fill_rate_pct",
         context=f"{venues_with_hours}/{venues_total_for_context} venues with hours",
+    )
+    add_info_check(
+        "enrichment.fixed_hours_venue_fill_rate",
+        "Fixed-hours venue fill rate %",
+        fixed_hours_pct,
+        context=f"{fixed_hours_with_hours}/{fixed_hours_total} fixed-hours venues with hours",
+    )
+    add_info_check(
+        "enrichment.event_led_destination_planning_fill_rate",
+        "Event-led destination planning fill rate %",
+        event_led_planning_pct,
+        context=f"{event_led_with_planning}/{event_led_total} event-led destinations with planning notes",
     )
     add_check(
         "enrichment.event_description_fill_rate",
@@ -1865,6 +1963,13 @@ def render_markdown(metrics: dict[str, Any]) -> str:
 
     specials = metrics["specials"]
     lines.append("## Initiative Coverage")
+    lines.append(
+        "Destination quality is evaluated separately from pure event yield. "
+        "A venue can be healthy and strategically useful even with zero future events "
+        "if it is a strong destination for nearby recommendations, hangs, concierge support, "
+        "or before/after planning."
+    )
+    lines.append("")
     lines.append("### Specials / Happy Hour")
     lines.append(f"- Active `venue_specials`: **{specials['active_total']:,}**")
     lines.append(f"- Active `happy_hour`: **{specials['happy_hour_active']:,}**")
@@ -1886,6 +1991,46 @@ def render_markdown(metrics: dict[str, Any]) -> str:
     lines.append(
         f"- Venues with genres: **{genres['venues_with_genres']:,} / {counts['venues_total']:,}** "
         f"(**{genres['venues_with_genres_pct']}%**)"
+    )
+    lines.append("")
+
+    enrichment = metrics["enrichment"]
+    lines.append("### Destination Readiness")
+    lines.append(
+        f"- Venue website fill: **{enrichment['venues_with_website']:,} / {counts['venues_total']:,}** "
+        f"(**{enrichment['venue_website_fill_rate_pct']}%**)"
+    )
+    lines.append(
+        f"- Venue image fill: **{enrichment['venues_with_image']:,} / {counts['venues_total']:,}** "
+        f"(**{enrichment['venue_image_fill_rate_pct']}%**)"
+    )
+    lines.append(
+        f"- Venue hours fill: **{enrichment['venues_with_hours']:,} / {counts['venues_total']:,}** "
+        f"(**{enrichment['venue_hours_fill_rate_pct']}%**)"
+    )
+    lines.append(
+        f"- Fixed-hours venue fill: **{enrichment['fixed_hours_venues_with_hours']:,} / "
+        f"{enrichment['fixed_hours_venues_total']:,}** "
+        f"(**{enrichment['fixed_hours_venue_fill_rate_pct']}%**)"
+    )
+    lines.append(
+        f"- Venue description fill: **{enrichment['venues_with_description']:,} / {counts['venues_total']:,}** "
+        f"(**{enrichment['venue_description_fill_rate_pct']}%**)"
+    )
+    lines.append(
+        f"- Event-led destination planning fill: **{enrichment['event_led_destinations_with_planning']:,} / "
+        f"{enrichment['event_led_destinations_total']:,}** "
+        f"(**{enrichment['event_led_destination_planning_fill_rate_pct']}%**)"
+    )
+    lines.append(
+        "- Destination readiness should inform recommendations even when a venue has "
+        "no current events, especially for restaurants, bars, lodging-adjacent places, "
+        "and pre/post-event gathering spots."
+    )
+    lines.append(
+        "- Daily hours matter most for fixed-hours destinations like museums, cinemas, "
+        "restaurants, and bars. Event-led venues like theaters and amphitheaters should "
+        "be judged more heavily on planning logistics than on stable weekly hours."
     )
     lines.append("")
 
