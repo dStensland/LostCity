@@ -24,12 +24,18 @@ export async function GET(request: NextRequest) {
   const sourceAccess = portalId ? await getPortalSourceAccess(portalId) : null;
   const sourceIds = sourceAccess?.sourceIds ?? [];
 
+  // Match timeline filters so count reflects what users actually see.
+  // Combines non-TBA, feed-gate, and canonical-only into a single .or()
+  // to avoid PostgREST multiple-or-param issues with portal scope.
   let query = supabase
     .from("events")
     .select("id", { count: "exact", head: true })
     .filter("tags", "cs", `{"${tag}"}`)
     .eq("is_active", true)
-    .gte("start_date", today);
+    .gte("start_date", today)
+    .is("canonical_event_id", null)
+    .or("start_time.not.is.null,is_all_day.eq.true")
+    .or("is_feed_ready.eq.true,is_feed_ready.is.null");
 
   query = applyFederatedPortalScopeToQuery(query, {
     portalId,
