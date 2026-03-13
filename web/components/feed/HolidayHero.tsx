@@ -34,20 +34,20 @@ function HolidayCard({
   const hasImageIcon = holiday.icon.startsWith("/");
   const hasQuickLinks = holiday.quickLinks && holiday.quickLinks.length > 0;
 
-  // ── Marquee layout — cinematic card with full-height photo + CTA pills ──
+  // ── Marquee layout — neon cinematic card with full-height photo + CTA pills ──
   if (hasQuickLinks && hasImageIcon) {
     const fadeColor = extractFadeColor(holiday.gradient);
 
     return (
       <>
-        {/* Atmospheric glow orbs */}
+        {/* Atmospheric glow orbs — subtle warm bokeh */}
         <div
-          className="absolute -left-10 -top-10 w-[250px] h-[250px] sm:w-[300px] sm:h-[300px] rounded-full pointer-events-none"
-          style={{ background: holiday.glowColor, opacity: 0.12, filter: "blur(60px)" }}
+          className="absolute -left-10 -top-10 w-[200px] h-[200px] sm:w-[250px] sm:h-[250px] rounded-full pointer-events-none"
+          style={{ background: holiday.glowColor, opacity: 0.08, filter: "blur(60px)" }}
         />
         <div
-          className="absolute right-0 bottom-0 w-[200px] h-[200px] sm:w-[350px] sm:h-[250px] rounded-full pointer-events-none"
-          style={{ background: holiday.glowColor, opacity: 0.06, filter: "blur(50px)" }}
+          className="absolute right-0 bottom-0 w-[150px] h-[150px] sm:w-[250px] sm:h-[200px] rounded-full pointer-events-none"
+          style={{ background: holiday.glowColor, opacity: 0.04, filter: "blur(50px)" }}
         />
 
         {/* Full-height photo on the left */}
@@ -69,6 +69,13 @@ function HolidayCard({
               background: `linear-gradient(90deg, transparent 40%, ${fadeColor} 100%)`,
             }}
           />
+          {/* Bottom edge fade */}
+          <div
+            className="absolute inset-x-0 bottom-0 h-12"
+            style={{
+              background: `linear-gradient(to top, ${fadeColor}, transparent)`,
+            }}
+          />
         </div>
 
         {/* Shimmer animation for urgent days */}
@@ -86,18 +93,20 @@ function HolidayCard({
         {/* Content area — right side */}
         <Link
           href={`/${portalSlug}?tags=${holiday.tag}&view=find`}
-          className="relative flex flex-col justify-center min-h-[280px] sm:min-h-[320px] pl-[48%] sm:pl-[38%] pr-5 sm:pr-8 py-7 sm:py-9 group/main"
+          className="relative flex flex-col justify-center min-h-[240px] sm:min-h-[260px] pl-[48%] sm:pl-[38%] pr-5 sm:pr-8 py-6 sm:py-8 group/main"
         >
-          {/* Countdown badge */}
+          {/* Countdown badge — dark glass with neon border */}
           <span
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-xs font-bold uppercase tracking-wider w-fit mb-2 sm:mb-3"
             style={{
               color: isToday || isTomorrow ? "#fff" : holiday.accentColor,
               backgroundColor: isToday
                 ? holiday.glowColor
-                : `color-mix(in srgb, ${holiday.glowColor} 15%, transparent)`,
-              border: `1px solid color-mix(in srgb, ${holiday.glowColor} 25%, transparent)`,
-              boxShadow: isToday ? `0 0 16px ${holiday.glowColor}60` : undefined,
+                : "rgba(0, 0, 0, 0.5)",
+              border: `1px solid color-mix(in srgb, ${holiday.glowColor} 40%, transparent)`,
+              boxShadow: isToday
+                ? `0 0 16px ${holiday.glowColor}60`
+                : `0 0 8px ${holiday.glowColor}15`,
             }}
           >
             {(isToday || isTomorrow) && (
@@ -112,15 +121,22 @@ function HolidayCard({
                 />
               </span>
             )}
+            {/* Green dot indicator */}
+            {!isToday && !isTomorrow && (
+              <span
+                className="inline-flex h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: holiday.glowColor }}
+              />
+            )}
             {holiday.countdown}
           </span>
 
-          {/* Title — large display type */}
+          {/* Title — large display type with neon glow */}
           <h3
-            className="text-[2.25rem] sm:text-[3rem] font-extrabold leading-[0.95] tracking-tight group-hover/main:text-white transition-colors"
+            className="text-[2rem] sm:text-[2.75rem] font-extrabold leading-[0.95] tracking-tight group-hover/main:text-white transition-colors"
             style={{
               color: "var(--cream, #F5F5F3)",
-              textShadow: `0 0 40px ${holiday.glowColor}25`,
+              textShadow: `0 0 30px ${holiday.glowColor}40, 0 0 60px ${holiday.glowColor}15`,
               letterSpacing: "-0.04em",
             }}
           >
@@ -129,45 +145,52 @@ function HolidayCard({
 
           {/* Subtitle */}
           <p
-            className="text-sm sm:text-base mt-1.5 sm:mt-2 italic max-w-[240px] sm:max-w-[350px]"
+            className="text-sm sm:text-base mt-1.5 sm:mt-2 italic max-w-[220px] sm:max-w-[350px]"
             style={{ color: "var(--soft, #A1A1AA)" }}
           >
             {holiday.subtitle}
           </p>
-
-          {/* Event count */}
-          {eventCount !== null && eventCount > 0 && (
-            <p
-              className="font-mono text-xs sm:text-sm font-bold mt-2 sm:mt-3"
-              style={{ color: holiday.accentColor, letterSpacing: "0.03em" }}
-            >
-              {eventCount} events this week
-            </p>
-          )}
         </Link>
 
-        {/* CTA pills row — aligned under the copy, not the photo */}
+        {/* CTA pills row — neon glow style */}
         <div className="relative flex items-center gap-2 sm:gap-2.5 pl-[48%] sm:pl-[38%] pr-5 sm:pr-8 pb-5 sm:pb-6 -mt-3 overflow-x-auto scrollbar-hide">
           {holiday.quickLinks!.map((link, i) => {
             const isFirst = i === 0;
             const pillLabel = isFirst && eventCount !== null && eventCount > 0
-              ? `${eventCount} ${link.label}`
+              ? `${eventCount} ${link.label} →`
               : link.label;
 
             return (
               <Link
                 key={link.label}
                 href={`/${portalSlug}${link.href}`}
-                className="flex-shrink-0 px-4 py-2 rounded-full font-mono text-xs font-medium transition-colors active:scale-95"
+                className="flex-shrink-0 px-4 py-2 rounded-full font-mono text-xs font-bold transition-all active:scale-95"
                 style={{
-                  color: isFirst ? "#fff" : holiday.accentColor,
+                  color: isFirst ? "#000" : holiday.accentColor,
                   backgroundColor: isFirst
-                    ? `color-mix(in srgb, ${holiday.glowColor} 40%, transparent)`
-                    : `color-mix(in srgb, ${holiday.glowColor} 12%, transparent)`,
-                  border: `1px solid color-mix(in srgb, ${holiday.glowColor} ${isFirst ? "50" : "20"}%, transparent)`,
+                    ? holiday.glowColor
+                    : "transparent",
+                  border: `1px solid color-mix(in srgb, ${holiday.glowColor} ${isFirst ? "100" : "40"}%, transparent)`,
+                  boxShadow: isFirst
+                    ? `0 0 12px ${holiday.glowColor}50, 0 0 4px ${holiday.glowColor}30`
+                    : `0 0 6px ${holiday.glowColor}15`,
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1.3)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.filter = ""; }}
+                onMouseEnter={(e) => {
+                  if (isFirst) {
+                    e.currentTarget.style.boxShadow = `0 0 20px ${holiday.glowColor}70, 0 0 8px ${holiday.glowColor}50`;
+                  } else {
+                    e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${holiday.glowColor} 15%, transparent)`;
+                    e.currentTarget.style.boxShadow = `0 0 12px ${holiday.glowColor}30`;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (isFirst) {
+                    e.currentTarget.style.boxShadow = `0 0 12px ${holiday.glowColor}50, 0 0 4px ${holiday.glowColor}30`;
+                  } else {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.boxShadow = `0 0 6px ${holiday.glowColor}15`;
+                  }
+                }}
               >
                 {pillLabel}
               </Link>
@@ -382,7 +405,7 @@ export default function HolidayHero({ portalSlug, position = 1, eventCount: pref
 
     async function fetchCount() {
       try {
-        const res = await fetch(`/api/events/tag-count?tag=${encodeURIComponent(holiday!.tag)}`);
+        const res = await fetch(`/api/events/tag-count?tag=${encodeURIComponent(holiday!.tag)}&portal=${encodeURIComponent(portalSlug)}`);
         if (!res.ok) return;
         const data = await res.json();
         if (typeof data.count === "number" && data.count > 0) {
@@ -401,14 +424,15 @@ export default function HolidayHero({ portalSlug, position = 1, eventCount: pref
 
   const hasQuickLinks = holiday.quickLinks && holiday.quickLinks.length > 0;
 
-  // Marquee cards: outer glow shadow + div wrapper (multiple <Link> inside)
+  // Marquee cards: neon border + outer glow + div wrapper (multiple <Link> inside)
   if (hasQuickLinks) {
     return (
       <div
         className="relative rounded-2xl overflow-hidden"
         style={{
           background: holiday.gradient,
-          boxShadow: `0 0 40px -4px ${holiday.glowColor}25`,
+          border: `1px solid color-mix(in srgb, ${holiday.glowColor} 35%, transparent)`,
+          boxShadow: `0 0 30px -4px ${holiday.glowColor}20, inset 0 1px 0 ${holiday.glowColor}15`,
         }}
       >
         <HolidayCard holiday={holiday} eventCount={eventCount} portalSlug={portalSlug} />
