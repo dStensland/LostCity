@@ -1,0 +1,136 @@
+/* ============================================
+   MARKETPLACE PORTAL VERTICAL
+   Mixed-use development / market hall theme
+   Applied via [data-vertical="marketplace"]
+   ============================================ */
+
+[data-vertical="marketplace"] {
+  /* Color Palette - Warm Industrial */
+  --mkt-ivory: #FBF8F3;
+  --mkt-cream: #F3EDE4;
+  --mkt-sand: #E4DDD2;
+  --mkt-brick: #B5674A;
+  --mkt-steel: #7A8A94;
+  --mkt-charcoal: #2C2824;
+  --mkt-ink: #1C1A17;
+
+  /* Semantic Accents */
+  --mkt-beltline: #5A8C5F;
+  --mkt-amber: #C8944A;
+  --mkt-sky: #6B7FA3;
+
+  /* Category Colors - Warm Muted */
+  --mkt-cat-food: #C8944A;
+  --mkt-cat-drink: #B5674A;
+  --mkt-cat-shop: #7A8A94;
+  --mkt-cat-event: #6B7FA3;
+  --mkt-cat-wellness: #5A8C5F;
+  --mkt-cat-art: #9B8A7A;
+
+  /* Shadows - Soft, Architectural */
+  --mkt-shadow-soft: 0 1px 3px rgba(44, 40, 36, 0.06), 0 1px 2px rgba(44, 40, 36, 0.04);
+  --mkt-shadow-medium: 0 4px 12px rgba(44, 40, 36, 0.08), 0 2px 4px rgba(44, 40, 36, 0.04);
+  --mkt-shadow-strong: 0 8px 24px rgba(44, 40, 36, 0.10), 0 4px 8px rgba(44, 40, 36, 0.05);
+
+  /* Timing */
+  --mkt-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --mkt-duration-fast: 200ms;
+  --mkt-duration-base: 350ms;
+  --mkt-duration-slow: 500ms;
+
+  /* Apply theme colors to standard CSS vars */
+  --background: var(--mkt-ivory);
+  --foreground: var(--mkt-charcoal);
+  --muted: var(--mkt-steel);
+  --accent: var(--mkt-brick);
+  --card: var(--mkt-cream);
+  --card-border: var(--mkt-sand);
+
+  /* Override neon colors for marketplace context */
+  --neon-magenta: var(--mkt-brick);
+  --neon-cyan: var(--mkt-beltline);
+  --neon-amber: var(--mkt-amber);
+
+  /* Disable ambient effects */
+  --grain-opacity: 0;
+  color-scheme: light;
+}
+
+/* Marketplace Animations */
+@keyframes mkt-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mkt-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+[data-vertical="marketplace"] .mkt-enter {
+  animation: mkt-fade-in 600ms var(--mkt-ease);
+}
+
+[data-vertical="marketplace"] .mkt-card-enter {
+  animation: mkt-fade-up 500ms var(--mkt-ease);
+}
+
+[data-vertical="marketplace"] .mkt-grid > * {
+  animation: mkt-fade-up 500ms var(--mkt-ease);
+}
+
+[data-vertical="marketplace"] .mkt-grid > *:nth-child(1) { animation-delay: 0ms; }
+[data-vertical="marketplace"] .mkt-grid > *:nth-child(2) { animation-delay: 80ms; }
+[data-vertical="marketplace"] .mkt-grid > *:nth-child(3) { animation-delay: 160ms; }
+[data-vertical="marketplace"] .mkt-grid > *:nth-child(4) { animation-delay: 240ms; }
+[data-vertical="marketplace"] .mkt-grid > *:nth-child(5) { animation-delay: 320ms; }
+[data-vertical="marketplace"] .mkt-grid > *:nth-child(6) { animation-delay: 400ms; }
+
+/* Disable all glow effects for marketplace vertical */
+[data-vertical="marketplace"] .icon-neon,
+[data-vertical="marketplace"] .icon-neon-subtle,
+[data-vertical="marketplace"] .icon-neon-intense,
+[data-vertical="marketplace"] .icon-neon-pulse,
+[data-vertical="marketplace"] .icon-neon-flicker,
+[data-vertical="marketplace"] .ambient-glow {
+  filter: none !important;
+  animation: none !important;
+  opacity: 0 !important;
+}
+
+/* Hide glass effects and particle fields */
+[data-vertical="marketplace"] .glass-panel,
+[data-vertical="marketplace"] .particle-field {
+  display: none !important;
+}
+
+/* Marketplace Nav Pills */
+[data-vertical="marketplace"] .mkt-pill {
+  border: 1px solid var(--mkt-sand);
+  white-space: nowrap;
+  transition: all var(--mkt-duration-fast) var(--mkt-ease);
+}
+[data-vertical="marketplace"] .mkt-pill-active {
+  border-color: var(--mkt-charcoal);
+  background: var(--mkt-charcoal);
+  color: var(--mkt-ivory);
+}
+
+/* Marketplace Hero Gradient */
+[data-vertical="marketplace"] .mkt-hero-gradient {
+  background: linear-gradient(to top, rgba(28, 26, 23, 0.82) 0%, rgba(28, 26, 23, 0.36) 45%, transparent 75%);
+}
+
+/* Marketplace Section Divider */
+[data-vertical="marketplace"] .mkt-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--mkt-sand) 20%, var(--mkt-sand) 80%, transparent);
+  margin: 0 0 2.5rem 0;
+}
+
+/* BeltLine highlight accent */
+[data-vertical="marketplace"] .mkt-beltline-tag {
+  color: var(--mkt-beltline);
+  border-color: color-mix(in srgb, var(--mkt-beltline) 40%, transparent);
+  background: color-mix(in srgb, var(--mkt-beltline) 8%, transparent);
+}

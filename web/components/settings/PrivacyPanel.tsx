@@ -2,19 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { createClient } from "@/lib/supabase/client";
 import ToggleRow from "./ToggleRow";
 import { PrivacyTierSelector } from "./PrivacyTierSelector";
 import type { PrivacyMode } from "@/lib/types/profile";
 
-type PrivacyPrefs = {
-  cross_portal_recommendations: boolean | null;
-  hide_adult_content: boolean | null;
-};
-
 export default function PrivacyPanel() {
   const { user, profile, loading: authLoading } = useAuth();
-  const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,15 +27,12 @@ export default function PrivacyPanel() {
       setError(null);
 
       try {
-        const { data } = (await supabase
-          .from("user_preferences")
-          .select("cross_portal_recommendations, hide_adult_content")
-          .eq("user_id", user.id)
-          .maybeSingle()) as { data: PrivacyPrefs | null };
-
-        if (data) {
-          setCrossPortalRecommendations(data.cross_portal_recommendations ?? true);
-          setHideAdultContent(data.hide_adult_content ?? false);
+        const res = await fetch("/api/auth/preferences");
+        if (!res.ok) throw new Error("Failed to fetch preferences");
+        const { preferences } = await res.json();
+        if (preferences) {
+          setCrossPortalRecommendations(preferences.cross_portal_recommendations ?? true);
+          setHideAdultContent(preferences.hide_adult_content ?? false);
         }
       } catch (err) {
         console.error("Failed to load privacy settings:", err);
@@ -55,7 +45,7 @@ export default function PrivacyPanel() {
     if (!authLoading) {
       loadPrivacySettings();
     }
-  }, [user, authLoading, supabase]);
+  }, [user, authLoading]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -65,31 +55,16 @@ export default function PrivacyPanel() {
     setError(null);
 
     try {
-      const prefsPayload = {
-        cross_portal_recommendations: crossPortalRecommendations,
-        hide_adult_content: hideAdultContent,
-      };
+      const res = await fetch("/api/auth/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cross_portal_recommendations: crossPortalRecommendations,
+          hide_adult_content: hideAdultContent,
+        }),
+      });
 
-      const { data: existingPrefs } = await supabase
-        .from("user_preferences")
-        .select("user_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (existingPrefs) {
-        await (
-          supabase.from("user_preferences") as ReturnType<typeof supabase.from>
-        )
-          .update(prefsPayload as never)
-          .eq("user_id", user.id);
-      } else {
-        await (
-          supabase.from("user_preferences") as ReturnType<typeof supabase.from>
-        ).insert({
-          user_id: user.id,
-          ...prefsPayload,
-        } as never);
-      }
+      if (!res.ok) throw new Error("Failed to save preferences");
 
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);

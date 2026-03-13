@@ -1,4 +1,6 @@
-# LostCity Product Roadmap
+# LostCity Product Roadmap (Historical)
+
+> **Note:** This file is historical. The active roadmap is `DEV_PLAN.md`.
 
 Active initiatives, reprioritized for launch proof and sales readiness.
 Updated 2026-02-23 with comprehensive implementation audit.

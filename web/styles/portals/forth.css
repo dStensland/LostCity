@@ -1,0 +1,67 @@
+/* ============================================
+   FORTH PORTAL THEME
+   Hotel concierge experience — FORTH brand
+   Applied via body[data-forth-*] and [data-forth-experience]
+   ============================================ */
+
+/* ============================================
+   FORTH MOTION MODES
+   Configured via portal.settings.forth_motion_mode
+   ============================================ */
+
+body[data-forth-motion="minimal"] [data-forth-experience] .forth-zoom-image,
+body[data-forth-motion="minimal"] [data-forth-experience] .group:hover .forth-zoom-image {
+  transform: none !important;
+  transition-duration: 120ms !important;
+}
+
+body[data-forth-motion="minimal"] [data-forth-experience] .forth-hover-lift {
+  transition-duration: 120ms !important;
+}
+
+body[data-forth-motion="minimal"] [data-forth-experience] .forth-hover-lift:hover {
+  transform: none !important;
+}
+
+body[data-forth-motion="subtle"] [data-forth-experience] .forth-zoom-image {
+  transition-duration: 360ms !important;
+}
+
+body[data-forth-motion="cinematic"] [data-forth-experience] .forth-zoom-image {
+  transition-duration: 950ms !important;
+}
+
+/* FORTH override: configurable per portal via settings.forth_background_mode. */
+body[data-forth-bg="off"]::after {
+  opacity: 0;
+}
+
+body[data-forth-bg="off"] .rain-overlay {
+  display: none !important;
+}
+
+body[data-forth-bg="subtle"]::after {
+  opacity: 0.0035;
+}
+
+/* Force-disable global grain/rain overlays when FORTH concierge experience is mounted. */
+body[data-forth-experience="true"]::after {
+  opacity: 0 !important;
+}
+
+body:has([data-forth-experience="true"])::after {
+  opacity: 0 !important;
+}
+
+body[data-forth-experience="true"] .rain-overlay {
+  display: none !important;
+}
+
+body:has([data-forth-experience="true"]) .rain-overlay {
+  display: none !important;
+}
+
+body[data-forth-experience="true"],
+body:has([data-forth-experience="true"]) {
+  overflow-x: clip;
+}

@@ -98,6 +98,25 @@ When multiple Claude Code sessions work in parallel, check `ACTIVE_WORK.md` in t
 
 See `BACKLOG.md` for the full prioritized roadmap with implementation status.
 
+## Migration Numbering
+
+`database/migrations/` files use sequential numeric prefixes (`NNN_description.sql`). 108+ numbering collisions exist from parallel agent work — they are harmless in production because Supabase runs the `supabase/migrations/` timestamp-based files, not the numbered ones. But avoid creating new collisions.
+
+**Before creating a migration manually:**
+```bash
+ls /Users/coach/Projects/LostCity/database/migrations/*.sql | sort -t_ -k1 -n | tail -1
+```
+Use the next sequential number after whatever that returns.
+
+**Preferred: use the scaffolding script**, which handles numbering automatically:
+```bash
+python3 /Users/coach/Projects/LostCity/database/create_migration_pair.py your_migration_name
+```
+
+**Parallel agents:** Check `ACTIVE_WORK.md` before picking a number. If two agents are working simultaneously, coordinate — each agent should claim a number range or one agent should defer until the other's migration is committed.
+
+`supabase/migrations/` uses `YYYYMMDDHHMMSS_description.sql` timestamps and does not have a collision risk.
+
 ## Environment Variables
 
 Required in `.env`:

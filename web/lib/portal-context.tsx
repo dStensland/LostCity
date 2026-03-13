@@ -2,6 +2,9 @@
 
 import { createContext, useContext, ReactNode } from "react";
 import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "./constants";
+
+/** Must match PortalVertical in @/lib/portal */
+type PortalVertical = "city" | "hotel" | "film" | "hospital" | "community" | "marketplace" | "dog" | "arts" | "adventure" | "family";
 import type {
   VisualPresetId,
   HeaderTemplate,
@@ -254,7 +257,7 @@ export type Portal = {
   branding: PortalBranding;
   settings: {
     /** Portal vertical/industry type - determines UI/UX treatment */
-    vertical?: "city" | "hotel" | "film" | "hospital" | "community" | "marketplace";
+    vertical?: PortalVertical;
     nav_labels?: {
       feed?: string;
       find?: string;
@@ -372,13 +375,4 @@ export function usePortalCity() {
   return portal.filters.city || portal.name;
 }
 
-/**
- * Get the portal vertical type (defaults to "city" if not set)
- */
-export function getPortalVertical(portal: Portal): "city" | "hotel" | "film" | "hospital" | "community" | "marketplace" | "dog" {
-  const configured = portal.settings?.vertical as string | undefined;
-  if (configured === "civic") {
-    return "community";
-  }
-  return (configured as "city" | "hotel" | "film" | "hospital" | "community" | "marketplace" | "dog") || "city";
-}
+// NOTE: getPortalVertical is exported from @/lib/portal — use that instead.

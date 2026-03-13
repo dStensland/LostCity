@@ -1,6 +1,5 @@
 "use client";
 
-import { NextIntlClientProvider } from "next-intl";
 import type { ReactNode } from "react";
 
 interface I18nProviderProps {
@@ -9,10 +8,7 @@ interface I18nProviderProps {
   children: ReactNode;
 }
 
-export function I18nProvider({ locale, messages, children }: I18nProviderProps) {
-  return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
-      {children}
-    </NextIntlClientProvider>
-  );
+// next-intl removed (Emory portal archived). This is now a passthrough wrapper.
+export function I18nProvider({ children }: I18nProviderProps) {
+  return <>{children}</>;
 }

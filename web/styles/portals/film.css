@@ -1,0 +1,63 @@
+/* ============================================
+   FILM VERTICAL THEME
+   Cinema/film portal — restrained blue-indigo palette,
+   no ambient overlays or neon states.
+   Applied via body[data-vertical="film"]
+   ============================================ */
+
+/* Disable grain for film vertical */
+body[data-vertical="film"]::after {
+  opacity: 0;
+}
+body:has([data-vertical="film"])::after {
+  opacity: 0;
+}
+body[data-vertical="film"],
+body:has([data-vertical="film"]) {
+  --coral: #b8c8f8;
+  --coral-hsl: 225 80% 85%;
+  --neon-amber: #b8c8f8;
+  --neon-amber-hsl: 225 80% 85%;
+  --gold: #dbe5ff;
+}
+
+/* Film vertical: restrained look, no ambient overlays/noisy neon states. */
+body[data-vertical="film"] .ambient-glow,
+body:has([data-vertical="film"]) .ambient-glow,
+body[data-vertical="film"] .rain-overlay,
+body:has([data-vertical="film"]) .rain-overlay,
+body[data-vertical="film"] .cursor-glow,
+body:has([data-vertical="film"]) .cursor-glow {
+  display: none !important;
+}
+
+body[data-vertical="film"] .nav-tab-shadow,
+body:has([data-vertical="film"]) .nav-tab-shadow {
+  text-shadow: none;
+}
+
+body[data-vertical="film"] .nav-tab-active,
+body:has([data-vertical="film"]) .nav-tab-active {
+  background: linear-gradient(180deg, #d7e1ff 0%, #b8c8f8 100%);
+  box-shadow: none;
+  color: #0b1020 !important;
+}
+
+body[data-vertical="film"] .nav-tab:not(.nav-tab-active):hover,
+body:has([data-vertical="film"]) .nav-tab:not(.nav-tab-active):hover {
+  background: rgba(172, 191, 242, 0.12);
+  border-bottom: 2px solid rgba(172, 191, 242, 0.35);
+}
+
+body[data-vertical="film"] .mobile-menu-active,
+body:has([data-vertical="film"]) .mobile-menu-active {
+  color: #dbe5ff !important;
+  background: linear-gradient(90deg, rgba(172, 191, 242, 0.2) 0%, rgba(172, 191, 242, 0.05) 100%);
+  text-shadow: none;
+}
+
+body[data-vertical="film"] .mobile-menu-active::before,
+body:has([data-vertical="film"]) .mobile-menu-active::before {
+  background: #dbe5ff;
+  box-shadow: none;
+}

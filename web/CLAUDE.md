@@ -47,6 +47,22 @@ See `BACKLOG.md` for the full prioritized roadmap with implementation status.
 
 **The Solution:** All authenticated database mutations MUST go through API routes.
 
+### Canonical Auth Pattern: `withAuth` / `withAuthAndParams`
+
+New API routes MUST use the wrappers from `lib/api-middleware.ts`:
+
+```typescript
+import { withAuth } from "@/lib/api-middleware";
+
+export const POST = withAuth(async (request, { user, serviceClient }) => {
+  // user is already verified, serviceClient bypasses RLS
+  const { data } = await serviceClient.from("table").insert({ user_id: user.id } as never);
+  return NextResponse.json({ success: true });
+});
+```
+
+~95 legacy routes still use manual `getUser()` — migrate them opportunistically when touching those files. Don't batch-migrate.
+
 ### Pattern: Use API Routes for All Mutations
 
 ```typescript

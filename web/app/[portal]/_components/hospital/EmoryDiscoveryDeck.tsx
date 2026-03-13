@@ -5,7 +5,6 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
 import type {
   EmoryFederationEventPreview,
   EmoryFederationOrgPreview,
@@ -54,8 +53,6 @@ const DEFAULT_FILTERS: DiscoveryFilter[] = [
   { id: "food", label: "Food access", keywords: ["food", "meal", "market", "nutrition", "kitchen", "cafe"] },
   { id: "care", label: "Care support", keywords: ["clinic", "screening", "pharmacy", "support", "health"] },
 ];
-
-// Note: TAB_LABELS and VIEW_LABELS now come from useTranslations("discovery")
 
 function getFallbackImage(item: { kind: string; title: string; subtitle: string }): string {
   if (item.kind === "event") return getEventFallbackImage(null, item.title);
@@ -121,22 +118,21 @@ export default function EmoryDiscoveryDeck({
   contextParams,
   allowedViews,
 }: EmoryDiscoveryDeckProps) {
-  const t = useTranslations("discovery");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const keyPrefix = stateKey || "discovery";
 
   const TAB_LABELS: Record<DiscoveryTab, string> = {
-    events: t("tabEvents"),
-    venues: t("tabVenues"),
-    organizations: t("tabOrgs"),
+    events: "Events",
+    venues: "Venues",
+    organizations: "Organizations",
   };
 
   const VIEW_LABELS: Record<DiscoveryView, string> = {
-    list: t("viewList"),
-    map: t("viewMap"),
-    timeline: t("viewTimeline"),
+    list: "List",
+    map: "Map",
+    timeline: "Timeline",
   };
 
   const tabParam = searchParams.get(`${keyPrefix}_tab`) as DiscoveryTab | null;
@@ -276,16 +272,16 @@ export default function EmoryDiscoveryDeck({
             onClick={() => setIsPlanOpen((value) => !value)}
             className="emory-secondary-btn inline-flex items-center px-2.5 py-1.5 text-xs"
           >
-            {t("myPlan")} ({savedItems.length})
+            My Plan ({savedItems.length})
           </button>
-          <span className="emory-chip">{activeCount} {t("results")}</span>
+          <span className="emory-chip">{activeCount} results</span>
         </div>
       </div>
 
       {isPlanOpen && (
         <div className="mt-2 rounded-lg border border-[#d7dce4] bg-[#f8f9fb] p-2.5">
           {savedItems.length === 0 ? (
-            <p className="text-xs text-[#6b7280]">{t("savePlanHint")}</p>
+            <p className="text-xs text-[#6b7280]">Save items to build your plan.</p>
           ) : (
             <div className="space-y-1.5">
               {savedItems.map((item) => (
@@ -293,14 +289,14 @@ export default function EmoryDiscoveryDeck({
                   <div>
                     <p className="text-sm font-semibold text-[#002f6c]">{item.title}</p>
                     <p className="text-xs text-[#4b5563]">{item.subtitle}</p>
-                    <Link href={appendContextParams(item.href, contextParams)} className="emory-link-btn mt-0.5 inline-flex">{t("open")}</Link>
+                    <Link href={appendContextParams(item.href, contextParams)} className="emory-link-btn mt-0.5 inline-flex">Open</Link>
                   </div>
                   <button
                     type="button"
                     onClick={() => toggleSaved(item.id)}
                     className="emory-link-btn"
                   >
-                    {t("remove")}
+                    Remove
                   </button>
                 </div>
               ))}
@@ -370,7 +366,7 @@ export default function EmoryDiscoveryDeck({
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("searchPlaceholder")}
+            placeholder="Search…"
             className="w-full rounded-md border border-[#d7dce4] bg-[#f8f9fb] px-3 py-2 text-sm text-[#002f6c] placeholder:text-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#bfd4f5]"
           />
         </label>
@@ -383,7 +379,7 @@ export default function EmoryDiscoveryDeck({
           >
             {allowedSortsForTab(activeTab).map((option) => (
               <option key={option} value={option}>
-                {option === "relevant" ? t("sortRelevant") : option === "soonest" ? t("sortSoonest") : option === "closest" ? t("sortClosest") : option === "active" ? t("sortActive") : t("sortAlpha")}
+                {option === "relevant" ? "Most Relevant" : option === "soonest" ? "Soonest" : option === "closest" ? "Closest" : option === "active" ? "Most Active" : "A–Z"}
               </option>
             ))}
           </select>
@@ -393,7 +389,7 @@ export default function EmoryDiscoveryDeck({
           onClick={resetControls}
           className="emory-secondary-btn inline-flex items-center justify-center px-2.5 py-1.5 text-[11px] sm:px-3 sm:py-2 sm:text-xs"
         >
-          {t("reset")}
+          Reset
         </button>
       </div>
 
@@ -415,9 +411,9 @@ export default function EmoryDiscoveryDeck({
                       </div>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-3">
-                      <Link href={appendContextParams(item.detailHref, contextParams)} className="emory-link-btn">{t("viewDetails")}</Link>
+                      <Link href={appendContextParams(item.detailHref, contextParams)} className="emory-link-btn">View Details</Link>
                       <button type="button" onClick={() => toggleSaved(item.key)} className="emory-link-btn">
-                        {savedIds.includes(item.key) ? t("saved") : t("save")}
+                        {savedIds.includes(item.key) ? "Saved" : "Save"}
                       </button>
                     </div>
                   </article>
@@ -459,12 +455,12 @@ export default function EmoryDiscoveryDeck({
                   <p className="mt-0.5 text-[14px] font-semibold text-[#002f6c] leading-snug line-clamp-2">{item.title}</p>
                   <p className="mt-1 text-xs text-[#4b5563] line-clamp-2">{item.subtitle}</p>
                   <div className="mt-2.5 flex flex-wrap gap-3">
-                    <Link href={appendContextParams(item.detailHref, contextParams)} className="emory-link-btn">{t("open")}</Link>
+                    <Link href={appendContextParams(item.detailHref, contextParams)} className="emory-link-btn">Open</Link>
                     {item.mapsHref && (
-                      <a href={item.mapsHref} target="_blank" rel="noreferrer" className="emory-link-btn">{t("mapDirections")}</a>
+                      <a href={item.mapsHref} target="_blank" rel="noreferrer" className="emory-link-btn">Get Directions</a>
                     )}
                     <button type="button" onClick={() => toggleSaved(item.key)} className="emory-link-btn">
-                      {savedIds.includes(item.key) ? t("saved") : t("save")}
+                      {savedIds.includes(item.key) ? "Saved" : "Save"}
                     </button>
                   </div>
                 </div>
@@ -476,7 +472,7 @@ export default function EmoryDiscoveryDeck({
 
       {activeCount > 9 && (
         <div className="mt-3 flex items-center justify-between gap-2">
-          <p className="text-xs text-[#6b7280]">{t("showingFirst", { count: 9 })}</p>
+          <p className="text-xs text-[#6b7280]">Showing first 9 results</p>
           <Link href={appendContextParams(emptyHref, contextParams)} className="emory-link-btn inline-flex">
             Open Full Listings
           </Link>
@@ -485,8 +481,8 @@ export default function EmoryDiscoveryDeck({
 
       {activeCount === 0 && (
         <div className="mt-3 rounded-md border border-dashed border-[#d7dce4] bg-[#f8f9fb] p-3">
-          <p className="text-sm text-[#6b7280]">{t("noMatches")}</p>
-          <Link href={appendContextParams(emptyHref, contextParams)} className="emory-link-btn mt-1 inline-flex">{t("openFullListings")}</Link>
+          <p className="text-sm text-[#6b7280]">No matches found. Try adjusting your filters.</p>
+          <Link href={appendContextParams(emptyHref, contextParams)} className="emory-link-btn mt-1 inline-flex">Open Full Listings</Link>
         </div>
       )}
     </section>

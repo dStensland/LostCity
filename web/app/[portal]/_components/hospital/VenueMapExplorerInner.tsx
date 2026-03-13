@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
 import { Map as MapboxMap, Marker, NavigationControl } from "react-map-gl";
 import type { MapRef } from "react-map-gl";
 import { ATLANTA_CENTER, MAPBOX_TOKEN, getMapStyle } from "@/lib/map-config";
@@ -62,7 +61,6 @@ export default function VenueMapExplorerInner({
   contextParams,
   onToggleSaved,
 }: VenueMapExplorerInnerProps) {
-  const t = useTranslations("discovery");
   const mapRef = useRef<MapRef | null>(null);
   const [mounted, setMounted] = useState(false);
   const [mapReady, setMapReady] = useState(false);
@@ -199,11 +197,11 @@ export default function VenueMapExplorerInner({
       <div className="relative overflow-hidden rounded-lg border border-[#d7dce4] bg-[#f8f9fb] min-h-[320px]" aria-label="Interactive map showing venues and organizations">
         {!mounted ? (
           <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-xs text-[#6b7280]">{t("loadingMap")}</p>
+            <p className="text-xs text-[#6b7280]">Loading map…</p>
           </div>
         ) : points.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
-            <p className="text-sm text-[#6b7280]">{t("noGeocodedVenues")}</p>
+            <p className="text-sm text-[#6b7280]">No venues with location data available.</p>
           </div>
         ) : (
           <MapboxMap
@@ -283,12 +281,12 @@ export default function VenueMapExplorerInner({
             <p className="text-sm font-semibold text-[#002f6c]">{selectedPoint.title}</p>
             <p className="text-xs text-[#4b5563]">{selectedPoint.subtitle}</p>
             <div className="mt-1 flex flex-wrap gap-3 pointer-events-auto">
-              <Link href={appendContextParams(selectedPoint.detailHref, contextParams)} className="emory-link-btn">{t("open")}</Link>
+              <Link href={appendContextParams(selectedPoint.detailHref, contextParams)} className="emory-link-btn">Open</Link>
               {selectedPoint.mapsHref && (
-                <a href={selectedPoint.mapsHref} target="_blank" rel="noreferrer" className="emory-link-btn">{t("mapDirections")}</a>
+                <a href={selectedPoint.mapsHref} target="_blank" rel="noreferrer" className="emory-link-btn">Get Directions</a>
               )}
               <button type="button" onClick={() => onToggleSaved(selectedPoint.key)} className="emory-link-btn">
-                {savedIds.includes(selectedPoint.key) ? t("saved") : t("save")}
+                {savedIds.includes(selectedPoint.key) ? "Saved" : "Save"}
               </button>
             </div>
           </div>
@@ -347,12 +345,12 @@ export default function VenueMapExplorerInner({
                 </button>
               </div>
               <div className="mt-1.5 flex flex-wrap gap-3">
-                <Link href={appendContextParams(item.detailHref, contextParams)} className="emory-link-btn">{t("open")}</Link>
+                <Link href={appendContextParams(item.detailHref, contextParams)} className="emory-link-btn">Open</Link>
                 {item.mapsHref && (
-                  <a href={item.mapsHref} target="_blank" rel="noreferrer" className="emory-link-btn">{t("mapDirections")}</a>
+                  <a href={item.mapsHref} target="_blank" rel="noreferrer" className="emory-link-btn">Get Directions</a>
                 )}
                 <button type="button" onClick={() => onToggleSaved(item.key)} className="emory-link-btn">
-                  {savedIds.includes(item.key) ? t("saved") : t("save")}
+                  {savedIds.includes(item.key) ? "Saved" : "Save"}
                 </button>
               </div>
             </article>
