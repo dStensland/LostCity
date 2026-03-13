@@ -163,7 +163,7 @@ export const HOLIDAYS: HolidayConfig[] = [
     tag: "st-patricks-day",
     title: "St. Patrick's Day",
     subtitle: "Parades, bar crawls & green across the city",
-    gradient: "linear-gradient(135deg, #061a0e 0%, #0d3320 25%, #143d28 50%, #0d3320 75%, #061a0e 100%)",
+    gradient: "linear-gradient(135deg, #050a05 0%, #0a1a0a 30%, #051005 60%, #030a03 100%)",
     accentColor: "#4ade80",
     glowColor: "#4ade80",
     icon: "/images/st-patricks-guinness.jpg",
