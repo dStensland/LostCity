@@ -116,4 +116,30 @@ describe("rerankSuggestionsForQuery", () => {
       type: "tag",
     });
   });
+
+  it("treats leading-article venue names like exact matches for short proper nouns", () => {
+    const ranked = rerankSuggestionsForQuery("earl", [
+      { text: "Earl Smith Strand Theatre", type: "venue", frequency: 10, similarity: 0.92 },
+      { text: "The Earl", type: "venue", frequency: 8, similarity: 0.52 },
+      { text: "Earl and Rachel Smith Strand Theatre", type: "venue", frequency: 5, similarity: 0.87 },
+    ]);
+
+    expect(ranked[0]).toMatchObject({
+      text: "The Earl",
+      type: "venue",
+    });
+  });
+
+  it("prefers the canonical venue over room variants for venue-family proper nouns", () => {
+    const ranked = rerankSuggestionsForQuery("masquerade", [
+      { text: "The Masquerade - Hell", type: "venue", frequency: 9, similarity: 0.93 },
+      { text: "The Masquerade", type: "venue", frequency: 6, similarity: 0.61 },
+      { text: "The Masquerade Music Park", type: "venue", frequency: 8, similarity: 0.82 },
+    ]);
+
+    expect(ranked[0]).toMatchObject({
+      text: "The Masquerade",
+      type: "venue",
+    });
+  });
 });

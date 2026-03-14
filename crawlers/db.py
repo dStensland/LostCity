@@ -2115,7 +2115,7 @@ _CATEGORY_NORMALIZATION_MAP: dict[str, str] = {
     "dance": "learning",
     "tours": "learning",
     "meetup": "community",
-    "gaming": "community",
+    "gaming": "nightlife",
     "markets": "community",
     "haunted": "nightlife",
     "eatertainment": "nightlife",
@@ -2579,6 +2579,39 @@ def insert_event(
     # e.g. "Art Camp for Kindergartners" should be family, not art
     if infer_is_kids_activity(event_data):
         event_data["category"] = "family"
+
+    # Auto-reclassify: bar/nightlife venues misclassified as "community" or "other"
+    # Bar crawls, pub parties, block parties at nightlife venues are not community events.
+    # Only reclassify when there are no civic/volunteer signals in the title.
+    _cur_cat = event_data.get("category", "")
+    if _cur_cat in ("community", "other") and venue_type:
+        _NIGHTLIFE_VENUE_TYPES = {
+            "bar", "nightclub", "brewery", "lounge", "sports_bar",
+            "distillery", "winery", "rooftop",
+        }
+        _CIVIC_TITLE_SIGNALS = {
+            "volunteer", "nonprofit", "civic", "meeting", "board",
+            "council", "hearing", "forum", "town hall", "advocacy",
+            "voter", "registration", "cleanup", "donation", "drive",
+        }
+        _title_lower = (event_data.get("title") or "").lower()
+        _has_civic_signal = any(sig in _title_lower for sig in _CIVIC_TITLE_SIGNALS)
+        if venue_type in _NIGHTLIFE_VENUE_TYPES and not _has_civic_signal:
+            _NIGHTLIFE_TITLE_SIGNALS = {
+                "crawl", "party", "block party", "bash", "fest",
+                "celebration", "happy hour", "brunch",
+            }
+            _has_nightlife_signal = any(sig in _title_lower for sig in _NIGHTLIFE_TITLE_SIGNALS)
+            if _has_nightlife_signal:
+                _new_cat = "nightlife"
+            else:
+                _new_cat = "food_drink"
+            logger.info(
+                "Reclassifying '%s' → %s (venue_type=%s, was %s): %s",
+                _new_cat, _new_cat, venue_type, _cur_cat,
+                event_data.get("title", "")[:60],
+            )
+            event_data["category"] = _new_cat
 
     # Festival/conference rollup hints based on source
     festival_hint = get_festival_source_hint(source_slug, source_name)
@@ -4507,6 +4540,58 @@ def find_existing_event_by_natural_key(event_data: dict) -> Optional[dict]:
     return None
 
 
+def _find_same_source_venue_date_event(event_data: dict) -> Optional[dict]:
+    """
+    Same-source + same-venue + same-date dedup guard.
+
+    A single source crawling the same venue on the same date should not produce
+    two separate events unless the times are meaningfully different (e.g., a
+    matinee and an evening show).  This catches re-crawl extraction artifacts
+    where the page layout changed and the LLM produced a different title.
+    """
+    source_id = event_data.get("source_id")
+    venue_id = event_data.get("venue_id")
+    start_date = event_data.get("start_date")
+    start_time = event_data.get("start_time")
+
+    if not source_id or not venue_id or not start_date:
+        return None
+
+    client = get_client()
+    query = (
+        client.table("events")
+        .select("*")
+        .eq("source_id", source_id)
+        .eq("venue_id", venue_id)
+        .eq("start_date", start_date)
+        .eq("is_active", True)
+        .is_("canonical_event_id", "null")
+    )
+
+    result = query.execute()
+    candidates = result.data or []
+    if not candidates:
+        return None
+
+    # If incoming event has a specific time, only match events with the same
+    # time or NULL time (avoids merging a 2pm show with an 8pm show).
+    if start_time:
+        matches = [
+            r for r in candidates
+            if r.get("start_time") == start_time or r.get("start_time") is None
+        ]
+    else:
+        # Incoming has no time — match events that also have no time
+        matches = [r for r in candidates if r.get("start_time") is None]
+
+    if not matches:
+        return None
+
+    # Return the most recently updated match (prefer the freshest data)
+    matches.sort(key=lambda r: r.get("updated_at") or r.get("created_at") or "", reverse=True)
+    return matches[0]
+
+
 def find_existing_event_for_insert(event_data: dict) -> Optional[dict]:
     """
     Dedupe guard for insert_event.
@@ -4559,6 +4644,22 @@ def find_existing_event_for_insert(event_data: dict) -> Optional[dict]:
     ):
         update_event(existing["id"], {"content_hash": event_data["content_hash"]})
         existing["content_hash"] = event_data["content_hash"]
+    if existing:
+        return existing
+
+    # Same-source + same-venue + same-date guard: a single source should not produce
+    # two distinct events at the same venue on the same date unless times differ.
+    # This catches extraction artifacts (e.g., Hudson Grille crawled twice, different titles).
+    existing = _find_same_source_venue_date_event(event_data)
+    if existing:
+        logger.info(
+            "Same-source dedup: '%s' matches existing '%s' (source=%s, venue=%s, date=%s)",
+            (event_data.get("title") or "")[:60],
+            (existing.get("title") or "")[:60],
+            event_data.get("source_id"),
+            event_data.get("venue_id"),
+            event_data.get("start_date"),
+        )
     return existing
 
 
@@ -4767,11 +4868,27 @@ def get_sibling_venue_ids(venue_id: int) -> list[int]:
 
     venue_name = venue.get("name", "").lower()
 
-    # Check if this is a Masquerade room
-    if "masquerade" in venue_name:
-        # Find all Masquerade venues
+    parent_venue_id = venue.get("parent_venue_id")
+
+    if parent_venue_id:
         result = (
-            client.table("venues").select("id").ilike("name", "%masquerade%").execute()
+            client.table("venues")
+            .select("id")
+            .or_(f"id.eq.{parent_venue_id},parent_venue_id.eq.{parent_venue_id}")
+            .eq("active", True)
+            .execute()
+        )
+        if result.data:
+            return [v["id"] for v in result.data]
+
+    # Backwards-compatible fallback for pre-parent-linked multi-room venues.
+    if "masquerade" in venue_name:
+        result = (
+            client.table("venues")
+            .select("id")
+            .ilike("name", "%masquerade%")
+            .eq("active", True)
+            .execute()
         )
         if result.data:
             return [v["id"] for v in result.data]

@@ -102,6 +102,21 @@ function normalizeSuggestionQuery(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+function stripLeadingArticle(value: string): string {
+  return value.replace(/^(the|a|an)\s+/i, "").trim();
+}
+
+function normalizeSuggestionMatchText(value: string): string {
+  return normalizeSuggestionQuery(stripLeadingArticle(value));
+}
+
+function countSuggestionWords(value: string): number {
+  return value
+    .split(" ")
+    .map((token) => token.replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, ""))
+    .filter(Boolean).length;
+}
+
 const QUERY_ALIAS_REPLACEMENTS: Array<{
   pattern: RegExp;
   replacement: string;
@@ -230,15 +245,42 @@ export function rerankSuggestionsForQuery(
   return [...suggestions]
     .map((suggestion, index) => {
       const normalizedText = normalizeSuggestionQuery(suggestion.text);
+      const comparableText = normalizeSuggestionMatchText(suggestion.text);
       const similarity = suggestion.similarity || 0;
-      const exactPrefixBonus = normalizedText.startsWith(normalizedQuery) ? 80 : 0;
-      const containsBonus = normalizedText.includes(normalizedQuery) ? 30 : 0;
+      const hasExactMatch =
+        normalizedText === normalizedQuery || comparableText === normalizedQuery;
+      const hasTokenPrefixMatch =
+        normalizedText.startsWith(`${normalizedQuery} `) ||
+        comparableText.startsWith(`${normalizedQuery} `);
+      const hasLoosePrefixMatch =
+        !hasExactMatch &&
+        !hasTokenPrefixMatch &&
+        (normalizedText.startsWith(normalizedQuery) ||
+          comparableText.startsWith(normalizedQuery));
+      const titleWordCount = countSuggestionWords(comparableText);
+      const compactTitleBonus =
+        normalizedQuery.split(" ").length === 1 &&
+        titleWordCount > 0 &&
+        titleWordCount <= 3
+          ? 22
+          : 0;
+      const longTitlePenalty =
+        normalizedQuery.split(" ").length === 1 && titleWordCount >= 4 ? 30 : 0;
+      const exactPrefixBonus = hasExactMatch ? 150 : hasTokenPrefixMatch ? 80 : 0;
+      const containsBonus =
+        normalizedText.includes(normalizedQuery) ||
+        comparableText.includes(normalizedQuery)
+          ? 30
+          : 0;
       const score =
         getIntentAwareSuggestionTypePriority(normalizedQuery, suggestion.type) +
         Math.round(similarity * 100) +
         Math.min(suggestion.frequency, 60) +
         exactPrefixBonus +
         containsBonus -
+        (hasLoosePrefixMatch ? 24 : 0) +
+        longTitlePenalty +
+        compactTitleBonus -
         index * 2;
 
       return { suggestion, score };
@@ -302,29 +344,6 @@ export function buildSuggestionQueryVariants(query: string): SuggestionQueryVari
   }
 
   return Array.from(byQuery.values()).sort((left, right) => right.priority - left.priority);
-}
-
-function getSuggestionTypePriority(type: SearchSuggestion["type"]): number {
-  switch (type) {
-    case "event":
-      return 500;
-    case "venue":
-      return 440;
-    case "festival":
-      return 400;
-    case "organizer":
-      return 360;
-    case "vibe":
-      return 300;
-    case "neighborhood":
-      return 260;
-    case "category":
-      return 140;
-    case "tag":
-      return 120;
-    default:
-      return 100;
-  }
 }
 
 export function mergeExpandedSuggestions(
@@ -470,11 +489,12 @@ export async function getSearchSuggestions(
 
   const loadPromise = (async () => {
     const client = createServiceClient();
+    const fetchLimit = Math.min(Math.max(limit + 4, limit * 2), 16);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (client.rpc as any)("get_similar_suggestions", {
       p_query: trimmed,
-      p_limit: limit,
+      p_limit: fetchLimit,
       p_min_similarity: 0.2,
       p_city: city || null,
     });
@@ -491,7 +511,10 @@ export async function getSearchSuggestions(
       frequency: row.frequency,
       similarity: row.similarity_score,
     }));
-    const suggestions = rerankSuggestionsForQuery(trimmed, mappedSuggestions);
+    const suggestions = rerankSuggestionsForQuery(trimmed, mappedSuggestions).slice(
+      0,
+      limit,
+    );
 
     await setSharedCacheJson(
       SEARCH_SUGGESTIONS_CACHE_NAMESPACE,

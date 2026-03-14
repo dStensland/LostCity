@@ -450,6 +450,23 @@ def refresh_available_filters() -> bool:
         return False
 
 
+def refresh_search_suggestions(city: Optional[str] = None) -> bool:
+    """Incrementally refresh the autocomplete corpus after crawl writes."""
+    if not writes_enabled():
+        suffix = f" city={city}" if city else ""
+        _log_write_skip(f"rpc refresh_search_suggestions_incremental{suffix}")
+        return True
+
+    client = get_client()
+    try:
+        payload = {"p_city": city} if city else {}
+        client.rpc("refresh_search_suggestions_incremental", payload).execute()
+        return True
+    except Exception as e:
+        print(f"Error refreshing search suggestions: {e}")
+        return False
+
+
 def update_source_health_tags(
     source_id: int, health_tags: list[str], active_months: Optional[list[int]] = None
 ) -> bool:

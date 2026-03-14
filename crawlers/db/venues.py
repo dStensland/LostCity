@@ -582,9 +582,26 @@ def get_sibling_venue_ids(venue_id: int) -> list[int]:
 
     venue_name = venue.get("name", "").lower()
 
+    parent_venue_id = venue.get("parent_venue_id")
+
+    if parent_venue_id:
+        result = (
+            client.table("venues")
+            .select("id")
+            .or_(f"id.eq.{parent_venue_id},parent_venue_id.eq.{parent_venue_id}")
+            .eq("active", True)
+            .execute()
+        )
+        if result.data:
+            return [v["id"] for v in result.data]
+
     if "masquerade" in venue_name:
         result = (
-            client.table("venues").select("id").ilike("name", "%masquerade%").execute()
+            client.table("venues")
+            .select("id")
+            .ilike("name", "%masquerade%")
+            .eq("active", True)
+            .execute()
         )
         if result.data:
             return [v["id"] for v in result.data]

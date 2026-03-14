@@ -41,6 +41,11 @@ export interface SearchResult {
     // List-specific
     itemCount?: number;
     curatorName?: string;
+    // Venue-specific ranking signals
+    featured?: boolean;
+    exploreFeatured?: boolean;
+    dataQuality?: number;
+    isEventVenue?: boolean;
   };
 }
 
@@ -161,6 +166,10 @@ interface VenueSearchRow {
   ts_rank: number;
   similarity_score: number;
   combined_score: number;
+  featured: boolean | null;
+  explore_featured: boolean | null;
+  data_quality: number | null;
+  is_event_venue: boolean | null;
 }
 
 interface OrganizationSearchRow {
@@ -257,6 +266,26 @@ const SCORING = {
     list: 1,
   },
 } as const;
+
+const ENTITY_QUERY_STOP_WORDS = new Set([
+  "and",
+  "at",
+  "bar",
+  "club",
+  "event",
+  "events",
+  "for",
+  "in",
+  "live",
+  "music",
+  "night",
+  "show",
+  "the",
+  "today",
+  "tonight",
+  "tomorrow",
+  "weekend",
+]);
 
 const PORTAL_CITY_CACHE_TTL_MS = 5 * 60 * 1000;
 const portalCityCache = new Map<string, { city: string | undefined; expiresAt: number }>();
@@ -381,6 +410,155 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function normalizeSearchText(value: string | undefined): string {
+  return (value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function stripLeadingArticle(value: string): string {
+  return value.replace(/^(the|a|an)\s+/i, "").trim();
+}
+
+function normalizeEntityMatchText(value: string | undefined): string {
+  return normalizeSearchText(stripLeadingArticle(value || ""));
+}
+
+function countMatchWords(value: string): number {
+  return value
+    .split(" ")
+    .map((token) => token.replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, ""))
+    .filter(Boolean).length;
+}
+
+function isAmbiguousEntityQuery(
+  query: string,
+  intent?: QueryIntentResult,
+): boolean {
+  const normalized = normalizeSearchText(query);
+  if (!normalized || normalized.length < 3 || normalized.length > 32) {
+    return false;
+  }
+
+  if (
+    intent &&
+    (intent.intent === "time" ||
+      intent.intent === "category" ||
+      intent.intent === "series")
+  ) {
+    return false;
+  }
+
+  const tokens = normalized.split(" ").filter(Boolean);
+  if (tokens.length === 0 || tokens.length > 2) {
+    return false;
+  }
+
+  if (tokens.some((token) => token.length < 3)) {
+    return false;
+  }
+
+  if (tokens.every((token) => ENTITY_QUERY_STOP_WORDS.has(token))) {
+    return false;
+  }
+
+  return true;
+}
+
+export function applyCommittedEntityQueryBoost(
+  query: string,
+  result: SearchResult,
+  intent?: QueryIntentResult,
+): number {
+  if (!isAmbiguousEntityQuery(query, intent)) {
+    return 0;
+  }
+
+  const normalizedQuery = normalizeSearchText(query);
+  const normalizedTitle = normalizeSearchText(result.title);
+  const normalizedComparableTitle = normalizeEntityMatchText(result.title);
+  if (!normalizedTitle) {
+    return 0;
+  }
+
+  const hasExactMatch =
+    normalizedTitle === normalizedQuery ||
+    normalizedComparableTitle === normalizedQuery;
+  const hasTokenPrefixMatch =
+    normalizedTitle === normalizedQuery ||
+    normalizedTitle.startsWith(`${normalizedQuery} `) ||
+    normalizedComparableTitle === normalizedQuery ||
+    normalizedComparableTitle.startsWith(`${normalizedQuery} `);
+  const hasLoosePrefixMatch =
+    !hasTokenPrefixMatch &&
+    (normalizedTitle.startsWith(normalizedQuery) ||
+      normalizedComparableTitle.startsWith(normalizedQuery));
+  const hasWordBoundaryMatch = new RegExp(
+    `\\b${escapeRegex(normalizedQuery)}\\b`,
+  ).test(`${normalizedTitle} ${normalizedComparableTitle}`.trim());
+  const comparableTitleWordCount = countMatchWords(normalizedComparableTitle);
+  const queryWordCount = normalizedQuery.split(" ").filter(Boolean).length;
+
+  let boost = 0;
+
+  switch (result.type) {
+    case "venue":
+      if (hasExactMatch) boost += 90;
+      else if (hasTokenPrefixMatch) boost += 55;
+      else if (hasWordBoundaryMatch) boost += 20;
+      else if (hasLoosePrefixMatch) boost -= 12;
+
+      if (queryWordCount === 1) {
+        if (hasExactMatch) {
+          boost += 28;
+        } else if (hasTokenPrefixMatch && comparableTitleWordCount <= 3) {
+          boost += 12;
+        }
+        if (comparableTitleWordCount >= 4) {
+          boost -= 18;
+        }
+        if (result.metadata?.isEventVenue) boost += 12;
+        if (result.metadata?.featured) {
+          boost += 6;
+        }
+        if (result.metadata?.exploreFeatured) {
+          boost += 34;
+        }
+        if (typeof result.metadata?.dataQuality === "number") {
+          boost += Math.min(8, Math.max(0, result.metadata.dataQuality - 70) / 4);
+        }
+      }
+      break;
+    case "organizer":
+      if (hasExactMatch) boost += 65;
+      else if (hasTokenPrefixMatch) boost += 35;
+      else if (hasWordBoundaryMatch) boost += 10;
+      else if (hasLoosePrefixMatch) boost -= 8;
+      break;
+    case "event":
+    case "festival":
+      if (hasExactMatch) boost += 40;
+      else if (hasTokenPrefixMatch) boost += 10;
+      else if (comparableTitleWordCount >= 4) boost -= 20;
+      break;
+    case "series":
+    case "list":
+      if (hasExactMatch) boost += 20;
+      else if (comparableTitleWordCount >= 4) boost -= 10;
+      break;
+    default:
+      break;
+  }
+
+  if (intent?.intent === "location" && result.type === "venue") {
+    boost += 15;
+  }
+
+  if (intent?.intent === "organizer" && result.type === "organizer") {
+    boost += 20;
+  }
+
+  return boost;
+}
+
 /**
  * Apply type priority boost based on intent analysis
  */
@@ -483,6 +661,7 @@ export async function unifiedSearch(
 
   // Calculate per-type limit for balanced results
   const limitPerType = Math.ceil(limit / types.length);
+  const entityOverfetchLimit = Math.min(limitPerType + 4, 12);
 
   // Run searches in parallel
   const searchPromises: Promise<SearchResult[]>[] = [];
@@ -512,7 +691,7 @@ export async function unifiedSearch(
     searchPromises.push(
       measureSearchTiming(timingRecorder, "search_venues_rpc", () =>
         searchVenues(client, effectiveQuery, {
-          limit: limitPerType,
+          limit: entityOverfetchLimit,
           offset,
           neighborhoods,
           city: resolvedCity,
@@ -526,7 +705,7 @@ export async function unifiedSearch(
     searchPromises.push(
       measureSearchTiming(timingRecorder, "search_organizers_rpc", () =>
         searchOrganizations(client, effectiveQuery, {
-          limit: limitPerType,
+          limit: entityOverfetchLimit,
           offset,
           categories,
           portalId,
@@ -641,6 +820,7 @@ export async function unifiedSearch(
 
       // Apply intent-based type priority
       newScore = applyTypePriorityBoost(newScore, result.type, intent);
+      newScore += applyCommittedEntityQueryBoost(trimmedQuery, result, intent);
 
       return { ...result, score: newScore };
     });
@@ -990,6 +1170,10 @@ async function searchVenues(
       neighborhood: row.neighborhood || undefined,
       venueType: row.venue_type || undefined,
       vibes: row.vibes || undefined,
+      featured: row.featured ?? undefined,
+      exploreFeatured: row.explore_featured ?? undefined,
+      dataQuality: row.data_quality ?? undefined,
+      isEventVenue: row.is_event_venue ?? undefined,
     },
   }));
 }

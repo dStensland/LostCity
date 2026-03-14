@@ -9,6 +9,7 @@ config({ path: ".env.local" });
  *
  * Seeds the database with test data for local development and staging.
  * Run with: npx tsx scripts/seed-staging.ts
+ * Override duplicate-name protection with: ALLOW_TEST_VENUE_DUPLICATES=1 npx tsx scripts/seed-staging.ts
  *
  * Creates:
  * - 10 test venues across Atlanta neighborhoods
@@ -589,6 +590,30 @@ async function clearTestData() {
 
 async function seedVenues(): Promise<number[]> {
   console.log("Seeding venues...");
+
+  const { data: existingCanonicalVenues, error: existingCanonicalError } = await supabase
+    .from("venues")
+    .select("name, slug")
+    .in("name", testVenues.map((venue) => venue.name))
+    .not("slug", "like", "%-test");
+
+  if (existingCanonicalError) {
+    console.error("Error checking for canonical venue conflicts:", existingCanonicalError);
+    throw existingCanonicalError;
+  }
+
+  if (
+    (existingCanonicalVenues?.length || 0) > 0 &&
+    process.env.ALLOW_TEST_VENUE_DUPLICATES !== "1"
+  ) {
+    const conflicts = existingCanonicalVenues
+      ?.map((venue) => `${venue.name} (${venue.slug})`)
+      .join(", ");
+    throw new Error(
+      `Refusing to seed test venues over real venue names: ${conflicts}. ` +
+      "Set ALLOW_TEST_VENUE_DUPLICATES=1 to override.",
+    );
+  }
 
   const { data, error } = await supabase
     .from("venues")

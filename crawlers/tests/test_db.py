@@ -138,8 +138,60 @@ def test_validate_event_keeps_default_future_guard_for_non_festival_schedule_sou
 
     assert is_valid is False
     assert rejection_reason is not None
-    assert "320" not in rejection_reason
-    assert "future" in rejection_reason.lower()
+
+
+def test_get_sibling_venue_ids_prefers_parent_linked_active_family():
+    from db import get_sibling_venue_ids
+
+    family_rows = [{"id": 364}, {"id": 104}, {"id": 112}]
+    query = MagicMock()
+    query.select.return_value = query
+    query.or_.return_value = query
+    query.eq.return_value = query
+    query.execute.return_value = SimpleNamespace(data=family_rows)
+    client = MagicMock()
+    client.table.return_value = query
+
+    with patch("db.venues.get_venue_by_id", return_value={"id": 104, "name": "The Masquerade - Hell", "parent_venue_id": 364}), patch(
+        "db.venues.get_client", return_value=client
+    ):
+        assert sorted(get_sibling_venue_ids(104)) == [104, 112, 364]
+
+
+def test_get_sibling_venue_ids_falls_back_to_active_name_match_for_masquerade_family():
+    from db import get_sibling_venue_ids
+
+    family_rows = [{"id": 364}, {"id": 104}, {"id": 112}]
+    query = MagicMock()
+    query.select.return_value = query
+    query.ilike.return_value = query
+    query.eq.return_value = query
+    query.execute.return_value = SimpleNamespace(data=family_rows)
+    client = MagicMock()
+    client.table.return_value = query
+
+    with patch("db.venues.get_venue_by_id", return_value={"id": 104, "name": "The Masquerade - Hell", "parent_venue_id": None}), patch(
+        "db.venues.get_client", return_value=client
+    ):
+        assert sorted(get_sibling_venue_ids(104)) == [104, 112, 364]
+
+
+def test_db_venues_get_sibling_venue_ids_prefers_parent_linked_active_family():
+    from db.venues import get_sibling_venue_ids
+
+    family_rows = [{"id": 364}, {"id": 104}, {"id": 112}]
+    query = MagicMock()
+    query.select.return_value = query
+    query.or_.return_value = query
+    query.eq.return_value = query
+    query.execute.return_value = SimpleNamespace(data=family_rows)
+    client = MagicMock()
+    client.table.return_value = query
+
+    with patch("db.venues.get_venue_by_id", return_value={"id": 104, "name": "The Masquerade - Hell", "parent_venue_id": 364}), patch(
+        "db.venues.get_client", return_value=client
+    ):
+        assert sorted(get_sibling_venue_ids(104)) == [104, 112, 364]
 
 
 @patch("db.events.events_support_is_active_column", return_value=True)

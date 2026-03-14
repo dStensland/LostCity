@@ -42,17 +42,19 @@ type Suggestion = {
 type AuditCase = {
   name: string;
   path: string;
-  expectations: Array<(suggestions: Suggestion[]) => string | null>;
+  resultKey?: "suggestions" | "results";
+  expectations: Array<(items: Suggestion[]) => string | null>;
 };
 
 const auditCases: AuditCase[] = [
   {
     name: "l5p_alias",
     path: "/api/search/instant?q=l5p&portal=atlanta&findType=events&limit=5",
+    resultKey: "suggestions",
     expectations: [
-      (suggestions) =>
-        suggestions.length > 0 &&
-        /little five points/i.test(suggestions[0]?.title || "")
+      (items) =>
+        items.length > 0 &&
+        /little five points/i.test(items[0]?.title || "")
           ? null
           : "Expected top suggestion to canonicalize `l5p` to Little Five Points",
     ],
@@ -60,10 +62,11 @@ const auditCases: AuditCase[] = [
   {
     name: "o4w_alias",
     path: "/api/search/instant?q=o4w&portal=atlanta&findType=events&limit=5",
+    resultKey: "suggestions",
     expectations: [
-      (suggestions) =>
-        suggestions.length > 0 &&
-        /old fourth ward/i.test(suggestions[0]?.title || "")
+      (items) =>
+        items.length > 0 &&
+        /old fourth ward/i.test(items[0]?.title || "")
           ? null
           : "Expected top suggestion to canonicalize `o4w` to Old Fourth Ward",
     ],
@@ -71,13 +74,14 @@ const auditCases: AuditCase[] = [
   {
     name: "event_intent_live_music_tonight",
     path: "/api/search/instant?q=live%20music%20tonight&portal=atlanta&findType=events&limit=5",
+    resultKey: "suggestions",
     expectations: [
-      (suggestions) =>
-        suggestions[0]?.type === "event"
+      (items) =>
+        items[0]?.type === "event"
           ? null
           : "Expected first `live music tonight` suggestion to be an event CTA/result",
-      (suggestions) =>
-        suggestions.slice(0, 5).every((suggestion) => suggestion.type === "event")
+      (items) =>
+        items.slice(0, 5).every((suggestion) => suggestion.type === "event")
           ? null
           : "Expected top `live music tonight` suggestions to stay event-focused",
     ],
@@ -85,9 +89,10 @@ const auditCases: AuditCase[] = [
   {
     name: "classes_pottery",
     path: "/api/search/instant?q=pottery&portal=atlanta&findType=classes&limit=5",
+    resultKey: "suggestions",
     expectations: [
-      (suggestions) =>
-        suggestions.some(
+      (items) =>
+        items.some(
           (suggestion) =>
             suggestion.type === "event" && /pottery/i.test(suggestion.title),
         )
@@ -98,14 +103,150 @@ const auditCases: AuditCase[] = [
   {
     name: "destination_callanwolde",
     path: "/api/search/instant?q=callanwolde&portal=atlanta&findType=destinations&limit=5",
+    resultKey: "suggestions",
     expectations: [
-      (suggestions) =>
-        suggestions.some(
+      (items) =>
+        items.some(
           (suggestion) =>
             suggestion.type === "venue" && /callanwolde/i.test(suggestion.title),
         )
           ? null
           : "Expected destinations search for `callanwolde` to include the venue",
+    ],
+  },
+  {
+    name: "destination_earl",
+    path: "/api/search/instant?q=earl&portal=atlanta&findType=destinations&limit=5",
+    resultKey: "suggestions",
+    expectations: [
+      (items) =>
+        items.length > 0 &&
+        items[0]?.type === "venue" &&
+        /the earl/i.test(items[0]?.title || "")
+          ? null
+          : "Expected destinations search for `earl` to rank The Earl first",
+    ],
+  },
+  {
+    name: "destination_masquerade",
+    path: "/api/search/instant?q=masquerade&portal=atlanta&findType=destinations&limit=5",
+    resultKey: "suggestions",
+    expectations: [
+      (items) =>
+        items.length > 0 &&
+        items[0]?.type === "venue" &&
+        /^the masquerade$/i.test(items[0]?.title || "")
+          ? null
+          : "Expected destinations search for `masquerade` to rank The Masquerade first",
+    ],
+  },
+  {
+    name: "destination_museum",
+    path: "/api/search/instant?q=museum&portal=atlanta&findType=destinations&limit=5",
+    resultKey: "suggestions",
+    expectations: [
+      (items) =>
+        items.length > 0 &&
+        items[0]?.type === "venue" &&
+        /high museum of art/i.test(items[0]?.title || "")
+          ? null
+          : "Expected destinations search for `museum` to rank High Museum of Art first",
+    ],
+  },
+  {
+    name: "destination_garden",
+    path: "/api/search/instant?q=garden&portal=atlanta&findType=destinations&limit=5",
+    resultKey: "suggestions",
+    expectations: [
+      (items) =>
+        items.length > 0 &&
+        items[0]?.type === "venue" &&
+        /atlanta botanical garden/i.test(items[0]?.title || "")
+          ? null
+          : "Expected destinations search for `garden` to rank Atlanta Botanical Garden first",
+    ],
+  },
+  {
+    name: "committed_callanwolde",
+    path: "/api/search?q=callanwolde&types=event,venue,organizer&portal=atlanta&limit=8&include_facets=false&include_did_you_mean=false&include_event_popularity=false",
+    resultKey: "results",
+    expectations: [
+      (items) =>
+        items.slice(0, 3).some(
+          (item) => item.type === "venue" && /callanwolde/i.test(item.title),
+        )
+          ? null
+          : "Expected committed search for `callanwolde` to rank the venue in the top 3",
+    ],
+  },
+  {
+    name: "committed_earl",
+    path: "/api/search?q=earl&types=event,venue,organizer&portal=atlanta&limit=8&include_facets=false&include_did_you_mean=false&include_event_popularity=false",
+    resultKey: "results",
+    expectations: [
+      (items) =>
+        items.length > 0 &&
+        items[0]?.type === "venue" &&
+        /the earl/i.test(items[0]?.title || "")
+          ? null
+          : "Expected committed search for `earl` to rank The Earl first",
+    ],
+  },
+  {
+    name: "committed_masquerade",
+    path: "/api/search?q=masquerade&types=event,venue,organizer&portal=atlanta&limit=8&include_facets=false&include_did_you_mean=false&include_event_popularity=false",
+    resultKey: "results",
+    expectations: [
+      (items) =>
+        items.length > 0 &&
+        items[0]?.type === "venue" &&
+        /^the masquerade$/i.test(items[0]?.title || "")
+          ? null
+          : "Expected committed search for `masquerade` to rank The Masquerade first",
+    ],
+  },
+  {
+    name: "committed_high",
+    path: "/api/search?q=high&types=event,venue,organizer&portal=atlanta&limit=8&include_facets=false&include_did_you_mean=false&include_event_popularity=false",
+    resultKey: "results",
+    expectations: [
+      (items) =>
+        items.length > 0 &&
+        items[0]?.type === "venue" &&
+        /high museum of art/i.test(items[0]?.title || "")
+          ? null
+          : "Expected committed search for `high` to rank High Museum of Art first",
+    ],
+  },
+  {
+    name: "committed_fox",
+    path: "/api/search?q=fox&types=event,venue,organizer&portal=atlanta&limit=8&include_facets=false&include_did_you_mean=false&include_event_popularity=false",
+    resultKey: "results",
+    expectations: [
+      (items) => {
+        const topThree = items.slice(0, 3);
+        const hasFoxTheatre = topThree.some(
+          (item) => item.type === "venue" && /fox theatre/i.test(item.title),
+        );
+        const hasFoxBros = topThree.some(
+          (item) => item.type === "venue" && /fox bros/i.test(item.title),
+        );
+        return hasFoxTheatre && hasFoxBros
+          ? null
+          : "Expected committed search for `fox` to surface both Fox Theatre and Fox Bros in the top 3";
+      },
+      (items) => {
+        const foxTheatreIndex = items.findIndex((item) => /fox theatre/i.test(item.title));
+        const foxBrosIndex = items.findIndex((item) => /fox bros/i.test(item.title));
+        const foxtailIndex = items.findIndex((item) => /foxtail/i.test(item.title));
+
+        if (foxtailIndex === -1) return null;
+        if (foxTheatreIndex === -1 || foxBrosIndex === -1) return null;
+
+        return foxtailIndex > Math.max(foxTheatreIndex, foxBrosIndex)
+          ? null
+          : "Expected `Foxtail` to rank behind whole-token `fox` venue matches";
+      },
     ],
   },
 ];
@@ -156,17 +297,20 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function normalizeSuggestions(payload: unknown): Suggestion[] {
+function normalizeItems(
+  payload: unknown,
+  resultKey: "suggestions" | "results" = "suggestions",
+): Suggestion[] {
   if (!payload || typeof payload !== "object") {
     return [];
   }
 
-  const rawSuggestions = (payload as { suggestions?: unknown }).suggestions;
-  if (!Array.isArray(rawSuggestions)) {
+  const rawItems = (payload as { suggestions?: unknown; results?: unknown })[resultKey];
+  if (!Array.isArray(rawItems)) {
     return [];
   }
 
-  return rawSuggestions
+  return rawItems
     .filter(
       (suggestion): suggestion is { title?: unknown; type?: unknown; subtitle?: unknown } =>
         Boolean(suggestion && typeof suggestion === "object"),
@@ -199,7 +343,10 @@ async function warmCase(path: string): Promise<void> {
 
 async function runAttempt(auditCase: AuditCase): Promise<AttemptOutcome> {
   const response = await fetchJson(auditCase.path);
-  const suggestions = normalizeSuggestions(response.json);
+  const suggestions = normalizeItems(
+    response.json,
+    auditCase.resultKey || "suggestions",
+  );
   const failures: string[] = [];
 
   if (require2xx && (response.status < 200 || response.status >= 300)) {
