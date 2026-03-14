@@ -1,13 +1,6 @@
-import insufficientFlags from "@/content/explore_tracks_insufficient_flags.json";
-
-type InsufficientRow = {
-  venue_slug?: string | null;
-  flags?: string[];
-};
-
-type InsufficientFlagsPayload = {
-  insufficient_rows?: InsufficientRow[];
-};
+// The explore_tracks_insufficient_flags.json file was removed as part of the
+// Emory portal archive. Image quality suppression now relies only on the manual
+// blocklist below. Restore the JSON import when a new quality audit is run.
 
 type VenueLike = {
   slug?: string | null;
@@ -20,18 +13,10 @@ type EventLike = {
   venue?: { slug?: string | null } | null;
 };
 
-const payload = insufficientFlags as InsufficientFlagsPayload;
 const MANUAL_BAD_IMAGE_VENUES = new Set<string>();
 
 const LOW_QUALITY_VENUE_SLUGS = (() => {
   const slugs = new Set<string>();
-  for (const row of payload.insufficient_rows || []) {
-    const venueSlug = (row.venue_slug || "").trim().toLowerCase();
-    if (!venueSlug) continue;
-    if ((row.flags || []).includes("low_quality_image")) {
-      slugs.add(venueSlug);
-    }
-  }
   for (const slug of MANUAL_BAD_IMAGE_VENUES) slugs.add(slug);
   return slugs;
 })();

@@ -7,7 +7,6 @@ import Image from "@/components/SmartImage";
 import Logo from "../Logo";
 import UserMenu from "../UserMenu";
 import HeaderSearchButton from "../HeaderSearchButton";
-import ATLittleLogo from "../logos/ATLittleLogo";
 import BackButton from "./BackButton";
 import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
@@ -262,17 +261,7 @@ export default function BrandedHeader({
           isScrolled ? "h-[50px]" : "h-[86px]"
         }`}
       >
-        {/* ATLittle logo for atlanta-families portal */}
-        {portalSlug === "atlanta-families" ? (
-          <Link
-            href={`/${portalSlug}`}
-            className={`block origin-center transition-transform duration-300 ease-out ${
-              isScrolled ? "scale-[0.65]" : "scale-100"
-            }`}
-          >
-            <ATLittleLogo variant="header" className="h-[70px] w-auto" />
-          </Link>
-        ) : branding?.logo_url ? (
+        {branding?.logo_url ? (
           <Link
             href={`/${portalSlug}`}
             className={`block origin-center transition-transform duration-300 ease-out ${

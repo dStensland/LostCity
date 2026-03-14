@@ -8,7 +8,6 @@ import PortalFooter from "@/components/PortalFooter";
 import { PortalTracker } from "./_components/PortalTracker";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import { Suspense } from "react";
-import { isEmoryDemoPortal } from "@/lib/hospital-art";
 import { isPCMDemoPortal } from "@/lib/marketplace-art";
 import { applyPreset } from "@/lib/apply-preset";
 import type { PortalBranding } from "@/lib/portal-context";
@@ -86,17 +85,14 @@ export default async function PortalLayout({ children, params }: Props) {
   const isHotel = vertical === "hotel";
   const resolvedBranding = applyPreset((portal.branding || {}) as PortalBranding);
   const isLightTheme = resolvedBranding.theme_mode === "light";
-  const isEmoryDemo = isEmoryDemoPortal(portal.slug);
   const isMarketplace = vertical === "marketplace" || isPCMDemoPortal(portal.slug);
 
   // Resolve the effective vertical key for animation/style config. Slug-based
   // demo portals use their canonical vertical name regardless of what
   // getPortalVertical() returns for their DB record.
-  const effectiveVertical = isEmoryDemo
-    ? "hospital"
-    : isMarketplace
-      ? "marketplace"
-      : vertical;
+  const effectiveVertical = isMarketplace
+    ? "marketplace"
+    : vertical;
 
   const verticalStyles = getVerticalStyles(effectiveVertical);
 
@@ -114,8 +110,8 @@ export default async function PortalLayout({ children, params }: Props) {
           <PortalTracker portalSlug={portal.slug} />
         </Suspense>
         {children}
-        {!isEmoryDemo && <PortalFooter />}
-        {!isEmoryDemo && <CannyWidget />}
+        <PortalFooter />
+        <CannyWidget />
       </div>
     </PortalProvider>
   );

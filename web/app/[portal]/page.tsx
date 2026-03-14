@@ -1,5 +1,5 @@
 import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
-import { EmoryDemoHeader, PortalHeader, DogHeader } from "@/components/headers";
+import { PortalHeader, DogHeader } from "@/components/headers";
 import { AmbientBackground } from "@/components/ambient";
 import FindView from "@/components/find/FindView";
 import CommunityHub from "@/components/community/CommunityHub";
@@ -10,10 +10,6 @@ import { TimelineTemplate } from "./_templates/timeline";
 import { FilmTemplate } from "./_templates/film";
 import { HotelTemplate } from "./_templates/hotel";
 // Pillar type import removed — Discover feed doesn't use pillars
-import { HospitalTemplate } from "./_templates/hospital";
-import EmoryCommunityExperience from "./_components/hospital/EmoryCommunityExperience";
-import { normalizeHospitalMode } from "@/lib/hospital-modes";
-import { isEmoryDemoPortal } from "@/lib/hospital-art";
 import { isPCMDemoPortal } from "@/lib/marketplace-art";
 import { normalizeMarketplacePersona } from "@/lib/marketplace-art";
 import { MarketplaceTemplate } from "./_templates/marketplace";
@@ -27,10 +23,9 @@ import {
   hasActiveFindFilters,
   hasAnyActiveFindFilters,
 } from "@/lib/find-filter-schema";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import HorseSpinner from "@/components/ui/HorseSpinner";
-import EmoryMobileBottomNav from "./_components/hospital/EmoryMobileBottomNav";
 import { CivicTabBar } from "@/components/civic/CivicTabBar";
 import type { Metadata } from "next";
 
@@ -134,15 +129,12 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
   // Check vertical type for hotel/specialty portals
   const vertical = getPortalVertical(portal);
-  const isEmoryPortal = isEmoryDemoPortal(portal.slug);
   const isHotel = vertical === "hotel";
   const isFilm = vertical === "film";
-  const isHospital = vertical === "hospital" || isEmoryPortal;
-  const isEmoryNativeHospital = isHospital && isEmoryPortal;
   const isMarketplace = vertical === "marketplace" || isPCMDemoPortal(portal.slug);
   const isCommunity = vertical === "community";
   const isDog = vertical === "dog" || isDogPortal(portal.slug);
-  const disableAmbientEffects = isEmoryNativeHospital || isFilm || isMarketplace || isDog || isCommunity;
+  const disableAmbientEffects = isFilm || isMarketplace || isDog || isCommunity;
 
   // Hotel portals always show the concierge experience (no view switching)
   if (isHotel) {
@@ -248,23 +240,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
   ) {
     viewMode = "find";
   }
-  // Emory: redirect ?view=community to the dedicated /community-hub route
-  if (isEmoryNativeHospital && viewMode === "community") {
-    const modeParam = searchParamsData.mode;
-    const target = modeParam
-      ? `/${portal.slug}/community-hub?mode=${modeParam}`
-      : `/${portal.slug}/community-hub`;
-    redirect(target);
-  }
-  // Emory hospital experience intentionally avoids the generic Atlanta Find surface.
-  // Drop the view=find and show the hub instead.
-  if (isEmoryNativeHospital && viewMode === "find") {
-    viewMode = "feed";
-  }
-
-  // feedTab only used by HospitalTemplate — legacy, always "curated"
-  const feedTab = "curated" as const;
-
   // Determine find type - support legacy view params
   // Note: "orgs" was moved to community view, redirect to events
   // Note: "spots" is a URL alias for the "destinations" findType
@@ -294,7 +269,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
   // Check for active filters
   const hasActiveFilters = hasActiveFindFilters(searchParamsData, findType);
-  const hospitalMode = normalizeHospitalMode(searchParamsData.mode);
   const portalPageSchema = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -311,18 +285,15 @@ export default async function PortalPage({ params, searchParams }: Props) {
   const mainClassName = (() => {
     const base = "mx-auto px-4 sm:px-6 lg:px-8 pb-20";
     if (viewMode !== "find") {
-      return isEmoryNativeHospital || isFilm
+      return isFilm
         ? `max-w-6xl ${base}`
         : `max-w-[1600px] ${base}`;
-    }
-    if (findDisplay === "calendar" || findDisplay === "map") {
-      return `max-w-[1600px] ${base}`;
     }
     return `max-w-[1600px] ${base}`;
   })();
 
   return (
-    <div className={`min-h-screen ${isEmoryNativeHospital ? "bg-[#f2f5fa] text-[#002f6c]" : ""}`}>
+    <div className="min-h-screen">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(portalPageSchema) }}
@@ -337,15 +308,11 @@ export default async function PortalPage({ params, searchParams }: Props) {
         `}</style>
       )}
       {!disableAmbientEffects && <AmbientBackground />}
-      {isEmoryNativeHospital ? (
-        <EmoryDemoHeader portalSlug={portal.slug} />
-      ) : (
-        <PortalHeader
-          portalSlug={portal.slug}
-          portalName={portal.name}
-          hideNav={isFilm}
-        />
-      )}
+      <PortalHeader
+        portalSlug={portal.slug}
+        portalName={portal.name}
+        hideNav={isFilm}
+      />
 
       <main className={mainClassName}>
         {/* DetailViewRouter handles showing detail views (event, venue, series, org) as overlays.
@@ -362,14 +329,8 @@ export default async function PortalPage({ params, searchParams }: Props) {
               return (
                 <>
                   {viewMode === "feed" && (
-                    <Suspense fallback={<FeedSkeleton vertical={vertical} isEmoryNativeHospital={isEmoryNativeHospital} />}>
-                      {isHospital ? (
-                        <HospitalTemplate
-                          portal={portal}
-                          feedTab={feedTab}
-                          mode={hospitalMode}
-                        />
-                      ) : isFilm ? (
+                    <Suspense fallback={<FeedSkeleton vertical={vertical} />}>
+                      {isFilm ? (
                         <FilmTemplate portal={portal} />
                       ) : (
                         /* Template system - select based on portal.page_template */
@@ -385,7 +346,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
                     </Suspense>
                   )}
 
-                  {!isEmoryNativeHospital && viewMode === "find" && (
+                  {viewMode === "find" && (
                     <div data-skeleton-route="find-view" className="contents">
                       <FindView
                         portalId={portal.id}
@@ -401,17 +362,9 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
                   {viewMode === "community" && (
                     <div data-skeleton-route="community-view" className="contents">
-                      {isEmoryNativeHospital ? (
-                        <EmoryCommunityExperience
-                          portal={portal}
-                          mode={hospitalMode}
-                          includeSupportSensitive={searchParamsData.support === "1"}
-                        />
-                      ) : (
-                        <CommunityHub
-                          portalSlug={portal.slug}
-                        />
-                      )}
+                      <CommunityHub
+                        portalSlug={portal.slug}
+                      />
                     </div>
                   )}
                 </>
@@ -420,14 +373,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
           </DetailViewRouter>
         </Suspense>
       </main>
-      {isEmoryNativeHospital && (
-        <>
-          <Suspense fallback={null}>
-            <EmoryMobileBottomNav portalSlug={portal.slug} />
-          </Suspense>
-          <div className="lg:hidden h-16" />
-        </>
-      )}
       {isCommunity && (
         <>
           <Suspense fallback={null}>
@@ -451,12 +396,10 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
 function FeedSkeleton({
   vertical,
-  isEmoryNativeHospital,
 }: {
   vertical: ReturnType<typeof getPortalVertical>;
-  isEmoryNativeHospital: boolean;
 }) {
-  const skeletonVertical = toSkeletonVertical(vertical, isEmoryNativeHospital);
+  const skeletonVertical = toSkeletonVertical(vertical);
   if (vertical === "marketplace") {
     return (
       <div data-skeleton-route="feed-view" data-skeleton-vertical="marketplace" className="py-6 space-y-6">
@@ -513,24 +456,6 @@ function FeedSkeleton({
           <div className="h-24 rounded-2xl skeleton-shimmer" />
         </div>
         <div className="h-64 rounded-2xl skeleton-shimmer" />
-      </div>
-    );
-  }
-
-  if (vertical === "hospital" || isEmoryNativeHospital) {
-    return (
-      <div data-skeleton-route="feed-view" data-skeleton-vertical={skeletonVertical} className="py-6 space-y-6">
-        <div className="h-60 rounded-[30px] skeleton-shimmer" />
-        <div className="grid gap-3 sm:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 rounded-2xl skeleton-shimmer" style={{ animationDelay: `${i * 60}ms` }} />
-          ))}
-        </div>
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-28 rounded-2xl skeleton-shimmer" style={{ animationDelay: `${i * 70}ms` }} />
-          ))}
-        </div>
       </div>
     );
   }
@@ -612,9 +537,7 @@ function DogMapSkeleton() {
 
 function toSkeletonVertical(
   vertical: ReturnType<typeof getPortalVertical>,
-  isEmoryNativeHospital: boolean
-): "city" | "hotel" | "film" | "hospital" | "marketplace" {
-  if (isEmoryNativeHospital) return "hospital";
-  if (vertical === "hotel" || vertical === "film" || vertical === "hospital" || vertical === "marketplace") return vertical;
+): "city" | "hotel" | "film" | "marketplace" {
+  if (vertical === "hotel" || vertical === "film" || vertical === "marketplace") return vertical;
   return "city";
 }
