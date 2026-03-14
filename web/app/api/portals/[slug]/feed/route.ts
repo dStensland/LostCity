@@ -238,6 +238,7 @@ type AutoFilter = {
   exclude_categories?: string[]; // Categories to exclude from results
   event_ids?: number[]; // Specific events to show (for pinned/featured content)
   nightlife_mode?: boolean; // Compound filter: nightlife + music/comedy/dance/gaming at nightlife venues or after 7pm
+  include_regular_hangs?: boolean;
 };
 
 type Event = {
@@ -263,6 +264,7 @@ type Event = {
   source_id?: number | null;
   festival_id?: string | null;
   is_tentpole?: boolean;
+  is_recurring?: boolean | null;
   series_id?: string | null;
   series?: {
     id: string;
@@ -587,6 +589,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         tags,
         festival_id,
         is_tentpole,
+        is_recurring,
         series_id,
         series:series_id(
           id,
@@ -797,6 +800,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         tags,
         festival_id,
         is_tentpole,
+        is_recurring,
         series_id,
         series:series_id(
           id,
@@ -1037,6 +1041,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           tags,
           festival_id,
           is_tentpole,
+          is_recurring,
           series_id,
           series:series_id(
             id,
@@ -1364,6 +1369,7 @@ export async function GET(request: NextRequest, { params }: Props) {
                 tags,
                 festival_id,
                 is_tentpole,
+                is_recurring,
                 series_id,
                 series:series_id(
                   id,

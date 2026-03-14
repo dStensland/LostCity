@@ -63,7 +63,7 @@ import {
   buildTrendingSection,
   buildBrowseSection,
   buildTabEventPool,
-  matchActivityType,
+  isSceneEvent,
 } from "@/lib/city-pulse/section-builders";
 import { resolveHeader } from "@/lib/city-pulse/header-resolver";
 import type {
@@ -676,7 +676,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   const buildCountCategoryQuery = (start: string, end: string) => {
     let q = portalClient
       .from("events")
-      .select("category_id, series_id, genres, tags")
+      .select("title, category_id, series_id, is_recurring, genres, tags")
       .gte("start_date", start)
       .lte("start_date", end)
       .is("canonical_event_id", null)
@@ -693,23 +693,30 @@ export async function GET(request: NextRequest, { params }: Props) {
   };
 
   /** Deduplicate rows by series_id (keep first per series), then count */
-  type CountRow = { category_id: string | null; series_id: string | null; genres: string[] | null; tags: string[] | null };
+  type CountRow = {
+    title: string | null;
+    category_id: string | null;
+    series_id: string | null;
+    is_recurring: boolean | null;
+    genres: string[] | null;
+    tags: string[] | null;
+  };
 
   /** Exclude recurring events that belong in Regular Hangs (The Scene) */
   const excludeSceneRows = (rows: CountRow[]): CountRow[] =>
     rows.filter((row) => {
-      if (!row.series_id) return true; // non-recurring → keep
-      // Build minimal FeedEventData-shaped object for matchActivityType
+      if (!row.series_id && !row.is_recurring) return true;
       const pseudo = {
-        id: 0, title: "", start_date: "", start_time: null, is_all_day: false,
+        id: 0, title: row.title ?? "", start_date: "", start_time: null, is_all_day: false,
         is_free: false, price_min: null, price_max: null, image_url: null,
         description: null, venue: { id: 0, name: "", slug: "", neighborhood: null },
         category: row.category_id,
+        series_id: row.series_id,
+        is_recurring: row.is_recurring,
         genres: row.genres,
         tags: row.tags,
       };
-      // If it matches a scene activity type → exclude from Lineup counts
-      return matchActivityType(pseudo as never) === null;
+      return !isSceneEvent(pseudo as never);
     });
 
   const dedupeCountRows = (rows: CountRow[]): CountRow[] => {

@@ -1,6 +1,7 @@
 import { addDays } from "date-fns";
 import type { PortalFeedDateFilter } from "@/lib/portal-feed-plan";
 import { getLocalDateString } from "@/lib/formats";
+import { isSceneEvent } from "@/lib/scene-event-routing";
 
 export type PortalAutoSectionEvent = {
   id: number;
@@ -13,6 +14,14 @@ export type PortalAutoSectionEvent = {
   genres?: string[] | null;
   tags?: string[] | null;
   source_id?: number | null;
+  festival_id?: string | null;
+  is_tentpole?: boolean | null;
+  is_recurring?: boolean | null;
+  series_id?: string | null;
+  series?: {
+    series_type?: string | null;
+    festival?: { id?: string | number | null } | null;
+  } | null;
   going_count?: number;
   venue?: {
     id?: number | null;
@@ -35,6 +44,7 @@ export type PortalAutoSectionFilter = {
   exclude_ids?: number[];
   exclude_categories?: string[];
   nightlife_mode?: boolean;
+  include_regular_hangs?: boolean;
 };
 
 const NIGHTLIFE_VENUE_TYPES = new Set([
@@ -259,6 +269,16 @@ export function mergePortalMixedSectionEvents<T extends PortalAutoSectionEvent>(
   return [...curatedEvents, ...autoEventsFiltered].slice(0, limit);
 }
 
+function shouldIncludeRegularHangs(filter: PortalAutoSectionFilter): boolean {
+  if (filter.include_regular_hangs) return true;
+  if (filter.nightlife_mode) return true;
+  if (filter.tags?.length) return true;
+  if (filter.subcategories?.length) return true;
+  if (filter.source_ids?.length) return true;
+  if (filter.venue_ids?.length) return true;
+  return false;
+}
+
 export function selectPortalAutoSectionEvents<T extends PortalAutoSectionEvent>(
   input: {
     pool: T[];
@@ -282,6 +302,10 @@ export function selectPortalAutoSectionEvents<T extends PortalAutoSectionEvent>(
     filtered = filtered.filter(
       (event) => event.start_date >= start && event.start_date <= end,
     );
+  }
+
+  if (!shouldIncludeRegularHangs(filter)) {
+    filtered = filtered.filter((event) => !isSceneEvent(event));
   }
 
   if (filter.categories?.length) {

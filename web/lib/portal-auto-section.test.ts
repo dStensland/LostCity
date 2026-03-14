@@ -151,4 +151,70 @@ describe("portal-auto-section", () => {
       randomSpy.mockRestore();
     }
   });
+
+  it("excludes regular hangs from generic auto sections by default", () => {
+    const result = selectPortalAutoSectionEvents({
+      pool: [
+        {
+          id: 10,
+          title: "Thursday Run Club",
+          start_date: "2026-03-10",
+          start_time: "18:30",
+          is_free: true,
+          price_min: null,
+          category: "fitness",
+          tags: ["run-club", "weekly"],
+          series_id: "series-run",
+          is_recurring: true,
+          venue: { id: 200, neighborhood: "Midtown", venue_type: "retail" },
+        },
+        {
+          id: 11,
+          title: "One-Night Comedy Showcase",
+          start_date: "2026-03-10",
+          start_time: "20:00",
+          is_free: false,
+          price_min: 25,
+          category: "comedy",
+          tags: ["headline"],
+          venue: { id: 201, neighborhood: "Midtown", venue_type: "theater" },
+        },
+      ],
+      filter: { sort_by: "date" },
+      limit: 5,
+      currentDate: new Date("2026-03-09T12:00:00Z"),
+      rsvpCounts: {},
+      resolveDateRange: () => ({ start: "2026-03-09", end: "2026-03-30" }),
+    });
+
+    expect(result.events.map((event) => event.id)).toEqual([11]);
+  });
+
+  it("keeps regular hangs for targeted auto sections", () => {
+    const result = selectPortalAutoSectionEvents({
+      pool: [
+        {
+          id: 20,
+          title: "Thursday Run Club",
+          start_date: "2026-03-10",
+          start_time: "18:30",
+          is_free: true,
+          price_min: null,
+          category: "fitness",
+          tags: ["run-club", "weekly"],
+          series_id: "series-run",
+          is_recurring: true,
+          source_id: 99,
+          venue: { id: 300, neighborhood: "Midtown", venue_type: "retail" },
+        },
+      ],
+      filter: { sort_by: "date", source_ids: [99] },
+      limit: 5,
+      currentDate: new Date("2026-03-09T12:00:00Z"),
+      rsvpCounts: {},
+      resolveDateRange: () => ({ start: "2026-03-09", end: "2026-03-30" }),
+    });
+
+    expect(result.events.map((event) => event.id)).toEqual([20]);
+  });
 });
