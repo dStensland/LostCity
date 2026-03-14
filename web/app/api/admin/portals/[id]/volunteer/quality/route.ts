@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import {
   adminErrorResponse,
   isValidUUID,
+  parseIntParam,
   type AnySupabase,
 } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
@@ -130,8 +131,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   if (access.response) return access.response;
   const { db, portal } = access;
 
-  const staleDaysParam = Number.parseInt(request.nextUrl.searchParams.get("stale_days") || "21", 10);
-  const staleDays = Math.min(Math.max(Number.isFinite(staleDaysParam) ? staleDaysParam : 21, 1), 180);
+  const staleDays = Math.min(Math.max(parseIntParam(request.nextUrl.searchParams.get("stale_days")) ?? 21, 1), 180);
 
   const { data: sourceAccessRows, error: sourceAccessError } = await db
     .from("portal_source_access")

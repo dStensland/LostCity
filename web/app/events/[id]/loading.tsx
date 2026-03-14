@@ -1,10 +1,10 @@
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import Skeleton from "@/components/Skeleton";
 
 export default function EventLoading() {
   return (
     <div className="min-h-screen">
-      <UnifiedHeader />
+      <PlatformHeader />
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         {/* Image skeleton */}

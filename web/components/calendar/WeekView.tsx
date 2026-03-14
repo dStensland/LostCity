@@ -31,10 +31,21 @@ interface CalendarEvent {
   } | null;
 }
 
+interface CalendarPlan {
+  id: string;
+  title: string;
+  plan_date: string;
+  plan_time: string | null;
+  item_count: number;
+  participants: Array<{ user_id: string; status: string }>;
+  is_creator: boolean;
+}
+
 interface WeekViewProps {
   currentDate: Date;
   onDateChange: (date: Date) => void;
   eventsByDate: Map<string, CalendarEvent[]>;
+  plansByDate?: Map<string, CalendarPlan[]>;
   onDayClick: (date: Date) => void;
   selectedDate: Date | null;
   portalSlug?: string;
@@ -61,9 +72,10 @@ export default function WeekView({
   currentDate,
   onDateChange,
   eventsByDate,
+  plansByDate = new Map(),
   onDayClick,
   selectedDate,
-  portalSlug = "la",
+  portalSlug = "atlanta",
 }: WeekViewProps) {
   const weekStart = useMemo(() => startOfWeek(currentDate), [currentDate]);
 
@@ -75,12 +87,13 @@ export default function WeekView({
         date,
         dateKey,
         events: eventsByDate.get(dateKey) || [],
+        plans: plansByDate.get(dateKey) || [],
         isToday: isToday(date),
         isPast: isBefore(date, new Date()) && !isToday(date),
         isSelected: selectedDate ? isSameDay(date, selectedDate) : false,
       };
     });
-  }, [weekStart, eventsByDate, selectedDate]);
+  }, [weekStart, eventsByDate, plansByDate, selectedDate]);
 
   // Navigate weeks
   const goToPrevWeek = () => onDateChange(subWeeks(currentDate, 1));
@@ -112,6 +125,30 @@ export default function WeekView({
       const allDay = day.events.filter((e) => e.is_all_day || !e.start_time);
       if (allDay.length > 0) {
         map.set(day.dateKey, allDay);
+      }
+    });
+    return map;
+  }, [weekDays]);
+
+  // Get plans without a time (go in all-day row)
+  const allDayPlansByDate = useMemo(() => {
+    const map = new Map<string, CalendarPlan[]>();
+    weekDays.forEach((day) => {
+      const allDay = day.plans.filter((p) => !p.plan_time);
+      if (allDay.length > 0) {
+        map.set(day.dateKey, allDay);
+      }
+    });
+    return map;
+  }, [weekDays]);
+
+  // Get plans with a time (go in time grid)
+  const timedPlansByDate = useMemo(() => {
+    const map = new Map<string, CalendarPlan[]>();
+    weekDays.forEach((day) => {
+      const timed = day.plans.filter((p) => !!p.plan_time);
+      if (timed.length > 0) {
+        map.set(day.dateKey, timed);
       }
     });
     return map;
@@ -198,17 +235,30 @@ export default function WeekView({
         ))}
       </div>
 
-      {/* All-day events row */}
-      {Array.from(allDayEventsByDate.values()).some((e) => e.length > 0) && (
+      {/* All-day events + untimed plans row */}
+      {(Array.from(allDayEventsByDate.values()).some((e) => e.length > 0) ||
+        Array.from(allDayPlansByDate.values()).some((p) => p.length > 0)) && (
         <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-[var(--twilight)]/75">
           <div className="p-2 font-mono text-xs text-[var(--muted)]">ALL DAY</div>
           {weekDays.map((day) => {
             const allDayEvents = allDayEventsByDate.get(day.dateKey) || [];
+            const allDayPlans = allDayPlansByDate.get(day.dateKey) || [];
             return (
               <div
                 key={`allday-${day.dateKey}`}
                 className="p-1 border-l border-[var(--twilight)]/55 min-h-[40px]"
               >
+                {/* Plans first in all-day row */}
+                {allDayPlans.slice(0, 1).map((plan) => (
+                  <Link
+                    key={`plan-allday-${plan.id}`}
+                    href={`/plans/${plan.id}`}
+                    className="block mb-1 px-2 py-1 rounded text-xs truncate transition-colors hover:opacity-80 bg-[var(--neon-cyan)]/15 border border-[var(--neon-cyan)]/30"
+                    title={plan.title}
+                  >
+                    <span className="text-[var(--neon-cyan)]">{plan.title}</span>
+                  </Link>
+                ))}
                 {allDayEvents.slice(0, 2).map((event) => (
                   <Link
                     key={event.id}
@@ -221,9 +271,9 @@ export default function WeekView({
                     <span className="text-[var(--cream)]">{event.title}</span>
                   </Link>
                 ))}
-                {allDayEvents.length > 2 && (
+                {(allDayPlans.length + allDayEvents.length) > 2 && (
                   <span className="text-2xs text-[var(--muted)]">
-                    +{allDayEvents.length - 2} more
+                    +{allDayPlans.length + allDayEvents.length - 2} more
                   </span>
                 )}
               </div>
@@ -363,6 +413,55 @@ export default function WeekView({
                         `}
                       />
                     </div>
+                    </Link>
+                  </>
+                );
+              })}
+
+              {/* Timed plans */}
+              {timedPlansByDate.get(day.dateKey)?.map((plan) => {
+                const startHour = parseTime(plan.plan_time);
+                if (startHour === null) return null;
+                const top = Math.max((startHour - 6) * HOUR_HEIGHT, 0);
+                const height = HOUR_HEIGHT;
+
+                const topClass = createCssVarClassForLength(
+                  "--plan-top",
+                  `${top}px`,
+                  "week-plan-top"
+                );
+                const heightClass = createCssVarClassForLength(
+                  "--plan-height",
+                  `${height}px`,
+                  "week-plan-height"
+                );
+                const planCss = [topClass?.css, heightClass?.css].filter(Boolean).join("\n");
+                const participantCount = plan.participants.filter(
+                  (p) => p.status === "accepted" || p.status === "invited"
+                ).length;
+
+                return (
+                  <>
+                    <ScopedStyles css={planCss} />
+                    <Link
+                      key={`plan-timed-${plan.id}`}
+                      href={`/plans/${plan.id}`}
+                      className={`absolute rounded-md overflow-hidden transition-all hover:scale-[1.02] hover:z-10 group calendar-event-full ${
+                        topClass?.className ?? ""
+                      } ${heightClass?.className ?? ""}`}
+                      style={{ right: "2px", left: "2px" }}
+                      title={plan.title}
+                    >
+                      <div className="p-1.5 h-full flex flex-col bg-[var(--neon-cyan)]/15 border border-[var(--neon-cyan)]/30 rounded-md">
+                        <span className="text-xs text-[var(--neon-cyan)] font-medium truncate group-hover:text-white">
+                          {plan.title}
+                        </span>
+                        {participantCount > 0 && (
+                          <span className="text-2xs text-[var(--neon-cyan)]/70 truncate mt-0.5">
+                            {participantCount} {participantCount === 1 ? "person" : "people"}
+                          </span>
+                        )}
+                      </div>
                     </Link>
                   </>
                 );

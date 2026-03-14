@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, insert_exhibition
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -246,6 +246,28 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             logger.info(f"Added: {full_title} ({start_date_str} - {end_date_str})")
                         except Exception as e:
                             logger.error(f"Failed to insert: {full_title}: {e}")
+
+                        # Dual-write: also insert as exhibition
+                        try:
+                            exhibition_record = {
+                                "title": full_title,
+                                "venue_id": venue_id,
+                                "source_id": source_id,
+                                "_venue_name": VENUE_DATA["name"],
+                                "opening_date": start_date.strftime("%Y-%m-%d"),
+                                "closing_date": end_date.strftime("%Y-%m-%d"),
+                                "description": description,
+                                "image_url": image_map.get(full_title),
+                                "source_url": event_url,
+                                "exhibition_type": "solo" if artist else "group",
+                                "admission_type": "free",
+                                "tags": ["contemporary-art", "gallery", "buckhead"],
+                                "is_active": True,
+                            }
+                            artists = [{"artist_name": artist}] if artist else None
+                            insert_exhibition(exhibition_record, artists=artists)
+                        except Exception as exc:
+                            logger.debug("Exhibition insert failed for %r: %s", full_title, exc)
 
                 i += 1
 

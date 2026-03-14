@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import ImageUploader from "@/components/ImageUploader";
 import VenueAutocomplete from "@/components/VenueAutocomplete";
 import OrganizationAutocomplete from "@/components/OrganizationAutocomplete";
@@ -400,7 +400,7 @@ export default function SubmitEventPage() {
 
   return (
     <div className="min-h-screen">
-      <UnifiedHeader />
+      <PlatformHeader />
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-6">

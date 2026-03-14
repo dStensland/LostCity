@@ -17,7 +17,7 @@ export default function CalendarLoading() {
       </div>
 
       {/* Status filter tabs skeleton */}
-      <div className="flex items-center gap-1 mb-6 bg-[var(--deep-violet)] rounded-lg p-1 w-fit">
+      <div className="flex items-center gap-1 mb-6 bg-[var(--dusk)] rounded-lg p-1 w-fit">
         {[0, 1, 2].map((i) => (
           <Skeleton
             key={i}
@@ -30,7 +30,7 @@ export default function CalendarLoading() {
       {/* Calendar grid skeleton */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
         {/* Main calendar */}
-        <div className="bg-gradient-to-br from-[var(--deep-violet)] to-[var(--midnight-blue)] rounded-xl p-6 border border-[var(--nebula)]">
+        <div className="bg-gradient-to-br from-[var(--dusk)] to-[var(--night)] rounded-xl p-6 border border-[var(--twilight)]">
           {/* Month header skeleton */}
           <div className="flex items-center justify-between mb-6">
             <Skeleton className="h-8 w-40 rounded" delay="0.3s" />
@@ -54,7 +54,7 @@ export default function CalendarLoading() {
             {[...Array(42)].map((_, i) => (
               <div
                 key={i}
-                className="aspect-square p-1 rounded-lg bg-[var(--twilight-purple)]/30"
+                className="aspect-square p-1 rounded-lg bg-[var(--twilight)]/30"
               >
                 <Skeleton className="h-4 w-6 rounded mb-1" delay={`${(i % 14) * 0.02}s`} />
               </div>
@@ -73,14 +73,14 @@ export default function CalendarLoading() {
         </div>
 
         {/* Selected day detail skeleton */}
-        <div className="bg-gradient-to-br from-[var(--deep-violet)] to-[var(--midnight-blue)] rounded-xl p-6 border border-[var(--nebula)] h-fit lg:sticky lg:top-20">
+        <div className="bg-gradient-to-br from-[var(--dusk)] to-[var(--night)] rounded-xl p-6 border border-[var(--twilight)] h-fit lg:sticky lg:top-20">
           <Skeleton className="h-4 w-24 rounded mb-2" delay="0.8s" />
           <Skeleton className="h-6 w-40 rounded mb-4" delay="0.85s" />
           <div className="space-y-3">
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="p-3 rounded-lg border border-[var(--nebula)] bg-[var(--cosmic-blue)]/30 border-l-[3px]"
+                className="p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 border-l-[3px]"
               >
                 <Skeleton className="h-3 w-16 rounded mb-2" delay={`${i * 0.1 + 0.9}s`} />
                 <Skeleton className="h-4 w-full rounded mb-1" delay={`${i * 0.1 + 0.95}s`} />

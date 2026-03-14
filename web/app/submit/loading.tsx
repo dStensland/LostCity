@@ -1,12 +1,12 @@
 "use client";
 
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import Skeleton from "@/components/Skeleton";
 
 export default function SubmitLoading() {
   return (
     <div className="min-h-screen">
-      <UnifiedHeader />
+      <PlatformHeader />
 
       <main className="max-w-2xl mx-auto px-4 py-8">
         {/* Header */}

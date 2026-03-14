@@ -35,6 +35,10 @@ from db import (
     find_event_by_hash,
     get_or_create_venue,
     insert_event,
+    insert_program,
+    infer_program_type,
+    infer_season,
+    infer_cost_period,
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
@@ -839,6 +843,98 @@ def _build_event_record(
 
 
 # ---------------------------------------------------------------------------
+# Program dual-write
+# ---------------------------------------------------------------------------
+
+# Reg types that qualify as programs (class, drop-in, camp, league)
+_PROGRAM_REG_TYPES = {"1", "2", "5", "8"}
+
+
+def _build_program_record(
+    event_record: dict,
+    session: dict,
+    section_name: str,
+    group_name: str,
+    venue_name: str,
+    reg_type: str,
+    tenant: "TenantConfig",
+) -> Optional[dict]:
+    """
+    Build a program record from an event record and session data.
+    Returns None if this session doesn't qualify as a program.
+    """
+    if reg_type not in _PROGRAM_REG_TYPES:
+        return None
+
+    from datetime import datetime
+
+    title = event_record["title"]
+    start_date_str = event_record.get("start_date")
+    end_date_str = event_record.get("end_date")
+
+    session_start = None
+    if start_date_str:
+        try:
+            session_start = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            pass
+
+    session_end = None
+    if end_date_str:
+        try:
+            session_end = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            pass
+
+    program_type = infer_program_type(title, reg_type, section_name)
+    season = infer_season(f"{title} {section_name}", session_start)
+
+    price_val = event_record.get("price_min", 0) or 0
+    cost_notes = event_record.get("price_note")
+    cost_period = infer_cost_period(cost_notes, reg_type)
+
+    # Registration status from session fullness
+    is_full = session.get("sessionFull", False)
+    reg_status = "closed" if is_full else "open"
+
+    # Build the record
+    program: dict = {
+        "source_id": event_record.get("source_id"),
+        "venue_id": event_record.get("venue_id"),
+        "name": title,
+        "description": event_record.get("description"),
+        "program_type": program_type,
+        "provider_name": tenant.county_name,
+        "age_min": event_record.get("age_min"),
+        "age_max": event_record.get("age_max"),
+        "season": season,
+        "session_start": start_date_str,
+        "session_end": end_date_str,
+        "schedule_start_time": event_record.get("start_time"),
+        "schedule_end_time": event_record.get("end_time"),
+        "cost_amount": price_val if price_val > 0 else None,
+        "cost_period": cost_period if price_val > 0 else None,
+        "cost_notes": cost_notes,
+        "registration_status": reg_status,
+        "registration_url": event_record.get("source_url"),
+        "tags": event_record.get("tags", []),
+        "_venue_name": venue_name,  # consumed by insert_program for slug
+    }
+
+    # Inherit portal_id from source if available
+    source_info = None
+    try:
+        from db.sources import get_source_info
+        source_info = get_source_info(event_record["source_id"])
+    except Exception:
+        pass
+    if source_info and source_info.get("owner_portal_id"):
+        program["portal_id"] = source_info["owner_portal_id"]
+
+    return program
+
+
+# ---------------------------------------------------------------------------
 # Venue resolution
 # ---------------------------------------------------------------------------
 
@@ -1062,6 +1158,28 @@ def crawl_tenant(source: dict, tenant: TenantConfig) -> tuple[int, int, int]:
                     except Exception as exc:
                         logger.error(
                             "[rec1/%s] Failed to insert %r: %s",
+                            tenant.tenant_slug,
+                            record["title"],
+                            exc,
+                        )
+
+                # Dual-write: also insert as a program if session qualifies
+                reg_type = str(session.get("registrationType", "2"))
+                program_record = _build_program_record(
+                    event_record=record,
+                    session=session,
+                    section_name=section_name,
+                    group_name=group_name,
+                    venue_name=venue_name,
+                    reg_type=reg_type,
+                    tenant=tenant,
+                )
+                if program_record:
+                    try:
+                        insert_program(program_record)
+                    except Exception as exc:
+                        logger.debug(
+                            "[rec1/%s] Program insert failed for %r: %s",
                             tenant.tenant_slug,
                             record["title"],
                             exc,

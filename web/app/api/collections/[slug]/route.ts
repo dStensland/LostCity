@@ -1,6 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { errorResponse } from "@/lib/api-utils";
+import { withAuthAndParams } from "@/lib/api-middleware";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 // Revalidate every 60 seconds - collections change infrequently
@@ -103,18 +104,12 @@ export async function GET(request: NextRequest, { params }: Props) {
 }
 
 // DELETE /api/collections/[slug] - Delete collection
-export async function DELETE(request: NextRequest, { params }: Props) {
+export const DELETE = withAuthAndParams<{ slug: string }>(async (request, { user, supabase, params }) => {
   // Apply rate limiting (write tier - deletes data)
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  const { slug } = await params;
-  const supabase = await createClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { slug } = params;
 
   // Verify ownership
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -145,4 +140,4 @@ export async function DELETE(request: NextRequest, { params }: Props) {
   }
 
   return NextResponse.json({ success: true });
-}
+});

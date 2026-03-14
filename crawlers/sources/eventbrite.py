@@ -52,13 +52,13 @@ CATEGORY_MAP = {
     "Charity & Causes": ("community", ["volunteer"]),
     "Religion & Spirituality": ("community", ["faith"]),
     "Family & Education": ("family", []),
-    "Seasonal & Holiday": ("community", ["cultural"]),
+    "Seasonal & Holiday": ("other", ["cultural"]),
     "Government & Politics": ("community", ["activism"]),
-    "Fashion & Beauty": ("community", []),
-    "Home & Lifestyle": ("community", []),
-    "Auto, Boat & Air": ("community", []),
-    "Hobbies & Special Interest": ("community", []),
-    "Other": ("community", []),
+    "Fashion & Beauty": ("other", []),
+    "Home & Lifestyle": ("other", []),
+    "Auto, Boat & Air": ("other", []),
+    "Hobbies & Special Interest": ("other", []),
+    "Other": ("other", []),
     "Nightlife": ("nightlife", []),
 }
 
@@ -394,8 +394,8 @@ def parse_datetime(dt_str: str) -> tuple[Optional[str], Optional[str]]:
 def get_category(eventbrite_category: Optional[str]) -> tuple[str, list[str]]:
     """Map Eventbrite category to Lost City category and genre list."""
     if not eventbrite_category:
-        return "community", []
-    return CATEGORY_MAP.get(eventbrite_category, ("community", []))
+        return "other", []
+    return CATEGORY_MAP.get(eventbrite_category, ("other", []))
 
 
 def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) -> Optional[dict]:

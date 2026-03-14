@@ -70,6 +70,7 @@ export interface HotVenue {
 export interface CreateHangRequest {
   venue_id: number;
   event_id?: number;
+  group_id?: string; // Optional group to associate this hang with
   note?: string;
   visibility?: HangVisibility;
   planned_for?: string; // ISO timestamp for planned hangs

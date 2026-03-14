@@ -7,6 +7,8 @@ import { triggerHaptic } from "@/lib/haptics";
 import { useAuthenticatedFetch } from "@/lib/hooks/useAuthenticatedFetch";
 import { usePortalSlug } from "@/lib/portal-context";
 import { trackHangCreated } from "@/lib/analytics/hangs-tracking";
+import { useMyGroups } from "@/lib/hooks/useGroups";
+import { ENABLE_GROUPS_V1 } from "@/lib/launch-flags";
 import type { HangVisibility, CreateHangRequest } from "@/lib/types/hangs";
 import {
   HANG_VISIBILITY_OPTIONS,
@@ -61,6 +63,8 @@ export const HangSheet = memo(function HangSheet({
 
   // Form state
   const [visibility, setVisibility] = useState<HangVisibility>("friends");
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false);
   const [note, setNote] = useState("");
   const [durationHours, setDurationHours] = useState(4);
   const [isPlanned, setIsPlanned] = useState(false);
@@ -71,6 +75,8 @@ export const HangSheet = memo(function HangSheet({
   const sheetRef = useRef<HTMLDivElement>(null);
   const { authFetch } = useAuthenticatedFetch();
   const portalSlug = usePortalSlug();
+  const { data: groupsData } = useMyGroups();
+  const myGroups = groupsData?.groups ?? [];
 
   // Handle open/close animation — matches MobileFilterSheet pattern exactly
   useEffect(() => {
@@ -96,6 +102,8 @@ export const HangSheet = memo(function HangSheet({
     if (isOpen) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional form reset on sheet open
       setVisibility("friends");
+      setSelectedGroupId(null);
+      setIsGroupDropdownOpen(false);
       setNote("");
       setDurationHours(4);
       setIsPlanned(false);
@@ -146,6 +154,7 @@ export const HangSheet = memo(function HangSheet({
     const body: CreateHangRequest = {
       venue_id: venue.id,
       ...(event?.id && { event_id: event.id }),
+      ...(selectedGroupId && { group_id: selectedGroupId }),
       visibility,
       ...(note.trim() && { note: note.trim() }),
       duration_hours: durationHours,
@@ -179,7 +188,7 @@ export const HangSheet = memo(function HangSheet({
 
     onHangCreated?.();
     onClose();
-  }, [venue.id, venue.name, event, visibility, note, durationHours, isPlanned, plannedFor, source, portalSlug, authFetch, onHangCreated, onClose]);
+  }, [venue.id, venue.name, event, selectedGroupId, visibility, note, durationHours, isPlanned, plannedFor, source, portalSlug, authFetch, onHangCreated, onClose]);
 
   if (typeof document === "undefined" || !isVisible) return null;
 
@@ -257,6 +266,79 @@ export const HangSheet = memo(function HangSheet({
                 )}
               </div>
             </div>
+
+            {/* Group selector — only shown when groups feature is on and user has groups */}
+            {ENABLE_GROUPS_V1 && myGroups.length > 0 && (
+              <div>
+                <p className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
+                  Group
+                </p>
+                <div className="relative">
+                  <button
+                    onClick={() => setIsGroupDropdownOpen((prev) => !prev)}
+                    className="w-full min-h-[44px] flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-left hover:border-[var(--soft)] transition-colors"
+                  >
+                    {selectedGroupId ? (
+                      <>
+                        <span className="text-base leading-none">
+                          {myGroups.find((g) => g.id === selectedGroupId)?.emoji ?? "👥"}
+                        </span>
+                        <span className="flex-1 font-mono text-sm text-[var(--cream)] truncate">
+                          {myGroups.find((g) => g.id === selectedGroupId)?.name ?? "Group"}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="flex-1 font-mono text-sm text-[var(--muted)]">
+                        Just me
+                      </span>
+                    )}
+                    <svg
+                      className={`w-4 h-4 text-[var(--muted)] flex-shrink-0 transition-transform ${isGroupDropdownOpen ? "rotate-180" : ""}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {isGroupDropdownOpen && (
+                    <div className="absolute left-0 right-0 top-full mt-1 z-10 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] shadow-2xl overflow-hidden">
+                      {/* "Just me" option */}
+                      <button
+                        onClick={() => {
+                          setSelectedGroupId(null);
+                          setIsGroupDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-[var(--twilight)] transition-colors ${
+                          !selectedGroupId ? "bg-[var(--twilight)]" : ""
+                        }`}
+                      >
+                        <span className="text-base leading-none">🙋</span>
+                        <span className="font-mono text-sm text-[var(--soft)]">Just me</span>
+                      </button>
+                      {myGroups.map((group) => (
+                        <button
+                          key={group.id}
+                          onClick={() => {
+                            setSelectedGroupId(group.id);
+                            setIsGroupDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-[var(--twilight)] transition-colors ${
+                            selectedGroupId === group.id ? "bg-[var(--vibe)]/10" : ""
+                          }`}
+                        >
+                          <span className="text-base leading-none">{group.emoji ?? "👥"}</span>
+                          <span className="font-mono text-sm text-[var(--cream)] truncate">
+                            {group.name}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Visibility selector */}
             <div>

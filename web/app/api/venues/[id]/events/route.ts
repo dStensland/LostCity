@@ -1,7 +1,7 @@
 import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
-import { errorResponse } from "@/lib/api-utils";
+import { errorResponse, parseIntParam } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
@@ -20,8 +20,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   const supabase = await createClient();
   const { id } = await params;
   const { searchParams } = new URL(request.url);
-  const rawLimit = parseInt(searchParams.get("limit") || "10", 10);
-  const limit = Math.min(Math.max(isNaN(rawLimit) ? 10 : rawLimit, 1), 100);
+  const limit = Math.min(Math.max(parseIntParam(searchParams.get("limit")) ?? 10, 1), 100);
   const portalExclusive = searchParams.get("portal_exclusive") === "true";
   const portalContext = await resolvePortalQueryContext(supabase, searchParams);
   if (portalContext.hasPortalParamMismatch) {

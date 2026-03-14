@@ -1,18 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { errorResponse, checkBodySize } from "@/lib/api-utils";
+import { withAuthAndParams } from "@/lib/api-middleware";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-type Props = {
-  params: Promise<{ slug: string }>;
-};
-
 type CollectionRow = { id: number; user_id: string | null };
 
 // POST /api/collections/[slug]/items - Add event to collection
-export async function POST(request: NextRequest, { params }: Props) {
+export const POST = withAuthAndParams<{ slug: string }>(async (request, { user, supabase, params }) => {
   // Check body size
   const bodySizeError = checkBodySize(request);
   if (bodySizeError) return bodySizeError;
@@ -21,13 +17,7 @@ export async function POST(request: NextRequest, { params }: Props) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  const { slug } = await params;
-  const supabase = await createClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { slug } = params;
 
   const body = await request.json();
   const { event_id, note } = body;
@@ -86,36 +76,30 @@ export async function POST(request: NextRequest, { params }: Props) {
   }
 
   return NextResponse.json({ item: data }, { status: 201 });
-}
+});
 
 // DELETE /api/collections/[slug]/items?event_id=123 - Remove event from collection
-export async function DELETE(request: NextRequest, { params }: Props) {
+export const DELETE = withAuthAndParams<{ slug: string }>(async (request, { user, supabase, params }) => {
   // Apply rate limiting (write tier - deletes data)
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  const { slug } = await params;
-  const supabase = await createClient();
+  const { slug } = params;
   const { searchParams } = new URL(request.url);
   const eventId = searchParams.get("event_id");
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   if (!eventId) {
     return NextResponse.json({ error: "event_id is required" }, { status: 400 });
   }
 
   // Get collection and verify ownership
-  const { data: collectionData2 } = await supabase
+  const { data: collectionData } = await supabase
     .from("collections")
     .select("id, user_id")
     .eq("slug", slug)
     .maybeSingle();
 
-  const collection = collectionData2 as CollectionRow | null;
+  const collection = collectionData as CollectionRow | null;
 
   if (!collection) {
     return NextResponse.json({ error: "Collection not found" }, { status: 404 });
@@ -134,8 +118,8 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     .eq("event_id", parseInt(eventId, 10));
 
   if (error) {
-    return errorResponse(error, "POST /api/collections/[slug]/items");
+    return errorResponse(error, "DELETE /api/collections/[slug]/items");
   }
 
   return NextResponse.json({ success: true });
-}
+});

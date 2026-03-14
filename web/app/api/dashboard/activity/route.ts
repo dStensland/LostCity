@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { parseIntParam } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 // No server-side cache — TanStack Query on the client handles caching (30s staleTime).
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
   if (rateLimitResult) return rateLimitResult;
 
   const { searchParams } = new URL(request.url);
-  const limit = Math.min(parseInt(searchParams.get("limit") || "30", 10), 100);
+  const limit = Math.min(parseIntParam(searchParams.get("limit")) ?? 30, 100);
   const cursor = searchParams.get("cursor");
 
   const user = await getUser();

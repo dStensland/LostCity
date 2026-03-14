@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import UserList from "@/components/UserList";
 import { createClient } from "@/lib/supabase/server";
 import PageFooter from "@/components/PageFooter";
@@ -56,7 +56,7 @@ export default async function FollowersPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
-      <UnifiedHeader />
+      <PlatformHeader />
 
       {/* Main */}
       <main className="max-w-2xl mx-auto px-4 py-8">

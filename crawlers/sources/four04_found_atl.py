@@ -14,7 +14,7 @@ from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, insert_exhibition
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -279,6 +279,26 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             logger.info(f"Added exhibition: {title[:50]}... ({start_date} to {end_date})")
                         except Exception as e:
                             logger.error(f"Failed to insert event: {title[:50]}: {e}")
+
+                    # Dual-write: also insert as exhibition
+                    try:
+                        exhibition_record = {
+                            "title": title,
+                            "venue_id": venue_id,
+                            "source_id": source_id,
+                            "_venue_name": VENUE_DATA["name"],
+                            "opening_date": start_date,
+                            "closing_date": end_date,
+                            "description": description,
+                            "image_url": image_url,
+                            "source_url": source_url,
+                            "admission_type": "free" if is_free else None,
+                            "tags": ["artist-collective", "gallery", "exhibition"],
+                            "is_active": True,
+                        }
+                        insert_exhibition(exhibition_record)
+                    except Exception as exc:
+                        logger.debug("Exhibition insert failed for %r: %s", title, exc)
 
             # Process reception event if found
             if reception_match:

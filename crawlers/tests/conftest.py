@@ -26,6 +26,13 @@ def reset_db_write_mode():
         pass
 
 
+@pytest.fixture(autouse=True)
+def mock_has_event_extractions_table():
+    """Mock has_event_extractions_table to return False by default in tests."""
+    with patch("db.events.has_event_extractions_table", return_value=False):
+        yield
+
+
 @pytest.fixture
 def mock_supabase_client():
     """Mock Supabase client for database tests."""

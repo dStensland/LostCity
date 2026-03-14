@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import PageFooter from "@/components/PageFooter";
 // FollowButton removed from people page — benched for curator feature
 import FriendButton from "@/components/FriendButton";
@@ -63,7 +63,7 @@ export default function PeoplePage() {
 
   return (
     <div className="min-h-screen">
-      <UnifiedHeader />
+      <PlatformHeader />
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-semibold text-[var(--cream)] mb-2">Find People</h1>

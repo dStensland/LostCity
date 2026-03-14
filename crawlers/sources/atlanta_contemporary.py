@@ -20,7 +20,7 @@ from bs4 import BeautifulSoup
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, insert_exhibition
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -568,6 +568,30 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         exhibition["title"],
                         exhibition["start_date"],
                     )
+
+                    # Dual-write: also insert as exhibition
+                    try:
+                        parts = exhibition["title"].split(": ", 1)
+                        artist_name = parts[0] if len(parts) == 2 else None
+                        exhibition_record = {
+                            "title": exhibition["title"],
+                            "venue_id": venue_id,
+                            "source_id": source_id,
+                            "_venue_name": VENUE_DATA["name"],
+                            "opening_date": exhibition["canonical_start_date"],
+                            "closing_date": exhibition["end_date"],
+                            "description": exhibition["description"],
+                            "image_url": exhibition["image_url"],
+                            "source_url": exhibition["source_url"],
+                            "admission_type": "free",
+                            "tags": ["contemporary-art", "museum", "west-midtown", "exhibition"],
+                            "is_active": True,
+                        }
+                        artists = [{"artist_name": artist_name}] if artist_name else None
+                        insert_exhibition(exhibition_record, artists=artists)
+                    except Exception as exc:
+                        logger.debug("Exhibition insert failed for %r: %s", exhibition["title"], exc)
+
                 except Exception as e:
                     logger.warning("Error parsing Atlanta Contemporary exhibition: %s", e)
                     continue

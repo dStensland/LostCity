@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import PageFooter from "@/components/PageFooter";
 import SettingsShell, { type SettingsTab } from "@/components/settings/SettingsShell";
 import { useAuth } from "@/lib/auth-context";
@@ -70,7 +70,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <UnifiedHeader />
+        <PlatformHeader />
         <div className="flex min-h-[calc(100vh-200px)]">
           <div className="hidden md:block w-60 border-r border-[var(--twilight)] bg-[var(--night)]" />
           <div className="flex-1 p-8">
@@ -85,7 +85,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen">
-      <UnifiedHeader />
+      <PlatformHeader />
       <SettingsShell>{(activeTab) => renderPanel(activeTab)}</SettingsShell>
       <PageFooter />
     </div>

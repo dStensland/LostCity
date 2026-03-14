@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import { useAuth } from "@/lib/auth-context";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 import type {
@@ -131,7 +131,7 @@ export default function SubmissionDetailPage() {
   if (!user) {
     return (
       <div className="min-h-screen">
-        <UnifiedHeader />
+        <PlatformHeader />
         <main className="max-w-4xl mx-auto px-4 py-12 text-center">
           <p className="text-[var(--muted)]">Please sign in to view this submission.</p>
         </main>
@@ -141,7 +141,7 @@ export default function SubmissionDetailPage() {
 
   return (
     <div className="min-h-screen">
-      <UnifiedHeader />
+      <PlatformHeader />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-6">

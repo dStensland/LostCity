@@ -27,6 +27,30 @@ import AgendaView from "@/components/calendar/AgendaView";
 import WeekStrip, { type WeekStripDay } from "@/components/calendar/WeekStrip";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 
+// Type for plans on the calendar
+interface CalendarPlan {
+  id: string;
+  title: string;
+  description: string | null;
+  plan_date: string;
+  plan_time: string | null;
+  status: string;
+  item_count: number;
+  creator: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+  participants: Array<{
+    user_id: string;
+    status: string;
+    user: { username: string; display_name: string | null; avatar_url: string | null };
+  }>;
+  is_creator: boolean;
+  participant_status: string | null;
+}
+
 // Type for RSVP'd calendar events
 interface CalendarEvent {
   id: number;
@@ -86,6 +110,7 @@ interface DayData {
   date: Date;
   events: CalendarEvent[];
   friendEvents: FriendCalendarEvent[];
+  plans: CalendarPlan[];
   isCurrentMonth: boolean;
   isToday: boolean;
   isPast: boolean;
@@ -117,7 +142,7 @@ export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [currentView, setCurrentView] = useState<CalendarView>("month");
+  const [currentView, setCurrentView] = useState<CalendarView>("agenda");
   const [syncMenuOpen, setSyncMenuOpen] = useState(false);
   const [friendsPanelOpen, setFriendsPanelOpen] = useState(false);
   const [selectedFriendIds, setSelectedFriendIds] = useState<Set<string>>(new Set());
@@ -214,6 +239,20 @@ export default function CalendarPage() {
     return map;
   }, [friendsData]);
 
+  // Build plans by date map
+  const plansByDate = useMemo(() => {
+    const map = new Map<string, CalendarPlan[]>();
+    const plans: CalendarPlan[] = data?.plans || [];
+    plans.forEach((plan) => {
+      const dateKey = plan.plan_date;
+      if (!map.has(dateKey)) {
+        map.set(dateKey, []);
+      }
+      map.get(dateKey)!.push(plan);
+    });
+    return map;
+  }, [data]);
+
   // Generate calendar grid
   const calendarDays = useMemo((): DayData[] => {
     const monthStart = startOfMonth(currentMonth);
@@ -229,6 +268,7 @@ export default function CalendarPage() {
         date: new Date(day),
         events: eventsByDate.get(dateKey) || [],
         friendEvents: friendEventsByDate.get(dateKey) || [],
+        plans: plansByDate.get(dateKey) || [],
         isCurrentMonth: isSameMonth(day, monthStart),
         isToday: isToday(day),
         isPast: isBefore(day, today) && !isToday(day),
@@ -237,7 +277,7 @@ export default function CalendarPage() {
     }
 
     return days;
-  }, [currentMonth, eventsByDate, friendEventsByDate]);
+  }, [currentMonth, eventsByDate, friendEventsByDate, plansByDate]);
 
   // Selected day's events (user + friends)
   const selectedDayEvents = useMemo(() => {
@@ -251,6 +291,12 @@ export default function CalendarPage() {
     const dateKey = format(selectedDate, "yyyy-MM-dd");
     return friendEventsByDate.get(dateKey) || [];
   }, [selectedDate, friendEventsByDate]);
+
+  const selectedDayPlans = useMemo(() => {
+    if (!selectedDate) return [];
+    const dateKey = format(selectedDate, "yyyy-MM-dd");
+    return plansByDate.get(dateKey) || [];
+  }, [selectedDate, plansByDate]);
 
   const mobileWeekStripDays = useMemo((): WeekStripDay[] => {
     const referenceDate = selectedDate || currentMonth;
@@ -363,6 +409,7 @@ export default function CalendarPage() {
   const friends: Friend[] = friendsList?.friends || [];
   const allEvents: CalendarEvent[] = data?.events || [];
   const allFriendEvents: FriendCalendarEvent[] = friendsData?.events || [];
+  const allPlans: CalendarPlan[] = data?.plans || [];
 
   if (!user) {
     return null; // Layout handles redirect
@@ -390,6 +437,11 @@ export default function CalendarPage() {
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--gold)]/35 bg-[var(--gold)]/15 font-mono text-xs text-[var(--gold)]">
                 {data.summary.interested} interested
               </span>
+              {data.summary.plans > 0 && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--neon-cyan)]/35 bg-[var(--neon-cyan)]/12 font-mono text-xs text-[var(--neon-cyan)]">
+                  {data.summary.plans} {data.summary.plans === 1 ? "plan" : "plans"}
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -450,7 +502,7 @@ export default function CalendarPage() {
                 </button>
 
                 {syncMenuOpen && feedUrls && (
-                  <div className="absolute right-0 mt-2 w-64 bg-[var(--midnight-blue)] border border-[var(--twilight)] rounded-lg shadow-2xl shadow-black/50 z-50 overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-64 bg-[var(--night)] border border-[var(--twilight)] rounded-lg shadow-2xl shadow-black/50 z-50 overflow-hidden">
                     <div className="px-4 py-3 border-b border-[var(--twilight)]/70">
                       <p className="font-mono text-xs text-[var(--muted)]">Subscribe to your calendar</p>
                     </div>
@@ -544,7 +596,7 @@ export default function CalendarPage() {
                         className="w-[18px] h-[18px] rounded-full object-cover"
                       />
                     ) : (
-                      <span className="w-[18px] h-[18px] rounded-full bg-[var(--cosmic-blue)] flex items-center justify-center text-2xs">
+                      <span className="w-[18px] h-[18px] rounded-full bg-[var(--dusk)] flex items-center justify-center text-2xs">
                         {(friend.display_name || friend.username)[0].toUpperCase()}
                       </span>
                     )}
@@ -566,6 +618,7 @@ export default function CalendarPage() {
           currentDate={currentMonth}
           onDateChange={setCurrentMonth}
           eventsByDate={eventsByDate}
+          plansByDate={plansByDate}
           onDayClick={setSelectedDate}
           selectedDate={selectedDate}
           portalSlug={portalSlug}
@@ -574,8 +627,10 @@ export default function CalendarPage() {
         <AgendaView
           events={allEvents}
           friendEvents={allFriendEvents}
+          plans={allPlans}
           eventsByDate={eventsByDate}
           friendEventsByDate={friendEventsByDate}
+          plansByDate={plansByDate}
           portalSlug={portalSlug}
         />
       ) : (
@@ -646,6 +701,7 @@ export default function CalendarPage() {
                   date={day.date}
                   events={day.events}
                   friendEvents={day.friendEvents}
+                  plans={day.plans}
                   isCurrentMonth={day.isCurrentMonth}
                   isToday={day.isToday}
                   isPast={day.isPast}
@@ -667,6 +723,10 @@ export default function CalendarPage() {
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[var(--gold)]" />
                 Interested
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[var(--neon-cyan)]" />
+                Plans
               </span>
               {selectedFriendIds.size > 0 && (
                 <span className="flex items-center gap-1.5">
@@ -694,7 +754,7 @@ export default function CalendarPage() {
                       </span>
                     )}
                     <span className="inline-block px-2 py-0.5 rounded-full border border-[var(--twilight)]/75 bg-[var(--dusk)]/70 text-[var(--soft)] font-mono text-2xs font-medium">
-                      {selectedDayEvents.length + selectedDayFriendEvents.length} planned
+                      {selectedDayEvents.length + selectedDayFriendEvents.length + selectedDayPlans.length} planned
                     </span>
                   </div>
                   <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
@@ -717,6 +777,80 @@ export default function CalendarPage() {
                 </div>
 
                 <div className="p-3.5 space-y-4">
+                  {selectedDayPlans.length > 0 && (
+                    <div>
+                      <h4 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">Plans</h4>
+                      <div className="space-y-2">
+                        {selectedDayPlans.map((plan) => {
+                          const { time, period } = formatTimeSplit(plan.plan_time, false);
+                          const acceptedParticipants = plan.participants.filter(
+                            (p) => p.status === "accepted" || p.status === "invited"
+                          );
+                          return (
+                            <Link
+                              key={plan.id}
+                              href={`/plans/${plan.id}`}
+                              className="find-row-card block rounded-xl border border-[var(--twilight)]/75 border-l-[3px] border-l-[var(--neon-cyan)] overflow-hidden group"
+                            >
+                              <div className="p-3 bg-[var(--card-bg)]/90">
+                                <div className="flex items-center justify-between gap-2 mb-1.5">
+                                  <span className="font-mono text-xs text-[var(--neon-cyan)]">
+                                    {plan.plan_time ? (
+                                      <>
+                                        {time}
+                                        {period && <span className="text-2xs ml-0.5 opacity-60">{period}</span>}
+                                      </>
+                                    ) : (
+                                      "All day"
+                                    )}
+                                  </span>
+                                  <span className="px-1.5 py-0.5 rounded-full font-mono text-2xs font-medium bg-[var(--neon-cyan)]/15 text-[var(--neon-cyan)]">
+                                    PLAN
+                                  </span>
+                                </div>
+                                <span className="text-[var(--cream)] group-hover:text-[var(--neon-cyan)] transition-colors text-sm leading-snug line-clamp-2 block">
+                                  {plan.title}
+                                </span>
+                                <div className="mt-1.5 flex items-center gap-2">
+                                  {!plan.is_creator && (
+                                    <span className="text-[11px] text-[var(--muted)] truncate">
+                                      by {plan.creator.display_name || plan.creator.username}
+                                    </span>
+                                  )}
+                                  {acceptedParticipants.length > 0 && (
+                                    <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+                                      <div className="flex -space-x-1">
+                                        {acceptedParticipants.slice(0, 3).map((p) => (
+                                          <span
+                                            key={p.user_id}
+                                            className="w-4 h-4 rounded-full bg-[var(--twilight)] border border-[var(--void)] flex items-center justify-center text-2xs text-[var(--muted)]"
+                                            title={p.user.display_name || p.user.username}
+                                          >
+                                            {(p.user.display_name || p.user.username)[0].toUpperCase()}
+                                          </span>
+                                        ))}
+                                        {acceptedParticipants.length > 3 && (
+                                          <span className="w-4 h-4 rounded-full bg-[var(--twilight)] border border-[var(--void)] flex items-center justify-center text-2xs text-[var(--muted)]">
+                                            +{acceptedParticipants.length - 3}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {plan.item_count > 0 && (
+                                    <span className="text-[11px] text-[var(--muted)]">
+                                      {plan.item_count} {plan.item_count === 1 ? "stop" : "stops"}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {selectedDayEvents.length > 0 && (
                     <div>
                       <h4 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">Your Events</h4>
@@ -805,7 +939,7 @@ export default function CalendarPage() {
                                     className="w-[18px] h-[18px] rounded-full object-cover"
                                   />
                                 ) : (
-                                  <span className="w-[18px] h-[18px] rounded-full bg-[var(--cosmic-blue)] flex items-center justify-center text-2xs text-[var(--muted)]">
+                                  <span className="w-[18px] h-[18px] rounded-full bg-[var(--dusk)] flex items-center justify-center text-2xs text-[var(--muted)]">
                                     {(event.friend.display_name || event.friend.username)[0].toUpperCase()}
                                   </span>
                                 )}
@@ -836,7 +970,7 @@ export default function CalendarPage() {
                     </div>
                   )}
 
-                  {selectedDayEvents.length === 0 && selectedDayFriendEvents.length === 0 && (
+                  {selectedDayEvents.length === 0 && selectedDayFriendEvents.length === 0 && selectedDayPlans.length === 0 && (
                     <div className="text-center py-8">
                       <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-[var(--twilight)]/35 flex items-center justify-center">
                         <svg className="w-7 h-7 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">

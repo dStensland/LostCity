@@ -23,10 +23,17 @@ interface FriendCalendarEvent {
   };
 }
 
+interface CalendarPlan {
+  id: string;
+  plan_date: string;
+  plan_time: string | null;
+}
+
 interface DayCellProps {
   date: Date;
   events: CalendarEvent[];
   friendEvents: FriendCalendarEvent[];
+  plans?: CalendarPlan[];
   isCurrentMonth: boolean;
   isToday: boolean;
   isPast: boolean;
@@ -38,6 +45,7 @@ export default function DayCell({
   date,
   events,
   friendEvents,
+  plans = [],
   isCurrentMonth,
   isToday,
   isPast,
@@ -46,6 +54,7 @@ export default function DayCell({
 }: DayCellProps) {
   const hasEvents = events.length > 0;
   const hasFriendEvents = friendEvents.length > 0;
+  const hasPlans = plans.length > 0;
   const eventCount = events.length;
   const uniqueCategories = Array.from(new Set(events.map((event) => event.category).filter(Boolean))).slice(0, 3);
   const topCategory = uniqueCategories[0] || null;
@@ -111,7 +120,7 @@ export default function DayCell({
           {friendAvatars.map((friend) => (
             <div
               key={friend.id}
-              className="w-4 h-4 rounded-full border border-[var(--void)] overflow-hidden bg-[var(--twilight-purple)]"
+              className="w-4 h-4 rounded-full border border-[var(--void)] overflow-hidden bg-[var(--twilight)]"
               title={friend.display_name || friend.username}
             >
               {friend.avatar_url ? (
@@ -130,34 +139,42 @@ export default function DayCell({
             </div>
           ))}
           {friendEvents.length > 3 && (
-            <span className="w-4 h-4 rounded-full border border-[var(--void)] bg-[var(--twilight-purple)] flex items-center justify-center text-2xs text-[var(--muted)]">
+            <span className="w-4 h-4 rounded-full border border-[var(--void)] bg-[var(--twilight)] flex items-center justify-center text-2xs text-[var(--muted)]">
               +{friendEvents.length - 3}
             </span>
           )}
         </div>
       )}
 
-      {hasEvents && isCurrentMonth && (
+      {(hasEvents || hasPlans) && isCurrentMonth && (
         <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1">
-          {topCategory && (
+          {hasEvents && topCategory && (
             <span
               data-category={topCategory}
               className="w-1.5 h-1.5 rounded-full bg-[var(--category-color,var(--muted))]"
             />
           )}
-          {extraCategoryCount > 0 && (
+          {hasEvents && extraCategoryCount > 0 && (
             <span className="font-mono text-2xs text-[var(--muted)]/90">
               +{extraCategoryCount}
             </span>
           )}
-          <span
-            className={`w-1.5 h-1.5 rounded-full ${
-              events.some((e) => e.rsvp_status === "going")
-                ? "bg-[var(--coral)]"
-                : "bg-[var(--gold)]"
-            }`}
-            title={events.some((e) => e.rsvp_status === "going") ? "Going" : "Interested"}
-          />
+          {hasEvents && (
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                events.some((e) => e.rsvp_status === "going")
+                  ? "bg-[var(--coral)]"
+                  : "bg-[var(--gold)]"
+              }`}
+              title={events.some((e) => e.rsvp_status === "going") ? "Going" : "Interested"}
+            />
+          )}
+          {hasPlans && (
+            <span
+              className="w-1.5 h-1.5 rounded-full bg-[var(--neon-cyan)]"
+              title={`${plans.length} ${plans.length === 1 ? "plan" : "plans"}`}
+            />
+          )}
         </div>
       )}
     </button>

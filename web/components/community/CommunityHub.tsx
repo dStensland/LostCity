@@ -16,6 +16,7 @@ import { useMyHangs, useFriendHangs, useHotVenues, useEndHang, useUpdateHang } f
 import { useFriendPlans } from "@/lib/hooks/useFriendPlans";
 import { useFriendRequests } from "@/lib/hooks/useFriendRequests";
 import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
+import { MyGroupsSection } from "@/components/groups/MyGroupsSection";
 import { ActiveHangBanner } from "@/components/hangs/ActiveHangBanner";
 import { FriendsActivity } from "@/components/community/FriendsActivity";
 import { FriendSearch } from "@/components/community/FriendSearch";
@@ -520,7 +521,10 @@ export default function CommunityHub({
       {/* 1. Pending friend requests — urgent */}
       <PendingRequests requests={pendingRequests} />
 
-      {/* 2. Plans — hero section, the differentiator */}
+      {/* 2. Groups — feature-flag gated internally */}
+      <MyGroupsSection />
+
+      {/* 3. Plans — hero section, the differentiator */}
       <PlansSection portalSlug={portalSlug} />
 
       {/* 3. Friends Out Now — secondary, requires social graph */}

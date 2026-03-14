@@ -10,7 +10,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, insert_exhibition
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -333,10 +333,50 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if existing:
                     smart_update_existing_event(existing, event_record)
                     events_updated += 1
+                    # Dual-write: also insert as exhibition
+                    try:
+                        raw_start, raw_end = parse_exhibition_date(date_text)
+                        exhibition_record = {
+                            "title": title,
+                            "venue_id": venue_id,
+                            "source_id": source_id,
+                            "_venue_name": VENUE_DATA["name"],
+                            "opening_date": raw_start,
+                            "closing_date": raw_end,
+                            "description": description,
+                            "image_url": exhibition_data.get('image_url'),
+                            "source_url": CURRENT_EXHIBITIONS_URL,
+                            "admission_type": "donation",
+                            "tags": ["museum", "african-american", "hbcu", "exhibition"],
+                            "is_active": True,
+                        }
+                        insert_exhibition(exhibition_record)
+                    except Exception as exc:
+                        logger.debug("Exhibition insert failed for %r: %s", title, exc)
                     continue
 
                 insert_event(event_record)
                 events_new += 1
+                # Dual-write: also insert as exhibition
+                try:
+                    raw_start, raw_end = parse_exhibition_date(date_text)
+                    exhibition_record = {
+                        "title": title,
+                        "venue_id": venue_id,
+                        "source_id": source_id,
+                        "_venue_name": VENUE_DATA["name"],
+                        "opening_date": raw_start,
+                        "closing_date": raw_end,
+                        "description": description,
+                        "image_url": exhibition_data.get('image_url'),
+                        "source_url": CURRENT_EXHIBITIONS_URL,
+                        "admission_type": "donation",
+                        "tags": ["museum", "african-american", "hbcu", "exhibition"],
+                        "is_active": True,
+                    }
+                    insert_exhibition(exhibition_record)
+                except Exception as exc:
+                    logger.debug("Exhibition insert failed for %r: %s", title, exc)
                 logger.debug(f"Inserted exhibition: {title} ({start_date} - {end_date})")
 
             except Exception as e:

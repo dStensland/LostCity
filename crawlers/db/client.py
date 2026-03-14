@@ -174,6 +174,7 @@ _EVENTS_HAS_FIELD_METADATA_COLUMNS: Optional[bool] = None
 _EVENTS_HAS_IS_ACTIVE_COLUMN: Optional[bool] = None
 _VENUES_HAS_FEATURES_TABLE: Optional[bool] = None
 _VENUES_HAS_LOCATION_DESIGNATOR: Optional[bool] = None
+_HAS_EVENT_EXTRACTIONS_TABLE: Optional[bool] = None
 _WRITES_ENABLED = True
 _WRITE_SKIP_REASON = ""
 _TEMP_ID_COUNTER = 0
@@ -459,3 +460,26 @@ def venues_support_location_designator() -> bool:
         else:
             raise
     return bool(_VENUES_HAS_LOCATION_DESIGNATOR)
+
+
+def has_event_extractions_table() -> bool:
+    """Detect whether the event_extractions table exists."""
+    global _HAS_EVENT_EXTRACTIONS_TABLE
+    if _HAS_EVENT_EXTRACTIONS_TABLE is not None:
+        return _HAS_EVENT_EXTRACTIONS_TABLE
+
+    client = get_client()
+    try:
+        client.table("event_extractions").select("event_id").limit(1).execute()
+        _HAS_EVENT_EXTRACTIONS_TABLE = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str or "relation" in error_str:
+            _HAS_EVENT_EXTRACTIONS_TABLE = False
+            logger.info(
+                "event_extractions table not found; extraction data stays on events table."
+            )
+        else:
+            raise
+
+    return bool(_HAS_EVENT_EXTRACTIONS_TABLE)
