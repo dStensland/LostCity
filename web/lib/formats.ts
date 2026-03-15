@@ -343,6 +343,21 @@ export function getLocalDateString(date: Date = new Date()): string {
 }
 
 /**
+ * Get the current time as HH:MM:SS in the portal timezone (America/New_York).
+ * Use this instead of `new Date().toTimeString().split(" ")[0]` — that returns
+ * the local time of the server process (UTC on Vercel), which is wrong after ~7pm ET.
+ */
+export function getLocalTimeString(date: Date = new Date()): string {
+  return date.toLocaleTimeString("en-GB", {
+    timeZone: PORTAL_TZ,
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+/**
  * Get a date string for N days from now in the portal timezone.
  */
 export function getLocalDateStringOffset(days: number): string {

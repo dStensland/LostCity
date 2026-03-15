@@ -6,6 +6,7 @@ import Image from "@/components/SmartImage";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import CategoryIcon from "@/components/CategoryIcon";
 import type { ExploreVenue, ExploreCollection } from "@/lib/explore-constants";
+import { CATEGORY_HERO_IMAGES } from "@/lib/explore-constants";
 
 type ExploreData = {
   featured: ExploreVenue[];
@@ -118,6 +119,39 @@ export default function ExploreView({ portalSlug }: { portalSlug: string }) {
 // HERO - Featured venue spotlight
 // ============================================
 
+function CategoryFallback({
+  categoryId,
+  fill = true,
+}: {
+  categoryId: string | null;
+  fill?: boolean;
+}) {
+  const fallback = CATEGORY_HERO_IMAGES[categoryId ?? ""];
+  const gradient = fallback?.gradient ?? "linear-gradient(135deg, var(--twilight) 0%, var(--void) 100%)";
+  const iconPath = fallback?.iconPath;
+  const iconColor = fallback?.iconColor ?? "var(--muted)";
+
+  return (
+    <div
+      className={fill ? "absolute inset-0 flex items-center justify-center" : "flex items-center justify-center w-full h-full"}
+      style={{ background: gradient }}
+      aria-hidden
+    >
+      {iconPath && (
+        <svg
+          className="w-14 h-14 opacity-25"
+          fill="none"
+          stroke={iconColor}
+          strokeWidth={1.25}
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d={iconPath} />
+        </svg>
+      )}
+    </div>
+  );
+}
+
 function ExploreHero({ venue, portalSlug }: { venue: ExploreVenue; portalSlug: string }) {
   const imageUrl = venue.hero_image_url || venue.image_url;
 
@@ -137,7 +171,7 @@ function ExploreHero({ venue, portalSlug }: { venue: ExploreVenue; portalSlug: s
             className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[var(--twilight)] to-[var(--void)]" />
+          <CategoryFallback categoryId={venue.explore_category} />
         )}
 
         {/* Gradient overlay */}
@@ -288,11 +322,7 @@ function ExploreVenueCard({
             className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[var(--twilight)]/50 to-[var(--void)]/50 flex items-center justify-center">
-            <span className="text-3xl opacity-30">
-              {CATEGORY_ICONS[venue.explore_category || ""] || "📍"}
-            </span>
-          </div>
+          <CategoryFallback categoryId={venue.explore_category} />
         )}
       </div>
 

@@ -107,7 +107,7 @@ type EventData = {
     id: string;
     name: string;
     slug: string;
-    org_type: string;
+    org_type: string | null;
     website: string | null;
     logo_url: string | null;
   } | null;
@@ -852,7 +852,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
                     {event.producer.name}
                   </h3>
                   <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-[0.14em]">
-                    {event.producer.org_type.replace(/_/g, " ")}
+                    {event.producer.org_type?.replace(/_/g, " ")}
                   </p>
                 </div>
               </div>

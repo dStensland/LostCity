@@ -811,10 +811,11 @@ def _build_event_record(
     start_time_str: Optional[str] = None
 
     is_all_day = bool(event.get("all_day", False))
-    if not is_all_day and start_dt.hour == 0 and start_dt.minute == 0:
-        # Midnight start with all_day=False — treat as unknown time, not all-day
-        start_time_str = None
-    elif not is_all_day:
+    if not is_all_day:
+        # Always preserve the time the API provides — 00:00 is midnight, not
+        # "unknown time".  The all_day flag is the canonical indicator; if it
+        # is False we always store the time so 12:00 AM and 12:00 PM are
+        # never silently dropped.
         start_time_str = start_dt.strftime("%H:%M")
 
     end_date_str: Optional[str] = None
@@ -823,7 +824,7 @@ def _build_event_record(
         try:
             end_dt = datetime.strptime(end_raw, "%Y-%m-%d %H:%M:%S")
             end_date_str = end_dt.strftime("%Y-%m-%d")
-            if not is_all_day and not (end_dt.hour == 0 and end_dt.minute == 0):
+            if not is_all_day:
                 end_time_str = end_dt.strftime("%H:%M")
         except ValueError:
             pass

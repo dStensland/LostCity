@@ -58,6 +58,40 @@ export async function GET(request: NextRequest) {
     const sourceAccess = await getPortalSourceAccess(portalId);
     const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
+    // Count query — same filters as data query, no pagination
+    let countQuery = portalClient
+      .from("open_calls")
+      .select("*", { count: "exact", head: true })
+      .eq("is_active", true);
+
+    countQuery = applyFederatedPortalScopeToQuery(countQuery, {
+      portalId,
+      portalExclusive,
+      publicOnlyWhenNoPortal: true,
+      sourceIds: sourceAccess.sourceIds,
+      sourceColumn: "source_id",
+    });
+
+    if (statusFilter && isValidString(statusFilter, 1, 50)) {
+      countQuery = countQuery.eq("status", statusFilter);
+    }
+
+    if (typeFilter && isValidString(typeFilter, 1, 50)) {
+      countQuery = countQuery.eq("call_type", typeFilter);
+    }
+
+    if (venueId !== null) {
+      countQuery = countQuery.eq("venue_id", venueId);
+    }
+
+    if (qFilter && isValidString(qFilter, 1, 200)) {
+      const escaped = escapeSQLPattern(qFilter);
+      countQuery = countQuery.or(
+        `title.ilike.%${escaped}%,description.ilike.%${escaped}%`
+      );
+    }
+
+    // Data query
     let query = portalClient
       .from("open_calls")
       .select(
@@ -121,7 +155,14 @@ export async function GET(request: NextRequest) {
       .order("deadline", { ascending: true, nullsFirst: false })
       .range(offset, offset + limit - 1);
 
-    const { data, error } = await query;
+    const [{ count: totalCount, error: countError }, { data, error }] = await Promise.all([
+      countQuery,
+      query,
+    ]);
+
+    if (countError) {
+      return errorResponse(countError, "GET /api/open-calls (count)");
+    }
 
     if (error) {
       return errorResponse(error, "GET /api/open-calls");
@@ -140,7 +181,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         open_calls: openCalls,
-        total: openCalls.length,
+        total: totalCount ?? openCalls.length,
         offset,
         limit,
       },

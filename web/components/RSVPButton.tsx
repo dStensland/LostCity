@@ -568,7 +568,7 @@ export default function RSVPButton({
             e.preventDefault();
             e.stopPropagation();
           }}
-          disabled={actionLoading}
+          disabled={actionLoading || authLoading}
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           style={{ touchAction: "manipulation" }}
@@ -623,7 +623,7 @@ export default function RSVPButton({
                       e.stopPropagation();
                       handleStatusChange(s);
                     }}
-                    disabled={actionLoading}
+                    disabled={actionLoading || authLoading}
                     role="menuitem"
                     tabIndex={focusedIndex === index ? 0 : -1}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded font-mono text-xs transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
@@ -651,7 +651,7 @@ export default function RSVPButton({
                       e.stopPropagation();
                       handleStatusChange(null);
                     }}
-                    disabled={actionLoading}
+                    disabled={actionLoading || authLoading}
                     role="menuitem"
                     tabIndex={focusedIndex === statusOptions.length ? 0 : -1}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded font-mono text-xs text-[var(--coral)] hover:bg-[var(--twilight)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
@@ -682,7 +682,7 @@ export default function RSVPButton({
                           e.stopPropagation();
                           handleVisibilityChange(opt.value);
                         }}
-                        disabled={actionLoading}
+                        disabled={actionLoading || authLoading}
                         className={`w-full flex items-center gap-2 px-3 py-2 rounded font-mono text-xs transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
                           visibility === opt.value
                             ? "bg-[var(--twilight)] text-[var(--cream)]"

@@ -53,6 +53,38 @@ def test_sanitize_text_normalizes_entities_and_breaks():
     assert cleaned == "Band & Friends Live"
 
 
+def test_sanitize_text_strips_breadcrumb_arrows():
+    from db import sanitize_text
+
+    # Navigation breadcrumb pattern: "Home >> Events >> Details"
+    cleaned = sanitize_text("Home >> Events >> Details")
+    assert ">>" not in cleaned
+    assert ">" not in cleaned
+
+    # Inline >> within a description
+    cleaned = sanitize_text("Join us >> Click here to register")
+    assert ">>" not in cleaned
+
+    # Unescaped &gt;&gt; that survived html.unescape (double-escaped)
+    # html.unescape twice will resolve &amp;gt;&amp;gt; -> &gt;&gt; -> >>
+    cleaned = sanitize_text("Home &amp;gt;&amp;gt; Events")
+    assert ">>" not in cleaned
+    assert ">" not in cleaned
+
+    # Runs of more than 2 '>' (malformed HTML artifacts)
+    cleaned = sanitize_text("Click here >>> Register")
+    assert ">>>" not in cleaned
+    assert ">>" not in cleaned
+
+    # Markdown-style blockquote leading '>'
+    cleaned = sanitize_text("> This is a quoted line")
+    assert cleaned == "This is a quoted line"
+
+    # Normal description without >> should be untouched
+    cleaned = sanitize_text("A great show featuring local artists.")
+    assert cleaned == "A great show featuring local artists."
+
+
 def test_normalize_category_maps_programs_to_family():
     from db import normalize_category
 

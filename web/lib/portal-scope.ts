@@ -56,6 +56,7 @@ const ATLANTA_METRO_CITIES = new Set(
     "lawrenceville",
     "marietta",
     "peachtree city",
+    "powder springs",
     "roswell",
     "sandy springs",
     "smyrna",

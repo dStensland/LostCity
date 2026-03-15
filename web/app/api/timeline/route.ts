@@ -153,6 +153,19 @@ async function fetchTimelinePage(
       festivals = (festivalsData || []) as Festival[];
     }
 
+    // Cross-table dedup: drop festivals whose name normalizes to a substring of (or matches)
+    // an event title already in this page, avoiding duplicates when a festival appears both
+    // as a crawled event and as a festivals-table record.
+    if (festivals.length > 0 && events.length > 0) {
+      const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const eventTitleNorms = new Set(events.map(e => normalize(e.title)));
+      festivals = festivals.filter(f => {
+        const normName = normalize(f.name);
+        return !eventTitleNorms.has(normName) &&
+          ![...eventTitleNorms].some(en => en.includes(normName) || normName.includes(en));
+      });
+    }
+
     festivalError = error;
   }
 

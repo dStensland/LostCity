@@ -407,10 +407,10 @@ def normalize_time_format(time_str: str) -> Optional[str]:
 
     time_str = time_str.strip().upper()
 
-    # Handle "HH:MM:SS" format - strip seconds
+    # Handle "HH:MM:SS" format - strip seconds and zero-pad hour
     if re.match(r"^\d{1,2}:\d{2}:\d{2}$", time_str):
-        time_str = ":".join(time_str.split(":")[:2])
-        return time_str
+        parts = time_str.split(":")
+        return f"{int(parts[0]):02d}:{parts[1]}"
 
     # Handle "HH:MM" 24-hour format (already correct)
     if re.match(r"^\d{1,2}:\d{2}$", time_str):

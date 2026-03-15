@@ -106,6 +106,7 @@ type PortalSearchParams = {
   event?: string;
   spot?: string;
   series?: string;
+  festival?: string;
   org?: string;
   // Concierge pillar
   pillar?: string;
@@ -316,9 +317,21 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
       <main className={mainClassName}>
         {/* DetailViewRouter handles showing detail views (event, venue, series, org) as overlays.
-            It uses useSearchParams which requires Suspense, but we use a minimal fallback since
-            each content view below has its own appropriate skeleton. */}
-        <Suspense fallback={null}>
+            It uses useSearchParams which requires Suspense. When a detail URL is active on first
+            load, we show a skeleton matching the detail type so users never see blank space. */}
+        <Suspense fallback={
+          <DetailPanelSkeleton
+            type={
+              searchParamsData.event ? "event" :
+              searchParamsData.spot ? "venue" :
+              searchParamsData.series ? "series" :
+              searchParamsData.festival ? "festival" :
+              searchParamsData.org ? "org" :
+              null
+            }
+            feedFallback={<FeedSkeleton vertical={vertical} />}
+          />
+        }>
           <DetailViewRouter portalSlug={portal.slug}>
             {/* Business portals with a parent_portal_id are white-label portals that show
                 filtered public events, not exclusive events. Only standalone business portals
@@ -390,6 +403,63 @@ export default async function PortalPage({ params, searchParams }: Props) {
           <div className="h-14 sm:hidden" />
         </>
       )}
+    </div>
+  );
+}
+
+type DetailType = "event" | "venue" | "series" | "festival" | "org" | null;
+
+// Shown while DetailViewRouter's Suspense boundary resolves (useSearchParams hydration).
+// When the URL already contains a detail param on first load, this prevents blank white space.
+function DetailPanelSkeleton({
+  type,
+  feedFallback,
+}: {
+  type: DetailType;
+  feedFallback: React.ReactNode;
+}) {
+  // No detail in the URL — fall back to the normal feed skeleton so the page
+  // doesn't flash blank while the router hydrates.
+  if (!type) return <>{feedFallback}</>;
+
+  // Generic detail skeleton: hero area + metadata card.
+  // Matches the shape common to EventDetailView / VenueDetailView skeletons.
+  return (
+    <div className="pt-6 pb-8" role="status" aria-label="Loading details">
+      {/* Hero area */}
+      <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-4 skeleton-shimmer-enhanced" />
+
+      {/* Quick actions bar */}
+      <div className="rounded-xl border border-[var(--twilight)] bg-[var(--night)] mb-6">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--twilight)]">
+          <div className="flex items-center gap-4">
+            <div className="h-5 w-14 rounded skeleton-shimmer-enhanced" />
+            <div className="h-4 w-20 rounded skeleton-shimmer-enhanced" style={{ animationDelay: "50ms" }} />
+            <div className="h-4 w-16 rounded skeleton-shimmer-enhanced" style={{ animationDelay: "80ms" }} />
+          </div>
+        </div>
+        <div className="p-3 flex items-center gap-3">
+          <div className="flex-1 h-12 rounded-lg skeleton-shimmer-enhanced" style={{ animationDelay: "100ms" }} />
+          <div className="h-12 w-12 rounded-lg skeleton-shimmer-enhanced" style={{ animationDelay: "120ms" }} />
+        </div>
+      </div>
+
+      {/* Info card */}
+      <div className="border border-[var(--twilight)] rounded-lg p-6 bg-[var(--night)]">
+        <div className="h-3 w-16 rounded skeleton-shimmer-enhanced mb-3" style={{ animationDelay: "140ms" }} />
+        <div className="space-y-2 mb-5">
+          <div className="h-4 w-full rounded skeleton-shimmer-enhanced" style={{ animationDelay: "160ms" }} />
+          <div className="h-4 w-[90%] rounded skeleton-shimmer-enhanced" style={{ animationDelay: "180ms" }} />
+          <div className="h-4 w-[75%] rounded skeleton-shimmer-enhanced" style={{ animationDelay: "200ms" }} />
+        </div>
+        <div className="pt-5 border-t border-[var(--twilight)]">
+          <div className="h-3 w-16 rounded skeleton-shimmer-enhanced mb-3" style={{ animationDelay: "220ms" }} />
+          <div className="p-3 rounded-lg border border-[var(--twilight)] bg-[var(--void)]">
+            <div className="h-5 w-[50%] rounded skeleton-shimmer-enhanced mb-2" style={{ animationDelay: "240ms" }} />
+            <div className="h-3 w-[70%] rounded skeleton-shimmer-enhanced" style={{ animationDelay: "260ms" }} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

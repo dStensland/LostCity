@@ -17,7 +17,7 @@ interface CalendarHeaderProps {
   isLoading?: boolean;
 }
 
-export function CalendarHeader({ summary, friends, feedUrls, isLoading: _isLoading }: CalendarHeaderProps) {
+export function CalendarHeader({ summary, friends, feedUrls, isLoading }: CalendarHeaderProps) {
   const { state, dispatch, setView, setStatusFilter } = useCalendar();
   const {
     currentView,
@@ -50,7 +50,7 @@ export function CalendarHeader({ summary, friends, feedUrls, isLoading: _isLoadi
             </p>
           </div>
           {summary && (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className={`flex flex-wrap items-center gap-2 ${isLoading ? "opacity-50 transition-opacity" : ""}`}>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--twilight)]/70 bg-[var(--void)]/72 font-mono text-xs text-[var(--soft)]">
                 <span className="text-[var(--cream)] font-semibold">{summary.total}</span>
                 total
