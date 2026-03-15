@@ -1,5 +1,6 @@
 import { getFilteredEventsWithCursor, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
 import { enrichEventsWithSocialProof } from "@/lib/social-proof";
+import { deduplicateCinemaEvents } from "@/lib/cinema-filter";
 import type { MoodId } from "@/lib/moods";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { apiResponse, escapeSQLPattern } from "@/lib/api-utils";
@@ -132,7 +133,10 @@ async function fetchTimelinePage(
   const cityFilteredEvents = filterByPortalCity(rawEvents, portalCity, { allowMissingCity: true });
 
   // Enrich events with social proof
-  const events = await enrichEventsWithSocialProof(cityFilteredEvents);
+  const enrichedEvents = await enrichEventsWithSocialProof(cityFilteredEvents);
+
+  // Collapse cinema showtimes: one feed card per film per day
+  const events = deduplicateCinemaEvents(enrichedEvents) as typeof enrichedEvents;
 
   let festivals: Festival[] = [];
   let festivalError: { message: string } | null = null;

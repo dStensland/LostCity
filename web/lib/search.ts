@@ -21,6 +21,7 @@ import type { Frequency, DayOfWeek } from "./recurrence";
 import { applyFederatedPortalScopeToQuery, applyPortalScopeToQuery } from "./portal-scope";
 import { applyFeedGate } from "./feed-gate";
 import { isSceneEvent } from "./scene-event-routing";
+import { deduplicateCinemaEvents } from "./cinema-filter";
 
 const logger = createLogger("search");
 
@@ -797,7 +798,13 @@ export async function getFilteredEventsWithSearch(
     });
   }
 
-  return { events, total: count ?? 0 };
+  // Collapse cinema showtimes: one feed card per film per day
+  const dedupedEvents = deduplicateCinemaEvents(events);
+  const dedupedTotal = count != null
+    ? count - (events.length - dedupedEvents.length)
+    : dedupedEvents.length;
+
+  return { events: dedupedEvents as EventWithLocation[], total: Math.max(0, dedupedTotal) };
 }
 
 /**
@@ -935,10 +942,13 @@ export async function getFilteredEventsWithCursor(
     });
   }
 
-  // Generate next cursor from the last event
-  const nextCursor = hasMore ? generateNextCursor(events) : null;
+  // Collapse cinema showtimes: one feed card per film per day
+  const dedupedEvents = deduplicateCinemaEvents(events) as EventWithLocation[];
 
-  return { events, nextCursor, hasMore };
+  // Generate next cursor from the last event
+  const nextCursor = hasMore ? generateNextCursor(dedupedEvents) : null;
+
+  return { events: dedupedEvents, nextCursor, hasMore };
 }
 
 // Get all events for map view
