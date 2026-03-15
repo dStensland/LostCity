@@ -1,7 +1,8 @@
-# PRD-035: Hooky — Family Portal
+# PRD-035: Lost Youth — Family Portal
 
 **Status:** Strategy Lock
-**Portal Slug:** `hooky`
+**Portal Slug:** `family` (vertical subdomain: `family.lostcity.ai`)
+**Brand Name:** Lost Youth
 **Tagline:** "Play hooky."
 **Type:** Family activity coordination portal (Metro Atlanta)
 
@@ -216,67 +217,127 @@ Hooky is a parent-facing planning tool. Children never create accounts or intera
 
 ---
 
+## Information Architecture
+
+The portal navigation is organized around **family decision moments**, not generic discovery tabs.
+
+### Primary Navigation (5 tabs)
+
+| Tab | Purpose | Why it earns its place |
+|-----|---------|----------------------|
+| **Today** | What matters right now | Immediate utility — operational dashboard |
+| **Weekend** | The highest-frequency planning surface | Habitual discovery — the Thursday night question |
+| **Programs** | Structured, recurring activities | Deep utility moat — camps, classes, leagues |
+| **Calendar** | The command center | Retention anchor — replaces Google Calendar for family activities |
+| **Plans** | Coordination and social layer | Coordination moat — replaces group text chaos |
+
+**Today** is the default landing — not because it's the biggest moat, but because it's the most useful opening state.
+
+---
+
 ## Feature Specifications
 
-### F1: The Feed (Weekly Rhythm)
+### T1: Today (Default Landing)
 
-The return driver. Every Thursday, Hooky gives you the weekend shaped by your family.
+The operational dashboard. What a parent needs to know right now.
 
-**Sections (each earns its place):**
+**Modules:**
 
-| Section | When it appears | Content |
-|---------|----------------|---------|
-| Conditions Banner | Always | Weather + contextual copy ("Perfect weather to play hooky outdoors") |
-| This Weekend | Always | 5-8 events/activities filtered by crew ages, weather-aware |
-| Heads Up | When relevant | Teacher workdays, registration deadlines, school breaks approaching |
-| For [Nickname] | If crew set up | Per-kid recs based on interests ("For Bug: robotics workshop") |
-| Programs Starting Soon | When enrollment open | Classes, enrichment, leagues with upcoming start dates |
-| Free This Week | Always | Budget-friendly, always populated |
+| Module | Content | When shown |
+|--------|---------|-----------|
+| Family Snapshot | What's on calendar today + registrations opening soon + next plan | Always |
+| Heads Up | No-school days, registration deadlines, school breaks approaching | When relevant (school calendar set up) |
+| After School / Today With Kids | Time-aware recommendations (after school, tonight, rainy-day, nearby) | Always |
+| Registration Radar | Opening soon / Closing soon / Filling fast | When registrations are active |
+| For [Nickname] | Per-kid recs based on interests | If crew set up |
 
-### F2: Programs Browser
+### T2: Weekend Planner
 
-Browse, filter, and compare structured programs. The feature that no parenting blog can replicate.
+The highest-repeat discovery surface. Answers: "What should we do this weekend?"
+
+**Filter bar:**
+- Kid selector (from crew)
+- Indoor / Outdoor
+- Free / Paid
+- Age range
+- Distance
+- Morning / Afternoon / Evening
+
+**Sections:**
+
+| Section | Content |
+|---------|---------|
+| Best Bets This Weekend | Data-driven ranking of top family activities |
+| For [Kid Name] | Child-specific recommendations when crew is set up |
+| Easy Wins | Under 20 min away, under 2 hours, cheap/free |
+| Big Outings | Destination-style: zoo, hike, festival, museum day |
+| Free Activities | Budget-friendly, always populated |
+
+**Every card supports:** Save, Add to Calendar, Create Plan, Share.
+
+### T3: Programs Browser
+
+Browse structured, recurring activities. This is the deep utility moat.
+
+**This should NOT feel like an event feed.** It should feel like a course catalog meets registration intelligence.
 
 **Filters:**
-- Type: Camps | Enrichment | Leagues | Classes | All
+- Type: Camps | Enrichment | Leagues | Classes | Rec Programs | All
 - Age: auto-set from crew profile, manually adjustable
-- Season: Summer | Fall | Spring | Year-round
+- Season: Summer | Fall | Spring | Winter | Year-round
 - Cost: Free | Under $100 | Under $250 | Any
 - Registration: Open only | Include waitlist
+- Day of week
+- Neighborhood / radius
+
+**Sub-tabs:**
+- **Browse** — General discovery
+- **Opening Soon** — Registration Radar view
+- **Seasonal** — Camp Season (Jan-Mar) / Break programs
 
 **Program Cards show:**
 - Name + provider
-- Age range + schedule + cost
+- Age range + schedule summary + cost
 - Registration status pill (OPEN / CLOSING SOON / WAITLIST / SOLD OUT)
-- Session dates
+- Session dates + day/time
+- Distance
 
-### F3: Camp Season (Seasonal Flagship)
+**Program Detail Page (critical):**
+- Above fold: title, age range, schedule summary, registration state, location, "Add all sessions to Calendar", "Follow for registration alerts"
+- Mid-page: session schedule, requirements, map, similar programs
+- Bottom: related weekend ideas nearby, save/share/register actions
 
-January through March, camp planning dominates. Hooky becomes the camp comparison engine.
+### T4: Family Calendar (V1.5)
 
-- Dedicated "Camp Season" section in feed
-- Side-by-side camp comparison on: dates coverage, age fit, cost, before/after care, lunch, location
-- Registration deadline alerts for saved camps
-- Filter by: type (STEM, sports, arts, nature, general), week coverage, cost range
+The most strategic page in the portal. A family activity operating system, not a passive grid.
 
-### F4: Compare
+**Default view:** Agenda / Week hybrid (not month grid — parents need "what's next" and "where are conflicts").
 
-Side-by-side comparison of up to 4 items. The feature ZERO competitors offer.
+**Calendar layers:**
+1. Family Plans — created inside Lost City
+2. Programs — recurring structured sessions
+3. School Calendar — no-school days, breaks, early dismissals
+4. Suggested Activities — soft overlays for open time blocks
 
-**MVP dimensions:**
+**Key features (phased):**
+- MVP: View all family activities in one place, school calendar overlay
+- V1.5: Add all program sessions in one tap, conflict detection, open-time suggestions
+- V2: Registration deadlines as calendar objects, iCal export
 
-| Dimension | Source | Display |
-|-----------|--------|---------|
-| Age Range | program/event age_min/age_max | Band labels, green check per kid |
-| Cost | cost_amount + cost_period | $/wk or "Free" |
-| Schedule | session dates + schedule times | Calendar snippet |
-| Location | venue address | Neighborhood + drive time |
-| Registration | registration_status | Status pill |
-| Freshness | crawl timestamp | "Updated 2 days ago" |
+### T5: Plans (Coordination Layer)
 
-State in localStorage. Share via link (existing share_token pattern).
+Turn "we might do this" into "we're doing this." Leverages Groups infrastructure (PRD-036).
 
-### F5: My Crew (Family Profile)
+**Sections:**
+- Upcoming Plans (this weekend, next week, school break)
+- Recurring Plans (weekly activities, monthly meetups)
+- Draft Plans (saved but not finalized ideas)
+
+**Core actions:** Create plan from event/program/destination, invite family or other parents, mark recurring, add to calendar, coordinate logistics.
+
+**Design principle:** Plans must be lightweight. "Lock this in" not "administer a system."
+
+### T6: My Crew (Family Profile)
 
 Per-kid profiles that power everything else.
 
@@ -287,7 +348,7 @@ Per-kid profiles that power everything else.
 
 **V1.5:** Full household with co-parent invite, home neighborhood, drive radius, dietary/accessibility needs at household level.
 
-### F6: School Calendar Integration
+### T7: School Calendar Integration
 
 Public school system calendar awareness. The panic-preventer.
 
@@ -296,30 +357,28 @@ Public school system calendar awareness. The panic-preventer.
 - Teacher workday → auto-attach activity suggestions for your crew's ages
 - Spring/winter/summer break → surface relevant programs and camps
 
-### F7: Gap Filler (V1.5)
+### T8: Registration Radar
 
-The coordination killer feature: "Bug has soccer 10-12 at Chastain. What can Rocket do within 10 minutes of there?"
+Alert parents about program registration windows. Prevent missed signups.
 
-- Pulls from committed/saved activities per kid
-- Finds open time gaps
-- Suggests activities filtered by: other kid's age, proximity to committed venue, time window
-- Extends existing venue location data with drive-time calculations
+- Accessible from: Today, Programs, Calendar
+- Three urgency tiers: Opening Soon / Closing Soon / Filling Fast
+- Parents can follow venues, program types, or specific programs
+- Notifications when registration windows open/close
 
-### F8: Family Calendar (V1.5)
+### T9: Compare (V1.5)
 
-Unified view of the family's committed + saved activities.
+Side-by-side comparison of up to 4 programs/camps. Zero competitors offer this.
 
-- Color-coded lanes per kid
-- Committed (enrolled programs) vs. saved (considering) visual distinction
-- Conflict detection for overlapping times
-- iCal export for any view (week, month, single kid)
+**Dimensions:** Age range, cost, schedule, location, registration status, before/after care, freshness.
 
-### F9: Cross-Portal Federation
+State in localStorage. Share via link.
 
-- **Yonder:** Family-friendly trails, outdoor adventures, nature programs
+### T10: Cross-Portal Federation
+
+- **Adventure:** Family-friendly trails, outdoor activities, nature programs
 - **HelpATL:** Youth volunteer hours (teen programs), school board meetings
 - **Atlanta:** All-ages events, festivals, free community events
-- **Pack ATL:** Dog-friendly family activities (when active)
 
 ---
 
@@ -359,51 +418,58 @@ Unified view of the family's committed + saved activities.
 
 ## Build Phases
 
-### Phase 1: Foundation (Portal + Core Data)
-- [ ] Create portal record (slug: `hooky`, status: `draft`)
-- [ ] Create visual preset / branding configuration
-- [ ] Subscribe to existing family sources via federation
-- [ ] Create interest channels (camps, enrichment, leagues, classes, free_events, outdoor_family)
-- [ ] Create `programs` table + migration
-- [ ] Seed school calendar data (APS, DeKalb, Cobb, Gwinnett 2025-26)
-- [ ] Add `family_kids` JSONB to portal preferences
-- [ ] Basic feed template with This Weekend + Heads Up + Free sections
+### Phase 1: Foundation [DONE]
+- [x] Create portal record (slug: `hooky`, status: `draft`) — migration 322
+- [x] Create visual preset / branding configuration — `family_friendly` preset
+- [x] Subscribe to 42 family sources via federation — migration 324
+- [x] Create `programs` table + migration — migration 307
+- [x] Seed school calendar data (APS, DeKalb, Cobb, Gwinnett 2025-26) — 62 events
+- [x] Add `age_min`/`age_max` to events table
+- [x] Build 28+ family-focused crawlers
 
-### Phase 2: Programs + Age Filtering
-- [ ] Programs API routes (list, detail, search with filters)
-- [ ] Programs browser view with type/age/cost/registration filters
-- [ ] Age-filtered discovery (events + programs shaped by crew ages)
-- [ ] Registration status pills on program/event cards
-- [ ] P0 crawler gaps (5 new crawlers)
-- [ ] Seed 20+ programs with structured data
+### Phase 2: Weekend Planner + Programs Browser [ACTIVE]
+- [ ] TypeScript types for programs (`web/lib/types/programs.ts`)
+- [ ] FamilyFeed shell with 5-tab nav (Today/Weekend/Programs/Calendar/Plans)
+- [ ] Today view — Family Snapshot, Registration Radar, After School suggestions
+- [ ] Weekend Planner — filter bar (age/distance/indoor-outdoor/free), result sections
+- [ ] Programs API route with age/type/season/registration filters
+- [ ] Weekend API route (Fri-Sun events + programs, age-filtered)
+- [ ] Programs Browser — structured filters, Browse/Opening Soon/Seasonal sub-tabs
+- [ ] ProgramCard component — age range, schedule, registration badge, cost
+- [ ] RegistrationBadge component — open/closing-soon/waitlist/sold-out states
 
-### Phase 3: Compare + Camp Season
-- [ ] Compare tray (add/remove items, persistent in localStorage)
-- [ ] Compare view with 6 dimensions
-- [ ] Camp Season feed section (Jan-Mar seasonal)
-- [ ] Camp comparison extensions (before/after care, lunch, week coverage)
-- [ ] Registration deadline alerts for saved items
-
-### Phase 4: Crew + School Calendar
-- [ ] My Crew profile setup (inline, not onboarding flow)
-- [ ] School calendar import (4 systems)
-- [ ] "Heads Up" section driven by school calendar
-- [ ] Per-kid "For [Nickname]" feed sections
+### Phase 3: Kid Profiles + School Calendar
+- [ ] My Crew inline setup ("Who's in your crew?" — nickname, age band, interests)
+- [ ] ChildChip selector — persistent, reflows content when switched
+- [ ] School calendar overlay on Today + Calendar tabs
+- [ ] "Heads Up" alerts — registration opening/closing, no-school days
+- [ ] Per-kid "For [Nickname]" sections in Today + Weekend
 - [ ] Teacher workday → activity suggestions
 
-### Phase 5: Coordination (V1.5)
+### Phase 4: Calendar + Plans
+- [ ] Family Calendar — agenda/week view with layers (plans, programs, school events)
+- [ ] Program → Calendar — "Add all sessions" one-tap scheduling
+- [ ] Plans integration — leverage Groups infrastructure (PRD-036)
+- [ ] Plan creation from event/program/destination cards
+
+### Phase 5: Compare + Camp Season
+- [ ] Compare tray (add/remove up to 4 items, localStorage)
+- [ ] Compare view with 6+ dimensions
+- [ ] Camp Season section (Jan-Mar) with camp-specific filters
+- [ ] Registration deadline alerts for saved programs
+
+### Phase 6: Coordination (V1.5)
 - [ ] Full household model (tables, co-parent invite)
-- [ ] Family Calendar view (per-kid lanes, committed vs. saved)
+- [ ] Conflict detection in calendar
+- [ ] Open-time suggestions
 - [ ] Gap Filler ("Kid A is busy, what can Kid B do nearby?")
 - [ ] iCal export
-- [ ] Household-level needs (dietary, accessibility)
 
-### Phase 6: Trust + Distribution
+### Phase 7: Trust + Distribution
 - [ ] Freshness badges (Live/Recent/Stale/Unverified)
-- [ ] Source authority scoring on sources table
-- [ ] Source transparency on event/program detail
+- [ ] Source transparency on program/event detail
 - [ ] SEO landing pages (/this-weekend, /summer-camps, /free-events)
-- [ ] Cross-portal federation setup
+- [ ] Cross-portal federation activation
 
 ---
 

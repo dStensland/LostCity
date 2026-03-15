@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
 import { useRouter } from "next/navigation";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import FriendRequestCard from "@/components/FriendRequestCard";
 import { useAuth } from "@/lib/auth-context";
 import { formatDistanceToNow } from "date-fns";
@@ -148,7 +148,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen">
-      <UnifiedHeader />
+      <PlatformHeader />
 
       {/* Main */}
       <main className="max-w-2xl mx-auto px-4 py-6">

@@ -19,8 +19,11 @@ export const SPORTS_SIGNAL_GENRES = [
   "ultimate-frisbee",
   "pickup",
   "open-play",
+  "open-gym",
+  "public-play",
   "drop-in",
   "league",
+  "team-sport",
   "athletics",
   "adaptive-sports",
   "wheelchair-sports",
@@ -29,4 +32,4 @@ export const SPORTS_SIGNAL_GENRES = [
 ] as const;
 
 export const SPORTS_TITLE_PATTERN =
-  /viewing party|watch party|\b(nfl|nba|mlb|nhl|mls|ufc|mma)\b|game\s*day|fight night|pickup|open play|drop-in|drop in|\brec( league| center)?\b|batting cage|pickleball|tennis|ultimate frisbee|softball|volleyball/i;
+  /viewing party|watch party|\b(nfl|nba|mlb|nhl|mls|ufc|mma)\b|game\s*day|fight night|pickup|open play|open gym|public play|drop-in|drop in|scrimmage|\brec( league| center)?\b|league play|batting cage|pickleball|tennis|ultimate frisbee|softball|volleyball|futsal/i;

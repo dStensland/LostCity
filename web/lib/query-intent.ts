@@ -114,6 +114,26 @@ const SERIES_PATTERNS: RegExp[] = [
   /\b(open mic|trivia night|karaoke|movie night)\b/i,
 ];
 
+const ENTITY_QUERY_STOP_WORDS = new Set([
+  "and",
+  "at",
+  "bar",
+  "club",
+  "event",
+  "events",
+  "for",
+  "in",
+  "live",
+  "music",
+  "night",
+  "show",
+  "the",
+  "today",
+  "tonight",
+  "tomorrow",
+  "weekend",
+]);
+
 /**
  * Analyze a search query to determine user intent
  */
@@ -233,6 +253,38 @@ export function analyzeQueryIntent(query: string): QueryIntentResult {
     confidence: 0.5,
     typePriority: getDefaultPriority(),
   };
+}
+
+export function shouldNarrowCommittedSearchToEntities(query: string): boolean {
+  const trimmedQuery = query.trim().toLowerCase();
+  if (!trimmedQuery || trimmedQuery.length < 3 || trimmedQuery.length > 32) {
+    return false;
+  }
+
+  const intent = analyzeQueryIntent(trimmedQuery);
+  if (intent.intent !== "general") {
+    return false;
+  }
+
+  const tokens = trimmedQuery.split(/\s+/).filter(Boolean);
+  if (tokens.length !== 1) {
+    return false;
+  }
+
+  const [token] = tokens;
+  if (!token || token.length < 3 || ENTITY_QUERY_STOP_WORDS.has(token)) {
+    return false;
+  }
+
+  return true;
+}
+
+export function getCommittedSearchTypesForQuery(
+  query: string,
+): Array<"event" | "venue" | "organizer"> {
+  return shouldNarrowCommittedSearchToEntities(query)
+    ? ["venue", "organizer"]
+    : ["event", "venue", "organizer"];
 }
 
 /**

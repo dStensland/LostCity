@@ -7,7 +7,7 @@ import { logger } from "@/lib/logger";
 import { apiResponse } from "@/lib/api-utils";
 import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
 import { createClient } from "@/lib/supabase/server";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 
 // Helper to safely parse integers with validation
 function safeParseInt(value: string | null, defaultValue: number, min = 1, max = 1000): number {
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 
     // Resolve portal context to get portal_id and city filter
     const supabase = await createClient();
-    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request));
     const portalId = portalContext.portalId || searchParams.get("portal_id") || undefined;
     const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 

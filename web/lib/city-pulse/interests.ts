@@ -62,6 +62,37 @@ const genreMatch =
   };
 
 const sportsSignalMatch = genreMatch(...SPORTS_SIGNAL_GENRES);
+const DANCE_SIGNAL_GENRES = [
+  "dance",
+  "salsa",
+  "swing",
+  "line-dancing",
+  "latin-night",
+  "dance-party",
+  "two-step",
+  "bachata",
+  "reggaeton",
+  "cumbia",
+  "country-dance",
+  "salsa-night",
+] as const;
+const MARKET_SIGNAL_GENRES = [
+  "farmers-market",
+  "market",
+  "night-market",
+  "craft-market",
+  "makers-market",
+] as const;
+const GAMING_SIGNAL_GENRES = [
+  "gaming",
+  "esports",
+  "board-games",
+  "arcade",
+  "dnd",
+  "video-games",
+  "tabletop",
+  "trading-card-games",
+] as const;
 
 export const INTEREST_CHIPS: InterestChip[] = [
   // --- Default interests ---
@@ -191,7 +222,7 @@ export const INTEREST_CHIPS: InterestChip[] = [
     iconName: "MusicNotes",
     color: "#F9A8D4",
     type: "category",
-    match: catMatch("dance"),
+    match: genreMatch(...DANCE_SIGNAL_GENRES),
   },
   {
     id: "outdoors",
@@ -207,7 +238,7 @@ export const INTEREST_CHIPS: InterestChip[] = [
     iconName: "Warehouse",
     color: "#FCA5A5",
     type: "category",
-    match: catMatch("markets"),
+    match: genreMatch(...MARKET_SIGNAL_GENRES),
   },
   // --- Genre-based chips ---
   {
@@ -297,7 +328,7 @@ export const INTEREST_CHIPS: InterestChip[] = [
     iconName: "GameController",
     color: "#7DD3FC",
     type: "category",
-    match: catMatch("gaming"),
+    match: genreMatch(...GAMING_SIGNAL_GENRES),
   },
   {
     id: "words",
@@ -328,6 +359,9 @@ const CHIP_COUNT_KEYS: Record<string, string[]> = {
   dj_electronic: ["genre:dj", "genre:electronic", "genre:edm", "tag:dj", "tag:electronic", "tag:edm"],
   food_specials: ["genre:happy-hour", "genre:food-specials", "genre:specials", "genre:oysters", "genre:taco-tuesday", "genre:wings", "genre:drink-specials", "tag:happy-hour", "tag:food-specials", "tag:specials", "tag:oysters", "tag:taco-tuesday", "tag:wings", "tag:drink-specials"],
   sports: SPORTS_SIGNAL_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),
+  dance: DANCE_SIGNAL_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),
+  markets: MARKET_SIGNAL_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),
+  gaming: GAMING_SIGNAL_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),
   run_fitness: ["genre:run-club", "genre:running", "genre:cycling", "genre:bike-ride", "genre:yoga", "genre:pickleball", "tag:run-club", "tag:running", "tag:cycling", "tag:bike-ride", "tag:yoga", "tag:pickleball"],
   bingo: ["genre:bingo", "tag:bingo"],
   jazz_blues: ["genre:jazz", "genre:blues", "genre:jam-session", "tag:jazz", "tag:blues", "tag:jam-session"],

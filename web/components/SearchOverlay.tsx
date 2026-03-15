@@ -9,6 +9,7 @@ import { buildStableSearchCacheKey } from "@/lib/search-cache-key";
 import SearchResultItem, { SearchResultSection, TypeIcon } from "./SearchResultItem";
 import { getRecentSearches, addRecentSearch, clearRecentSearches } from "@/lib/searchHistory";
 import { buildSearchResultHref } from "@/lib/search-navigation";
+import { getCommittedSearchTypesForQuery } from "@/lib/query-intent";
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -150,6 +151,14 @@ function filterCachedResultsByType(
 ): SearchResult[] {
   if (!type) return items;
   return items.filter((item) => item.type === type);
+}
+
+function buildOverlaySearchTypes(query: string, typeFilter: TypeFilter): string {
+  if (typeFilter) {
+    return typeFilter;
+  }
+
+  return getCommittedSearchTypesForQuery(query).join(",");
 }
 
 export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
@@ -457,18 +466,15 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     // Use ref to get latest filter value without recreating callback
     const currentTypeFilter = activeTypeFilterRef.current;
 
+    const requestedTypes = buildOverlaySearchTypes(searchQuery, currentTypeFilter);
     const params = new URLSearchParams({
       q: searchQuery,
       limit: "12",
-      types: OVERLAY_SEARCH_TYPES,
+      types: requestedTypes,
       include_facets: "false",
       include_did_you_mean: "false",
       include_event_popularity: "false",
     });
-
-    if (currentTypeFilter) {
-      params.set("types", currentTypeFilter);
-    }
     if (portal?.slug) {
       params.set("portal", portal.slug);
     }
@@ -516,11 +522,27 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     setError(null);
 
     try {
-      const response = await fetch(`/api/search?${params.toString()}`, {
-        signal: controller.signal,
-      });
-      if (!response.ok) throw new Error("Search request failed");
-      const data = await response.json();
+      const fetchPayload = async (requestParams: URLSearchParams) => {
+        const response = await fetch(`/api/search?${requestParams.toString()}`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("Search request failed");
+        return response.json();
+      };
+
+      let data = await fetchPayload(params);
+
+      const shouldRetryWithFullTypes =
+        !currentTypeFilter &&
+        requestedTypes !== OVERLAY_SEARCH_TYPES &&
+        Array.isArray(data?.results) &&
+        data.results.length === 0;
+
+      if (shouldRetryWithFullTypes) {
+        const fallbackParams = new URLSearchParams(params);
+        fallbackParams.set("types", OVERLAY_SEARCH_TYPES);
+        data = await fetchPayload(fallbackParams);
+      }
 
       if (controller.signal.aborted || requestId !== searchRequestIdRef.current) {
         return;

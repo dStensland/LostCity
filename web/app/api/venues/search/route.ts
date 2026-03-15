@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { errorResponse, isValidString, escapeSQLPattern } from "@/lib/api-utils";
+import { errorResponse, isValidString, escapeSQLPattern, parseIntParam } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 // GET /api/venues/search?q= - Search venues for autocomplete
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q");
-  const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 20);
+  const limit = Math.min(parseIntParam(searchParams.get("limit")) ?? 10, 20);
   const neighborhood = searchParams.get("neighborhood");
   const city = searchParams.get("city");
 

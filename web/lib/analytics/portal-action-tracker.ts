@@ -1,15 +1,12 @@
 "use client";
 
-import type { HospitalAudienceMode } from "@/lib/hospital-modes";
 import type { PortalInteractionActionType } from "@/lib/analytics/portal-action-types";
 
 export type PortalActionType = PortalInteractionActionType;
 
 export type PortalActionPayload = {
   action_type: PortalActionType;
-  page_type?: "hospital" | "feed" | "find" | "community";
-  hospital_slug?: string;
-  mode_context?: HospitalAudienceMode;
+  page_type?: "feed" | "find" | "community";
   section_key?: string;
   target_kind?: string;
   target_id?: string;
@@ -38,7 +35,7 @@ export function trackPortalAction(portalSlug: string, payload: PortalActionPaylo
 
   const body = {
     ...payload,
-    page_type: payload.page_type || "hospital",
+    page_type: payload.page_type || "feed",
     referrer: document.referrer || undefined,
     utm_source: utmSource || undefined,
     utm_medium: utmMedium || undefined,

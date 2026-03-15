@@ -22,6 +22,8 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +63,11 @@ VENUE_DATA = {
     },
     "vibes": ["free", "contemporary-art", "cultural", "west-midtown"],
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    exhibitions=True,
+)
 
 
 def parse_date_time(date_time_str: str) -> tuple[Optional[str], Optional[str]]:
@@ -232,6 +239,41 @@ def build_exhibition_title(primary: str, secondary: str) -> str:
     return secondary_clean or primary_clean
 
 
+def build_exhibition_lane_record(
+    exhibition: dict,
+    *,
+    source_id: int,
+    venue_id: int,
+    portal_id: Optional[str],
+) -> tuple[dict, Optional[list[dict]]]:
+    """Build the typed exhibition lane record plus optional artist associations."""
+    parts = exhibition["title"].split(": ", 1)
+    artist_name = parts[0] if len(parts) == 2 else None
+
+    exhibition_record = {
+        "title": exhibition["title"],
+        "venue_id": venue_id,
+        "source_id": source_id,
+        "_venue_name": VENUE_DATA["name"],
+        "opening_date": exhibition["canonical_start_date"],
+        "closing_date": exhibition["end_date"],
+        "description": exhibition["description"],
+        "image_url": exhibition["image_url"],
+        "source_url": exhibition["source_url"],
+        "admission_type": "free",
+        "tags": ["contemporary-art", "museum", "west-midtown", "exhibition"],
+        "is_active": True,
+        "metadata": {
+            "display_start_date": exhibition["start_date"],
+        },
+    }
+    if portal_id:
+        exhibition_record["portal_id"] = portal_id
+
+    artists = [{"artist_name": artist_name}] if artist_name else None
+    return exhibition_record, artists
+
+
 def extract_exhibition_detail(detail_url: str) -> tuple[Optional[str], Optional[str]]:
     """Fetch the exhibit detail page for description and hero image."""
     try:
@@ -332,6 +374,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_found = 0
     events_new = 0
     events_updated = 0
+    exhibition_envelope = TypedEntityEnvelope()
+
+    try:
+        from db.sources import get_source_info
+
+        source_info = get_source_info(source_id) or {}
+    except Exception:
+        source_info = {}
+    portal_id = source_info.get("owner_portal_id")
 
     try:
         with sync_playwright() as p:
@@ -559,20 +610,39 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if existing:
                         smart_update_existing_event(existing, event_record)
                         events_updated += 1
-                        continue
+                    else:
+                        insert_event(event_record)
+                        events_new += 1
+                        logger.info(
+                            "Added exhibit: %s on %s",
+                            exhibition["title"],
+                            exhibition["start_date"],
+                        )
 
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info(
-                        "Added exhibit: %s on %s",
-                        exhibition["title"],
-                        exhibition["start_date"],
+                    exhibition_record, artists = build_exhibition_lane_record(
+                        exhibition,
+                        source_id=source_id,
+                        venue_id=venue_id,
+                        portal_id=portal_id,
                     )
+                    if artists:
+                        exhibition_record["artists"] = artists
+                    exhibition_envelope.add("exhibitions", exhibition_record)
+
                 except Exception as e:
                     logger.warning("Error parsing Atlanta Contemporary exhibition: %s", e)
                     continue
 
             browser.close()
+
+        if exhibition_envelope.exhibitions:
+            persist_result = persist_typed_entity_envelope(exhibition_envelope)
+            skipped_exhibitions = persist_result.skipped.get("exhibitions", 0)
+            if skipped_exhibitions:
+                logger.warning(
+                    "Atlanta Contemporary: skipped %d exhibition rows",
+                    skipped_exhibitions,
+                )
 
         logger.info(
             f"Atlanta Contemporary crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

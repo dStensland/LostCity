@@ -28,6 +28,8 @@ from db import (
     writes_enabled,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from utils import (
     extract_images_from_page, extract_event_links, find_event_url,
     enrich_event_record, parse_date_range,
@@ -105,6 +107,12 @@ VENUE_DATA = {
     # Admission: typically $15 adult, $10 student/senior
     "vibes": ["fashion", "cultural", "art", "midtown"],
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 
 def _is_cloudflare_challenge_text(text: str) -> bool:
@@ -188,6 +196,7 @@ def _extract_catalog_destination_fields_from_text(catalog_text: str) -> Optional
         "short_description": CATALOG_SHORT_DESCRIPTION,
         "description": CATALOG_DESCRIPTION,
         "planning_notes": planning_note,
+        "recent_exhibition_examples": examples,
     }
 
 
@@ -210,6 +219,53 @@ def _fetch_catalog_destination_fields() -> Optional[dict]:
     except Exception as exc:
         logger.warning("Failed to fetch SCAD catalog PDF fallback: %s", exc)
         return None
+
+
+def _build_catalog_destination_envelope(venue_id: int, updates: dict) -> TypedEntityEnvelope:
+    """Project SCAD catalog fallback data into shared destination-richness lanes."""
+    examples = updates.get("recent_exhibition_examples") or []
+    envelope = TypedEntityEnvelope()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "museum",
+            "commitment_tier": "halfday",
+            "primary_activity": "fashion and film exhibitions",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-friendly", "cold-weather"],
+            "practical_notes": updates.get("planning_notes"),
+            "source_url": CATALOG_URL,
+            "metadata": {
+                "source_note": CATALOG_SOURCE_NOTE,
+                "recent_exhibition_examples": examples,
+            },
+        },
+    )
+
+    feature_description = (
+        "SCAD describes the museum as a destination for fashion and film exhibitions "
+        "that connect visitors with internationally renowned designers, filmmakers, "
+        "and photographers."
+    )
+    if examples:
+        feature_description += " Recent highlighted exhibitions include " + ", ".join(examples) + "."
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "rotating-fashion-and-film-exhibitions",
+            "title": "Rotating fashion and film exhibitions",
+            "feature_type": "experience",
+            "description": feature_description,
+            "url": CATALOG_URL,
+            "sort_order": 10,
+        },
+    )
+
+    return envelope
 
 
 def _apply_catalog_destination_fallback(venue_id: int) -> bool:
@@ -242,17 +298,33 @@ def _apply_catalog_destination_fallback(venue_id: int) -> bool:
         )
         merged_updates["planning_last_verified_at"] = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    venue_updated = False
     if not merged_updates:
-        logger.info("SCAD FASH catalog fallback found no missing destination fields to update")
-        return False
-
-    if not writes_enabled():
+        logger.info("SCAD FASH catalog fallback found no missing venue fields to update")
+    elif not writes_enabled():
         logger.info("SCAD FASH catalog fallback would update venue %s with %s", venue_id, sorted(merged_updates))
-        return True
+        venue_updated = True
+    else:
+        client.table("venues").update(merged_updates).eq("id", venue_id).execute()
+        logger.info("SCAD FASH catalog fallback updated venue %s with %s", venue_id, sorted(merged_updates))
+        venue_updated = True
 
-    client.table("venues").update(merged_updates).eq("id", venue_id).execute()
-    logger.info("SCAD FASH catalog fallback updated venue %s with %s", venue_id, sorted(merged_updates))
-    return True
+    typed_result = persist_typed_entity_envelope(
+        _build_catalog_destination_envelope(venue_id, updates)
+    )
+    typed_persisted = any(typed_result.persisted.values())
+    if typed_persisted:
+        logger.info(
+            "SCAD FASH catalog fallback persisted destination richness: %s",
+            typed_result.persisted,
+        )
+    elif typed_result.skipped:
+        logger.warning(
+            "SCAD FASH catalog fallback skipped destination richness: %s",
+            typed_result.skipped,
+        )
+
+    return venue_updated or typed_persisted
 
 
 def parse_date(date_text: str) -> Optional[str]:

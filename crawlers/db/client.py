@@ -173,7 +173,9 @@ _EVENTS_HAS_CONTENT_KIND_COLUMN: Optional[bool] = None
 _EVENTS_HAS_FIELD_METADATA_COLUMNS: Optional[bool] = None
 _EVENTS_HAS_IS_ACTIVE_COLUMN: Optional[bool] = None
 _VENUES_HAS_FEATURES_TABLE: Optional[bool] = None
+_VENUES_HAS_DESTINATION_DETAILS_TABLE: Optional[bool] = None
 _VENUES_HAS_LOCATION_DESIGNATOR: Optional[bool] = None
+_HAS_EVENT_EXTRACTIONS_TABLE: Optional[bool] = None
 _WRITES_ENABLED = True
 _WRITE_SKIP_REASON = ""
 _TEMP_ID_COUNTER = 0
@@ -211,6 +213,7 @@ def reset_client() -> None:
     global _client, _EVENTS_HAS_SHOW_SIGNAL_COLUMNS, _EVENTS_HAS_FILM_IDENTITY_COLUMNS
     global _EVENTS_HAS_CONTENT_KIND_COLUMN, _EVENTS_HAS_FIELD_METADATA_COLUMNS
     global _EVENTS_HAS_IS_ACTIVE_COLUMN, _VENUES_HAS_FEATURES_TABLE
+    global _VENUES_HAS_DESTINATION_DETAILS_TABLE
     _client = None
     _EVENTS_HAS_SHOW_SIGNAL_COLUMNS = None
     _EVENTS_HAS_FILM_IDENTITY_COLUMNS = None
@@ -218,6 +221,7 @@ def reset_client() -> None:
     _EVENTS_HAS_FIELD_METADATA_COLUMNS = None
     _EVENTS_HAS_IS_ACTIVE_COLUMN = None
     _VENUES_HAS_FEATURES_TABLE = None
+    _VENUES_HAS_DESTINATION_DETAILS_TABLE = None
     _SOURCE_CACHE.clear()
     _VENUE_CACHE.clear()
 
@@ -391,6 +395,29 @@ def venues_support_features_table() -> bool:
     return bool(_VENUES_HAS_FEATURES_TABLE)
 
 
+def venues_support_destination_details_table() -> bool:
+    """Detect whether the venue_destination_details table exists."""
+    global _VENUES_HAS_DESTINATION_DETAILS_TABLE
+    if _VENUES_HAS_DESTINATION_DETAILS_TABLE is not None:
+        return _VENUES_HAS_DESTINATION_DETAILS_TABLE
+
+    client = get_client()
+    try:
+        client.table("venue_destination_details").select("venue_id").limit(1).execute()
+        _VENUES_HAS_DESTINATION_DETAILS_TABLE = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str or "relation" in error_str:
+            _VENUES_HAS_DESTINATION_DETAILS_TABLE = False
+            logger.warning(
+                "venue_destination_details table missing; run migrations 500_venue_destination_details.sql and 503_destination_details_contract.sql"
+            )
+        else:
+            raise
+
+    return bool(_VENUES_HAS_DESTINATION_DETAILS_TABLE)
+
+
 def events_support_is_active_column() -> bool:
     """Detect whether events.is_active exists."""
     global _EVENTS_HAS_IS_ACTIVE_COLUMN
@@ -459,3 +486,26 @@ def venues_support_location_designator() -> bool:
         else:
             raise
     return bool(_VENUES_HAS_LOCATION_DESIGNATOR)
+
+
+def has_event_extractions_table() -> bool:
+    """Detect whether the event_extractions table exists."""
+    global _HAS_EVENT_EXTRACTIONS_TABLE
+    if _HAS_EVENT_EXTRACTIONS_TABLE is not None:
+        return _HAS_EVENT_EXTRACTIONS_TABLE
+
+    client = get_client()
+    try:
+        client.table("event_extractions").select("event_id").limit(1).execute()
+        _HAS_EVENT_EXTRACTIONS_TABLE = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str or "relation" in error_str:
+            _HAS_EVENT_EXTRACTIONS_TABLE = False
+            logger.info(
+                "event_extractions table not found; extraction data stays on events table."
+            )
+        else:
+            raise
+
+    return bool(_HAS_EVENT_EXTRACTIONS_TABLE)

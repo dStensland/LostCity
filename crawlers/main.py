@@ -44,6 +44,7 @@ from db import (
     configure_write_mode,
     writes_enabled,
     reset_client,
+    refresh_search_suggestions,
 )
 from config import set_database_target, get_config
 from crawl_context import set_crawl_context, CrawlContext
@@ -999,6 +1000,12 @@ def run_post_crawl_tasks(
         logger.info("Available filters refreshed successfully")
     else:
         logger.warning("Failed to refresh available filters")
+
+    logger.info("Refreshing search suggestions...")
+    if refresh_search_suggestions(maintenance_city):
+        logger.info("Search suggestions refreshed successfully")
+    else:
+        logger.warning("Failed to refresh search suggestions")
 
     # Fetch logos for any producers missing them
     logger.info("Fetching logos for producers...")

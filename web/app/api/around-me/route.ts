@@ -4,8 +4,9 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limi
 import { getNeighborhoodByName } from "@/config/neighborhoods";
 import { isSpotOpen, VENUE_TYPES_MAP, type VenueType, DESTINATION_CATEGORIES } from "@/lib/spots";
 import { logger } from "@/lib/logger";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 import { applyFederatedPortalScopeToQuery, excludeSensitiveEvents, filterByPortalCity, isVenueCityInScope } from "@/lib/portal-scope";
+import { parseIntParam } from "@/lib/api-utils";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { applyFeedGate } from "@/lib/feed-gate";
@@ -215,10 +216,7 @@ export async function GET(request: NextRequest) {
       : null;
   const category = searchParams.get("category"); // food, drinks, coffee, music, arts, fun
   const countOnly = searchParams.get("countOnly") === "true";
-  const requestedLimit = parseInt(searchParams.get("limit") || "50", 10);
-  const limit = Number.isFinite(requestedLimit)
-    ? Math.max(1, Math.min(requestedLimit, 250))
-    : 50;
+  const limit = Math.max(1, Math.min(parseIntParam(searchParams.get("limit")) ?? 50, 250));
   const portalExclusive = searchParams.get("portal_exclusive") === "true";
 
   // Determine center point
@@ -259,7 +257,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = await createClient();
-    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request));
     if (portalContext.hasPortalParamMismatch) {
       return NextResponse.json(
         { error: "portal and portal_id parameters must reference the same portal" },

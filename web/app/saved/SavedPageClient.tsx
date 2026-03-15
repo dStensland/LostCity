@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import DashboardPlanning from "@/components/dashboard/DashboardPlanning";
 import PageFooter from "@/components/PageFooter";
 import { usePortalOptional, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
@@ -23,7 +23,7 @@ export default function SavedPageClient() {
   if (loading) {
     return (
       <>
-        <UnifiedHeader portalSlug={portalSlug} hideNav />
+        <PlatformHeader />
         <main className="max-w-4xl mx-auto px-4 py-6">
           <div className="h-8 w-40 skeleton-shimmer rounded mb-6" />
           <div className="space-y-3">
@@ -49,10 +49,7 @@ export default function SavedPageClient() {
 
   return (
     <>
-      <UnifiedHeader
-        portalSlug={portalSlug}
-        hideNav
-      />
+      <PlatformHeader />
       <main id="main-content" className="max-w-4xl mx-auto px-4 py-6">
         <h1 className="text-xl font-semibold text-[var(--cream)] mb-6">Your Stash</h1>
         <DashboardPlanning />

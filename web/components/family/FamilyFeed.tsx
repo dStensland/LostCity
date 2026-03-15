@@ -1,530 +1,93 @@
 "use client";
 
-import { useMemo, useState, type ComponentType, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import Image from "next/image";
-import type { EventWithLocation } from "@/lib/search";
-import {
-  MuseumScene,
-  OutdoorScene,
-  TheaterScene,
-  SportsScene,
-  FestivalScene,
-  CampScene,
-  type IllustrationProps,
-} from "./CategoryIllustrations";
-import {
-  // Doodle-style icons (sketchy, hand-drawn)
-  DoodleSearch,
-  DoodleBolt,
-  DoodleParty,
-  DoodleTag,
-  DoodlePin,
-  DoodleRocket,
-  DoodleTicket,
-  DoodleStar,
-  // Splat & melty decorative elements
-  SplatBlob,
-  MeltyDrip,
-  GooeyS,
-  Squiggle,
-  ConfettiBurst,
-  ScribbleCloud,
-  WobblyCircle,
-} from "./illustrations";
+import { useState } from "react";
+import { TodayView } from "./TodayView";
+import { WeekendPlanner } from "./WeekendPlanner";
+import { ProgramsBrowser } from "./ProgramsBrowser";
+import { CalendarView } from "./CalendarView";
+import { PlansView } from "./PlansView";
 
-/*
- * ATLittle Family Feed
- * Design Language: "The Family Adventure Guide"
- *
- * Visual DNA:
- * - Bold, confident colors (not tints)
- * - Illustration-forward with Where's Waldo-style scenes
- * - Playful typography with real hierarchy
- * - Cards that feel like collectible adventure tickets
- * - Hover states that bring illustrations to life
- */
+// Tab definition
+type TabId = "today" | "weekend" | "programs" | "calendar" | "plans";
 
-// Bold, confident palette - no wimpy tints
-const C = {
-  // Primary
-  orange: "#FF5722",
-  orangeLight: "#FF7043",
-  green: "#4CAF50",
-  purple: "#9C27B0",
-  blue: "#2196F3",
-  pink: "#E91E63",
-  yellow: "#FFC107",
-  teal: "#009688",
+interface Tab {
+  id: TabId;
+  label: string;
+}
 
-  // Neutrals
-  cream: "#FFF8E7",
-  paper: "#FFFDF5",
-  ink: "#1A1A1A",
-  pencil: "#5D4E37",
-  faded: "#9E9E9E",
-};
-
-type FamilyTone = "orange" | "green" | "purple" | "blue" | "pink" | "yellow" | "teal";
+const TABS: Tab[] = [
+  { id: "today", label: "Today" },
+  { id: "weekend", label: "Weekend" },
+  { id: "programs", label: "Programs" },
+  { id: "calendar", label: "Calendar" },
+  { id: "plans", label: "Plans" },
+];
 
 interface FamilyFeedProps {
   portalId: string;
   portalSlug: string;
-  portalExclusive: boolean; // Kept for interface compatibility but not used - FamilyFeed shows public events
-}
-
-// Map adventure IDs to their illustration components
-const ILLUSTRATIONS: Record<string, ComponentType<IllustrationProps>> = {
-  museums: MuseumScene,
-  outdoor: OutdoorScene,
-  theater: TheaterScene,
-  sports: SportsScene,
-  festivals: FestivalScene,
-  camps: CampScene,
-};
-
-// Illustrated category data with Where's Waldo-style scenes
-const ADVENTURES = [
-  { id: "museums", label: "Museums", tone: "orange", size: "large" },
-  { id: "outdoor", label: "Outdoors", tone: "green", size: "small" },
-  { id: "theater", label: "Shows", tone: "purple", size: "small" },
-  { id: "sports", label: "Sports", tone: "blue", size: "medium" },
-  { id: "festivals", label: "Festivals", tone: "pink", size: "medium" },
-  { id: "camps", label: "Camps", tone: "teal", size: "small" },
-] as const;
-
-const FILTERS: Record<string, string> = {
-  museums: "genres=museum",
-  outdoor: "categories=outdoors",
-  theater: "categories=theater",
-  sports: "categories=sports",
-  festivals: "tags=festival",
-  camps: "tags=camp",
-};
-
-function getTimeGreeting(): { greeting: string; subtext: string } {
-  const hour = new Date().getHours();
-  const day = new Date().getDay();
-
-  if (day === 0 || day === 6) {
-    return { greeting: "Weekend Mode!", subtext: "Time for adventures" };
-  }
-  if (hour < 12) {
-    return { greeting: "Good Morning!", subtext: "What's the plan today?" };
-  }
-  if (hour < 17) {
-    return { greeting: "Hey There!", subtext: "Looking for something fun?" };
-  }
-  return { greeting: "Good Evening!", subtext: "Any plans tonight?" };
-}
-
-async function fetchEvents(
-  filters: string,
-  limit = 8,
-  portalId?: string,
-  portalExclusive?: boolean
-): Promise<EventWithLocation[]> {
-  const params = new URLSearchParams(filters);
-  params.set("limit", limit.toString());
-  params.set("useCursor", "true");
-  const existingTags = params.get("tags");
-  params.set("tags", existingTags ? `family-friendly,${existingTags}` : "family-friendly");
-
-  // Add portal context for proper filtering
-  if (portalId) {
-    params.set("portal_id", portalId);
-  }
-  if (portalExclusive) {
-    params.set("portal_exclusive", "true");
-  }
-
-  const res = await fetch(`/api/events?${params.toString()}`);
-  if (!res.ok) return [];
-  return (await res.json()).events || [];
-}
-
-// Adventure Ticket Card - the core UI element
-function AdventureTicket({
-  event,
-  portalSlug,
-  tone = "orange",
-  variant = "default"
-}: {
-  event: EventWithLocation;
-  portalSlug: string;
-  tone?: FamilyTone;
-  variant?: "default" | "featured";
-}) {
-  const isToday = new Date(event.start_date).toDateString() === new Date().toDateString();
-  const isFree = event.is_free;
-  const isFeatured = variant === "featured";
-  const accent = C[tone];
-
-  return (
-    <Link
-      href={`/${portalSlug}?event=${event.id}`}
-      className={`group block bg-white rounded-2xl overflow-hidden transition-all duration-300
-        hover:-translate-y-2 hover:rotate-1 hover:shadow-xl atlittle-btn family-ticket ${
-        isFeatured ? "col-span-2 row-span-2" : ""
-      }`}
-      data-family-tone={tone}
-    >
-      {/* Ticket stub top */}
-      <div
-        className={`relative overflow-hidden ${
-          isFeatured ? "h-[200px]" : "h-[140px]"
-        } ${event.image_url ? "" : "bg-[var(--family-accent)]"}`}
-      >
-        {event.image_url ? (
-          <Image
-            src={event.image_url}
-            alt={event.title}
-            fill
-            sizes="(max-width: 768px) 100vw, 600px"
-            className="object-cover transition-transform duration-500 group-hover:scale-110"
-          />
-        ) : (
-          // Illustrated placeholder - doodle ticket
-          <div className="w-full h-full flex items-center justify-center">
-            <DoodleTicket size={72} color={accent} className="opacity-50" />
-          </div>
-        )}
-
-        {/* Badges - bold, visible, and PULSING */}
-        <div className="absolute top-3 left-3 flex gap-2">
-          {isToday && (
-            <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wide atlittle-badge-pulse family-badge bg-[var(--family-pink)] text-[var(--family-pink)]">
-              <span className="text-white">Today!</span>
-            </span>
-          )}
-          {isFree && (
-            <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wide atlittle-badge-pulse atlittle-stagger-2 family-badge bg-[var(--family-green)] text-[var(--family-green)]">
-              <span className="text-white">Free</span>
-            </span>
-          )}
-        </div>
-
-        {/* Torn ticket edge */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 100 8" preserveAspectRatio="none" className="w-full h-2">
-            <path
-              d="M0 8 L0 4 Q5 0 10 4 Q15 8 20 4 Q25 0 30 4 Q35 8 40 4 Q45 0 50 4 Q55 8 60 4 Q65 0 70 4 Q75 8 80 4 Q85 0 90 4 Q95 8 100 4 L100 8 Z"
-              fill="white"
-            />
-          </svg>
-        </div>
-      </div>
-
-      {/* Ticket info */}
-      <div className="p-4">
-        <h3
-          className={`font-black leading-tight text-gray-900 group-hover:text-gray-600 transition-colors line-clamp-2 ${
-            isFeatured ? "text-xl" : "text-base"
-          } family-font-display`}
-        >
-          {event.title}
-        </h3>
-
-        <div className="mt-2 flex items-center gap-2 text-sm family-font text-[var(--family-pencil)]">
-          <span className="font-bold">
-            {new Date(event.start_date).toLocaleDateString("en-US", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            })}
-          </span>
-          {event.start_time && (
-            <>
-              <span>•</span>
-              <span>{event.start_time}</span>
-            </>
-          )}
-        </div>
-
-        {event.venue?.name && (
-          <p
-            className="mt-1 text-sm font-bold truncate flex items-center gap-1 family-font text-[var(--family-accent)]"
-          >
-            <DoodlePin size={16} color={accent} /> {event.venue.name}
-          </p>
-        )}
-      </div>
-    </Link>
-  );
-}
-
-// Section with personality
-function AdventureSection({
-  title,
-  icon,
-  tone,
-  events,
-  viewMoreHref,
-  portalSlug,
-  isLoading,
-}: {
-  title: string;
-  icon: ReactNode;
-  tone: FamilyTone;
-  events: EventWithLocation[];
-  viewMoreHref: string;
-  portalSlug: string;
-  isLoading: boolean;
-}) {
-  if (isLoading) {
-    return (
-      <section className="mb-10 px-4">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-12 h-12 rounded-xl skeleton-shimmer-light" />
-          <div className="h-8 w-40 rounded-lg skeleton-shimmer-light" />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-48 rounded-2xl skeleton-shimmer-light" />
-          ))}
-        </div>
-      </section>
-    );
-  }
-
-  if (events.length === 0) return null;
-
-  return (
-    <section className="mb-10 px-4" data-family-tone={tone}>
-      {/* Section header - BIG and bold */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center bg-[var(--family-accent)] family-border-ink-3"
-          >
-            {icon}
-          </div>
-          <h2
-            className="text-2xl font-black family-font-display text-[var(--family-ink)]"
-          >
-            {title}
-          </h2>
-        </div>
-
-        <Link
-          href={viewMoreHref}
-          className="flex items-center gap-1 px-4 py-2 rounded-full font-bold text-sm transition-all hover:scale-105 bg-[var(--family-accent)] text-white family-border-ink-2"
-        >
-          See All →
-        </Link>
-      </div>
-
-      {/* Masonry-ish grid */}
-      <div className="grid grid-cols-2 gap-4">
-        {events.slice(0, 4).map((event, i) => (
-          <AdventureTicket
-            key={event.id}
-            event={event}
-            portalSlug={portalSlug}
-            tone={tone}
-            variant={i === 0 ? "featured" : "default"}
-          />
-        ))}
-      </div>
-    </section>
-  );
+  portalExclusive?: boolean;
 }
 
 export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
-  const { greeting, subtext } = useMemo(() => getTimeGreeting(), []);
-  const [hoveredAdventure, setHoveredAdventure] = useState<string | null>(null);
-
-  // Note: FamilyFeed shows public events filtered by family-friendly tags,
-  // not portal-exclusive events. We pass portalId for federation but NOT
-  // portalExclusive since we want to show public family content.
-  const { data: weekendEvents, isLoading: loadingWeekend } = useQuery({
-    queryKey: ["family-weekend", portalId],
-    queryFn: () => fetchEvents("date=weekend", 8, portalId, false),
-    staleTime: 60 * 1000,
-  });
-
-  const { data: freeEvents, isLoading: loadingFree } = useQuery({
-    queryKey: ["family-free", portalId],
-    queryFn: () => fetchEvents("free=1", 8, portalId, false),
-    staleTime: 60 * 1000,
-  });
-
-  const { data: todayEvents, isLoading: loadingToday } = useQuery({
-    queryKey: ["family-today", portalId],
-    queryFn: () => fetchEvents("date=today", 8, portalId, false),
-    staleTime: 60 * 1000,
-  });
+  const [activeTab, setActiveTab] = useState<TabId>("today");
 
   return (
-    <div className="family-theme min-h-screen pb-16 bg-[var(--family-cream)]">
-
-      {/* HERO - The Welcome Mat - Animated & Vibrant */}
-      <div className="relative px-5 pt-8 pb-12 overflow-hidden family-hero">
-        {/* Decorative splat/melty elements - BIGGER & ANIMATED */}
-        <div
-          className="absolute -top-2 right-6 opacity-60 pointer-events-none atlittle-float rotate-var-12"
-        >
-          <MeltyDrip className="w-20 h-32" color="#FFC107" />
-        </div>
-        <div
-          className="absolute bottom-2 right-2 opacity-70 pointer-events-none atlittle-wobble rotate-var--6"
-        >
-          <SplatBlob className="w-28 h-28" color="#E91E63" />
-        </div>
-        <div
-          className="absolute top-1/4 left-0 opacity-50 pointer-events-none atlittle-float atlittle-stagger-2 rotate-var-6"
-        >
-          <GooeyS className="w-20 h-20" color="#FFC107" />
-        </div>
-        <div className="absolute bottom-16 left-6 opacity-40 pointer-events-none atlittle-wobble atlittle-stagger-3">
-          <ScribbleCloud className="w-28 h-20" color="white" />
-        </div>
-        {/* Extra splat for more energy */}
-        <div
-          className="absolute top-8 left-1/3 opacity-30 pointer-events-none atlittle-spin-slow"
-        >
-          <WobblyCircle className="w-12 h-12" color="white" />
-        </div>
-
-        {/* Main content with bounce animations */}
-        <div className="relative">
-          <p className="text-white/90 text-base font-bold uppercase tracking-wider animate-fade-in stagger-1 italic family-font">
-            {subtext}
-          </p>
-          <h1
-            className="text-5xl md:text-6xl font-black text-white leading-tight mt-2 atlittle-bounce-in family-font-display family-hero-title"
-          >
-            {greeting}
-          </h1>
-
-          {/* Search prompt - wiggly and playful */}
-          <div className="mt-7 bg-white rounded-2xl p-4 flex items-center gap-3 cursor-pointer atlittle-wiggle-in atlittle-btn hover:scale-[1.03] hover:rotate-1 transition-transform family-search-prompt">
-            <DoodleSearch size={28} color="#FF5722" />
-            <span className="text-gray-400 font-semibold">What are you looking for?</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ADVENTURE PICKER - Where's Waldo-style illustrated grid */}
-      <div className="px-4 py-8 relative bg-[var(--family-paper)]">
-        {/* Background decoration */}
-        <div className="absolute top-4 right-4 opacity-15 pointer-events-none atlittle-float">
-          <ConfettiBurst className="w-24 h-24" />
-        </div>
-
-        <h2 className="text-2xl md:text-3xl font-black mb-5 family-font-display text-[var(--family-ink)] family-section-title">
-          Pick Your Adventure
-        </h2>
-
-        <div className="grid grid-cols-3 gap-3">
-          {ADVENTURES.map((adv) => {
-            const Illustration = ILLUSTRATIONS[adv.id];
-            const isHovered = hoveredAdventure === adv.id;
-
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: "var(--background, #F3EEE8)" }}
+    >
+      {/* Tab bar — sticky, horizontal scrollable on mobile */}
+      <div
+        className="sticky top-0 z-20 border-b"
+        style={{
+          backgroundColor: "var(--background, #F3EEE8)",
+          borderColor: "var(--twilight, #E8E4DF)",
+        }}
+      >
+        <div className="flex items-end overflow-x-auto scrollbar-hide px-4 gap-1">
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.id;
             return (
-              <Link
-                key={adv.id}
-                href={`/${portalSlug}?view=find&type=events&${FILTERS[adv.id]}`}
-                className={`relative rounded-2xl overflow-hidden transition-all duration-300 family-border-ink-3 bg-[var(--family-accent)] ${
-                  adv.size === "large" ? "col-span-2 row-span-2 min-h-[180px]" :
-                  adv.size === "medium" ? "col-span-2 min-h-[100px]" : "min-h-[120px]"
-                } ${
-                  isHovered
-                    ? "family-shadow-lg -translate-x-0.5 -translate-y-0.5"
-                    : "family-shadow-sm"
-                }`}
-                data-family-tone={adv.tone}
-                onMouseEnter={() => setHoveredAdventure(adv.id)}
-                onMouseLeave={() => setHoveredAdventure(null)}
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="flex-shrink-0 px-4 py-3 text-sm font-medium transition-colors relative"
+                style={{
+                  color: isActive ? "var(--coral)" : "var(--soft, #57534E)",
+                  fontFamily: "var(--font-outfit, system-ui, sans-serif)",
+                }}
               >
-                {/* Illustration fills the card */}
-                <div className="absolute inset-0">
-                  <Illustration
-                    isHovered={isHovered}
-                    className="w-full h-full opacity-90"
-                  />
-                </div>
-
-                {/* Label overlay at bottom */}
-                <div
-                  className="absolute bottom-0 left-0 right-0 px-3 py-2 family-adventure-label"
-                >
+                {tab.label}
+                {/* Active indicator — honey underline */}
+                {isActive && (
                   <span
-                    className={`font-black text-white drop-shadow-md ${
-                      adv.size === "large" ? "text-xl" : "text-sm"
-                    } family-font-display family-label-shadow`}
-                  >
-                    {adv.label}
-                  </span>
-                </div>
-
-                {/* Hover hint */}
-                {isHovered && (
-                  <div
-                    className="absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-bold text-white bg-[var(--family-ink)]"
-                  >
-                    Explore →
-                  </div>
+                    className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full"
+                    style={{ backgroundColor: "var(--coral)" }}
+                  />
                 )}
-              </Link>
+              </button>
             );
           })}
         </div>
       </div>
 
-      {/* Decorative divider - animated squiggly line */}
-      <div className="flex justify-center items-center gap-4 py-6 bg-[var(--family-cream)]">
-        <DoodleStar size={24} color={C.yellow} className="atlittle-twinkle" />
-        <Squiggle className="opacity-70 atlittle-squiggle-draw" color={C.orange} />
-        <DoodleStar size={24} color={C.yellow} className="atlittle-twinkle atlittle-stagger-3" />
-      </div>
-
-      {/* TODAY'S ADVENTURES */}
-      {(todayEvents?.length ?? 0) > 0 && (
-        <AdventureSection
-          title="Happening Today"
-          icon={<DoodleBolt size={26} color="#FFC107" />}
-          tone="pink"
-          events={todayEvents || []}
-          viewMoreHref={`/${portalSlug}?view=find&type=events&date=today`}
-          portalSlug={portalSlug}
-          isLoading={loadingToday}
-        />
+      {/* Tab content */}
+      {activeTab === "today" && (
+        <TodayView portalId={portalId} portalSlug={portalSlug} />
       )}
-
-      {/* WEEKEND ADVENTURES */}
-      <AdventureSection
-        title="This Weekend"
-        icon={<DoodleParty size={26} />}
-        tone="purple"
-        events={weekendEvents || []}
-        viewMoreHref={`/${portalSlug}?view=find&type=events&date=weekend`}
-        portalSlug={portalSlug}
-        isLoading={loadingWeekend}
-      />
-
-      {/* FREE ADVENTURES */}
-      <AdventureSection
-        title="Free for Families"
-        icon={<DoodleTag size={26} color="#4CAF50" />}
-        tone="green"
-        events={freeEvents || []}
-        viewMoreHref={`/${portalSlug}?view=find&type=events&free=1`}
-        portalSlug={portalSlug}
-        isLoading={loadingFree}
-      />
-
-      {/* BOTTOM CTA - Big, bold, bouncy */}
-      <div className="px-4 mt-8 mb-4">
-        <Link
-          href={`/${portalSlug}?view=find&type=events`}
-          className="block w-full py-5 rounded-2xl text-center font-black text-xl text-white transition-all hover:scale-[1.03] hover:-rotate-1 atlittle-btn family-cta family-font-display"
-        >
-          Explore All Adventures
-          <DoodleRocket size={32} className="inline-block ml-3 -mt-1 group-hover:animate-bounce" />
-        </Link>
-      </div>
+      {activeTab === "weekend" && (
+        <WeekendPlanner portalId={portalId} portalSlug={portalSlug} />
+      )}
+      {activeTab === "programs" && (
+        <ProgramsBrowser portalSlug={portalSlug} />
+      )}
+      {activeTab === "calendar" && (
+        <CalendarView portalSlug={portalSlug} />
+      )}
+      {activeTab === "plans" && (
+        <PlansView portalSlug={portalSlug} />
+      )}
     </div>
   );
 }

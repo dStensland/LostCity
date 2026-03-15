@@ -4,6 +4,7 @@ import type {
   VenueSubmissionData,
   ProducerSubmissionData,
 } from "@/lib/types";
+import { getSiteUrl } from "@/lib/site-url";
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
@@ -168,7 +169,7 @@ export async function createEventFromSubmission(
       price_max: data.price_max || null,
       price_note: data.price_note || null,
       is_free: data.is_free || false,
-      source_url: data.source_url || `https://lostcity.io/submit/${submissionId}`,
+      source_url: data.source_url || `${getSiteUrl()}/submit/${submissionId}`,
       ticket_url: data.ticket_url || null,
       image_url: data.image_url || null,
       submitted_by: submittedBy,

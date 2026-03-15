@@ -23,6 +23,7 @@ from db.client import (
     events_support_content_kind_column,
     events_support_is_active_column,
     events_support_field_metadata_columns,
+    has_event_extractions_table,
 )
 from db.validation import (
     validate_event,
@@ -990,6 +991,34 @@ INSERT_PIPELINE = [
 
 
 # ---------------------------------------------------------------------------
+# Extraction column routing (Phase C: event_extractions table)
+# ---------------------------------------------------------------------------
+
+_EXTRACTION_COLUMNS = {"raw_text", "extraction_confidence", "field_provenance", "field_confidence", "extraction_version"}
+
+
+def _pop_extraction_columns(event_data: dict) -> dict:
+    """Pop extraction-related columns from event_data, return them as a separate dict."""
+    extraction = {}
+    for col in _EXTRACTION_COLUMNS:
+        val = event_data.pop(col, None)
+        if val is not None:
+            extraction[col] = val
+    return extraction
+
+
+def _write_event_extraction(client, event_id: int, extraction_data: dict) -> None:
+    """Write extraction metadata to the event_extractions table."""
+    if not extraction_data:
+        return
+    try:
+        payload = {"event_id": event_id, **extraction_data}
+        client.table("event_extractions").upsert(payload, on_conflict="event_id").execute()
+    except Exception as e:
+        logger.debug("Failed to write event_extractions for event %s: %s", event_id, e)
+
+
+# ---------------------------------------------------------------------------
 # Event insert
 # ---------------------------------------------------------------------------
 
@@ -1039,8 +1068,17 @@ def insert_event(
         _log_write_skip(f"insert events title={event_data.get('title', 'untitled')[:60]}")
         return _next_temp_id()
 
+    # If event_extractions table exists, route extraction columns there instead
+    extraction_data = None
+    if has_event_extractions_table():
+        extraction_data = _pop_extraction_columns(event_data)
+
     result = _insert_event_record(client, event_data)
     event_id = result.data[0]["id"]
+
+    # Write extraction data to the separate table
+    if extraction_data:
+        _write_event_extraction(client, event_id, extraction_data)
 
     _queue_event_blurhash(event_id, event_data.get("image_url"))
 
@@ -1979,7 +2017,10 @@ def update_event_extraction_metadata(
     field_confidence: Optional[dict] = None,
     extraction_version: Optional[str] = None,
 ) -> None:
-    """Update per-field provenance/confidence metadata for an event."""
+    """Update per-field provenance/confidence metadata for an event.
+
+    Routes to event_extractions table when available, falls back to events table.
+    """
     update_data: dict = {}
     if field_provenance is not None:
         update_data["field_provenance"] = field_provenance
@@ -1996,7 +2037,12 @@ def update_event_extraction_metadata(
         return
 
     client = get_client()
-    client.table("events").update(update_data).eq("id", event_id).execute()
+
+    # Prefer the dedicated extraction table when available
+    if has_event_extractions_table():
+        _write_event_extraction(client, event_id, update_data)
+    else:
+        client.table("events").update(update_data).eq("id", event_id).execute()
 
 
 def deactivate_tba_events() -> int:

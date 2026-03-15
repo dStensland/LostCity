@@ -109,6 +109,15 @@ web/public/portals/*/build-collage.py
 # Auto-generated docs (if applicable)
 web/docs/auto-generated/
 
+# QA and screenshot artifacts
+web/content/
+web/screenshots/
+web/build.log
+web/screenshot_*.js
+web/dog_portal_*.mjs
+web/check-*.mjs
+web/list-artifacts.mjs
+
 # Temporary documentation files
 web/SECURITY_FIXES_*.md
 web/API_OPTIMIZATION_SUMMARY.md

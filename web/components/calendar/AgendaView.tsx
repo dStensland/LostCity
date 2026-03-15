@@ -7,64 +7,33 @@ import { format, isToday, isBefore, parseISO } from "date-fns";
 import CategoryIcon from "@/components/CategoryIcon";
 import { formatTimeSplit, formatPriceDetailed, type PriceableEvent } from "@/lib/formats";
 import { getSmartDateLabel } from "@/lib/card-utils";
-
-interface CalendarEvent {
-  id: number;
-  title: string;
-  start_date: string;
-  start_time: string | null;
-  end_time: string | null;
-  is_all_day: boolean;
-  is_free: boolean;
-  price_min: number | null;
-  price_max: number | null;
-  category: string | null;
-  image_url: string | null;
-  rsvp_status: "going" | "interested" | "went";
-  venue: {
-    id: number;
-    name: string;
-    slug: string | null;
-    neighborhood: string | null;
-  } | null;
-}
-
-interface FriendCalendarEvent {
-  id: number;
-  title: string;
-  start_date: string;
-  start_time: string | null;
-  is_all_day: boolean;
-  category: string | null;
-  rsvp_status: "going" | "interested";
-  friend: {
-    id: string;
-    username: string;
-    display_name: string | null;
-    avatar_url: string | null;
-  };
-}
+import type { CalendarEvent, CalendarPlan, FriendCalendarEvent } from "@/lib/types/calendar";
 
 interface AgendaViewProps {
   events: CalendarEvent[];
   friendEvents: FriendCalendarEvent[];
+  plans?: CalendarPlan[];
   eventsByDate: Map<string, CalendarEvent[]>;
   friendEventsByDate: Map<string, FriendCalendarEvent[]>;
+  plansByDate?: Map<string, CalendarPlan[]>;
   portalSlug?: string;
 }
 
 export default function AgendaView({
   events,
   friendEvents,
+  plans = [],
   eventsByDate,
   friendEventsByDate,
-  portalSlug = "la",
+  plansByDate = new Map(),
+  portalSlug = "atlanta",
 }: AgendaViewProps) {
-  // Get sorted dates that have events
+  // Get sorted dates that have events or plans
   const sortedDates = useMemo(() => {
     const allDates = new Set<string>();
     events.forEach((e) => allDates.add(e.start_date));
     friendEvents.forEach((e) => allDates.add(e.start_date));
+    plans.forEach((p) => allDates.add(p.plan_date));
     const now = new Date();
 
     return Array.from(allDates)
@@ -74,7 +43,7 @@ export default function AgendaView({
         const date = parseISO(dateStr);
         return isToday(date) || !isBefore(date, now);
       });
-  }, [events, friendEvents]);
+  }, [events, friendEvents, plans]);
 
   // Group friend avatars by event
   const friendsByEvent = useMemo(() => {
@@ -91,7 +60,7 @@ export default function AgendaView({
   if (sortedDates.length === 0) {
     return (
       <div className="rounded-2xl border border-[var(--twilight)]/85 bg-[var(--void)]/65 shadow-[0_18px_40px_rgba(0,0,0,0.28)] p-8 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight-purple)]/30 flex items-center justify-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
           <svg
             className="w-8 h-8 text-[var(--muted)]"
             fill="none"
@@ -106,9 +75,9 @@ export default function AgendaView({
             />
           </svg>
         </div>
-        <p className="text-[var(--cream)] font-mono text-sm mb-2">No upcoming events</p>
+        <p className="text-[var(--cream)] font-mono text-sm mb-2">No upcoming events or plans</p>
         <p className="text-[var(--muted)] text-xs">
-          RSVP to events to see them in your agenda
+          RSVP to events or create plans to see them here
         </p>
         <Link
           href={`/${portalSlug}`}
@@ -127,6 +96,8 @@ export default function AgendaView({
         const dayFriendEvents = friendEventsByDate.get(dateStr) || [];
         const dateLabel = getSmartDateLabel(dateStr);
         const isDateToday = isToday(parseISO(dateStr));
+
+        const dayPlans = plansByDate.get(dateStr) || [];
 
         return (
           <div key={dateStr} className="border-b border-[var(--twilight)]/70 last:border-b-0">
@@ -155,8 +126,119 @@ export default function AgendaView({
               </div>
             </div>
 
-            {/* Events for this date */}
+            {/* Plans then events for this date */}
             <div className="divide-y divide-[var(--twilight)]/45">
+              {/* Plans come first — they frame the day */}
+              {dayPlans.map((plan) => {
+                const { time, period } = formatTimeSplit(plan.plan_time, false);
+                const acceptedParticipants = plan.participants.filter(
+                  (p) => p.status === "accepted" || p.status === "invited"
+                );
+
+                return (
+                  <Link
+                    key={`plan-${plan.id}`}
+                    href={`/plans/${plan.id}`}
+                    className="flex gap-4 p-4 hover:bg-[var(--neon-cyan)]/5 transition-colors group border-l-[3px] border-l-[var(--neon-cyan)] bg-[var(--neon-cyan)]/[0.03]"
+                  >
+                    {/* Plan icon */}
+                    <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-[var(--neon-cyan)]/10 flex items-center justify-center border border-[var(--neon-cyan)]/20">
+                      <svg
+                        className="w-7 h-7 text-[var(--neon-cyan)] opacity-80"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                        />
+                      </svg>
+                    </div>
+
+                    {/* Plan details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-mono text-xs text-[var(--neon-cyan)]">
+                          {plan.plan_time ? (
+                            <>
+                              {time}
+                              {period && <span className="text-xs ml-0.5 opacity-60">{period}</span>}
+                            </>
+                          ) : (
+                            "All day"
+                          )}
+                        </span>
+                        <span className="text-[var(--muted)]">·</span>
+                        <span className="font-mono text-xs text-[var(--muted)] uppercase">
+                          Plan
+                        </span>
+                      </div>
+
+                      <h3 className="text-[var(--cream)] font-medium group-hover:text-[var(--neon-cyan)] transition-colors line-clamp-2">
+                        {plan.title}
+                      </h3>
+
+                      <div className="flex items-center gap-3 mt-2">
+                        {!plan.is_creator && (
+                          <span className="text-sm text-[var(--muted)] truncate">
+                            by {plan.creator.display_name || plan.creator.username}
+                          </span>
+                        )}
+
+                        {plan.item_count > 0 && (
+                          <span className="px-2 py-0.5 rounded-full font-mono text-xs font-medium bg-[var(--twilight)] text-[var(--soft)]">
+                            {plan.item_count} {plan.item_count === 1 ? "stop" : "stops"}
+                          </span>
+                        )}
+
+                        {acceptedParticipants.length > 0 && (
+                          <div className="flex items-center gap-1">
+                            <div className="flex -space-x-1">
+                              {acceptedParticipants.slice(0, 3).map((p) => (
+                                <div
+                                  key={p.user_id}
+                                  className="w-5 h-5 rounded-full border-2 border-[var(--night)] overflow-hidden bg-[var(--neon-cyan)]/20 flex items-center justify-center"
+                                  title={p.user.display_name || p.user.username}
+                                >
+                                  <span className="text-2xs text-[var(--neon-cyan)] font-medium">
+                                    {(p.user.display_name || p.user.username)[0].toUpperCase()}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            <span className="font-mono text-xs text-[var(--muted)]">
+                              {acceptedParticipants.length === 1
+                                ? `${acceptedParticipants[0].user.display_name || acceptedParticipants[0].user.username}`
+                                : `${acceptedParticipants.length} people`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Arrow */}
+                    <div className="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <svg
+                        className="w-5 h-5 text-[var(--neon-cyan)]"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </div>
+                  </Link>
+                );
+              })}
+
               {dayEvents.map((event) => {
                 const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
                 const priceResult = formatPriceDetailed(event as PriceableEvent);
@@ -171,7 +253,7 @@ export default function AgendaView({
                     className="flex gap-4 p-4 hover:bg-[var(--twilight)]/25 transition-colors group"
                   >
                     {/* Event image or category icon */}
-                    <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-[var(--cosmic-blue)]">
+                    <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-[var(--dusk)]">
                       {event.image_url ? (
                         <Image
                           src={event.image_url}
@@ -255,7 +337,7 @@ export default function AgendaView({
                               px-2 py-0.5 rounded-full font-mono text-xs font-medium
                               ${priceResult.isFree
                                 ? "bg-[var(--neon-green)]/20 text-[var(--neon-green)]"
-                                : "bg-[var(--twilight-purple)] text-[var(--cream)]"
+                                : "bg-[var(--twilight)] text-[var(--cream)]"
                               }
                             `}
                           >
@@ -269,7 +351,7 @@ export default function AgendaView({
                               {friendsGoing.slice(0, 3).map(({ friend }) => (
                                 <div
                                   key={friend.id}
-                                  className="w-5 h-5 rounded-full border-2 border-[var(--midnight-blue)] overflow-hidden bg-[var(--twilight-purple)]"
+                                  className="w-5 h-5 rounded-full border-2 border-[var(--night)] overflow-hidden bg-[var(--twilight)]"
                                   title={friend.display_name || friend.username}
                                 >
                                   {friend.avatar_url ? (
@@ -339,7 +421,7 @@ export default function AgendaView({
                       className="flex gap-4 p-4 hover:bg-[var(--twilight)]/20 transition-colors group bg-[var(--twilight)]/15"
                     >
                       {/* Friend indicator */}
-                      <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-[var(--twilight-purple)]/50 flex items-center justify-center">
+                      <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-[var(--twilight)]/50 flex items-center justify-center">
                         {friendEvent.friend.avatar_url ? (
                           <Image
                             src={friendEvent.friend.avatar_url}

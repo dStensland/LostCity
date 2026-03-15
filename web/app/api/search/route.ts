@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   getCachedPortalQueryContext,
   resolvePortalQueryContext,
+  getVerticalFromRequest,
 } from "@/lib/portal-query-context";
 import { logger } from "@/lib/logger";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
@@ -183,12 +184,13 @@ export async function GET(request: NextRequest) {
       status?: number;
     }> = (async () => {
       const portalContext = await timing.measure("bootstrap", async () => {
-        const cachedContext = await getCachedPortalQueryContext(searchParams);
+        const verticalOpts = getVerticalFromRequest(request);
+        const cachedContext = await getCachedPortalQueryContext(searchParams, verticalOpts);
         if (cachedContext) {
           timing.addMetric("portal_context_cache_hit", 0, "shared");
           return cachedContext;
         }
-        return resolvePortalQueryContext(await createClient(), searchParams);
+        return resolvePortalQueryContext(await createClient(), searchParams, verticalOpts);
       });
       if (portalContext.hasPortalParamMismatch) {
         return {

@@ -2,9 +2,32 @@ import { NextResponse } from "next/server";
 import { getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { format, startOfMonth, endOfMonth, addMonths } from "date-fns";
-import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { errorResponse } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
+
+export type CalendarPlan = {
+  id: string;
+  title: string;
+  description: string | null;
+  plan_date: string;
+  plan_time: string | null;
+  status: string;
+  item_count: number;
+  creator: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+  participants: Array<{
+    user_id: string;
+    status: string;
+    user: { username: string; display_name: string | null; avatar_url: string | null };
+  }>;
+  is_creator: boolean;
+  participant_status: string | null;
+};
 
 export type UserCalendarEvent = {
   id: number;
@@ -172,17 +195,138 @@ export async function GET(request: Request) {
       eventsByDate[event.start_date].push(event);
     });
 
+    // Fetch plans where user is creator
+    type PlanParticipantRow = {
+      user_id: string;
+      status: string;
+      user: { username: string; display_name: string | null; avatar_url: string | null };
+    };
+    type PlanRow = {
+      id: string;
+      title: string;
+      description: string | null;
+      plan_date: string;
+      plan_time: string | null;
+      status: string;
+      creator_id: string;
+      creator: { id: string; username: string; display_name: string | null; avatar_url: string | null };
+      item_count: { count: number }[];
+      participants: PlanParticipantRow[];
+    };
+
+    const { data: creatorPlans, error: creatorError } = await supabase
+      .from("plans")
+      .select(`
+        id, title, description, plan_date, plan_time, status, creator_id,
+        creator:profiles!plans_creator_id_fkey(id, username, display_name, avatar_url),
+        item_count:plan_items(count),
+        participants:plan_participants(
+          user_id, status,
+          user:profiles!plan_participants_user_id_fkey(username, display_name, avatar_url)
+        )
+      `)
+      .eq("creator_id", user.id)
+      .eq("status", "active")
+      .gte("plan_date", startDate)
+      .lte("plan_date", endDate)
+      .order("plan_date", { ascending: true }) as { data: PlanRow[] | null; error: Error | null };
+
+    if (creatorError) {
+      logger.error("Error fetching creator plans:", creatorError);
+    }
+
+    // Fetch plans where user is a participant (not declined)
+    const { data: participantRows } = await supabase
+      .from("plan_participants")
+      .select("plan_id")
+      .eq("user_id", user.id)
+      .neq("status", "declined") as { data: { plan_id: string }[] | null };
+
+    const participantPlanIds = (participantRows || []).map((r) => r.plan_id);
+
+    let participantPlans: PlanRow[] = [];
+    if (participantPlanIds.length > 0) {
+      const { data: pp } = await supabase
+        .from("plans")
+        .select(`
+          id, title, description, plan_date, plan_time, status, creator_id,
+          creator:profiles!plans_creator_id_fkey(id, username, display_name, avatar_url),
+          item_count:plan_items(count),
+          participants:plan_participants(
+            user_id, status,
+            user:profiles!plan_participants_user_id_fkey(username, display_name, avatar_url)
+          )
+        `)
+        .in("id", participantPlanIds)
+        .neq("creator_id", user.id)
+        .eq("status", "active")
+        .gte("plan_date", startDate)
+        .lte("plan_date", endDate)
+        .order("plan_date", { ascending: true }) as { data: PlanRow[] | null };
+      participantPlans = pp || [];
+    }
+
+    // Merge and dedupe (creator wins over participant row)
+    const seenPlanIds = new Set<string>();
+    const rawPlans: PlanRow[] = [];
+    for (const p of (creatorPlans || [])) {
+      seenPlanIds.add(p.id);
+      rawPlans.push(p);
+    }
+    for (const p of participantPlans) {
+      if (!seenPlanIds.has(p.id)) {
+        seenPlanIds.add(p.id);
+        rawPlans.push(p);
+      }
+    }
+
+    // Find user's participant status for non-creator plans
+    const participantStatusMap = new Map<string, string>();
+    for (const row of participantRows || []) {
+      const plan = rawPlans.find((p) => p.id === row.plan_id);
+      if (plan) {
+        const pp = plan.participants.find((pa) => pa.user_id === user.id);
+        if (pp) participantStatusMap.set(row.plan_id, pp.status);
+      }
+    }
+
+    const plans: CalendarPlan[] = rawPlans.map((p) => ({
+      id: p.id,
+      title: p.title,
+      description: p.description,
+      plan_date: p.plan_date,
+      plan_time: p.plan_time,
+      status: p.status,
+      item_count: Array.isArray(p.item_count) ? (p.item_count[0]?.count ?? 0) : 0,
+      creator: p.creator,
+      participants: p.participants,
+      is_creator: p.creator_id === user.id,
+      participant_status: p.creator_id === user.id
+        ? null
+        : (participantStatusMap.get(p.id) ?? null),
+    }));
+
+    plans.sort((a, b) => {
+      const dc = a.plan_date.localeCompare(b.plan_date);
+      if (dc !== 0) return dc;
+      if (!a.plan_time && !b.plan_time) return 0;
+      if (!a.plan_time) return -1;
+      if (!b.plan_time) return 1;
+      return a.plan_time.localeCompare(b.plan_time);
+    });
+
     // Summary stats
     const goingCount = events.filter(e => e.rsvp_status === "going").length;
     const interestedCount = events.filter(e => e.rsvp_status === "interested").length;
 
     return NextResponse.json({
       events,
-      eventsByDate,
+      plans,
       summary: {
         total: events.length,
         going: goingCount,
         interested: interestedCount,
+        plans: plans.length,
         daysWithEvents: Object.keys(eventsByDate).length,
       },
     });

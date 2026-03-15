@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import CategoryIcon, { CATEGORY_CONFIG, type CategoryType } from "@/components/CategoryIcon";
 import VibeIcon, { getVibeColor } from "@/components/VibeIcon";
 import ScopedStyles from "@/components/ScopedStyles";
@@ -229,7 +229,7 @@ export default function PreferencesClient({
   return (
     <div className={embedded ? "" : "min-h-screen"}>
       <ScopedStyles css={scopedCss} />
-      {!embedded && <UnifiedHeader />}
+      {!embedded && <PlatformHeader />}
 
       <main className={embedded ? "" : "max-w-2xl mx-auto px-4 py-8"}>
         {/* Welcome banner */}

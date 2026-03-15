@@ -62,3 +62,68 @@ describe("sports interest chip", () => {
     })).toBe(9);
   });
 });
+
+describe("derived interest chips", () => {
+  it("matches dance from live genres instead of a dead category", () => {
+    const danceChip = INTEREST_MAP.get("dance");
+
+    expect(danceChip?.match(
+      makeEvent({
+        category: "nightlife",
+        genres: ["salsa-night"],
+        title: "Friday Salsa Social",
+      }),
+    )).toBe(true);
+  });
+
+  it("matches markets from market-like genres instead of a dead category", () => {
+    const marketsChip = INTEREST_MAP.get("markets");
+
+    expect(marketsChip?.match(
+      makeEvent({
+        category: "community",
+        genres: ["farmers-market"],
+        title: "Sunday Farmers Market",
+      }),
+    )).toBe(true);
+  });
+
+  it("matches gaming from live genres instead of a dead category", () => {
+    const gamingChip = INTEREST_MAP.get("gaming");
+
+    expect(gamingChip?.match(
+      makeEvent({
+        category: "community",
+        tags: ["board-games"],
+        title: "Board Game Night",
+      }),
+    )).toBe(true);
+  });
+
+  it("builds OR-filter queries for derived chips", () => {
+    const danceQuery = getInterestQueryConfig("dance");
+    const marketsQuery = getInterestQueryConfig("markets");
+    const gamingQuery = getInterestQueryConfig("gaming");
+
+    expect(danceQuery).toMatchObject({ type: "or_filter" });
+    expect(marketsQuery).toMatchObject({ type: "or_filter" });
+    expect(gamingQuery).toMatchObject({ type: "or_filter" });
+  });
+
+  it("sums derived chip counts from tags and genres", () => {
+    expect(getServerChipCount("dance", {
+      "tag:dance-party": 2,
+      "genre:salsa-night": 3,
+    })).toBe(5);
+
+    expect(getServerChipCount("markets", {
+      "tag:market": 1,
+      "genre:farmers-market": 4,
+    })).toBe(5);
+
+    expect(getServerChipCount("gaming", {
+      "tag:board-games": 2,
+      "genre:arcade": 3,
+    })).toBe(5);
+  });
+});

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import { useAuth } from "@/lib/auth-context";
 import PageFooter from "@/components/PageFooter";
 
@@ -61,7 +61,7 @@ export default function UserClaimsPage() {
   if (!user) {
     return (
       <div className="min-h-screen">
-        <UnifiedHeader />
+        <PlatformHeader />
         <main className="max-w-4xl mx-auto px-4 py-12 text-center">
           <p className="text-[var(--muted)]">Please sign in to view your claims.</p>
         </main>
@@ -71,7 +71,7 @@ export default function UserClaimsPage() {
 
   return (
     <div className="min-h-screen">
-      <UnifiedHeader />
+      <PlatformHeader />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">

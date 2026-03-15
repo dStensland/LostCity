@@ -10,8 +10,18 @@ from typing import Optional
 
 from bs4 import BeautifulSoup
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
+from db import (
+    find_event_by_hash,
+    get_or_create_venue,
+    insert_event,
+    infer_program_type,
+    infer_season,
+    infer_cost_period,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from sources._activecommunities_family_filter import is_family_relevant_activity
 from sources.atlanta_dpr import (
     ACTIVITY_SEARCH_URL,
@@ -28,6 +38,11 @@ from sources.atlanta_dpr import (
 
 logger = logging.getLogger(__name__)
 
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    programs=True,
+)
+
 _BLOCKED_KEYWORDS = [
     "adult swim lessons",
     "open gym",
@@ -35,14 +50,71 @@ _BLOCKED_KEYWORDS = [
 ]
 
 
+def _build_program_record(
+    event_record: dict,
+    venue_name: str,
+    source_id: int,
+    portal_id: Optional[str],
+    age_min: Optional[int],
+    age_max: Optional[int],
+) -> Optional[dict]:
+    """Build the structured program record for the shared typed lane."""
+    title = event_record.get("title", "")
+    program_type = infer_program_type(title)
+    if not title or not program_type:
+        return None
+
+    session_start_str = event_record.get("start_date")
+
+    session_start = None
+    if session_start_str:
+        try:
+            session_start = datetime.strptime(session_start_str, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            pass
+
+    season = infer_season(title, session_start)
+    price_val = event_record.get("price_min", 0) or 0
+    cost_period = infer_cost_period(event_record.get("price_note"))
+
+    program_data: dict = {
+        "source_id": source_id,
+        "venue_id": event_record.get("venue_id"),
+        "name": title,
+        "description": event_record.get("description"),
+        "program_type": program_type,
+        "provider_name": "Atlanta Parks & Recreation",
+        "age_min": age_min,
+        "age_max": age_max,
+        "season": season,
+        "session_start": session_start_str,
+        "session_end": event_record.get("end_date"),
+        "cost_amount": price_val if price_val > 0 else None,
+        "cost_period": cost_period if price_val > 0 else None,
+        "registration_url": event_record.get("source_url"),
+        "tags": event_record.get("tags", []),
+        "_venue_name": venue_name,
+    }
+
+    if portal_id:
+        program_data["portal_id"] = portal_id
+
+    return program_data
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl family-relevant public programs from Atlanta DPR's ACTIVENet catalog."""
+    from db.sources import get_source_info
+
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
     today = date.today()
     venue_cache: dict[str, int] = {}
+    program_envelope = TypedEntityEnvelope()
+    source_info = get_source_info(source_id) or {}
+    portal_id = source_info.get("owner_portal_id")
 
     session, csrf = _init_session()
     if not session or not csrf:
@@ -164,9 +236,29 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 else:
                     insert_event(event_record)
                     events_new += 1
+
+                program_record = _build_program_record(
+                    event_record=event_record,
+                    venue_name=venue_name,
+                    source_id=source_id,
+                    portal_id=portal_id,
+                    age_min=age_min,
+                    age_max=age_max,
+                )
+                if program_record:
+                    program_envelope.add("programs", program_record)
             except Exception as exc:
                 logger.error("Atlanta family programs: error processing item %s: %s", item.get("id"), exc)
                 continue
+
+    if program_envelope.programs:
+        persist_result = persist_typed_entity_envelope(program_envelope)
+        skipped_programs = persist_result.skipped.get("programs", 0)
+        if skipped_programs:
+            logger.warning(
+                "Atlanta family programs: skipped %d structured program rows",
+                skipped_programs,
+            )
 
     logger.info(
         "Atlanta family programs crawl complete: %d found, %d new, %d updated",

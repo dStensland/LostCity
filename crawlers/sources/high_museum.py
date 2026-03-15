@@ -17,7 +17,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, insert_exhibition
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record, parse_date_range
 
@@ -595,6 +595,26 @@ def _crawl_exhibitions(
                 logger.info(f"Added exhibition: {title} ({exhibit_start} – {end_date})")
             except Exception as e:
                 logger.error(f"Failed to insert exhibition: {title}: {e}")
+
+            # Dual-write: also insert as exhibition
+            try:
+                exhibition_record = {
+                    "title": title,
+                    "venue_id": venue_id,
+                    "source_id": source_id,
+                    "_venue_name": VENUE_DATA["name"],
+                    "opening_date": start_date or exhibit_start,
+                    "closing_date": end_date,
+                    "description": description,
+                    "image_url": exhibit_image_map.get(title),
+                    "source_url": event_url,
+                    "admission_type": "ticketed",
+                    "tags": ["museum", "high-museum", "midtown", "exhibition"],
+                    "is_active": True,
+                }
+                insert_exhibition(exhibition_record)
+            except Exception as exc:
+                logger.debug("Exhibition insert failed for %r: %s", title, exc)
 
     except Exception as e:
         logger.warning(f"Failed to crawl exhibitions page: {e}")

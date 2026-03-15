@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useAuth, type Profile } from "@/lib/auth-context";
-import { createClient } from "@/lib/supabase/client";
 import AvatarUpload from "@/components/AvatarUpload";
 import CityMomentUpload from "@/components/CityMomentUpload";
 import { RegularSpotsSection } from "@/components/settings/RegularSpotsSection";
@@ -43,7 +42,6 @@ export default function ProfilePanel() {
   return (
     <ProfileForm
       key={profile?.updated_at || user.id}
-      userId={user.id}
       username={profile?.username || ""}
       initialProfile={getEditableProfile(profile)}
       onRefreshProfile={refreshProfile}
@@ -52,17 +50,14 @@ export default function ProfilePanel() {
 }
 
 function ProfileForm({
-  userId,
   username,
   initialProfile,
   onRefreshProfile,
 }: {
-  userId: string;
   username: string;
   initialProfile: EditableProfile;
   onRefreshProfile: () => Promise<void>;
 }) {
-  const supabase = createClient();
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,20 +78,22 @@ function ProfileForm({
       return;
     }
 
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({
+    const res = await fetch("/api/auth/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         display_name: displayName.trim() || null,
         bio: bio.trim() || null,
         location: location.trim() || null,
         website: website.trim() || null,
-      } as never)
-      .eq("id", userId);
+      }),
+    });
 
     setSaving(false);
 
-    if (updateError) {
-      console.error("Error saving profile:", updateError);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      console.error("Error saving profile:", body);
       setError("Failed to save profile. Please try again.");
       return;
     }

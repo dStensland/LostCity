@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import { errorResponse, isValidUrl, type AnySupabase } from "@/lib/api-utils";
+import { errorResponse, isValidUrl, parseIntParam, type AnySupabase } from "@/lib/api-utils";
+import { withAuth } from "@/lib/api-middleware";
 import { logger } from "@/lib/logger";
 import { isValidSubmissionMode, isValidOwnerType, isValidVibeTags, isValidHexColor } from "@/lib/curation-utils";
 
@@ -21,8 +22,8 @@ export async function GET(request: NextRequest) {
   const vibeTag = searchParams.get("vibe_tag");
   const ownerType = searchParams.get("owner_type");
   const sortBy = searchParams.get("sort"); // "trending" | "newest" | "votes" | "popular"
-  const limit = parseInt(searchParams.get("limit") || "50");
-  const offset = parseInt(searchParams.get("offset") || "0");
+  const limit = parseIntParam(searchParams.get("limit")) ?? 50;
+  const offset = parseIntParam(searchParams.get("offset")) ?? 0;
 
   try {
     // If slug is provided, fetch single list by slug
@@ -340,17 +341,12 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/lists - Create a new list
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, { user, serviceClient, supabase }) => {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  const supabase = await createClient() as AnySupabase;
-
-  // Check auth
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const svc = serviceClient as AnySupabase;
+  const sub = supabase as AnySupabase;
 
   try {
     const body = await request.json();
@@ -380,14 +376,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid owner type" }, { status: 400 });
     }
 
-    // Use service client to bypass RLS - auth already validated above
-    let serviceClient: AnySupabase;
-    try {
-      serviceClient = createServiceClient() as AnySupabase;
-    } catch {
-      return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
-    }
-
     const insertData: Record<string, unknown> = {
       portal_id: portal_id || null,
       creator_id: user.id,
@@ -409,7 +397,7 @@ export async function POST(request: NextRequest) {
     }
     if (owner_type) insertData.owner_type = owner_type;
 
-    const { data: list, error } = await serviceClient
+    const { data: list, error } = await svc
       .from("lists")
       .insert(insertData)
       .select("*")
@@ -420,7 +408,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch creator profile separately (creator_id FK is to auth.users, not profiles)
-    const { data: creator } = await supabase
+    const { data: creator } = await sub
       .from("profiles")
       .select("username, display_name, avatar_url")
       .eq("id", user.id)
@@ -438,4 +426,4 @@ export async function POST(request: NextRequest) {
     logger.error("Error in lists POST", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});

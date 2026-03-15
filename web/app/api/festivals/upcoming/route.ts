@@ -103,6 +103,7 @@ export async function GET(request: Request) {
           .select("id, name, slug, website, location, neighborhood, categories, free, announced_start, announced_end, ticket_url, description, image_url, typical_month, typical_duration_days, festival_type, portal_id")
           .not("announced_start", "is", null)
           .or(`announced_end.gte.${today},announced_end.is.null`)
+          .not("festival_type", "in", "(conference,trade_show,professional_development,convention)")
           .order("announced_start", { ascending: true })
           .limit(50);
 

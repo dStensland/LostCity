@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import PageFooter from "@/components/PageFooter";
 
 export default function CalendarLayout({
@@ -45,7 +45,7 @@ export default function CalendarLayout({
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--void)]">
-      <UnifiedHeader />
+      <PlatformHeader />
       <main className="flex-1">{children}</main>
       <PageFooter />
     </div>

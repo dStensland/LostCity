@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import { useAuth } from "@/lib/auth-context";
 import PageFooter from "@/components/PageFooter";
 
@@ -112,7 +112,7 @@ export default function ClaimPage() {
   if ((!entityType || !entityId || (!isVenue && !isOrganization)) && !claimId) {
     return (
       <div className="min-h-screen">
-        <UnifiedHeader />
+        <PlatformHeader />
         <main className="max-w-2xl mx-auto px-4 py-12">
           <div className="text-center">
             <h1 className="text-3xl font-semibold text-[var(--cream)] mb-4">
@@ -175,7 +175,7 @@ export default function ClaimPage() {
 
   return (
     <div className="min-h-screen">
-      <UnifiedHeader />
+      <PlatformHeader />
 
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-8">

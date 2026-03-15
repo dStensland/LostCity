@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import CreateCollectionButton from "@/components/CreateCollectionButton";
 import PageFooter from "@/components/PageFooter";
 
@@ -71,7 +71,7 @@ export default async function CollectionsPage() {
 
   return (
     <div className="min-h-screen">
-      <UnifiedHeader />
+      <PlatformHeader />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">

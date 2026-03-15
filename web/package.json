@@ -43,7 +43,6 @@
     "date-fns": "^4.1.0",
     "mapbox-gl": "^3.18.1",
     "next": "^16.1.6",
-    "next-intl": "^4.8.2",
     "openai": "^6.22.0",
     "qrcode.react": "^4.2.0",
     "react": "19.2.3",

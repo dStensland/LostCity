@@ -651,6 +651,7 @@ CREATE TABLE IF NOT EXISTS programs (
   lunch_included BOOLEAN NOT NULL DEFAULT false,
   tags TEXT[],
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'draft', 'archived')),
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT programs_age_range_check CHECK (
@@ -670,6 +671,7 @@ CREATE INDEX IF NOT EXISTS idx_programs_registration_status ON programs(registra
 CREATE INDEX IF NOT EXISTS idx_programs_age_range ON programs(age_min, age_max) WHERE age_min IS NOT NULL OR age_max IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_programs_season ON programs(season, status) WHERE season IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_programs_status ON programs(status, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_programs_content_hash ON programs ((metadata->>'content_hash')) WHERE metadata ? 'content_hash';
 
 CREATE TRIGGER update_programs_updated_at
   BEFORE UPDATE ON programs
@@ -677,6 +679,163 @@ CREATE TRIGGER update_programs_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
+
+-- -------------------------------------------------------
+-- Event Extractions (migration 497) — extraction metadata
+-- separated from events table for performance
+-- -------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS event_extractions (
+  event_id INTEGER PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
+  raw_text TEXT,
+  extraction_confidence DECIMAL(3, 2),
+  field_provenance JSONB,
+  field_confidence JSONB,
+  extraction_version TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- -------------------------------------------------------
+-- Exhibitions (Arts portal entity)
+-- -------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS exhibitions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT NOT NULL UNIQUE,
+  venue_id INTEGER NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+  source_id INTEGER REFERENCES sources(id) ON DELETE SET NULL,
+  portal_id UUID REFERENCES portals(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  image_url TEXT,
+  opening_date DATE,
+  closing_date DATE,
+  medium TEXT,
+  exhibition_type TEXT CHECK (exhibition_type IN ('solo','group','installation','retrospective','popup','permanent')),
+  admission_type TEXT CHECK (admission_type IN ('free','ticketed','donation','suggested')),
+  admission_url TEXT,
+  source_url TEXT,
+  tags TEXT[],
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT exhibitions_date_order CHECK (opening_date IS NULL OR closing_date IS NULL OR opening_date <= closing_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_exhibitions_venue ON exhibitions(venue_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_exhibitions_portal ON exhibitions(portal_id, is_active) WHERE portal_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_exhibitions_source ON exhibitions(source_id) WHERE source_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_exhibitions_dates ON exhibitions(opening_date, closing_date) WHERE is_active = true;
+
+CREATE TABLE IF NOT EXISTS exhibition_artists (
+  exhibition_id UUID NOT NULL REFERENCES exhibitions(id) ON DELETE CASCADE,
+  artist_name TEXT NOT NULL,
+  artist_url TEXT,
+  role TEXT DEFAULT 'artist' CHECK (role IN ('artist','curator','collaborator')),
+  PRIMARY KEY (exhibition_id, artist_name)
+);
+
+CREATE TRIGGER update_exhibitions_updated_at
+  BEFORE UPDATE ON exhibitions
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+ALTER TABLE exhibitions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE exhibition_artists ENABLE ROW LEVEL SECURITY;
+
+-- -------------------------------------------------------
+-- Open Calls (Arts portal — deadline-driven opportunities)
+-- -------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS open_calls (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT NOT NULL UNIQUE,
+  organization_id TEXT REFERENCES organizations(id) ON DELETE SET NULL,
+  venue_id INTEGER REFERENCES venues(id) ON DELETE SET NULL,
+  source_id INTEGER REFERENCES sources(id) ON DELETE SET NULL,
+  portal_id UUID REFERENCES portals(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  deadline DATE,
+  application_url TEXT NOT NULL,
+  fee NUMERIC,
+  eligibility TEXT,
+  medium_requirements TEXT[],
+  call_type TEXT NOT NULL CHECK (call_type IN ('submission','residency','grant','commission','exhibition_proposal')),
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed','reviewing','awarded')),
+  source_url TEXT,
+  tags TEXT[],
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_open_calls_deadline ON open_calls(deadline) WHERE is_active = true AND status = 'open';
+CREATE INDEX IF NOT EXISTS idx_open_calls_portal ON open_calls(portal_id, is_active) WHERE portal_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_open_calls_venue ON open_calls(venue_id) WHERE venue_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_open_calls_org ON open_calls(organization_id) WHERE organization_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_open_calls_type ON open_calls(call_type, status) WHERE is_active = true;
+
+CREATE TRIGGER update_open_calls_updated_at
+  BEFORE UPDATE ON open_calls
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+ALTER TABLE open_calls ENABLE ROW LEVEL SECURITY;
+
+-- -------------------------------------------------------
+-- Venue Destination Details (Adventure portal extension)
+-- -------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS venue_destination_details (
+  venue_id INTEGER PRIMARY KEY REFERENCES venues(id) ON DELETE CASCADE,
+  destination_type TEXT,
+  commitment_tier TEXT CHECK (commitment_tier IN ('hour','halfday','fullday','weekend')),
+  primary_activity TEXT,
+  drive_time_minutes INTEGER CHECK (drive_time_minutes BETWEEN 0 AND 1440),
+  difficulty_level TEXT CHECK (difficulty_level IN ('easy','moderate','hard','expert')),
+  trail_length_miles NUMERIC,
+  elevation_gain_ft INTEGER CHECK (elevation_gain_ft >= 0),
+  surface_type TEXT,
+  best_seasons TEXT[],
+  weather_fit_tags TEXT[],
+  practical_notes TEXT,
+  conditions_notes TEXT,
+  accessibility_notes TEXT,
+  parking_type TEXT CHECK (parking_type IN ('free_lot','paid_lot','street','garage','none')),
+  parking_capacity INTEGER,
+  best_time_of_day TEXT CHECK (best_time_of_day IN ('morning','afternoon','evening','any')),
+  family_suitability TEXT CHECK (family_suitability IN ('yes','no','caution')),
+  dog_friendly BOOLEAN,
+  reservation_required BOOLEAN,
+  permit_required BOOLEAN,
+  fee_note TEXT,
+  seasonal_hazards TEXT[],
+  source_url TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TRIGGER update_venue_destination_details_updated_at
+  BEFORE UPDATE ON venue_destination_details
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_venue_destination_details_type
+  ON venue_destination_details(destination_type)
+  WHERE destination_type IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_venue_destination_details_commitment
+  ON venue_destination_details(commitment_tier)
+  WHERE commitment_tier IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_venue_destination_details_best_seasons
+  ON venue_destination_details USING GIN(best_seasons);
+
+CREATE INDEX IF NOT EXISTS idx_venue_destination_details_weather_fit_tags
+  ON venue_destination_details USING GIN(weather_fit_tags);
 
 -- -------------------------------------------------------
 -- Search term corpus (migration 486)
@@ -788,6 +947,579 @@ CREATE TRIGGER update_search_term_overrides_updated_at
   BEFORE UPDATE ON search_term_overrides
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- -------------------------------------------------------
+-- Search term incremental refresh + generated aliases (migration 490)
+-- -------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION search_term_alias_candidates(
+  p_display_term TEXT,
+  p_slug TEXT DEFAULT NULL
+)
+RETURNS TEXT[] AS $$
+  WITH normalized_base AS (
+    SELECT normalize_search_term(p_display_term) AS base_term
+  ),
+  raw_candidates AS (
+    SELECT normalize_search_term(candidate) AS candidate
+    FROM unnest(
+      ARRAY[
+        regexp_replace(COALESCE(p_display_term, ''), '\s*\([^)]*\)\s*', ' ', 'g'),
+        regexp_replace(COALESCE(p_display_term, ''), '^\s*the\s+', '', 'i'),
+        regexp_replace(
+          COALESCE(p_display_term, ''),
+          '\s+(fine arts center|performing arts center|arts center|art center|community center|cultural center|event center|music hall|theatre|theater|playhouse|museum|gallery|studios?|hall|association|foundation|society|collective|project|initiative|coalition|alliance|committee|council|inc|llc)\s*$',
+          '',
+          'i'
+        ),
+        replace(COALESCE(p_slug, ''), '-', ' ')
+      ]
+    ) AS raw(candidate)
+  )
+  SELECT COALESCE(
+    array_agg(DISTINCT rc.candidate) FILTER (
+      WHERE rc.candidate IS NOT NULL
+        AND char_length(rc.candidate) >= 4
+        AND rc.candidate <> nb.base_term
+    ),
+    ARRAY[]::TEXT[]
+  )
+  FROM raw_candidates rc
+  CROSS JOIN normalized_base nb;
+$$ LANGUAGE sql IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION venue_search_term_weight(
+  p_has_active_children BOOLEAN,
+  p_parent_venue_id BIGINT DEFAULT NULL,
+  p_featured BOOLEAN DEFAULT FALSE,
+  p_explore_featured BOOLEAN DEFAULT FALSE,
+  p_data_quality SMALLINT DEFAULT NULL
+)
+RETURNS INTEGER AS $$
+  SELECT
+    (CASE
+      WHEN p_has_active_children THEN 4
+      WHEN p_parent_venue_id IS NOT NULL THEN 2
+      ELSE 1
+    END)
+    + (CASE
+      WHEN COALESCE(p_explore_featured, FALSE) THEN 6
+      WHEN COALESCE(p_featured, FALSE) THEN 3
+      ELSE 0
+    END)
+    + (CASE
+      WHEN COALESCE(p_data_quality, 0) >= 90 THEN 4
+      WHEN COALESCE(p_data_quality, 0) >= 85 THEN 3
+      WHEN COALESCE(p_data_quality, 0) >= 80 THEN 2
+      WHEN COALESCE(p_data_quality, 0) >= 75 THEN 1
+      ELSE 0
+    END);
+$$ LANGUAGE sql IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION venue_generic_search_term_candidates(
+  p_display_term TEXT
+)
+RETURNS TEXT[] AS $$
+  WITH normalized_name AS (
+    SELECT normalize_search_term(p_display_term) AS base_term
+  )
+  SELECT COALESCE(
+    array_agg(DISTINCT candidate) FILTER (
+      WHERE candidate IS NOT NULL
+        AND candidate <> normalized_name.base_term
+    ),
+    ARRAY[]::TEXT[]
+  )
+  FROM normalized_name
+  CROSS JOIN LATERAL (
+    VALUES
+      (CASE WHEN normalized_name.base_term ~ '\mmuseum(s)?\M' THEN 'museum' END),
+      (CASE WHEN normalized_name.base_term ~ '\mgarden(s)?\M' THEN 'garden' END),
+      (CASE WHEN normalized_name.base_term ~ '\mpark\M' THEN 'park' END),
+      (CASE WHEN normalized_name.base_term ~ '\mmarket\M' THEN 'market' END),
+      (CASE WHEN normalized_name.base_term ~ '\mplayhouse\M' THEN 'playhouse' END),
+      (CASE WHEN normalized_name.base_term ~ '\mtheat(er|re)\M' THEN 'theater' END),
+      (CASE WHEN normalized_name.base_term ~ '\mtheat(er|re)\M' THEN 'theatre' END),
+      (CASE WHEN normalized_name.base_term ~ '\mamphitheat(er|re)\M' THEN 'amphitheater' END),
+      (CASE WHEN normalized_name.base_term ~ '\mamphitheat(er|re)\M' THEN 'amphitheatre' END),
+      (CASE WHEN normalized_name.base_term ~ '\mhall\M' THEN 'hall' END),
+      (CASE WHEN normalized_name.base_term ~ '\msquare\M' THEN 'square' END),
+      (CASE WHEN normalized_name.base_term ~ '\mplaza\M' THEN 'plaza' END),
+      (CASE WHEN normalized_name.base_term ~ '\mtrail\M' THEN 'trail' END),
+      (CASE WHEN normalized_name.base_term ~ '\marboretum\M' THEN 'arboretum' END),
+      (CASE WHEN normalized_name.base_term ~ '\mzoo\M' THEN 'zoo' END),
+      (CASE WHEN normalized_name.base_term ~ '\maquarium\M' THEN 'aquarium' END),
+      (CASE WHEN normalized_name.base_term ~ '\mstadium\M' THEN 'stadium' END)
+  ) AS candidates(candidate);
+$$ LANGUAGE sql IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION rebuild_entity_search_terms_scoped(
+  p_city TEXT DEFAULT NULL,
+  p_since TIMESTAMPTZ DEFAULT NULL,
+  p_full BOOLEAN DEFAULT FALSE
+)
+RETURNS void AS $$
+DECLARE
+  v_metro_cities TEXT[];
+  v_effective_since TIMESTAMPTZ;
+BEGIN
+  v_metro_cities := get_metro_cities(p_city);
+  v_effective_since := CASE
+    WHEN p_full THEN NULL
+    ELSE COALESCE(p_since, now() - INTERVAL '6 hours')
+  END;
+
+  IF p_full THEN
+    TRUNCATE TABLE entity_search_terms;
+  ELSE
+    DELETE FROM entity_search_terms est
+    WHERE est.entity_type IN ('category', 'tag', 'vibe', 'neighborhood')
+      OR (
+        est.entity_type = 'event'
+        AND EXISTS (
+          SELECT 1
+          FROM events e
+          LEFT JOIN venues v ON v.id = e.venue_id
+          WHERE e.id::TEXT = est.entity_id
+            AND e.updated_at >= v_effective_since
+            AND (v_metro_cities IS NULL OR v.city IS NULL OR v.city = ANY(v_metro_cities))
+        )
+      )
+      OR (
+        est.entity_type = 'venue'
+        AND EXISTS (
+          SELECT 1
+          FROM venues v
+          WHERE v.id::TEXT = est.entity_id
+            AND COALESCE(
+              (to_jsonb(v) ->> 'updated_at')::timestamptz,
+              v.hours_updated_at,
+              v.last_verified_at,
+              v.created_at
+            ) >= v_effective_since
+            AND (v_metro_cities IS NULL OR v.city IS NULL OR v.city = ANY(v_metro_cities))
+        )
+      )
+      OR (
+        est.entity_type = 'organizer'
+        AND EXISTS (
+          SELECT 1
+          FROM organizations o
+          WHERE o.id::TEXT = est.entity_id
+            AND o.updated_at >= v_effective_since
+            AND (v_metro_cities IS NULL OR o.city IS NULL OR o.city = ANY(v_metro_cities))
+        )
+      )
+      OR (
+        est.entity_type = 'program'
+        AND EXISTS (
+          SELECT 1
+          FROM programs p
+          LEFT JOIN venues v ON v.id = p.venue_id
+          WHERE p.id::TEXT = est.entity_id
+            AND p.updated_at >= v_effective_since
+            AND (v_metro_cities IS NULL OR v.city IS NULL OR v.city = ANY(v_metro_cities))
+        )
+      )
+      OR (
+        est.entity_type = 'festival'
+        AND EXISTS (
+          SELECT 1
+          FROM festivals f
+          WHERE f.id = est.entity_id
+            AND f.updated_at >= v_effective_since
+        )
+      );
+  END IF;
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'event', e.id::TEXT, 'event', 'primary', e.title, normalize_search_term(e.title), v.city, 1, 'events.title'
+  FROM events e
+  LEFT JOIN venues v ON v.id = e.venue_id
+  WHERE e.start_date >= CURRENT_DATE
+    AND COALESCE(e.is_active, TRUE) = TRUE
+    AND e.canonical_event_id IS NULL
+    AND normalize_search_term(e.title) IS NOT NULL
+    AND (p_full OR e.updated_at >= v_effective_since)
+    AND (v_metro_cities IS NULL OR v.city IS NULL OR v.city = ANY(v_metro_cities));
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'event', e.id::TEXT, 'event', 'artist', e.title, normalize_search_term(ea.name), v.city, 1, 'event_artists.name'
+  FROM events e
+  JOIN event_artists ea ON ea.event_id = e.id
+  LEFT JOIN venues v ON v.id = e.venue_id
+  WHERE e.start_date >= CURRENT_DATE
+    AND COALESCE(e.is_active, TRUE) = TRUE
+    AND e.canonical_event_id IS NULL
+    AND normalize_search_term(e.title) IS NOT NULL
+    AND normalize_search_term(ea.name) IS NOT NULL
+    AND normalize_search_term(ea.name) <> normalize_search_term(e.title)
+    AND (p_full OR e.updated_at >= v_effective_since)
+    AND (v_metro_cities IS NULL OR v.city IS NULL OR v.city = ANY(v_metro_cities))
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'venue', v.id::TEXT, 'venue', 'primary', v.name, normalize_search_term(v.name), v.city,
+    venue_search_term_weight(
+      EXISTS (
+        SELECT 1
+        FROM venues child
+        WHERE child.parent_venue_id = v.id
+          AND COALESCE(child.active, TRUE) = TRUE
+      ),
+      v.parent_venue_id,
+      COALESCE(v.featured, FALSE),
+      COALESCE(v.explore_featured, FALSE),
+      v.data_quality
+    ),
+    'venues.name'
+  FROM venues v
+  WHERE COALESCE(v.active, TRUE) = TRUE
+    AND normalize_search_term(v.name) IS NOT NULL
+    AND (p_full OR COALESCE(
+      (to_jsonb(v) ->> 'updated_at')::timestamptz,
+      v.hours_updated_at,
+      v.last_verified_at,
+      v.created_at
+    ) >= v_effective_since)
+    AND (v_metro_cities IS NULL OR v.city IS NULL OR v.city = ANY(v_metro_cities));
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'venue', v.id::TEXT, 'venue', 'alias', v.name, normalize_search_term(alias.term), v.city,
+    venue_search_term_weight(
+      EXISTS (
+        SELECT 1
+        FROM venues child
+        WHERE child.parent_venue_id = v.id
+          AND COALESCE(child.active, TRUE) = TRUE
+      ),
+      v.parent_venue_id,
+      COALESCE(v.featured, FALSE),
+      COALESCE(v.explore_featured, FALSE),
+      v.data_quality
+    ),
+    'venues.aliases'
+  FROM venues v
+  CROSS JOIN LATERAL unnest(COALESCE(v.aliases, '{}'::TEXT[])) AS alias(term)
+  WHERE COALESCE(v.active, TRUE) = TRUE
+    AND normalize_search_term(v.name) IS NOT NULL
+    AND normalize_search_term(alias.term) IS NOT NULL
+    AND normalize_search_term(alias.term) <> normalize_search_term(v.name)
+    AND (p_full OR COALESCE(
+      (to_jsonb(v) ->> 'updated_at')::timestamptz,
+      v.hours_updated_at,
+      v.last_verified_at,
+      v.created_at
+    ) >= v_effective_since)
+    AND (v_metro_cities IS NULL OR v.city IS NULL OR v.city = ANY(v_metro_cities))
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'venue', v.id::TEXT, 'venue', 'alias', v.name, alias.term, v.city,
+    venue_search_term_weight(
+      EXISTS (
+        SELECT 1
+        FROM venues child
+        WHERE child.parent_venue_id = v.id
+          AND COALESCE(child.active, TRUE) = TRUE
+      ),
+      v.parent_venue_id,
+      COALESCE(v.featured, FALSE),
+      COALESCE(v.explore_featured, FALSE),
+      v.data_quality
+    ),
+    'venues.generated_aliases'
+  FROM venues v
+  CROSS JOIN LATERAL unnest(search_term_alias_candidates(v.name, v.slug)) AS alias(term)
+  WHERE COALESCE(v.active, TRUE) = TRUE
+    AND normalize_search_term(v.name) IS NOT NULL
+    AND (p_full OR COALESCE(
+      (to_jsonb(v) ->> 'updated_at')::timestamptz,
+      v.hours_updated_at,
+      v.last_verified_at,
+      v.created_at
+    ) >= v_effective_since)
+    AND (v_metro_cities IS NULL OR v.city IS NULL OR v.city = ANY(v_metro_cities))
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'venue', v.id::TEXT, 'venue', 'alias', v.name, alias.term, v.city,
+    venue_search_term_weight(
+      EXISTS (
+        SELECT 1
+        FROM venues child
+        WHERE child.parent_venue_id = v.id
+          AND COALESCE(child.active, TRUE) = TRUE
+      ),
+      v.parent_venue_id,
+      COALESCE(v.featured, FALSE),
+      COALESCE(v.explore_featured, FALSE),
+      v.data_quality
+    ),
+    'venues.generic_aliases'
+  FROM venues v
+  CROSS JOIN LATERAL unnest(venue_generic_search_term_candidates(v.name)) AS alias(term)
+  WHERE COALESCE(v.active, TRUE) = TRUE
+    AND normalize_search_term(v.name) IS NOT NULL
+    AND (p_full OR COALESCE(
+      (to_jsonb(v) ->> 'updated_at')::timestamptz,
+      v.hours_updated_at,
+      v.last_verified_at,
+      v.created_at
+    ) >= v_effective_since)
+    AND (v_metro_cities IS NULL OR v.city IS NULL OR v.city = ANY(v_metro_cities))
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'organizer', o.id::TEXT, 'organizer', 'primary', o.name, normalize_search_term(o.name), o.city,
+    GREATEST(COALESCE(o.total_events_tracked, 1), 1), 'organizations.name'
+  FROM organizations o
+  WHERE COALESCE(o.hidden, FALSE) = FALSE
+    AND normalize_search_term(o.name) IS NOT NULL
+    AND (p_full OR o.updated_at >= v_effective_since)
+    AND (v_metro_cities IS NULL OR o.city IS NULL OR o.city = ANY(v_metro_cities));
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'organizer', o.id::TEXT, 'organizer', 'alias', o.name, alias.term, o.city,
+    GREATEST(COALESCE(o.total_events_tracked, 1), 1), 'organizations.generated_aliases'
+  FROM organizations o
+  CROSS JOIN LATERAL unnest(search_term_alias_candidates(o.name, o.slug)) AS alias(term)
+  WHERE COALESCE(o.hidden, FALSE) = FALSE
+    AND normalize_search_term(o.name) IS NOT NULL
+    AND (p_full OR o.updated_at >= v_effective_since)
+    AND (v_metro_cities IS NULL OR o.city IS NULL OR o.city = ANY(v_metro_cities))
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'program', p.id::TEXT, 'event', 'primary', p.name, normalize_search_term(p.name), v.city, 1, 'programs.name'
+  FROM programs p
+  LEFT JOIN venues v ON v.id = p.venue_id
+  WHERE p.status = 'active'
+    AND normalize_search_term(p.name) IS NOT NULL
+    AND (p_full OR p.updated_at >= v_effective_since)
+    AND (v_metro_cities IS NULL OR v.city IS NULL OR v.city = ANY(v_metro_cities));
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'program', p.id::TEXT, 'event', 'alias', p.name, alias.term, v.city, 1, 'programs.generated_aliases'
+  FROM programs p
+  LEFT JOIN venues v ON v.id = p.venue_id
+  CROSS JOIN LATERAL unnest(search_term_alias_candidates(p.name, p.slug)) AS alias(term)
+  WHERE p.status = 'active'
+    AND normalize_search_term(p.name) IS NOT NULL
+    AND (p_full OR p.updated_at >= v_effective_since)
+    AND (v_metro_cities IS NULL OR v.city IS NULL OR v.city = ANY(v_metro_cities))
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'program', p.id::TEXT, 'event', 'provider', p.name, normalize_search_term(p.provider_name), v.city, 1, 'programs.provider_name'
+  FROM programs p
+  LEFT JOIN venues v ON v.id = p.venue_id
+  WHERE p.status = 'active'
+    AND normalize_search_term(p.name) IS NOT NULL
+    AND normalize_search_term(p.provider_name) IS NOT NULL
+    AND normalize_search_term(p.provider_name) <> normalize_search_term(p.name)
+    AND (p_full OR p.updated_at >= v_effective_since)
+    AND (v_metro_cities IS NULL OR v.city IS NULL OR v.city = ANY(v_metro_cities))
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'program', p.id::TEXT, 'event', 'venue', p.name, normalize_search_term(v.name), v.city, 1, 'programs.venue'
+  FROM programs p
+  JOIN venues v ON v.id = p.venue_id
+  WHERE p.status = 'active'
+    AND normalize_search_term(p.name) IS NOT NULL
+    AND normalize_search_term(v.name) IS NOT NULL
+    AND normalize_search_term(v.name) <> normalize_search_term(p.name)
+    AND (p_full OR p.updated_at >= v_effective_since)
+    AND (v_metro_cities IS NULL OR v.city IS NULL OR v.city = ANY(v_metro_cities))
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'neighborhood',
+    normalized_city || ':' || normalized_neighborhood,
+    'neighborhood',
+    'primary',
+    display_term,
+    normalized_neighborhood,
+    city,
+    frequency,
+    'venues.neighborhood'
+  FROM (
+    SELECT
+      MIN(v.neighborhood) AS display_term,
+      MIN(v.city) AS city,
+      normalize_search_term(v.city) AS normalized_city,
+      normalize_search_term(v.neighborhood) AS normalized_neighborhood,
+      COUNT(*)::INTEGER AS frequency
+    FROM venues v
+    WHERE COALESCE(v.active, TRUE) = TRUE
+      AND normalize_search_term(v.neighborhood) IS NOT NULL
+      AND normalize_search_term(v.city) IS NOT NULL
+      AND (
+        p_full OR COALESCE(
+          (to_jsonb(v) ->> 'updated_at')::timestamptz,
+          v.hours_updated_at,
+          v.last_verified_at,
+          v.created_at
+        ) >= v_effective_since OR v_metro_cities IS NOT NULL
+      )
+      AND (v_metro_cities IS NULL OR v.city = ANY(v_metro_cities))
+    GROUP BY normalize_search_term(v.city), normalize_search_term(v.neighborhood)
+  ) neighborhoods;
+
+  DELETE FROM entity_search_terms
+  WHERE entity_type IN ('category', 'tag', 'vibe');
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'category', normalize_search_term(e.category_id), 'category', 'primary',
+    MIN(e.category_id), normalize_search_term(e.category_id), NULL, COUNT(*)::INTEGER, 'events.category_id'
+  FROM events e
+  WHERE e.start_date >= CURRENT_DATE
+    AND COALESCE(e.is_active, TRUE) = TRUE
+    AND e.category_id IS NOT NULL
+    AND normalize_search_term(e.category_id) IS NOT NULL
+  GROUP BY normalize_search_term(e.category_id);
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'tag', normalize_search_term(tag.term), 'tag', 'tag',
+    MIN(tag.term), normalize_search_term(tag.term), NULL, COUNT(*)::INTEGER, 'events.tags'
+  FROM events e
+  CROSS JOIN LATERAL unnest(COALESCE(e.tags, '{}'::TEXT[])) AS tag(term)
+  WHERE e.start_date >= CURRENT_DATE
+    AND COALESCE(e.is_active, TRUE) = TRUE
+    AND normalize_search_term(tag.term) IS NOT NULL
+  GROUP BY normalize_search_term(tag.term)
+  HAVING COUNT(*) >= 3;
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'tag', normalize_search_term(tag.term), 'tag', 'tag',
+    MIN(tag.term), normalize_search_term(tag.term), NULL, COUNT(*)::INTEGER, 'programs.tags'
+  FROM programs p
+  CROSS JOIN LATERAL unnest(COALESCE(p.tags, '{}'::TEXT[])) AS tag(term)
+  WHERE p.status = 'active'
+    AND normalize_search_term(tag.term) IS NOT NULL
+  GROUP BY normalize_search_term(tag.term)
+  HAVING COUNT(*) >= 2
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'vibe', normalize_search_term(vibe.term), 'vibe', 'vibe',
+    MIN(vibe.term), normalize_search_term(vibe.term), NULL, COUNT(*)::INTEGER, 'venues.vibes'
+  FROM venues v
+  CROSS JOIN LATERAL unnest(COALESCE(v.vibes, '{}'::TEXT[])) AS vibe(term)
+  WHERE COALESCE(v.active, TRUE) = TRUE
+    AND normalize_search_term(vibe.term) IS NOT NULL
+  GROUP BY normalize_search_term(vibe.term)
+  HAVING COUNT(*) >= 2;
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'festival', f.id, 'festival', 'primary', f.name, normalize_search_term(f.name), NULL, 1, 'festivals.name'
+  FROM festivals f
+  WHERE normalize_search_term(f.name) IS NOT NULL
+    AND (p_full OR f.updated_at >= v_effective_since);
+
+  INSERT INTO entity_search_terms (
+    entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
+  )
+  SELECT
+    'festival', f.id, 'festival', 'alias', f.name, alias.term, NULL, 1, 'festivals.generated_aliases'
+  FROM festivals f
+  CROSS JOIN LATERAL unnest(search_term_alias_candidates(f.name, f.slug)) AS alias(term)
+  WHERE normalize_search_term(f.name) IS NOT NULL
+    AND (p_full OR f.updated_at >= v_effective_since)
+  ON CONFLICT DO NOTHING;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION rebuild_entity_search_terms()
+RETURNS void AS $$
+BEGIN
+  PERFORM rebuild_entity_search_terms_scoped(NULL, NULL, TRUE);
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION refresh_search_suggestions()
+RETURNS void AS $$
+BEGIN
+  PERFORM rebuild_entity_search_terms_scoped(NULL, NULL, TRUE);
+  BEGIN
+    REFRESH MATERIALIZED VIEW CONCURRENTLY search_suggestions;
+  EXCEPTION
+    WHEN feature_not_supported OR object_not_in_prerequisite_state THEN
+      REFRESH MATERIALIZED VIEW search_suggestions;
+  END;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION refresh_search_suggestions_incremental(
+  p_city TEXT DEFAULT NULL,
+  p_since TIMESTAMPTZ DEFAULT NULL
+)
+RETURNS void AS $$
+BEGIN
+  PERFORM rebuild_entity_search_terms_scoped(p_city, p_since, FALSE);
+  BEGIN
+    REFRESH MATERIALIZED VIEW CONCURRENTLY search_suggestions;
+  EXCEPTION
+    WHEN feature_not_supported OR object_not_in_prerequisite_state THEN
+      REFRESH MATERIALIZED VIEW search_suggestions;
+  END;
+END;
+$$ LANGUAGE plpgsql;
 
 -- -------------------------------------------------------
 -- School calendar events (Hooky family portal — migration 307)

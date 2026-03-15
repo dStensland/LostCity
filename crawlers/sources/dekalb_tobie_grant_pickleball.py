@@ -247,8 +247,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "is_recurring": True,
                     "recurrence_rule": f"FREQ=WEEKLY;BYDAY={DAY_CODES[weekday]}",
                     "content_hash": content_hash,
-                    "is_class": True,
-                    "class_category": "sports",
                 }
 
                 existing_event = find_existing_event_for_insert(event_record)
@@ -257,7 +255,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         events_updated += 1
                 else:
                     series_hint = {
-                        "series_type": "class_series",
+                        "series_type": "recurring_show",
                         "series_title": build_series_title(parsed["title"], weekday),
                     }
                     insert_event(event_record, series_hint=series_hint)

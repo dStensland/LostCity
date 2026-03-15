@@ -2,23 +2,15 @@ import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { EmoryDemoHeader, PortalHeader } from "@/components/headers";
+import { PortalHeader } from "@/components/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getLocalDateString } from "@/lib/formats";
 import { getProxiedImageSrc } from "@/lib/image-proxy";
 import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
-import { isEmoryDemoPortal } from "@/lib/hospital-art";
-import { normalizeHospitalMode } from "@/lib/hospital-modes";
-import Skeleton from "@/components/Skeleton";
-import EmoryCommunityExperience from "../_components/hospital/EmoryCommunityExperience";
-import EmoryMobileBottomNav from "../_components/hospital/EmoryMobileBottomNav";
-import { Suspense } from "react";
 import FilmPortalNav from "../_components/film/FilmPortalNav";
-import MyHospitalApplier from "../_components/hospital/MyHospitalApplier";
 
 type Props = {
   params: Promise<{ portal: string }>;
-  searchParams?: Promise<{ mode?: string; support?: string; hospital?: string }>;
 };
 
 type RawOrganizationRow = {
@@ -241,42 +233,13 @@ async function getFilmCommunityData() {
   return { groups, upcomingMeetups };
 }
 
-export default async function CommunityHubPage({ params, searchParams }: Props) {
+export default async function CommunityHubPage({ params }: Props) {
   const { portal: slug } = await params;
-  const searchParamsData = searchParams ? await searchParams : {};
   const portal = await getCachedPortalBySlug(slug);
 
   if (!portal) notFound();
 
   const vertical = getPortalVertical(portal);
-  const isEmoryPortal = isEmoryDemoPortal(portal.slug);
-  const isHospital = vertical === "hospital" || isEmoryPortal;
-
-  if (isHospital && isEmoryPortal) {
-    const hospitalMode = normalizeHospitalMode(searchParamsData.mode);
-    return (
-      <div className="min-h-screen bg-[#f2f5fa] text-[#002f6c]">
-        <EmoryDemoHeader portalSlug={portal.slug} />
-        <main className="max-w-6xl mx-auto px-4 pb-20">
-          <Suspense fallback={null}>
-            <MyHospitalApplier portalId={portal.id} />
-          </Suspense>
-          <Suspense fallback={<EmoryCommunityExperienceSkeleton />}>
-            <EmoryCommunityExperience
-              portal={portal}
-              mode={hospitalMode}
-              includeSupportSensitive={searchParamsData.support === "1"}
-              hospitalSlug={searchParamsData.hospital || null}
-            />
-          </Suspense>
-        </main>
-        <Suspense fallback={null}>
-          <EmoryMobileBottomNav portalSlug={portal.slug} />
-        </Suspense>
-        <div className="lg:hidden h-16" />
-      </div>
-    );
-  }
 
   if (vertical !== "film") {
     redirect(`/${portal.slug}?view=community`);
@@ -486,56 +449,3 @@ export default async function CommunityHubPage({ params, searchParams }: Props) 
   );
 }
 
-function EmoryCommunityExperienceSkeleton() {
-  return (
-    <div className="py-6 space-y-5">
-      {/* Hero skeleton */}
-      <section className="rounded-[20px] border border-[#ede8e1] bg-[#faf9f7] p-5 sm:p-7">
-        <Skeleton light className="h-10 w-[70%] rounded" />
-        <Skeleton light className="h-4 w-48 rounded mt-3" delay="0.04s" />
-        <div className="mt-3 flex gap-1.5">
-          <Skeleton light className="h-7 w-36 rounded-full" delay="0.08s" />
-          <Skeleton light className="h-7 w-32 rounded-full" delay="0.12s" />
-        </div>
-      </section>
-
-      {/* Category pathway cards skeleton */}
-      <section className="px-4 sm:px-5">
-        <Skeleton light className="h-3 w-32 rounded mb-3" delay="0.16s" />
-        <div className="flex gap-3 overflow-hidden sm:grid sm:grid-cols-2 lg:grid-cols-3">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <div
-              key={i}
-              className="shrink-0 w-[260px] sm:w-auto rounded-2xl border border-[#e5e7eb] bg-white p-4"
-            >
-              <div className="flex items-start gap-3">
-                <Skeleton light className="h-6 w-6 rounded shrink-0" delay={`${i * 0.04 + 0.2}s`} />
-                <div className="min-w-0 flex-1">
-                  <Skeleton light className="h-4 w-24 rounded" delay={`${i * 0.04 + 0.24}s`} />
-                  <Skeleton light className="h-3 w-full rounded mt-1.5" delay={`${i * 0.04 + 0.28}s`} />
-                  <Skeleton light className="h-5 w-20 rounded-full mt-2" delay={`${i * 0.04 + 0.32}s`} />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Discovery deck skeleton */}
-      <section className="rounded-[20px] border border-[#e5e7eb] bg-white p-4 sm:p-5">
-        <Skeleton light className="h-6 w-64 rounded" delay="0.5s" />
-        <Skeleton light className="h-4 w-80 rounded mt-2" delay="0.54s" />
-        <div className="mt-4 flex gap-2">
-          {[0, 1, 2].map((i) => (
-            <Skeleton light key={i} className="h-9 w-24 rounded-lg" delay={`${i * 0.04 + 0.58}s`} />
-          ))}
-        </div>
-        <div className="mt-4 space-y-3">
-          {[0, 1, 2].map((i) => (
-            <Skeleton light key={i} className="h-20 rounded-xl" delay={`${i * 0.06 + 0.7}s`} />
-          ))}
-        </div>
-      </section>
-    </div>
-  );
-}

@@ -81,7 +81,7 @@ RECURRING_PROGRAMS = [
             "group meets at the top of the west side stairs of the Active Oval; from November "
             "through February it meets at the Ladies Waiting Room near 12th Street."
         ),
-        "tags": ["running", "track-workout", "group-run", "free", "weekly", "piedmont-park"],
+        "tags": ["run-club", "running", "track-workout", "group-run", "free", "weekly", "piedmont-park"],
     },
     {
         "day": 3,  # Thursday
@@ -96,7 +96,7 @@ RECURRING_PROGRAMS = [
             "Brewing, and Westside Motor Lounge. Gather at 6:15 p.m.; two- to four-mile run "
             "or walk begins promptly at 6:30 p.m."
         ),
-        "tags": ["running", "walking", "group-run", "beltline", "free", "weekly"],
+        "tags": ["run-club", "running", "walking", "group-run", "group-walk", "beltline", "free", "weekly"],
     },
 ]
 
@@ -136,11 +136,11 @@ def categorize_event(title: str, description: str = "") -> dict:
         }
 
     # Group runs / social runs
-    if any(word in combined for word in ["group run", "social run", "meet up", "meetup", "run club"]):
+    if any(word in combined for word in ["group run", "social run", "meet up", "meetup", "run club", "walk club", "walking club", "group walk"]):
         return {
             "category": "fitness",
             "subcategory": "running",
-            "tags": base_tags + ["social", "group-run", "beginner-friendly"],
+            "tags": base_tags + ["social", "run-club", "group-run", "beginner-friendly"],
         }
 
     # Virtual events

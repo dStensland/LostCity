@@ -6,24 +6,7 @@ import CategoryIcon from "@/components/CategoryIcon";
 import { formatTimeSplit, formatPriceDetailed, type PriceableEvent } from "@/lib/formats";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClassForLength } from "@/lib/css-utils";
-
-interface CalendarEvent {
-  id: number;
-  title: string;
-  start_time: string | null;
-  end_time: string | null;
-  is_all_day: boolean;
-  is_free: boolean;
-  price_min: number | null;
-  price_max: number | null;
-  category: string | null;
-  genres?: string[] | null;
-  rsvp_status: "going" | "interested" | "went";
-  venue: {
-    name: string;
-    neighborhood: string | null;
-  } | null;
-}
+import type { CalendarEvent } from "@/lib/types/calendar";
 
 interface HoverPreviewCardProps {
   event: CalendarEvent;
@@ -96,7 +79,7 @@ export default function HoverPreviewCard({
   event,
   triggerRef,
   onClose,
-  portalSlug = "la",
+  portalSlug = "atlanta",
 }: HoverPreviewCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ top: 0, left: 0, flipUp: false });
@@ -160,7 +143,7 @@ export default function HoverPreviewCard({
     <div
       ref={cardRef}
       className={`
-        fixed z-50 w-72 bg-[var(--midnight-blue)] border border-[var(--nebula)] rounded-xl shadow-xl shadow-[var(--deep-violet)]/50
+        fixed z-50 w-72 bg-[var(--night)] border border-[var(--twilight)] rounded-xl shadow-xl shadow-black/50
         transition-opacity duration-150 hover-preview-card ${topClass?.className ?? ""} ${leftClass?.className ?? ""}
       `}
       onMouseEnter={() => {}} // Handled by parent keepPreviewOpen
@@ -168,10 +151,10 @@ export default function HoverPreviewCard({
     >
       <ScopedStyles css={[topClass?.css, leftClass?.css].filter(Boolean).join("\n")} />
       {/* Header with category */}
-      <div className="p-4 border-b border-[var(--nebula)]/50">
+      <div className="p-4 border-b border-[var(--twilight)]/50">
         <div className="flex items-start gap-3">
           {event.category && (
-            <div className="p-2 rounded-lg bg-[var(--twilight-purple)]/50 flex-shrink-0">
+            <div className="p-2 rounded-lg bg-[var(--twilight)]/50 flex-shrink-0">
               <CategoryIcon type={event.category} size={20} />
             </div>
           )}
@@ -250,7 +233,7 @@ export default function HoverPreviewCard({
                 px-2 py-0.5 rounded-full font-mono text-xs font-medium
                 ${priceResult.isFree
                   ? "bg-[var(--neon-green)]/20 text-[var(--neon-green)]"
-                  : "bg-[var(--twilight-purple)] text-[var(--cream)]"
+                  : "bg-[var(--twilight)] text-[var(--cream)]"
                 }
               `}
             >
@@ -258,12 +241,12 @@ export default function HoverPreviewCard({
             </span>
           )}
           {event.category && (
-            <span className="px-2 py-0.5 rounded-full bg-[var(--twilight-purple)] font-mono text-xs text-[var(--muted)]">
+            <span className="px-2 py-0.5 rounded-full bg-[var(--twilight)] font-mono text-xs text-[var(--muted)]">
               {event.category}
             </span>
           )}
           {event.genres?.[0] && (
-            <span className="px-2 py-0.5 rounded-full bg-[var(--cosmic-blue)] font-mono text-xs text-[var(--muted)]">
+            <span className="px-2 py-0.5 rounded-full bg-[var(--dusk)] font-mono text-xs text-[var(--muted)]">
               {event.genres[0]}
             </span>
           )}
@@ -271,7 +254,7 @@ export default function HoverPreviewCard({
       </div>
 
       {/* Footer actions */}
-      <div className="p-4 border-t border-[var(--nebula)]/50 flex items-center justify-between">
+      <div className="p-4 border-t border-[var(--twilight)]/50 flex items-center justify-between">
         {/* RSVP status */}
         <span
           className={`

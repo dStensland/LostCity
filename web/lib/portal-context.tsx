@@ -2,6 +2,9 @@
 
 import { createContext, useContext, ReactNode } from "react";
 import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "./constants";
+
+/** Must match PortalVertical in @/lib/portal */
+type PortalVertical = "city" | "hotel" | "film" | "hospital" | "community" | "marketplace" | "dog" | "arts" | "adventure" | "family";
 import type {
   VisualPresetId,
   HeaderTemplate,
@@ -231,6 +234,10 @@ export type Portal = {
   custom_domain?: string | null;
   /** Parent city portal ID for B2B portals */
   parent_portal_id?: string | null;
+  /** Vertical subdomain slug (e.g., 'arts', 'citizen') — null for base city portals */
+  vertical_slug?: string | null;
+  /** City slug for subdomain routing (e.g., 'atlanta') */
+  city_slug?: string | null;
   /** Page template override */
   page_template?: "default" | "gallery" | "timeline" | "custom";
   /** Custom component overrides (paths to components) */
@@ -254,7 +261,7 @@ export type Portal = {
   branding: PortalBranding;
   settings: {
     /** Portal vertical/industry type - determines UI/UX treatment */
-    vertical?: "city" | "hotel" | "film" | "hospital" | "community" | "marketplace";
+    vertical?: PortalVertical;
     nav_labels?: {
       feed?: string;
       find?: string;
@@ -350,12 +357,30 @@ export function usePortalSlug() {
 }
 
 /**
+ * Get the path slug for URL building. Returns city_slug if available, otherwise slug.
+ * Use this instead of usePortalSlug() when building URLs for subdomain-aware portals.
+ */
+export function usePortalPathSlug() {
+  const { portal } = usePortal();
+  return portal.city_slug || portal.slug;
+}
+
+/**
+ * Get the path slug from a Portal object. Returns city_slug if available, otherwise slug.
+ */
+export function getPortalPathSlug(portal: Portal): string {
+  return portal.city_slug || portal.slug;
+}
+
+/**
  * Build a portal-relative URL.
  * @param path - The path within the portal (e.g., "events", "?view=spots")
- * @param portalSlug - Optional portal slug override
+ * @param portalOrSlug - Optional portal object or slug string override
  */
-export function buildPortalUrl(path: string, portalSlug?: string) {
-  const slug = portalSlug || DEFAULT_PORTAL_SLUG;
+export function buildPortalUrl(path: string, portalOrSlug?: Portal | string) {
+  const slug = typeof portalOrSlug === "object"
+    ? (portalOrSlug.city_slug || portalOrSlug.slug)
+    : (portalOrSlug || DEFAULT_PORTAL_SLUG);
   if (path.startsWith("?") || path.startsWith("/")) {
     return `/${slug}${path}`;
   }
@@ -372,13 +397,4 @@ export function usePortalCity() {
   return portal.filters.city || portal.name;
 }
 
-/**
- * Get the portal vertical type (defaults to "city" if not set)
- */
-export function getPortalVertical(portal: Portal): "city" | "hotel" | "film" | "hospital" | "community" | "marketplace" | "dog" {
-  const configured = portal.settings?.vertical as string | undefined;
-  if (configured === "civic") {
-    return "community";
-  }
-  return (configured as "city" | "hotel" | "film" | "hospital" | "community" | "marketplace" | "dog") || "city";
-}
+// NOTE: getPortalVertical is exported from @/lib/portal — use that instead.

@@ -21,6 +21,7 @@ import { createLogger } from "./logger";
 import type { Frequency, DayOfWeek } from "./recurrence";
 import { applyFederatedPortalScopeToQuery, applyPortalScopeToQuery } from "./portal-scope";
 import { applyFeedGate } from "./feed-gate";
+import { isSceneEvent } from "./scene-event-routing";
 
 const logger = createLogger("search");
 
@@ -786,6 +787,7 @@ export async function getFilteredEventsWithSearch(
     const isLive = computeIsLive(event, now, today);
     return { ...event, ...(isLive ? { is_live: true } : {}), category: (event as any).category_id ?? (event as any).category ?? null };
   });
+  events = events.filter((event) => !isSceneEvent(event));
 
   // Sort by relevance when search is active
   if (filters.search?.trim()) {
@@ -924,6 +926,7 @@ export async function getFilteredEventsWithCursor(
     const isLive = computeIsLive(event, now, today);
     return { ...event, ...(isLive ? { is_live: true } : {}), category: (event as any).category_id ?? (event as any).category ?? null };
   });
+  events = events.filter((event) => !isSceneEvent(event));
 
   // Sort by relevance when search is active
   if (filters.search?.trim()) {
@@ -990,9 +993,15 @@ export async function getEventsForMap(
       start_time,
       end_time,
       is_all_day,
+      is_tentpole,
+      is_recurring,
       category_id,
+      tags,
+      genres,
       is_free,
       is_live,
+      series_id,
+      series:series_id(series_type, festival:festivals(id)),
       venue:venues!inner(id, name, slug, address, neighborhood, city, state, lat, lng, venue_type)
     `
     )
@@ -1063,7 +1072,7 @@ export async function getEventsForMap(
     return { ...event, ...(isLive ? { is_live: true } : {}), category: (event as any).category_id ?? (event as any).category ?? null };
   });
 
-  return events;
+  return events.filter((event) => !isSceneEvent(event));
 }
 
 

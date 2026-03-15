@@ -26,7 +26,17 @@ export function usePortalTracking(portalSlug: string) {
       // Ignore localStorage failures.
     }
 
-    document.cookie = `${PORTAL_CONTEXT_COOKIE}=${encodeURIComponent(portalSlug)}; Path=/; Max-Age=2592000; SameSite=Lax`;
+    // Set cookie with domain for cross-subdomain sharing
+    const hostname = window.location.hostname;
+    let domainAttr = "";
+    if (hostname.endsWith(".lostcity.ai") || hostname === "lostcity.ai") {
+      domainAttr = "; Domain=.lostcity.ai";
+    } else if (hostname.endsWith(".lostcity.app") || hostname === "lostcity.app") {
+      domainAttr = "; Domain=.lostcity.app";
+    } else if (hostname.endsWith(".lvh.me") || hostname === "lvh.me") {
+      domainAttr = "; Domain=.lvh.me";
+    }
+    document.cookie = `${PORTAL_CONTEXT_COOKIE}=${encodeURIComponent(portalSlug)}; Path=/; Max-Age=2592000; SameSite=Lax${domainAttr}`;
   }, [portalSlug]);
 
   useEffect(() => {

@@ -8,7 +8,7 @@ import {
 } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
 import { escapeSQLPattern, errorResponse } from "@/lib/api-utils";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 import {
   applyPortalScopeToQuery,
   filterByPortalCity,
@@ -32,6 +32,7 @@ import {
   rankAndFilterPersonalizedFeedEvents,
   type FeedRecommendationReason,
 } from "@/lib/feed-personalization";
+import { isSceneEvent } from "@/lib/scene-event-routing";
 import { buildFeedRequestPlan } from "@/lib/feed-request-plan";
 import { getCachedFeedSocialGraphContext } from "@/lib/feed-social-graph-context";
 import { ENABLE_INTEREST_CHANNELS_V1 } from "@/lib/launch-flags";
@@ -202,7 +203,7 @@ export async function GET(request: Request) {
     const [portalContext, prefsResult, trendingEventsResult] =
       await timing.measure("bootstrap", () =>
         Promise.all([
-          resolvePortalQueryContext(supabase, searchParams),
+          resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request)),
           supabase
             .from("user_preferences")
             .select("*")
@@ -223,7 +224,11 @@ export async function GET(request: Request) {
         is_all_day,
         is_free,
         is_adult,
+        is_recurring,
+        is_tentpole,
         category_id,
+        genres,
+        tags,
         image_url,
         blurhash,
         series_id,
@@ -395,6 +400,8 @@ export async function GET(request: Request) {
       organization_id,
       source_id,
       portal_id,
+      is_recurring,
+      is_tentpole,
       series_id,
       series:series_id(
         id,
@@ -902,6 +909,7 @@ export async function GET(request: Request) {
     events = events.filter(
       (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event),
     );
+    events = events.filter((event) => !isSceneEvent(event));
 
     let followedChannelCount = 0;
     let channelMatchesByEventId = new Map<number, EventChannelMatch[]>();
@@ -1078,7 +1086,11 @@ export async function GET(request: Request) {
       is_all_day: boolean;
       is_free: boolean;
       is_adult: boolean | null;
+      is_recurring?: boolean | null;
+      is_tentpole?: boolean | null;
       category: string | null;
+      genres?: string[] | null;
+      tags?: string[] | null;
       image_url: string | null;
       series_id?: string | null;
       series?: {
@@ -1129,9 +1141,12 @@ export async function GET(request: Request) {
         : trendingEventsData).filter(
         (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event),
       );
+      const routableTrendingEventsData = filteredTrendingEventsData.filter(
+        (event) => !isSceneEvent(event),
+      );
 
-      if (filteredTrendingEventsData.length > 0) {
-        const trendingEventIds = filteredTrendingEventsData.map((e) => e.id);
+      if (routableTrendingEventsData.length > 0) {
+        const trendingEventIds = routableTrendingEventsData.map((e) => e.id);
 
         // Get recent RSVPs and total going counts in parallel
         const [recentRsvpsResult, goingCountsResult] = await Promise.all([
@@ -1166,7 +1181,7 @@ export async function GET(request: Request) {
         }
 
         // Score events based on recent activity + total interest
-        const scored = filteredTrendingEventsData.map((event) => ({
+        const scored = routableTrendingEventsData.map((event) => ({
           ...suppressEventImageIfVenueFlagged(event),
           score:
             (recentRsvpCounts[event.id] || 0) * 3 +

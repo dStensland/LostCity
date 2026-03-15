@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, isAdmin, getUser } from "@/lib/supabase/server";
-import { isValidEnum, adminErrorResponse } from "@/lib/api-utils";
+import { isValidEnum, adminErrorResponse, parseIntParam } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 const CLAIM_STATUSES = ["pending", "approved", "rejected", "needs_info"] as const;
@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
   const type = searchParams.get("type");
-  const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
-  const offset = parseInt(searchParams.get("offset") || "0");
+  const limit = Math.min(parseIntParam(searchParams.get("limit")) ?? 50, 100);
+  const offset = parseIntParam(searchParams.get("offset")) ?? 0;
 
   const supabase = await createClient();
 

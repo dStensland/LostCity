@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import { errorResponse, isValidString, escapeSQLPattern } from "@/lib/api-utils";
+import { errorResponse, isValidString, escapeSQLPattern, parseIntParam } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 type OrganizationPortalSchema = {
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q");
-  const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 20);
+  const limit = Math.min(parseIntParam(searchParams.get("limit")) ?? 10, 20);
   const category = searchParams.get("category");
   const includeUnverified = searchParams.get("include_unverified") === "true";
   const portalIdParam = searchParams.get("portal_id");

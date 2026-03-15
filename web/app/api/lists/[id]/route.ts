@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { checkBodySize, isValidUrl, type AnySupabase } from "@/lib/api-utils";
+import { withAuthAndParams } from "@/lib/api-middleware";
 import { logger } from "@/lib/logger";
 import { isValidSubmissionMode, isValidOwnerType, isValidVibeTags, isValidHexColor } from "@/lib/curation-utils";
 

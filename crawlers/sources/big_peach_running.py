@@ -217,11 +217,12 @@ def build_schedule_templates(entries: list[dict]) -> list[dict]:
         title = build_event_title(location, weekday, start_time)
         is_walk = location == "South Fulton"
 
-        tags = ["running", "group-run", "free", "weekly", slugify(location)]
+        tags = ["run-club", "running", "group-run", "free", "weekly", slugify(location)]
         if start_time < "12:00":
             tags.append("morning")
         if is_walk:
             tags.append("walking")
+            tags.append("group-walk")
 
         templates.append(
             {

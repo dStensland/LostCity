@@ -28,6 +28,8 @@ from db.client import (
     events_support_is_active_column,
     events_support_field_metadata_columns,
     venues_support_location_designator,
+    has_event_extractions_table,
+    venues_support_destination_details_table,
     # module-level state (needed by scripts that directly access them)
     _SOURCE_CACHE,
     _VENUE_CACHE,
@@ -66,6 +68,7 @@ from db.sources import (
     get_sources_due_for_crawl,
     get_sources_by_cadence,
     refresh_available_filters,
+    refresh_search_suggestions,
     update_source_health_tags,
     get_source_health_tags,
     detect_zero_event_sources,
@@ -150,6 +153,38 @@ from db.events import (
     upsert_event_links,
     update_event_extraction_metadata,
     deactivate_tba_events,
+)
+
+# ===== programs.py =====
+from db.programs import (
+    infer_program_type,
+    infer_season,
+    infer_cost_period,
+    generate_program_hash,
+    find_program_by_hash,
+    insert_program,
+    update_program,
+)
+
+# ===== exhibitions.py =====
+from db.exhibitions import (
+    generate_exhibition_hash,
+    find_exhibition_by_hash,
+    insert_exhibition,
+    update_exhibition,
+)
+
+# ===== open_calls.py =====
+from db.open_calls import (
+    generate_open_call_hash,
+    find_open_call_by_hash,
+    insert_open_call,
+    update_open_call,
+)
+
+# ===== destination_details.py =====
+from db.destination_details import (
+    upsert_venue_destination_details,
 )
 
 # ===== notifications.py =====

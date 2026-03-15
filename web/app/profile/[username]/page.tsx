@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import PageFooter from "@/components/PageFooter";
 import { ProfileView } from "@/components/profile/ProfileView";
 import { createClient } from "@/lib/supabase/server";
@@ -65,7 +65,7 @@ export default async function ProfilePage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-[var(--void)]">
-      <UnifiedHeader />
+      <PlatformHeader />
       <ProfileView profile={profile} portalSlug={portalSlug} />
       <PageFooter />
     </div>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import PageFooter from "@/components/PageFooter";
 
 export const metadata: Metadata = {
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function TermsOfServicePage() {
   return (
     <div className="min-h-screen flex flex-col">
-      <UnifiedHeader />
+      <PlatformHeader />
 
       <main className="flex-1 max-w-3xl mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold text-[var(--cream)] mb-2">Terms of Service</h1>

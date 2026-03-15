@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PlatformHeader } from "@/components/headers";
 import { useAuth } from "@/lib/auth-context";
 import type { SubmissionWithProfile, SubmissionStatus, SubmissionType } from "@/lib/types";
 import PageFooter from "@/components/PageFooter";
@@ -110,7 +110,7 @@ export default function UserSubmissionsPage() {
   if (!user) {
     return (
       <div className="min-h-screen">
-        <UnifiedHeader />
+        <PlatformHeader />
         <main className="max-w-4xl mx-auto px-4 py-12 text-center">
           <p className="text-[var(--muted)]">Please sign in to view your submissions.</p>
         </main>
@@ -127,7 +127,7 @@ export default function UserSubmissionsPage() {
 
   return (
     <div className="min-h-screen">
-      <UnifiedHeader />
+      <PlatformHeader />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}

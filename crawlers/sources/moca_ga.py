@@ -18,7 +18,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
+from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event, insert_exhibition
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -384,10 +384,48 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if existing:
                 smart_update_existing_event(existing, event_record)
                 events_updated += 1
+                if record.get("content_kind") == "exhibit":
+                    try:
+                        exhibition_record = {
+                            "title": record["title"],
+                            "venue_id": venue_id,
+                            "source_id": source_id,
+                            "_venue_name": VENUE_DATA["name"],
+                            "opening_date": hash_start_date,
+                            "closing_date": record["end_date"],
+                            "description": record["description"],
+                            "image_url": record["image_url"],
+                            "source_url": record["source_url"],
+                            "admission_type": "free" if record.get("is_free") else "ticketed",
+                            "tags": ["museum", "moca-ga", "west-midtown", "exhibition", "contemporary-art"],
+                            "is_active": True,
+                        }
+                        insert_exhibition(exhibition_record)
+                    except Exception as exc:
+                        logger.debug("Exhibition insert failed for %r: %s", record["title"], exc)
                 continue
 
             insert_event(event_record)
             events_new += 1
+            if record.get("content_kind") == "exhibit":
+                try:
+                    exhibition_record = {
+                        "title": record["title"],
+                        "venue_id": venue_id,
+                        "source_id": source_id,
+                        "_venue_name": VENUE_DATA["name"],
+                        "opening_date": hash_start_date,
+                        "closing_date": record["end_date"],
+                        "description": record["description"],
+                        "image_url": record["image_url"],
+                        "source_url": record["source_url"],
+                        "admission_type": "free" if record.get("is_free") else "ticketed",
+                        "tags": ["museum", "moca-ga", "west-midtown", "exhibition", "contemporary-art"],
+                        "is_active": True,
+                    }
+                    insert_exhibition(exhibition_record)
+                except Exception as exc:
+                    logger.debug("Exhibition insert failed for %r: %s", record["title"], exc)
 
         logger.info(
             "MOCA GA crawl complete: %s found, %s new, %s updated",

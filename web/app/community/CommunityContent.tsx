@@ -15,7 +15,7 @@ import { createCssVarClass } from "@/lib/css-utils";
 const EVENT_CATEGORIES = [
   "music", "comedy", "art", "theater", "film", "community",
   "food_drink", "sports", "fitness", "nightlife", "family",
-  "dance", "learning", "wellness", "outdoors"
+  "learning", "wellness", "outdoors"
 ] as const;
 
 // Org type configuration with colors and labels

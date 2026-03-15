@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, isAdmin, getUser } from "@/lib/supabase/server";
-import { isValidEnum, adminErrorResponse } from "@/lib/api-utils";
+import { isValidEnum, adminErrorResponse, parseIntParam } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type");
   const portalId = searchParams.get("portal_id");
   const submittedBy = searchParams.get("submitted_by");
-  const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
-  const offset = parseInt(searchParams.get("offset") || "0");
+  const limit = Math.min(parseIntParam(searchParams.get("limit")) ?? 50, 100);
+  const offset = parseIntParam(searchParams.get("offset")) ?? 0;
   const allowedSortFields = ["created_at", "updated_at", "status", "submission_type"];
   const sortByParam = searchParams.get("sort_by") || "created_at";
   const sortBy = allowedSortFields.includes(sortByParam) ? sortByParam : "created_at";
