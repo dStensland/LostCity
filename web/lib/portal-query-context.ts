@@ -1,6 +1,21 @@
 import { isValidUUID, type AnySupabase } from "@/lib/api-utils";
 import { resolvePortalSlugAlias } from "@/lib/portal-aliases";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { getPortalByVerticalAndCity } from "@/lib/portal";
+
+/**
+ * Extract vertical slug from the middleware-injected x-lc-vertical header.
+ * Use this in API route handlers to pass subdomain context through to portal resolution.
+ *
+ * @example
+ * const ctx = await resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request));
+ */
+export function getVerticalFromRequest(
+  request: Request | { headers: { get(name: string): string | null } },
+): { verticalSlug?: string | null } {
+  const vertical = request.headers.get("x-lc-vertical");
+  return vertical ? { verticalSlug: vertical } : {};
+}
 
 export type PortalFilters = {
   categories?: string[];
@@ -168,11 +183,23 @@ async function writeCachedPortal(row: CachedPortalRow): Promise<void> {
 
 export async function getCachedPortalQueryContext(
   searchParams: URLSearchParams,
+  options?: { verticalSlug?: string | null },
 ): Promise<PortalQueryContext | null> {
   const { portalSlug, portalId, portalIdParam } = getRequestedPortalRef(searchParams);
 
   if (!portalSlug && !portalId) {
     return emptyPortalQueryContext(null);
+  }
+
+  // If we have a vertical slug, try vertical+city cache key first
+  const verticalSlug = options?.verticalSlug;
+  if (verticalSlug && portalSlug) {
+    const cachedRow = await readCachedPortal(`slug:${verticalSlug}-${portalSlug}`);
+    if (cachedRow) {
+      return toPortalQueryContext(cachedRow, portalIdParam);
+    }
+    // No cache hit for vertical+city — return null to fall through to full resolution
+    return null;
   }
 
   if (portalSlug) {
@@ -204,9 +231,26 @@ export async function getCachedPortalQueryContext(
  */
 export async function resolvePortalQueryContext(
   supabase: AnySupabase,
-  searchParams: URLSearchParams
+  searchParams: URLSearchParams,
+  options?: { verticalSlug?: string | null },
 ): Promise<PortalQueryContext> {
   const { portalSlug, portalId, portalIdParam } = getRequestedPortalRef(searchParams);
+
+  // If we have a vertical header AND a portal slug, resolve as vertical+city first
+  const verticalSlug = options?.verticalSlug;
+  if (verticalSlug && portalSlug) {
+    const verticalPortal = await getPortalByVerticalAndCity(verticalSlug, portalSlug);
+    if (verticalPortal) {
+      const parsedFilters = parsePortalFilters(verticalPortal.filters);
+      return {
+        portalId: verticalPortal.id,
+        portalSlug: verticalPortal.slug,
+        filters: parsedFilters,
+        portalSettings: verticalPortal.settings ?? {},
+        hasPortalParamMismatch: false,
+      };
+    }
+  }
 
   type PortalRow = {
     id: string;

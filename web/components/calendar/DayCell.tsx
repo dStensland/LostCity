@@ -2,32 +2,7 @@
 
 import { format } from "date-fns";
 import Image from "@/components/SmartImage";
-
-interface CalendarEvent {
-  id: number;
-  title: string;
-  start_time: string | null;
-  is_all_day: boolean;
-  category: string | null;
-  rsvp_status: "going" | "interested" | "went";
-}
-
-interface FriendCalendarEvent {
-  id: number;
-  title: string;
-  friend: {
-    id: string;
-    username: string;
-    display_name: string | null;
-    avatar_url: string | null;
-  };
-}
-
-interface CalendarPlan {
-  id: string;
-  plan_date: string;
-  plan_time: string | null;
-}
+import type { CalendarEvent, CalendarPlan, FriendCalendarEvent } from "@/lib/types/calendar";
 
 interface DayCellProps {
   date: Date;
@@ -94,7 +69,7 @@ export default function DayCell({
       <div className="flex items-start justify-between gap-1">
         <span
           className={`
-            font-mono text-[13px] font-semibold
+            font-mono text-sm font-semibold
             ${isToday ? "text-[var(--gold)]" : ""}
             ${isSelected && !isToday ? "text-[var(--cream)]" : ""}
             ${!isToday && !isSelected ? (isPast ? "text-[var(--soft)]/70" : "text-[var(--cream)]/95") : ""}

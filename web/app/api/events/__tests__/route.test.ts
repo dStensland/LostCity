@@ -56,6 +56,7 @@ vi.mock("@/lib/portal-query-context", () => ({
     portalId: null,
     filters: { city: null },
   })),
+  getVerticalFromRequest: vi.fn(() => ({})),
 }));
 
 describe("GET /api/events", () => {

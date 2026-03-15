@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { errorResponse, isValidString, parseIntParam } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = await createClient();
-    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request));
 
     if (!portalContext.portalId) {
       return NextResponse.json({ error: "Portal not found" }, { status: 404 });

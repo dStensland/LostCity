@@ -15,7 +15,21 @@ This file tracks which Claude Code sessions are working on what. Every agent rea
 <!-- Add entries below when starting a session. Remove when done. -->
 <!-- Format: ### Session Name (started YYYY-MM-DD) -->
 
-_No active sessions._
+### Session E — Entity Graph Rollout (started 2026-03-15)
+**Scope:** `crawlers/sources/`, `crawlers/tests/`, `ACTIVE_WORK.md`, `WORKSTREAM.md`
+**Backlog items:**
+- Workstream Track B: typed-lane crawler conversions
+- Workstream Track D: production schema and attribution validation
+- Workstream Track C prep: backfill planning inputs
+
+**Claimed paths:**
+- `crawlers/sources/atlanta_family_programs.py`
+- `crawlers/sources/clark_atlanta_art_museum.py`
+- `crawlers/sources/dolls_head_trail.py`
+- `crawlers/tests/test_atlanta_family_programs.py` (if created)
+- `crawlers/tests/test_clark_atlanta_art_museum.py` (if created)
+- `crawlers/tests/test_dolls_head_trail.py` (if created)
+- `WORKSTREAM.md`
 
 ---
 

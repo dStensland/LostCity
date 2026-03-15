@@ -18,6 +18,8 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import get_client, get_or_create_venue
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +68,12 @@ VENUE_DATA = {
     ),
 }
 
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
+
 
 def _extract_og_meta(html: str) -> tuple[Optional[str], Optional[str]]:
     """Return (og:image, og:description) from page HTML."""
@@ -84,6 +92,56 @@ def _extract_og_meta(html: str) -> tuple[Optional[str], Optional[str]]:
             break
 
     return og_image, og_desc
+
+
+def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
+    """Project Doll's Head Trail into shared destination-intelligence lanes."""
+    envelope = TypedEntityEnvelope()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "trail",
+            "commitment_tier": "hour",
+            "primary_activity": "self-guided folk-art trail walk",
+            "best_seasons": ["spring", "fall", "winter"],
+            "weather_fit_tags": ["outdoor", "dry-weather", "cool-weather"],
+            "practical_notes": (
+                "Always-open self-guided trail in Constitution Lakes Park. Best experienced in dry weather "
+                "with walking shoes because portions of the wetland trail can stay soft after rain."
+            ),
+            "family_suitability": "caution",
+            "dog_friendly": True,
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Free to visit.",
+            "source_url": HOMEPAGE,
+            "metadata": {
+                "source_type": "destination_first_crawler",
+                "vibes": venue_data.get("vibes", []),
+            },
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "found-object-folk-art-installations",
+            "title": "Found-object folk art installations",
+            "feature_type": "experience",
+            "description": (
+                "The trail is known for eerie found-object art installations built from discarded doll heads "
+                "and other materials along the wooded wetland path."
+            ),
+            "url": HOMEPAGE,
+            "is_free": True,
+            "sort_order": 10,
+        },
+    )
+
+    return envelope
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -122,6 +180,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
             get_client().table("venues").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning("Doll's Head Trail: venue update failed: %s", exc)
+
+    persist_result = persist_typed_entity_envelope(
+        _build_destination_envelope(venue_id, venue_data)
+    )
+    if persist_result.skipped:
+        logger.warning(
+            "Doll's Head Trail: skipped typed destination writes: %s",
+            persist_result.skipped,
+        )
 
     logger.info(
         "Doll's Head Trail: venue record enriched (destination-first, no events)"

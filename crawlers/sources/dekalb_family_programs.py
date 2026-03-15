@@ -14,13 +14,14 @@ from db import (
     find_event_by_hash,
     get_or_create_venue,
     insert_event,
-    insert_program,
     infer_program_type,
     infer_season,
     infer_cost_period,
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from sources._activecommunities_family_filter import is_family_relevant_activity
 from sources.dekalb_parks_rec import (
     ACTIVITY_SEARCH_URL,
@@ -37,6 +38,11 @@ from sources.dekalb_parks_rec import (
 
 logger = logging.getLogger(__name__)
 
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    programs=True,
+)
+
 _BLOCKED_KEYWORDS = [
     "adult swim",
     "water fitness",
@@ -46,18 +52,20 @@ _BLOCKED_KEYWORDS = [
 ]
 
 
-def _try_insert_program(
+def _build_program_record(
     event_record: dict,
     venue_name: str,
     source_id: int,
+    portal_id: Optional[str],
     age_min: Optional[int],
     age_max: Optional[int],
-) -> None:
-    """Attempt to dual-write a DeKalb ACTIVENet activity as a program."""
-    from db.sources import get_source_info
-
+) -> Optional[dict]:
+    """Build the structured program record for the shared typed lane."""
     title = event_record.get("title", "")
     program_type = infer_program_type(title)
+    if not title or not program_type:
+        return None
+
     session_start_str = event_record.get("start_date")
 
     session_start = None
@@ -90,28 +98,25 @@ def _try_insert_program(
         "_venue_name": venue_name,
     }
 
-    # Inherit portal_id from source
-    try:
-        source_info = get_source_info(source_id)
-        if source_info and source_info.get("owner_portal_id"):
-            program_data["portal_id"] = source_info["owner_portal_id"]
-    except Exception:
-        pass
+    if portal_id:
+        program_data["portal_id"] = portal_id
 
-    try:
-        insert_program(program_data)
-    except Exception as exc:
-        logger.debug("Program insert failed for %r: %s", title, exc)
+    return program_data
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl family-relevant public programs from DeKalb's ACTIVENet catalog."""
+    from db.sources import get_source_info
+
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
     today = date.today()
     venue_cache: dict[str, int] = {}
+    program_envelope = TypedEntityEnvelope()
+    source_info = get_source_info(source_id) or {}
+    portal_id = source_info.get("owner_portal_id")
 
     session, csrf = _init_session()
     if not session or not csrf:
@@ -232,17 +237,28 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     insert_event(event_record)
                     events_new += 1
 
-                # Dual-write: also insert as a program
-                _try_insert_program(
+                program_record = _build_program_record(
                     event_record=event_record,
                     venue_name=venue_name,
                     source_id=source_id,
+                    portal_id=portal_id,
                     age_min=age_min,
                     age_max=age_max,
                 )
+                if program_record:
+                    program_envelope.add("programs", program_record)
             except Exception as exc:
                 logger.error("DeKalb family programs: error processing item %s: %s", item.get("id"), exc)
                 continue
+
+    if program_envelope.programs:
+        persist_result = persist_typed_entity_envelope(program_envelope)
+        skipped_programs = persist_result.skipped.get("programs", 0)
+        if skipped_programs:
+            logger.warning(
+                "DeKalb family programs: skipped %d structured program rows",
+                skipped_programs,
+            )
 
     logger.info(
         "DeKalb family programs crawl complete: %d found, %d new, %d updated",

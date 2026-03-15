@@ -6,24 +6,7 @@ import CategoryIcon from "@/components/CategoryIcon";
 import { formatTimeSplit, formatPriceDetailed, type PriceableEvent } from "@/lib/formats";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClassForLength } from "@/lib/css-utils";
-
-interface CalendarEvent {
-  id: number;
-  title: string;
-  start_time: string | null;
-  end_time: string | null;
-  is_all_day: boolean;
-  is_free: boolean;
-  price_min: number | null;
-  price_max: number | null;
-  category: string | null;
-  genres?: string[] | null;
-  rsvp_status: "going" | "interested" | "went";
-  venue: {
-    name: string;
-    neighborhood: string | null;
-  } | null;
-}
+import type { CalendarEvent } from "@/lib/types/calendar";
 
 interface HoverPreviewCardProps {
   event: CalendarEvent;

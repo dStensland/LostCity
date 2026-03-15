@@ -527,6 +527,79 @@ export function generateDomainVerificationToken(): string {
 }
 
 /**
+ * Get a portal by vertical and city slugs (for subdomain routing).
+ * Returns null if not found or not active.
+ */
+export async function getPortalByVerticalAndCity(
+  vertical: string,
+  city: string
+): Promise<Portal | null> {
+  return getOrSetSharedCacheJson<Portal | null>(
+    "portal",
+    `vertical:${vertical}:${city}`,
+    5 * 60 * 1000,
+    async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let result = await (supabase as any)
+        .from("portals")
+        .select(`${BASE_PORTAL_COLUMNS},${B2B_PORTAL_COLUMNS}`)
+        .eq("vertical_slug", vertical)
+        .eq("city_slug", city)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (result.error && result.error.message?.includes("column")) {
+        // vertical_slug/city_slug columns don't exist yet - migration hasn't run
+        return null;
+      }
+
+      if (result.error || !result.data) {
+        return null;
+      }
+
+      return result.data as Portal;
+    },
+  );
+}
+
+/**
+ * Get the base city portal (no vertical) by city slug.
+ * Used for root domain + city path (e.g., lostcity.ai/atlanta).
+ */
+export async function getPortalByCitySlug(city: string): Promise<Portal | null> {
+  return getOrSetSharedCacheJson<Portal | null>(
+    "portal",
+    `city:${city}`,
+    5 * 60 * 1000,
+    async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let result = await (supabase as any)
+        .from("portals")
+        .select(`${BASE_PORTAL_COLUMNS},${B2B_PORTAL_COLUMNS}`)
+        .is("vertical_slug", null)
+        .eq("city_slug", city)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (result.error && result.error.message?.includes("column")) {
+        return null;
+      }
+
+      if (result.error || !result.data) {
+        return null;
+      }
+
+      return result.data as Portal;
+    },
+  );
+}
+
+/**
+ * Cached version of getPortalByVerticalAndCity for use in pages/layouts.
+ */
+export const getCachedPortalByVerticalAndCity = cache(getPortalByVerticalAndCity);
+
+/**
  * Cached version of getPortalBySlug for use in pages/layouts.
  * Deduplicates calls within the same request using React cache().
  */

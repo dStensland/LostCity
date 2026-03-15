@@ -6228,7 +6228,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
   --event-height: 0px;
   top: var(--event-top);
   height: var(--event-height);
-  background-color: color-mix(in srgb, var(--category-color) 30%, var(--midnight-blue));
+  background-color: color-mix(in srgb, var(--category-color) 30%, var(--night));
   border-left: 3px solid var(--category-color);
 }
 

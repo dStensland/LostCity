@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sources.atlanta_contemporary import (
+    build_exhibition_lane_record,
     build_exhibition_title,
     normalize_ongoing_exhibit_dates,
     parse_exhibition_date_range,
@@ -39,3 +40,29 @@ class TestBuildExhibitionTitle:
 
     def test_avoids_duplicate_repetition(self):
         assert build_exhibition_title("Unbound Narratives", "Unbound Narratives") == "Unbound Narratives"
+
+
+class TestBuildExhibitionLaneRecord:
+    def test_projects_exhibition_into_typed_lane(self):
+        record, artists = build_exhibition_lane_record(
+            {
+                "title": "Artist One: Unbound Narratives",
+                "description": "A survey exhibition.",
+                "canonical_start_date": "2026-02-01",
+                "start_date": "2026-03-09",
+                "end_date": "2026-05-17",
+                "source_url": "https://example.com/exhibits/unbound",
+                "image_url": "https://example.com/image.jpg",
+            },
+            source_id=77,
+            venue_id=99,
+            portal_id="portal-arts",
+        )
+
+        assert record["source_id"] == 77
+        assert record["venue_id"] == 99
+        assert record["portal_id"] == "portal-arts"
+        assert record["opening_date"] == "2026-02-01"
+        assert record["closing_date"] == "2026-05-17"
+        assert record["metadata"]["display_start_date"] == "2026-03-09"
+        assert artists == [{"artist_name": "Artist One"}]

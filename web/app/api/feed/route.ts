@@ -8,7 +8,7 @@ import {
 } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
 import { escapeSQLPattern, errorResponse } from "@/lib/api-utils";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 import {
   applyPortalScopeToQuery,
   filterByPortalCity,
@@ -203,7 +203,7 @@ export async function GET(request: Request) {
     const [portalContext, prefsResult, trendingEventsResult] =
       await timing.measure("bootstrap", () =>
         Promise.all([
-          resolvePortalQueryContext(supabase, searchParams),
+          resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request)),
           supabase
             .from("user_preferences")
             .select("*")

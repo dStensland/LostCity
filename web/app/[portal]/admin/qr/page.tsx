@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, use } from "react";
 import { usePortal } from "@/lib/portal-context";
+import { getSiteUrl, buildPortalOrigin } from "@/lib/site-url";
 import { QRCodeCanvas } from "qrcode.react";
 
 const SIZES = [
@@ -18,8 +19,6 @@ const PLACEMENTS = [
   { label: "Front Desk", value: "front_desk" },
 ] as const;
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://lostcity.ai").replace(/\/$/, "");
-
 export default function QRCodePage({ params }: { params: Promise<{ portal: string }> }) {
   const { portal: slug } = use(params);
   const { portal } = usePortal();
@@ -28,7 +27,13 @@ export default function QRCodePage({ params }: { params: Promise<{ portal: strin
   const [placement, setPlacement] = useState("room_card");
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  const portalUrl = `${SITE_URL}/${slug}?utm_source=${placement}&utm_medium=qr&utm_campaign=hotel_concierge`;
+  const portalOrigin = portal.vertical_slug
+    ? buildPortalOrigin(portal)
+    : getSiteUrl();
+  const portalPath = portal.vertical_slug
+    ? `/${portal.city_slug || slug}`
+    : `/${slug}`;
+  const portalUrl = `${portalOrigin}${portalPath}?utm_source=${placement}&utm_medium=qr&utm_campaign=hotel_concierge`;
 
   const handleDownload = useCallback(() => {
     const canvas = canvasRef.current?.querySelector("canvas");

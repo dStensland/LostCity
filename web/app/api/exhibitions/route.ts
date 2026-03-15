@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import {
   errorResponse,
   isValidString,
@@ -7,6 +7,9 @@ import {
   escapeSQLPattern,
 } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
+import { getPortalSourceAccess } from "@/lib/federation";
+import { applyFederatedPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -20,19 +23,43 @@ export async function GET(request: NextRequest) {
   if (rateLimitResult) return rateLimitResult;
 
   const { searchParams } = new URL(request.url);
+  const portalParam = searchParams.get("portal");
+  if (!portalParam || !isValidString(portalParam, 1, 50)) {
+    return NextResponse.json(
+      { error: "portal parameter is required" },
+      { status: 400 }
+    );
+  }
 
   const limit = Math.min(parseIntParam(searchParams.get("limit")) ?? 20, 100);
   const offset = Math.max(parseIntParam(searchParams.get("offset")) ?? 0, 0);
   const typeFilter = searchParams.get("type");
   const admissionFilter = searchParams.get("admission");
   const showingFilter = searchParams.get("showing"); // current, upcoming, past
+  const portalExclusive = searchParams.get("portal_exclusive") === "true";
   const venueId = parseIntParam(searchParams.get("venue_id"));
   const qFilter = searchParams.get("q");
 
   try {
     const supabase = await createClient();
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request));
+    if (!portalContext.portalId) {
+      return NextResponse.json({ error: "Portal not found" }, { status: 404 });
+    }
 
-    let query = supabase
+    if (portalContext.hasPortalParamMismatch) {
+      return NextResponse.json(
+        { error: "portal and portal_id parameters must reference the same portal" },
+        { status: 400 }
+      );
+    }
+
+    const portalId = portalContext.portalId;
+    const portalClient = await createPortalScopedClient(portalId);
+    const sourceAccess = await getPortalSourceAccess(portalId);
+    const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
+
+    let query = portalClient
       .from("exhibitions")
       .select(
         `
@@ -61,6 +88,14 @@ export async function GET(request: NextRequest) {
       `
       )
       .eq("is_active", true);
+
+    query = applyFederatedPortalScopeToQuery(query, {
+      portalId,
+      portalExclusive,
+      publicOnlyWhenNoPortal: true,
+      sourceIds: sourceAccess.sourceIds,
+      sourceColumn: "source_id",
+    });
 
     const today = new Date().toISOString().split("T")[0];
 
@@ -103,10 +138,20 @@ export async function GET(request: NextRequest) {
       return errorResponse(error, "GET /api/exhibitions");
     }
 
+    type ExhibitionRow = {
+      venue?: { city?: string | null } | null;
+      [key: string]: unknown;
+    };
+    const exhibitions = filterByPortalCity(
+      (data ?? []) as ExhibitionRow[],
+      portalCity,
+      { allowMissingCity: true }
+    );
+
     return NextResponse.json(
       {
-        exhibitions: data ?? [],
-        total: (data ?? []).length,
+        exhibitions,
+        total: exhibitions.length,
         offset,
         limit,
       },

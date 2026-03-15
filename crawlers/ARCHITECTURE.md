@@ -8,7 +8,8 @@ ranking, portal isolation, and downstream presentation.
 ## Goals
 - Maximize future-facing coverage and correctness, not lifetime row counts.
 - Move data into the correct entity lane: `events`, `series`, `venues`,
-  `venue_specials`, and festival structures.
+  `venue_specials`, `programs`, `exhibitions`, opportunity lanes, and festival
+  structures.
 - Treat destinations as first-class product data. A venue can be healthy and
   valuable even when it has zero upcoming events if it helps people decide
   where to meet, eat, stay, gather before/after, or support regular hangs.
@@ -74,7 +75,8 @@ what earlier phases did not provide unless explicitly allowed.
 5. Entity Linking
    - Input: NormalizedEvent
    - Output: Persistable payloads for `events`, `series`, `venues`, `event_artists`,
-     `event_images`, and `event_links`
+     `event_images`, `event_links`, and any additional typed entity lanes emitted
+     by the source
    - Tasks: link artists, venues, organizations, series, and portal/source attribution.
 
 6. Persist + Dedupe + Change Detection
@@ -92,13 +94,22 @@ Use the storage lane that matches the user-visible contract:
 - `events`: dated happenings that belong in the feed.
 - `events` + `content_kind='exhibit'`: exhibitions with real date ranges.
 - `series`: recurring classes, weekly shows, festival programs, film runs.
+- `programs`: structured enrollment-based activities with registration state.
+- `exhibitions`: exhibition runs that deserve independent identity beyond event cards.
+- `destination_details`: reusable destination-intelligence extensions for drive
+  time, commitment, conditions fit, and practical planning.
+- opportunity tables: deadline- or commitment-driven actionables.
 - `venue_specials`: happy hours, recurring food/drink deals, operational promos.
 - `venues`: destination metadata, planning metadata, and map/discovery completeness.
+- destination-attached features: durable things you can do, see, or experience at
+  a place that should not be flattened into feed events.
 
 Healthy coverage therefore has two parallel outputs:
 
 - feed health: events/exhibits/series users can attend
 - destination health: places users can choose before, after, or instead of an event
+- typed-entity health: programs, exhibitions, destination details, opportunities, and destination
+  features represented in their correct storage lane instead of event-shaped fallbacks
 
 Coverage work that ignores these boundaries creates noise, dedupe failures, and
 bad feed quality.
@@ -160,6 +171,13 @@ Venue specials:
 - Use `venue_specials` for deals and operational recurring offers.
 - Coverage quality for hotel/concierge surfaces depends on this table as much as
   the event feed.
+
+Typed entity outputs:
+- The crawler contract should increasingly classify extracted records into
+  explicit typed payload lanes instead of assuming every row becomes an event.
+- Near-term target lanes: `events`, `programs`, `exhibitions`,
+  `destination_details`, opportunity tables, `venue_specials`, and
+  destination-attached feature/enrichment lanes.
 
 ## Source Profiles
 Profiles are config-first and must be deterministic. YAML or JSON allowed.

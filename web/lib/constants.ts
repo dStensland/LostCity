@@ -17,3 +17,23 @@ export const DEFAULT_PORTAL_SLUG = "atlanta";
  * NOTE: The actual portal data is always loaded from the database.
  */
 export const DEFAULT_PORTAL_NAME = "Atlanta";
+
+/**
+ * Default city slug — used when redirecting from a vertical subdomain root to a city.
+ */
+export const DEFAULT_CITY_SLUG = "atlanta";
+
+/**
+ * Known vertical slugs that map to subdomain routing.
+ * Used by middleware to distinguish vertical subdomains from B2B custom subdomains.
+ */
+export const KNOWN_VERTICALS = new Set([
+  "arts",
+  "family",
+  "adventure",
+  "citizen",
+  "sports",
+  "film",
+  "music",
+  "dog",
+]);

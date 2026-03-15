@@ -8,6 +8,7 @@ import type { FindType as SearchFindType } from "@/lib/search-context";
 import {
   getCachedPortalQueryContext,
   resolvePortalQueryContext,
+  getVerticalFromRequest,
 } from "@/lib/portal-query-context";
 import { buildInstantSearchPayload, type InstantSearchEntityType } from "@/lib/instant-search-service";
 import type { UnifiedSearchResponse } from "@/lib/unified-search";
@@ -117,12 +118,13 @@ export async function GET(request: NextRequest) {
         return supabaseClientPromise;
       };
       const portalContext = await timing.measure("bootstrap", async () => {
-        const cachedContext = await getCachedPortalQueryContext(searchParams);
+        const verticalOpts = getVerticalFromRequest(request);
+        const cachedContext = await getCachedPortalQueryContext(searchParams, verticalOpts);
         if (cachedContext) {
           timing.addMetric("portal_context_cache_hit", 0, "shared");
           return cachedContext;
         }
-        return resolvePortalQueryContext(await getSupabase(), searchParams);
+        return resolvePortalQueryContext(await getSupabase(), searchParams, verticalOpts);
       });
 
       if (portalContext.hasPortalParamMismatch) {

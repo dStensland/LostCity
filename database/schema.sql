@@ -651,6 +651,7 @@ CREATE TABLE IF NOT EXISTS programs (
   lunch_included BOOLEAN NOT NULL DEFAULT false,
   tags TEXT[],
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'draft', 'archived')),
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT programs_age_range_check CHECK (
@@ -670,6 +671,7 @@ CREATE INDEX IF NOT EXISTS idx_programs_registration_status ON programs(registra
 CREATE INDEX IF NOT EXISTS idx_programs_age_range ON programs(age_min, age_max) WHERE age_min IS NOT NULL OR age_max IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_programs_season ON programs(season, status) WHERE season IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_programs_status ON programs(status, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_programs_content_hash ON programs ((metadata->>'content_hash')) WHERE metadata ? 'content_hash';
 
 CREATE TRIGGER update_programs_updated_at
   BEFORE UPDATE ON programs
@@ -789,17 +791,29 @@ ALTER TABLE open_calls ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS venue_destination_details (
   venue_id INTEGER PRIMARY KEY REFERENCES venues(id) ON DELETE CASCADE,
-  commitment_level TEXT CHECK (commitment_level IN ('hour','halfday','fullday','weekend')),
-  difficulty TEXT CHECK (difficulty IN ('easy','moderate','challenging','expert')),
+  destination_type TEXT,
+  commitment_tier TEXT CHECK (commitment_tier IN ('hour','halfday','fullday','weekend')),
+  primary_activity TEXT,
+  drive_time_minutes INTEGER CHECK (drive_time_minutes BETWEEN 0 AND 1440),
+  difficulty_level TEXT CHECK (difficulty_level IN ('easy','moderate','hard','expert')),
   trail_length_miles NUMERIC,
+  elevation_gain_ft INTEGER CHECK (elevation_gain_ft >= 0),
+  surface_type TEXT,
+  best_seasons TEXT[],
+  weather_fit_tags TEXT[],
+  practical_notes TEXT,
   conditions_notes TEXT,
   accessibility_notes TEXT,
   parking_type TEXT CHECK (parking_type IN ('free_lot','paid_lot','street','garage','none')),
   parking_capacity INTEGER,
-  seasonal_availability TEXT[],
   best_time_of_day TEXT CHECK (best_time_of_day IN ('morning','afternoon','evening','any')),
+  family_suitability TEXT CHECK (family_suitability IN ('yes','no','caution')),
   dog_friendly BOOLEAN,
-  kid_friendly BOOLEAN,
+  reservation_required BOOLEAN,
+  permit_required BOOLEAN,
+  fee_note TEXT,
+  seasonal_hazards TEXT[],
+  source_url TEXT,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -808,6 +822,20 @@ CREATE TRIGGER update_venue_destination_details_updated_at
   BEFORE UPDATE ON venue_destination_details
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_venue_destination_details_type
+  ON venue_destination_details(destination_type)
+  WHERE destination_type IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_venue_destination_details_commitment
+  ON venue_destination_details(commitment_tier)
+  WHERE commitment_tier IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_venue_destination_details_best_seasons
+  ON venue_destination_details USING GIN(best_seasons);
+
+CREATE INDEX IF NOT EXISTS idx_venue_destination_details_weather_fit_tags
+  ON venue_destination_details USING GIN(weather_fit_tags);
 
 -- -------------------------------------------------------
 -- Search term corpus (migration 486)

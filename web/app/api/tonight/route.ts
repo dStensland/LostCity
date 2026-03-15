@@ -2,7 +2,7 @@ import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { format, startOfDay, addDays, startOfWeek, startOfMonth } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 import {
   applyPortalScopeToQuery,
   filterByPortalCity,
@@ -670,7 +670,7 @@ export async function GET(request: NextRequest) {
     const tonightLoadPromise = (async (): Promise<Response> => {
     const supabase = await createClient();
 
-    const portalContext = await resolvePortalQueryContext(supabase, request.nextUrl.searchParams);
+    const portalContext = await resolvePortalQueryContext(supabase, request.nextUrl.searchParams, getVerticalFromRequest(request));
     if (portalContext.hasPortalParamMismatch) {
       return NextResponse.json(
         { error: "portal and portal_id parameters must reference the same portal" },

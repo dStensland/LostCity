@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import {
   errorResponse,
   isValidString,
@@ -7,10 +7,13 @@ import {
   escapeSQLPattern,
 } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
+import { getPortalSourceAccess } from "@/lib/federation";
+import { applyFederatedPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/open-calls?type=submission&status=open
+// GET /api/open-calls?portal=arts&type=submission&status=open
 export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(
     request,
@@ -20,18 +23,42 @@ export async function GET(request: NextRequest) {
   if (rateLimitResult) return rateLimitResult;
 
   const { searchParams } = new URL(request.url);
+  const portalParam = searchParams.get("portal");
+  if (!portalParam || !isValidString(portalParam, 1, 50)) {
+    return NextResponse.json(
+      { error: "portal parameter is required" },
+      { status: 400 }
+    );
+  }
 
   const limit = Math.min(parseIntParam(searchParams.get("limit")) ?? 20, 100);
   const offset = Math.max(parseIntParam(searchParams.get("offset")) ?? 0, 0);
   const typeFilter = searchParams.get("type");
   const statusFilter = searchParams.get("status") ?? "open";
+  const portalExclusive = searchParams.get("portal_exclusive") === "true";
   const venueId = parseIntParam(searchParams.get("venue_id"));
   const qFilter = searchParams.get("q");
 
   try {
     const supabase = await createClient();
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request));
+    if (!portalContext.portalId) {
+      return NextResponse.json({ error: "Portal not found" }, { status: 404 });
+    }
 
-    let query = supabase
+    if (portalContext.hasPortalParamMismatch) {
+      return NextResponse.json(
+        { error: "portal and portal_id parameters must reference the same portal" },
+        { status: 400 }
+      );
+    }
+
+    const portalId = portalContext.portalId;
+    const portalClient = await createPortalScopedClient(portalId);
+    const sourceAccess = await getPortalSourceAccess(portalId);
+    const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
+
+    let query = portalClient
       .from("open_calls")
       .select(
         `
@@ -57,10 +84,18 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at,
         organization:organizations(id, name, slug, website),
-        venue:venues(id, name, slug, neighborhood)
+        venue:venues(id, name, slug, neighborhood, city)
       `
       )
       .eq("is_active", true);
+
+    query = applyFederatedPortalScopeToQuery(query, {
+      portalId,
+      portalExclusive,
+      publicOnlyWhenNoPortal: true,
+      sourceIds: sourceAccess.sourceIds,
+      sourceColumn: "source_id",
+    });
 
     if (statusFilter && isValidString(statusFilter, 1, 50)) {
       query = query.eq("status", statusFilter);
@@ -92,10 +127,20 @@ export async function GET(request: NextRequest) {
       return errorResponse(error, "GET /api/open-calls");
     }
 
+    type OpenCallRow = {
+      venue?: { city?: string | null } | null;
+      [key: string]: unknown;
+    };
+    const openCalls = filterByPortalCity(
+      (data ?? []) as OpenCallRow[],
+      portalCity,
+      { allowMissingCity: true }
+    );
+
     return NextResponse.json(
       {
-        open_calls: data ?? [],
-        total: (data ?? []).length,
+        open_calls: openCalls,
+        total: openCalls.length,
         offset,
         limit,
       },

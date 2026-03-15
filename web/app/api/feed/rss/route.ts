@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 import { getPortalSourceAccess } from "@/lib/federation";
 import {
   excludeSensitiveEvents,
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createClient();
-  const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+  const portalContext = await resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request));
   const { portalId, portalSlug, filters } = portalContext;
 
   if (!portalId || !portalSlug) {

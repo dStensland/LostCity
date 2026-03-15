@@ -4,7 +4,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limi
 import { getNeighborhoodByName } from "@/config/neighborhoods";
 import { isSpotOpen, VENUE_TYPES_MAP, type VenueType, DESTINATION_CATEGORIES } from "@/lib/spots";
 import { logger } from "@/lib/logger";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 import { applyFederatedPortalScopeToQuery, excludeSensitiveEvents, filterByPortalCity, isVenueCityInScope } from "@/lib/portal-scope";
 import { parseIntParam } from "@/lib/api-utils";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
@@ -257,7 +257,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = await createClient();
-    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request));
     if (portalContext.hasPortalParamMismatch) {
       return NextResponse.json(
         { error: "portal and portal_id parameters must reference the same portal" },

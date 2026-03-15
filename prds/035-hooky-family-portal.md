@@ -1,7 +1,8 @@
-# PRD-035: Hooky — Family Portal
+# PRD-035: Lost Youth — Family Portal
 
 **Status:** Strategy Lock
-**Portal Slug:** `hooky`
+**Portal Slug:** `family` (vertical subdomain: `family.lostcity.ai`)
+**Brand Name:** Lost Youth
 **Tagline:** "Play hooky."
 **Type:** Family activity coordination portal (Metro Atlanta)
 

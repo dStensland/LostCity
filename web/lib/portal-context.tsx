@@ -234,6 +234,10 @@ export type Portal = {
   custom_domain?: string | null;
   /** Parent city portal ID for B2B portals */
   parent_portal_id?: string | null;
+  /** Vertical subdomain slug (e.g., 'arts', 'citizen') — null for base city portals */
+  vertical_slug?: string | null;
+  /** City slug for subdomain routing (e.g., 'atlanta') */
+  city_slug?: string | null;
   /** Page template override */
   page_template?: "default" | "gallery" | "timeline" | "custom";
   /** Custom component overrides (paths to components) */
@@ -353,12 +357,30 @@ export function usePortalSlug() {
 }
 
 /**
+ * Get the path slug for URL building. Returns city_slug if available, otherwise slug.
+ * Use this instead of usePortalSlug() when building URLs for subdomain-aware portals.
+ */
+export function usePortalPathSlug() {
+  const { portal } = usePortal();
+  return portal.city_slug || portal.slug;
+}
+
+/**
+ * Get the path slug from a Portal object. Returns city_slug if available, otherwise slug.
+ */
+export function getPortalPathSlug(portal: Portal): string {
+  return portal.city_slug || portal.slug;
+}
+
+/**
  * Build a portal-relative URL.
  * @param path - The path within the portal (e.g., "events", "?view=spots")
- * @param portalSlug - Optional portal slug override
+ * @param portalOrSlug - Optional portal object or slug string override
  */
-export function buildPortalUrl(path: string, portalSlug?: string) {
-  const slug = portalSlug || DEFAULT_PORTAL_SLUG;
+export function buildPortalUrl(path: string, portalOrSlug?: Portal | string) {
+  const slug = typeof portalOrSlug === "object"
+    ? (portalOrSlug.city_slug || portalOrSlug.slug)
+    : (portalOrSlug || DEFAULT_PORTAL_SLUG);
   if (path.startsWith("?") || path.startsWith("/")) {
     return `/${slug}${path}`;
   }

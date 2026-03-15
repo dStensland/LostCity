@@ -1,7 +1,8 @@
-# PRD-034: Yonder — Adventure Portal
+# PRD-034: Lost Track — Adventure Portal
 
 **Status:** Strategy Lock
-**Portal Slug:** `yonder`
+**Portal Slug:** `adventure` (vertical subdomain: `adventure.lostcity.ai`)
+**Brand Name:** Lost Track
 **Tagline:** "Wander over yonder"
 **Type:** Regional adventure discovery portal (Atlanta → North Georgia)
 

@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getLocalDateString } from "@/lib/formats";
 import type { Festival } from "@/lib/festivals";
 import { logger } from "@/lib/logger";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 import { filterByPortalCity } from "@/lib/portal-scope";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
@@ -188,7 +188,7 @@ export async function GET(request: Request) {
     const venueParam = searchParams.get("venue");
     const venueId = venueParam ? safeParseInt(venueParam, 0, 0, 999999) : undefined;
     const supabase = await createClient();
-    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request));
     if (portalContext.hasPortalParamMismatch) {
       return apiResponse(
         { error: "portal and portal_id parameters must reference the same portal" },

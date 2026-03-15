@@ -13,7 +13,7 @@ import {
   RATE_LIMITS,
   getClientIdentifier,
 } from "@/lib/rate-limit";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 import {
   applyFederatedPortalScopeToQuery,
   filterByPortalCity,
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
   const portalExclusive = searchParams.get("portal_exclusive") === "true";
 
   const supabase = await createClient();
-  const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+  const portalContext = await resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request));
   if (portalContext.hasPortalParamMismatch) {
     return NextResponse.json(
       { error: "portal and portal_id parameters must reference the same portal" },

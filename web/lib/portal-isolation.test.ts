@@ -25,6 +25,8 @@ describe("portal isolation guardrails", () => {
       "app/api/events/search/route.ts",
       "app/api/calendar/route.ts",
       "app/api/classes/route.ts",
+      "app/api/exhibitions/route.ts",
+      "app/api/open-calls/route.ts",
       "app/api/series/[slug]/route.ts",
       "app/api/around-me/route.ts",
     ];
@@ -52,6 +54,8 @@ describe("portal isolation guardrails", () => {
       "app/api/events/search/route.ts",
       "app/api/calendar/route.ts",
       "app/api/classes/route.ts",
+      "app/api/exhibitions/route.ts",
+      "app/api/open-calls/route.ts",
       "app/api/series/[slug]/route.ts",
       "app/api/around-me/route.ts",
       "app/api/spots/route.ts",

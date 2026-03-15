@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, Fragment } from "react";
 import Link from "next/link";
 import {
   format,
@@ -15,31 +15,7 @@ import {
 import CategoryIcon from "@/components/CategoryIcon";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClassForLength } from "@/lib/css-utils";
-
-interface CalendarEvent {
-  id: number;
-  title: string;
-  start_date: string;
-  start_time: string | null;
-  end_time: string | null;
-  is_all_day: boolean;
-  category: string | null;
-  rsvp_status: "going" | "interested" | "went";
-  venue: {
-    name: string;
-    slug: string | null;
-  } | null;
-}
-
-interface CalendarPlan {
-  id: string;
-  title: string;
-  plan_date: string;
-  plan_time: string | null;
-  item_count: number;
-  participants: Array<{ user_id: string; status: string }>;
-  is_creator: boolean;
-}
+import type { CalendarEvent, CalendarPlan } from "@/lib/types/calendar";
 
 interface WeekViewProps {
   currentDate: Date;
@@ -371,10 +347,9 @@ export default function WeekView({
                   .join("\n");
 
                 return (
-                  <>
+                  <Fragment key={event.id}>
                     <ScopedStyles css={eventCss} />
                     <Link
-                      key={event.id}
                       href={`/${portalSlug}?event=${event.id}`}
                       scroll={false}
                       data-category={event.category || "other"}
@@ -414,7 +389,7 @@ export default function WeekView({
                       />
                     </div>
                     </Link>
-                  </>
+                  </Fragment>
                 );
               })}
 
@@ -441,10 +416,9 @@ export default function WeekView({
                 ).length;
 
                 return (
-                  <>
+                  <Fragment key={`plan-timed-${plan.id}`}>
                     <ScopedStyles css={planCss} />
                     <Link
-                      key={`plan-timed-${plan.id}`}
                       href={`/plans/${plan.id}`}
                       className={`absolute rounded-md overflow-hidden transition-all hover:scale-[1.02] hover:z-10 group calendar-event-full ${
                         topClass?.className ?? ""
@@ -463,7 +437,7 @@ export default function WeekView({
                         )}
                       </div>
                     </Link>
-                  </>
+                  </Fragment>
                 );
               })}
 

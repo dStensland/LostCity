@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
+import { getCachedPortalBySlug, getCachedPortalByVerticalAndCity, getPortalVertical } from "@/lib/portal";
 import { PortalProvider } from "@/lib/portal-context";
 import { PortalTheme } from "@/components/PortalTheme";
 import PortalThemeClient from "@/components/PortalThemeClient";
@@ -12,8 +12,10 @@ import { isPCMDemoPortal } from "@/lib/marketplace-art";
 import { applyPreset } from "@/lib/apply-preset";
 import type { PortalBranding } from "@/lib/portal-context";
 import { getVerticalStyles } from "@/lib/portal-animation-config";
+import { buildPortalOrigin } from "@/lib/site-url";
 
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 // Hotel vertical fonts — preload disabled so they only load for hotel portals
 const cormorantGaramond = Cormorant_Garamond({
@@ -39,7 +41,16 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { portal: slug } = await params;
-  const portal = await getCachedPortalBySlug(slug);
+  const headersList = await headers();
+  const vertical = headersList.get("x-lc-vertical");
+
+  let portal;
+  if (vertical) {
+    portal = await getCachedPortalByVerticalAndCity(vertical, slug);
+    if (!portal) portal = await getCachedPortalBySlug(slug);
+  } else {
+    portal = await getCachedPortalBySlug(slug);
+  }
 
   if (!portal) {
     return { title: "Not Found | Lost City" };
@@ -47,11 +58,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const branding = portal.branding || {};
 
+  const origin = buildPortalOrigin(portal);
+  const pathSlug = portal.city_slug || portal.slug;
+
   return {
     title: `${portal.name} Events | Lost City`,
     description: portal.tagline || `Find your people in ${portal.name}. ${portal.portal_type === "city" ? "Shows, sounds, scenes, and the good stuff." : ""}`,
     alternates: {
-      canonical: `/${portal.slug}`,
+      canonical: `${origin}/${pathSlug}`,
     },
     openGraph: {
       title: `${portal.name} | Lost City`,
@@ -71,8 +85,20 @@ export default async function PortalLayout({ children, params }: Props) {
     notFound();
   }
 
-  // All portals must exist in the database - no hardcoded fallback
-  const portal = await getCachedPortalBySlug(slug);
+  // Resolve portal: check for vertical subdomain header first
+  const headersList = await headers();
+  const subdomainVertical = headersList.get("x-lc-vertical");
+
+  let portal;
+  if (subdomainVertical) {
+    // Subdomain routing: vertical from middleware header, city from path segment
+    portal = await getCachedPortalByVerticalAndCity(subdomainVertical, slug);
+    // Fallback to slug-based lookup for backward compat
+    if (!portal) portal = await getCachedPortalBySlug(slug);
+  } else {
+    // Standard path routing (root domain or no subdomain)
+    portal = await getCachedPortalBySlug(slug);
+  }
 
   if (!portal) {
     notFound();

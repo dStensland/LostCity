@@ -29,6 +29,7 @@ from db.client import (
     events_support_field_metadata_columns,
     venues_support_location_designator,
     has_event_extractions_table,
+    venues_support_destination_details_table,
     # module-level state (needed by scripts that directly access them)
     _SOURCE_CACHE,
     _VENUE_CACHE,
@@ -179,6 +180,11 @@ from db.open_calls import (
     find_open_call_by_hash,
     insert_open_call,
     update_open_call,
+)
+
+# ===== destination_details.py =====
+from db.destination_details import (
+    upsert_venue_destination_details,
 )
 
 # ===== notifications.py =====

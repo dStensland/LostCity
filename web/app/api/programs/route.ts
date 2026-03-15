@@ -8,7 +8,7 @@ import {
   escapeSQLPattern,
 } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 import { getPortalSourceAccess } from "@/lib/federation";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = await createClient();
-    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request));
 
     if (!portalContext.portalId) {
       return NextResponse.json(

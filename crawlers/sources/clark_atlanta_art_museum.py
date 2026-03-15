@@ -10,8 +10,10 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, insert_exhibition
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +52,11 @@ VENUE_DATA = {
     },
     "vibes": ["free", "cultural", "art", "educational"],
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    exhibitions=True,
+)
 
 
 def normalize_ongoing_exhibit_dates(start_date: str, end_date: Optional[str]) -> tuple[str, Optional[str]]:
@@ -215,12 +222,49 @@ def extract_exhibitions(html_content: str) -> list[dict]:
     return exhibitions
 
 
+def build_exhibition_lane_record(
+    exhibition_data: dict,
+    *,
+    source_id: int,
+    venue_id: int,
+    portal_id: Optional[str],
+) -> dict:
+    """Build the typed exhibition lane record for Clark Atlanta inventory."""
+    raw_start, raw_end = parse_exhibition_date(exhibition_data["date_text"])
+    record = {
+        "title": exhibition_data["title"].rstrip(":").strip(),
+        "venue_id": venue_id,
+        "source_id": source_id,
+        "_venue_name": VENUE_DATA["name"],
+        "opening_date": raw_start,
+        "closing_date": raw_end,
+        "description": exhibition_data.get("description"),
+        "image_url": exhibition_data.get("image_url"),
+        "source_url": CURRENT_EXHIBITIONS_URL,
+        "admission_type": "donation",
+        "tags": ["museum", "african-american", "hbcu", "exhibition"],
+        "is_active": True,
+    }
+    if portal_id:
+        record["portal_id"] = portal_id
+    return record
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Clark Atlanta University Art Museum exhibitions."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
+    exhibition_envelope = TypedEntityEnvelope()
+
+    try:
+        from db.sources import get_source_info
+
+        source_info = get_source_info(source_id) or {}
+    except Exception:
+        source_info = {}
+    portal_id = source_info.get("owner_portal_id")
 
     try:
         headers = {
@@ -333,55 +377,33 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if existing:
                     smart_update_existing_event(existing, event_record)
                     events_updated += 1
-                    # Dual-write: also insert as exhibition
-                    try:
-                        raw_start, raw_end = parse_exhibition_date(date_text)
-                        exhibition_record = {
-                            "title": title,
-                            "venue_id": venue_id,
-                            "source_id": source_id,
-                            "_venue_name": VENUE_DATA["name"],
-                            "opening_date": raw_start,
-                            "closing_date": raw_end,
-                            "description": description,
-                            "image_url": exhibition_data.get('image_url'),
-                            "source_url": CURRENT_EXHIBITIONS_URL,
-                            "admission_type": "donation",
-                            "tags": ["museum", "african-american", "hbcu", "exhibition"],
-                            "is_active": True,
-                        }
-                        insert_exhibition(exhibition_record)
-                    except Exception as exc:
-                        logger.debug("Exhibition insert failed for %r: %s", title, exc)
-                    continue
+                else:
+                    insert_event(event_record)
+                    events_new += 1
+                    logger.debug(f"Inserted exhibition: {title} ({start_date} - {end_date})")
 
-                insert_event(event_record)
-                events_new += 1
-                # Dual-write: also insert as exhibition
-                try:
-                    raw_start, raw_end = parse_exhibition_date(date_text)
-                    exhibition_record = {
-                        "title": title,
-                        "venue_id": venue_id,
-                        "source_id": source_id,
-                        "_venue_name": VENUE_DATA["name"],
-                        "opening_date": raw_start,
-                        "closing_date": raw_end,
-                        "description": description,
-                        "image_url": exhibition_data.get('image_url'),
-                        "source_url": CURRENT_EXHIBITIONS_URL,
-                        "admission_type": "donation",
-                        "tags": ["museum", "african-american", "hbcu", "exhibition"],
-                        "is_active": True,
-                    }
-                    insert_exhibition(exhibition_record)
-                except Exception as exc:
-                    logger.debug("Exhibition insert failed for %r: %s", title, exc)
-                logger.debug(f"Inserted exhibition: {title} ({start_date} - {end_date})")
+                exhibition_envelope.add(
+                    "exhibitions",
+                    build_exhibition_lane_record(
+                        exhibition_data,
+                        source_id=source_id,
+                        venue_id=venue_id,
+                        portal_id=portal_id,
+                    ),
+                )
 
             except Exception as e:
                 logger.error(f"Failed to process exhibition '{exhibition_data.get('title', 'Unknown')}': {e}", exc_info=True)
                 continue
+
+        if exhibition_envelope.exhibitions:
+            persist_result = persist_typed_entity_envelope(exhibition_envelope)
+            skipped_exhibitions = persist_result.skipped.get("exhibitions", 0)
+            if skipped_exhibitions:
+                logger.warning(
+                    "Clark Atlanta Art Museum: skipped %d exhibition rows",
+                    skipped_exhibitions,
+                )
 
         logger.info(f"Clark Atlanta Art Museum: Found {events_found} exhibitions, {events_new} new, {events_updated} existing")
 

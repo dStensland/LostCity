@@ -7,66 +7,7 @@ import { format, isToday, isBefore, parseISO } from "date-fns";
 import CategoryIcon from "@/components/CategoryIcon";
 import { formatTimeSplit, formatPriceDetailed, type PriceableEvent } from "@/lib/formats";
 import { getSmartDateLabel } from "@/lib/card-utils";
-
-interface CalendarPlan {
-  id: string;
-  title: string;
-  description: string | null;
-  plan_date: string;
-  plan_time: string | null;
-  status: string;
-  item_count: number;
-  creator: {
-    id: string;
-    username: string;
-    display_name: string | null;
-    avatar_url: string | null;
-  };
-  participants: Array<{
-    user_id: string;
-    status: string;
-    user: { username: string; display_name: string | null; avatar_url: string | null };
-  }>;
-  is_creator: boolean;
-  participant_status: string | null;
-}
-
-interface CalendarEvent {
-  id: number;
-  title: string;
-  start_date: string;
-  start_time: string | null;
-  end_time: string | null;
-  is_all_day: boolean;
-  is_free: boolean;
-  price_min: number | null;
-  price_max: number | null;
-  category: string | null;
-  image_url: string | null;
-  rsvp_status: "going" | "interested" | "went";
-  venue: {
-    id: number;
-    name: string;
-    slug: string | null;
-    neighborhood: string | null;
-  } | null;
-}
-
-interface FriendCalendarEvent {
-  id: number;
-  title: string;
-  start_date: string;
-  start_time: string | null;
-  is_all_day: boolean;
-  category: string | null;
-  rsvp_status: "going" | "interested";
-  friend: {
-    id: string;
-    username: string;
-    display_name: string | null;
-    avatar_url: string | null;
-  };
-}
+import type { CalendarEvent, CalendarPlan, FriendCalendarEvent } from "@/lib/types/calendar";
 
 interface AgendaViewProps {
   events: CalendarEvent[];

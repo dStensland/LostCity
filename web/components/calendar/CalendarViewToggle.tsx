@@ -1,6 +1,9 @@
 "use client";
 
-export type CalendarView = "month" | "week" | "agenda";
+import type { CalendarView } from "@/lib/types/calendar";
+
+// Re-export for backwards compat
+export type { CalendarView };
 
 interface CalendarViewToggleProps {
   currentView: CalendarView;
