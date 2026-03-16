@@ -839,6 +839,16 @@ export default function CityBriefing({
   const [tentpoles, setTentpoles] = useState<StandaloneTentpole[]>([]);
   const [posts, setPosts] = useState<NetworkPost[]>([]);
   const [liveCount, setLiveCount] = useState<number | null>(null);
+
+  const dedupedPosts = useMemo(() => {
+    const seenTitles = new Set<string>();
+    return posts.filter((p) => {
+      const norm = p.title.toLowerCase().trim();
+      if (seenTitles.has(norm)) return false;
+      seenTitles.add(norm);
+      return true;
+    });
+  }, [posts]);
   const [loading, setLoading] = useState(true);
 
   // ── Fetch all three sources in parallel ──────────────────────────────────
@@ -1181,8 +1191,8 @@ export default function CityBriefing({
                 </Link>
               </div>
               <div className="rounded-card bg-[var(--night)] border border-[var(--twilight)]/30 px-3">
-                {posts.slice(0, 4).map((post, i) => (
-                  <NewsRow key={post.id} post={post} isLast={i === Math.min(posts.length, 4) - 1} />
+                {dedupedPosts.slice(0, 4).map((post, i) => (
+                  <NewsRow key={post.id} post={post} isLast={i === Math.min(dedupedPosts.length, 4) - 1} />
                 ))}
               </div>
             </div>

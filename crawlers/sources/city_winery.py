@@ -98,6 +98,49 @@ def map_genres(api_tags: list) -> list[str]:
     return genres or ["live-music"]
 
 
+_FOOD_DRINK_KEYWORDS = frozenset(
+    [
+        "tour",
+        "tasting",
+        "dinner",
+        "brunch",
+        "lunch",
+        "chef",
+        "winemaker",
+        "winery",
+        "pairing",
+        "harvest",
+        "vintage",
+        "culinary",
+    ]
+)
+
+
+def derive_category(genres: list[str], title: str) -> str:
+    """Derive event category from genres and title.
+
+    Priority order:
+    1. comedy/stand-up genre (when live-music is absent) → "comedy"
+    2. drag genre → "nightlife"
+    3. food/drink keywords in title → "food_drink"
+    4. default → "music"
+    """
+    genre_set = set(genres)
+    title_lower = title.lower()
+    title_words = set(title_lower.split())
+
+    if ("comedy" in genre_set or "stand-up" in genre_set) and "live-music" not in genre_set:
+        return "comedy"
+
+    if "drag" in genre_set:
+        return "nightlife"
+
+    if _FOOD_DRINK_KEYWORDS & title_words:
+        return "food_drink"
+
+    return "music"
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl City Winery Atlanta via Vivenu API."""
     source_id = source["id"]
@@ -196,7 +239,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "end_date": end_date,
                     "end_time": end_time,
                     "is_all_day": False,
-                    "category": "music",
+                    "category": derive_category(genres, title),
                     "tags": ["city-winery", "live-music", "dinner-show", "ponce-city-market"],
                     "price_min": price,
                     "price_max": price,

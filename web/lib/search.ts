@@ -7,14 +7,13 @@ import {
   ALL_TAGS,
 } from "./search-constants";
 import {
-  startOfDay,
   addDays,
   nextSaturday,
   nextSunday,
   isSaturday,
   isSunday,
-  format,
 } from "date-fns";
+import { getLocalDateString, getLocalTimeString } from "@/lib/formats";
 import { getMoodById, type MoodId } from "./moods";
 import { decodeCursor, generateNextCursor, type CursorData } from "./cursor";
 import { createLogger } from "./logger";
@@ -22,6 +21,7 @@ import type { Frequency, DayOfWeek } from "./recurrence";
 import { applyFederatedPortalScopeToQuery, applyPortalScopeToQuery } from "./portal-scope";
 import { applyFeedGate } from "./feed-gate";
 import { isSceneEvent } from "./scene-event-routing";
+import { deduplicateCinemaEvents } from "./cinema-filter";
 
 const logger = createLogger("search");
 
@@ -184,21 +184,21 @@ function getDateRange(filter: "now" | "today" | "tomorrow" | "weekend" | "week" 
   end: string;
 } {
   const now = new Date();
-  const today = startOfDay(now);
+  const todayStr = getLocalDateString(now);
 
   switch (filter) {
     case "now":
     case "today":
       return {
-        start: format(today, "yyyy-MM-dd"),
-        end: format(today, "yyyy-MM-dd"),
+        start: todayStr,
+        end: todayStr,
       };
 
     case "tomorrow": {
-      const tomorrow = addDays(today, 1);
+      const tomorrow = addDays(now, 1);
       return {
-        start: format(tomorrow, "yyyy-MM-dd"),
-        end: format(tomorrow, "yyyy-MM-dd"),
+        start: getLocalDateString(tomorrow),
+        end: getLocalDateString(tomorrow),
       };
     }
 
@@ -207,38 +207,38 @@ function getDateRange(filter: "now" | "today" | "tomorrow" | "weekend" | "week" 
       let sunDate: Date;
 
       if (isSaturday(now)) {
-        satDate = today;
-        sunDate = addDays(today, 1);
+        satDate = now;
+        sunDate = addDays(now, 1);
       } else if (isSunday(now)) {
-        satDate = today;
-        sunDate = today;
+        satDate = now;
+        sunDate = now;
       } else {
-        satDate = nextSaturday(today);
-        sunDate = nextSunday(today);
+        satDate = nextSaturday(now);
+        sunDate = nextSunday(now);
       }
 
       return {
-        start: format(satDate, "yyyy-MM-dd"),
-        end: format(sunDate, "yyyy-MM-dd"),
+        start: getLocalDateString(satDate),
+        end: getLocalDateString(sunDate),
       };
     }
 
     case "week":
       return {
-        start: format(today, "yyyy-MM-dd"),
-        end: format(addDays(today, 7), "yyyy-MM-dd"),
+        start: todayStr,
+        end: getLocalDateString(addDays(now, 7)),
       };
 
     case "month":
       return {
-        start: format(today, "yyyy-MM-dd"),
-        end: format(addDays(today, 30), "yyyy-MM-dd"),
+        start: todayStr,
+        end: getLocalDateString(addDays(now, 30)),
       };
 
     default:
       return {
-        start: format(today, "yyyy-MM-dd"),
-        end: format(addDays(today, 365), "yyyy-MM-dd"),
+        start: todayStr,
+        end: getLocalDateString(addDays(now, 365)),
       };
   }
 }
@@ -301,7 +301,7 @@ async function batchFetchVenueIds(filters: {
           .from("events")
           .select("id")
           .or(`title.ilike.%${escapedTerm}%,description.ilike.%${escapedTerm}%`)
-          .gte("start_date", format(startOfDay(new Date()), "yyyy-MM-dd"))
+          .gte("start_date", getLocalDateString())
           .limit(500);
         return (data || []).map((e: { id: number }) => e.id);
       })()
@@ -695,9 +695,8 @@ export async function getFilteredEventsWithSearch(
   pageSize = 20
 ): Promise<{ events: EventWithLocation[]; total: number }> {
   const now = new Date();
-  // Use date-fns format to get local date (not UTC from toISOString)
-  const today = format(startOfDay(now), "yyyy-MM-dd");
-  const currentTime = now.toTimeString().split(" ")[0]; // HH:MM:SS format
+  const today = getLocalDateString(now);
+  const currentTime = getLocalTimeString(now); // HH:MM:SS in ET
   const offset = (page - 1) * pageSize;
 
   let query = supabase
@@ -799,7 +798,13 @@ export async function getFilteredEventsWithSearch(
     });
   }
 
-  return { events, total: count ?? 0 };
+  // Collapse cinema showtimes: one feed card per film per day
+  const dedupedEvents = deduplicateCinemaEvents(events);
+  const dedupedTotal = count != null
+    ? count - (events.length - dedupedEvents.length)
+    : dedupedEvents.length;
+
+  return { events: dedupedEvents as EventWithLocation[], total: Math.max(0, dedupedTotal) };
 }
 
 /**
@@ -812,9 +817,8 @@ export async function getFilteredEventsWithCursor(
   pageSize = 20
 ): Promise<{ events: EventWithLocation[]; nextCursor: string | null; hasMore: boolean }> {
   const now = new Date();
-  // Use date-fns format to get local date (not UTC from toISOString)
-  const today = format(startOfDay(now), "yyyy-MM-dd");
-  const currentTime = now.toTimeString().split(" ")[0]; // HH:MM:SS format
+  const today = getLocalDateString(now);
+  const currentTime = getLocalTimeString(now); // HH:MM:SS in ET
 
   // Decode cursor if provided
   let cursorData: CursorData | null = null;
@@ -938,10 +942,13 @@ export async function getFilteredEventsWithCursor(
     });
   }
 
-  // Generate next cursor from the last event
-  const nextCursor = hasMore ? generateNextCursor(events) : null;
+  // Collapse cinema showtimes: one feed card per film per day
+  const dedupedEvents = deduplicateCinemaEvents(events) as EventWithLocation[];
 
-  return { events, nextCursor, hasMore };
+  // Generate next cursor from the last event
+  const nextCursor = hasMore ? generateNextCursor(dedupedEvents) : null;
+
+  return { events: dedupedEvents, nextCursor, hasMore };
 }
 
 // Get all events for map view
@@ -949,8 +956,7 @@ export async function getEventsForMap(
   filters: SearchFilters,
   limit = 500
 ): Promise<EventWithLocation[]> {
-  // Use date-fns format to get local date (not UTC from toISOString)
-  const today = format(startOfDay(new Date()), "yyyy-MM-dd");
+  const today = getLocalDateString();
 
   // Get mood data for potential vibes lookup (needed for consistency with other functions)
   const mood = filters.mood ? getMoodById(filters.mood) : null;
@@ -1064,8 +1070,7 @@ export async function getEventsForMap(
 
   // Compute is_live for each event based on current time
   const now = new Date();
-  // Use date-fns format to get local date (not UTC from toISOString)
-  const currentDate = format(startOfDay(now), "yyyy-MM-dd");
+  const currentDate = getLocalDateString(now);
 
   const events = (data as EventWithLocation[]).map((event) => {
     const isLive = computeIsLive(event, now, currentDate);

@@ -1929,11 +1929,19 @@ def infer_genres(
                 genres.add(genre)
 
     # --- Inherit venue genres (if event is at a jazz bar, it's likely jazz-related) ---
+    # Scoped to the event's category to prevent cross-domain bleed (e.g. a doom metal
+    # show at 529 should not inherit `comedy`/`trivia`/`stand-up` just because 529
+    # also hosts those programming types).
     if venue_genres:
         normalized_venue = normalize_genres(venue_genres)
         # Only inherit if event has no genres yet (don't override explicit genres)
         if not genres and normalized_venue:
-            genres.update(normalized_venue)
+            allowed = genres_for_category(category_key)
+            if allowed:
+                scoped = [g for g in normalized_venue if g in allowed]
+                genres.update(scoped)
+            else:
+                genres.update(normalized_venue)
 
     # --- Fallback: infer from venue vibes/type when no genres found ---
     if not genres and (venue_vibes or venue_type):

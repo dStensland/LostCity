@@ -61,6 +61,10 @@ def sanitize_text(text: str) -> str:
     """
     Sanitize text field by stripping whitespace, removing HTML tags,
     decoding HTML entities, and normalizing whitespace.
+
+    Also strips navigation breadcrumb artifacts like "Home >> Events >> Details"
+    and repeated '>' characters that appear from unescaped HTML entities or
+    markdown-style blockquotes in scraped web content.
     """
     if not text:
         return text
@@ -73,6 +77,21 @@ def sanitize_text(text: str) -> str:
         text = soup.get_text(separator=" ")
 
     text = text.replace("\xa0", " ")
+
+    # Strip navigation breadcrumb artifacts: "Home >> Events >> Details"
+    # These appear when breadcrumb/path text is captured as event descriptions.
+    # Match one or more words separated by >> sequences, with optional surrounding
+    # whitespace — but only when the pattern dominates the whole string or a line.
+    # Strategy: remove >> separators and collapse what remains into clean text,
+    # but only when >> appears as a separator (not inside legitimate content).
+    # Simple rule: replace any " >> " or ">> " or " >>" with " " (space-separated breadcrumbs),
+    # then strip any leading/trailing lone '>' characters left over.
+    text = re.sub(r"\s*>>\s*", " ", text)
+    # Remove stray runs of '>' that aren't part of HTML (already stripped above)
+    text = re.sub(r">{2,}", " ", text)
+    # Remove a lone leading '>' (markdown blockquote artifact)
+    text = re.sub(r"^>\s*", "", text)
+
     text = re.sub(r"\s+([,.;:!?])", r"\1", text)
     text = re.sub(r"\(\s+", "(", text)
     text = re.sub(r"\s+\)", ")", text)

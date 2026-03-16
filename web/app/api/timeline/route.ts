@@ -1,5 +1,6 @@
 import { getFilteredEventsWithCursor, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
 import { enrichEventsWithSocialProof } from "@/lib/social-proof";
+import { deduplicateCinemaEvents } from "@/lib/cinema-filter";
 import type { MoodId } from "@/lib/moods";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { apiResponse, escapeSQLPattern } from "@/lib/api-utils";
@@ -132,7 +133,10 @@ async function fetchTimelinePage(
   const cityFilteredEvents = filterByPortalCity(rawEvents, portalCity, { allowMissingCity: true });
 
   // Enrich events with social proof
-  const events = await enrichEventsWithSocialProof(cityFilteredEvents);
+  const enrichedEvents = await enrichEventsWithSocialProof(cityFilteredEvents);
+
+  // Collapse cinema showtimes: one feed card per film per day
+  const events = deduplicateCinemaEvents(enrichedEvents) as typeof enrichedEvents;
 
   let festivals: Festival[] = [];
   let festivalError: { message: string } | null = null;
@@ -151,6 +155,19 @@ async function fetchTimelinePage(
       });
     } else {
       festivals = (festivalsData || []) as Festival[];
+    }
+
+    // Cross-table dedup: drop festivals whose name normalizes to a substring of (or matches)
+    // an event title already in this page, avoiding duplicates when a festival appears both
+    // as a crawled event and as a festivals-table record.
+    if (festivals.length > 0 && events.length > 0) {
+      const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const eventTitleNorms = new Set(events.map(e => normalize(e.title)));
+      festivals = festivals.filter(f => {
+        const normName = normalize(f.name);
+        return !eventTitleNorms.has(normName) &&
+          ![...eventTitleNorms].some(en => en.includes(normName) || normName.includes(en));
+      });
     }
 
     festivalError = error;

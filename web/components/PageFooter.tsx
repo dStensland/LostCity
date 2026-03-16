@@ -67,7 +67,7 @@ export default function PageFooter({
             <Logo size="md" href={undefined} />
           ) : null}
           <p className="font-serif text-[var(--muted)] mt-1">
-            {tagline || `Find your people in ${cityName}`}
+            {tagline || "FIND YOUR THING AND DO IT"}
           </p>
         </div>
 
