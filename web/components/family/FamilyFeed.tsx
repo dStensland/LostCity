@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Users } from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth-context";
@@ -65,7 +66,7 @@ function SidebarNavItem({
       style={{
         fontFamily: "var(--font-dm-sans, 'DM Sans', system-ui, sans-serif)",
         color: isActive ? SAGE : TEXT_SECONDARY,
-        backgroundColor: isActive ? `${SAGE}12` : "transparent",
+        backgroundColor: isActive ? `${SAGE}22` : "transparent",
         borderLeft: isActive ? `4px solid ${AMBER}` : "4px solid transparent",
       }}
     >
@@ -254,14 +255,8 @@ function CrewPanel({ kids, isAuthenticated, portalSlug }: { kids: KidProfile[]; 
             <Users size={24} style={{ color: SAGE }} />
           </div>
           <div className="min-w-0">
-            <p
-              className="text-xs uppercase tracking-[0.18em]"
-              style={{ fontFamily: "var(--font-dm-sans, 'DM Sans', system-ui, sans-serif)", color: AMBER }}
-            >
-              My Crew
-            </p>
             <h2
-              className="mt-1 text-2xl font-semibold"
+              className="text-2xl font-semibold"
               style={{ fontFamily: "var(--font-dm-sans, 'DM Sans', system-ui, sans-serif)", color: TEXT_PRIMARY }}
             >
               My Crew
@@ -356,10 +351,22 @@ function MobileBottomTabBar({
 
 // ---- Main component ------------------------------------------------------
 
+const VALID_TABS = new Set<TabId>(["today", "weekend", "programs", "calendar", "crew"]);
+
 export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabId>("today");
   const [activeKidIds, setActiveKidIds] = useState<string[]>([]);
   const [activeGenericFilters, setActiveGenericFilters] = useState<GenericFilter[]>([]);
+
+  // Read initial tab from URL param — used by SpringBreakBanner CTA and deep links.
+  // Only applies on first mount; tab state is purely client-side after that.
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam && VALID_TABS.has(tabParam as TabId)) {
+      setActiveTab(tabParam as TabId);
+    }
+  }, [searchParams]);
 
   const { user } = useAuth();
   const { data: kids = [] } = useKidProfiles();
@@ -445,13 +452,13 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
           <div className="mb-6 px-1">
             <p
               className="text-lg font-bold leading-tight"
-              style={{ fontFamily: "var(--font-dm-sans, 'DM Sans', system-ui, sans-serif)", color: TEXT_PRIMARY }}
+              style={{ fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)", fontWeight: 700, color: TEXT_PRIMARY }}
             >
               Lost Youth
             </p>
             <p
-              className="text-xs mt-0.5 italic"
-              style={{ fontFamily: "DM Sans, system-ui, sans-serif", color: TEXT_SECONDARY }}
+              className="text-xs mt-0.5"
+              style={{ fontFamily: "var(--font-dm-sans, 'DM Sans', system-ui, sans-serif)", fontStyle: "italic", color: TEXT_SECONDARY }}
             >
               play hooky
             </p>

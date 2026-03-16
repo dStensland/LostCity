@@ -49,6 +49,7 @@ export const BESPOKE_FEED_SHELL_VERTICALS = [
   "community",
   "family",
   "arts",
+  "adventure",
 ] as const;
 
 export const AMBIENT_DISABLED_VERTICALS = [
@@ -56,6 +57,7 @@ export const AMBIENT_DISABLED_VERTICALS = [
   "community",
   "marketplace",
   "dog",
+  "adventure",
 ] as const;
 
 export const GLOBAL_EFFECTS_SUPPRESSED_VERTICALS = [
@@ -66,6 +68,7 @@ export const GLOBAL_EFFECTS_SUPPRESSED_VERTICALS = [
   "dog",
   "hotel",
   "hospital",
+  "adventure",
 ] as const;
 
 export const FEED_SKELETON_VERTICALS = [

@@ -48,7 +48,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        fontFamily: "Outfit, system-ui, sans-serif",
+        fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)",
         fontSize: 10,
         fontWeight: 700,
         letterSpacing: "0.1em",
@@ -83,7 +83,7 @@ function DetailRow({ icon, label, value }: DetailRowProps) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
             fontSize: 11,
             color: MUTED,
             marginBottom: 1,
@@ -93,7 +93,7 @@ function DetailRow({ icon, label, value }: DetailRowProps) {
         </div>
         <div
           style={{
-            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
             fontSize: 13,
             color: TEXT,
             fontWeight: 500,
@@ -213,7 +213,7 @@ export function ProgramDetailSheet({
       width: "100%",
       padding: "14px 20px",
       borderRadius: 12,
-      fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
+      fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)",
       fontSize: 15,
       fontWeight: 700,
       textAlign: "center",
@@ -446,7 +446,7 @@ export function ProgramDetailSheet({
           {/* Title */}
           <h2
             style={{
-              fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)",
               fontSize: 22,
               fontWeight: 800,
               color: TEXT,
@@ -461,7 +461,7 @@ export function ProgramDetailSheet({
           {/* Provider / venue line */}
           <p
             style={{
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 13,
               color: MUTED,
               margin: "0 0 14px",
@@ -477,7 +477,7 @@ export function ProgramDetailSheet({
             {/* Age */}
             <span
               style={{
-                fontFamily: "DM Sans, system-ui, sans-serif",
+                fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
                 fontSize: 12,
                 fontWeight: 600,
                 color: SAGE,
@@ -493,7 +493,7 @@ export function ProgramDetailSheet({
             {/* Registration status */}
             <span
               style={{
-                fontFamily: "DM Sans, system-ui, sans-serif",
+                fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
                 fontSize: 12,
                 fontWeight: 600,
                 borderRadius: 20,
@@ -511,7 +511,7 @@ export function ProgramDetailSheet({
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 5,
-                  fontFamily: "DM Sans, system-ui, sans-serif",
+                  fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
                   fontSize: 12,
                   fontWeight: 600,
                   color: matchingKid.color,
@@ -539,7 +539,7 @@ export function ProgramDetailSheet({
             {isFree && (
               <span
                 style={{
-                  fontFamily: "DM Sans, system-ui, sans-serif",
+                  fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
                   fontSize: 12,
                   fontWeight: 700,
                   color: "#3A7D44",
@@ -559,7 +559,7 @@ export function ProgramDetailSheet({
             {!isFree && p.cost_amount !== null && (
               <span
                 style={{
-                  fontFamily: "DM Sans, system-ui, sans-serif",
+                  fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
                   fontSize: 12,
                   fontWeight: 600,
                   color: TEXT,
@@ -590,7 +590,7 @@ export function ProgramDetailSheet({
               >
                 <div
                   style={{
-                    fontFamily: "DM Sans, system-ui, sans-serif",
+                    fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
                     fontSize: 13,
                     color: TEXT,
                     fontWeight: 500,
@@ -607,7 +607,7 @@ export function ProgramDetailSheet({
                   <span
                     style={{
                       alignSelf: "flex-start",
-                      fontFamily: "DM Sans, system-ui, sans-serif",
+                      fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
                       fontSize: 11,
                       fontWeight: 600,
                       color: AMBER,
@@ -630,7 +630,7 @@ export function ProgramDetailSheet({
               <SectionLabel>About</SectionLabel>
               <p
                 style={{
-                  fontFamily: "DM Sans, system-ui, sans-serif",
+                  fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
                   fontSize: 14,
                   color: TEXT,
                   lineHeight: 1.65,
@@ -656,7 +656,7 @@ export function ProgramDetailSheet({
           {p.registration_opens && status === "upcoming" && (
             <div
               style={{
-                fontFamily: "DM Sans, system-ui, sans-serif",
+                fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
                 fontSize: 12,
                 color: MUTED,
                 textAlign: "center",
@@ -679,7 +679,7 @@ export function ProgramDetailSheet({
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 4,
-                fontFamily: "DM Sans, system-ui, sans-serif",
+                fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
                 fontSize: 11,
                 color: MUTED,
                 marginBottom: 8,

@@ -126,8 +126,19 @@ export async function GET(request: NextRequest) {
       const today = new Date().toISOString().split("T")[0];
       // Exclude sessions that have already ended; keep programs with no end date
       programsQuery = programsQuery.or(`session_end.is.null,session_end.gte.${today}`);
-      // Exclude adult-only programs (age_min > 17 means no one under 18 qualifies)
+      // Exclude adult-only programs: age_min > 17 means no one under 18 qualifies,
+      // age_max > 60 means the program spans well into adult range (not family-focused)
       programsQuery = programsQuery.or(`age_min.is.null,age_min.lte.17`);
+      programsQuery = programsQuery.or(`age_max.is.null,age_max.lte.60`);
+      // Freshness guard: exclude programs whose session_start is more than 1 year
+      // in the past AND session_end is NULL (stale data with no explicit end date).
+      // Programs with no session_start at all are kept (they have no staleness signal).
+      const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0];
+      programsQuery = programsQuery.or(
+        `session_start.is.null,session_start.gte.${oneYearAgo},session_end.not.is.null`
+      );
     }
 
     if (registrationFilter && isValidString(registrationFilter, 1, 100)) {
@@ -236,7 +247,11 @@ export async function GET(request: NextRequest) {
       } | null;
     };
 
-    const programs = (programsData ?? []) as ProgramRow[];
+    // Post-query: filter out adult-titled programs that slip through DB filters
+    const ADULT_TITLE_RE = /\badult/i;
+    const programs = ((programsData ?? []) as ProgramRow[]).filter(
+      (p) => !ADULT_TITLE_RE.test(p.name)
+    );
 
     // Compatibility mode only: fall back to recurring events when explicitly requested.
     if (programs.length === 0 && offset === 0 && includeEventsFallback) {

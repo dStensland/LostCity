@@ -80,7 +80,7 @@ describe("phase 1 runtime helpers", () => {
     expect(isContentPillarVertical("sports")).toBe(true);
     expect(isContentPillarVertical("hotel")).toBe(false);
     expect(hasBespokeFeedShell("family")).toBe(true);
-    expect(hasBespokeFeedShell("adventure")).toBe(false);
+    expect(hasBespokeFeedShell("adventure")).toBe(true);
   });
 
   it("drives shared ambient and skeleton behavior", () => {

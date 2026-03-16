@@ -61,6 +61,14 @@ const imageHosts = new Set([
   "cdn.evbuc.com",
   "s1.ticketm.net",
   "s1.ticketmaster.com",
+  "images.seatgeek.com",
+  "img.songkick.com",
+  "f4.bcbits.com",
+  // Music / streaming CDNs (Spotify artist/album art, etc.)
+  "i.scdn.co",
+  "mosaic.scdn.co",
+  // Meetup event images
+  "secure.meetupstatic.com",
   // Image CDNs
   "images.unsplash.com",
   "images.pexels.com",

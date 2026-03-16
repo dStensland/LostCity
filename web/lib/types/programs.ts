@@ -118,13 +118,13 @@ export const REGISTRATION_STATUS_LABELS: Record<RegistrationStatus, string> = {
 };
 
 export const REGISTRATION_STATUS_COLORS: Record<RegistrationStatus, string> = {
-  open: "text-emerald-700 bg-emerald-50 border-emerald-200",
-  waitlist: "text-amber-700 bg-amber-50 border-amber-200",
-  closed: "text-gray-500 bg-gray-50 border-gray-200",
-  walk_in: "text-blue-700 bg-blue-50 border-blue-200",
-  sold_out: "text-red-700 bg-red-50 border-red-200",
-  upcoming: "text-violet-700 bg-violet-50 border-violet-200",
-  unknown: "text-gray-500 bg-gray-50 border-gray-200",
+  open: "text-[#3D6B3D] bg-[#5E7A5E]/10 border-[#5E7A5E]/25",
+  waitlist: "text-[#7A5C00] bg-[#C48B1D]/10 border-[#C48B1D]/25",
+  closed: "text-[#756E63] bg-[#756E63]/10 border-[#756E63]/20",
+  walk_in: "text-[#5E7A5E] bg-[#5E7A5E]/10 border-[#5E7A5E]/20",
+  sold_out: "text-[#8B3A3A] bg-[#8B3A3A]/10 border-[#8B3A3A]/20",
+  upcoming: "text-[#7A5C00] bg-[#C48B1D]/10 border-[#C48B1D]/25",
+  unknown: "text-[#756E63] bg-[#756E63]/10 border-[#756E63]/20",
 };
 
 export const SEASON_LABELS: Record<ProgramSeason, string> = {

@@ -57,7 +57,7 @@ export const ProgramCard = memo(function ProgramCard({ program }: ProgramCardPro
         <div className="flex-1 min-w-0">
           <h3
             className="text-base font-semibold leading-snug"
-            style={{ fontFamily: "var(--font-outfit, system-ui, sans-serif)", color: "var(--cream, #1C1917)" }}
+            style={{ fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)", color: "var(--cream, #1C1917)" }}
           >
             {displayName}
           </h3>

@@ -63,11 +63,11 @@ export default function ATLittleHeader() {
 
         {/* Right side actions: search + user menu only */}
         <div className="flex items-center gap-2">
-          <div className="rounded-full transition-transform hover:scale-105 family-header-pill">
+          <div className="rounded-full family-header-pill">
             <HeaderSearchButton />
           </div>
-          <div className="rounded-full transition-transform hover:scale-105 family-header-pill">
-            <UserMenu />
+          <div className="rounded-full family-header-pill">
+            <UserMenu minimal />
           </div>
         </div>
       </div>

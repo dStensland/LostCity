@@ -82,6 +82,8 @@ export async function GET(request: NextRequest) {
     // Build each query individually — applying the optional age filter inline
     // to avoid TypeScript generic constraint issues with Supabase's query builder.
 
+    // Exclude adult-only programs (age_min > 17 means no minors eligible).
+    // Also exclude programs whose session has already ended (stale data guard).
     let openingSoonQ = supabase
       .from("programs")
       .select(programSelect)
@@ -90,6 +92,8 @@ export async function GET(request: NextRequest) {
       .eq("registration_status", "upcoming")
       .gte("registration_opens", today)
       .lte("registration_opens", in14Days)
+      .or(`session_end.is.null,session_end.gte.${today}`)
+      .or("age_min.is.null,age_min.lte.17")
       .order("registration_opens", { ascending: true })
       .limit(20);
 
@@ -101,6 +105,8 @@ export async function GET(request: NextRequest) {
       .eq("registration_status", "open")
       .gte("registration_closes", today)
       .lte("registration_closes", in7Days)
+      .or(`session_end.is.null,session_end.gte.${today}`)
+      .or("age_min.is.null,age_min.lte.17")
       .order("registration_closes", { ascending: true })
       .limit(20);
 
@@ -110,6 +116,8 @@ export async function GET(request: NextRequest) {
       .eq("portal_id", portalId)
       .eq("status", "active")
       .eq("registration_status", "waitlist")
+      .or(`session_end.is.null,session_end.gte.${today}`)
+      .or("age_min.is.null,age_min.lte.17")
       .order("session_start", { ascending: true, nullsFirst: false })
       .limit(20);
 
@@ -138,9 +146,14 @@ export async function GET(request: NextRequest) {
       return errorResponse(fillingFastResult.error, "GET /api/programs/registration-radar (filling_fast)");
     }
 
-    const openingSoon = openingSoonResult.data ?? [];
-    const closingSoon = closingSoonResult.data ?? [];
-    const fillingFast = fillingFastResult.data ?? [];
+    // Post-query title filter: exclude programs with "Adult" in the name.
+    // Supabase doesn't support server-side regex; filter here instead.
+    // This catches "Adult Registration", "Adult5 Swim Lines", etc.
+    // Cast required: Supabase infers .data as `never` after null-guard in complex queries.
+    const adultTitleRe = /\badult/i;
+    const openingSoon = (openingSoonResult.data as { name: string }[] ?? []).filter((p) => !adultTitleRe.test(p.name));
+    const closingSoon = (closingSoonResult.data as { name: string }[] ?? []).filter((p) => !adultTitleRe.test(p.name));
+    const fillingFast = (fillingFastResult.data as { name: string }[] ?? []).filter((p) => !adultTitleRe.test(p.name));
 
     return NextResponse.json(
       {

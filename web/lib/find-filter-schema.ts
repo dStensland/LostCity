@@ -42,7 +42,6 @@ export const FIND_TYPE_FILTER_KEYS: Record<FindType, readonly string[]> = {
     "genres",
     "cuisine",
     "label",
-    "tab",
     "occasion",
   ],
   showtimes: ["date", "theater"],

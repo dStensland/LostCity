@@ -3,12 +3,10 @@
 import { memo, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { useWeather } from "@/lib/hooks/useWeather";
 import {
-  BellSimple,
   Tag,
-  CalendarCheck,
   ArrowRight,
   MapPin,
   Clock,
@@ -35,12 +33,9 @@ const SKY = "#78B7D0";
 const TEXT = "#1E2820";
 const MUTED = "#756E63";
 const BORDER = "#E0DDD4";
-const SAGE_WASH = "#EEF2EE";
-
 void CANVAS; // used as page-level bg in parent
 void MOSS;
 void SKY;
-void SAGE_WASH;
 
 // ---- Types ---------------------------------------------------------------
 
@@ -141,7 +136,8 @@ async function fetchExploreVenues(portalId: string): Promise<VenueCard[]> {
   const res = await fetch(`/api/venues/search?q=family&limit=6&${params.toString()}`);
   if (!res.ok) return [];
   const json = await res.json();
-  return (json.venues ?? []) as VenueCard[];
+  // Only return venues that have a real image — placeholders degrade the carousel
+  return ((json.venues ?? []) as VenueCard[]).filter((v) => v.image_url);
 }
 
 // ---- Shared sub-components -----------------------------------------------
@@ -160,7 +156,7 @@ function SectionLabel({
       <span
         style={{
           color,
-          fontFamily: "Outfit, system-ui, sans-serif",
+          fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
           fontSize: 11,
           fontWeight: 700,
           letterSpacing: "1.5px",
@@ -185,7 +181,7 @@ function SeeAllLink({
     <Link
       href={href}
       className="hover:opacity-70 transition-opacity"
-      style={{ color: SAGE, fontSize: 12, fontFamily: "DM Sans, system-ui, sans-serif" }}
+      style={{ color: SAGE, fontSize: 12, fontFamily: "var(--font-dm-sans, system-ui, sans-serif)" }}
     >
       {label}
     </Link>
@@ -215,7 +211,7 @@ function WeatherPill({ temp, condition, emoji }: { temp: number; condition: stri
       <span style={{ fontSize: 13, lineHeight: 1 }}>{emoji}</span>
       <span
         style={{
-          fontFamily: "DM Sans, system-ui, sans-serif",
+          fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
           fontSize: 12,
           fontWeight: 600,
           color: AMBER,
@@ -246,7 +242,7 @@ function GreetingHeadline({ todayEventCount }: { todayEventCount: number | null 
     <div>
       <h1
         style={{
-          fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
+          fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)",
           fontSize: 32,
           fontWeight: 800,
           color: TEXT,
@@ -258,7 +254,7 @@ function GreetingHeadline({ todayEventCount }: { todayEventCount: number | null 
       </h1>
       <p
         style={{
-          fontFamily: "DM Sans, system-ui, sans-serif",
+          fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
           fontSize: 13,
           color: MUTED,
           marginTop: 6,
@@ -295,7 +291,7 @@ function FeaturedHero({
         className="block relative overflow-hidden"
         style={{ borderRadius: 16, height: 160 }}
       >
-        <Image
+        <SmartImage
           src={event.image_url}
           alt={event.title}
           fill
@@ -312,7 +308,7 @@ function FeaturedHero({
           <p
             style={{
               color: "#fff",
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 10,
               fontWeight: 600,
               letterSpacing: "0.8px",
@@ -326,7 +322,7 @@ function FeaturedHero({
           <p
             style={{
               color: "#fff",
-              fontFamily: "Outfit, system-ui, sans-serif",
+              fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)",
               fontSize: 18,
               fontWeight: 700,
               lineHeight: 1.25,
@@ -339,14 +335,8 @@ function FeaturedHero({
     );
   }
 
-  // Fallback: contextual quick-link card instead of empty hero
+  // Fallback: contextual card when no featured event has an image
   const hasEvents = (todayEventCount ?? 0) > 0;
-  const QUICK_LINKS = [
-    { label: "Outdoors", href: `/${portalSlug}?view=find&type=events&date=today&tags=outdoor` },
-    { label: "Arts & Crafts", href: `/${portalSlug}?view=find&type=events&date=today&categories=art` },
-    { label: "Free", href: `/${portalSlug}?view=find&type=events&date=today&is_free=true` },
-    { label: "All Events", href: `/${portalSlug}?view=find&type=events&date=today` },
-  ];
 
   return (
     <div
@@ -362,7 +352,7 @@ function FeaturedHero({
           <p
             style={{
               color: "rgba(255,255,255,0.7)",
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 10,
               fontWeight: 600,
               letterSpacing: "0.8px",
@@ -375,7 +365,7 @@ function FeaturedHero({
           <p
             style={{
               color: "#fff",
-              fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)",
               fontSize: 20,
               fontWeight: 800,
               lineHeight: 1.2,
@@ -388,7 +378,7 @@ function FeaturedHero({
           <p
             style={{
               color: "rgba(255,255,255,0.75)",
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 13,
               marginTop: 4,
               lineHeight: 1.4,
@@ -401,112 +391,7 @@ function FeaturedHero({
         </div>
         <SmileySticker size={40} weight="fill" style={{ color: "rgba(255,255,255,0.3)", flexShrink: 0, marginTop: 2 }} />
       </div>
-
-      {/* Quick link pills */}
-      <div className="flex flex-wrap gap-2 mt-4">
-        {QUICK_LINKS.map((link) => (
-          <Link
-            key={link.label}
-            href={link.href}
-            className="rounded-full px-3 py-1.5 transition-opacity hover:opacity-80"
-            style={{
-              backgroundColor: "rgba(255,255,255,0.2)",
-              color: "#fff",
-              fontFamily: "DM Sans, system-ui, sans-serif",
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            {link.label}
-          </Link>
-        ))}
-      </div>
     </div>
-  );
-}
-
-// ---- Section: Today's Plan -----------------------------------------------
-
-function TodaysPlan({
-  kids,
-  activeKidIds,
-  portalSlug,
-}: {
-  kids: import("@/lib/types/kid-profiles").KidProfile[];
-  activeKidIds: string[];
-  portalSlug: string;
-}) {
-  const hasKids = kids.length > 0;
-  void activeKidIds; // will be used for saved-event filtering when data layer is ready
-
-  return (
-    <section>
-      <SectionLabel
-        text="Today's Plan"
-        color={AMBER}
-        rightSlot={
-          hasKids ? (
-            <Link
-              href={`/${portalSlug}?view=plans`}
-              className="hover:opacity-70 transition-opacity"
-              style={{ color: SAGE, fontSize: 12, fontFamily: "DM Sans, system-ui, sans-serif" }}
-            >
-              Edit →
-            </Link>
-          ) : undefined
-        }
-      />
-      {/* Empty state — plan is built from saved/RSVPd events which aren't yet wired */}
-      <div
-        className="rounded-2xl px-4 py-5"
-        style={{ backgroundColor: CARD, border: `1px solid ${BORDER}` }}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className="flex-shrink-0 flex items-center justify-center rounded-xl"
-            style={{ width: 40, height: 40, backgroundColor: SAGE_WASH }}
-          >
-            <CalendarCheck size={20} weight="duotone" style={{ color: SAGE }} />
-          </div>
-          <div>
-            <p
-              style={{
-                fontFamily: "DM Sans, system-ui, sans-serif",
-                fontSize: 14,
-                fontWeight: 600,
-                color: TEXT,
-                lineHeight: 1.3,
-              }}
-            >
-              Your day is wide open
-            </p>
-            <p
-              style={{
-                fontFamily: "DM Sans, system-ui, sans-serif",
-                fontSize: 12,
-                color: MUTED,
-                marginTop: 2,
-              }}
-            >
-              Save events to build your plan.
-            </p>
-          </div>
-        </div>
-        <Link
-          href={`/${portalSlug}?view=find&type=events&date=today`}
-          className="inline-flex items-center gap-1.5 mt-3 rounded-full px-4 py-2 transition-opacity hover:opacity-80"
-          style={{
-            backgroundColor: SAGE,
-            color: "#fff",
-            fontFamily: "DM Sans, system-ui, sans-serif",
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          Browse events <ArrowRight size={13} weight="bold" />
-        </Link>
-      </div>
-    </section>
   );
 }
 
@@ -551,7 +436,7 @@ function HeadsUpCard({ event }: { event: SchoolCalendarEvent }) {
       <div className="flex-1 min-w-0">
         <p
           style={{
-            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
             fontSize: 14,
             fontWeight: 600,
             color: TEXT,
@@ -562,7 +447,7 @@ function HeadsUpCard({ event }: { event: SchoolCalendarEvent }) {
         </p>
         <p
           style={{
-            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
             fontSize: 11,
             color: MUTED,
             marginTop: 2,
@@ -627,7 +512,7 @@ function HeadsUpSection({
           ))}
         </div>
       ) : (
-        <p style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 13, color: MUTED }}>
+        <p style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 13, color: MUTED }}>
           No upcoming school calendar alerts.
         </p>
       )}
@@ -655,7 +540,7 @@ function RadarRow({
         <div className="flex items-center gap-2 flex-wrap">
           <span
             style={{
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 14,
               fontWeight: 600,
               color: TEXT,
@@ -667,18 +552,18 @@ function RadarRow({
         </div>
         <div className="flex items-center gap-2 flex-wrap mt-0.5">
           {program.provider_name && (
-            <span style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 11, color: MUTED }}>
+            <span style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 11, color: MUTED }}>
               {program.provider_name}
             </span>
           )}
-          <span style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 11, color: MUTED }}>
+          <span style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 11, color: MUTED }}>
             {formatAgeRange(program.age_min, program.age_max)}
           </span>
-          <span style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 11, color: MUTED }}>
+          <span style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 11, color: MUTED }}>
             {formatCost(program.cost_amount, program.cost_period)}
           </span>
         </div>
-        <p style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 11, color: urgencyColor, marginTop: 2 }}>
+        <p style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 11, color: urgencyColor, marginTop: 2 }}>
           {urgencyLabel}
         </p>
       </div>
@@ -690,7 +575,7 @@ function RadarRow({
           className="flex-shrink-0 hover:opacity-80 transition-opacity mt-0.5"
           style={{
             color: AMBER,
-            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
             fontSize: 12,
             fontWeight: 600,
           }}
@@ -758,7 +643,7 @@ function RegistrationRadarSection({
           ))}
         </div>
       ) : (
-        <p style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 13, color: MUTED }}>
+        <p style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 13, color: MUTED }}>
           Nothing urgent right now — check the Programs tab for what's coming.
         </p>
       )}
@@ -781,7 +666,7 @@ function ExploreDestinationCard({ venue }: { venue: VenueCard }) {
     >
       <div className="relative overflow-hidden" style={{ height: 80 }}>
         {venue.image_url ? (
-          <Image
+          <SmartImage
             src={venue.image_url}
             alt={venue.name}
             fill
@@ -801,7 +686,7 @@ function ExploreDestinationCard({ venue }: { venue: VenueCard }) {
         <p
           className="line-clamp-1"
           style={{
-            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
             fontSize: 13,
             fontWeight: 700,
             color: TEXT,
@@ -813,7 +698,7 @@ function ExploreDestinationCard({ venue }: { venue: VenueCard }) {
         {venue.neighborhood && (
           <p
             style={{
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 11,
               color: MUTED,
               marginTop: 2,
@@ -865,7 +750,7 @@ function GoExploreSection({
         <Link
           href={`/${portalSlug}?view=find&type=venues`}
           className="hover:opacity-70 transition-opacity"
-          style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 13, color: SAGE }}
+          style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 13, color: SAGE }}
         >
           Discover family-friendly spots nearby →
         </Link>
@@ -885,7 +770,7 @@ function TagPill({ tag }: { tag: string }) {
         color: MOSS,
         borderRadius: 8,
         padding: "2px 8px",
-        fontFamily: "DM Sans, system-ui, sans-serif",
+        fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
         fontSize: 11,
         fontWeight: 500,
       }}
@@ -895,6 +780,19 @@ function TagPill({ tag }: { tag: string }) {
   );
 }
 
+// Geographic and redundant tags that add no discovery value on a family portal
+const SUPPRESSED_TAGS = new Set([
+  "family-friendly",
+  "gwinnett",
+  "dekalb",
+  "fulton",
+  "cobb",
+  "atlanta",
+  "georgia",
+  "atl",
+  "metro-atlanta",
+]);
+
 function AfterSchoolPickCard({
   event,
   portalSlug,
@@ -902,7 +800,9 @@ function AfterSchoolPickCard({
   event: EventWithLocation;
   portalSlug: string;
 }) {
-  const displayTags = (event.tags ?? []).slice(0, 3);
+  const displayTags = (event.tags ?? [])
+    .filter((t) => !SUPPRESSED_TAGS.has(t.toLowerCase()))
+    .slice(0, 3);
 
   return (
     <Link
@@ -920,7 +820,7 @@ function AfterSchoolPickCard({
         <p
           className="leading-snug"
           style={{
-            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
             fontSize: 14,
             fontWeight: 600,
             color: TEXT,
@@ -931,21 +831,29 @@ function AfterSchoolPickCard({
         </p>
         <div className="flex items-center gap-2 flex-wrap">
           {event.venue?.name && (
-            <span style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 12, color: MUTED }}>
+            <span style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 12, color: MUTED }}>
               {event.venue.name}
             </span>
           )}
-          {event.start_time && (
+          {event.start_time ? (
             <span
               className="flex items-center gap-1"
-              style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 12, color: MUTED }}
+              style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 12, color: MUTED }}
             >
               <Clock size={11} />
               {formatTime(event.start_time)}
             </span>
-          )}
+          ) : event.is_all_day ? (
+            <span
+              className="flex items-center gap-1"
+              style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 12, color: MUTED }}
+            >
+              <Clock size={11} />
+              All day
+            </span>
+          ) : null}
           {event.is_free && (
-            <span style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 12, fontWeight: 600, color: SAGE }}>
+            <span style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 12, fontWeight: 600, color: SAGE }}>
               Free
             </span>
           )}
@@ -973,10 +881,18 @@ function AfterSchoolPicksSection({
 }) {
   // Filter to after-school hours (start_time >= 14:00) to avoid adult
   // daytime events like tennis leagues that are tagged family-friendly.
-  // All-day events are included regardless of time.
+  // Title exclusions:
+  //   - /\badult/i  — explicit "Adult" programs (e.g. "Adult Beginner Swim")
+  //   - /\bUSTA\b/  — USTA league matches (adult/competitive tennis, not family activities;
+  //                   catches "ALTA / USTA Jr 3 Lines", "USTA Adult5 Lines", etc.)
+  //   - /\blines\b/i — Tennis league terminology (e.g. "3 Lines", "5 Lines match")
+  // All-day events are included regardless of time (but still title-filtered).
   const afterSchoolEvents = useMemo(() => {
     if (!events) return [];
     return events.filter((e) => {
+      if (/\badult/i.test(e.title)) return false;
+      if (/\bUSTA\b/.test(e.title)) return false;
+      if (/\blines\b/i.test(e.title)) return false;
       if (e.is_all_day) return true;
       if (!e.start_time) return false;
       const hour = parseInt(e.start_time.split(":")[0] ?? "0", 10);
@@ -1014,10 +930,10 @@ function AfterSchoolPicksSection({
           className="rounded-xl border px-4 py-4"
           style={{ backgroundColor: CARD, borderColor: BORDER }}
         >
-          <p style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 13, fontWeight: 500, color: TEXT }}>
+          <p style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 13, fontWeight: 500, color: TEXT }}>
             Discover events near you
           </p>
-          <p style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 12, color: MUTED, marginTop: 2 }}>
+          <p style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 12, color: MUTED, marginTop: 2 }}>
             Family-friendly events, programs, and places to explore.
           </p>
           <Link
@@ -1025,7 +941,7 @@ function AfterSchoolPicksSection({
             className="inline-flex items-center gap-1 mt-3 hover:opacity-70 transition-opacity"
             style={{
               color: SAGE,
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 12,
               fontWeight: 600,
             }}
@@ -1085,6 +1001,9 @@ export const TodayView = memo(function TodayView({
     staleTime: 10 * 60 * 1000,
   });
 
+  // Suppress featured events with adult titles before passing to the hero.
+  const safeFeaturedEvent = featuredEvent && /\badult/i.test(featuredEvent.title) ? null : featuredEvent;
+
   const todayEventCount = loadingToday ? null : (todayEvents?.length ?? 0);
 
   // ---- Desktop layout ------------------------------------------------------
@@ -1101,7 +1020,7 @@ export const TodayView = memo(function TodayView({
 
         {/* Featured hero */}
         <FeaturedHero
-          event={featuredEvent}
+          event={safeFeaturedEvent}
           isLoading={loadingFeatured}
           portalSlug={portalSlug}
           todayEventCount={todayEventCount}
@@ -1109,9 +1028,8 @@ export const TodayView = memo(function TodayView({
 
         {/* Two-column grid */}
         <div className="grid gap-6" style={{ gridTemplateColumns: "1fr 340px" }}>
-          {/* Left column: Today's Plan + Events */}
+          {/* Left column: Events */}
           <div className="flex flex-col gap-6">
-            <TodaysPlan kids={kids} activeKidIds={activeKidIds} portalSlug={portalSlug} />
             <AfterSchoolPicksSection
               events={todayEvents}
               isLoading={loadingToday}
@@ -1154,14 +1072,11 @@ export const TodayView = memo(function TodayView({
       <div className="flex flex-col gap-6 px-4">
         {/* Featured hero */}
         <FeaturedHero
-          event={featuredEvent}
+          event={safeFeaturedEvent}
           isLoading={loadingFeatured}
           portalSlug={portalSlug}
           todayEventCount={todayEventCount}
         />
-
-        {/* Today's Plan */}
-        <TodaysPlan kids={kids} activeKidIds={activeKidIds} portalSlug={portalSlug} />
 
         {/* Heads Up */}
         <HeadsUpSection calendarData={calendarData} isLoading={loadingCalendar} />
@@ -1196,7 +1111,7 @@ export const TodayView = memo(function TodayView({
             <Link
               href={`/${portalSlug}?view=find&type=venues`}
               className="hover:opacity-70 transition-opacity"
-              style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 13, color: SAGE }}
+              style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 13, color: SAGE }}
             >
               Discover family-friendly spots nearby →
             </Link>

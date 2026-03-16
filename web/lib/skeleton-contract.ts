@@ -6,6 +6,7 @@ export const PORTAL_SKELETON_VERTICALS = [
   "hotel",
   "film",
   "hospital",
+  "adventure",
 ] as const;
 
 export type PortalSkeletonVertical = (typeof PORTAL_SKELETON_VERTICALS)[number];
@@ -27,36 +28,42 @@ export const PORTAL_SKELETON_REGISTRY: Record<PortalSkeletonRoute, Record<Portal
     hotel: "Hotel concierge loading state.",
     film: "Film marquee loading state.",
     hospital: "Hospital care navigation loading state.",
+    adventure: "Adventure destination explorer loading state.",
   },
   "feed-view": {
     city: "Default curated feed fallback.",
     hotel: "Hotel feed fallback.",
     film: "Film feed fallback.",
     hospital: "Hospital feed fallback.",
+    adventure: "Adventure feed fallback.",
   },
   "find-view": {
     city: "Default find fallback.",
     hotel: "Hotel find fallback.",
     film: "Film find fallback.",
     hospital: "Hospital find fallback.",
+    adventure: "Adventure find fallback.",
   },
   "community-view": {
     city: "Default community fallback.",
     hotel: "Hotel community fallback.",
     film: "Film community fallback.",
     hospital: "Hospital community fallback.",
+    adventure: "Adventure community fallback.",
   },
   "event-detail": {
     city: "Default event detail fallback.",
     hotel: "Hotel event detail fallback.",
     film: "Film event detail fallback.",
     hospital: "Hospital event detail fallback.",
+    adventure: "Adventure event detail fallback.",
   },
   "happening-now": {
     city: "Default happening now fallback.",
     hotel: "Hotel happening now fallback.",
     film: "Film happening now fallback.",
     hospital: "Hospital happening now fallback.",
+    adventure: "Adventure happening now fallback.",
   },
 };
 
@@ -75,6 +82,7 @@ export function inferSkeletonVerticalFromSlug(slug: string): PortalSkeletonVerti
   if (normalized === "forth" || normalized.includes("hotel")) return "hotel";
   if (normalized.includes("film") || normalized.includes("cinema") || normalized.includes("movie")) return "film";
   if (normalized.includes("emory") || normalized.includes("hospital") || normalized.includes("health")) return "hospital";
+  if (normalized.includes("yonder") || normalized.includes("adventure") || normalized.includes("track")) return "adventure";
   return "city";
 }
 

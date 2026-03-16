@@ -145,7 +145,7 @@ const ProgramCardItem = memo(function ProgramCardItem({
       {/* Title */}
       <div
         style={{
-          fontFamily: "Outfit, system-ui, sans-serif",
+          fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)",
           fontSize: 15,
           fontWeight: 700,
           color: TEXT,
@@ -159,7 +159,7 @@ const ProgramCardItem = memo(function ProgramCardItem({
       {(program.provider_name || program.venue?.name) && (
         <div
           style={{
-            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
             fontSize: 12,
             color: MUTED,
           }}
@@ -173,7 +173,7 @@ const ProgramCardItem = memo(function ProgramCardItem({
       {metaLine && (
         <div
           style={{
-            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
             fontSize: 12,
             color: MUTED,
           }}
@@ -188,7 +188,7 @@ const ProgramCardItem = memo(function ProgramCardItem({
         {status === "open" && (
           <span
             style={{
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 10,
               fontWeight: 700,
               letterSpacing: "0.5px",
@@ -206,7 +206,7 @@ const ProgramCardItem = memo(function ProgramCardItem({
         {status === "waitlist" && (
           <span
             style={{
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 10,
               fontWeight: 700,
               letterSpacing: "0.5px",
@@ -224,7 +224,7 @@ const ProgramCardItem = memo(function ProgramCardItem({
         {status === "sold_out" && (
           <span
             style={{
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 10,
               fontWeight: 700,
               letterSpacing: "0.5px",
@@ -242,7 +242,7 @@ const ProgramCardItem = memo(function ProgramCardItem({
         {status === "upcoming" && (
           <span
             style={{
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 10,
               fontWeight: 700,
               letterSpacing: "0.5px",
@@ -261,7 +261,7 @@ const ProgramCardItem = memo(function ProgramCardItem({
         {status === "walk_in" && (
           <span
             style={{
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 10,
               fontWeight: 700,
               letterSpacing: "0.5px",
@@ -280,7 +280,7 @@ const ProgramCardItem = memo(function ProgramCardItem({
         {status === "open" && isUrgent && closesLabel && (
           <span
             style={{
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 10,
               fontWeight: 600,
               color: AMBER,
@@ -298,7 +298,7 @@ const ProgramCardItem = memo(function ProgramCardItem({
         {isFree && (
           <span
             style={{
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 10,
               fontWeight: 700,
               letterSpacing: "0.5px",
@@ -317,7 +317,7 @@ const ProgramCardItem = memo(function ProgramCardItem({
         {sessionDates && (
           <span
             style={{
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 11,
               color: MUTED,
             }}
@@ -335,7 +335,7 @@ const ProgramCardItem = memo(function ProgramCardItem({
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
               fontSize: 12,
               fontWeight: 600,
               color: SAGE,
@@ -437,7 +437,7 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
         >
           <span
             style={{
-              fontFamily: "Outfit, system-ui, sans-serif",
+              fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)",
               fontSize: 28,
               fontWeight: 800,
               color: TEXT,
@@ -463,7 +463,7 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
             >
               <span
                 style={{
-                  fontFamily: "DM Sans, system-ui, sans-serif",
+                  fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
                   fontSize: 11,
                   color: MUTED,
                   lineHeight: 1,
@@ -523,7 +523,7 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
                   borderRadius: 20,
                   padding: "6px 14px",
                   fontSize: 14,
-                  fontFamily: "DM Sans, system-ui, sans-serif",
+                  fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
                   fontWeight: 500,
                   border: isActive ? "none" : `1px solid ${BORDER}`,
                   backgroundColor: isActive ? SAGE : CARD_BG,
@@ -546,7 +546,7 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span
               style={{
-                fontFamily: "DM Sans, system-ui, sans-serif",
+                fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
                 fontSize: 12,
                 color: MUTED,
               }}
@@ -560,7 +560,7 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
                   borderRadius: 14,
                   padding: "2px 10px",
                   fontSize: 12,
-                  fontFamily: "DM Sans, system-ui, sans-serif",
+                  fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
                   fontWeight: 500,
                   backgroundColor: `${kid.color}15`,
                   border: `1px solid ${kid.color}30`,
@@ -576,7 +576,7 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
           {ageRangeLabel && (
             <span
               style={{
-                fontFamily: "DM Sans, system-ui, sans-serif",
+                fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
                 fontSize: 12,
                 color: MUTED,
               }}
@@ -635,32 +635,47 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
               padding: "48px 20px",
             }}
           >
-            <div
-              className="inline-flex items-center justify-center rounded-2xl mb-4"
-              style={{ width: 56, height: 56, backgroundColor: `${SAGE}12` }}
-            >
-              <span style={{ fontSize: 24 }}>🎒</span>
-            </div>
             <p
               style={{
-                fontFamily: "DM Sans, system-ui, sans-serif",
-                fontSize: 15,
-                fontWeight: 600,
-                color: TEXT,
-                marginBottom: 4,
+                fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
+                fontSize: 16,
+                fontWeight: 500,
+                color: SAGE,
+                marginBottom: 8,
               }}
             >
-              No programs yet
+              {activeCategory === "all"
+                ? "No programs found"
+                : `No ${CATEGORY_PILLS.find((p) => p.id === activeCategory)?.label.toLowerCase() ?? activeCategory} programs found`}
             </p>
             <p
               style={{
-                fontFamily: "DM Sans, system-ui, sans-serif",
-                fontSize: 13,
+                fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
+                fontSize: 14,
                 color: MUTED,
+                opacity: 0.6,
+                marginTop: 0,
               }}
             >
-              Try a different category or check back soon.
+              Try a different category or check back soon
             </p>
+            <a
+              href={`/${portalSlug}?view=find&categories=family,community`}
+              style={{
+                display: "inline-block",
+                marginTop: 16,
+                padding: "10px 24px",
+                backgroundColor: SAGE,
+                color: "white",
+                borderRadius: 12,
+                fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
+                fontWeight: 600,
+                fontSize: 14,
+                textDecoration: "none",
+              }}
+            >
+              Browse family events instead
+            </a>
           </div>
         )}
       </div>

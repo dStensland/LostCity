@@ -22,7 +22,7 @@ export const PlansView = memo(function PlansView({ portalSlug: _portalSlug }: Pl
       </div>
       <h2
         className="text-lg font-semibold mb-2"
-        style={{ fontFamily: "var(--font-outfit, system-ui, sans-serif)", color: "var(--cream, #1C1917)" }}
+        style={{ fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)", color: "var(--cream, #1C1917)" }}
       >
         Family Plans
       </h2>

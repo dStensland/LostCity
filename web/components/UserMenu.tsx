@@ -10,7 +10,13 @@ import ShareInviteLink from "./ShareInviteLink";
 import NotificationDropdown from "./NotificationDropdown";
 import CalendarButton from "./CalendarButton";
 
-export default function UserMenu() {
+interface UserMenuProps {
+  /** When true, suppresses notification bell, share, and calendar icons.
+   * Use for portal headers that specify avatar-only (e.g. family portal). */
+  minimal?: boolean;
+}
+
+export default function UserMenu({ minimal = false }: UserMenuProps) {
   const { user, profile, loading, signOut } = useAuth();
   const portalContext = usePortalOptional();
   const portalSlug = portalContext?.portal?.slug ?? DEFAULT_PORTAL.slug;
@@ -78,18 +84,20 @@ export default function UserMenu() {
 
   return (
     <div className="flex items-center gap-2">
-      {/* Notifications */}
-      <NotificationDropdown />
+      {/* Notifications / share / calendar — suppressed on minimal (e.g. family portal header) */}
+      {!minimal && <NotificationDropdown />}
 
-      {/* Invite Friends */}
-      <div className="hidden sm:block">
-        <ShareInviteLink variant="icon" />
-      </div>
+      {!minimal && (
+        <div className="hidden sm:block">
+          <ShareInviteLink variant="icon" />
+        </div>
+      )}
 
-      {/* Calendar */}
-      <div className="hidden sm:block">
-        <CalendarButton />
-      </div>
+      {!minimal && (
+        <div className="hidden sm:block">
+          <CalendarButton />
+        </div>
+      )}
 
       {/* Avatar and dropdown */}
       <div className="relative flex items-center" ref={menuRef}>

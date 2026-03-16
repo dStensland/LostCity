@@ -75,7 +75,6 @@ type VenueShape = {
   lng: number | null;
   image_url: string | null;
   venue_type: string | null;
-  is_indoor: boolean | null;
 } | null;
 
 type WeekendEvent = {
@@ -120,9 +119,7 @@ const INDOOR_VENUE_TYPES = new Set([
 
 function isIndoorVenue(venue: VenueShape): boolean {
   if (!venue) return false;
-  if (venue.is_indoor === true) return true;
-  if (venue.is_indoor === false) return false;
-  // Infer from venue_type
+  // Infer from venue_type (is_indoor column not yet in schema)
   return venue.venue_type ? INDOOR_VENUE_TYPES.has(venue.venue_type) : false;
 }
 
@@ -201,7 +198,7 @@ export async function GET(request: NextRequest) {
       ticket_url,
       source_id,
       portal_id,
-      venue:venues(id, name, slug, neighborhood, city, lat, lng, image_url, venue_type, is_indoor)
+      venue:venues(id, name, slug, neighborhood, city, lat, lng, image_url, venue_type)
     `;
 
     // Build the portal source scope filter

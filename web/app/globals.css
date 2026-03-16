@@ -6294,7 +6294,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 }
 
 .family-font-display {
-  font-family: var(--font-baloo), var(--font-outfit), system-ui;
+  font-family: var(--font-plus-jakarta-sans), system-ui, sans-serif;
 }
 
 .family-border-ink-2 { border: 1px solid var(--family-border-cream); }
@@ -6367,9 +6367,9 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 }
 
 .family-logo-badge {
-  background-color: var(--family-orange);
+  background-color: #5E7A5E;
   border: none;
-  box-shadow: 0 2px 8px rgba(196, 139, 29, 0.3);
+  box-shadow: 0 2px 8px rgba(94, 122, 94, 0.3);
   border-radius: 9999px;
 }
 

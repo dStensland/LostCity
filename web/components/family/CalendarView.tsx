@@ -21,9 +21,9 @@ const BORDER = "#E0DDD4";
 const SAGE_WASH = "#EEF2EE";
 
 // ---- Fonts ----------------------------------------------------------------
-const JAKARTA = "Plus Jakarta Sans, system-ui, sans-serif";
-const DM = "DM Sans, system-ui, sans-serif";
-const OUTFIT = "Outfit, system-ui, sans-serif";
+const JAKARTA = "var(--font-plus-jakarta-sans, system-ui, sans-serif)";
+const DM = "var(--font-dm-sans, system-ui, sans-serif)";
+const OUTFIT = "var(--font-plus-jakarta-sans, system-ui, sans-serif)";
 
 // ---- Types ----------------------------------------------------------------
 
@@ -164,6 +164,12 @@ function formatTime(timeStr: string | null | undefined): string {
   const period = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
   return `${hour}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+// ---- Helpers --------------------------------------------------------------
+
+function stripProgramCode(name: string): string {
+  return name.replace(/\s*\([A-Z]{2,4}\d{4,6}\)\s*$/, "").trim();
 }
 
 // ---- Sub-components -------------------------------------------------------
@@ -424,8 +430,8 @@ function EventTimeRail({ startTime }: { startTime: string | null }) {
   if (!startTime) {
     return (
       <div className="flex w-11 flex-shrink-0 flex-col items-center justify-center">
-        <span style={{ fontFamily: OUTFIT, fontSize: 13, fontWeight: 700, color: MUTED, lineHeight: 1 }}>
-          —
+        <span style={{ fontFamily: OUTFIT, fontSize: 10, fontWeight: 600, color: MUTED, lineHeight: 1, letterSpacing: "0.03em", textTransform: "uppercase" }}>
+          All day
         </span>
       </div>
     );
@@ -458,7 +464,7 @@ function DayEventRow({ event }: { event: EventWithLocation }) {
           className="font-semibold leading-snug"
           style={{ fontFamily: DM, fontSize: 14, fontWeight: 600, color: TEXT }}
         >
-          {event.title}
+          {stripProgramCode(event.title)}
         </p>
         {event.venue?.name && (
           <p style={{ fontFamily: DM, fontSize: 12, color: MUTED, marginTop: 2 }}>
@@ -491,7 +497,7 @@ function ProgramDayRow({ program }: { program: ProgramWithVenue }) {
           className="font-semibold leading-snug"
           style={{ fontFamily: DM, fontSize: 14, fontWeight: 600, color: TEXT }}
         >
-          {program.name}
+          {stripProgramCode(program.name)}
         </p>
         {(program.provider_name ?? program.venue?.name) && (
           <p style={{ fontFamily: DM, fontSize: 12, color: MUTED, marginTop: 2 }}>
@@ -526,12 +532,18 @@ function DayDetailPanel({
   const dayPrograms = programs.filter((p) => p.session_start === dateKey);
 
   // Events from API — only fetch when portalId is available
-  const { data: dayEvents = [], isLoading: loadingEvents } = useQuery({
+  const { data: rawDayEvents = [], isLoading: loadingEvents } = useQuery({
     queryKey: ["family-calendar-day-events", portalId ?? "", dateKey],
     queryFn: () => fetchDayEvents(portalId!, dateKey),
     enabled: Boolean(portalId),
     staleTime: 2 * 60 * 1000,
   });
+
+  // Exclude adult content — tennis leagues (USTA/ALTA), adult class series, etc.
+  // that bleed into the calendar via the family-friendly venue tag.
+  const isAdultContent = (title: string) =>
+    /\badult/i.test(title) || /\bUSTA\b/.test(title) || /\blines\b/i.test(title);
+  const dayEvents = rawDayEvents.filter((e) => !isAdultContent(e.title));
 
   // School events active on this day
   const activeSE = schoolEvents.filter((se) => {

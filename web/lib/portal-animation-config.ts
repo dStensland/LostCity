@@ -178,7 +178,12 @@ const VERTICAL_STYLE_CONFIG: Record<PortalVertical, VerticalStyleConfig> = {
   city: { css: null },
   hotel: { css: null },
   family: { css: null },
-  adventure: { css: null },
+  adventure: {
+    css: `
+  html, body { background-color: #F5F2ED !important; }
+  ${DISABLE_ATMOSPHERE}
+  ${disableAnimations("adventure")}`,
+  },
   sports: { css: null },
 };
 

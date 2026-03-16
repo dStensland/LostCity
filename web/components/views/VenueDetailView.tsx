@@ -45,6 +45,7 @@ import Badge from "@/components/ui/Badge";
 import Dot from "@/components/ui/Dot";
 import VenueShowtimes, { type ShowtimeEvent } from "@/components/VenueShowtimes";
 import DogNearbySection from "@/components/detail/DogNearbySection";
+import { DestinationDetailSections } from "@/components/adventure/DestinationDetailSections";
 import dynamic from "next/dynamic";
 
 const DogTagModal = dynamic(
@@ -620,6 +621,14 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
 
         {/* ── SPECIALS ──────────────────────────────────── */}
         <VenueSpecialsSection specials={specials} />
+
+        {/* ── ADVENTURE DESTINATION DETAILS ────────────── */}
+        {portal?.settings?.vertical === "adventure" && spot.slug && (
+          <DestinationDetailSections
+            venueSlug={spot.slug}
+            portalSlug={portalSlug}
+          />
+        )}
 
         {/* (Accolades section moved above Quick Actions) */}
 

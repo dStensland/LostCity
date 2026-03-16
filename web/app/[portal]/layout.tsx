@@ -6,7 +6,7 @@ import PortalThemeClient from "@/components/PortalThemeClient";
 import CannyWidget from "@/components/CannyWidget";
 import PortalFooter from "@/components/PortalFooter";
 import { PortalTracker } from "./_components/PortalTracker";
-import { Cormorant_Garamond, Inter, Plus_Jakarta_Sans } from "next/font/google";
+import { Cormorant_Garamond, DM_Sans, Inter, Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import { Suspense } from "react";
 import { isPCMDemoPortal } from "@/lib/marketplace-art";
 import { applyPreset } from "@/lib/apply-preset";
@@ -35,10 +35,27 @@ const inter = Inter({
   preload: false,
 });
 
-// Family vertical fonts — Plus Jakarta Sans for Lost Youth portal
+// Family vertical fonts — Plus Jakarta Sans (display) + DM Sans (body) for Lost Youth portal
 const plusJakartaSans = Plus_Jakarta_Sans({
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-plus-jakarta-sans",
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+});
+
+const dmSans = DM_Sans({
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+});
+
+// Adventure vertical fonts — Space Grotesk for Lost Track portal
+const spaceGrotesk = Space_Grotesk({
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
   display: "swap",
   preload: false,
@@ -120,6 +137,7 @@ export default async function PortalLayout({ children, params }: Props) {
   const vertical = getPortalVertical(portal);
   const isHotel = vertical === "hotel";
   const isFamily = vertical === "family";
+  const isAdventure = vertical === "adventure";
   const resolvedBranding = applyPreset((portal.branding || {}) as PortalBranding);
   const isLightTheme = resolvedBranding.theme_mode === "light";
   const isMarketplace = vertical === "marketplace" || isPCMDemoPortal(portal.slug);
@@ -145,7 +163,8 @@ export default async function PortalLayout({ children, params }: Props) {
         data-theme={isLightTheme ? "light" : undefined}
         className={[
           isHotel ? `${cormorantGaramond.variable} ${inter.variable}` : "",
-          isFamily ? plusJakartaSans.variable : "",
+          isFamily ? `${plusJakartaSans.variable} ${dmSans.variable}` : "",
+          isAdventure ? spaceGrotesk.variable : "",
         ].filter(Boolean).join(" ")}
       >
         <Suspense fallback={null}>
