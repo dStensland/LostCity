@@ -132,6 +132,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
   const [expandedMultiVenue, setExpandedMultiVenue] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const controller = new AbortController();
 
     async function fetchSeries() {
@@ -142,28 +143,45 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
       setExpandedSingleVenue(false);
       setExpandedMultiVenue(false);
 
-      try {
-        const qs = portalId ? `?${new URLSearchParams({ portal_id: portalId }).toString()}` : "";
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        const res = await fetch(`/api/series/${slug}${qs}`, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (!res.ok) {
-          throw new Error("Series not found");
+      const qs = portalId ? `?${new URLSearchParams({ portal_id: portalId }).toString()}` : "";
+      const MAX_RETRIES = 2;
+
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 500 * attempt));
+            if (cancelled) return;
+          }
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const res = await fetch(`/api/series/${slug}${qs}`, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (cancelled) return;
+          if (!res.ok) {
+            if ((res.status === 503 || res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
+              continue;
+            }
+            throw new Error(res.status === 404 ? "Series not found" : `Failed to load series (${res.status})`);
+          }
+          const data = await res.json();
+          if (cancelled) return;
+          setSeries(data.series);
+          setVenueShowtimes(data.venueShowtimes || []);
+          setStatus("ready");
+          return;
+        } catch (err) {
+          if (controller.signal.aborted) return;
+          if (cancelled) return;
+          if (attempt === MAX_RETRIES) {
+            setError(err instanceof Error ? err.message : "Failed to load series");
+            setStatus("error");
+          }
         }
-        const data = await res.json();
-        setSeries(data.series);
-        setVenueShowtimes(data.venueShowtimes || []);
-        setStatus("ready");
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : "Failed to load series");
-        setStatus("error");
       }
     }
 
     fetchSeries();
 
-    return () => controller.abort();
+    return () => { cancelled = true; controller.abort(); };
   }, [slug, portalId]);
 
   const navigateToDetail = (param: string, value: string | number) => {

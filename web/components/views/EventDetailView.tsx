@@ -9,10 +9,13 @@ import FollowButton from "@/components/FollowButton";
 import FriendsGoing from "@/components/FriendsGoing";
 import WhosGoing from "@/components/WhosGoing";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
-import EventQuickActions from "@/components/EventQuickActions";
+import RSVPButton from "@/components/RSVPButton";
+import AddToCalendar from "@/components/AddToCalendar";
+import ShareEventButton from "@/components/ShareEventButton";
+import InviteToEventButton from "@/components/InviteToEventButton";
 import VenueVibes from "@/components/VenueVibes";
 import LinkifyText from "@/components/LinkifyText";
-import { formatTime, formatTimeRange } from "@/lib/formats";
+import { formatTime, formatPriceDetailed } from "@/lib/formats";
 import { format, parseISO } from "date-fns";
 import { EntityTagList } from "@/components/tags/EntityTagList";
 import FlagButton from "@/components/FlagButton";
@@ -28,10 +31,10 @@ import GettingThereSection from "@/components/GettingThereSection";
 import { deriveShowSignals } from "@/lib/show-signals";
 import ShowSignalsPanel from "@/components/ShowSignalsPanel";
 import { inferLineupGenreFallback } from "@/lib/artist-fallbacks";
+import { isTicketingUrl } from "@/lib/card-utils";
 import dynamic from "next/dynamic";
 import {
   ForkKnife,
-
   CaretRight,
   CaretDown,
   ArrowSquareOut,
@@ -39,19 +42,20 @@ import {
   Repeat,
   Buildings,
   Flag,
+  Ticket,
 } from "@phosphor-icons/react";
 
 const OutingPlannerSheet = dynamic(
   () => import("@/components/outing-planner/OutingPlannerSheet"),
   { ssr: false },
 );
-import { DescriptionTeaser } from "@/components/detail/DescriptionTeaser";
-import { InfoCard } from "@/components/detail/InfoCard";
+
 import { SectionHeader } from "@/components/detail/SectionHeader";
-import { GenreChip } from "@/components/ActivityChip";
-import { parseRecurrenceRule, parseRecurrenceDays } from "@/lib/recurrence";
+import { parseRecurrenceRule } from "@/lib/recurrence";
 import NeonBackButton from "@/components/detail/NeonBackButton";
+import DetailShell from "@/components/detail/DetailShell";
 import Badge from "@/components/ui/Badge";
+import Dot from "@/components/ui/Dot";
 
 type EventData = {
   id: number;
@@ -253,33 +257,47 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       setImageError(false);
       setIsLowRes(false);
 
-      try {
-        const eventUrl = portal?.id ? `/api/events/${eventId}?portal_id=${portal.id}` : `/api/events/${eventId}`;
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        const res = await fetch(eventUrl, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (cancelled) return;
-        if (!res.ok) {
-          throw new Error("Event not found");
+      const eventUrl = portal?.id ? `/api/events/${eventId}?portal_id=${portal.id}` : `/api/events/${eventId}`;
+      const MAX_RETRIES = 2;
+
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 500 * attempt));
+            if (cancelled) return;
+          }
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const res = await fetch(eventUrl, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (cancelled) return;
+          if (!res.ok) {
+            if ((res.status === 503 || res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
+              continue;
+            }
+            throw new Error(res.status === 404 ? "Event not found" : `Failed to load event (${res.status})`);
+          }
+          const data = await res.json();
+          if (cancelled) return;
+          setEvent(data.event);
+          setEventArtists(data.eventArtists || []);
+          setVenueEvents(data.venueEvents || []);
+          setNearbyEvents(data.nearbyEvents || []);
+          setNearbyDestinations(data.nearbyDestinations || {
+            food: [],
+            drinks: [],
+            nightlife: [],
+            fun: [],
+          });
+          setStatus("ready");
+          return;
+        } catch (err) {
+          if (controller.signal.aborted) return;
+          if (cancelled) return;
+          if (attempt === MAX_RETRIES) {
+            setError(err instanceof Error ? err.message : "Failed to load event");
+            setStatus("error");
+          }
         }
-        const data = await res.json();
-        if (cancelled) return;
-        setEvent(data.event);
-        setEventArtists(data.eventArtists || []);
-        setVenueEvents(data.venueEvents || []);
-        setNearbyEvents(data.nearbyEvents || []);
-        setNearbyDestinations(data.nearbyDestinations || {
-          food: [],
-          drinks: [],
-          nightlife: [],
-          fun: [],
-        });
-        setStatus("ready");
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load event");
-        setStatus("error");
       }
     }
 
@@ -287,8 +305,6 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     return () => { cancelled = true; controller.abort(); };
   }, [eventId, portal?.id]);
 
-  // Navigate to another detail view, clearing all detail params first
-  // so only one is active at a time. Each push adds to history for proper back nav.
   const navigateToDetail = (param: string, value: string | number) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.delete("event");
@@ -305,78 +321,44 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   const handleSeriesClick = (slug: string) => navigateToDetail("series", slug);
   const handleFestivalClick = (slug: string) => navigateToDetail("festival", slug);
 
-  // Merge all destination categories into a flat sorted list
   const allDestinations = useMemo(() => {
     const { food, drinks, nightlife, fun } = nearbyDestinations;
     const merged = [...food, ...drinks, ...nightlife, ...fun];
-    // Open venues first, then by distance
     return merged.sort((a, b) => {
       const aOpen = a.closesAt !== undefined ? 1 : 0;
       const bOpen = b.closesAt !== undefined ? 1 : 0;
-      if (aOpen !== bOpen) return bOpen - aOpen; // open first
+      if (aOpen !== bOpen) return bOpen - aOpen;
       return (a.distance ?? 99) - (b.distance ?? 99);
     });
   }, [nearbyDestinations]);
 
+  // ── LOADING SKELETON ──────────────────────────────────────────────────
   if (status === "loading") {
     return (
       <div className="pt-6 pb-8" role="status" aria-label="Loading event details">
-        {/* Hero skeleton with back button */}
-        <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-4 bg-[var(--night)]">
-          <Skeleton className="absolute inset-0" />
-          <NeonBackButton onClose={onClose} />
-          {/* Title overlay skeleton */}
-          <div className="absolute bottom-0 left-0 right-0 p-4">
-            <Skeleton className="h-7 w-[70%] rounded" delay="0.1s" />
-            <Skeleton className="h-4 w-[45%] rounded mt-2" delay="0.15s" />
-          </div>
-        </div>
-
-        {/* Quick actions skeleton */}
-        <div className="rounded-xl border border-[var(--twilight)] bg-[var(--card-bg)] mb-6">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--twilight)]">
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-5 w-14 rounded" delay="0.2s" />
-              <Skeleton className="h-4 w-20 rounded" delay="0.25s" />
-              <Skeleton className="h-4 w-16 rounded" delay="0.3s" />
-            </div>
-            <div className="hidden sm:flex items-center gap-2">
-              <Skeleton className="h-8 w-8 rounded-lg" delay="0.3s" />
-              <Skeleton className="h-8 w-8 rounded-lg" delay="0.35s" />
+        <NeonBackButton onClose={onClose} floating={false} />
+        <div className="lg:flex lg:gap-0">
+          {/* Sidebar skeleton */}
+          <div className="lg:w-[340px] lg:flex-shrink-0">
+            <Skeleton className="aspect-video lg:aspect-[16/10] w-full rounded-lg" />
+            <div className="p-4 space-y-3">
+              <Skeleton className="h-7 w-[80%] rounded" delay="0.1s" />
+              <Skeleton className="h-4 w-[50%] rounded" delay="0.14s" />
+              <Skeleton className="h-4 w-[60%] rounded" delay="0.18s" />
+              <div className="flex gap-2 pt-2">
+                <Skeleton className="h-8 w-16 rounded-full" delay="0.22s" />
+                <Skeleton className="h-8 w-16 rounded-full" delay="0.24s" />
+                <Skeleton className="h-8 w-16 rounded-full" delay="0.26s" />
+              </div>
             </div>
           </div>
-          <div className="p-3 flex items-center gap-3">
-            <Skeleton className="flex-1 h-12 rounded-lg" delay="0.35s" />
-            <Skeleton className="h-12 w-12 rounded-lg" delay="0.4s" />
-          </div>
-        </div>
-
-        {/* Info card skeleton */}
-        <div className="border border-[var(--twilight)] rounded-lg p-6 sm:p-8 bg-[var(--card-bg)]">
-          {/* Description skeleton */}
-          <Skeleton className="h-3 w-16 rounded mb-3" delay="0.4s" />
-          <div className="space-y-2 mb-5">
-            <Skeleton className="h-4 w-full rounded" delay="0.45s" />
-            <Skeleton className="h-4 w-[90%] rounded" delay="0.5s" />
-            <Skeleton className="h-4 w-[75%] rounded" delay="0.55s" />
-          </div>
-
-          {/* Location skeleton */}
-          <div className="pt-5 border-t border-[var(--twilight)] mb-5">
-            <Skeleton className="h-3 w-16 rounded mb-3" delay="0.6s" />
-            <div className="p-3 rounded-lg border border-[var(--twilight)] bg-[var(--void)]">
-              <Skeleton className="h-5 w-[50%] rounded mb-2" delay="0.65s" />
-              <Skeleton className="h-3 w-[70%] rounded" delay="0.7s" />
-            </div>
-          </div>
-
-          {/* Social proof skeleton */}
-          <div className="pt-5 border-t border-[var(--twilight)]">
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-8 w-8 rounded-full" delay="0.75s" />
-              <Skeleton className="h-8 w-8 rounded-full" delay="0.8s" />
-              <Skeleton className="h-8 w-8 rounded-full" delay="0.85s" />
-              <Skeleton className="h-4 w-24 rounded ml-1" delay="0.9s" />
+          {/* Content skeleton */}
+          <div className="flex-1 p-4 lg:p-8 space-y-6">
+            <Skeleton className="h-3 w-32 rounded" delay="0.3s" />
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-full rounded-lg" delay="0.34s" />
+              <Skeleton className="h-10 w-full rounded-lg" delay="0.38s" />
+              <Skeleton className="h-10 w-full rounded-lg" delay="0.42s" />
             </div>
           </div>
         </div>
@@ -384,17 +366,19 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     );
   }
 
+  // ── ERROR STATE ───────────────────────────────────────────────────────
   if (error || !event) {
     return (
       <div className="pt-6" role="alert">
-        <div className="relative aspect-[4/3] bg-[var(--dusk)] rounded-xl mb-4 flex items-center justify-center">
-          <NeonBackButton onClose={onClose} />
+        <NeonBackButton onClose={onClose} floating={false} />
+        <div className="text-center py-12">
           <p className="text-[var(--muted)]">{error || "Event not found"}</p>
         </div>
       </div>
     );
   }
 
+  // ── DERIVED VALUES ────────────────────────────────────────────────────
   const isLive = event.is_live || false;
   const isDog = isDogPortal(portalSlug);
   const recurrenceText = parseRecurrenceRule(event.recurrence_rule);
@@ -434,7 +418,6 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     end_time: event.end_time,
     is_all_day: event.is_all_day,
     is_free: event.is_free,
-    is_adult: event.is_adult,
     ticket_url: event.ticket_url,
     age_policy: event.age_policy,
     ticket_status: event.ticket_status,
@@ -463,439 +446,457 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     eventCategory: event.category,
   });
   const hasLineup = displayParticipants.length > 0;
-  const hasAboutContent = Boolean(descriptionText) || hasLineup;
-  const hasIntroContent = hasAboutContent || hasShowSignals;
 
-  return (
-    <div className="pt-6 pb-8">
+  // Price + date/time for sidebar
+  const { text: priceText, isFree } = formatPriceDetailed(event);
+  const dateObj = parseISO(event.start_date);
+  const dateDisplay = event.end_date && event.end_date !== event.start_date
+    ? `${format(dateObj, "MMM d")} – ${format(parseISO(event.end_date), "MMM d")}`
+    : format(dateObj, "EEE, MMM d");
+  const timeDisplay = event.is_all_day
+    ? "All Day"
+    : event.start_time
+      ? (() => {
+          const [hours, minutes] = event.start_time.split(":");
+          const hour = parseInt(hours, 10);
+          const period = hour >= 12 ? "PM" : "AM";
+          const hour12 = hour % 12 || 12;
+          return `${hour12}:${minutes} ${period}`;
+        })()
+      : "Time TBA";
+
+  const isActuallyTicketed = isTicketingUrl(event.ticket_url);
+  const sourceLooksTicketed = isTicketingUrl(event.source_url);
+
+  // ── SIDEBAR ───────────────────────────────────────────────────────────
+  const sidebarContent = (
+    <div className="flex flex-col h-full">
       <ScopedStyles
         css={[heroAccentClass?.css, seriesColorClass?.css, festivalColorClass?.css].filter(Boolean).join("\n")}
       />
-      {/* Hero Image with integrated back button */}
-      <div
-        className={`relative aspect-[4/3] bg-[var(--night)] rounded-xl overflow-hidden mb-4 ${
-          isLive ? "ring-2 ring-[var(--coral)] ring-opacity-50" : ""
-        } ${heroAccentClass?.className ?? ""}`}
-      >
-        {showImage ? (
-          <>
-            {!imageLoaded && (
-              <div className="absolute inset-0 skeleton-shimmer" />
-            )}
-            <Image
-              src={event.image_url!}
-              alt={event.title}
-              fill
-              sizes="(max-width: 640px) 100vw, 640px"
-              className={`${isLowRes ? "object-contain" : "object-cover"} transition-opacity duration-300 ${
-                imageLoaded ? "opacity-100" : "opacity-0"
-              }`}
-              onLoad={(e) => {
-                setImageLoaded(true);
-                const img = e.currentTarget as HTMLImageElement;
-                if (img.naturalWidth > 0 && img.naturalWidth < 600) setIsLowRes(true);
-              }}
-              onError={() => setImageError(true)}
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          </>
-        ) : (
-          <>
-            {/* Branded gradient hero fallback — animated neon aesthetic */}
-            <div className="absolute inset-0 bg-[var(--void)]" />
-            <div className="absolute inset-0 hero-fallback-ambient" />
-            {/* Neon top line */}
-            <div className="absolute top-0 left-0 right-0 h-0.5 hero-fallback-topline" />
-            {/* Center icon */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex items-center justify-center w-20 h-20 rounded-2xl hero-fallback-icon">
-                <CategoryIcon type={event.category || "other"} size={40} glow="intense" />
-              </div>
-            </div>
-            {/* Scanline effect */}
-            <div className="absolute inset-0 pointer-events-none opacity-[0.03] hero-fallback-scanlines" />
-            {/* Bottom gradient for title overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-          </>
-        )}
 
-        {/* Back button - neon styled */}
-        <NeonBackButton onClose={onClose} />
-
-        {/* Live badge - positioned on the right to avoid overlapping back button */}
-        {isLive && (
-          <div className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] rounded-full font-mono text-xs font-medium z-10">
-            <span className="w-2 h-2 bg-[var(--void)] rounded-full animate-pulse" />
-            LIVE NOW
-          </div>
-        )}
-
-        {/* Image source attribution - subtle link to original source */}
-        {showImage && event.source_url && (
-          <a
-            href={event.source_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`absolute top-3 right-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded text-2xs font-mono text-[var(--muted)] hover:text-[var(--soft)] transition-colors z-10 focus-ring ${isLive ? "hidden" : ""}`}
-            title="View original source"
-          >
-            <ArrowSquareOut size={12} weight="light" className="inline-block mr-1 -mt-0.5" />
-            Source
-          </a>
-        )}
-
-        {/* Title overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <h1 className="text-xl sm:text-3xl font-bold text-white drop-shadow-lg">
-            {event.title}
-          </h1>
-          {event.venue && (
-            <p className="text-sm text-white/80 mt-1">
-              <button
-                onClick={() => handleSpotClick(event.venue!.slug)}
-                className="py-1 hover:text-white hover:underline transition-colors"
-              >
-                {event.venue.name}
-              </button>
-              {event.venue.neighborhood && ` · ${event.venue.neighborhood}`}
-            </p>
+      {/* Hero image — compact */}
+      {showImage ? (
+        <div className={`aspect-video lg:aspect-[16/10] bg-[var(--night)] overflow-hidden relative ${isLive ? "ring-2 ring-[var(--coral)] ring-opacity-50" : ""}`}>
+          {!imageLoaded && (
+            <Skeleton className="absolute inset-0" />
           )}
-          {event.genres && event.genres.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {event.genres.slice(0, 4).map((genre) => (
-                <span
-                  key={genre}
-                  className="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-white/15 text-white/90 backdrop-blur-sm border border-white/10"
-                >
-                  {genre.replace(/-/g, " ")}
-                </span>
-              ))}
+          <Image
+            src={event.image_url!}
+            alt={event.title}
+            fill
+            sizes="(max-width: 1024px) 100vw, 340px"
+            className={`${isLowRes ? "object-contain" : "object-cover"} brightness-[0.85] contrast-[1.05] transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+            onLoad={(e) => {
+              setImageLoaded(true);
+              if (e.currentTarget.naturalWidth < 600) setIsLowRes(true);
+            }}
+            onError={() => setImageError(true)}
+            priority
+          />
+          {/* LIVE badge */}
+          {isLive && (
+            <div className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] rounded-full font-mono text-xs font-medium z-10">
+              <span className="w-2 h-2 bg-[var(--void)] rounded-full animate-pulse" />
+              LIVE NOW
+            </div>
+          )}
+          {/* Source attribution */}
+          {event.source_url && !isLive && (
+            <a
+              href={event.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="absolute top-3 right-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded text-2xs font-mono text-[var(--muted)] hover:text-[var(--soft)] transition-colors z-10 focus-ring"
+              title="View original source"
+            >
+              <ArrowSquareOut size={12} weight="light" className="inline-block mr-1 -mt-0.5" />
+              Source
+            </a>
+          )}
+        </div>
+      ) : (
+        <div className={`aspect-video lg:aspect-[16/10] bg-gradient-to-b from-[var(--dusk)] to-[var(--night)] flex items-center justify-center relative ${isLive ? "ring-2 ring-[var(--coral)] ring-opacity-50" : ""}`}>
+          <CategoryIcon type={event.category || "other"} size={40} className="opacity-20" />
+          {isLive && (
+            <div className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] rounded-full font-mono text-xs font-medium z-10">
+              <span className="w-2 h-2 bg-[var(--void)] rounded-full animate-pulse" />
+              LIVE NOW
             </div>
           )}
         </div>
+      )}
+
+      {/* Identity */}
+      <div className="px-5 pt-4 pb-3 space-y-2">
+        {/* Title */}
+        <h2 className="text-xl lg:text-lg font-bold text-[var(--cream)] leading-tight">
+          {event.title}
+        </h2>
+
+        {/* Venue link + neighborhood */}
+        {event.venue && (
+          <button
+            onClick={() => handleSpotClick(event.venue!.slug)}
+            className="text-sm text-[var(--soft)] hover:text-[var(--coral)] transition-colors text-left focus-ring"
+          >
+            {event.venue.name}
+            {event.venue.neighborhood && (
+              <span className="text-[var(--muted)]"> · {event.venue.neighborhood}</span>
+            )}
+          </button>
+        )}
+
+        {/* Date + Time + Price */}
+        <p className="text-sm flex items-center gap-1.5 flex-wrap">
+          <span className="text-[var(--cream)] font-medium">{dateDisplay}</span>
+          <Dot />
+          <span className="text-[var(--soft)]">{timeDisplay}</span>
+          {priceText && (
+            <>
+              <Dot />
+              <span className={`font-mono font-bold ${isFree ? "text-[var(--neon-green)]" : "text-[var(--gold)]"}`}>
+                {priceText}
+              </span>
+            </>
+          )}
+        </p>
       </div>
 
-      {/* Quick Actions */}
-      <EventQuickActions
-        event={event}
-        isLive={isLive}
-        className="mb-5"
-        extraActions={
-          event.venue && event.venue.lat != null && event.venue.lng != null ? (() => {
-            const neonColor = getCategoryColor(event.category || "other");
-            return (
-              <button
-                onClick={() => setShowNightSheet(true)}
-                className="inline-flex items-center gap-2 px-3 sm:px-4 min-h-[40px] rounded-full text-sm font-mono font-medium transition-all focus-ring active:scale-95"
-                style={{
-                  color: neonColor,
-                  backgroundColor: `color-mix(in srgb, ${neonColor} 10%, transparent)`,
-                  borderWidth: 1,
-                  borderStyle: "solid",
-                  borderColor: `color-mix(in srgb, ${neonColor} 30%, transparent)`,
-                  boxShadow: `0 0 12px color-mix(in srgb, ${neonColor} 20%, transparent)`,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${neonColor} 18%, transparent)`;
-                  e.currentTarget.style.borderColor = `color-mix(in srgb, ${neonColor} 45%, transparent)`;
-                  e.currentTarget.style.boxShadow = `0 0 16px color-mix(in srgb, ${neonColor} 35%, transparent)`;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${neonColor} 10%, transparent)`;
-                  e.currentTarget.style.borderColor = `color-mix(in srgb, ${neonColor} 30%, transparent)`;
-                  e.currentTarget.style.boxShadow = `0 0 12px color-mix(in srgb, ${neonColor} 20%, transparent)`;
-                }}
-              >
-                <ForkKnife size={16} weight="duotone" />
-                <span className="hidden sm:inline">Plan Night</span>
-              </button>
-            );
-          })() : undefined
-        }
-      />
+      {/* Divider */}
+      <div className="mx-5 border-t border-[var(--twilight)]/40" />
 
-      {/* Above-the-fold: Description teaser */}
-      {descriptionText && descriptionText.length >= 50 && (
-        <div className="mb-5">
-          <DescriptionTeaser
-            description={descriptionText}
-            accentColor={getCategoryColor(event.category || "other")}
-          />
-        </div>
-      )}
-
-      {/* Above-the-fold: Social proof (promoted from info card) */}
-      <FriendsGoing eventId={event.id} className="mb-4" />
-
-      {/* Above-the-fold: Interactive genre pills */}
+      {/* Genre pills */}
       {event.genres && event.genres.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-5">
+        <div className="px-5 py-3 flex flex-wrap gap-1.5">
           {event.genres.slice(0, 5).map((genre) => (
-            <GenreChip key={genre} genre={genre} category={event.category} portalSlug={portalSlug} />
+            <Badge key={genre} variant="neutral" size="sm">{genre.replace(/-/g, " ")}</Badge>
           ))}
         </div>
       )}
 
-      {/* Dog-friendly event highlights (dog portal only) */}
-      {isDog && dogTags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-6">
-          {dogTags.map((tag) => (
-            <span
-              key={tag}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold min-h-[44px] bg-[var(--coral)]/10 text-[var(--coral)] border border-[var(--coral)]/25"
-            >
-              {tag === "dog-friendly" && "🐾 Dog Friendly"}
-              {tag === "pets" && "🐕 Pet Event"}
-              {tag === "adoption" && "❤️ Adoption"}
-              {tag === "outdoor" && "🌳 Outdoor"}
-              {tag === "family-friendly" && "👨‍👩‍👧 Family Friendly"}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Exhibition Info Card */}
+      {/* Exhibition info (compact) */}
       {isExhibition(event) && (
-        <div className="flex items-center gap-3 p-4 rounded-lg border border-[var(--neon-amber)]/30 mb-6 bg-[var(--neon-amber)]/5">
-          <div className="w-10 h-10 rounded-full bg-[var(--neon-amber)]/15 flex items-center justify-center flex-shrink-0">
-            <FrameCorners size={20} weight="light" className="text-[var(--neon-amber)]" aria-hidden="true" />
-          </div>
-          <div>
-            <p className="text-[var(--cream)] font-medium">
-              Exhibition
+        <div className="px-5 py-2">
+          <div className="flex items-center gap-2.5 p-2.5 rounded-lg border border-[var(--neon-amber)]/30 bg-[var(--neon-amber)]/5">
+            <FrameCorners size={18} weight="light" className="text-[var(--neon-amber)] flex-shrink-0" aria-hidden="true" />
+            <div className="text-sm">
+              <span className="text-[var(--cream)] font-medium">Exhibition</span>
               {event.end_date && (() => {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 const endDate = parseISO(event.end_date!);
                 const startDate = parseISO(event.start_date);
                 if (startDate > today) {
-                  return ` · Opens ${format(startDate, "MMM d")}`;
+                  return <span className="text-[var(--muted)]"> · Opens {format(startDate, "MMM d")}</span>;
                 }
-                return ` · Through ${format(endDate, "MMM d")}`;
+                return <span className="text-[var(--muted)]"> · Through {format(endDate, "MMM d")}</span>;
               })()}
-            </p>
-            <p className="text-sm text-[var(--muted)]">
-              {(() => {
-                const days = parseRecurrenceDays(event.recurrence_rule);
-                const hours = formatTimeRange(event.start_time, event.end_time);
-                if (days.length > 0 && hours !== "TBA") {
-                  return `${days.join(", ")} · ${hours}`;
-                }
-                if (days.length > 0) return days.join(", ");
-                if (hours !== "TBA") return hours;
-                return "See venue for hours";
-              })()}
-            </p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Recurring Event Badge (non-exhibition) */}
+      {/* Recurring badge (compact, non-exhibition) */}
       {!isExhibition(event) && event.is_recurring && recurrenceText && (
-        <div className="flex items-center gap-3 p-4 rounded-lg border border-[var(--twilight)] mb-6 bg-[var(--dusk)]">
-          <div className="w-10 h-10 rounded-full bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">
-            <Repeat size={20} weight="light" className="text-[var(--coral)]" aria-hidden="true" />
-          </div>
-          <div>
-            <p className="text-[var(--cream)] font-medium">This event repeats {recurrenceText.toLowerCase()}</p>
-            <p className="text-sm text-[var(--muted)]">View all dates in the series</p>
+        <div className="px-5 py-2">
+          <div className="flex items-center gap-2.5 p-2.5 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]">
+            <Repeat size={18} weight="light" className="text-[var(--coral)] flex-shrink-0" aria-hidden="true" />
+            <span className="text-sm text-[var(--cream)]">Repeats {recurrenceText.toLowerCase()}</span>
           </div>
         </div>
       )}
 
-      {/* Main event info card */}
-      <InfoCard accentColor={getCategoryColor(event.category || "other")}>
-        {/* Description */}
-        {descriptionText && (
-          <div className="mb-5">
-            <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] pb-3">
-              About
-            </h2>
-            <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
-              <LinkifyText text={descriptionText} />
-            </p>
+      {/* Show Signals */}
+      {hasShowSignals && (
+        <div className="px-5 py-2">
+          <ShowSignalsPanel signals={showSignals} ticketUrl={event.ticket_url} />
+        </div>
+      )}
+
+      {/* Dog-friendly tags */}
+      {isDog && dogTags.length > 0 && (
+        <>
+          <div className="mx-5 border-t border-[var(--twilight)]/40" />
+          <div className="px-5 py-2 flex flex-wrap gap-2">
+            {dogTags.map((tag) => (
+              <Badge key={tag} variant="alert">
+                {tag === "dog-friendly" && "🐾 Dog Friendly"}
+                {tag === "pets" && "🐕 Pet Event"}
+                {tag === "adoption" && "❤️ Adoption"}
+                {tag === "outdoor" && "🌳 Outdoor"}
+                {tag === "family-friendly" && "👨‍👩‍👧 Family Friendly"}
+              </Badge>
+            ))}
           </div>
+        </>
+      )}
+
+      {/* Spacer (pushes actions to bottom on desktop) */}
+      <div className="hidden lg:flex flex-1" />
+
+      {/* Divider before actions */}
+      <div className="mx-5 border-t border-[var(--twilight)]/40" />
+
+      {/* Primary CTA */}
+      <div className="px-5 py-3 space-y-2.5">
+        {event.ticket_url ? (
+          <a
+            href={event.ticket_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--coral)] text-[var(--void)] text-base font-semibold rounded-lg hover:bg-[var(--rose)] transition-all shadow-[0_0_20px_rgba(255,107,122,0.3)] hover:shadow-[0_0_30px_rgba(255,107,122,0.5)] ${
+              isLive ? "animate-pulse-glow" : ""
+            }`}
+          >
+            {isActuallyTicketed ? (
+              <Ticket size={20} weight="bold" />
+            ) : (
+              <ArrowSquareOut size={20} weight="bold" />
+            )}
+            {isLive ? "Join Now" : isActuallyTicketed ? "Get Tickets" : event.is_free ? "RSVP Free" : "Learn More"}
+          </a>
+        ) : event.source_url ? (
+          <a
+            href={event.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--coral)] text-[var(--void)] text-base font-semibold rounded-lg hover:bg-[var(--rose)] transition-all shadow-[0_0_20px_rgba(255,107,122,0.3)] hover:shadow-[0_0_30px_rgba(255,107,122,0.5)]"
+          >
+            {sourceLooksTicketed || !event.is_free ? (
+              <Ticket size={20} weight="bold" />
+            ) : (
+              <ArrowSquareOut size={20} weight="bold" />
+            )}
+            {event.is_free ? "RSVP Free" : "Get Tickets"}
+          </a>
+        ) : (
+          <RSVPButton
+            eventId={event.id}
+            venueId={event.venue?.id}
+            venueName={event.venue?.name}
+            venueType={event.venue?.venue_type}
+            variant="primary"
+            className="w-full justify-center py-3 text-base"
+          />
         )}
 
-        {/* Artists */}
-        {hasLineup && (
-          <div className={`mb-5 ${descriptionText ? "pt-5 border-t border-[var(--twilight)]" : ""}`}>
-            <LineupSection
-              artists={displayParticipants}
-              portalSlug={portalSlug}
-              maxDisplay={20}
-              title={participantLabels.sectionTitle}
-              headlinerLabel={participantLabels.headlinerLabel}
-              supportLabel={participantLabels.supportLabel}
-              eventCategory={event.category}
-              fallbackImageUrl={event.image_url}
-              fallbackGenres={lineupGenreFallback}
+        {/* Secondary actions row */}
+        <div className="flex items-center justify-center gap-1">
+          {(event.ticket_url || event.source_url) && (
+            <RSVPButton
+              eventId={event.id}
+              venueId={event.venue?.id}
+              venueName={event.venue?.name}
+              venueType={event.venue?.venue_type}
+              variant="compact"
+            />
+          )}
+          <InviteToEventButton eventId={event.id} eventTitle={event.title} variant="icon" />
+          <AddToCalendar
+            eventId={event.id}
+            title={event.title}
+            date={event.start_date}
+            time={event.start_time}
+            venue={event.venue?.name}
+            address={event.venue?.address}
+            city={event.venue?.city}
+            state={event.venue?.state}
+            variant="icon"
+          />
+          <ShareEventButton eventId={event.id} eventTitle={event.title} variant="icon" />
+          {event.venue && event.venue.lat != null && event.venue.lng != null && (
+            <button
+              onClick={() => setShowNightSheet(true)}
+              className="inline-flex items-center justify-center w-10 h-10 rounded-lg text-[var(--soft)] hover:text-[var(--cream)] hover:bg-white/5 transition-colors focus-ring"
+              title="Plan Night"
+            >
+              <ForkKnife size={18} weight="duotone" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── CONTENT ZONE ──────────────────────────────────────────────────────
+  const contentZone = (
+    <div className="px-4 lg:px-8 py-6 space-y-8">
+      {/* ── PRIMARY: LINEUP ──────────────────────────────────── */}
+      {hasLineup && (
+        <div>
+          <LineupSection
+            artists={displayParticipants}
+            portalSlug={portalSlug}
+            maxDisplay={20}
+            title={participantLabels.sectionTitle}
+            headlinerLabel={participantLabels.headlinerLabel}
+            supportLabel={participantLabels.supportLabel}
+            eventCategory={event.category}
+            fallbackImageUrl={event.image_url}
+            fallbackGenres={lineupGenreFallback}
+          />
+        </div>
+      )}
+
+      {/* ── ABOUT ────────────────────────────────────────────── */}
+      {descriptionText && (
+        <div>
+          <SectionHeader title="About" variant={hasLineup ? "divider" : "inline"} />
+          <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
+            <LinkifyText text={descriptionText} />
+          </p>
+        </div>
+      )}
+
+      {/* ── SOCIAL PROOF ─────────────────────────────────────── */}
+      <div>
+        <FriendsGoing eventId={event.id} className="mb-4" />
+        <SectionHeader title="Who's Going" variant="divider" />
+        <WhosGoing eventId={event.id} />
+      </div>
+
+      {/* ── LOCATION ─────────────────────────────────────────── */}
+      {event.venue && event.venue.address && (
+        <div>
+          <div className="flex items-center justify-between pt-6 border-t border-[var(--twilight)]/30 pb-3">
+            <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)]">
+              Location
+            </h2>
+            <DirectionsDropdown
+              venueName={event.venue.name}
+              address={event.venue.address}
+              city={event.venue.city}
+              state={event.venue.state}
             />
           </div>
-        )}
-
-        {hasShowSignals && (
-          <div className="mb-5">
-            <SectionHeader title="Show Details" className={hasAboutContent ? "" : "border-t-0 pt-0"} />
-            <ShowSignalsPanel signals={showSignals} ticketUrl={event.ticket_url} />
-          </div>
-        )}
-
-        {/* Location */}
-        {event.venue && event.venue.address && (
-          <div className="mb-5">
-            <div className={`flex items-center justify-between py-4 ${hasIntroContent ? "border-t border-[var(--twilight)]" : ""}`}>
-              <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)]">
-                Location
-              </h2>
-              <DirectionsDropdown
-                venueName={event.venue.name}
-                address={event.venue.address}
-                city={event.venue.city}
-                state={event.venue.state}
-              />
-            </div>
-            <button
-              onClick={() => handleSpotClick(event.venue!.slug)}
-              className="block w-full text-left p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)] focus-ring"
-            >
-              <p className="text-[var(--soft)]">
-                <span className="text-[var(--cream)] font-medium group-hover:text-[var(--coral)] transition-colors">
-                  {event.venue.name}
-                </span>
-                <CaretRight size={16} weight="bold" className="inline-block ml-1 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" />
-                <br />
-                <span className="text-sm text-[var(--muted)]">
-                  {event.venue.address} · {event.venue.city}, {event.venue.state}
-                </span>
-              </p>
-              {event.venue.vibes && event.venue.vibes.length > 0 &&
-                event.category && ["food_drink", "nightlife", "music"].includes(event.category) && (
-                <VenueVibes vibes={event.venue.vibes} className="mt-2" />
-              )}
-              <GettingThereSection transit={event.venue} variant="compact" />
-            </button>
-
-          </div>
-        )}
-
-        {/* Social proof — FriendsGoing promoted above the fold */}
-        <div>
-          <SectionHeader title="Who's Going" />
-          <WhosGoing eventId={event.id} />
-        </div>
-
-        {/* Series link */}
-        {event.series && (
-          <div className="pt-4 border-t border-[var(--twilight)] space-y-3">
-            {event.series.festival && (
-              <button
-                onClick={() => handleFestivalClick(event.series!.festival!.slug)}
-                className={`flex items-center gap-3 w-full p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)] text-left focus-ring ${festivalColorClass?.className ?? ""}`}
-              >
-                <Flag size={20} weight="light" className="flex-shrink-0 series-accent" aria-hidden="true" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm text-[var(--soft)] group-hover:text-[var(--coral)] transition-colors">
-                    Part of <span className="text-[var(--cream)] font-medium">{event.series.festival.name}</span>
-                  </span>
-                  <span
-                    className="ml-2 text-xs font-mono uppercase tracking-wider px-1.5 py-0.5 rounded series-bg-20 series-accent"
-                  >
-                    Festival
-                  </span>
-                </div>
-                <CaretRight size={16} weight="bold" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" />
-              </button>
+          <button
+            onClick={() => handleSpotClick(event.venue!.slug)}
+            className="block w-full text-left p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)] focus-ring"
+          >
+            <p className="text-[var(--soft)]">
+              <span className="text-[var(--cream)] font-medium group-hover:text-[var(--coral)] transition-colors">
+                {event.venue.name}
+              </span>
+              <CaretRight size={16} weight="bold" className="inline-block ml-1 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" />
+              <br />
+              <span className="text-sm text-[var(--muted)]">
+                {event.venue.address} · {event.venue.city}, {event.venue.state}
+              </span>
+            </p>
+            {event.venue.vibes && event.venue.vibes.length > 0 &&
+              event.category && ["food_drink", "nightlife", "music"].includes(event.category) && (
+              <VenueVibes vibes={event.venue.vibes} className="mt-2" />
             )}
+            <GettingThereSection transit={event.venue} variant="compact" />
+          </button>
+        </div>
+      )}
+
+      {/* ── SERIES / FESTIVAL LINKS ──────────────────────────── */}
+      {event.series && (
+        <div className="pt-6 border-t border-[var(--twilight)]/30 space-y-3">
+          {event.series.festival && (
             <button
-              onClick={() => handleSeriesClick(event.series!.slug)}
-              className={`flex items-center gap-3 w-full p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)] text-left focus-ring ${seriesColorClass?.className ?? ""}`}
+              onClick={() => handleFestivalClick(event.series!.festival!.slug)}
+              className={`flex items-center gap-3 w-full p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)] text-left focus-ring ${festivalColorClass?.className ?? ""}`}
             >
-              <Repeat size={20} weight="light" className="flex-shrink-0 series-accent" />
+              <Flag size={20} weight="light" className="flex-shrink-0 series-accent" aria-hidden="true" />
               <div className="flex-1 min-w-0">
                 <span className="text-sm text-[var(--soft)] group-hover:text-[var(--coral)] transition-colors">
-                  Part of <span className="text-[var(--cream)] font-medium">{event.series.title}</span>
+                  Part of <span className="text-[var(--cream)] font-medium">{event.series.festival.name}</span>
                 </span>
                 <span
                   className="ml-2 text-xs font-mono uppercase tracking-wider px-1.5 py-0.5 rounded series-bg-20 series-accent"
                 >
-                  {getSeriesTypeLabel(event.series.series_type)}
+                  Festival
                 </span>
               </div>
               <CaretRight size={16} weight="bold" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" />
             </button>
-          </div>
-        )}
-
-        {/* Producer */}
-        {event.producer && (
-          <div>
-            <SectionHeader title="Presented by" />
-            <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-[var(--twilight)] bg-[var(--void)]">
-              <div className="flex items-center gap-3 min-w-0">
-                {event.producer.logo_url ? (
-                  <Image
-                    src={event.producer.logo_url}
-                    alt={event.producer.name}
-                    width={40}
-                    height={40}
-                    className="rounded-lg object-cover flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-lg bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">
-                    <Buildings size={20} weight="light" className="text-[var(--muted)]" aria-hidden="true" />
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <h3 className="text-[var(--cream)] font-medium truncate text-sm">
-                    {event.producer.name}
-                  </h3>
-                  <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-[0.14em]">
-                    {event.producer.org_type?.replace(/_/g, " ")}
-                  </p>
-                </div>
-              </div>
-              <FollowButton targetProducerId={event.producer.id} size="sm" />
-            </div>
-          </div>
-        )}
-
-        {/* Tags Section */}
-        <div>
-          {/* System tags (from crawlers) — always visible */}
-          {event.tags && event.tags.length > 0 && (
-            <div className="mb-4">
-              <SectionHeader title="Tags" />
-              <div className="flex flex-wrap gap-2">
-                {event.tags.map((tag) => (
-                  <Badge key={tag} variant="alert">{tag.replace(/-/g, " ")}</Badge>
-                ))}
-              </div>
-            </div>
           )}
+          <button
+            onClick={() => handleSeriesClick(event.series!.slug)}
+            className={`flex items-center gap-3 w-full p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)] text-left focus-ring ${seriesColorClass?.className ?? ""}`}
+          >
+            <Repeat size={20} weight="light" className="flex-shrink-0 series-accent" />
+            <div className="flex-1 min-w-0">
+              <span className="text-sm text-[var(--soft)] group-hover:text-[var(--coral)] transition-colors">
+                Part of <span className="text-[var(--cream)] font-medium">{event.series.title}</span>
+              </span>
+              <span
+                className="ml-2 text-xs font-mono uppercase tracking-wider px-1.5 py-0.5 rounded series-bg-20 series-accent"
+              >
+                {getSeriesTypeLabel(event.series.series_type)}
+              </span>
+            </div>
+            <CaretRight size={16} weight="bold" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" />
+          </button>
+        </div>
+      )}
 
-          {/* Community tags — collapsed by default to reduce scroll depth + API calls */}
-          <div className="mt-4">
-            <CommunityTagsSection
-              eventId={event.id}
-              venue={event.venue}
-              producer={event.producer}
-            />
+      {/* ── PRODUCER ─────────────────────────────────────────── */}
+      {event.producer && (
+        <div>
+          <SectionHeader title="Presented by" variant="divider" />
+          <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-[var(--twilight)] bg-[var(--void)]">
+            <div className="flex items-center gap-3 min-w-0">
+              {event.producer.logo_url ? (
+                <Image
+                  src={event.producer.logo_url}
+                  alt={event.producer.name}
+                  width={40}
+                  height={40}
+                  className="rounded-lg object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-lg bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">
+                  <Buildings size={20} weight="light" className="text-[var(--muted)]" aria-hidden="true" />
+                </div>
+              )}
+              <div className="min-w-0">
+                <h3 className="text-[var(--cream)] font-medium truncate text-sm">
+                  {event.producer.name}
+                </h3>
+                <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-[0.14em]">
+                  {event.producer.org_type?.replace(/_/g, " ")}
+                </p>
+              </div>
+            </div>
+            <FollowButton targetProducerId={event.producer.id} size="sm" />
           </div>
         </div>
+      )}
 
-        {/* Flag */}
-        <div className="pt-4 border-t border-[var(--twilight)]">
-          <FlagButton
-            entityType="event"
-            entityId={event.id}
-            entityName={event.title}
-          />
-        </div>
-      </InfoCard>
+      {/* ── TAGS ─────────────────────────────────────────────── */}
+      <div className="border-t border-[var(--twilight)]/30 pt-5 space-y-3">
+        {event.tags && event.tags.length > 0 && (
+          <div className="mb-4">
+            <h3 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] pb-3">
+              Tags
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {event.tags.map((tag) => (
+                <Badge key={tag} variant="alert">{tag.replace(/-/g, " ")}</Badge>
+              ))}
+            </div>
+          </div>
+        )}
 
-      {/* Around Here */}
+        <CommunityTagsSection
+          eventId={event.id}
+          venue={event.venue}
+          producer={event.producer}
+        />
+
+        <FlagButton
+          entityType="event"
+          entityId={event.id}
+          entityName={event.title}
+        />
+      </div>
+
+      {/* ── DISCOVERY: AROUND HERE ───────────────────────────── */}
       <AroundHereSection
         venueEvents={venueEvents}
         nearbyEvents={nearbyEvents}
@@ -907,8 +908,25 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         onSpotClick={handleSpotClick}
         onEventClick={handleEventClick}
       />
+    </div>
+  );
 
-      {/* Outing Planner — consolidated bottom sheet */}
+  // ── TOP BAR ───────────────────────────────────────────────────────────
+  const topBar = (
+    <div className="flex items-center px-4 lg:px-6 py-3">
+      <NeonBackButton onClose={onClose} floating={false} />
+    </div>
+  );
+
+  return (
+    <>
+      <DetailShell
+        topBar={topBar}
+        sidebar={sidebarContent}
+        content={contentZone}
+      />
+
+      {/* Outing Planner */}
       {showNightSheet && event.venue && (
         <OutingPlannerSheet
           anchor={{
@@ -937,6 +955,6 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
           onClose={() => setShowNightSheet(false)}
         />
       )}
-    </div>
+    </>
   );
 }

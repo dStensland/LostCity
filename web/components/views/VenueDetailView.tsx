@@ -41,6 +41,7 @@ import { SectionHeader } from "@/components/detail/SectionHeader";
 import { QuickActionLink } from "@/components/detail/QuickActionLink";
 import { CollapsibleSection } from "@/components/detail/CollapsibleSection";
 import NeonBackButton from "@/components/detail/NeonBackButton";
+import DetailShell from "@/components/detail/DetailShell";
 import Badge from "@/components/ui/Badge";
 import Dot from "@/components/ui/Dot";
 import VenueShowtimes, { type ShowtimeEvent } from "@/components/VenueShowtimes";
@@ -78,7 +79,6 @@ type SpotData = {
   spot_type: string | null;
   spot_types: string[] | null;
   vibes: string[] | null;
-  // Transit fields
   nearest_marta_station: string | null;
   marta_walk_minutes: number | null;
   marta_lines: string[] | null;
@@ -123,15 +123,11 @@ type UpcomingEvent = {
   recommendation_count?: number;
 };
 
-// EditorialMention type imported from AccoladesSection
-
 type VenueOccasion = {
   occasion: string;
   confidence: number;
   source: string;
 };
-
-// EDITORIAL_SOURCE_LABELS moved to AccoladesSection
 
 const OCCASION_LABELS: Record<string, string> = {
   date_night: "Date Night",
@@ -173,10 +169,6 @@ type NearbyDestinations = {
   fun: NearbyDestination[];
 };
 
-// AccoladesSection imported from @/components/detail/AccoladesSection
-
-// ── Main Component ───────────────────────────────────────────────────────────
-
 interface VenueDetailViewProps {
   slug: string;
   portalSlug: string;
@@ -193,7 +185,6 @@ const dogVibeLabels: Record<string, string> = {
   "fenced": "Fenced Area",
 };
 
-// CollapsibleVenueTags uses shared CollapsibleSection
 function CollapsibleVenueTags({ venueId }: { venueId: number }) {
   return (
     <CollapsibleSection title="Community Tags">
@@ -225,8 +216,8 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
   const { portal } = usePortal();
 
   useEffect(() => {
+    let cancelled = false;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     async function fetchSpot() {
       setStatus("loading");
@@ -235,42 +226,59 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
       setImageError(false);
       setIsLowRes(false);
 
-      try {
-        const res = await fetch(`/api/spots/${slug}`, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (!res.ok) {
-          throw new Error("Spot not found");
+      const MAX_RETRIES = 2;
+
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 500 * attempt));
+            if (cancelled) return;
+          }
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const res = await fetch(`/api/spots/${slug}`, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (cancelled) return;
+          if (!res.ok) {
+            if ((res.status === 503 || res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
+              continue;
+            }
+            throw new Error(res.status === 404 ? "Spot not found" : `Failed to load spot (${res.status})`);
+          }
+          const data = await res.json();
+          if (cancelled) return;
+          setSpot(data.spot);
+          setUpcomingEvents(data.upcomingEvents || []);
+          setNearbyDestinations(data.nearbyDestinations || null);
+          setHighlights(data.highlights || []);
+          setFeatures(
+            filterVenueFeaturesForPortal(data.features || [], {
+              portalSlug,
+              venueSlug: slug,
+            })
+          );
+          setSpecials(data.specials || []);
+          setEditorialMentions(data.editorialMentions || []);
+          setOccasions(data.occasions || []);
+          setAttachedChildDestinations(
+            data.attachedChildDestinations || data.artifacts || []
+          );
+          setStatus("ready");
+          return;
+        } catch (err) {
+          if (controller.signal.aborted) return;
+          if (cancelled) return;
+          if (attempt === MAX_RETRIES) {
+            setError(err instanceof Error ? err.message : "Failed to load spot");
+            setStatus("error");
+          }
         }
-        const data = await res.json();
-        setSpot(data.spot);
-        setUpcomingEvents(data.upcomingEvents || []);
-        setNearbyDestinations(data.nearbyDestinations || null);
-        setHighlights(data.highlights || []);
-        setFeatures(
-          filterVenueFeaturesForPortal(data.features || [], {
-            portalSlug,
-            venueSlug: slug,
-          })
-        );
-        setSpecials(data.specials || []);
-        setEditorialMentions(data.editorialMentions || []);
-        setOccasions(data.occasions || []);
-        setAttachedChildDestinations(
-          data.attachedChildDestinations || data.artifacts || []
-        );
-        setStatus("ready");
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : "Failed to load spot");
-        setStatus("error");
       }
     }
 
     fetchSpot();
-    return () => controller.abort();
+    return () => { cancelled = true; controller.abort(); };
   }, [slug]);
 
-  // Fetch walkable neighbors when spot is loaded
   useEffect(() => {
     if (!spot || !spot.walkable_neighbor_count) return;
 
@@ -311,58 +319,30 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
     return (
       <div className="pt-6 pb-8" role="status" aria-label="Loading venue details">
         <NeonBackButton onClose={onClose} floating={false} />
-
-        {/* Hero image skeleton */}
-        <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 relative">
-          <Skeleton className="absolute inset-0" />
-        </div>
-
-        {/* Flowing skeleton — matches new unwrapped layout */}
-        <div className="space-y-5 sm:space-y-8">
-          <div>
-            {/* Type badge */}
-            <Skeleton className="h-7 w-28 rounded-full mb-4" delay="0.06s" />
-
-            {/* Name + follow/recommend */}
-            <div className="flex items-start justify-between gap-4">
-              <Skeleton className="h-7 w-[60%] rounded" delay="0.1s" />
-              <div className="flex gap-2 flex-shrink-0">
-                <Skeleton className="w-9 h-9 rounded-lg" delay="0.14s" />
-                <Skeleton className="w-9 h-9 rounded-lg" delay="0.16s" />
+        <div className="lg:flex lg:gap-0">
+          {/* Sidebar skeleton */}
+          <div className="lg:w-[340px] lg:flex-shrink-0">
+            <Skeleton className="aspect-video lg:aspect-[16/10] w-full rounded-lg" />
+            <div className="p-4 space-y-3">
+              <Skeleton className="h-7 w-28 rounded-full" delay="0.06s" />
+              <Skeleton className="h-7 w-[80%] rounded" delay="0.1s" />
+              <Skeleton className="h-5 w-[50%] rounded" delay="0.14s" />
+              <div className="flex gap-2 pt-2">
+                <Skeleton className="h-8 w-16 rounded-lg" delay="0.18s" />
+                <Skeleton className="h-8 w-16 rounded-lg" delay="0.2s" />
+                <Skeleton className="h-8 w-16 rounded-lg" delay="0.22s" />
+                <Skeleton className="h-8 w-16 rounded-lg" delay="0.24s" />
               </div>
             </div>
-
-            {/* Neighborhood + price */}
-            <Skeleton className="h-5 w-[35%] rounded mt-2" delay="0.18s" />
           </div>
-
-          {/* Vibe pills */}
-          <div className="flex gap-2">
-            <Skeleton className="h-6 w-16 rounded-full" delay="0.22s" />
-            <Skeleton className="h-6 w-20 rounded-full" delay="0.24s" />
-            <Skeleton className="h-6 w-14 rounded-full" delay="0.26s" />
-          </div>
-
-          {/* Quick actions */}
-          <div className="flex flex-wrap gap-2">
-            <Skeleton className="h-8 w-24 rounded-full" delay="0.3s" />
-            <Skeleton className="h-8 w-28 rounded-full" delay="0.32s" />
-            <Skeleton className="h-8 w-24 rounded-full" delay="0.34s" />
-          </div>
-
-          {/* Hours section */}
-          <div className="pt-6 border-t border-[var(--twilight)]/30">
-            <Skeleton className="h-3 w-12 rounded mb-3" delay="0.4s" />
-            <Skeleton className="h-4 w-[50%] rounded" delay="0.44s" />
-            <Skeleton className="h-4 w-[45%] rounded mt-1.5" delay="0.46s" />
-          </div>
-
-          {/* Description section */}
-          <div className="pt-6 border-t border-[var(--twilight)]/30">
-            <Skeleton className="h-3 w-14 rounded mb-3" delay="0.5s" />
-            <Skeleton className="h-4 w-full rounded" delay="0.54s" />
-            <Skeleton className="h-4 w-[90%] rounded mt-1.5" delay="0.56s" />
-            <Skeleton className="h-4 w-[75%] rounded mt-1.5" delay="0.58s" />
+          {/* Content skeleton */}
+          <div className="flex-1 p-4 lg:p-8 space-y-6">
+            <Skeleton className="h-3 w-32 rounded" delay="0.3s" />
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-full rounded-lg" delay="0.34s" />
+              <Skeleton className="h-10 w-full rounded-lg" delay="0.38s" />
+              <Skeleton className="h-10 w-full rounded-lg" delay="0.42s" />
+            </div>
           </div>
         </div>
       </div>
@@ -390,14 +370,14 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
     ? spot.vibes.filter((v) => v in dogVibeLabels)
     : [];
 
-  return (
-    <div className="pt-6 pb-8">
-      {/* Back button */}
-      <NeonBackButton onClose={onClose} floating={false} />
+  const hasTransit = spot.nearest_marta_station || spot.beltline_adjacent || (spot.parking_type && spot.parking_type.length > 0) || spot.transit_score;
 
-      {/* Spot image */}
-      {showImage && (
-        <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 relative">
+  // ── SIDEBAR ─────────────────────────────────────────────────────────────
+  const sidebarContent = (
+    <div className="flex flex-col h-full">
+      {/* Hero image — compact */}
+      {showImage ? (
+        <div className="aspect-video lg:aspect-[16/10] bg-[var(--night)] overflow-hidden relative">
           {!imageLoaded && (
             <Skeleton className="absolute inset-0" />
           )}
@@ -405,7 +385,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
             src={spot.image_url!}
             alt={spot.name}
             fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            sizes="(max-width: 1024px) 100vw, 340px"
             className={`${isLowRes ? "object-contain" : "object-cover"} brightness-[0.85] contrast-[1.05] transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
             onLoad={(e) => {
               setImageLoaded(true);
@@ -414,60 +394,296 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
             onError={() => setImageError(true)}
           />
         </div>
+      ) : (
+        <div className="aspect-video lg:aspect-[16/10] bg-gradient-to-b from-[var(--dusk)] to-[var(--night)] flex items-center justify-center">
+          <CategoryIcon type={primaryType || ""} size={40} className="opacity-20" />
+        </div>
       )}
 
-      {/* Editorial flowing layout — no single InfoCard wrapper */}
-      <div className="space-y-5 sm:space-y-8">
-        {/* ── IDENTITY ────────────────────────────────────── */}
-        <div>
-          {/* Type badge */}
-          {typeInfo && (() => {
-            const badgeColor = getCategoryColor(primaryType || "");
-            const badgeClass = createCssVarClass("--accent-color", badgeColor, "accent");
-            return (
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm mb-4 border bg-accent-15 border-accent-40 ${badgeClass?.className ?? ""}`}>
-                <ScopedStyles css={badgeClass?.css} />
-                <CategoryIcon type={primaryType || ""} size={16} glow="subtle" />
-                <span className="font-mono text-xs font-medium uppercase tracking-widest text-accent">
-                  {spot.spot_types && spot.spot_types.length > 1
-                    ? getSpotTypeLabels(spot.spot_types)
-                    : typeInfo.label}
-                </span>
+      {/* Identity */}
+      <div className="px-5 pt-4 pb-3 space-y-2">
+        {/* Type badge */}
+        {typeInfo && (() => {
+          const badgeColor = getCategoryColor(primaryType || "");
+          const badgeClass = createCssVarClass("--accent-color", badgeColor, "accent");
+          return (
+            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs border bg-accent-15 border-accent-40 ${badgeClass?.className ?? ""}`}>
+              <ScopedStyles css={badgeClass?.css} />
+              <CategoryIcon type={primaryType || ""} size={12} glow="subtle" />
+              <span className="font-mono font-medium uppercase tracking-widest text-accent">
+                {spot.spot_types && spot.spot_types.length > 1
+                  ? getSpotTypeLabels(spot.spot_types)
+                  : typeInfo.label}
               </span>
-            );
-          })()}
+            </span>
+          );
+        })()}
 
-          {/* Name + Follow/Recommend */}
-          <div className="flex items-start justify-between gap-4">
-            <h2 className="text-2xl font-bold text-[var(--cream)] leading-tight">
-              {spot.name}
-            </h2>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <FollowButton targetVenueId={spot.id} size="sm" />
-              <RecommendButton venueId={spot.id} size="sm" />
-            </div>
-          </div>
+        {/* Name */}
+        <h2 className="text-xl lg:text-lg font-bold text-[var(--cream)] leading-tight">
+          {spot.name}
+        </h2>
 
-          {/* Neighborhood + Price */}
-          <p className="mt-2 text-[var(--soft)] text-lg">
-            {spot.neighborhood || spot.city}
-            {priceDisplay && (
-              <span className="text-[var(--muted)]"> <Dot /> {priceDisplay}</span>
-            )}
+        {/* Neighborhood + Price + Status */}
+        <p className="text-sm text-[var(--soft)] flex items-center gap-1.5 flex-wrap">
+          {spot.neighborhood || spot.city}
+          {priceDisplay && (
+            <><Dot /> <span className="text-[var(--muted)]">{priceDisplay}</span></>
+          )}
+        </p>
+      </div>
+
+      {/* Divider */}
+      <div className="mx-5 border-t border-[var(--twilight)]/40" />
+
+      {/* Quick Actions */}
+      <div className="px-3 py-2 grid grid-cols-4 gap-1">
+        {spot.website && (
+          <QuickActionLink
+            href={spot.website}
+            icon={<Globe size={18} weight="light" aria-hidden="true" />}
+            label="Website"
+            compact
+          />
+        )}
+        {spot.instagram && (
+          <QuickActionLink
+            href={`https://instagram.com/${spot.instagram.replace("@", "")}`}
+            icon={<InstagramLogo size={18} weight="light" aria-hidden="true" />}
+            label="Instagram"
+            compact
+          />
+        )}
+        {spot.phone && (
+          <QuickActionLink
+            href={`tel:${spot.phone}`}
+            icon={<Phone size={18} weight="light" aria-hidden="true" />}
+            label="Call"
+            external={false}
+            compact
+          />
+        )}
+        {spot.address && (
+          <DirectionsDropdown
+            venueName={spot.name}
+            address={spot.address}
+            city={spot.city}
+            state={spot.state}
+          />
+        )}
+      </div>
+
+      {/* Divider */}
+      <div className="mx-5 border-t border-[var(--twilight)]/40" />
+
+      {/* Hours */}
+      {(spot.hours || spot.hours_display || spot.is_24_hours) && (
+        <div className="px-5 py-3">
+          <h3 className="font-mono text-2xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] mb-2">Hours</h3>
+          <HoursSection
+            hours={spot.hours}
+            hoursDisplay={spot.hours_display}
+            is24Hours={spot.is_24_hours || false}
+          />
+        </div>
+      )}
+
+      {/* Getting There */}
+      {hasTransit && (
+        <div className="px-5 py-3">
+          <GettingThereSection
+            transit={spot}
+            variant="compact"
+            walkableNeighbors={walkableNeighbors}
+            onSpotClick={handleSpotClick}
+          />
+        </div>
+      )}
+
+      {/* Divider */}
+      <div className="mx-5 border-t border-[var(--twilight)]/40" />
+
+      {/* Vibes */}
+      {spot.vibes && spot.vibes.length > 0 && (
+        <div className="px-5 py-3 flex flex-wrap gap-1.5">
+          {spot.vibes.slice(0, 4).map((vibe) => (
+            <Badge key={vibe} variant="neutral" size="sm">{vibe.replace(/-/g, " ")}</Badge>
+          ))}
+        </div>
+      )}
+
+      {/* Dog-friendly highlights */}
+      {isDog && dogHighlightVibes.length > 0 && (
+        <div className="px-5 py-2 flex flex-wrap gap-2">
+          {dogHighlightVibes.map((vibe) => (
+            <Badge key={vibe} variant="alert">
+              {vibe === "off-leash" && "🐕"}
+              {vibe === "pup-cup" && "🍦"}
+              {vibe === "dog-menu" && "🦴"}
+              {vibe === "treats-available" && "🍪"}
+              {vibe === "dog-friendly" && "🐾"}
+              {vibe === "water-bowls" && "💧"}
+              {vibe === "fenced" && "🏡"}
+              {" "}{dogVibeLabels[vibe]}
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {/* Tag this spot (dog portal only) */}
+      {isDog && (
+        <div className="px-5 py-2">
+          <button
+            onClick={() => setShowTagModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-xl text-sm font-semibold transition-colors bg-[var(--coral)]/8 text-[var(--coral)] border border-[var(--coral)]/20 focus-ring"
+          >
+            <Tag size={16} weight="light" aria-hidden="true" />
+            Tag this spot
+          </button>
+        </div>
+      )}
+
+      {/* Spacer (pushes action buttons to bottom on desktop) */}
+      <div className="hidden lg:flex flex-1" />
+
+      {/* Action buttons */}
+      <div className="px-5 py-3 flex gap-2">
+        <div className="flex-1">
+          <FollowButton targetVenueId={spot.id} size="sm" className="w-full" />
+        </div>
+        {spot.lat != null && spot.lng != null && (
+          <button
+            onClick={() => setShowOutingSheet(true)}
+            className="flex-1 inline-flex items-center justify-center gap-2 min-h-[36px] rounded-lg text-sm font-semibold text-[var(--void)] bg-[var(--coral)] hover:brightness-110 transition-all focus-ring"
+          >
+            <ForkKnife size={16} weight="duotone" />
+            Plan Evening
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  // ── CONTENT ZONE ────────────────────────────────────────────────────────
+  const contentZone = (
+    <div className="px-4 lg:px-8 py-6 space-y-8">
+      {/* ── PRIMARY: UPCOMING EVENTS ──────────────────────── */}
+      {upcomingEvents.length > 0 && (
+        <div>
+          <VenueShowtimes
+            events={upcomingEvents as ShowtimeEvent[]}
+            portalSlug={portalSlug}
+            venueType={spot.spot_type}
+            title="Upcoming Events"
+            onEventClick={handleEventClick}
+          />
+        </div>
+      )}
+
+      {/* ── ABOUT ─────────────────────────────────────────── */}
+      {spot.description && (
+        <div>
+          <SectionHeader title="About" variant="divider" />
+          <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
+            <LinkifyText text={spot.description} />
           </p>
         </div>
+      )}
 
-        {/* ── VIBES ───────────────────────────────────────── */}
-        {spot.vibes && spot.vibes.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {spot.vibes.slice(0, 4).map((vibe) => (
-              <Badge key={vibe} variant="neutral" size="md">{vibe.replace(/-/g, " ")}</Badge>
+      {/* ── WHILE YOU'RE HERE (Highlights) ────────────────── */}
+      {highlights.length > 0 && (
+        <div>
+          <SectionHeader title="While You're Here" variant="divider" />
+          <div className="space-y-3">
+            {highlights.map((h) => {
+              const config = HIGHLIGHT_CONFIG[h.highlight_type];
+              const IconComp = config?.Icon;
+              const highlightColorClass = createCssVarClass("--highlight-color", config?.color || "#A78BFA", `hl-${h.highlight_type}`);
+              return (
+                <div key={h.id} className={`flex items-start gap-3 p-3 rounded-lg border border-[var(--twilight)]/40 bg-[var(--dusk)] ${highlightColorClass?.className ?? ""}`}>
+                  <ScopedStyles css={highlightColorClass?.css} />
+                  {IconComp && (
+                    <IconComp
+                      size={20}
+                      weight="light"
+                      className="flex-shrink-0 mt-0.5 icon-neon-subtle text-[var(--highlight-color)]"
+                    />
+                  )}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-[var(--cream)]">{h.title}</span>
+                      <span className="text-2xs font-mono uppercase text-[var(--muted)]">
+                        {config?.label}
+                      </span>
+                    </div>
+                    {h.description && (
+                      <p className="text-sm text-[var(--soft)] mt-1 leading-relaxed">{h.description}</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── FEATURES ──────────────────────────────────────── */}
+      <VenueFeaturesSection features={features} venueType={spot.spot_type} />
+
+      {/* ── SPECIALS ──────────────────────────────────────── */}
+      <VenueSpecialsSection specials={specials} />
+
+      {/* ── ADVENTURE DESTINATION DETAILS ─────────────────── */}
+      {portal?.settings?.vertical === "adventure" && spot.slug && (
+        <DestinationDetailSections
+          venueSlug={spot.slug}
+          portalSlug={portalSlug}
+        />
+      )}
+
+      {/* ── ARTIFACTS / CHILD DESTINATIONS ────────────────── */}
+      {attachedChildDestinations.length > 0 && (
+        <div>
+          <SectionHeader
+            title={ATTACHED_CHILD_DESTINATION_SECTION_TITLE}
+            count={attachedChildDestinations.length}
+            variant="divider"
+          />
+          <div className="space-y-2">
+            {attachedChildDestinations.map((artifact) => (
+              <button
+                key={artifact.id}
+                onClick={() => artifact.slug && handleSpotClick(artifact.slug)}
+                className="block w-full text-left p-3 min-h-[44px] border border-[var(--twilight)]/40 rounded-lg bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group focus-ring"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
+                      {artifact.name}
+                    </span>
+                    {artifact.short_description && (
+                      <p className="text-sm text-[var(--soft)] mt-0.5 line-clamp-1">
+                        {artifact.short_description}
+                      </p>
+                    )}
+                  </div>
+                  <CaretRight size={16} weight="bold" aria-hidden="true" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" />
+                </div>
+              </button>
             ))}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ── PERFECT FOR (Occasions) ────────────────────── */}
-        {occasions.length > 0 && (
+      {/* ── SIGNAL: EDITORIAL MENTIONS ─────────────────────── */}
+      {editorialMentions.length > 0 && (
+        <AccoladesSection mentions={editorialMentions} />
+      )}
+
+      {/* ── SIGNAL: PERFECT FOR (Occasions) ───────────────── */}
+      {occasions.length > 0 && (
+        <div>
+          <SectionHeader title="Perfect For" variant="divider" />
           <div className="flex flex-wrap gap-1.5">
             {occasions.map((o) => (
               <span
@@ -478,253 +694,20 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
               </span>
             ))}
           </div>
-        )}
-
-        {/* ── ACCOLADES ────────────────────────────────────── */}
-        {editorialMentions.length > 0 && (
-          <AccoladesSection mentions={editorialMentions} />
-        )}
-
-        {/* ── QUICK ACTIONS ───────────────────────────────── */}
-        <div className="flex flex-wrap gap-2">
-          {spot.website && (
-            <QuickActionLink
-              href={spot.website}
-              icon={<Globe size={16} weight="light" aria-hidden="true" />}
-              label="Website"
-            />
-          )}
-          {spot.instagram && (
-            <QuickActionLink
-              href={`https://instagram.com/${spot.instagram.replace("@", "")}`}
-              icon={<InstagramLogo size={16} weight="light" aria-hidden="true" />}
-              label="Instagram"
-            />
-          )}
-          {spot.phone && (
-            <QuickActionLink
-              href={`tel:${spot.phone}`}
-              icon={<Phone size={16} weight="light" aria-hidden="true" />}
-              label="Call"
-              external={false}
-            />
-          )}
-          {spot.address && (
-            <DirectionsDropdown
-              venueName={spot.name}
-              address={spot.address}
-              city={spot.city}
-              state={spot.state}
-            />
-          )}
-          {spot.lat != null && spot.lng != null && (
-            <button
-              onClick={() => setShowOutingSheet(true)}
-              className="inline-flex items-center gap-2 px-4 min-h-[44px] rounded-lg text-sm font-mono font-medium text-[var(--gold)] bg-[var(--gold)]/8 border border-[var(--gold)]/25 hover:bg-[var(--gold)]/14 hover:border-[var(--gold)]/40 transition-all focus-ring"
-            >
-              <ForkKnife size={16} weight="duotone" />
-              Plan an Evening Here
-            </button>
-          )}
-        </div>
-
-        {/* Dog-friendly highlights (dog portal only) */}
-        {isDog && dogHighlightVibes.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {dogHighlightVibes.map((vibe) => (
-              <Badge key={vibe} variant="alert">
-                {vibe === "off-leash" && "🐕"}
-                {vibe === "pup-cup" && "🍦"}
-                {vibe === "dog-menu" && "🦴"}
-                {vibe === "treats-available" && "🍪"}
-                {vibe === "dog-friendly" && "🐾"}
-                {vibe === "water-bowls" && "💧"}
-                {vibe === "fenced" && "🏡"}
-                {" "}{dogVibeLabels[vibe]}
-              </Badge>
-            ))}
-          </div>
-        )}
-
-        {/* Tag this spot (dog portal only) */}
-        {isDog && (
-          <button
-            onClick={() => setShowTagModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-xl text-sm font-semibold transition-colors bg-[var(--coral)]/8 text-[var(--coral)] border border-[var(--coral)]/20 focus-ring"
-          >
-            <Tag size={16} weight="light" aria-hidden="true" />
-            Tag this spot
-          </button>
-        )}
-
-        {/* ── HOURS ───────────────────────────────────────── */}
-        {(spot.hours || spot.hours_display || spot.is_24_hours) && (
-          <div>
-            <SectionHeader title="Hours" variant="divider" />
-            <HoursSection
-              hours={spot.hours}
-              hoursDisplay={spot.hours_display}
-              is24Hours={spot.is_24_hours || false}
-            />
-          </div>
-        )}
-
-        {/* ── ABOUT ───────────────────────────────────────── */}
-        {spot.description && (
-          <div>
-            <SectionHeader title="About" variant="divider" />
-            <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
-              <LinkifyText text={spot.description} />
-            </p>
-          </div>
-        )}
-
-        {/* ── HIGHLIGHTS ──────────────────────────────────── */}
-        {highlights.length > 0 && (
-          <div>
-            <SectionHeader title="While You're Here" variant="divider" />
-            <div className="space-y-3">
-              {highlights.map((h) => {
-                const config = HIGHLIGHT_CONFIG[h.highlight_type];
-                const IconComp = config?.Icon;
-                const highlightColorClass = createCssVarClass("--highlight-color", config?.color || "#A78BFA", `hl-${h.highlight_type}`);
-                return (
-                  <div key={h.id} className={`flex items-start gap-3 p-3 rounded-lg border border-[var(--twilight)]/40 bg-[var(--dusk)] ${highlightColorClass?.className ?? ""}`}>
-                    <ScopedStyles css={highlightColorClass?.css} />
-                    {IconComp && (
-                      <IconComp
-                        size={20}
-                        weight="light"
-                        className="flex-shrink-0 mt-0.5 icon-neon-subtle text-[var(--highlight-color)]"
-                      />
-                    )}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-[var(--cream)]">{h.title}</span>
-                        <span className="text-xs font-mono uppercase text-[var(--muted)]">
-                          {config?.label}
-                        </span>
-                      </div>
-                      {h.description && (
-                        <p className="text-sm text-[var(--soft)] mt-1 leading-relaxed">{h.description}</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ── FEATURES ────────────────────────────────────── */}
-        <VenueFeaturesSection features={features} venueType={spot.spot_type} />
-
-        {/* ── SPECIALS ──────────────────────────────────── */}
-        <VenueSpecialsSection specials={specials} />
-
-        {/* ── ADVENTURE DESTINATION DETAILS ────────────── */}
-        {portal?.settings?.vertical === "adventure" && spot.slug && (
-          <DestinationDetailSections
-            venueSlug={spot.slug}
-            portalSlug={portalSlug}
-          />
-        )}
-
-        {/* (Accolades section moved above Quick Actions) */}
-
-        {/* ── ARTIFACTS ───────────────────────────────────── */}
-        {attachedChildDestinations.length > 0 && (
-          <div>
-            <SectionHeader
-              title={ATTACHED_CHILD_DESTINATION_SECTION_TITLE}
-              count={attachedChildDestinations.length}
-              variant="divider"
-            />
-            <div className="space-y-2">
-              {attachedChildDestinations.map((artifact) => (
-                <button
-                  key={artifact.id}
-                  onClick={() => artifact.slug && handleSpotClick(artifact.slug)}
-                  className="block w-full text-left p-3 min-h-[44px] border border-[var(--twilight)]/40 rounded-lg bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group focus-ring"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
-                        {artifact.name}
-                      </span>
-                      {artifact.short_description && (
-                        <p className="text-sm text-[var(--soft)] mt-0.5 line-clamp-1">
-                          {artifact.short_description}
-                        </p>
-                      )}
-                    </div>
-                    <CaretRight size={16} weight="bold" aria-hidden="true" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" />
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── GETTING THERE ───────────────────────────────── */}
-        {(spot.nearest_marta_station || spot.beltline_adjacent || (spot.parking_type && spot.parking_type.length > 0) || spot.transit_score) && (
-          <div>
-            <GettingThereSection
-              transit={spot}
-              variant="expanded"
-              walkableNeighbors={walkableNeighbors}
-              onSpotClick={handleSpotClick}
-            />
-          </div>
-        )}
-
-        {/* ── LOCATION ────────────────────────────────────── */}
-        {spot.address && (
-          <div>
-            <div className="flex items-center justify-between pt-6 border-t border-[var(--twilight)]/30 pb-3">
-              <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)]">
-                Location
-              </h2>
-              <DirectionsDropdown
-                venueName={spot.name}
-                address={spot.address}
-                city={spot.city}
-                state={spot.state}
-              />
-            </div>
-            <p className="text-[var(--soft)]">
-              {spot.address}
-              <br />
-              {spot.city}, {spot.state}
-            </p>
-          </div>
-        )}
-
-        {/* ── COMMUNITY ───────────────────────────────────── */}
-        <div className="border-t border-[var(--twilight)]/30 pt-5 space-y-3">
-          <CollapsibleVenueTags venueId={spot.id} />
-          <FlagButton
-            entityType="venue"
-            entityId={spot.id}
-            entityName={spot.name}
-          />
-        </div>
-      </div>
-
-      {/* More at Venue - Showtime-grouped for cinemas, day-by-day for others */}
-      {upcomingEvents.length > 0 && (
-        <div className="mt-8">
-          <VenueShowtimes
-            events={upcomingEvents as ShowtimeEvent[]}
-            portalSlug={portalSlug}
-            venueType={spot.spot_type}
-            title={`More at ${spot.name}`}
-            onEventClick={handleEventClick}
-          />
         </div>
       )}
 
-      {/* Happening Around Here */}
+      {/* ── COMMUNITY ─────────────────────────────────────── */}
+      <div className="border-t border-[var(--twilight)]/30 pt-5 space-y-3">
+        <CollapsibleVenueTags venueId={spot.id} />
+        <FlagButton
+          entityType="venue"
+          entityId={spot.id}
+          entityName={spot.name}
+        />
+      </div>
+
+      {/* ── DISCOVERY: NEARBY ─────────────────────────────── */}
       {nearbyDestinations && (
         <NearbySection
           nearbySpots={nearbyDestinations}
@@ -732,7 +715,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         />
       )}
 
-      {/* Dog-Friendly Nearby (dog portal only) */}
+      {/* Dog-Friendly Nearby */}
       {isDog && spot.neighborhood && (
         <DogNearbySection
           neighborhood={spot.neighborhood}
@@ -740,8 +723,25 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
           onSpotClick={handleSpotClick}
         />
       )}
+    </div>
+  );
 
-      {/* Dog Tag Modal */}
+  // ── TOP BAR ─────────────────────────────────────────────────────────────
+  const topBar = (
+    <div className="flex items-center px-4 lg:px-6 py-3">
+      <NeonBackButton onClose={onClose} floating={false} />
+    </div>
+  );
+
+  return (
+    <>
+      <DetailShell
+        topBar={topBar}
+        sidebar={sidebarContent}
+        content={contentZone}
+      />
+
+      {/* Modals */}
       {isDog && showTagModal && (
         <DogTagModal
           venueId={spot.id}
@@ -756,7 +756,6 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         />
       )}
 
-      {/* Outing Planner */}
       {showOutingSheet && spot.lat != null && spot.lng != null && (
         <OutingPlannerSheet
           anchor={{
@@ -776,6 +775,6 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
           onClose={() => setShowOutingSheet(false)}
         />
       )}
-    </div>
+    </>
   );
 }

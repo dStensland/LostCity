@@ -116,6 +116,7 @@ export default function FestivalDetailView({
   const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const controller = new AbortController();
 
     async function fetchFestival() {
@@ -124,27 +125,44 @@ export default function FestivalDetailView({
       setImageLoaded(false);
       setImageError(false);
 
-      try {
-        const qs = portalId ? `?${new URLSearchParams({ portal_id: portalId }).toString()}` : "";
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        const res = await fetch(`/api/festivals/${slug}${qs}`, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (!res.ok) {
-          throw new Error("Festival not found");
+      const qs = portalId ? `?${new URLSearchParams({ portal_id: portalId }).toString()}` : "";
+      const MAX_RETRIES = 2;
+
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 500 * attempt));
+            if (cancelled) return;
+          }
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const res = await fetch(`/api/festivals/${slug}${qs}`, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (cancelled) return;
+          if (!res.ok) {
+            if ((res.status === 503 || res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
+              continue;
+            }
+            throw new Error(res.status === 404 ? "Festival not found" : `Failed to load festival (${res.status})`);
+          }
+          const data = (await res.json()) as FestivalResponse;
+          if (cancelled) return;
+          setFestival(data.festival);
+          setPrograms(data.programs || []);
+          setStatus("ready");
+          return;
+        } catch (err) {
+          if (controller.signal.aborted) return;
+          if (cancelled) return;
+          if (attempt === MAX_RETRIES) {
+            setError(err instanceof Error ? err.message : "Failed to load festival");
+            setStatus("error");
+          }
         }
-        const data = (await res.json()) as FestivalResponse;
-        setFestival(data.festival);
-        setPrograms(data.programs || []);
-        setStatus("ready");
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : "Failed to load festival");
-        setStatus("error");
       }
     }
 
     fetchFestival();
-    return () => controller.abort();
+    return () => { cancelled = true; controller.abort(); };
   }, [slug, portalId]);
 
   const allSessions = useMemo(() => programs.flatMap((p) => p.sessions || []), [programs]);
