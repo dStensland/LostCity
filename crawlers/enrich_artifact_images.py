@@ -35,7 +35,7 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 HEADERS = {
-    "User-Agent": "LostCityBot/1.0 (https://lostcity.app; contact@lostcity.app)",
+    "User-Agent": "LostCityBot/1.0 (https://lostcity.ai; contact@lostcity.ai)",
     "Accept": "application/json",
 }
 

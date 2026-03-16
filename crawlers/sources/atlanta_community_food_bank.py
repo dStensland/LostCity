@@ -56,7 +56,7 @@ HORIZON_DAYS = 30
 
 # Request headers — no auth needed for public volunteer listing
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0; +https://lostcity.app)",
+    "User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0; +https://lostcity.ai)",
     "Accept": "application/json",
     "Referer": f"{VOLUNTEERHUB_BASE}/vv2/",
 }

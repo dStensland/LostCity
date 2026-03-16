@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     const portalId = portalContext.portalId;
     const portalClient = await createPortalScopedClient(portalId);
-    const sourceAccess = await getPortalSourceAccess(portalId);
+    const sourceAccess = await getPortalSourceAccess(portalId, { entityFamily: "exhibitions" });
     const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
     let query = portalClient
@@ -92,6 +92,7 @@ export async function GET(request: NextRequest) {
     query = applyFederatedPortalScopeToQuery(query, {
       portalId,
       portalExclusive,
+      entityFamily: "exhibitions",
       publicOnlyWhenNoPortal: true,
       sourceIds: sourceAccess.sourceIds,
       sourceColumn: "source_id",

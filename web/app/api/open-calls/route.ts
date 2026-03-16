@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     const portalId = portalContext.portalId;
     const portalClient = await createPortalScopedClient(portalId);
-    const sourceAccess = await getPortalSourceAccess(portalId);
+    const sourceAccess = await getPortalSourceAccess(portalId, { entityFamily: "open_calls" });
     const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
     // Count query — same filters as data query, no pagination
@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
     countQuery = applyFederatedPortalScopeToQuery(countQuery, {
       portalId,
       portalExclusive,
+      entityFamily: "open_calls",
       publicOnlyWhenNoPortal: true,
       sourceIds: sourceAccess.sourceIds,
       sourceColumn: "source_id",
@@ -126,6 +127,7 @@ export async function GET(request: NextRequest) {
     query = applyFederatedPortalScopeToQuery(query, {
       portalId,
       portalExclusive,
+      entityFamily: "open_calls",
       publicOnlyWhenNoPortal: true,
       sourceIds: sourceAccess.sourceIds,
       sourceColumn: "source_id",

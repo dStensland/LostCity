@@ -226,7 +226,7 @@ export function IdentityStep({ draft, updateDraft, onNext }: Props) {
             URL Slug
           </label>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-sm text-[var(--muted)]">lostcity.app/</span>
+            <span className="font-mono text-sm text-[var(--muted)]">lostcity.ai/</span>
             <input
               type="text"
               value={slug}

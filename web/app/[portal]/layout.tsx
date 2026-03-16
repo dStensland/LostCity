@@ -13,6 +13,7 @@ import { applyPreset } from "@/lib/apply-preset";
 import type { PortalBranding } from "@/lib/portal-context";
 import { getVerticalStyles } from "@/lib/portal-animation-config";
 import { buildPortalOrigin } from "@/lib/site-url";
+import { shouldDisableAmbientEffects } from "@/lib/portal-taxonomy";
 
 import type { Metadata } from "next";
 import { headers } from "next/headers";
@@ -63,13 +64,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: `${portal.name} Events | Lost City`,
-    description: portal.tagline || `Find your people in ${portal.name}. ${portal.portal_type === "city" ? "Shows, sounds, scenes, and the good stuff." : ""}`,
+    description: portal.tagline || `Find your thing and do it in ${portal.name}. ${portal.portal_type === "city" ? "Shows, sounds, scenes, and the good stuff." : ""}`,
     alternates: {
       canonical: `${origin}/${pathSlug}`,
     },
     openGraph: {
       title: `${portal.name} | Lost City`,
-      description: portal.tagline || `Find your people in ${portal.name}`,
+      description: portal.tagline || `Find your thing and do it in ${portal.name}`,
       images: branding.og_image_url ? [{ url: branding.og_image_url as string }] : [],
     },
     icons: branding.favicon_url ? { icon: branding.favicon_url as string } : undefined,
@@ -121,6 +122,7 @@ export default async function PortalLayout({ children, params }: Props) {
     : vertical;
 
   const verticalStyles = getVerticalStyles(effectiveVertical);
+  const suppressPortalStyleAtmosphere = shouldDisableAmbientEffects(vertical);
 
   return (
     <PortalProvider portal={portal}>
@@ -129,6 +131,7 @@ export default async function PortalLayout({ children, params }: Props) {
       {verticalStyles && <style>{verticalStyles}</style>}
       <div
         data-vertical={vertical}
+        data-atmosphere={suppressPortalStyleAtmosphere ? "disabled" : "default"}
         data-theme={isLightTheme ? "light" : undefined}
         className={isHotel ? `${cormorantGaramond.variable} ${inter.variable}` : ""}
       >

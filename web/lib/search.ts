@@ -546,8 +546,10 @@ async function applySearchFilters(
   }
 
   // Apply category filter (using category_id)
-  if (filters.categories && filters.categories.length > 0) {
-    query = query.in("category_id", filters.categories);
+  // Filter out "all" — it's not a real category_id, just a UI sentinel
+  const realCategories = filters.categories?.filter((c) => c !== "all");
+  if (realCategories && realCategories.length > 0) {
+    query = query.in("category_id", realCategories);
   }
 
   // Apply tag filter (events with ANY of the selected tags)

@@ -520,14 +520,15 @@ export default async function PortalEventPage({ params }: Props) {
             </Link>
           )}
 
-          {/* Past Event Banner */}
+          {/* Past Event Banner — skip for recurring events with future occurrences */}
           {(() => {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const endDate = event.end_date ? new Date(event.end_date + "T00:00:00") : null;
             const startDate = new Date(event.start_date + "T00:00:00");
             const isPast = endDate ? endDate < today : startDate < today;
-            if (!isPast) return null;
+            // Recurring events have future occurrences even if this instance is past
+            if (!isPast || event.is_recurring) return null;
             return (
               <div className="flex items-center gap-3 p-4 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)]">
                 <div className="w-10 h-10 rounded-full bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">

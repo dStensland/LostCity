@@ -218,17 +218,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
             lat = detail.get("lat")
             lng = detail.get("lng")
             if location_name and lat is not None and lng is not None:
+                # Only default to Atlanta if coordinates are within metro bounding box
+                # (approx 33.5-34.2 lat, -84.8 to -84.0 lng)
+                in_metro = 33.5 <= lat <= 34.2 and -84.8 <= lng <= -84.0
                 venue_record = {
                     "name": location_name,
                     "slug": re.sub(r"[^a-z0-9]+", "-", location_name.lower()).strip("-")[:80],
-                    "city": "Atlanta",
-                    "state": "GA",
+                    "state": "GA" if 30.5 <= lat <= 35.0 and -86.0 <= lng <= -80.5 else None,
                     "lat": lat,
                     "lng": lng,
                     "venue_type": "park",
                     "spot_type": "trail",
                     "website": detail_url,
                 }
+                if in_metro:
+                    venue_record["city"] = "Atlanta"
                 try:
                     venue_id = get_or_create_venue(venue_record)
                 except Exception as exc:

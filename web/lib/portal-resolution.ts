@@ -10,7 +10,7 @@ import {
 
 /**
  * Extract portal slug from Referer header
- * Example: https://lostcity.app/atl-dogs/events/123 → "atl-dogs"
+ * Example: https://lostcity.ai/atl-dogs/events/123 → "atl-dogs"
  */
 export function extractPortalSlugFromReferer(request: NextRequest): string | null {
   const referer = request.headers.get("referer");

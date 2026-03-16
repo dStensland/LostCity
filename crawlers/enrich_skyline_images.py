@@ -32,7 +32,7 @@ COMMONS_API = "https://commons.wikimedia.org/w/api.php"
 THUMB_WIDTH = 1000  # Slightly larger for architectural detail
 
 HEADERS = {
-    "User-Agent": "LostCityBot/1.0 (https://lostcity.app; contact@lostcity.app)",
+    "User-Agent": "LostCityBot/1.0 (https://lostcity.ai; contact@lostcity.ai)",
     "Accept": "application/json",
 }
 

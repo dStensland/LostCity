@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 // GET /api/programs?portal=hooky
 // Returns programs for a portal with optional filtering.
-// Falls back to recurring events if the programs table is empty.
+// Compatibility fallback to recurring events is opt-in via include_events_fallback=true.
 export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(
     request,
@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
   const dayFilter = parseIntParam(searchParams.get("day"));
   const qFilter = searchParams.get("q");
   const sortParam = searchParams.get("sort") ?? "session_start";
+  const includeEventsFallback = searchParams.get("include_events_fallback") === "true";
 
   try {
     const supabase = await createClient();
@@ -227,9 +228,9 @@ export async function GET(request: NextRequest) {
 
     const programs = (programsData ?? []) as ProgramRow[];
 
-    // If programs table is empty, fall back to recurring events for this portal
-    if (programs.length === 0 && offset === 0) {
-      const sourceAccess = await getPortalSourceAccess(portalId);
+    // Compatibility mode only: fall back to recurring events when explicitly requested.
+    if (programs.length === 0 && offset === 0 && includeEventsFallback) {
+      const sourceAccess = await getPortalSourceAccess(portalId, { entityFamily: "programs" });
       const sourceIds = sourceAccess?.sourceIds ?? [];
 
       if (sourceIds.length === 0) {
@@ -306,6 +307,7 @@ export async function GET(request: NextRequest) {
           offset,
           limit,
           source: "events_fallback",
+          compatibility_mode: "include_events_fallback",
         },
         {
           headers: {
@@ -322,6 +324,7 @@ export async function GET(request: NextRequest) {
         offset,
         limit,
         source: "programs",
+        compatibility_mode: includeEventsFallback ? "include_events_fallback" : null,
       },
       {
         headers: {
