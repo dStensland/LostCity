@@ -1,47 +1,82 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Clock, ArrowRight } from "@phosphor-icons/react";
 import type { EventWithLocation } from "@/lib/search";
+import type { KidProfile } from "@/lib/types/kid-profiles";
+import { useAuth } from "@/lib/auth-context";
+
+// ---- Palette (Afternoon Field) -------------------------------------------
+
+const CANVAS = "#F0EDE4";
+const CARD = "#FAFAF6";
+const SAGE = "#5E7A5E";
+const AMBER = "#C48B1D";
+const MOSS = "#7A9E7A";
+const TEXT = "#1E2820";
+const MUTED = "#756E63";
+const BORDER = "#E0DDD4";
+const SAGE_WASH = "#EEF2EE";
+
+// ---- Props ---------------------------------------------------------------
 
 interface WeekendPlannerProps {
   portalId: string;
   portalSlug: string;
+  activeKidIds?: string[];
+  kids?: KidProfile[];
 }
 
-type IndoorOutdoor = "all" | "indoor" | "outdoor";
+// ---- Date helpers --------------------------------------------------------
 
-interface WeekendFilters {
-  indoorOutdoor: IndoorOutdoor;
-  freeOnly: boolean;
+function getWeekendDates(): { saturday: Date; sunday: Date } {
+  const today = new Date();
+  const day = today.getDay(); // 0=Sun, 6=Sat
+  const daysUntilSat = day === 6 ? 0 : day === 0 ? 6 : 6 - day;
+  const saturday = new Date(today);
+  saturday.setDate(today.getDate() + daysUntilSat);
+  saturday.setHours(0, 0, 0, 0);
+  const sunday = new Date(saturday);
+  sunday.setDate(saturday.getDate() + 1);
+  return { saturday, sunday };
+}
+
+function toDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function formatShortDate(d: Date): string {
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function formatDayLabel(d: Date): string {
+  return d.toLocaleDateString("en-US", { weekday: "long" }).toUpperCase();
+}
+
+function formatEventTime(startTime: string | null): string {
+  if (!startTime) return "";
+  // startTime is HH:MM:SS
+  const [h, m] = startTime.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
 // ---- Data fetcher --------------------------------------------------------
 
-async function fetchWeekendEvents(
-  portalId: string,
-  filters: WeekendFilters
-): Promise<EventWithLocation[]> {
+async function fetchWeekendEvents(portalId: string): Promise<EventWithLocation[]> {
   const params = new URLSearchParams({
     date: "weekend",
     tags: "family-friendly",
     portal_id: portalId,
-    limit: "24",
+    limit: "30",
     useCursor: "true",
   });
-
-  if (filters.freeOnly) {
-    params.set("free", "1");
-  }
-
-  if (filters.indoorOutdoor === "indoor") {
-    params.set("tags", "family-friendly,indoor");
-  } else if (filters.indoorOutdoor === "outdoor") {
-    params.set("tags", "family-friendly,outdoor");
-  }
 
   const res = await fetch(`/api/events?${params.toString()}`);
   if (!res.ok) return [];
@@ -49,165 +84,493 @@ async function fetchWeekendEvents(
   return (json.events ?? []) as EventWithLocation[];
 }
 
-// ---- Event card ----------------------------------------------------------
+// ---- Kid color helpers ---------------------------------------------------
 
-function FamilyEventCard({
-  event,
-  portalSlug,
-}: {
-  event: EventWithLocation;
-  portalSlug: string;
-}) {
-  const dateLabel = new Date(event.start_date).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-
-  return (
-    <Link
-      href={`/${portalSlug}?event=${event.id}`}
-      className="group block bg-white rounded-xl border overflow-hidden hover:shadow-md transition-shadow"
-      style={{ borderColor: "var(--twilight, #E8E4DF)" }}
-    >
-      {/* Image */}
-      {event.image_url ? (
-        <div className="relative h-36 overflow-hidden">
-          <Image
-            src={event.image_url}
-            alt={event.title}
-            fill
-            sizes="(max-width: 640px) 100vw, 320px"
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-          {/* Badges */}
-          {event.is_free && (
-            <div className="absolute top-2 left-2">
-              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-600 text-white">
-                Free
-              </span>
-            </div>
-          )}
-        </div>
-      ) : (
-        /* No image — thin accent strip for badge placement */
-        event.is_free ? (
-          <div
-            className="h-8 relative flex items-center px-3"
-            style={{ backgroundColor: "color-mix(in srgb, var(--coral) 6%, white)" }}
-          >
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-600 text-white">
-              Free
-            </span>
-          </div>
-        ) : null
-      )}
-
-      {/* Content */}
-      <div className="p-3">
-        <h3
-          className="text-sm font-semibold leading-snug text-[var(--cream)] line-clamp-2 group-hover:text-[var(--coral)] transition-colors"
-          style={{ fontFamily: "var(--font-outfit, system-ui, sans-serif)" }}
-        >
-          {event.title}
-        </h3>
-
-        <div className="mt-1.5 space-y-0.5">
-          <div className="flex items-center gap-1 text-xs text-[var(--muted)]">
-            <Clock size={11} />
-            <span>{dateLabel}{event.start_time ? ` · ${event.start_time}` : ""}</span>
-          </div>
-          {event.venue?.name && (
-            <div className="flex items-center gap-1 text-xs text-[var(--muted)]">
-              <MapPin size={11} />
-              <span className="truncate">{event.venue.name}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </Link>
-  );
+function kidBgColor(hex: string): string {
+  return `${hex}18`;
 }
 
-// ---- Section block -------------------------------------------------------
-
-function EventSection({
-  title,
-  events,
-  seeAllHref,
-  portalSlug,
-  isLoading,
-  emptyMessage,
-}: {
-  title: string;
-  events: EventWithLocation[];
-  seeAllHref: string;
-  portalSlug: string;
-  isLoading: boolean;
-  emptyMessage: string;
-}) {
-  if (!isLoading && events.length === 0) return null;
-
-  return (
-    <section>
-      <div className="flex items-center justify-between mb-3">
-        <h2
-          className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]"
-          style={{ fontFamily: "var(--font-mono, ui-monospace, monospace)" }}
-        >
-          {title}
-        </h2>
-        <Link
-          href={seeAllHref}
-          className="flex items-center gap-1 text-xs font-medium text-[var(--coral)] hover:opacity-80 transition-opacity"
-          style={{ fontFamily: "var(--font-mono, ui-monospace, monospace)" }}
-        >
-          See all <ArrowRight size={11} />
-        </Link>
-      </div>
-
-      {isLoading ? (
-        <div className="grid grid-cols-2 gap-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-48 rounded-xl skeleton-shimmer-light" />
-          ))}
-        </div>
-      ) : events.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3">
-          {events.slice(0, 6).map((event) => (
-            <FamilyEventCard key={event.id} event={event} portalSlug={portalSlug} />
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-[var(--muted)] py-2">{emptyMessage}</p>
-      )}
-    </section>
-  );
+function kidBorderColor(hex: string): string {
+  return `${hex}40`;
 }
 
-// ---- Filter chip ---------------------------------------------------------
+// ---- Kid chip ------------------------------------------------------------
 
-function FilterChip({
-  label,
+function KidChip({
+  kid,
   isActive,
   onClick,
 }: {
-  label: string;
+  kid: KidProfile;
   isActive: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className="flex-shrink-0 px-3.5 py-2 rounded-full text-sm font-medium border transition-colors"
       style={{
-        backgroundColor: isActive ? "var(--coral)" : "white",
-        color: isActive ? "white" : "var(--soft, #57534E)",
-        borderColor: isActive ? "var(--coral)" : "var(--twilight, #E8E4DF)",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "6px 14px",
+        borderRadius: 20,
+        backgroundColor: isActive ? kidBgColor(kid.color) : "transparent",
+        border: `1.5px solid ${isActive ? kidBorderColor(kid.color) : `${BORDER}`}`,
+        fontFamily: "DM Sans, system-ui, sans-serif",
+        fontSize: 12,
+        fontWeight: 500,
+        color: isActive ? kid.color : MUTED,
+        cursor: "pointer",
+        flexShrink: 0,
+        transition: "all 0.15s",
       }}
     >
-      {label}
+      <span
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          backgroundColor: kid.color,
+          flexShrink: 0,
+        }}
+      />
+      {kid.nickname}
     </button>
+  );
+}
+
+function AllKidsChip({
+  isActive,
+  onClick,
+}: {
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "6px 14px",
+        borderRadius: 20,
+        backgroundColor: isActive ? SAGE : "transparent",
+        border: `1.5px solid ${isActive ? SAGE : BORDER}`,
+        fontFamily: "DM Sans, system-ui, sans-serif",
+        fontSize: 12,
+        fontWeight: 500,
+        color: isActive ? "#fff" : MUTED,
+        cursor: "pointer",
+        flexShrink: 0,
+        transition: "all 0.15s",
+      }}
+    >
+      All
+    </button>
+  );
+}
+
+// ---- Event card (two-column grid) ----------------------------------------
+
+function DayEventCard({
+  event,
+  portalSlug,
+  assignedKids,
+}: {
+  event: EventWithLocation;
+  portalSlug: string;
+  assignedKids: KidProfile[];
+}) {
+  const timeLabel = event.start_time ? formatEventTime(event.start_time) : null;
+  const isFeatured = event.is_tentpole || false;
+  const timeColor = isFeatured ? AMBER : SAGE;
+
+  // Tint border to first assigned kid's color if assigned to exactly one kid
+  const borderColor =
+    assignedKids.length === 1
+      ? `${assignedKids[0].color}30`
+      : BORDER;
+
+  return (
+    <Link
+      href={`/${portalSlug}?event=${event.id}`}
+      style={{
+        display: "block",
+        backgroundColor: CARD,
+        borderRadius: 12,
+        border: `1px solid ${borderColor}`,
+        borderLeft: `3px solid ${assignedKids.length === 1 ? assignedKids[0].color : SAGE}`,
+        padding: 12,
+        textDecoration: "none",
+        transition: "box-shadow 0.15s",
+      }}
+    >
+      {timeLabel && (
+        <p
+          style={{
+            fontFamily: "Outfit, system-ui, sans-serif",
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.5px",
+            color: timeColor,
+            marginBottom: 4,
+            textTransform: "uppercase",
+          }}
+        >
+          {timeLabel}
+        </p>
+      )}
+
+      <p
+        style={{
+          fontFamily: "Outfit, system-ui, sans-serif",
+          fontSize: 14,
+          fontWeight: 700,
+          color: TEXT,
+          lineHeight: 1.3,
+          marginBottom: 4,
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }}
+      >
+        {event.title}
+      </p>
+
+      {event.venue?.name && (
+        <p
+          style={{
+            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontSize: 11,
+            color: MUTED,
+            marginBottom: assignedKids.length > 0 || event.is_free ? 6 : 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {event.venue.name}
+        </p>
+      )}
+
+      {/* Kid dots + free badge row */}
+      {(assignedKids.length > 0 || event.is_free) && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          {/* Kid color dots */}
+          {assignedKids.length > 0 && (
+            <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+              {assignedKids.map((kid) => (
+                <span
+                  key={kid.id}
+                  title={kid.nickname}
+                  style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: "50%",
+                    backgroundColor: kid.color,
+                    display: "inline-block",
+                    flexShrink: 0,
+                  }}
+                />
+              ))}
+              {assignedKids.length === 1 && (
+                <span
+                  style={{
+                    fontFamily: "DM Sans, system-ui, sans-serif",
+                    fontSize: 10,
+                    color: MUTED,
+                  }}
+                >
+                  {assignedKids[0].nickname} only
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Free badge */}
+          {event.is_free && (
+            <span
+              style={{
+                backgroundColor: `${MOSS}1A`,
+                color: MOSS,
+                fontSize: 10,
+                fontWeight: 600,
+                fontFamily: "DM Sans, system-ui, sans-serif",
+                padding: "2px 6px",
+                borderRadius: 8,
+              }}
+            >
+              Free
+            </span>
+          )}
+        </div>
+      )}
+    </Link>
+  );
+}
+
+// ---- Add something card --------------------------------------------------
+
+function AddSomethingCard() {
+  return (
+    <button
+      disabled
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 4,
+        backgroundColor: SAGE_WASH,
+        borderRadius: 12,
+        border: `1px solid ${SAGE}33`,
+        padding: "16px 12px",
+        cursor: "default",
+        width: "100%",
+        minHeight: 80,
+      }}
+    >
+      <span
+        style={{
+          fontSize: 18,
+          fontWeight: 700,
+          color: SAGE,
+          lineHeight: 1,
+        }}
+      >
+        +
+      </span>
+      <span
+        style={{
+          fontFamily: "DM Sans, system-ui, sans-serif",
+          fontSize: 12,
+          fontWeight: 500,
+          color: SAGE,
+        }}
+      >
+        Add something
+      </span>
+    </button>
+  );
+}
+
+// ---- Day column ----------------------------------------------------------
+
+function DayColumn({
+  label,
+  date,
+  events,
+  portalSlug,
+  activeKidIds,
+  kids,
+  isLoading,
+  isAuthenticated,
+}: {
+  label: string;
+  date: Date;
+  events: EventWithLocation[];
+  portalSlug: string;
+  activeKidIds: string[];
+  kids: KidProfile[];
+  isLoading: boolean;
+  isAuthenticated: boolean;
+}) {
+  const shortDate = formatShortDate(date);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* Column header */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+        <p
+          style={{
+            fontFamily: "Outfit, system-ui, sans-serif",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "1px",
+            color: SAGE,
+            textTransform: "uppercase",
+          }}
+        >
+          {label}
+        </p>
+        <p
+          style={{
+            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontSize: 11,
+            color: MUTED,
+          }}
+        >
+          {shortDate}
+        </p>
+      </div>
+
+      {/* Cards */}
+      {isLoading ? (
+        <>
+          <SkeletonCard />
+          <SkeletonCard />
+        </>
+      ) : events.length > 0 ? (
+        events.map((event) => {
+          // Find which active kids are age-appropriate (simple: any active kid)
+          const relevantKids = activeKidIds.length > 0
+            ? kids.filter((k) => activeKidIds.includes(k.id))
+            : [];
+          return (
+            <DayEventCard
+              key={event.id}
+              event={event}
+              portalSlug={portalSlug}
+              assignedKids={relevantKids}
+            />
+          );
+        })
+      ) : isAuthenticated ? (
+        <AddSomethingCard />
+      ) : null}
+    </div>
+  );
+}
+
+// ---- Skeleton card -------------------------------------------------------
+
+function SkeletonCard() {
+  return (
+    <div
+      style={{
+        backgroundColor: CARD,
+        borderRadius: 12,
+        border: `1px solid ${BORDER}`,
+        padding: 12,
+        height: 80,
+      }}
+    >
+      <div
+        style={{
+          width: "60%",
+          height: 10,
+          borderRadius: 4,
+          backgroundColor: BORDER,
+          marginBottom: 8,
+        }}
+      />
+      <div
+        style={{
+          width: "90%",
+          height: 12,
+          borderRadius: 4,
+          backgroundColor: BORDER,
+          marginBottom: 6,
+        }}
+      />
+      <div
+        style={{
+          width: "50%",
+          height: 10,
+          borderRadius: 4,
+          backgroundColor: BORDER,
+        }}
+      />
+    </div>
+  );
+}
+
+// ---- Recommendation card (Perfect For section) ---------------------------
+
+function RecommendationCard({
+  event,
+  portalSlug,
+}: {
+  event: EventWithLocation;
+  portalSlug: string;
+}) {
+  return (
+    <Link
+      href={`/${portalSlug}?event=${event.id}`}
+      style={{
+        display: "flex",
+        gap: 12,
+        backgroundColor: CARD,
+        borderRadius: 14,
+        border: `1px solid ${BORDER}`,
+        padding: "10px 12px",
+        textDecoration: "none",
+        alignItems: "center",
+      }}
+    >
+      {/* Image */}
+      {event.image_url && (
+        <div
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 10,
+            overflow: "hidden",
+            flexShrink: 0,
+            position: "relative",
+          }}
+        >
+          <Image
+            src={event.image_url}
+            alt={event.title}
+            fill
+            sizes="56px"
+            style={{ objectFit: "cover" }}
+          />
+        </div>
+      )}
+
+      {/* Text */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p
+          style={{
+            fontFamily: "Outfit, system-ui, sans-serif",
+            fontSize: 14,
+            fontWeight: 700,
+            color: TEXT,
+            lineHeight: 1.3,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {event.title}
+        </p>
+        {event.venue?.name && (
+          <p
+            style={{
+              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontSize: 11,
+              color: MUTED,
+              marginTop: 2,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {event.venue.name}
+          </p>
+        )}
+        <div style={{ display: "flex", gap: 6, marginTop: 4, alignItems: "center" }}>
+          {event.is_free && (
+            <span
+              style={{
+                backgroundColor: `${MOSS}1A`,
+                color: MOSS,
+                fontSize: 10,
+                fontWeight: 600,
+                fontFamily: "DM Sans, system-ui, sans-serif",
+                padding: "2px 6px",
+                borderRadius: 8,
+              }}
+            >
+              Free
+            </span>
+          )}
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -216,94 +579,243 @@ function FilterChip({
 export const WeekendPlanner = memo(function WeekendPlanner({
   portalId,
   portalSlug,
+  activeKidIds = [],
+  kids = [],
 }: WeekendPlannerProps) {
-  const [filters, setFilters] = useState<WeekendFilters>({
-    indoorOutdoor: "all",
-    freeOnly: false,
-  });
+  const { authState } = useAuth();
+  const isAuthenticated = authState === "authenticated";
+  const { saturday, sunday } = getWeekendDates();
+  const satStr = toDateString(saturday);
+  const sunStr = toDateString(sunday);
 
-  const { data: allEvents, isLoading } = useQuery({
-    queryKey: ["family-weekend-events", portalId, filters],
-    queryFn: () => fetchWeekendEvents(portalId, filters),
+  const { data: allEvents = [], isLoading } = useQuery({
+    queryKey: ["family-weekend-events", portalId],
+    queryFn: () => fetchWeekendEvents(portalId),
     staleTime: 60 * 1000,
   });
 
-  const events = allEvents ?? [];
+  // Split by day
+  const satEvents = allEvents.filter((e) => e.start_date === satStr).slice(0, 4);
+  const sunEvents = allEvents.filter((e) => e.start_date === sunStr).slice(0, 4);
 
-  // Derive sub-sections from the same result set
-  const freeEvents = events.filter((e) => e.is_free);
-  const nonFreeEvents = events.filter((e) => !e.is_free);
-  const bestBets = filters.freeOnly ? [] : nonFreeEvents;
+  // Perfect For section: top events that have an image (prefer richer cards)
+  const recommendations = allEvents
+    .filter((e) => e.image_url)
+    .slice(0, 3);
+  // Fall back to any top events if no images
+  const recEvents = recommendations.length >= 2 ? recommendations : allEvents.slice(0, 3);
 
-  const toggleIndoorOutdoor = (val: IndoorOutdoor) => {
-    setFilters((f) => ({ ...f, indoorOutdoor: f.indoorOutdoor === val ? "all" : val }));
-  };
+  // Date range label
+  const satLabel = saturday.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const sunLabel = sunday.toLocaleDateString("en-US", { day: "numeric" });
+  const dateRangeLabel = `${satLabel}–${sunLabel}`;
 
-  const toggleFree = () => {
-    setFilters((f) => ({ ...f, freeOnly: !f.freeOnly }));
-  };
+  const hasAnyEvents = !isLoading && allEvents.length === 0;
 
   return (
-    <div className="pb-6">
-      {/* Filter bar — sticky, scrollable on mobile */}
+    <div style={{ backgroundColor: CANVAS, paddingBottom: 32 }}>
+      {/* ---- Header ---- */}
       <div
-        className="sticky top-0 z-10 bg-[var(--background)] border-b px-4 py-3"
-        style={{ borderColor: "var(--twilight, #E8E4DF)" }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "8px 20px",
+          paddingTop: 16,
+        }}
       >
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-          <FilterChip
-            label="Indoor"
-            isActive={filters.indoorOutdoor === "indoor"}
-            onClick={() => toggleIndoorOutdoor("indoor")}
+        <h2
+          style={{
+            fontFamily: "Outfit, system-ui, sans-serif",
+            fontSize: 28,
+            fontWeight: 800,
+            color: TEXT,
+            margin: 0,
+          }}
+        >
+          This Weekend
+        </h2>
+        <span
+          style={{
+            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontSize: 14,
+            fontWeight: 500,
+            color: MUTED,
+          }}
+        >
+          {dateRangeLabel}
+        </span>
+      </div>
+
+      {/* ---- Kid filter chips ---- */}
+      {kids.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            gap: 10,
+            padding: "8px 20px",
+            overflowX: "auto",
+          }}
+        >
+          <AllKidsChip
+            isActive={activeKidIds.length === 0}
+            onClick={() => {/* parent controls kid filter state */}}
           />
-          <FilterChip
-            label="Outdoor"
-            isActive={filters.indoorOutdoor === "outdoor"}
-            onClick={() => toggleIndoorOutdoor("outdoor")}
+          {kids.map((kid) => (
+            <KidChip
+              key={kid.id}
+              kid={kid}
+              isActive={activeKidIds.includes(kid.id)}
+              onClick={() => {/* parent controls kid filter state */}}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ---- Full empty state ---- */}
+      {hasAnyEvents && (
+        <div
+          style={{
+            padding: "48px 20px",
+            textAlign: "center",
+          }}
+        >
+          <div
+            className="inline-flex items-center justify-center rounded-2xl mb-4"
+            style={{ width: 56, height: 56, backgroundColor: SAGE_WASH }}
+          >
+            <span style={{ fontSize: 28 }}>🌤️</span>
+          </div>
+          <p
+            style={{
+              fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
+              fontSize: 16,
+              fontWeight: 700,
+              color: TEXT,
+              marginBottom: 6,
+            }}
+          >
+            Weekend is wide open
+          </p>
+          <p
+            style={{
+              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontSize: 13,
+              color: MUTED,
+              marginBottom: 16,
+              maxWidth: 280,
+              marginLeft: "auto",
+              marginRight: "auto",
+            }}
+          >
+            Find family-friendly events happening this Saturday and Sunday.
+          </p>
+          <Link
+            href={`/${portalSlug}?view=find&type=events&date=weekend`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "10px 24px",
+              borderRadius: 24,
+              backgroundColor: SAGE,
+              color: "#fff",
+              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontSize: 14,
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            Browse weekend events →
+          </Link>
+        </div>
+      )}
+
+      {/* ---- Two-column Sat / Sun grid ---- */}
+      {!hasAnyEvents && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 10,
+            padding: "4px 12px",
+            maxWidth: 800,
+          }}
+        >
+          <DayColumn
+            label={formatDayLabel(saturday)}
+            date={saturday}
+            events={satEvents}
+            portalSlug={portalSlug}
+            activeKidIds={activeKidIds}
+            kids={kids}
+            isLoading={isLoading}
+            isAuthenticated={isAuthenticated}
           />
-          <FilterChip
-            label="Free"
-            isActive={filters.freeOnly}
-            onClick={toggleFree}
+          <DayColumn
+            label={formatDayLabel(sunday)}
+            date={sunday}
+            events={sunEvents}
+            portalSlug={portalSlug}
+            activeKidIds={activeKidIds}
+            kids={kids}
+            isLoading={isLoading}
+            isAuthenticated={isAuthenticated}
           />
         </div>
-      </div>
+      )}
 
-      {/* Content */}
-      <div className="px-4 pt-5 space-y-8">
-        {/* Best Bets — shown when not filtering free-only */}
-        {!filters.freeOnly && (
-          <EventSection
-            title="Best Bets"
-            events={bestBets.length > 0 ? bestBets : events}
-            seeAllHref={`/${portalSlug}?view=find&type=events&date=weekend`}
-            portalSlug={portalSlug}
-            isLoading={isLoading}
-            emptyMessage="No events found for this weekend."
-          />
-        )}
-
-        {/* Free Activities */}
-        {(filters.freeOnly || freeEvents.length > 0 || isLoading) && (
-          <EventSection
-            title="Free Activities"
-            events={freeEvents}
-            seeAllHref={`/${portalSlug}?view=find&type=events&date=weekend&free=1`}
-            portalSlug={portalSlug}
-            isLoading={isLoading && filters.freeOnly}
-            emptyMessage="No free events found this weekend."
-          />
-        )}
-
-        {/* Empty state when filters yield nothing */}
-        {!isLoading && events.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-sm text-[var(--muted)]">
-              No events matched your filters. Try removing Indoor/Outdoor or the Free filter.
+      {/* ---- Perfect For This Weekend ---- */}
+      {!isLoading && recEvents.length > 0 && (
+        <div style={{ padding: "16px 20px 0", maxWidth: 800 }}>
+          {/* Section header */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 10,
+            }}
+          >
+            <p
+              style={{
+                fontFamily: "Outfit, system-ui, sans-serif",
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "1.2px",
+                color: AMBER,
+                textTransform: "uppercase",
+                margin: 0,
+              }}
+            >
+              Perfect For This Weekend
             </p>
+            <Link
+              href={`/${portalSlug}?view=find&type=events&date=weekend`}
+              style={{
+                fontFamily: "DM Sans, system-ui, sans-serif",
+                fontSize: 12,
+                color: SAGE,
+                textDecoration: "none",
+              }}
+            >
+              More →
+            </Link>
           </div>
-        )}
-      </div>
+
+          {/* Recommendation cards */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {recEvents.map((event) => (
+              <RecommendationCard
+                key={event.id}
+                event={event}
+                portalSlug={portalSlug}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 });

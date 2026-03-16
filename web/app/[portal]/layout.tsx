@@ -6,7 +6,7 @@ import PortalThemeClient from "@/components/PortalThemeClient";
 import CannyWidget from "@/components/CannyWidget";
 import PortalFooter from "@/components/PortalFooter";
 import { PortalTracker } from "./_components/PortalTracker";
-import { Cormorant_Garamond, Inter } from "next/font/google";
+import { Cormorant_Garamond, Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { Suspense } from "react";
 import { isPCMDemoPortal } from "@/lib/marketplace-art";
 import { applyPreset } from "@/lib/apply-preset";
@@ -30,6 +30,15 @@ const cormorantGaramond = Cormorant_Garamond({
 const inter = Inter({
   weight: ["400", "500", "600"],
   variable: "--font-body",
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+});
+
+// Family vertical fonts — Plus Jakarta Sans for Lost Youth portal
+const plusJakartaSans = Plus_Jakarta_Sans({
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-plus-jakarta-sans",
   subsets: ["latin"],
   display: "swap",
   preload: false,
@@ -110,6 +119,7 @@ export default async function PortalLayout({ children, params }: Props) {
   // resolved here so getVerticalStyles receives the canonical vertical key.
   const vertical = getPortalVertical(portal);
   const isHotel = vertical === "hotel";
+  const isFamily = vertical === "family";
   const resolvedBranding = applyPreset((portal.branding || {}) as PortalBranding);
   const isLightTheme = resolvedBranding.theme_mode === "light";
   const isMarketplace = vertical === "marketplace" || isPCMDemoPortal(portal.slug);
@@ -133,7 +143,10 @@ export default async function PortalLayout({ children, params }: Props) {
         data-vertical={vertical}
         data-atmosphere={suppressPortalStyleAtmosphere ? "disabled" : "default"}
         data-theme={isLightTheme ? "light" : undefined}
-        className={isHotel ? `${cormorantGaramond.variable} ${inter.variable}` : ""}
+        className={[
+          isHotel ? `${cormorantGaramond.variable} ${inter.variable}` : "",
+          isFamily ? plusJakartaSans.variable : "",
+        ].filter(Boolean).join(" ")}
       >
         <Suspense fallback={null}>
           <PortalTracker portalSlug={portal.slug} />

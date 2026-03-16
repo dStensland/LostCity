@@ -15,8 +15,12 @@ from db import (
     insert_exhibition,
     insert_open_call,
     insert_program,
+    upsert_editorial_mention,
+    upsert_volunteer_opportunity,
     upsert_venue_destination_details,
     upsert_venue_feature,
+    upsert_venue_occasion,
+    upsert_venue_special,
 )
 from entity_lanes import TypedEntityEnvelope
 
@@ -96,6 +100,45 @@ def persist_typed_entity_envelope(
         else:
             result.bump_skipped("venue_features")
 
+    for special in envelope.venue_specials:
+        special_record = dict(special)
+        venue_id = _resolve_venue_id(special_record, venue_ids_by_slug)
+        if not venue_id:
+            result.bump_skipped("venue_specials")
+            result.unresolved.append("venue_specials")
+            continue
+        persisted = upsert_venue_special(venue_id, special_record)
+        if persisted:
+            result.bump_persisted("venue_specials")
+        else:
+            result.bump_skipped("venue_specials")
+
+    for mention in envelope.editorial_mentions:
+        mention_record = dict(mention)
+        venue_id = _resolve_venue_id(mention_record, venue_ids_by_slug)
+        if not venue_id:
+            result.bump_skipped("editorial_mentions")
+            result.unresolved.append("editorial_mentions")
+            continue
+        persisted = upsert_editorial_mention(venue_id, mention_record)
+        if persisted:
+            result.bump_persisted("editorial_mentions")
+        else:
+            result.bump_skipped("editorial_mentions")
+
+    for occasion in envelope.venue_occasions:
+        occasion_record = dict(occasion)
+        venue_id = _resolve_venue_id(occasion_record, venue_ids_by_slug)
+        if not venue_id:
+            result.bump_skipped("venue_occasions")
+            result.unresolved.append("venue_occasions")
+            continue
+        persisted = upsert_venue_occasion(venue_id, occasion_record)
+        if persisted:
+            result.bump_persisted("venue_occasions")
+        else:
+            result.bump_skipped("venue_occasions")
+
     for event in envelope.events:
         event_record = dict(event)
         venue_id = _resolve_venue_id(event_record, venue_ids_by_slug)
@@ -159,15 +202,18 @@ def persist_typed_entity_envelope(
         else:
             result.bump_skipped("open_calls")
 
-    for lane in (
-        "opportunities",
-        "venue_specials",
-        "editorial_mentions",
-        "venue_occasions",
-    ):
-        records = getattr(envelope, lane)
-        if records:
-            result.skipped[lane] = result.skipped.get(lane, 0) + len(records)
-            result.unresolved.append(lane)
+    for opportunity in envelope.volunteer_opportunities:
+        opportunity_record = dict(opportunity)
+        if not opportunity_record.get("organization_id") and not opportunity_record.get(
+            "organization_slug"
+        ):
+            result.bump_skipped("volunteer_opportunities")
+            result.unresolved.append("volunteer_opportunities")
+            continue
+        persisted = upsert_volunteer_opportunity(opportunity_record)
+        if persisted:
+            result.bump_persisted("volunteer_opportunities")
+        else:
+            result.bump_skipped("volunteer_opportunities")
 
     return result

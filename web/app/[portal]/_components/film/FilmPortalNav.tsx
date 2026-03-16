@@ -13,7 +13,7 @@ const NAV_ITEMS = [
   { key: "home", label: "Home", path: "" },
   { key: "showtimes", label: "Showtimes", path: "/showtimes" },
   { key: "festivals", label: "Festivals", path: "/festivals" },
-  { key: "programs", label: "Programs", path: "/programs" },
+  { key: "programs", label: "Screening Programs", path: "/screening-programs" },
   { key: "calendar", label: "Calendar", path: "/calendar" },
   { key: "venues", label: "Venues", path: "/venues" },
   { key: "community", label: "Community", path: "/community-hub" },

@@ -14,6 +14,22 @@ CREATE TABLE sources (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Portal federation contract (migration-backed canonical objects)
+-- The executable source of truth for these objects currently lives in:
+--   - database/migrations/035_source_federation.sql
+--   - database/migrations/508_entity_family_federation.sql
+--
+-- Key live semantics:
+--   - sources.owner_portal_id UUID REFERENCES portals(id)
+--   - source_sharing_rules.share_scope / allowed_categories govern event access
+--   - source_sharing_rules.shared_entity_families governs non-event sharing
+--   - source_subscriptions.subscription_scope / subscribed_categories govern event subscriptions
+--   - source_subscriptions.subscribed_entity_families governs non-event subscriptions
+--   - portal_source_access materializes event/category access
+--   - portal_source_entity_access materializes non-event entity-family access
+--   - generic `opportunities` is not a supported shared entity family; use
+--     concrete families like `open_calls` or `volunteer_opportunities`
+
 -- Venues table: normalized venue information
 CREATE TABLE venues (
   id SERIAL PRIMARY KEY,
@@ -1661,3 +1677,37 @@ CREATE INDEX IF NOT EXISTS idx_venue_occasions_venue
   ON venue_occasions(venue_id);
 
 ALTER TABLE venue_occasions ENABLE ROW LEVEL SECURITY;
+
+-- -------------------------------------------------------
+-- Kid profiles (family portal)
+-- -------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS kid_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  nickname TEXT NOT NULL,
+  age INTEGER NOT NULL CHECK (age >= 0 AND age <= 18),
+  color TEXT NOT NULL DEFAULT '#4A7DB5',
+  emoji TEXT,
+  school_system TEXT CHECK (school_system IN ('aps', 'dekalb', 'cobb', 'gwinnett')),
+  interests TEXT[] DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_kid_profiles_user_nickname
+  ON kid_profiles(user_id, nickname);
+
+CREATE INDEX IF NOT EXISTS idx_kid_profiles_user
+  ON kid_profiles(user_id);
+
+ALTER TABLE kid_profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage their own kid profiles"
+  ON kid_profiles FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE TRIGGER kid_profiles_updated_at
+  BEFORE UPDATE ON kid_profiles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

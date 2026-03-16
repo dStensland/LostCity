@@ -31,6 +31,55 @@ This file tracks which Claude Code sessions are working on what. Every agent rea
 - `crawlers/tests/test_dolls_head_trail.py` (if created)
 - `WORKSTREAM.md`
 
+### Session F — Portal Strategy Alignment Phase 1/2 (started 2026-03-15)
+**Scope:** `web/lib/`, `web/app/[portal]/`, `web/app/api/`, `web/components/`, `database/`, `docs/`, `ACTIVE_WORK.md`
+**Backlog items:**
+- Portal strategy alignment workstream Phase 1: taxonomy reset
+- Portal strategy alignment workstream Phase 2: federation and attribution semantics
+- Shared portal/entity taxonomy contract
+- Manifest/runtime/helper/skeleton alignment
+- Entity-family-aware federation storage contract
+- Stricter default write attribution
+
+**Claimed paths:**
+- `web/lib/portal-taxonomy.ts`
+- `web/lib/portal.ts`
+- `web/lib/portal-manifest.ts`
+- `web/lib/portal-context.tsx`
+- `web/lib/skeleton-contract.ts`
+- `web/lib/portal-animation-config.ts`
+- `web/lib/civic-routing.ts`
+- `web/app/[portal]/layout.tsx`
+- `web/app/[portal]/page.tsx`
+- `web/app/[portal]/loading.tsx`
+- `web/app/[portal]/happening-now/loading.tsx`
+- `web/app/[portal]/events/[id]/loading.tsx`
+- `web/components/ClientEffects.tsx`
+- `web/components/RainEffect.tsx`
+- `web/components/PortalThemeClient.tsx`
+- `web/components/outing-planner/outing-copy.ts`
+- `web/lib/portal-taxonomy.test.ts`
+- `web/lib/portal-manifest.test.ts`
+- `web/lib/portal-vertical.test.ts`
+- `web/lib/skeleton-contract.test.ts`
+- `web/lib/portal-animation-config.test.ts`
+- `web/lib/civic-routing.test.ts`
+- `web/lib/federation.ts`
+- `web/lib/federation.test.ts`
+- `web/lib/portal-scope.ts`
+- `web/lib/portal-attribution.ts`
+- `web/lib/portal-attribution-guard.test.ts`
+- `web/app/api/programs/route.ts`
+- `web/app/api/exhibitions/route.ts`
+- `web/app/api/open-calls/route.ts`
+- `web/app/api/portals/[slug]/sources/route.ts`
+- `database/migrations/508_entity_family_federation.sql`
+- `supabase/migrations/20260315205723_entity_family_federation.sql`
+- `database/schema.sql`
+- `docs/portal-strategy-alignment-workstream.md`
+- `DEV_PLAN.md`
+- `ACTIVE_WORK.md`
+
 ---
 
 ## Recommended Session Split

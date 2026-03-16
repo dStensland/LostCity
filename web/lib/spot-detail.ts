@@ -3,6 +3,7 @@ import { getDistanceMiles } from "@/lib/geo";
 import { getLocalDateString } from "@/lib/formats";
 import { fetchSocialProofCounts } from "@/lib/social-proof";
 import { applyVenueGate } from "@/lib/feed-gate";
+import { ATTACHED_CHILD_DESTINATION_VENUE_TYPES } from "@/lib/destination-graph";
 import {
   getYonderDestinationIntelligence,
   type YonderDestinationIntelligence,
@@ -147,11 +148,22 @@ export type VenueOccasionRow = {
   source: string;
 };
 
+export type AttachedChildDestinationRow = {
+  id: number;
+  name: string;
+  slug: string | null;
+  venue_type: string | null;
+  image_url: string | null;
+  short_description: string | null;
+};
+
 export type SpotDetailPayload = {
   spot: Record<string, unknown>;
   upcomingEvents: Array<Record<string, unknown>>;
   nearbyDestinations: Record<string, NearbyDestination[]>;
   highlights: Array<Record<string, unknown>>;
+  attachedChildDestinations: AttachedChildDestinationRow[];
+  // Compatibility alias for older consumers that still expect the previous field name.
   artifacts: Array<Record<string, unknown>>;
   features: VenueFeatureRow[];
   specials: VenueSpecialRow[];
@@ -394,6 +406,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     .from("venues")
     .select("id, name, slug, venue_type, image_url, short_description")
     .eq("parent_venue_id", spot.id)
+    .in("venue_type", [...ATTACHED_CHILD_DESTINATION_VENUE_TYPES])
     .eq("active", true)
     .order("name", { ascending: true });
   const featuresPromise = supabase
@@ -520,6 +533,8 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     highlights: dedupeVenueHighlights(
       (highlights as VenueHighlightRow[] | null) || []
     ) as unknown as Array<Record<string, unknown>>,
+    attachedChildDestinations:
+      (artifacts as AttachedChildDestinationRow[] | null) || [],
     artifacts: (artifacts || []) as Array<Record<string, unknown>>,
     features: (features as VenueFeatureRow[] | null) || [],
     specials: (specials as VenueSpecialRow[] | null) || [],

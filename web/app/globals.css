@@ -6256,28 +6256,29 @@ body:has([data-vertical="hospital"]) .rain-overlay {
    ============================================ */
 
 .family-theme {
-  --family-orange: #FF5722;
-  --family-orange-light: #FF7043;
-  --family-green: #4CAF50;
+  /* Afternoon Field palette */
+  --family-orange: #C48B1D;
+  --family-orange-light: #D4A442;
+  --family-green: #5E7A5E;
   --family-purple: #9C27B0;
-  --family-blue: #2196F3;
+  --family-blue: #78B7D0;
   --family-pink: #E91E63;
-  --family-yellow: #FFC107;
-  --family-teal: #009688;
-  --family-cream: #FFF8E7;
-  --family-paper: #FFFDF5;
-  --family-ink: #1A1A1A;
-  --family-pencil: #5D4E37;
-  --family-faded: #9E9E9E;
+  --family-yellow: #C48B1D;
+  --family-teal: #5E7A5E;
+  --family-cream: #F0EDE4;
+  --family-paper: #FAFAF6;
+  --family-ink: #1E2820;
+  --family-pencil: #756E63;
+  --family-faded: #756E63;
 
-  --family-warm-cream: #FFF8F0;
-  --family-peach-main: #FBAB7E;
-  --family-peach-light: #FFCFA7;
-  --family-green-main: #059669;
-  --family-text-green: #4A7C59;
-  --family-brown: #8B7355;
-  --family-border-cream: #E8D5C4;
-  --family-cream-light: #F5EDE3;
+  --family-warm-cream: #F0EDE4;
+  --family-peach-main: #C48B1D;
+  --family-peach-light: #D4A442;
+  --family-green-main: #5E7A5E;
+  --family-text-green: #5E7A5E;
+  --family-brown: #756E63;
+  --family-border-cream: #E0DDD4;
+  --family-cream-light: #FAFAF6;
 }
 
 .family-theme [data-family-tone="orange"] { --family-accent: var(--family-orange); }
@@ -6296,16 +6297,16 @@ body:has([data-vertical="hospital"]) .rain-overlay {
   font-family: var(--font-baloo), var(--font-outfit), system-ui;
 }
 
-.family-border-ink-2 { border: 2px solid var(--family-ink); }
-.family-border-ink-3 { border: 3px solid var(--family-ink); }
-.family-shadow-xs { box-shadow: 2px 2px 0 var(--family-ink); }
-.family-shadow-sm { box-shadow: 3px 3px 0 var(--family-ink); }
-.family-shadow-md { box-shadow: 4px 4px 0 var(--family-ink); }
-.family-shadow-lg { box-shadow: 6px 6px 0 var(--family-ink); }
+.family-border-ink-2 { border: 1px solid var(--family-border-cream); }
+.family-border-ink-3 { border: 1px solid var(--family-border-cream); }
+.family-shadow-xs { box-shadow: 0 1px 2px rgba(30, 40, 32, 0.05); }
+.family-shadow-sm { box-shadow: 0 2px 4px rgba(30, 40, 32, 0.06); }
+.family-shadow-md { box-shadow: 0 4px 12px rgba(30, 40, 32, 0.08); }
+.family-shadow-lg { box-shadow: 0 8px 24px rgba(30, 40, 32, 0.1); }
 
 .family-ticket {
-  border: 3px solid var(--family-ink);
-  box-shadow: 4px 4px 0 var(--family-ink);
+  border: 1px solid var(--family-border-cream);
+  box-shadow: 0 2px 8px rgba(30, 40, 32, 0.06);
 }
 
 .family-hero {
@@ -6342,50 +6343,51 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 }
 
 .family-search-prompt {
-  border: 3px solid var(--family-ink);
-  box-shadow: 6px 6px 0 var(--family-ink);
+  border: 1px solid var(--family-border-cream);
+  box-shadow: 0 4px 12px rgba(30, 40, 32, 0.08);
   will-change: transform;
 }
 
 .family-cta {
-  background-color: var(--family-ink);
-  border: 3px solid var(--family-ink);
-  box-shadow: 6px 6px 0 var(--family-orange);
+  background-color: var(--family-green);
+  border: none;
+  box-shadow: 0 2px 8px rgba(94, 122, 94, 0.3);
 }
 
 .family-badge {
-  border: 2px solid var(--family-ink);
+  border: 1px solid var(--family-border-cream);
 }
 
 .family-header {
-  border-bottom: 3px solid var(--family-ink);
+  border-bottom: 1px solid var(--family-border-cream);
 }
 
 .family-header-shadow {
-  box-shadow: 0 4px 0 var(--family-ink);
+  box-shadow: 0 2px 8px rgba(30, 40, 32, 0.08);
 }
 
 .family-logo-badge {
   background-color: var(--family-orange);
-  border: 3px solid var(--family-ink);
-  box-shadow: 3px 3px 0 var(--family-ink);
+  border: none;
+  box-shadow: 0 2px 8px rgba(196, 139, 29, 0.3);
+  border-radius: 9999px;
 }
 
 .family-nav-wrap {
   background-color: var(--family-paper);
-  border: 2px solid var(--family-ink);
+  border: 1px solid var(--family-border-cream);
 }
 
 .family-header-pill {
   background-color: var(--family-paper);
-  border: 2px solid var(--family-ink);
-  box-shadow: 2px 2px 0 var(--family-ink);
+  border: 1px solid var(--family-border-cream);
+  box-shadow: 0 1px 3px rgba(30, 40, 32, 0.06);
 }
 
 .family-menu-panel {
   background-color: var(--family-paper);
-  border: 3px solid var(--family-ink);
-  box-shadow: 4px 4px 0 var(--family-ink);
+  border: 1px solid var(--family-border-cream);
+  box-shadow: 0 8px 24px rgba(30, 40, 32, 0.12);
 }
 
 .rotate-var-12 { --rotate: 12deg; }

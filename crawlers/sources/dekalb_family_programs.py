@@ -22,7 +22,11 @@ from db import (
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
-from sources._activecommunities_family_filter import is_family_relevant_activity
+from sources._activecommunities_family_filter import (
+    infer_activecommunities_registration_open,
+    infer_activecommunities_schedule_days,
+    is_family_relevant_activity,
+)
 from sources.dekalb_parks_rec import (
     ACTIVITY_SEARCH_URL,
     MAX_PAGES,
@@ -52,8 +56,24 @@ _BLOCKED_KEYWORDS = [
 ]
 
 
+def _flush_program_envelope(program_envelope: TypedEntityEnvelope) -> TypedEntityEnvelope:
+    if not program_envelope.programs:
+        return program_envelope
+
+    persist_result = persist_typed_entity_envelope(program_envelope)
+    skipped_programs = persist_result.skipped.get("programs", 0)
+    if skipped_programs:
+        logger.warning(
+            "DeKalb family programs: skipped %d structured program rows",
+            skipped_programs,
+        )
+    return TypedEntityEnvelope()
+
+
 def _build_program_record(
     event_record: dict,
+    item: dict,
+    desc_text: str,
     venue_name: str,
     source_id: int,
     portal_id: Optional[str],
@@ -78,6 +98,18 @@ def _build_program_record(
     season = infer_season(title, session_start)
     price_val = event_record.get("price_min", 0) or 0
     cost_period = infer_cost_period(event_record.get("price_note"))
+    schedule_days = infer_activecommunities_schedule_days(
+        session_start=session_start_str,
+        session_end=event_record.get("end_date"),
+        date_range_description=item.get("date_range_description"),
+        desc_text=desc_text,
+    )
+    registration_opens = infer_activecommunities_registration_open(
+        activity_online_start_time=item.get("activity_online_start_time"),
+        desc_text=desc_text,
+        session_start=session_start_str,
+    )
+    registration_status = "closed" if item.get("total_open") == 0 else "open"
 
     program_data: dict = {
         "source_id": source_id,
@@ -91,10 +123,25 @@ def _build_program_record(
         "season": season,
         "session_start": session_start_str,
         "session_end": event_record.get("end_date"),
+        "schedule_days": schedule_days,
         "cost_amount": price_val if price_val > 0 else None,
         "cost_period": cost_period if price_val > 0 else None,
+        "registration_status": registration_status,
+        "registration_opens": registration_opens,
         "registration_url": event_record.get("source_url"),
         "tags": event_record.get("tags", []),
+        "metadata": {
+            "activity_id": item.get("id"),
+            "activity_number": item.get("number"),
+            "activity_online_start_time": item.get("activity_online_start_time"),
+            "date_range": item.get("date_range"),
+            "date_range_description": item.get("date_range_description"),
+            "total_open": item.get("total_open"),
+            "already_enrolled": item.get("already_enrolled"),
+            "urgent_status": (item.get("urgent_message") or {}).get("status_description"),
+            "location_label": (item.get("location") or {}).get("label"),
+            "ages_label": item.get("ages"),
+        },
         "_venue_name": venue_name,
     }
 
@@ -239,6 +286,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 program_record = _build_program_record(
                     event_record=event_record,
+                    item=item,
+                    desc_text=desc_text,
                     venue_name=venue_name,
                     source_id=source_id,
                     portal_id=portal_id,
@@ -251,14 +300,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 logger.error("DeKalb family programs: error processing item %s: %s", item.get("id"), exc)
                 continue
 
-    if program_envelope.programs:
-        persist_result = persist_typed_entity_envelope(program_envelope)
-        skipped_programs = persist_result.skipped.get("programs", 0)
-        if skipped_programs:
-            logger.warning(
-                "DeKalb family programs: skipped %d structured program rows",
-                skipped_programs,
-            )
+        program_envelope = _flush_program_envelope(program_envelope)
+
+    program_envelope = _flush_program_envelope(program_envelope)
 
     logger.info(
         "DeKalb family programs crawl complete: %d found, %d new, %d updated",

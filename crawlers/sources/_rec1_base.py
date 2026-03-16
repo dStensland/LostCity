@@ -118,6 +118,14 @@ def _parse_age_range_text(text: str) -> tuple[Optional[int], Optional[int]]:
     if t in ("adult", "adults"):
         return 18, None
 
+    # "3yr 6m-10" / "3 years 6 months - 10 years"
+    m = re.search(
+        r"(\d+)\s*y(?:r|ear)?s?(?:\s+\d+\s*m(?:o|onth)?s?)?\s*(?:-|–|to)\s*(\d+)",
+        t,
+    )
+    if m:
+        return int(m.group(1)), int(m.group(2))
+
     # "Seniors 55+" or "Senior (55+)"
     m = re.search(r"senior\w*.*?(\d+)\+?", t)
     if m:
@@ -274,6 +282,158 @@ def _parse_time_range(times_value: str) -> tuple[Optional[str], Optional[str]]:
         return _parse_time_str(m.group(1)), _parse_time_str(m.group(2))
 
     return _parse_time_str(times_value), None
+
+
+def _parse_schedule_days(days_value: str) -> Optional[list[int]]:
+    """
+    Parse Rec1 schedule day strings into ISO weekday integers.
+
+    Examples:
+      - "Weekdays" -> [1,2,3,4,5]
+      - "Mon/Wed" -> [1,3]
+      - "Tue & Thu" -> [2,4]
+      - "Sat" -> [6]
+    """
+    if not days_value:
+        return None
+
+    normalized = days_value.strip().lower()
+    if not normalized:
+        return None
+    if "weekday" in normalized:
+        return [1, 2, 3, 4, 5]
+    if "weekend" in normalized:
+        return [6, 7]
+
+    day_map = {
+        "m": 1,
+        "mon": 1,
+        "monday": 1,
+        "tu": 2,
+        "tue": 2,
+        "tues": 2,
+        "tuesday": 2,
+        "t": 2,
+        "w": 3,
+        "wed": 3,
+        "weds": 3,
+        "wednesday": 3,
+        "th": 4,
+        "thu": 4,
+        "thur": 4,
+        "thurs": 4,
+        "thursday": 4,
+        "f": 5,
+        "fri": 5,
+        "friday": 5,
+        "sa": 6,
+        "sat": 6,
+        "saturday": 6,
+        "su": 7,
+        "sun": 7,
+        "sunday": 7,
+    }
+
+    values: list[int] = []
+    tokens = re.findall(r"[a-z]+", normalized)
+    for index, token in enumerate(tokens):
+        day = day_map.get(token)
+        if day and day not in values:
+            values.append(day)
+
+        # Range formats like "F-SU" / "Mon-Thu"
+        if token in {"to", "through", "thru"} and 0 < index < len(tokens) - 1:
+            start = day_map.get(tokens[index - 1])
+            end = day_map.get(tokens[index + 1])
+            if start and end:
+                if start <= end:
+                    expanded = range(start, end + 1)
+                else:
+                    expanded = list(range(start, 8)) + list(range(1, end + 1))
+                for expanded_day in expanded:
+                    if expanded_day not in values:
+                        values.append(expanded_day)
+
+    # Hyphenated short ranges survive tokenization as adjacent day tokens.
+    day_tokens = [day_map[token] for token in tokens if token in day_map]
+    if len(day_tokens) == 2 and "-" in normalized:
+        start, end = day_tokens
+        values = []
+        if start <= end:
+            values.extend(range(start, end + 1))
+        else:
+            values.extend(range(start, 8))
+            values.extend(range(1, end + 1))
+    return values or None
+
+
+def _parse_registration_window(
+    session: dict,
+    basic_info: list[str],
+    default_year: int,
+) -> tuple[Optional[str], Optional[str]]:
+    """
+    Parse registration open/close dates from Rec1 session fields.
+    Returns ISO date strings.
+    """
+    registration_opens: Optional[date] = None
+    registration_closes: Optional[date] = None
+
+    reg_start = session.get("regStart")
+    if reg_start:
+        registration_opens = _parse_date_str(reg_start, date(default_year, 1, 1))
+
+    registration_line = next(
+        (entry for entry in basic_info if str(entry).lower().startswith("registration:")),
+        None,
+    )
+    if registration_line:
+        normalized_line = str(registration_line).lower()
+        months = {
+            "jan": 1,
+            "feb": 2,
+            "mar": 3,
+            "apr": 4,
+            "may": 5,
+            "jun": 6,
+            "jul": 7,
+            "aug": 8,
+            "sep": 9,
+            "oct": 10,
+            "nov": 11,
+            "dec": 12,
+        }
+        month_day_pairs = re.findall(
+            r"\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+(\d{1,2})\b",
+            normalized_line,
+        )
+        if month_day_pairs:
+            try:
+                if not registration_opens:
+                    month, day_num = month_day_pairs[0]
+                    registration_opens = date(default_year, months[month], int(day_num))
+                month, day_num = month_day_pairs[-1]
+                registration_closes = date(default_year, months[month], int(day_num))
+            except ValueError:
+                pass
+
+        if not registration_opens or not registration_closes:
+            numeric_pairs = re.findall(r"(\d{1,2}/\d{1,2})(?:/\d{2,4})?", normalized_line)
+            parsed_numeric_dates = [
+                parsed_date
+                for parsed_date in (_parse_date_str(value, date(default_year, 1, 1)) for value in numeric_pairs)
+                if parsed_date
+            ]
+            if parsed_numeric_dates:
+                if not registration_opens:
+                    registration_opens = parsed_numeric_dates[0]
+                if not registration_closes:
+                    registration_closes = parsed_numeric_dates[-1]
+
+    return (
+        registration_opens.isoformat() if registration_opens else None,
+        registration_closes.isoformat() if registration_closes else None,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -871,6 +1031,8 @@ def _build_program_record(
     title = event_record["title"]
     start_date_str = event_record.get("start_date")
     end_date_str = event_record.get("end_date")
+    features = session.get("features", [])
+    basic_info = session.get("basicInfo") or []
 
     session_start = None
     if start_date_str:
@@ -888,9 +1050,15 @@ def _build_program_record(
 
     program_type = infer_program_type(title, reg_type, section_name)
     season = infer_season(f"{title} {section_name}", session_start)
+    schedule_days = _parse_schedule_days(_extract_feature(features, "days"))
+    registration_opens, registration_closes = _parse_registration_window(
+        session,
+        basic_info,
+        session_start.year if session_start else date.today().year,
+    )
 
     price_val = event_record.get("price_min", 0) or 0
-    cost_notes = event_record.get("price_note")
+    cost_notes = session.get("customDisplayPrice") or event_record.get("price_note")
     cost_period = infer_cost_period(cost_notes, reg_type)
 
     # Registration status from session fullness
@@ -910,14 +1078,30 @@ def _build_program_record(
         "season": season,
         "session_start": start_date_str,
         "session_end": end_date_str,
+        "schedule_days": schedule_days,
         "schedule_start_time": event_record.get("start_time"),
         "schedule_end_time": event_record.get("end_time"),
         "cost_amount": price_val if price_val > 0 else None,
         "cost_period": cost_period if price_val > 0 else None,
         "cost_notes": cost_notes,
         "registration_status": reg_status,
+        "registration_opens": registration_opens,
+        "registration_closes": registration_closes,
         "registration_url": event_record.get("source_url"),
         "tags": event_record.get("tags", []),
+        "metadata": {
+            "session_id": session.get("id"),
+            "registration_type": reg_type,
+            "registration_open": session.get("registrationOpen"),
+            "registration_over": session.get("registrationOver"),
+            "session_full": session.get("sessionFull"),
+            "location": _extract_feature(features, "location"),
+            "age_gender": _extract_feature(features, "ageGender"),
+            "days": _extract_feature(features, "days"),
+            "dates": _extract_feature(features, "dates"),
+            "times": _extract_feature(features, "times"),
+            "basic_info": basic_info,
+        },
         "_venue_name": venue_name,  # consumed by insert_program for slug
     }
 

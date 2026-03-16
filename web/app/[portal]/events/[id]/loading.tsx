@@ -5,6 +5,7 @@ import Skeleton from "@/components/Skeleton";
 import { useParams } from "next/navigation";
 import { usePortalOptional } from "@/lib/portal-context";
 import { resolveSkeletonVertical } from "@/lib/skeleton-contract";
+import { isFilmPortalVertical } from "@/lib/portal-taxonomy";
 
 export default function EventLoading() {
   const params = useParams();
@@ -15,7 +16,7 @@ export default function EventLoading() {
 
   if (vertical === "hotel") {
     return (
-      <div data-skeleton-route="event-detail" data-skeleton-vertical="hotel" className="min-h-screen bg-[var(--hotel-ivory)]">
+      <div data-skeleton-route="event-detail" data-skeleton-vertical={vertical} className="min-h-screen bg-[var(--hotel-ivory)]">
         <main className="max-w-5xl mx-auto px-4 py-8">
           <div className="h-[420px] rounded-2xl skeleton-shimmer mb-6" />
           <div className="rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-6 sm:p-8">
@@ -38,7 +39,7 @@ export default function EventLoading() {
 
   if (vertical === "hospital") {
     return (
-      <div data-skeleton-route="event-detail" data-skeleton-vertical="hospital" className="min-h-screen bg-[#f2f5fa]">
+      <div data-skeleton-route="event-detail" data-skeleton-vertical={vertical} className="min-h-screen bg-[#f2f5fa]">
         <main className="max-w-6xl mx-auto px-4 py-8">
           <div className="h-72 rounded-2xl skeleton-shimmer mb-6" />
           <div className="rounded-2xl border border-[#d5dfef] bg-white p-6 sm:p-8">
@@ -55,9 +56,9 @@ export default function EventLoading() {
     );
   }
 
-  if (vertical === "film") {
+  if (isFilmPortalVertical(vertical)) {
     return (
-      <div data-skeleton-route="event-detail" data-skeleton-vertical="film" className="min-h-screen bg-[#070a12]">
+      <div data-skeleton-route="event-detail" data-skeleton-vertical={vertical} className="min-h-screen bg-[#070a12]">
         <main className="max-w-6xl mx-auto px-4 py-8">
           <div className="h-80 rounded-2xl skeleton-shimmer mb-6" />
           <div className="rounded-2xl border border-[#2a3244] bg-[#0c1321] p-6 sm:p-8">

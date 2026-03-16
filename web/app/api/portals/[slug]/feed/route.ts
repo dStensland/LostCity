@@ -12,7 +12,10 @@ import {
   buildPortalHolidayFeedSections,
   finalizePortalFeedSections,
 } from "@/lib/portal-feed-finalize";
-import { getPortalSourceAccess } from "@/lib/federation";
+import {
+  getPortalSourceAccess,
+  isEventCategoryAllowedForSourceAccess,
+} from "@/lib/federation";
 import {
   applyRateLimit,
   RATE_LIMITS,
@@ -821,20 +824,13 @@ export async function GET(request: NextRequest, { params }: Props) {
       for (const rawEvent of filterOutInactiveVenueEvents(events)) {
         const event = suppressEventImageIfVenueFlagged(rawEvent);
         if (
-          event.source_id &&
-          federationAccess.categoryConstraints.has(event.source_id)
-        ) {
-          const allowedCategories = federationAccess.categoryConstraints.get(
+          !isEventCategoryAllowedForSourceAccess(
+            federationAccess,
             event.source_id,
-          );
-          if (
-            allowedCategories !== null &&
-            allowedCategories !== undefined &&
-            event.category &&
-            !allowedCategories.includes(event.category)
-          ) {
-            continue;
-          }
+            event.category,
+          )
+        ) {
+          continue;
         }
         // Filter out events from wrong cities (e.g. Nashville events leaking into Atlanta portals)
         if (

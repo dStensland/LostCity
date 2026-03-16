@@ -6,7 +6,7 @@ import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-
 
 export const dynamic = "force-dynamic";
 
-// GET /api/programs/registration-radar?portal=hooky
+// GET /api/programs/registration-radar?portal=atlanta-families
 // Returns programs grouped by registration urgency:
 //   opening_soon  — upcoming, registration_opens within 14 days
 //   closing_soon  — open, registration_closes within 7 days

@@ -13,7 +13,7 @@ import { getPortalSourceAccess } from "@/lib/federation";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/programs?portal=hooky
+// GET /api/programs?portal=atlanta-families
 // Returns programs for a portal with optional filtering.
 // Compatibility fallback to recurring events is opt-in via include_events_fallback=true.
 export async function GET(request: NextRequest) {
@@ -46,6 +46,8 @@ export async function GET(request: NextRequest) {
   const qFilter = searchParams.get("q");
   const sortParam = searchParams.get("sort") ?? "session_start";
   const includeEventsFallback = searchParams.get("include_events_fallback") === "true";
+  // active=true: exclude past programs (session_end < today) and adult-only programs (age_min > 17)
+  const activeOnly = searchParams.get("active") === "true";
 
   try {
     const supabase = await createClient();
@@ -118,6 +120,14 @@ export async function GET(request: NextRequest) {
       programsQuery = programsQuery
         .or(`age_min.is.null,age_min.lte.${ageFilter}`)
         .or(`age_max.is.null,age_max.gte.${ageFilter}`);
+    }
+
+    if (activeOnly) {
+      const today = new Date().toISOString().split("T")[0];
+      // Exclude sessions that have already ended; keep programs with no end date
+      programsQuery = programsQuery.or(`session_end.is.null,session_end.gte.${today}`);
+      // Exclude adult-only programs (age_min > 17 means no one under 18 qualifies)
+      programsQuery = programsQuery.or(`age_min.is.null,age_min.lte.17`);
     }
 
     if (registrationFilter && isValidString(registrationFilter, 1, 100)) {

@@ -1,11 +1,11 @@
-export type PortalVertical =
-  | "city"
-  | "hotel"
-  | "film"
-  | "hospital"
-  | "community"
-  | "marketplace"
-  | "dog";
+import {
+  normalizePortalVertical,
+  supportsPortalArtists,
+  supportsPortalMap,
+  supportsPortalSpots,
+  supportsPortalWeather,
+  type PortalVertical,
+} from "@/lib/portal-taxonomy";
 
 export type PortalType = "city" | "event" | "business" | "personal" | string;
 
@@ -71,21 +71,10 @@ function toPortalVertical(
   portalType: PortalType,
   settings?: Record<string, unknown> | null
 ): PortalVertical {
-  const rawVertical = settings?.vertical;
-  if (
-    rawVertical === "city" ||
-    rawVertical === "hotel" ||
-    rawVertical === "film" ||
-    rawVertical === "hospital" ||
-    rawVertical === "community" ||
-    rawVertical === "marketplace" ||
-    rawVertical === "dog"
-  ) {
-    return rawVertical;
-  }
-
-  if (portalType === "business") return "community";
-  return "city";
+  return normalizePortalVertical(
+    settings?.vertical,
+    portalType === "business" ? "community" : "city",
+  );
 }
 
 function sanitizeSourceIds(sourceIds: number[] | undefined): number[] {
@@ -151,10 +140,10 @@ export function buildPortalManifest(input: PortalManifestInput): PortalManifest 
     },
     modules: {
       events: true,
-      spots: vertical !== "film",
-      artists: vertical === "city" || vertical === "film" || vertical === "community",
-      weather: vertical !== "dog",
-      map: vertical !== "hotel",
+      spots: supportsPortalSpots(vertical),
+      artists: supportsPortalArtists(vertical),
+      weather: supportsPortalWeather(vertical),
+      map: supportsPortalMap(vertical),
     },
   };
 }

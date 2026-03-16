@@ -22,7 +22,10 @@ import {
   buildPortalHolidayFeedSections,
   finalizePortalFeedSections,
 } from "@/lib/portal-feed-finalize";
-import { getPortalSourceAccess } from "@/lib/federation";
+import {
+  getPortalSourceAccess,
+  isEventCategoryAllowedForSourceAccess,
+} from "@/lib/federation";
 import { isValidUUID } from "@/lib/api-utils";
 import { fetchSocialProofCounts } from "@/lib/social-proof";
 import {
@@ -781,20 +784,13 @@ export async function loadPortalFeed(
       for (const rawEvent of filterOutInactiveVenueEvents(events)) {
         const event = suppressEventImageIfVenueFlagged(rawEvent);
         if (
-          event.source_id &&
-          federationAccess.categoryConstraints.has(event.source_id)
-        ) {
-          const allowedCategories = federationAccess.categoryConstraints.get(
+          !isEventCategoryAllowedForSourceAccess(
+            federationAccess,
             event.source_id,
-          );
-          if (
-            allowedCategories !== null &&
-            allowedCategories !== undefined &&
-            event.category &&
-            !allowedCategories.includes(event.category)
-          ) {
-            continue;
-          }
+            event.category,
+          )
+        ) {
+          continue;
         }
         if (
           enforcePortalCityFilter &&

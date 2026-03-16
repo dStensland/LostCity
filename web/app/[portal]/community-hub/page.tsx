@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getLocalDateString } from "@/lib/formats";
 import { getProxiedImageSrc } from "@/lib/image-proxy";
 import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
+import { isFilmPortalVertical } from "@/lib/portal-taxonomy";
 import FilmPortalNav from "../_components/film/FilmPortalNav";
 
 type Props = {
@@ -241,7 +242,7 @@ export default async function CommunityHubPage({ params }: Props) {
 
   const vertical = getPortalVertical(portal);
 
-  if (vertical !== "film") {
+  if (!isFilmPortalVertical(vertical)) {
     redirect(`/${portal.slug}?view=community`);
   }
 
@@ -448,4 +449,3 @@ export default async function CommunityHubPage({ params }: Props) {
     </div>
   );
 }
-

@@ -18,7 +18,7 @@ ENTITY_LANE_NAMES = (
     "programs",
     "exhibitions",
     "open_calls",
-    "opportunities",
+    "volunteer_opportunities",
     "venue_features",
     "venue_specials",
     "editorial_mentions",
@@ -44,7 +44,7 @@ class SourceEntityCapabilities:
     programs: bool = False
     exhibitions: bool = False
     open_calls: bool = False
-    opportunities: bool = False
+    volunteer_opportunities: bool = False
     venue_features: bool = False
     venue_specials: bool = False
     editorial_mentions: bool = False
@@ -71,7 +71,7 @@ class TypedEntityEnvelope:
     programs: list[EntityRecord] = field(default_factory=list)
     exhibitions: list[EntityRecord] = field(default_factory=list)
     open_calls: list[EntityRecord] = field(default_factory=list)
-    opportunities: list[EntityRecord] = field(default_factory=list)
+    volunteer_opportunities: list[EntityRecord] = field(default_factory=list)
     venue_features: list[EntityRecord] = field(default_factory=list)
     venue_specials: list[EntityRecord] = field(default_factory=list)
     editorial_mentions: list[EntityRecord] = field(default_factory=list)

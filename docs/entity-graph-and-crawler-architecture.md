@@ -195,7 +195,7 @@ Current home:
 
 - `exhibitions`
 
-### Opportunities
+### Opportunity Families
 
 Use for submission-, volunteer-, or deadline-driven actionables.
 
@@ -210,6 +210,12 @@ Current homes:
 
 - `volunteer_opportunities`
 - `open_calls`
+
+Direction:
+
+- keep concrete opportunity families first-class
+- do not preserve a generic crawler `opportunities` lane unless it maps to a
+  concrete shared entity contract
 
 ### Games / Matches / Schedules
 
@@ -351,6 +357,44 @@ Use this rule:
 Recommended storage strategy:
 
 - short term: represent many of these through destination records plus destination-feature or relationship metadata
+- short term runtime contract: treat child venue types like `landmark`,
+  `artifact`, `public_art`, `viewpoint`, `historic_site`, and `skyscraper` as
+  attached child destinations before promoting them into their own entity family
+- use a shared relationship vocabulary for those child destinations:
+  `standalone_spot`, `parent_destination`, and `child_landmark`, instead of
+  letting each portal invent its own launch-only semantics
+- when a portal-specific launch route still exists, expose a canonical
+  destination-node payload shape first and keep older artifact-specific fields
+  only as compatibility aliases
+- when a launch surface is likely to persist, add a canonical path like
+  `destination-nodes` and keep older artifact-named routes as wrappers instead
+  of making artifact language the long-term API contract
+- use canonical field names like `destinationNodeType` in those payloads and
+  treat artifact-era names only as compatibility aliases
+- encode at least a baseline attached-vs-standalone distinction in code, not
+  just docs, so child landmarks and standalone destination records can be
+  reasoned about consistently before any later promotion into a dedicated table
+- use that distinction in runtime behavior where appropriate, for example by
+  preferring standalone destination nodes over attached children in launch-tier
+  shelves unless a product explicitly wants attached-child emphasis
+- expose that distinction through canonical route/query semantics too, so future
+  portal surfaces can ask directly for attached-child nodes or specific quest
+  lanes instead of rebuilding those filters client-side
+- move primary consumers onto those canonical route/query semantics as they are
+  introduced, so the platform contract is exercised in real usage instead of
+  becoming another unused abstraction layer
+- when a canonical route starts powering a real shelf, let it own not just
+  filtering but ordering and reasonable limits too, so shelf semantics live in
+  reusable infrastructure instead of each client component
+- keep the config/export layer canonical too; artifact-era export names can
+  survive temporarily as aliases, but destination-node-first names should be
+  the source of truth
+- apply the same rule to quest and grouping vocabularies, not just node lists,
+  so the launch contract does not drift back toward artifact-first semantics at
+  the config layer
+- apply the same rule to file/module boundaries too; a canonical destination-node
+  contract should live in a destination-node-named module, with artifact-era
+  filenames surviving only as compatibility shims if needed
 - medium term: add a dedicated landmark/artifact table only when Yonder truly needs independent routing, quest joins, and progress tracking
 
 This aligns with the existing Yonder artifact research direction.
@@ -473,11 +517,12 @@ Recommended output envelope:
   "events": [...],
   "programs": [...],
   "exhibitions": [...],
-  "opportunities": [...],
-  "specials": [...],
-  "destination_features": [...],
-  "editorial_signals": [...],
-  "planning_facts": [...],
+  "open_calls": [...],
+  "volunteer_opportunities": [...],
+  "venue_features": [...],
+  "venue_specials": [...],
+  "editorial_mentions": [...],
+  "venue_occasions": [...],
 }
 ```
 
@@ -491,7 +536,8 @@ Add per-source capabilities:
 - `emits_events`
 - `emits_programs`
 - `emits_exhibitions`
-- `emits_opportunities`
+- `emits_open_calls`
+- `emits_volunteer_opportunities`
 - `emits_specials`
 - `emits_destination_features`
 - `emits_destination_details`
@@ -507,7 +553,8 @@ Shared writers should exist per lane:
 - event writer
 - program writer
 - exhibition writer
-- opportunity writer
+- open-call writer
+- volunteer-opportunity writer
 - specials writer
 - destination feature writer
 - destination-details writer

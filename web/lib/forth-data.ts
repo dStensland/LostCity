@@ -21,7 +21,11 @@ import type {
 } from "./forth-types";
 import type { Portal } from "./portal-context";
 import { createClient } from "./supabase/server";
-import { getPortalSourceAccess, type PortalSourceAccess } from "./federation";
+import {
+  getPortalSourceAccess,
+  isEventCategoryAllowedForSourceAccess,
+  type PortalSourceAccess,
+} from "./federation";
 import { getLocalDateString } from "./formats";
 import {
   haversineDistanceKm,
@@ -633,10 +637,13 @@ async function fetchFeedSectionsDirect(
 
     for (const event of (poolEvents || []) as DbEvent[]) {
       // Apply federation category constraints
-      if (event.source_id && federationAccess.categoryConstraints.has(event.source_id)) {
-        const allowed = federationAccess.categoryConstraints.get(event.source_id);
-        if (allowed !== null && allowed !== undefined && event.category_id && !allowed.includes(event.category_id)) continue;
-      }
+      if (
+        !isEventCategoryAllowedForSourceAccess(
+          federationAccess,
+          event.source_id,
+          event.category_id,
+        )
+      ) continue;
       // City geo-filter
       if (!isVenueCityInPortalAllowlist(event.venue?.city, portalCities)) {
         continue;
@@ -862,10 +869,13 @@ async function fetchDestinationsDirect(
   const nextEventByVenue = new Map<number, DbNextEvent>();
   for (const event of (eventsRaw || []) as DbNextEvent[]) {
     if (!event.venue_id) continue;
-    if (event.source_id && federationAccess.categoryConstraints.has(event.source_id)) {
-      const allowed = federationAccess.categoryConstraints.get(event.source_id);
-      if (allowed !== null && allowed !== undefined && event.category_id && !allowed.includes(event.category_id)) continue;
-    }
+    if (
+      !isEventCategoryAllowedForSourceAccess(
+        federationAccess,
+        event.source_id,
+        event.category_id,
+      )
+    ) continue;
     if (!nextEventByVenue.has(event.venue_id)) nextEventByVenue.set(event.venue_id, event);
   }
 

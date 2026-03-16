@@ -65,6 +65,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const attribution = await resolvePortalAttributionForWrite(request, {
     endpoint: "/api/volunteer/engagements/[id]",
     body,
+    allowMissing: true,
     requireWhenHinted: true,
   });
 

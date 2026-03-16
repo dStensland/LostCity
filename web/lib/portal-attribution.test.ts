@@ -134,6 +134,32 @@ describe("Portal attribution coverage", () => {
     expect(missing).toEqual([]);
   });
 
+  it("requires explicit allowMissing opt-outs on routes that derive portal context from target entities", () => {
+    const libRoot = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      ".."
+    );
+
+    const routesThatMayDerivePortalContext = [
+      "app/api/volunteer/engagements/route.ts",
+      "app/api/volunteer/engagements/[id]/route.ts",
+      "app/api/channels/subscriptions/route.ts",
+    ];
+
+    const missing: string[] = [];
+
+    for (const relativePath of routesThatMayDerivePortalContext) {
+      const fullPath = path.join(libRoot, relativePath);
+      const content = fs.readFileSync(fullPath, "utf-8");
+
+      if (!content.includes("allowMissing: true")) {
+        missing.push(relativePath);
+      }
+    }
+
+    expect(missing).toEqual([]);
+  });
+
   it("ensures search venue RPC callers pass city parameter", () => {
     const libRoot = path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),

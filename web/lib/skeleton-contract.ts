@@ -1,3 +1,6 @@
+import { coercePortalVertical } from "@/lib/portal-taxonomy";
+import type { PortalVertical } from "@/lib/portal-taxonomy";
+
 export const PORTAL_SKELETON_VERTICALS = [
   "city",
   "hotel",
@@ -59,7 +62,7 @@ export const PORTAL_SKELETON_REGISTRY: Record<PortalSkeletonRoute, Record<Portal
 
 type PortalLike = {
   settings?: {
-    vertical?: string | null;
+    vertical?: PortalVertical | string | null;
   } | null;
 } | null | undefined;
 
@@ -76,10 +79,9 @@ export function inferSkeletonVerticalFromSlug(slug: string): PortalSkeletonVerti
 }
 
 export function resolveSkeletonVertical(portal: PortalLike, fallbackSlug: string): PortalSkeletonVertical {
-  const configured = portal?.settings?.vertical;
-  if (typeof configured === "string" && isSupportedVertical(configured)) {
+  const configured = coercePortalVertical(portal?.settings?.vertical);
+  if (configured && isSupportedVertical(configured)) {
     return configured;
   }
   return inferSkeletonVerticalFromSlug(fallbackSlug);
 }
-

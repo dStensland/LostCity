@@ -1,4 +1,8 @@
-from sources._activecommunities_family_filter import is_family_relevant_activity
+from sources._activecommunities_family_filter import (
+    infer_activecommunities_registration_open,
+    infer_activecommunities_schedule_days,
+    is_family_relevant_activity,
+)
 
 
 def test_family_filter_keeps_youth_programs_and_skips_adult_programs() -> None:
@@ -66,4 +70,44 @@ def test_family_filter_keeps_youth_camps_without_explicit_ages() -> None:
             tags=["summer"],
         )
         is True
+    )
+
+
+def test_infer_activecommunities_schedule_days_supports_weekday_phrases_and_short_ranges() -> None:
+    assert (
+        infer_activecommunities_schedule_days(
+            session_start="2026-06-08",
+            session_end="2026-06-12",
+            date_range_description="",
+            desc_text="Camp runs weekdays with arts and games.",
+        )
+        == [1, 2, 3, 4, 5]
+    )
+    assert (
+        infer_activecommunities_schedule_days(
+            session_start="2026-03-21",
+            session_end="2026-03-21",
+            date_range_description="",
+            desc_text="One-day workshop.",
+        )
+        == [6]
+    )
+
+
+def test_infer_activecommunities_registration_open_prefers_payload_then_description() -> None:
+    assert (
+        infer_activecommunities_registration_open(
+            activity_online_start_time="2026-01-16 09:00:00",
+            desc_text="",
+            session_start="2026-06-08",
+        )
+        == "2026-01-16"
+    )
+    assert (
+        infer_activecommunities_registration_open(
+            activity_online_start_time="",
+            desc_text="Open registration for new plots will begin February 3rd.",
+            session_start="2026-01-02",
+        )
+        == "2026-02-03"
     )

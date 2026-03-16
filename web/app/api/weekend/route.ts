@@ -132,7 +132,7 @@ function isNearAtlantaCenter(venue: VenueShape): boolean {
   return km <= EASY_WINS_RADIUS_KM;
 }
 
-// GET /api/weekend?portal=hooky
+// GET /api/weekend?portal=atlanta-families
 // Returns family activities for the upcoming weekend (Fri–Sun)
 // grouped into sections: best_bets, free, easy_wins, big_outings
 export async function GET(request: NextRequest) {

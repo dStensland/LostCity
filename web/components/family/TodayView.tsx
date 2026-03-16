@@ -1,15 +1,18 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import Image from "next/image";
+import { useWeather } from "@/lib/hooks/useWeather";
 import {
   BellSimple,
-  Lightning,
   Tag,
   CalendarCheck,
+  ArrowRight,
+  MapPin,
   Clock,
+  SmileySticker,
 } from "@phosphor-icons/react";
 import {
   SCHOOL_SYSTEM_LABELS,
@@ -22,9 +25,60 @@ import {
 import type { EventWithLocation } from "@/lib/search";
 import { RegistrationBadge } from "./RegistrationBadge";
 
+// ---- Palette (Afternoon Field) --------------------------------------------
+const CANVAS = "#F0EDE4";
+const CARD = "#FAFAF6";
+const SAGE = "#5E7A5E";
+const AMBER = "#C48B1D";
+const MOSS = "#7A9E7A";
+const SKY = "#78B7D0";
+const TEXT = "#1E2820";
+const MUTED = "#756E63";
+const BORDER = "#E0DDD4";
+const SAGE_WASH = "#EEF2EE";
+
+void CANVAS; // used as page-level bg in parent
+void MOSS;
+void SKY;
+void SAGE_WASH;
+
+// ---- Types ---------------------------------------------------------------
+
 interface TodayViewProps {
   portalId: string;
   portalSlug: string;
+  activeKidIds?: string[];
+  kids?: import("@/lib/types/kid-profiles").KidProfile[];
+  desktopLayout?: boolean;
+}
+
+interface VenueCard {
+  id: number;
+  name: string;
+  venue_type: string | null;
+  neighborhood: string | null;
+  image_url: string | null;
+  address: string | null;
+}
+
+// ---- Helpers --------------------------------------------------------------
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning!";
+  if (hour < 17) return "Good afternoon!";
+  return "Good evening!";
+}
+
+function formatTime(timeStr: string | null | undefined): string {
+  if (!timeStr) return "";
+  // timeStr is "HH:MM:SS" or "HH:MM"
+  const [hourStr, minStr] = timeStr.split(":");
+  const hour = parseInt(hourStr, 10);
+  const min = minStr ?? "00";
+  const period = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${min} ${period}`;
 }
 
 // ---- Data fetchers -------------------------------------------------------
@@ -36,9 +90,7 @@ async function fetchSchoolCalendar(): Promise<SchoolCalendarEvent[]> {
   return (json.events ?? []) as SchoolCalendarEvent[];
 }
 
-async function fetchRegistrationRadar(
-  portalSlug: string
-): Promise<{
+async function fetchRegistrationRadar(portalSlug: string): Promise<{
   opening_soon: ProgramWithVenue[];
   closing_soon: ProgramWithVenue[];
   filling_fast: ProgramWithVenue[];
@@ -46,8 +98,7 @@ async function fetchRegistrationRadar(
   const res = await fetch(
     `/api/programs/registration-radar?portal=${encodeURIComponent(portalSlug)}`
   );
-  if (!res.ok)
-    return { opening_soon: [], closing_soon: [], filling_fast: [] };
+  if (!res.ok) return { opening_soon: [], closing_soon: [], filling_fast: [] };
   return res.json();
 }
 
@@ -65,61 +116,458 @@ async function fetchTodayEvents(portalId: string): Promise<EventWithLocation[]> 
   return (json.events ?? []) as EventWithLocation[];
 }
 
-// ---- Sub-components ------------------------------------------------------
+async function fetchFeaturedEvent(portalId: string): Promise<EventWithLocation | null> {
+  const params = new URLSearchParams({
+    date: "today",
+    tags: "family-friendly",
+    portal_id: portalId,
+    limit: "1",
+    useCursor: "true",
+  });
+  const res = await fetch(`/api/events?${params.toString()}`);
+  if (!res.ok) return null;
+  const json = await res.json();
+  const events = (json.events ?? []) as EventWithLocation[];
+  return events[0] ?? null;
+}
 
-function SectionHeader({
-  icon,
-  title,
+async function fetchExploreVenues(portalId: string): Promise<VenueCard[]> {
+  const params = new URLSearchParams({
+    portal_id: portalId,
+    family_friendly: "true",
+    limit: "6",
+  });
+  // Use the venue search endpoint — filter for family-friendly explore-able venues
+  const res = await fetch(`/api/venues/search?q=family&limit=6&${params.toString()}`);
+  if (!res.ok) return [];
+  const json = await res.json();
+  return (json.venues ?? []) as VenueCard[];
+}
+
+// ---- Shared sub-components -----------------------------------------------
+
+function SectionLabel({
+  text,
+  color,
+  rightSlot,
 }: {
-  icon: React.ReactNode;
-  title: string;
+  text: string;
+  color: string;
+  rightSlot?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-2 mb-3">
-      <span style={{ color: "var(--coral)" }}>{icon}</span>
-      <h2
-        className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]"
-        style={{ fontFamily: "var(--font-mono, ui-monospace, monospace)" }}
+    <div className="flex items-center justify-between mb-3">
+      <span
+        style={{
+          color,
+          fontFamily: "Outfit, system-ui, sans-serif",
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: "1.5px",
+          textTransform: "uppercase",
+        }}
       >
-        {title}
-      </h2>
+        {text}
+      </span>
+      {rightSlot}
     </div>
   );
 }
 
-function EmptyState({ message }: { message: string }) {
+function SeeAllLink({
+  href,
+  label = "See all →",
+}: {
+  href: string;
+  label?: string;
+}) {
   return (
-    <p className="text-sm text-[var(--muted)] py-3">{message}</p>
+    <Link
+      href={href}
+      className="hover:opacity-70 transition-opacity"
+      style={{ color: SAGE, fontSize: 12, fontFamily: "DM Sans, system-ui, sans-serif" }}
+    >
+      {label}
+    </Link>
   );
 }
 
-// School calendar alert row
-function CalendarAlert({ event }: { event: SchoolCalendarEvent }) {
+function SkeletonBlock({ height = 60 }: { height?: number }) {
+  return (
+    <div
+      className="rounded-2xl animate-pulse"
+      style={{ height, backgroundColor: BORDER }}
+    />
+  );
+}
+
+// ---- Section: Weather/Greeting Banner ------------------------------------
+
+function WeatherPill({ temp, condition, emoji }: { temp: number; condition: string; emoji: string }) {
+  return (
+    <div
+      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5"
+      style={{
+        backgroundColor: `${AMBER}18`,
+        border: `1px solid ${AMBER}30`,
+      }}
+    >
+      <span style={{ fontSize: 13, lineHeight: 1 }}>{emoji}</span>
+      <span
+        style={{
+          fontFamily: "DM Sans, system-ui, sans-serif",
+          fontSize: 12,
+          fontWeight: 600,
+          color: AMBER,
+        }}
+      >
+        {temp}°F · {condition}
+      </span>
+    </div>
+  );
+}
+
+function GreetingHeadline({ todayEventCount }: { todayEventCount: number | null }) {
+  const greeting = getGreeting();
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+  const subtitle =
+    todayEventCount === null
+      ? "Loading…"
+      : todayEventCount > 0
+      ? `${todayEventCount} thing${todayEventCount !== 1 ? "s" : ""} happening after school`
+      : "Explore what's on this week";
+
+  return (
+    <div>
+      <h1
+        style={{
+          fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
+          fontSize: 32,
+          fontWeight: 800,
+          color: TEXT,
+          lineHeight: 1.1,
+          margin: 0,
+        }}
+      >
+        {greeting}
+      </h1>
+      <p
+        style={{
+          fontFamily: "DM Sans, system-ui, sans-serif",
+          fontSize: 13,
+          color: MUTED,
+          marginTop: 6,
+        }}
+      >
+        {dateStr} · {subtitle}
+      </p>
+    </div>
+  );
+}
+
+// ---- Section: Featured Event Hero ----------------------------------------
+
+function FeaturedHero({
+  event,
+  isLoading,
+  portalSlug,
+  todayEventCount,
+}: {
+  event: EventWithLocation | null | undefined;
+  isLoading: boolean;
+  portalSlug: string;
+  todayEventCount: number | null;
+}) {
+  if (isLoading) {
+    return <SkeletonBlock height={160} />;
+  }
+
+  // When we have a featured event with an image — show it as hero
+  if (event?.image_url) {
+    return (
+      <Link
+        href={`/${portalSlug}?event=${event.id}`}
+        className="block relative overflow-hidden"
+        style={{ borderRadius: 16, height: 160 }}
+      >
+        <Image
+          src={event.image_url}
+          alt={event.title}
+          fill
+          className="object-cover"
+          sizes="(min-width: 640px) 640px, 100vw"
+        />
+        <div
+          className="absolute inset-x-0 bottom-0"
+          style={{
+            background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 100%)",
+            padding: "32px 14px 12px",
+          }}
+        >
+          <p
+            style={{
+              color: "#fff",
+              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: "0.8px",
+              textTransform: "uppercase",
+              opacity: 0.9,
+              marginBottom: 2,
+            }}
+          >
+            Happening Today
+          </p>
+          <p
+            style={{
+              color: "#fff",
+              fontFamily: "Outfit, system-ui, sans-serif",
+              fontSize: 18,
+              fontWeight: 700,
+              lineHeight: 1.25,
+            }}
+          >
+            {event.title}
+          </p>
+        </div>
+      </Link>
+    );
+  }
+
+  // Fallback: contextual quick-link card instead of empty hero
+  const hasEvents = (todayEventCount ?? 0) > 0;
+  const QUICK_LINKS = [
+    { label: "Outdoors", href: `/${portalSlug}?view=find&type=events&date=today&tags=outdoor` },
+    { label: "Arts & Crafts", href: `/${portalSlug}?view=find&type=events&date=today&categories=art` },
+    { label: "Free", href: `/${portalSlug}?view=find&type=events&date=today&is_free=true` },
+    { label: "All Events", href: `/${portalSlug}?view=find&type=events&date=today` },
+  ];
+
+  return (
+    <div
+      className="overflow-hidden"
+      style={{
+        borderRadius: 16,
+        background: "linear-gradient(135deg, #5E7A5E 0%, #6E8E6E 50%, #78B7D0 100%)",
+        padding: "20px 18px 16px",
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p
+            style={{
+              color: "rgba(255,255,255,0.7)",
+              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: "0.8px",
+              textTransform: "uppercase",
+              marginBottom: 4,
+            }}
+          >
+            {hasEvents ? "Happening Today" : "This Week"}
+          </p>
+          <p
+            style={{
+              color: "#fff",
+              fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
+              fontSize: 20,
+              fontWeight: 800,
+              lineHeight: 1.2,
+            }}
+          >
+            {hasEvents
+              ? `${todayEventCount} thing${todayEventCount !== 1 ? "s" : ""} to do`
+              : "Find your next adventure"}
+          </p>
+          <p
+            style={{
+              color: "rgba(255,255,255,0.75)",
+              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontSize: 13,
+              marginTop: 4,
+              lineHeight: 1.4,
+            }}
+          >
+            {hasEvents
+              ? "After school, weekends, and everything in between."
+              : "Browse family-friendly events, programs, and places."}
+          </p>
+        </div>
+        <SmileySticker size={40} weight="fill" style={{ color: "rgba(255,255,255,0.3)", flexShrink: 0, marginTop: 2 }} />
+      </div>
+
+      {/* Quick link pills */}
+      <div className="flex flex-wrap gap-2 mt-4">
+        {QUICK_LINKS.map((link) => (
+          <Link
+            key={link.label}
+            href={link.href}
+            className="rounded-full px-3 py-1.5 transition-opacity hover:opacity-80"
+            style={{
+              backgroundColor: "rgba(255,255,255,0.2)",
+              color: "#fff",
+              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            {link.label}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---- Section: Today's Plan -----------------------------------------------
+
+function TodaysPlan({
+  kids,
+  activeKidIds,
+  portalSlug,
+}: {
+  kids: import("@/lib/types/kid-profiles").KidProfile[];
+  activeKidIds: string[];
+  portalSlug: string;
+}) {
+  const hasKids = kids.length > 0;
+  void activeKidIds; // will be used for saved-event filtering when data layer is ready
+
+  return (
+    <section>
+      <SectionLabel
+        text="Today's Plan"
+        color={AMBER}
+        rightSlot={
+          hasKids ? (
+            <Link
+              href={`/${portalSlug}?view=plans`}
+              className="hover:opacity-70 transition-opacity"
+              style={{ color: SAGE, fontSize: 12, fontFamily: "DM Sans, system-ui, sans-serif" }}
+            >
+              Edit →
+            </Link>
+          ) : undefined
+        }
+      />
+      {/* Empty state — plan is built from saved/RSVPd events which aren't yet wired */}
+      <div
+        className="rounded-2xl px-4 py-5"
+        style={{ backgroundColor: CARD, border: `1px solid ${BORDER}` }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="flex-shrink-0 flex items-center justify-center rounded-xl"
+            style={{ width: 40, height: 40, backgroundColor: SAGE_WASH }}
+          >
+            <CalendarCheck size={20} weight="duotone" style={{ color: SAGE }} />
+          </div>
+          <div>
+            <p
+              style={{
+                fontFamily: "DM Sans, system-ui, sans-serif",
+                fontSize: 14,
+                fontWeight: 600,
+                color: TEXT,
+                lineHeight: 1.3,
+              }}
+            >
+              Your day is wide open
+            </p>
+            <p
+              style={{
+                fontFamily: "DM Sans, system-ui, sans-serif",
+                fontSize: 12,
+                color: MUTED,
+                marginTop: 2,
+              }}
+            >
+              Save events to build your plan.
+            </p>
+          </div>
+        </div>
+        <Link
+          href={`/${portalSlug}?view=find&type=events&date=today`}
+          className="inline-flex items-center gap-1.5 mt-3 rounded-full px-4 py-2 transition-opacity hover:opacity-80"
+          style={{
+            backgroundColor: SAGE,
+            color: "#fff",
+            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          Browse events <ArrowRight size={13} weight="bold" />
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+// ---- Section: Heads Up (school calendar) ---------------------------------
+
+const SCHOOL_TYPE_EMOJI: Record<string, string> = {
+  no_school: "🏠",
+  half_day: "🕐",
+  break: "🌸",
+  holiday: "🎉",
+  early_release: "⏰",
+};
+
+function HeadsUpCard({ event }: { event: SchoolCalendarEvent }) {
   const startDate = new Date(event.start_date + "T00:00:00");
   const endDate = new Date(event.end_date + "T00:00:00");
   const isSingleDay = event.start_date === event.end_date;
 
   const dateLabel = isSingleDay
-    ? startDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+    ? startDate.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      })
     : `${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 
   const typeLabel = SCHOOL_EVENT_TYPE_LABELS[event.event_type];
-  const systemLabel = SCHOOL_SYSTEM_LABELS[event.school_system];
+  // school_system may be a pre-combined "APS, DeKalb, Cobb" string from deduplication
+  const systemLabel = SCHOOL_SYSTEM_LABELS[event.school_system] ?? event.school_system;
+  const emoji = SCHOOL_TYPE_EMOJI[event.event_type] ?? "📅";
 
   return (
     <div
-      className="flex items-start gap-3 py-2.5 border-b last:border-b-0"
-      style={{ borderColor: "var(--twilight, #E8E4DF)" }}
+      className="flex items-start gap-3 rounded-xl"
+      style={{
+        backgroundColor: CARD,
+        border: `1px solid ${BORDER}`,
+        padding: "10px 14px",
+      }}
     >
-      <div
-        className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5"
-        style={{ backgroundColor: "color-mix(in srgb, var(--coral) 10%, white)" }}
-      >
-        <CalendarCheck size={16} weight="duotone" style={{ color: "var(--coral)" }} />
-      </div>
+      <span style={{ fontSize: 20, flexShrink: 0, marginTop: 1 }}>{emoji}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[var(--cream)] leading-snug">{event.name}</p>
-        <p className="text-xs text-[var(--muted)] mt-0.5">
+        <p
+          style={{
+            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontSize: 14,
+            fontWeight: 600,
+            color: TEXT,
+            lineHeight: 1.3,
+          }}
+        >
+          {event.name}
+        </p>
+        <p
+          style={{
+            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontSize: 11,
+            color: MUTED,
+            marginTop: 2,
+          }}
+        >
           {typeLabel} · {systemLabel} · {dateLabel}
         </p>
       </div>
@@ -127,7 +575,68 @@ function CalendarAlert({ event }: { event: SchoolCalendarEvent }) {
   );
 }
 
-// Registration radar row
+function HeadsUpSection({
+  calendarData,
+  isLoading,
+}: {
+  calendarData: SchoolCalendarEvent[] | undefined;
+  isLoading: boolean;
+}) {
+  // Deduplicate by (name, start_date, end_date) — same break shows once per
+  // school system and we merge the system names into a single row.
+  const dedupedCalendar = useMemo<SchoolCalendarEvent[]>(() => {
+    if (!calendarData) return [];
+    const groups = new Map<string, SchoolCalendarEvent & { _systems: string[] }>();
+    for (const evt of calendarData) {
+      const key = `${evt.name}|${evt.start_date}|${evt.end_date}`;
+      const existing = groups.get(key);
+      if (existing) {
+        const systemLabel = SCHOOL_SYSTEM_LABELS[evt.school_system] ?? evt.school_system;
+        if (!existing._systems.includes(systemLabel)) {
+          existing._systems.push(systemLabel);
+        }
+      } else {
+        const systemLabel = SCHOOL_SYSTEM_LABELS[evt.school_system] ?? evt.school_system;
+        groups.set(key, { ...evt, _systems: [systemLabel] });
+      }
+    }
+    // Re-map: if multiple systems, override school_system label in the card via the name field
+    return Array.from(groups.values()).map((g) => {
+      if (g._systems.length <= 1) return g;
+      // Encode the combined system list into school_system so HeadsUpCard renders it.
+      // HeadsUpCard calls SCHOOL_SYSTEM_LABELS[event.school_system]; if the key is not
+      // in the map the lookup returns undefined, so we use the combined string directly.
+      return { ...g, school_system: g._systems.join(", ") as SchoolCalendarEvent["school_system"] };
+    });
+  }, [calendarData]);
+
+  const has = dedupedCalendar.length > 0;
+
+  return (
+    <section>
+      <SectionLabel text="Heads Up" color={AMBER} />
+      {isLoading ? (
+        <div className="flex flex-col gap-2">
+          <SkeletonBlock height={58} />
+          <SkeletonBlock height={58} />
+        </div>
+      ) : has ? (
+        <div className="flex flex-col gap-2">
+          {dedupedCalendar.map((evt) => (
+            <HeadsUpCard key={`${evt.name}|${evt.start_date}`} event={evt} />
+          ))}
+        </div>
+      ) : (
+        <p style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 13, color: MUTED }}>
+          No upcoming school calendar alerts.
+        </p>
+      )}
+    </section>
+  );
+}
+
+// ---- Section: Registration Radar -----------------------------------------
+
 function RadarRow({
   program,
   urgencyLabel,
@@ -140,25 +649,36 @@ function RadarRow({
   return (
     <div
       className="flex items-start gap-3 py-2.5 border-b last:border-b-0"
-      style={{ borderColor: "var(--twilight, #E8E4DF)" }}
+      style={{ borderColor: BORDER }}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-[var(--cream)] truncate">{program.name}</span>
+          <span
+            style={{
+              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontSize: 14,
+              fontWeight: 600,
+              color: TEXT,
+            }}
+          >
+            {program.name}
+          </span>
           <RegistrationBadge status={program.registration_status} />
         </div>
         <div className="flex items-center gap-2 flex-wrap mt-0.5">
           {program.provider_name && (
-            <span className="text-xs text-[var(--muted)]">{program.provider_name}</span>
+            <span style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 11, color: MUTED }}>
+              {program.provider_name}
+            </span>
           )}
-          <span className="text-xs text-[var(--muted)]">
+          <span style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 11, color: MUTED }}>
             {formatAgeRange(program.age_min, program.age_max)}
           </span>
-          <span className="text-xs text-[var(--muted)]">
+          <span style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 11, color: MUTED }}>
             {formatCost(program.cost_amount, program.cost_period)}
           </span>
         </div>
-        <p className="text-xs mt-0.5" style={{ color: urgencyColor }}>
+        <p style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 11, color: urgencyColor, marginTop: 2 }}>
           {urgencyLabel}
         </p>
       </div>
@@ -167,7 +687,13 @@ function RadarRow({
           href={program.registration_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-shrink-0 text-xs font-medium text-[var(--coral)] hover:opacity-80 transition-opacity mt-0.5"
+          className="flex-shrink-0 hover:opacity-80 transition-opacity mt-0.5"
+          style={{
+            color: AMBER,
+            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontSize: 12,
+            fontWeight: 600,
+          }}
         >
           Register →
         </a>
@@ -176,64 +702,358 @@ function RadarRow({
   );
 }
 
-// Today event card — compact horizontal layout
-function TodayEventCard({
+function RegistrationRadarSection({
+  radarData,
+  isLoading,
+}: {
+  radarData:
+    | { opening_soon: ProgramWithVenue[]; closing_soon: ProgramWithVenue[]; filling_fast: ProgramWithVenue[] }
+    | undefined;
+  isLoading: boolean;
+}) {
+  const urgentPrograms: Array<{
+    program: ProgramWithVenue;
+    urgencyLabel: string;
+    urgencyColor: string;
+  }> = [];
+
+  if (radarData) {
+    radarData.closing_soon.forEach((p) =>
+      urgentPrograms.push({ program: p, urgencyLabel: "Registration closes soon", urgencyColor: "#C45A3B" })
+    );
+    radarData.filling_fast.forEach((p) =>
+      urgentPrograms.push({ program: p, urgencyLabel: "Waitlist — act fast", urgencyColor: "#D97706" })
+    );
+    radarData.opening_soon.forEach((p) =>
+      urgentPrograms.push({ program: p, urgencyLabel: "Registration opens soon", urgencyColor: SAGE })
+    );
+  }
+
+  const has = urgentPrograms.length > 0;
+
+  return (
+    <section>
+      <SectionLabel
+        text="Registration Radar"
+        color={AMBER}
+        rightSlot={<Tag size={14} weight="bold" style={{ color: AMBER }} />}
+      />
+      {isLoading ? (
+        <div className="flex flex-col gap-2">
+          <SkeletonBlock height={68} />
+          <SkeletonBlock height={68} />
+        </div>
+      ) : has ? (
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{ backgroundColor: CARD, border: `1px solid ${BORDER}`, padding: "0 14px" }}
+        >
+          {urgentPrograms.slice(0, 5).map(({ program, urgencyLabel, urgencyColor }) => (
+            <RadarRow
+              key={program.id}
+              program={program}
+              urgencyLabel={urgencyLabel}
+              urgencyColor={urgencyColor}
+            />
+          ))}
+        </div>
+      ) : (
+        <p style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 13, color: MUTED }}>
+          Nothing urgent right now — check the Programs tab for what's coming.
+        </p>
+      )}
+    </section>
+  );
+}
+
+// ---- Section: Go Explore (venue cards) -----------------------------------
+
+function ExploreDestinationCard({ venue }: { venue: VenueCard }) {
+  return (
+    <div
+      className="flex-shrink-0 overflow-hidden"
+      style={{
+        width: 164,
+        borderRadius: 12,
+        backgroundColor: CARD,
+        border: `1px solid ${BORDER}`,
+      }}
+    >
+      <div className="relative overflow-hidden" style={{ height: 80 }}>
+        {venue.image_url ? (
+          <Image
+            src={venue.image_url}
+            alt={venue.name}
+            fill
+            className="object-cover"
+            sizes="164px"
+          />
+        ) : (
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ backgroundColor: "#D4E4D4" }}
+          >
+            <MapPin size={20} weight="duotone" style={{ color: SAGE }} />
+          </div>
+        )}
+      </div>
+      <div style={{ padding: "8px 10px" }}>
+        <p
+          className="line-clamp-1"
+          style={{
+            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontSize: 13,
+            fontWeight: 700,
+            color: TEXT,
+            lineHeight: 1.3,
+          }}
+        >
+          {venue.name}
+        </p>
+        {venue.neighborhood && (
+          <p
+            style={{
+              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontSize: 11,
+              color: MUTED,
+              marginTop: 2,
+            }}
+          >
+            {venue.neighborhood}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GoExploreSection({
+  venues,
+  isLoading,
+  portalSlug,
+  desktopLabel = false,
+}: {
+  venues: VenueCard[] | undefined;
+  isLoading: boolean;
+  portalSlug: string;
+  desktopLabel?: boolean;
+}) {
+  const labelText = desktopLabel ? "Family Favorites Nearby" : "Go Explore";
+  const labelColor = desktopLabel ? AMBER : SAGE;
+  const has = (venues?.length ?? 0) > 0;
+
+  return (
+    <section>
+      <SectionLabel
+        text={labelText}
+        color={labelColor}
+        rightSlot={<SeeAllLink href={`/${portalSlug}?view=find&type=venues`} />}
+      />
+      {isLoading ? (
+        <div className="flex gap-2.5 overflow-hidden">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex-shrink-0 rounded-xl animate-pulse" style={{ width: 140, height: 130, backgroundColor: BORDER }} />
+          ))}
+        </div>
+      ) : has ? (
+        <div className="flex gap-2.5 overflow-x-auto" style={{ scrollbarWidth: "none", paddingBottom: 2 }}>
+          {venues!.map((v) => (
+            <ExploreDestinationCard key={v.id} venue={v} />
+          ))}
+        </div>
+      ) : (
+        <Link
+          href={`/${portalSlug}?view=find&type=venues`}
+          className="hover:opacity-70 transition-opacity"
+          style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 13, color: SAGE }}
+        >
+          Discover family-friendly spots nearby →
+        </Link>
+      )}
+    </section>
+  );
+}
+
+// ---- Section: After School Picks (today's events) ------------------------
+
+// Tag pills with kid-colored backgrounds
+function TagPill({ tag }: { tag: string }) {
+  return (
+    <span
+      style={{
+        backgroundColor: `${MOSS}26`, // 15% opacity
+        color: MOSS,
+        borderRadius: 8,
+        padding: "2px 8px",
+        fontFamily: "DM Sans, system-ui, sans-serif",
+        fontSize: 11,
+        fontWeight: 500,
+      }}
+    >
+      {tag}
+    </span>
+  );
+}
+
+function AfterSchoolPickCard({
   event,
   portalSlug,
 }: {
   event: EventWithLocation;
   portalSlug: string;
 }) {
-  const hasImage = !!event.image_url;
+  const displayTags = (event.tags ?? []).slice(0, 3);
 
   return (
     <Link
       href={`/${portalSlug}?event=${event.id}`}
-      className="flex items-start gap-3 py-2.5 border-b last:border-b-0 hover:bg-[var(--night)] rounded-lg px-1 -mx-1 transition-colors"
-      style={{ borderColor: "var(--twilight, #E8E4DF)" }}
+      className="block hover:opacity-80 transition-opacity"
     >
-      {hasImage && (
-        <div className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden">
-          <Image
-            src={event.image_url!}
-            alt={event.title}
-            width={56}
-            height={56}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[var(--cream)] leading-snug line-clamp-2">
+      <div
+        className="rounded-xl"
+        style={{
+          backgroundColor: CARD,
+          border: `1px solid ${BORDER}`,
+          padding: "10px 14px",
+        }}
+      >
+        <p
+          className="leading-snug"
+          style={{
+            fontFamily: "DM Sans, system-ui, sans-serif",
+            fontSize: 14,
+            fontWeight: 600,
+            color: TEXT,
+            marginBottom: 3,
+          }}
+        >
           {event.title}
         </p>
-        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-          {event.start_time && (
-            <span className="flex items-center gap-1 text-xs text-[var(--muted)]">
-              <Clock size={11} />
-              {event.start_time}
+        <div className="flex items-center gap-2 flex-wrap">
+          {event.venue?.name && (
+            <span style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 12, color: MUTED }}>
+              {event.venue.name}
             </span>
           )}
-          {event.venue?.name && (
-            <span className="text-xs text-[var(--muted)] truncate">{event.venue.name}</span>
+          {event.start_time && (
+            <span
+              className="flex items-center gap-1"
+              style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 12, color: MUTED }}
+            >
+              <Clock size={11} />
+              {formatTime(event.start_time)}
+            </span>
           )}
           {event.is_free && (
-            <span className="text-xs font-medium text-emerald-700">Free</span>
+            <span style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 12, fontWeight: 600, color: SAGE }}>
+              Free
+            </span>
           )}
         </div>
+        {displayTags.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap mt-2">
+            {displayTags.map((tag) => (
+              <TagPill key={tag} tag={tag} />
+            ))}
+          </div>
+        )}
       </div>
     </Link>
   );
 }
 
-// ---- Main component ------------------------------------------------------
+function AfterSchoolPicksSection({
+  events,
+  isLoading,
+  portalSlug,
+}: {
+  events: EventWithLocation[] | undefined;
+  isLoading: boolean;
+  portalSlug: string;
+}) {
+  // Filter to after-school hours (start_time >= 14:00) to avoid adult
+  // daytime events like tennis leagues that are tagged family-friendly.
+  // All-day events are included regardless of time.
+  const afterSchoolEvents = useMemo(() => {
+    if (!events) return [];
+    return events.filter((e) => {
+      if (e.is_all_day) return true;
+      if (!e.start_time) return false;
+      const hour = parseInt(e.start_time.split(":")[0] ?? "0", 10);
+      return hour >= 14;
+    });
+  }, [events]);
 
-export const TodayView = memo(function TodayView({ portalId, portalSlug }: TodayViewProps) {
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
+  const has = afterSchoolEvents.length > 0;
+
+  return (
+    <section>
+      <SectionLabel
+        text="After School Picks"
+        color={AMBER}
+        rightSlot={
+          has ? (
+            <SeeAllLink href={`/${portalSlug}?view=find&type=events&date=today`} />
+          ) : undefined
+        }
+      />
+      {isLoading ? (
+        <div className="flex flex-col gap-2">
+          {[1, 2, 3].map((i) => (
+            <SkeletonBlock key={i} height={72} />
+          ))}
+        </div>
+      ) : has ? (
+        <div className="flex flex-col gap-2">
+          {afterSchoolEvents.slice(0, 4).map((event) => (
+            <AfterSchoolPickCard key={event.id} event={event} portalSlug={portalSlug} />
+          ))}
+        </div>
+      ) : (
+        <div
+          className="rounded-xl border px-4 py-4"
+          style={{ backgroundColor: CARD, borderColor: BORDER }}
+        >
+          <p style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 13, fontWeight: 500, color: TEXT }}>
+            Discover events near you
+          </p>
+          <p style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 12, color: MUTED, marginTop: 2 }}>
+            Family-friendly events, programs, and places to explore.
+          </p>
+          <Link
+            href={`/${portalSlug}?view=find&type=events`}
+            className="inline-flex items-center gap-1 mt-3 hover:opacity-70 transition-opacity"
+            style={{
+              color: SAGE,
+              fontFamily: "DM Sans, system-ui, sans-serif",
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            Browse all events <ArrowRight size={12} weight="bold" />
+          </Link>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ---- Main component -------------------------------------------------------
+
+export const TodayView = memo(function TodayView({
+  portalId,
+  portalSlug,
+  activeKidIds = [],
+  kids = [],
+  desktopLayout = false,
+}: TodayViewProps) {
+  // Derive active kids for future age-based filtering
+  const _selectedKids = activeKidIds.length > 0
+    ? kids.filter((k) => activeKidIds.includes(k.id))
+    : [];
+  void _selectedKids;
+
+  const weather = useWeather();
 
   const { data: calendarData, isLoading: loadingCalendar } = useQuery({
     queryKey: ["family-school-calendar"],
@@ -253,161 +1073,146 @@ export const TodayView = memo(function TodayView({ portalId, portalSlug }: Today
     staleTime: 60 * 1000,
   });
 
-  // Flatten radar results — closing soon is most urgent, then filling fast, then opening soon
-  const urgentPrograms: Array<{
-    program: ProgramWithVenue;
-    urgencyLabel: string;
-    urgencyColor: string;
-  }> = [];
+  const { data: featuredEvent, isLoading: loadingFeatured } = useQuery({
+    queryKey: ["family-featured-event", portalId],
+    queryFn: () => fetchFeaturedEvent(portalId),
+    staleTime: 60 * 1000,
+  });
 
-  if (radarData) {
-    radarData.closing_soon.forEach((p) =>
-      urgentPrograms.push({
-        program: p,
-        urgencyLabel: "Registration closes soon",
-        urgencyColor: "var(--coral)",
-      })
-    );
-    radarData.filling_fast.forEach((p) =>
-      urgentPrograms.push({
-        program: p,
-        urgencyLabel: "Waitlist — act fast",
-        urgencyColor: "#D97706",
-      })
-    );
-    radarData.opening_soon.forEach((p) =>
-      urgentPrograms.push({
-        program: p,
-        urgencyLabel: "Registration opens soon",
-        urgencyColor: "#059669",
-      })
+  const { data: exploreVenues, isLoading: loadingVenues } = useQuery({
+    queryKey: ["family-explore-venues", portalId],
+    queryFn: () => fetchExploreVenues(portalId),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const todayEventCount = loadingToday ? null : (todayEvents?.length ?? 0);
+
+  // ---- Desktop layout ------------------------------------------------------
+  if (desktopLayout) {
+    return (
+      <div className="flex flex-col gap-6 px-5">
+        {/* Top row: greeting + weather pill */}
+        <div className="flex items-start justify-between pt-2">
+          <GreetingHeadline todayEventCount={todayEventCount} />
+          {!weather.loading && weather.condition && (
+            <WeatherPill temp={weather.temp} condition={weather.condition} emoji={weather.emoji} />
+          )}
+        </div>
+
+        {/* Featured hero */}
+        <FeaturedHero
+          event={featuredEvent}
+          isLoading={loadingFeatured}
+          portalSlug={portalSlug}
+          todayEventCount={todayEventCount}
+        />
+
+        {/* Two-column grid */}
+        <div className="grid gap-6" style={{ gridTemplateColumns: "1fr 340px" }}>
+          {/* Left column: Today's Plan + Events */}
+          <div className="flex flex-col gap-6">
+            <TodaysPlan kids={kids} activeKidIds={activeKidIds} portalSlug={portalSlug} />
+            <AfterSchoolPicksSection
+              events={todayEvents}
+              isLoading={loadingToday}
+              portalSlug={portalSlug}
+            />
+          </div>
+          {/* Right column: Heads Up + Registration */}
+          <div className="flex flex-col gap-6">
+            <HeadsUpSection calendarData={calendarData} isLoading={loadingCalendar} />
+            <RegistrationRadarSection radarData={radarData} isLoading={loadingRadar} />
+          </div>
+        </div>
+
+        {/* Full-width bottom: Go Explore carousel */}
+        <div className="pb-6">
+          <GoExploreSection
+            venues={exploreVenues}
+            isLoading={loadingVenues}
+            portalSlug={portalSlug}
+            desktopLabel
+          />
+        </div>
+      </div>
     );
   }
 
-  const hasCalendarAlerts = (calendarData?.length ?? 0) > 0;
-  const hasRadarItems = urgentPrograms.length > 0;
-  const hasTodayEvents = (todayEvents?.length ?? 0) > 0;
-
+  // ---- Mobile layout -------------------------------------------------------
   return (
-    <div className="px-4 py-5 space-y-6 max-w-2xl mx-auto">
-      {/* Snapshot card */}
-      <div
-        className="rounded-xl p-4 border"
-        style={{
-          backgroundColor: "color-mix(in srgb, var(--coral) 6%, white)",
-          borderColor: "color-mix(in srgb, var(--coral) 20%, white)",
-        }}
-      >
-        <div className="flex items-start gap-3">
-          <Lightning size={20} weight="fill" style={{ color: "var(--coral)", flexShrink: 0, marginTop: 2 }} />
-          <div>
-            <p
-              className="text-sm font-semibold text-[var(--cream)]"
-              style={{ fontFamily: "var(--font-outfit, system-ui, sans-serif)" }}
-            >
-              {today}
-            </p>
-            {loadingToday ? (
-              <p className="text-xs text-[var(--muted)] mt-0.5">Loading...</p>
-            ) : (
-              <p className="text-xs text-[var(--muted)] mt-0.5">
-                {hasTodayEvents
-                  ? `${todayEvents!.length} family-friendly ${todayEvents!.length === 1 ? "activity" : "activities"} happening today`
-                  : "No events found for today — check the Weekend tab"}
-              </p>
-            )}
+    <div className="flex flex-col gap-5 pb-8 max-w-2xl mx-auto" style={{ overflowX: "hidden" }}>
+      {/* Greeting + Weather */}
+      <div className="px-4 pt-2">
+        {!weather.loading && weather.condition && (
+          <div className="flex items-center justify-between mb-2">
+            <WeatherPill temp={weather.temp} condition={weather.condition} emoji={weather.emoji} />
           </div>
-        </div>
+        )}
+        <GreetingHeadline todayEventCount={todayEventCount} />
       </div>
 
-      {/* Heads Up — school calendar alerts */}
-      <section>
-        <SectionHeader
-          icon={<BellSimple size={14} weight="bold" />}
-          title="Heads Up"
+      <div className="flex flex-col gap-6 px-4">
+        {/* Featured hero */}
+        <FeaturedHero
+          event={featuredEvent}
+          isLoading={loadingFeatured}
+          portalSlug={portalSlug}
+          todayEventCount={todayEventCount}
         />
-        {loadingCalendar ? (
-          <div className="space-y-2">
-            {[1, 2].map((i) => (
-              <div key={i} className="h-12 rounded-lg skeleton-shimmer-light" />
-            ))}
-          </div>
-        ) : hasCalendarAlerts ? (
-          <div
-            className="bg-white rounded-xl border overflow-hidden"
-            style={{ borderColor: "var(--twilight, #E8E4DF)" }}
-          >
-            {calendarData!.map((event) => (
-              <CalendarAlert key={event.id} event={event} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState message="No school calendar alerts coming up." />
-        )}
-      </section>
 
-      {/* Registration Radar */}
-      <section>
-        <SectionHeader
-          icon={<Tag size={14} weight="bold" />}
-          title="Registration Radar"
-        />
-        {loadingRadar ? (
-          <div className="space-y-2">
-            {[1, 2].map((i) => (
-              <div key={i} className="h-14 rounded-lg skeleton-shimmer-light" />
-            ))}
-          </div>
-        ) : hasRadarItems ? (
-          <div
-            className="bg-white rounded-xl border overflow-hidden divide-y"
-            style={{ borderColor: "var(--twilight, #E8E4DF)" }}
-          >
-            {urgentPrograms.slice(0, 5).map(({ program, urgencyLabel, urgencyColor }) => (
-              <RadarRow
-                key={program.id}
-                program={program}
-                urgencyLabel={urgencyLabel}
-                urgencyColor={urgencyColor}
-              />
-            ))}
-          </div>
-        ) : (
-          <EmptyState message="Nothing urgent right now — check the Programs tab for what's coming." />
-        )}
-      </section>
+        {/* Today's Plan */}
+        <TodaysPlan kids={kids} activeKidIds={activeKidIds} portalSlug={portalSlug} />
 
-      {/* After School / Today */}
-      {(hasTodayEvents || loadingToday) && (
+        {/* Heads Up */}
+        <HeadsUpSection calendarData={calendarData} isLoading={loadingCalendar} />
+
+        {/* Go Explore — carousel with bleed edge */}
         <section>
-          <div className="flex items-center justify-between mb-3">
-            <SectionHeader
-              icon={<Lightning size={14} weight="bold" />}
-              title="Happening Today"
-            />
-            <Link
-              href={`/${portalSlug}?view=find&type=events&date=today`}
-              className="text-xs font-medium text-[var(--coral)] hover:opacity-80 transition-opacity"
-              style={{ fontFamily: "var(--font-mono, ui-monospace, monospace)" }}
-            >
-              See all →
-            </Link>
-          </div>
-          {loadingToday ? (
-            <div className="space-y-2">
+          <SectionLabel
+            text="Go Explore"
+            color={SAGE}
+            rightSlot={<SeeAllLink href={`/${portalSlug}?view=find&type=venues`} />}
+          />
+          {loadingVenues ? (
+            <div className="flex gap-2.5">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-16 rounded-lg skeleton-shimmer-light" />
+                <div
+                  key={i}
+                  className="flex-shrink-0 rounded-xl animate-pulse"
+                  style={{ width: 140, height: 130, backgroundColor: BORDER }}
+                />
+              ))}
+            </div>
+          ) : (exploreVenues?.length ?? 0) > 0 ? (
+            <div
+              className="flex gap-2.5 overflow-x-auto"
+              style={{ scrollbarWidth: "none", paddingBottom: 2, marginLeft: -16, paddingLeft: 16, marginRight: -16, paddingRight: 16 }}
+            >
+              {exploreVenues!.map((v) => (
+                <ExploreDestinationCard key={v.id} venue={v} />
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-xl border overflow-hidden px-3" style={{ borderColor: "var(--twilight, #E8E4DF)" }}>
-              {todayEvents!.slice(0, 6).map((event) => (
-                <TodayEventCard key={event.id} event={event} portalSlug={portalSlug} />
-              ))}
-            </div>
+            <Link
+              href={`/${portalSlug}?view=find&type=venues`}
+              className="hover:opacity-70 transition-opacity"
+              style={{ fontFamily: "DM Sans, system-ui, sans-serif", fontSize: 13, color: SAGE }}
+            >
+              Discover family-friendly spots nearby →
+            </Link>
           )}
         </section>
-      )}
+
+        {/* After School Picks */}
+        <AfterSchoolPicksSection
+          events={todayEvents}
+          isLoading={loadingToday}
+          portalSlug={portalSlug}
+        />
+
+        {/* Registration Radar */}
+        <RegistrationRadarSection radarData={radarData} isLoading={loadingRadar} />
+      </div>
     </div>
   );
 });

@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { escapeSQLPattern } from "@/lib/api-utils";
-import { getPortalSourceAccess, type PortalSourceAccess } from "@/lib/federation";
+import {
+  getPortalSourceAccess,
+  isEventCategoryAllowedForSourceAccess,
+  type PortalSourceAccess,
+} from "@/lib/federation";
 import { applyFeedGate } from "@/lib/feed-gate";
 import {
   applyFederatedPortalScopeToQuery,
@@ -227,14 +231,13 @@ async function previewEvents(
   }
 
   const uniqueRows = Array.from(new Map(mergedRows.map((row) => [row.id, row])).values());
-  const sourceScopedRows = uniqueRows.filter((event) => {
-    if (!sourceAccess) return true;
-    if (typeof event.source_id !== "number") return true;
-    const allowedCategories = sourceAccess.categoryConstraints.get(event.source_id);
-    if (allowedCategories == null) return true;
-    if (!event.category_id) return true;
-    return allowedCategories.includes(event.category_id);
-  });
+  const sourceScopedRows = uniqueRows.filter((event) =>
+    isEventCategoryAllowedForSourceAccess(
+      sourceAccess,
+      event.source_id,
+      event.category_id,
+    )
+  );
   const cityFiltered = filterByPortalCity(sourceScopedRows, portalCity, {
     allowMissingCity: true,
   });

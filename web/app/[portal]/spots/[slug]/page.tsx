@@ -8,6 +8,7 @@ import {
 } from "@/lib/spots";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import { getSpotDetail } from "@/lib/spot-detail";
+import { ATTACHED_CHILD_DESTINATION_SECTION_TITLE } from "@/lib/destination-graph";
 import { notFound } from "next/navigation";
 
 import type { Metadata } from "next";
@@ -388,7 +389,7 @@ export default async function PortalSpotPage({ params }: Props) {
     upcomingEvents,
     nearbyDestinations,
     highlights,
-    artifacts,
+    attachedChildDestinations,
     features,
     editorialMentions,
     yonderDestinationIntelligence,
@@ -855,12 +856,12 @@ export default async function PortalSpotPage({ params }: Props) {
           )}
 
           {/* ── 9. ARTIFACTS — sub-venues ──────────────────────────── */}
-          {artifacts.length > 0 && (
+          {attachedChildDestinations.length > 0 && (
             <RelatedSection
-              title="Inside This Venue"
-              count={artifacts.length}
+              title={ATTACHED_CHILD_DESTINATION_SECTION_TITLE}
+              count={attachedChildDestinations.length}
             >
-              {artifacts.map((a) => {
+              {attachedChildDestinations.map((a) => {
                 const artifact = a as {
                   id: number;
                   name: string;

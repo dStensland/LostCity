@@ -8,6 +8,7 @@
 
 import { supabase } from "@/lib/supabase";
 import { createServiceClient } from "@/lib/supabase/service";
+import type { EntityFamily } from "@/lib/portal-taxonomy";
 
 // Types for federation
 
@@ -19,6 +20,7 @@ export interface SourceAccess {
 }
 
 export interface PortalSourceAccess {
+  entityFamily: EntityFamily;
   sourceIds: number[];
   categoryConstraints: Map<number, string[] | null>;
   accessDetails: SourceAccess[];
@@ -63,11 +65,25 @@ export interface SourceWithOwnership {
 
 const PORTAL_SOURCE_ACCESS_CACHE_TTL_MS = 5 * 60 * 1000;
 const PORTAL_SOURCE_ACCESS_CACHE_MAX_ENTRIES = 200;
+const EVENT_SOURCE_ACCESS_VIEW = "portal_source_access";
+const NON_EVENT_SOURCE_ACCESS_VIEW = "portal_source_entity_access";
 
 const portalSourceAccessCache = new Map<string, { expiresAt: number; value: PortalSourceAccess }>();
 
+type PortalSourceAccessOptions = {
+  entityFamily?: EntityFamily;
+};
+
+function getPortalSourceAccessCacheKey(
+  portalId: string,
+  entityFamily: EntityFamily,
+): string {
+  return `${portalId}:${entityFamily}`;
+}
+
 function clonePortalSourceAccess(value: PortalSourceAccess): PortalSourceAccess {
   return {
+    entityFamily: value.entityFamily,
     sourceIds: [...value.sourceIds],
     categoryConstraints: new Map(value.categoryConstraints),
     accessDetails: value.accessDetails.map((detail) => ({
@@ -75,6 +91,40 @@ function clonePortalSourceAccess(value: PortalSourceAccess): PortalSourceAccess 
       accessibleCategories: detail.accessibleCategories ? [...detail.accessibleCategories] : null,
     })),
   };
+}
+
+export function entityFamilyUsesCategoryConstraints(entityFamily: EntityFamily): boolean {
+  return entityFamily === "events";
+}
+
+function isMissingSourceAccessRelation(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const message = "message" in error && typeof error.message === "string" ? error.message : "";
+  return message.includes(NON_EVENT_SOURCE_ACCESS_VIEW);
+}
+
+function normalizeCategoriesForEntityFamily(
+  categories: string[] | null,
+  entityFamily: EntityFamily,
+): string[] | null {
+  return entityFamilyUsesCategoryConstraints(entityFamily) ? categories : null;
+}
+
+export function isEventCategoryAllowedForSourceAccess(
+  sourceAccess: PortalSourceAccess | null | undefined,
+  sourceId: number | null | undefined,
+  categoryId: string | null | undefined,
+): boolean {
+  if (!sourceAccess || !entityFamilyUsesCategoryConstraints(sourceAccess.entityFamily)) {
+    return true;
+  }
+
+  if (typeof sourceId !== "number") return true;
+
+  const allowedCategories = sourceAccess.categoryConstraints.get(sourceId);
+  if (allowedCategories == null) return true;
+  if (!categoryId) return true;
+  return allowedCategories.includes(categoryId);
 }
 
 // ============================================================================
@@ -85,61 +135,120 @@ function clonePortalSourceAccess(value: PortalSourceAccess): PortalSourceAccess 
  * Get accessible sources for a portal using the materialized view.
  * This is the main function used by the search module.
  */
-export async function getPortalSourceAccess(portalId: string): Promise<PortalSourceAccess> {
-  const cached = portalSourceAccessCache.get(portalId);
+export async function getPortalSourceAccess(
+  portalId: string,
+  options: PortalSourceAccessOptions = {},
+): Promise<PortalSourceAccess> {
+  const entityFamily = options.entityFamily ?? "events";
+  const cacheKey = getPortalSourceAccessCacheKey(portalId, entityFamily);
+  const cached = portalSourceAccessCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return clonePortalSourceAccess(cached.value);
   }
   if (cached && cached.expiresAt <= Date.now()) {
-    portalSourceAccessCache.delete(portalId);
+    portalSourceAccessCache.delete(cacheKey);
   }
 
-  // Type for the materialized view rows (not in generated types)
-  type PortalSourceAccessRow = {
+  type EventPortalSourceAccessRow = {
     source_id: number;
     source_name: string;
     accessible_categories: string[] | null;
     access_type: string;
   };
 
-  const { data, error } = await supabase
-    .from("portal_source_access")
-    .select("source_id, source_name, accessible_categories, access_type")
-    .eq("portal_id", portalId);
+  type EntityPortalSourceAccessRow = {
+    source_id: number;
+    source_name: string;
+    entity_family: EntityFamily;
+    access_type: string;
+  };
+
+  const fetchEventRows = async () =>
+    supabase
+      .from(EVENT_SOURCE_ACCESS_VIEW)
+      .select("source_id, source_name, accessible_categories, access_type")
+      .eq("portal_id", portalId);
+
+  const fetchEntityRows = async () =>
+    supabase
+      .from(NON_EVENT_SOURCE_ACCESS_VIEW)
+      .select("source_id, source_name, entity_family, access_type")
+      .eq("portal_id", portalId)
+      .eq("entity_family", entityFamily);
+
+  const { data, error } = entityFamilyUsesCategoryConstraints(entityFamily)
+    ? await fetchEventRows()
+    : await fetchEntityRows();
 
   if (error) {
+    if (!entityFamilyUsesCategoryConstraints(entityFamily) && isMissingSourceAccessRelation(error)) {
+      console.warn(
+        `Falling back to ${EVENT_SOURCE_ACCESS_VIEW} for ${entityFamily} source access until ${NON_EVENT_SOURCE_ACCESS_VIEW} is available.`,
+      );
+      const fallback = await fetchEventRows();
+      if (!fallback.error) {
+        const fallbackRows = (fallback.data || []) as unknown as EventPortalSourceAccessRow[];
+        const sourceIds = fallbackRows.map((row) => row.source_id);
+        const categoryConstraints = new Map<number, string[] | null>();
+        const accessDetails = fallbackRows.map((row) => {
+          categoryConstraints.set(row.source_id, null);
+          return {
+            sourceId: row.source_id,
+            sourceName: row.source_name,
+            accessibleCategories: null,
+            accessType: row.access_type as "owner" | "global" | "subscription",
+          };
+        });
+        const fallbackValue = { entityFamily, sourceIds, categoryConstraints, accessDetails };
+        portalSourceAccessCache.set(cacheKey, {
+          expiresAt: Date.now() + PORTAL_SOURCE_ACCESS_CACHE_TTL_MS,
+          value: clonePortalSourceAccess(fallbackValue),
+        });
+        return fallbackValue;
+      }
+    }
+
     console.error("Error fetching portal source access:", error);
     return {
+      entityFamily,
       sourceIds: [],
       categoryConstraints: new Map(),
       accessDetails: [],
     };
   }
 
-  const rows = (data || []) as unknown as PortalSourceAccessRow[];
+  const rows = entityFamilyUsesCategoryConstraints(entityFamily)
+    ? (data || []) as unknown as EventPortalSourceAccessRow[]
+    : (data || []) as unknown as EntityPortalSourceAccessRow[];
   const sourceIds: number[] = [];
   const categoryConstraints = new Map<number, string[] | null>();
   const accessDetails: SourceAccess[] = [];
 
   for (const row of rows) {
+    const accessibleCategories = entityFamilyUsesCategoryConstraints(entityFamily)
+      ? normalizeCategoriesForEntityFamily(
+          (row as EventPortalSourceAccessRow).accessible_categories,
+          entityFamily,
+        )
+      : null;
     sourceIds.push(row.source_id);
-    categoryConstraints.set(row.source_id, row.accessible_categories);
+    categoryConstraints.set(row.source_id, accessibleCategories);
     accessDetails.push({
       sourceId: row.source_id,
       sourceName: row.source_name,
-      accessibleCategories: row.accessible_categories,
+      accessibleCategories,
       accessType: row.access_type as "owner" | "global" | "subscription",
     });
   }
 
-  const value = { sourceIds, categoryConstraints, accessDetails };
+  const value = { entityFamily, sourceIds, categoryConstraints, accessDetails };
   if (portalSourceAccessCache.size >= PORTAL_SOURCE_ACCESS_CACHE_MAX_ENTRIES) {
     const firstKey = portalSourceAccessCache.keys().next().value;
     if (firstKey) {
       portalSourceAccessCache.delete(firstKey);
     }
   }
-  portalSourceAccessCache.set(portalId, {
+  portalSourceAccessCache.set(cacheKey, {
     expiresAt: Date.now() + PORTAL_SOURCE_ACCESS_CACHE_TTL_MS,
     value: clonePortalSourceAccess(value),
   });

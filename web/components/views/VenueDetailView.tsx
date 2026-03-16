@@ -28,6 +28,7 @@ import VenueSpecialsSection, { type VenueSpecial } from "@/components/detail/Ven
 import DirectionsDropdown from "@/components/DirectionsDropdown";
 import GettingThereSection, { type WalkableNeighbor } from "@/components/GettingThereSection";
 import { usePortal } from "@/lib/portal-context";
+import { ATTACHED_CHILD_DESTINATION_SECTION_TITLE } from "@/lib/destination-graph";
 import {
   CaretRight,
   ForkKnife,
@@ -214,7 +215,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
   const [highlights, setHighlights] = useState<VenueHighlight[]>([]);
   const [features, setFeatures] = useState<VenueFeature[]>([]);
   const [specials, setSpecials] = useState<VenueSpecial[]>([]);
-  const [artifacts, setArtifacts] = useState<{id: number; name: string; slug: string | null; image_url: string | null; short_description: string | null}[]>([]);
+  const [attachedChildDestinations, setAttachedChildDestinations] = useState<{id: number; name: string; slug: string | null; image_url: string | null; short_description: string | null}[]>([]);
   const [editorialMentions, setEditorialMentions] = useState<EditorialMention[]>([]);
   const [occasions, setOccasions] = useState<VenueOccasion[]>([]);
   const [walkableNeighbors, setWalkableNeighbors] = useState<WalkableNeighbor[]>([]);
@@ -253,7 +254,9 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         setSpecials(data.specials || []);
         setEditorialMentions(data.editorialMentions || []);
         setOccasions(data.occasions || []);
-        setArtifacts(data.artifacts || []);
+        setAttachedChildDestinations(
+          data.attachedChildDestinations || data.artifacts || []
+        );
         setStatus("ready");
       } catch (err) {
         if (controller.signal.aborted) return;
@@ -621,11 +624,15 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         {/* (Accolades section moved above Quick Actions) */}
 
         {/* ── ARTIFACTS ───────────────────────────────────── */}
-        {artifacts.length > 0 && (
+        {attachedChildDestinations.length > 0 && (
           <div>
-            <SectionHeader title="Artifacts" count={artifacts.length} variant="divider" />
+            <SectionHeader
+              title={ATTACHED_CHILD_DESTINATION_SECTION_TITLE}
+              count={attachedChildDestinations.length}
+              variant="divider"
+            />
             <div className="space-y-2">
-              {artifacts.map((artifact) => (
+              {attachedChildDestinations.map((artifact) => (
                 <button
                   key={artifact.id}
                   onClick={() => artifact.slug && handleSpotClick(artifact.slug)}

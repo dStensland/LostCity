@@ -73,9 +73,9 @@ export function isFeatureHeavyType(
   return !!venueType && FEATURE_HEAVY_TYPES.has(venueType);
 }
 
-const HOOKY_GLOBAL_EXCLUDED_SLUGS = new Set(["birdseed-fundraiser-pick-up"]);
+const FAMILY_GLOBAL_EXCLUDED_SLUGS = new Set(["birdseed-fundraiser-pick-up"]);
 
-const HOOKY_EXCLUDED_TEXT_PATTERNS = [
+const FAMILY_EXCLUDED_TEXT_PATTERNS = [
   /\bfundraiser\b/i,
   /\bpick[\s-]?up\b/i,
   /\bmember(s)? only\b/i,
@@ -83,7 +83,7 @@ const HOOKY_EXCLUDED_TEXT_PATTERNS = [
   /\bvolunteer\b/i,
 ];
 
-const HOOKY_ALLOWED_SLUGS_BY_VENUE: Record<string, Set<string>> = {
+const FAMILY_ALLOWED_SLUGS_BY_VENUE: Record<string, Set<string>> = {
   "chattahoochee-nature-center": new Set([
     "wildlife-walk",
     "river-boardwalk-trails",
@@ -96,23 +96,23 @@ const HOOKY_ALLOWED_SLUGS_BY_VENUE: Record<string, Set<string>> = {
   ]),
 };
 
-function shouldExcludeFromHooky(
+function shouldExcludeFromFamily(
   feature: VenueFeature,
   venueSlug: string | null
 ): boolean {
-  if (HOOKY_GLOBAL_EXCLUDED_SLUGS.has(feature.slug)) {
+  if (FAMILY_GLOBAL_EXCLUDED_SLUGS.has(feature.slug)) {
     return true;
   }
 
   const combinedText = [feature.slug, feature.title, feature.description]
     .filter(Boolean)
     .join(" ");
-  if (HOOKY_EXCLUDED_TEXT_PATTERNS.some((pattern) => pattern.test(combinedText))) {
+  if (FAMILY_EXCLUDED_TEXT_PATTERNS.some((pattern) => pattern.test(combinedText))) {
     return true;
   }
 
   if (venueSlug) {
-    const allowlist = HOOKY_ALLOWED_SLUGS_BY_VENUE[venueSlug];
+    const allowlist = FAMILY_ALLOWED_SLUGS_BY_VENUE[venueSlug];
     if (allowlist && !allowlist.has(feature.slug)) {
       return true;
     }
@@ -125,11 +125,11 @@ export function filterVenueFeaturesForPortal(
   features: VenueFeature[],
   { portalSlug, venueSlug }: VenueFeatureFilterOptions = {}
 ): VenueFeature[] {
-  if (portalSlug !== "hooky") {
+  if (portalSlug !== "atlanta-families") {
     return features;
   }
 
   return features.filter(
-    (feature) => !shouldExcludeFromHooky(feature, venueSlug ?? null)
+    (feature) => !shouldExcludeFromFamily(feature, venueSlug ?? null)
   );
 }

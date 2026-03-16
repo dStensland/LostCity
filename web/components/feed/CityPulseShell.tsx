@@ -51,7 +51,7 @@ import NowShowingSection from "./sections/NowShowingSection";
 import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 
 import YonderRegionalEscapesSection from "./sections/YonderRegionalEscapesSection";
-import YonderArtifactQuestsSection from "./sections/YonderArtifactQuestsSection";
+import YonderDestinationNodeQuestsSection from "./sections/YonderDestinationNodeQuestsSection";
 import ActiveContestSection from "./sections/ActiveContestSection";
 import HolidayHero from "./HolidayHero";
 import FeedTimeMachine from "./FeedTimeMachine";
@@ -475,7 +475,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
             dayOfWeek={context.day_of_week ?? null}
             timeSlot={context.time_slot ?? null}
           />
-          <YonderArtifactQuestsSection portalSlug={portalSlug} />
+          <YonderDestinationNodeQuestsSection portalSlug={portalSlug} />
         </>
       )}
 

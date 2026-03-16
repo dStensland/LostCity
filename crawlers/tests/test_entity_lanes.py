@@ -11,6 +11,7 @@ def test_source_entity_capabilities_report_enabled_lanes():
         destination_details=True,
         events=True,
         programs=True,
+        volunteer_opportunities=True,
         venue_features=True,
     )
 
@@ -19,6 +20,7 @@ def test_source_entity_capabilities_report_enabled_lanes():
         "destination_details",
         "events",
         "programs",
+        "volunteer_opportunities",
         "venue_features",
     )
 

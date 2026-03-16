@@ -8,6 +8,7 @@ import {
   PROGRAM_TYPE_LABELS,
   type ProgramWithVenue,
 } from "@/lib/types/programs";
+import { formatTime } from "@/lib/formats";
 import { RegistrationBadge } from "./RegistrationBadge";
 
 interface ProgramCardProps {
@@ -33,14 +34,18 @@ export const ProgramCard = memo(function ProgramCard({ program }: ProgramCardPro
   const sessionDates = formatSessionDates(program.session_start, program.session_end);
   const isFree = program.cost_amount === null || program.cost_amount === 0;
 
-  const scheduleDisplay = [
-    scheduleDays,
-    program.schedule_start_time && program.schedule_end_time
-      ? `${program.schedule_start_time}–${program.schedule_end_time}`
-      : program.schedule_start_time || "",
-  ]
-    .filter(Boolean)
-    .join(" • ");
+  const startFormatted = formatTime(program.schedule_start_time);
+  const endFormatted = program.schedule_end_time ? formatTime(program.schedule_end_time) : null;
+  const timeDisplay =
+    startFormatted !== "TBA" && endFormatted && endFormatted !== "TBA"
+      ? `${startFormatted} – ${endFormatted}`
+      : startFormatted !== "TBA"
+      ? startFormatted
+      : "";
+
+  const scheduleDisplay = [scheduleDays, timeDisplay].filter(Boolean).join(" • ");
+
+  const displayName = program.name.replace(/\s*\([A-Z]{2,4}\d{4,6}\)\s*$/, "");
 
   return (
     <div
@@ -51,13 +56,13 @@ export const ProgramCard = memo(function ProgramCard({ program }: ProgramCardPro
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex-1 min-w-0">
           <h3
-            className="text-base font-semibold leading-snug text-[var(--cream)]"
-            style={{ fontFamily: "var(--font-outfit, system-ui, sans-serif)" }}
+            className="text-base font-semibold leading-snug"
+            style={{ fontFamily: "var(--font-outfit, system-ui, sans-serif)", color: "var(--cream, #1C1917)" }}
           >
-            {program.name}
+            {displayName}
           </h3>
           {program.provider_name && (
-            <p className="text-sm text-[var(--muted)] mt-0.5 truncate">
+            <p className="text-sm mt-0.5 truncate" style={{ color: "var(--muted, #78716C)" }}>
               {program.provider_name}
             </p>
           )}
@@ -68,13 +73,13 @@ export const ProgramCard = memo(function ProgramCard({ program }: ProgramCardPro
       {/* Metadata pills row */}
       <div className="flex flex-wrap gap-1.5 mb-3">
         {/* Type */}
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--night)] text-[var(--soft)] border border-[var(--twilight)]">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-black/5 border border-black/10" style={{ color: "var(--soft, #57534E)" }}>
           {typeLabel}
         </span>
 
         {/* Age range */}
         {ageLabel !== "All ages" && (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-[var(--coral)] bg-[color-mix(in_srgb,var(--coral)_8%,white)] border border-[color-mix(in_srgb,var(--coral)_20%,white)]">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={{ color: "#C48B1D", backgroundColor: "color-mix(in srgb, #C48B1D 8%, white)", borderWidth: 1, borderStyle: "solid", borderColor: "color-mix(in srgb, #C48B1D 20%, white)" }}>
             {ageLabel}
           </span>
         )}
@@ -84,8 +89,9 @@ export const ProgramCard = memo(function ProgramCard({ program }: ProgramCardPro
           className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
             isFree
               ? "text-emerald-700 bg-emerald-50 border-emerald-200"
-              : "bg-[var(--night)] text-[var(--soft)] border-[var(--twilight)]"
+              : "bg-black/5 border-black/10"
           }`}
+          style={isFree ? undefined : { color: "var(--soft, #57534E)" }}
         >
           {cost}
         </span>
@@ -95,17 +101,17 @@ export const ProgramCard = memo(function ProgramCard({ program }: ProgramCardPro
       {(scheduleDisplay || sessionDates) && (
         <div className="space-y-0.5 mb-3">
           {scheduleDisplay && (
-            <p className="text-sm text-[var(--soft)]">{scheduleDisplay}</p>
+            <p className="text-sm" style={{ color: "var(--soft, #57534E)" }}>{scheduleDisplay}</p>
           )}
           {sessionDates && (
-            <p className="text-sm text-[var(--muted)]">{sessionDates}</p>
+            <p className="text-sm" style={{ color: "var(--muted, #78716C)" }}>{sessionDates}</p>
           )}
         </div>
       )}
 
       {/* Venue */}
       {program.venue && (
-        <p className="text-xs text-[var(--muted)] mb-3 truncate">
+        <p className="text-xs mb-3 truncate" style={{ color: "var(--muted, #78716C)" }}>
           {program.venue.name}
           {program.venue.neighborhood ? ` · ${program.venue.neighborhood}` : ""}
         </p>
@@ -113,7 +119,7 @@ export const ProgramCard = memo(function ProgramCard({ program }: ProgramCardPro
 
       {/* Cost notes if any */}
       {program.cost_notes && (
-        <p className="text-xs text-[var(--muted)] mb-3 italic">{program.cost_notes}</p>
+        <p className="text-xs mb-3 italic" style={{ color: "var(--muted, #78716C)" }}>{program.cost_notes}</p>
       )}
 
       {/* Registration CTA */}
@@ -122,7 +128,8 @@ export const ProgramCard = memo(function ProgramCard({ program }: ProgramCardPro
           href={program.registration_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-sm font-medium text-[var(--coral)] hover:opacity-80 transition-opacity"
+          className="inline-flex items-center gap-1 text-sm font-medium hover:opacity-80 transition-opacity"
+          style={{ color: "#C48B1D" }}
         >
           Register →
         </a>
