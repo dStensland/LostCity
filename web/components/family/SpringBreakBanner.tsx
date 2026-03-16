@@ -7,10 +7,9 @@ import { SCHOOL_SYSTEM_LABELS, type SchoolSystem } from "@/lib/types/programs";
 // Spring break 2026: April 6–10 (APS, DeKalb, Cobb, Gwinnett share this window)
 const SPRING_BREAK_START = new Date("2026-04-06T00:00:00");
 const SPRING_BREAK_END = new Date("2026-04-10T23:59:59");
-// NOTE: date_from/date_to are intentionally not included in the CTA href.
-// Adding them triggers hasAnyActiveFindFilters() in page.tsx, which overrides
-// tab=programs and loads FindView instead of FamilyFeed. Spring Break date
-// filtering can be added as a chip inside ProgramsBrowser when that's built out.
+// Use string constants to avoid timezone drift from Date.toISOString()
+const SPRING_BREAK_START_STR = "2026-04-06";
+const SPRING_BREAK_END_STR = "2026-04-10";
 const SHOW_WITHIN_DAYS = 21;
 
 const AMBER = "#C48B1D";
@@ -61,7 +60,7 @@ export const SpringBreakBanner = memo(function SpringBreakBanner({
     ? `${startLabel} – ${endLabel}${systemName ? ` · ${systemName}` : ""}`
     : `${startLabel} – ${endLabel}${systemName ? ` · ${systemName}` : ""}`;
 
-  const filterHref = `/${portalSlug}?tab=programs`;
+  const filterHref = `/${portalSlug}?view=find&date_from=${SPRING_BREAK_START_STR}&date_to=${SPRING_BREAK_END_STR}`;
 
   return (
     <div
