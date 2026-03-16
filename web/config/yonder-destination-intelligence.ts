@@ -11,7 +11,26 @@ export type YonderDestinationType =
   | "trail"
   | "viewpoint"
   | "climbing_area"
-  | "water_access";
+  | "water_access"
+  | "lake"
+  | "river"
+  | "cavern"
+  | "scenic_drive"
+  | "nature_center"
+  | "farm"
+  | "national_park"
+  | "zipline_park"
+  | "landmark"
+  | "campground"
+  | "canyon"
+  | "wilderness"
+  | "national_forest"
+  | "park"
+  | "mountain"
+  | "historic_site"
+  | "scenic_area"
+  | "nature_preserve"
+  | "community_recreation_center";
 
 export type YonderPrimaryActivity =
   | "hiking"
@@ -21,7 +40,18 @@ export type YonderPrimaryActivity =
   | "climbing"
   | "camping_base"
   | "paddling"
-  | "rafting";
+  | "rafting"
+  | "mountain_biking"
+  | "tubing"
+  | "caving"
+  | "fishing"
+  | "swimming"
+  | "zip_lining"
+  | "agritourism"
+  | "camping"
+  | "rock_climbing"
+  | "disc_golf"
+  | "wildlife_viewing";
 
 export type YonderDifficultyLevel = "easy" | "moderate" | "hard";
 
@@ -92,7 +122,7 @@ export type YonderStayOption = {
 export type YonderDestinationIntelligence = {
   slug: string;
   name: string;
-  launchWave: "wave1" | "wave2" | "wave3" | "wave4" | "wave5";
+  launchWave: "wave1" | "wave2" | "wave3" | "wave4" | "wave5" | "wave6" | "wave7" | "wave8" | "wave9" | "wave10" | "wave11" | "wave12" | "wave13" | "wave14" | "wave15" | "wave16";
   commitmentTier: YonderCommitmentTier;
   destinationType: YonderDestinationType;
   primaryActivity: YonderPrimaryActivity;
@@ -122,14 +152,14 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "fall", "winter"],
     weatherFitTags: ["after-rain", "cool-weather", "leaf-season"],
     summary:
-      "Iconic waterfall day trip with enough payoff to anchor a full day without requiring an overnight.",
+      "Georgia's tallest waterfall — a 729-foot cascade tumbling through old-growth forest, 90 minutes north of Atlanta.",
     practicalNotes: [
-      "Arrive early on fall weekends to avoid parking friction.",
-      "Best promoted after recent rain when waterfall flow is stronger.",
-      "Use as a gateway destination for users graduating from metro trails.",
+      "Arrive early on fall weekends; the upper parking lot fills by mid-morning.",
+      "Water volume is strongest after recent rain — worth timing your trip accordingly.",
+      "The approach trail involves significant stairs; plan for a steady 3-4 hour outing.",
     ],
     whyItMatters:
-      "Amicalola is the easiest high-payoff regional anchor to understand and market inside Lost Track's full-day shelf.",
+      "One of the most visually dramatic waterfalls in the Southeast, and the official southern approach to the Appalachian Trail.",
     questHooks: [
       "North Georgia waterfall circuit",
       "Appalachian gateway collection",
@@ -149,14 +179,14 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "fall", "winter"],
     weatherFitTags: ["clear-day", "cool-weather", "leaf-season"],
     summary:
-      "A dramatic gorge destination that delivers clear 'worth the trip' energy for committed day hikers.",
+      "One of the most dramatic gorge hikes in the Southeast — 1,000-foot canyon walls, suspension bridges, and Class V rapids far below.",
     practicalNotes: [
-      "Promote more aggressively in cooler months due to stairs and sun exposure.",
-      "Gorge-floor permits and access rules can change, so keep recommendations scoped to what is currently reliable.",
-      "Strong visual choice for users deciding between scenic payoff and lower-friction metro plans.",
+      "Cooler months are best; the stairs and exposed sections are punishing in summer heat.",
+      "Gorge-floor access requires a permit (limited daily) — check availability before you go.",
+      "Budget a full day: the rim trails alone are 3+ hours, and the gorge floor adds significant time.",
     ],
     whyItMatters:
-      "Tallulah makes Lost Track feel regional and intentional rather than like a city portal with a hiking tab.",
+      "The scale and drama here is genuinely hard to believe until you're standing at the rim — worth the two-hour drive.",
     questHooks: [
       "Georgia canyon collection",
       "high-payoff overlook run",
@@ -176,14 +206,14 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["clear-day", "cool-weather", "leaf-season"],
     summary:
-      "A canyon-scale regional anchor that can support both a long day trip and early weekend-escape framing.",
+      "A canyon-carved state park in northwest Georgia with two waterfalls, a 1,000-foot gorge, and some of the best camping in the state.",
     practicalNotes: [
-      "Use this as a weekend idea even before full camping inventory exists.",
-      "Stair-heavy routes mean this should not be framed as beginner-easy despite the broad appeal.",
-      "Good candidate for 'if you only do one big trip this month' modules.",
+      "The canyon rim loop and waterfall descent involve significant stairs — wear real shoes.",
+      "Peak weekends (fall foliage especially) book up months in advance; reserve early via ReserveAmerica.",
+      "Day visitors are welcome, but staying overnight turns this into a genuinely different experience.",
     ],
     whyItMatters:
-      "Cloudland is the strongest current bridge from Lost Track's full-day discovery into true weekend positioning.",
+      "The canyon views rival places people fly to see — this is one of Georgia's genuine natural wonders, and it's only two hours from Atlanta.",
     questHooks: [
       "Georgia canyon weekends",
       "waterfalls plus overlooks quest",
@@ -214,7 +244,7 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
         leadTime: "seasonal_rush",
         priceSignal: "$$",
         comparisonNote:
-          "Best compared as a high-demand state-park weekend where scenery and overnight utility both drive demand.",
+          "A high-demand park on peak weekends — book tent sites and cabins well in advance, especially in fall.",
       },
     },
   },
@@ -230,15 +260,16 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     typicalDurationMinutes: 300,
     bestSeasons: ["spring", "fall", "winter"],
     weatherFitTags: ["clear-day", "cool-weather", "leaf-season", "heat-exposed"],
+
     summary:
-      "A classic Appalachian summit hike for users who want a real mountain benchmark, not just a scenic walk.",
+      "Georgia's highest point on the Appalachian Trail — a demanding summit hike with exposed ridgeline views and a stone shelter at the top.",
     practicalNotes: [
-      "Frame as a committed mountain hike rather than a casual scenic option.",
-      "Clear-weather days make the summit payoff materially stronger.",
-      "Useful as a graduation step after easier North Georgia trails.",
+      "This is a real mountain hike: 4.3 miles round-trip with 1,100 feet of elevation gain. Not a casual walk.",
+      "Clear days deliver panoramic views from the summit; cloudy days are atmospheric but views are limited.",
+      "The Byron Reece trailhead parking fills early on weekends — arrive by 8am.",
     ],
     whyItMatters:
-      "Blood Mountain gives Lost Track an unmistakable Appalachian identity and a true effort-reward ladder.",
+      "The most iconic summit hike in the state, with the satisfaction of a genuine Appalachian Trail peak and views that earn every step.",
     questHooks: [
       "Appalachian starter pack",
       "Georgia summit ladder",
@@ -258,14 +289,14 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "fall"],
     weatherFitTags: ["clear-day", "cool-weather", "leaf-season"],
     summary:
-      "The southern Appalachian Trail anchor, better suited to quest framing and committed outings than casual browse traffic.",
+      "The southern terminus of the Appalachian Trail — a 2,193-mile journey starts at this summit bronze plaque in the North Georgia mountains.",
     practicalNotes: [
-      "Treat as a high-intent destination, not a generic weekend suggestion.",
-      "Works best when paired with Appalachian or milestone editorial framing.",
-      "Road and trail access details matter more here than for park-style destinations.",
+      "Access is via forest road and trail — a 4WD-capable vehicle helps on the approach road, especially in wet conditions.",
+      "The most common approach from Amicalola Falls adds 8.8 miles each way; plan accordingly.",
+      "Spring thru-hiker season (March–April) brings a genuine energy to the summit worth experiencing.",
     ],
     whyItMatters:
-      "Springer Mountain is foundational quest infrastructure for Lost Track even if it stays lower-volume in broad consumer use.",
+      "Standing at the Appalachian Trail's southern terminus is a legitimately moving experience, even if you're only there for the day.",
     questHooks: [
       "Appalachian origin quest",
       "Georgia trail milestones",
@@ -290,7 +321,7 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
         leadTime: "self_planned",
         priceSignal: "$",
         comparisonNote:
-          "This compares more like a self-planned trail objective than a stay inventory decision.",
+          "No bookable lodging here — plan your own transportation and overnight logistics for a multi-day approach.",
       },
     },
   },
@@ -307,14 +338,14 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["summer", "fall", "winter"],
     weatherFitTags: ["clear-day", "leaf-season", "sunrise-friendly"],
     summary:
-      "Georgia's highest point with broad scenic payoff and much lower friction than a full summit hike.",
+      "Georgia's highest peak at 4,784 feet — drive most of the way up, then walk a quarter-mile to 360-degree views across four states.",
     practicalNotes: [
-      "Use this for scenic-full-day recommendations aimed at broader audiences.",
-      "Visibility matters, so promote most heavily on clear-weather windows.",
-      "Strong option when users want mountain payoff without a difficult hike.",
+      "Visibility is everything here — check the forecast before going; haze or clouds kill the payoff.",
+      "A shuttle runs from the parking lot to the summit in season; otherwise it's a short steep walk.",
+      "Fall foliage windows (mid-October) are the single best time to visit.",
     ],
     whyItMatters:
-      "Brasstown Bald gives Lost Track a broadly accessible regional escape instead of only hard-hike recommendations.",
+      "The biggest views accessible to anyone, regardless of fitness level — on a clear day you can see into the Carolinas and Tennessee.",
     questHooks: [
       "Georgia high points",
       "best scenic drives",
@@ -334,14 +365,14 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "fall", "winter"],
     weatherFitTags: ["after-rain", "cool-weather", "leaf-season"],
     summary:
-      "A classic North Georgia waterfall hike with enough broad appeal to be one of Lost Track's most reusable full-day recommendations.",
+      "A 5-mile round-trip through Chattahoochee National Forest to a 100-foot waterfall framed by a dramatic rock cleft.",
     practicalNotes: [
-      "Best after recent rain and in cooler-weather windows.",
-      "High-value choice when users want scenic payoff without the intensity of summit-first hikes.",
-      "Strong counterpart to Amicalola inside a waterfall-focused recommendation stack.",
+      "Water flow is best after recent rain — the falls are significantly more impressive with good volume.",
+      "The trail follows Dodd Creek the entire way; some crossings may require wet feet in high water.",
+      "Cooler months are most comfortable; the forest canopy makes this pleasant even in summer.",
     ],
     whyItMatters:
-      "Raven Cliff is one of the cleanest full-day recommendations Lost Track can make without requiring special user context.",
+      "The combination of trail length, forest scenery, and the final reveal of the falls through the rock cleft makes this one of the most satisfying waterfall hikes in North Georgia.",
     questHooks: [
       "North Georgia waterfall circuit",
       "cool-weather day-hike picks",
@@ -361,14 +392,14 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["summer", "fall"],
     weatherFitTags: ["summer-friendly", "leaf-season", "clear-day"],
     summary:
-      "A mountain-lake anchor that makes weekend energy feel attainable even before Camp Finder becomes a full product.",
+      "A mountain lake state park in the Blue Ridge foothills with hiking, swimming, and campgrounds nestled between Blood Mountain and Brasstown Bald.",
     practicalNotes: [
-      "Use for lower-barrier weekend escape framing.",
-      "Good option when recommending scenic over strenuous.",
-      "Peak weekends can book up, so pair with realistic planning copy rather than scarcity-blind promotion.",
+      "The lake is the centerpiece — swimming, fishing, and paddling all work well here.",
+      "Fall weekends and summer holiday weekends book up fast; reserve via ReserveAmerica well in advance.",
+      "Combine with a hike up Coosa Backcountry Trail for a full mountain day beyond the lake.",
     ],
     whyItMatters:
-      "Vogel is the easiest early weekend destination to understand and package for a broad audience.",
+      "One of Georgia's most beloved state parks, with mountain scenery, lake access, and a relaxed pace that makes the two-hour drive feel worth it.",
     questHooks: [
       "mountain-lake weekends",
       "first overnight escapes",
@@ -379,7 +410,7 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       bookingStyle: "reserveamerica_park",
       overnightReadiness: "cabin_capable",
       inventoryNote:
-        "Strong early-weekend anchor for campground and cabin planning with broad scenic appeal.",
+        "One of Georgia's most-loved mountain lake parks — campgrounds and cabins both available through ReserveAmerica.",
       stayOptions: [
         {
           unitType: "tent_site",
@@ -416,14 +447,14 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["summer", "fall"],
     weatherFitTags: ["clear-day", "leaf-season", "cool-weather"],
     summary:
-      "A mountain-park anchor with scenic range that helps Lost Track stretch beyond the most obvious North Georgia picks.",
+      "A mountain park in the Cohutta Highlands with an ancient stone wall, lake swimming, and over 15 miles of trails through forested ridgelines.",
     practicalNotes: [
-      "Useful as a weekend shelf pick once users have seen the more obvious flagship destinations.",
-      "Stronger when positioned around overlooks, loops, and a fuller day rather than a single signature attraction.",
-      "Good candidate for 'less obvious but worth it' editorial framing.",
+      "The mysterious 855-foot stone wall at the summit is genuinely interesting — no one knows exactly who built it.",
+      "Multiple trail loops give this more replay value than a single-attraction destination.",
+      "Fall foliage here can rival the more famous parks at a fraction of the crowd.",
     ],
     whyItMatters:
-      "Fort Mountain adds range and keeps Lost Track's regional layer from collapsing into the same three names.",
+      "More to explore than its reputation suggests — a strong second or third North Georgia trip for people who've already hit the obvious ones.",
     questHooks: [
       "less-obvious Georgia state parks",
       "mountain overlook loop",
@@ -434,7 +465,7 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       bookingStyle: "reserveamerica_park",
       overnightReadiness: "camp_capable",
       inventoryNote:
-        "Best framed as a scenic mountain park weekend with campground and cabin-style planning.",
+        "Campgrounds and cabins available through ReserveAmerica — book early for fall weekends.",
       stayOptions: [
         {
           unitType: "tent_site",
@@ -454,7 +485,7 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
         leadTime: "book_early",
         priceSignal: "$$",
         comparisonNote:
-          "Useful alternative to flagship parks when users want mountain range without the most obvious crowds.",
+          "A good alternative to the better-known parks when you want mountain scenery without the weekend crowds.",
       },
     },
   },
@@ -471,14 +502,14 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["fall", "winter", "spring"],
     weatherFitTags: ["dry-weather", "cool-weather", "clear-day"],
     summary:
-      "Atlanta's most distinctive outdoor climbing anchor and one of Lost Track's best chances to feel locally specific instead of generic.",
+      "A cluster of massive granite boulders in southwest Atlanta — one of the best urban bouldering spots in the South, hiding in plain sight.",
     practicalNotes: [
-      "Promote only in dry-weather windows.",
-      "Useful for 'mildly weird / deeply local' editorial framing as much as for strict climbing audiences.",
-      "Pair with stewardship or access-context copy where appropriate.",
+      "Dry weather only — the granite becomes dangerously slick when wet.",
+      "No formal climbing grades are posted; newcomers should come with an experienced boulderer or do research beforehand.",
+      "The area has a strong stewardship culture — leave it cleaner than you found it.",
     ],
     whyItMatters:
-      "Boat Rock is the strongest local-difference destination in the Wave 1 set and gives Lost Track an outdoor identity no generic event feed can fake.",
+      "Few cities have a legitimate bouldering area 30 minutes from downtown — this one is worth knowing about whether you climb or just want to scramble around on rocks.",
     questHooks: [
       "Atlanta outdoors locals know",
       "climbing and bouldering starter path",
@@ -501,14 +532,14 @@ export const YONDER_WAVE2_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "fall", "winter"],
     weatherFitTags: ["after-rain", "cool-weather", "leaf-season"],
     summary:
-      "A high-signal North Georgia waterfall stop that broadens Lost Track's full-day waterfall shelf beyond the obvious flagships.",
+      "Two waterfalls in a single recreation area — an upper falls of 35 feet and a dramatic lower falls of 90 feet — connected by a forested trail.",
     practicalNotes: [
-      "Best promoted after recent rain when water volume is stronger.",
-      "Works well as a lower-friction scenic hike compared with harder summit days.",
-      "Useful support anchor when the homepage needs more than one waterfall-driven recommendation.",
+      "Water volume is strongest after recent rain; the lower falls especially rewards a post-rain visit.",
+      "The trail is moderate with some rocky sections — sturdy footwear recommended.",
+      "Combine with a stop at nearby Vogel or Helton Creek for a full North Georgia waterfall day.",
     ],
     whyItMatters:
-      "DeSoto gives Lost Track more waterfall density, which is critical for seasonal recommendation logic and future quest clustering.",
+      "Getting two distinct waterfalls in one stop makes this punches above its mileage — a genuinely satisfying payoff for the drive.",
     questHooks: [
       "North Georgia waterfall circuit",
       "cool-weather scenic hikes",
@@ -528,14 +559,14 @@ export const YONDER_WAVE2_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["after-rain", "summer-friendly", "leaf-season"],
     summary:
-      "A lower-friction waterfall destination with strong scenic payoff, ideal for users who want mountain energy without an all-day grind.",
+      "A pair of stacked waterfalls on an easy 0.4-mile trail — an accessible North Georgia gem that rewards even a short detour.",
     practicalNotes: [
-      "Strong for broad-audience scenic recommendations and less intense day-trip framing.",
-      "Rain improves payoff, but the easier access makes it useful even outside peak flow windows.",
-      "A good alternate when harder waterfall hikes feel like too much commitment.",
+      "One of the shortest hikes to a genuinely beautiful waterfall in North Georgia — good for all fitness levels.",
+      "Flow is best after rain, but the two-tier cascade is scenic even in drier conditions.",
+      "Often combined with nearby Blood Mountain or Vogel State Park for a fuller day.",
     ],
     whyItMatters:
-      "Helton Creek helps Lost Track avoid making every scenic full-day recommendation feel strenuous or expert-coded.",
+      "The payoff-to-effort ratio here is unusually high — a beautiful waterfall just minutes from the parking area.",
     questHooks: [
       "easy-payoff waterfall list",
       "first North Georgia scenic trips",
@@ -555,14 +586,14 @@ export const YONDER_WAVE2_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "fall", "winter"],
     weatherFitTags: ["clear-day", "cool-weather", "leaf-season", "sunrise-friendly"],
     summary:
-      "A true summit payoff for high-intent hikers, giving Lost Track a second hard-hike benchmark beyond Blood Mountain.",
+      "Georgia's second-highest peak at 4,696 feet, with a wooden observation tower at the summit and panoramic views into the Carolinas.",
     practicalNotes: [
-      "Promote on clear days when summit-view payoff is strongest.",
-      "Best used for committed hikers rather than general scenic audiences.",
-      "Strong candidate for quest framing around Georgia summit progression.",
+      "Clear days are essential — the observation tower views on a hazy day are a letdown.",
+      "The most common approach (Beegum Gap trailhead) is 5.4 miles round-trip with 1,350 feet of gain — a committed outing.",
+      "Less crowded than Blood Mountain on weekends, making it a good choice when parking pressure is a concern.",
     ],
     whyItMatters:
-      "Rabun Bald deepens Lost Track's summit ladder so the portal can serve ambitious hikers without repeating the same flagship every time.",
+      "The observation tower at the summit turns an already-excellent summit view into something even more dramatic — worth every step of the climb.",
     questHooks: [
       "Georgia summit ladder",
       "hard-hike brag list",
@@ -582,14 +613,14 @@ export const YONDER_WAVE2_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["summer", "fall", "winter"],
     weatherFitTags: ["clear-day", "leaf-season", "cool-weather", "sunrise-friendly"],
     summary:
-      "An overlook-heavy mountain park that expands Lost Track's weekend shelf with another scenic, camp-capable escape.",
+      "Georgia's highest state park at 3,640 feet, with sweeping overlooks across the Blue Ridge and Nantahala mountain ranges.",
     practicalNotes: [
-      "Useful when weekend recommendations need something more scenic-drive and overlook oriented.",
-      "Visibility matters, so clear days and foliage windows are especially valuable.",
-      "Good backup weekend anchor when the most obvious parks are overexposed or crowded.",
+      "Clear days are essential — the overlook views in haze or clouds are dramatically reduced.",
+      "Fall foliage from this elevation is spectacular; mid-October is prime.",
+      "The park is in the mountains above Clayton — combine with a stop in town for a complete day.",
     ],
     whyItMatters:
-      "Black Rock Mountain gives the weekend layer more range and keeps Lost Track from collapsing into a tiny set of repeat park names.",
+      "The elevation gives you views that most Georgia parks can't match — on a clear fall day this is as good as it gets in the state.",
     questHooks: [
       "overlook weekends",
       "fall-color mountain parks",
@@ -600,7 +631,7 @@ export const YONDER_WAVE2_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       bookingStyle: "reserveamerica_park",
       overnightReadiness: "camp_capable",
       inventoryNote:
-        "Works as a scenic mountain-park weekend with camp-capable inventory and clear-day payoff.",
+        "Georgia's highest state park, with campgrounds and cabins available — best reserved well ahead for peak foliage weekends.",
       stayOptions: [
         {
           unitType: "tent_site",
@@ -637,14 +668,14 @@ export const YONDER_WAVE2_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["fall", "winter", "spring"],
     weatherFitTags: ["clear-day", "leaf-season", "cool-weather", "sunrise-friendly"],
     summary:
-      "A high-upside overlook anchor that gives Lost Track a cleaner wilderness-edge weekend idea without requiring a big technical hike.",
+      "A backcountry overlook on the edge of the Cohutta Wilderness with expansive ridge views — reached via forest road rather than technical trail.",
     practicalNotes: [
-      "Best framed around overlook payoff, foliage, and clear-weather windows.",
-      "Useful as a scenic-weekend alternative to more hike-centric recommendations.",
-      "Can support future Cohutta-area quest clustering once additional anchors are seeded.",
+      "Access requires a high-clearance vehicle on rough forest road — not a passenger car destination.",
+      "Clear weather is essential; the views in clouds or haze are limited.",
+      "Best paired with a broader Cohutta area exploration — this is a highlight stop, not a full-day destination on its own.",
     ],
     whyItMatters:
-      "Cohutta Overlook starts to make the portal's wilderness-scale weekend promise feel broader than state parks alone.",
+      "The wilderness scale of the view here feels genuinely remote — the kind of overlook that rewards the extra effort to reach it.",
     questHooks: [
       "North Georgia overlook run",
       "wilderness-edge weekends",
@@ -655,7 +686,7 @@ export const YONDER_WAVE2_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       bookingStyle: "self_planned",
       overnightReadiness: "day_use_only",
       inventoryNote:
-        "Best treated as a scenic wilderness-edge objective, not a stayable overnight base on its own.",
+        "No overnight facilities at this location — pair with a nearby campground or plan as a day trip.",
       stayOptions: [
         {
           unitType: "day_use",
@@ -669,7 +700,7 @@ export const YONDER_WAVE2_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
         leadTime: "self_planned",
         priceSignal: "$",
         comparisonNote:
-          "This is a trip objective to pair with another base, not a destination with its own stay inventory.",
+          "No overnight facilities at the overlook itself — pair this as a stop within a broader trip to the Cohutta area.",
       },
     },
   },
@@ -689,14 +720,14 @@ export const YONDER_WAVE3_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "fall", "winter"],
     weatherFitTags: ["after-rain", "cool-weather", "leaf-season"],
     summary:
-      "The cleanest metro-edge trail anchor for when Lost Track needs a real nature reset without turning the day into a road trip.",
+      "Creek-side trails past Civil War-era textile mill ruins, 30 minutes from downtown Atlanta — a genuine natural escape without the road trip.",
     practicalNotes: [
-      "Best after rain and in cooler months when creek flow and ruins payoff are strongest.",
-      "Ideal bridge between urban quick hits and full-day regional hikes.",
-      "Use when users want an actual trail day but only have half a day to spare.",
+      "Creek flow and the ruins atmosphere are both best after rain and in cooler months.",
+      "Multiple trail loops offer flexibility from 2 to 5+ miles depending on how long you want to be out.",
+      "Parking fills on weekend mornings — arrive before 10am or come on a weekday.",
     ],
     whyItMatters:
-      "Sweetwater is the most useful metro support anchor for keeping Lost Track credible below the regional mountain layer.",
+      "The combination of old-growth forest, rushing creek, and crumbling ruins creates an atmosphere that doesn't feel like 30 minutes from Midtown.",
     questHooks: [
       "metro-to-mountain progression",
       "best first half-day hikes",
@@ -716,14 +747,14 @@ export const YONDER_WAVE3_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "fall", "winter"],
     weatherFitTags: ["clear-day", "cool-weather", "leaf-season"],
     summary:
-      "A distinctive granite-landscape half-day option that keeps Lost Track's close-in nature shelf from collapsing into the same river and forest pattern.",
+      "A granite monadnock with open rock outcrops, wildflower meadows, and guided summit hikes — 30 minutes southeast of Atlanta.",
     practicalNotes: [
-      "Stronger in cooler-weather windows and clear-day conditions.",
-      "Useful when the portal needs a scenic half-day recommendation outside the Chattahoochee corridor.",
-      "Good candidate for beginner-friendly but still memorable trail prompts.",
+      "The summit is only accessible via guided ranger hike (check the park schedule before going).",
+      "The lower trails and rock outcrops are open to self-guided hiking and offer their own compelling scenery.",
+      "Spring wildflowers on the granite flats are a genuine seasonal highlight.",
     ],
     whyItMatters:
-      "Panola widens Lost Track's metro support map and gives the half-day shelf a more distinctive geological identity.",
+      "The exposed granite landscape and guided summit access make this feel different from any other close-in Atlanta trail — worth the short drive.",
     questHooks: [
       "Atlanta monadnock circuit",
       "close-in nature variety",
@@ -743,14 +774,14 @@ export const YONDER_WAVE3_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall", "winter"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A reliable river-adjacent half-day trail that gives Lost Track a low-friction answer when users want mileage without mountain logistics.",
+      "A flat, paved river loop through Chattahoochee National Recreation Area — one of Atlanta's best close-in outdoor routines at any pace.",
     practicalNotes: [
-      "Works year-round and is especially useful for repeatable close-in outdoor routines.",
-      "Good fallback when bigger mountain plans feel like too much friction.",
-      "Use as a confidence-building recommendation for users easing into longer trail time.",
+      "The main Wetlands Loop is 3.1 miles and completely flat — accessible to almost any fitness level.",
+      "Works year-round; popular enough that early mornings are less crowded.",
+      "Dogs are welcome on leash, making this a reliable local favorite for that reason alone.",
     ],
     whyItMatters:
-      "Cochran Shoals gives Lost Track repeatable half-day depth, which reduces pressure on the regional shelf to do all the work.",
+      "One of the most-visited trails in Georgia for good reason — the river views, wildlife, and ease of access make this endlessly repeatable.",
     questHooks: [
       "river-loop regulars",
       "best close-in mileage",
@@ -770,14 +801,14 @@ export const YONDER_WAVE3_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["summer", "spring", "fall"],
     weatherFitTags: ["summer-friendly", "clear-day", "all-season"],
     summary:
-      "The strongest current metro water-access node for summer escape framing, group paddles, and heat-aware recommendations.",
+      "Atlanta's favorite summer float — rent a tube or kayak at Powers Island and drift down the Chattahoochee back to the car.",
     practicalNotes: [
-      "Best used for warm-weather and group-friendly outdoor suggestions.",
-      "Useful when the portal needs a real water answer instead of another trail card.",
-      "Pair with safety and river-condition context once the conditions layer deepens.",
+      "Water temperature stays cool even in summer, making this the city's go-to heat escape.",
+      "Tubing season runs roughly May through September depending on water levels — check conditions before going.",
+      "Bring a dry bag for your phone and something to secure anything you don't want wet.",
     ],
     whyItMatters:
-      "Powers Island is the most direct way to make Lost Track's water lane feel real in Atlanta before the broader paddle graph is built out.",
+      "There's no better way to spend a hot Atlanta afternoon — a lazy river float that feels like a real escape without leaving the metro.",
     questHooks: [
       "Chattahoochee crossings",
       "summer water escapes",
@@ -797,14 +828,14 @@ export const YONDER_WAVE3_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["summer", "spring", "fall"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A cleaner put-in style support node that helps Lost Track grow beyond a single Chattahoochee access story.",
+      "A quiet Chattahoochee put-in inside the national recreation area — a calmer launch point for kayaks and canoes away from the tubing crowds.",
     practicalNotes: [
-      "Use as support inventory for water-focused modules rather than a flagship scenic card.",
-      "Most valuable in heat-aware routing and Chattahoochee-specific collections.",
-      "Helpful for expanding future artifact and access-point logic without needing a new data model yet.",
+      "Best for paddlers who want a peaceful float rather than a group tubing scene.",
+      "The surrounding trails through Island Ford are worth adding before or after a paddle.",
+      "Parking is free and rarely crowded compared to the busier Powers Island launch.",
     ],
     whyItMatters:
-      "Island Ford starts the access-node layer Lost Track needs if it wants to own water discovery rather than just mentioning the river abstractly.",
+      "A more serene alternative to the busy tubing sections — the forested river corridor here is genuinely beautiful.",
     questHooks: [
       "Chattahoochee crossings",
       "river access starter pack",
@@ -824,14 +855,14 @@ export const YONDER_WAVE3_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A lower-friction camp-capable park that gives Lost Track a weekend option closer to Atlanta than the North Georgia mountain set.",
+      "A riverside state park just 55 minutes from Atlanta with riverside camping, 20 miles of trails, and the Chattahoochee flowing through the property.",
     practicalNotes: [
-      "Useful as a 'try a weekend outside without driving two hours' recommendation.",
-      "Pairs well with early camping-adjacent messaging even before Camp Finder exists.",
-      "Good counterweight when the weekend shelf feels too mountain-heavy.",
+      "One of the closest full-service campgrounds to Atlanta — a good first overnight for people new to camping.",
+      "The river frontage makes this feel more remote than the drive time suggests.",
+      "Cabins are available if you want the experience without the tent setup.",
     ],
     whyItMatters:
-      "Chattahoochee Bend makes Lost Track's weekend layer feel more reachable and less dependent on a narrow North Georgia pattern.",
+      "Proves you don't have to drive two hours to get a real outdoor overnight — a genuinely satisfying park that's easy to get to.",
     questHooks: [
       "first overnight escapes",
       "close-in weekend basecamps",
@@ -842,12 +873,12 @@ export const YONDER_WAVE3_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       bookingStyle: "reserveamerica_park",
       overnightReadiness: "camp_capable",
       inventoryNote:
-        "Close-in state park weekend with real campground and cabin-style planning upside.",
+        "One of the closest camp-capable state parks to Atlanta — campgrounds and cabins available through ReserveAmerica.",
       stayOptions: [
         {
           unitType: "tent_site",
           label: "Campground",
-          summary: "Closest true camp-capable weekend in the Lost Track set.",
+          summary: "One of the closest full-service campgrounds to Atlanta — great for a first overnight.",
           bookingSurface: "reserveamerica",
         },
         {
@@ -882,14 +913,14 @@ export const YONDER_WAVE4_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "The core Chattahoochee anchor that ties trails, launches, and river-day planning into one recognizable Lost Track lane.",
+      "A 48-mile stretch of protected river corridor through metro Atlanta — trails, canoe launches, and wildlife within 30 minutes of the city.",
     practicalNotes: [
-      "Use as the parent water-and-trail anchor when Lost Track needs to explain the river system, not just a single put-in.",
-      "Strong in warm-weather and clear-day windows, but useful year-round for lower-friction outdoor plans.",
-      "Best paired with more specific access nodes when the recommendation needs execution-level clarity.",
+      "The NRA covers 15 separate units from Buford Dam to Peachtree Creek — pick a unit based on what you want to do (trail, paddle, fish, or just be outside).",
+      "Cochran Shoals, East Palisades, and Island Ford are the most popular units for first-timers.",
+      "Free to visit; parking can fill at popular units on weekends.",
     ],
     whyItMatters:
-      "The NRA is the umbrella destination that makes Lost Track's water and river logic legible instead of feeling like disconnected access points.",
+      "One of the most visited national recreation areas in the country — and most Atlantans don't realize how much of the river they can actually access.",
     questHooks: [
       "Chattahoochee crossings",
       "river regulars",
@@ -909,14 +940,14 @@ export const YONDER_WAVE4_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall", "winter"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A river-bluff trail with real local distinctiveness that helps Lost Track connect hiking and water-adjacent discovery in one place.",
+      "A 4-mile loop along high river bluffs above the Chattahoochee, with bamboo forests, a small beach, and dramatic elevation changes.",
     practicalNotes: [
-      "Useful when recommendations need more payoff and texture than a basic flat river loop.",
-      "Good bridge between close-in trails and water-access collections.",
-      "Works across seasons, especially when users want a short-drive trail that still feels memorable.",
+      "More challenging than the flat Cochran Shoals loop — expect real climbs and some rocky footing.",
+      "The bamboo forest section is surprisingly atmospheric and unlike anything else close to Atlanta.",
+      "Multiple entry points; the Whitewater Creek trailhead is the most common start.",
     ],
     whyItMatters:
-      "East Palisades gives the half-day shelf a more cinematic Chattahoochee option than generic river-path inventory.",
+      "The bluff views and bamboo sections make this feel genuinely unexpected for a trail this close to the city.",
     questHooks: [
       "Chattahoochee crossings",
       "Atlanta trails locals know",
@@ -936,14 +967,14 @@ export const YONDER_WAVE4_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall", "winter"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A practical access-node layer for East Palisades that starts to make Lost Track's access-point logic real rather than theoretical.",
+      "A secondary entrance to the East Palisades unit with river access and a quieter approach through forested trails down to the Chattahoochee.",
     practicalNotes: [
-      "Use when route clarity matters more than broad scenic framing.",
-      "Strong support inventory for future artifact and access-point collections.",
-      "Best treated as a precision node inside Chattahoochee recommendations, not a flagship destination card.",
+      "Less trafficked than the main Whitewater Creek entrance — a better choice on busy weekend mornings.",
+      "River access at the bottom of the trail makes this a good spot for fishing or just sitting by the water.",
+      "The trail down to the river is steep in places — bring good footwear.",
     ],
     whyItMatters:
-      "Indian Trail Entrance is the kind of support node Lost Track needs if it wants to graduate from destination list to usable outdoor graph.",
+      "A genuinely peaceful stretch of the Chattahoochee that most people drive right past — worth knowing about.",
     questHooks: [
       "Chattahoochee crossings",
       "access-point starter pack",
@@ -963,14 +994,14 @@ export const YONDER_WAVE4_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "clear-day", "all-season"],
     summary:
-      "A true whitewater operator anchor that gives Lost Track's water lane a bigger-adventure option beyond metro floats and river trails.",
+      "Guided whitewater rafting on the Chattahoochee below Columbus — Class II-IV rapids depending on water release, run by a professional outfitter.",
     practicalNotes: [
-      "Useful when the weekend shelf needs an actual water-adventure answer, not just another park with a river nearby.",
-      "Warm-weather and group-oriented framing works best here.",
-      "Should be positioned as a trip prompt and operator anchor, not a generic scenic place card.",
+      "This is a booked experience with a guide company, not a self-guided float — reserve in advance.",
+      "Rapid intensity varies with dam release schedules; check with the operator before booking.",
+      "Works well as a group trip — they accommodate crews of all experience levels.",
     ],
     whyItMatters:
-      "Whitewater Express is the quickest way to make Lost Track's water category feel more ambitious than tubing and launches alone.",
+      "The closest legitimate whitewater rafting to Atlanta — a real adventure that doesn't require going to Tennessee.",
     questHooks: [
       "Georgia water weekends",
       "crew adventure days",
@@ -981,7 +1012,7 @@ export const YONDER_WAVE4_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       bookingStyle: "operator_direct",
       overnightReadiness: "operator_bookable",
       inventoryNote:
-        "This is an operator-booked adventure weekend, not a campsite or cabin inventory play.",
+        "Book directly with Whitewater Express — this is a guided experience, not a self-planned campsite stay.",
       stayOptions: [
         {
           unitType: "guide_package",
@@ -995,7 +1026,7 @@ export const YONDER_WAVE4_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
         leadTime: "book_early",
         priceSignal: "$$$",
         comparisonNote:
-          "This compares like a bookable adventure package, not a lodging decision with multiple stay formats.",
+          "Book the rafting experience directly — this isn't a campsite or cabin reservation, it's a guided adventure.",
       },
     },
   },
@@ -1012,14 +1043,14 @@ export const YONDER_WAVE4_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "clear-day", "all-season"],
     summary:
-      "A north-metro river support anchor that helps Lost Track avoid making every water recommendation about the Chattahoochee.",
+      "A north-metro riverside park with canoe launch, fishing access, and trails along the Etowah River just 45 minutes from Atlanta.",
     practicalNotes: [
-      "Best used to broaden the water lane and reduce repetition in warm-weather shelves.",
-      "Good for closer-in paddle and riverfront recommendations north of core Atlanta.",
-      "Most valuable as support density rather than a top-of-feed flagship.",
+      "A low-key alternative to the busier Chattahoochee spots — rarely crowded and easy to access.",
+      "Good for a casual morning paddle or fishing session without a long drive.",
+      "The Etowah is a smaller, calmer river than the Chattahoochee — better suited to beginners.",
     ],
     whyItMatters:
-      "Etowah River Park expands Lost Track's water identity geographically and prevents the summer lane from feeling too single-river dependent.",
+      "A peaceful river outing that doesn't require fighting weekend crowds at the more popular Chattahoochee access points.",
     questHooks: [
       "north-metro water reset",
       "river regulars",
@@ -1042,14 +1073,14 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A close-in lake weekend that gives Lost Track a realistic overnight shelf without making every escape a mountain mission.",
+      "A lake-centered state park on Lake Allatoona, 50 minutes north of Atlanta — swimming, fishing, hiking, and camping without the mountain drive.",
     practicalNotes: [
-      "Best used for reachable weekend prompts and first overnighters.",
-      "Strong fallback when users want a real getaway without a long North Georgia drive.",
-      "Useful for broad-audience cabin-or-camp framing, not just trail-first recommendations.",
+      "Lake Allatoona offers swimming and boating in addition to trails — bring a change of clothes.",
+      "Summer weekends fill up; reserve your site or cabin well in advance.",
+      "The 7-mile trail network is easy and well-marked — good for kids and casual hikers.",
     ],
     whyItMatters:
-      "Red Top Mountain is the fastest way to make Lost Track's weekend layer feel more repeatable and less dependent on the same mountain pattern.",
+      "Everything a weekend outdoors should be without requiring a two-hour drive — lake access, good trails, and a campground that doesn't feel like parking lot camping.",
     questHooks: [
       "first overnight escapes",
       "close-in lake weekends",
@@ -1060,7 +1091,7 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       bookingStyle: "reserveamerica_park",
       overnightReadiness: "cabin_capable",
       inventoryNote:
-        "Reachable lake-park weekend with real cabin and campground utility for first overnighters.",
+        "50 minutes from Atlanta with campgrounds and cabins on Lake Allatoona — a great first overnight trip.",
       stayOptions: [
         {
           unitType: "tent_site",
@@ -1097,14 +1128,14 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A quieter east-metro basecamp that broadens Lost Track's weekend shelf beyond scenic-heavy mountain recommendations.",
+      "A relaxed east-side state park with two lakes, a beach, disc golf, and equestrian trails — 65 minutes from Atlanta in Morgan County.",
     practicalNotes: [
-      "Useful for lower-key weekend prompts and first camp-capable trips.",
-      "Good when the weekend shelf needs variety instead of another overlook or waterfall card.",
-      "Works well for family-friendly or crew-friendly overnight suggestions.",
+      "The beach and swimming lake are the main draw in summer — worth planning a half-day around.",
+      "Disc golfers will find one of the nicer public courses in the region here.",
+      "Less crowded than the parks west or north of Atlanta — a genuinely peaceful place to spend a weekend.",
     ],
     whyItMatters:
-      "Hard Labor Creek gives Lost Track another real overnight-capable option that makes the weekend shelf feel less repetitive.",
+      "An underrated park with more to do than most people expect — the beach and disc golf course alone make it worth the drive.",
     questHooks: [
       "first overnight escapes",
       "camp-close-to-home",
@@ -1115,7 +1146,7 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       bookingStyle: "reserveamerica_park",
       overnightReadiness: "camp_capable",
       inventoryNote:
-        "Useful as a lower-key campground and cabin base rather than a scenery-first flagship trip.",
+        "A quieter park with campgrounds and cabins — good for a low-key weekend without the scenery crowds.",
       stayOptions: [
         {
           unitType: "tent_site",
@@ -1135,7 +1166,7 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
         leadTime: "book_early",
         priceSignal: "$",
         comparisonNote:
-          "Lower-key overnight profile that compares well when users value calm logistics over maximum spectacle.",
+          "A lower-key overnight option when the goal is a peaceful getaway, not maximum scenery.",
       },
     },
   },
@@ -1152,14 +1183,14 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A lake-centered park that gives Lost Track a broad-audience weekend base with easier logistics than the farthest regional anchors.",
+      "A historic fort site turned lake park 55 minutes east of Atlanta — swimming, boating, and camping around a 260-acre lake.",
     practicalNotes: [
-      "Best used for approachable weekend escapes and broad family-friendly outdoors prompts.",
-      "Good counterweight when the shelf is leaning too hard into mountain-only adventure.",
-      "Useful for cabin-or-campsite messaging even before a true lodging layer exists.",
+      "The 1792 log fort is one of the oldest structures in Georgia and worth a look.",
+      "The lake has a swimming beach and boat ramp — kayak and canoe rentals available in season.",
+      "A solid choice for families or groups who want a complete lake weekend without a long drive.",
     ],
     whyItMatters:
-      "Fort Yargo adds a repeatable, broadly usable overnight option to Lost Track's weekend shelf instead of another one-off scenic anchor.",
+      "Packs more into a single park than most — history, lake access, and a proper campground, all within an hour of the city.",
     questHooks: [
       "easy getaway ladder",
       "lake park weekends",
@@ -1170,7 +1201,7 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       bookingStyle: "reserveamerica_park",
       overnightReadiness: "cabin_capable",
       inventoryNote:
-        "Broad-audience weekend base with cabin-and-camp options and easier logistics than mountain-heavy picks.",
+        "Campgrounds and cabins available on the lake — a solid choice for a family or group weekend without a long drive.",
       stayOptions: [
         {
           unitType: "tent_site",
@@ -1190,7 +1221,7 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
         leadTime: "book_early",
         priceSignal: "$$",
         comparisonNote:
-          "Broad-audience lake-park weekend with a relatively approachable comfort profile.",
+          "A relaxed lake-park weekend with campgrounds and cabins available — easy booking and no long drive.",
       },
     },
   },
@@ -1207,14 +1238,14 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "clear-day", "all-season"],
     summary:
-      "A lake-forward weekend base that strengthens Lost Track's overnight water lane instead of only its hiking shelf.",
+      "A lakefront state park on Lake Lanier with boat ramps, swimming, and camping — 70 minutes from Atlanta in the Georgia foothills.",
     practicalNotes: [
-      "Best used for warm-weather weekend prompts and water-adjacent overnight ideas.",
-      "Useful when Lost Track needs a real overnight water answer rather than another access point or float launch.",
-      "Good bridge between paddling logic and camp-capable recommendations.",
+      "Lake Lanier is one of the largest lakes in the Southeast — the open water here feels genuinely expansive.",
+      "The park has its own boat ramp; bring your own kayak or canoe for day use.",
+      "Summer weekends are busy; reserve early or plan for shoulder-season visits.",
     ],
     whyItMatters:
-      "Don Carter helps Lost Track connect its water and weekend strategies instead of treating them as separate categories.",
+      "The best place to actually camp on Lake Lanier — spacious sites, real lake access, and a park that doesn't feel cramped.",
     questHooks: [
       "lake weekends",
       "overnight water escapes",
@@ -1225,7 +1256,7 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       bookingStyle: "reserveamerica_park",
       overnightReadiness: "camp_capable",
       inventoryNote:
-        "Best understood as a lake-forward camp-and-cabin weekend rather than a pure paddling day trip.",
+        "Campground and cabins right on Lake Lanier — bring a kayak or canoe for full use of the water.",
       stayOptions: [
         {
           unitType: "tent_site",
@@ -1245,7 +1276,7 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
         leadTime: "seasonal_rush",
         priceSignal: "$$",
         comparisonNote:
-          "Best compared as a summer-forward overnight water base rather than a pure hiking weekend.",
+          "A lake-centered park best enjoyed in summer — the water access is the main event, with trails as a bonus.",
       },
     },
   },
@@ -1262,14 +1293,14 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall", "winter"],
     weatherFitTags: ["summer-friendly", "leaf-season", "clear-day", "all-season"],
     summary:
-      "A North Georgia lodge-and-lake base that gives Lost Track a softer-landing weekend option than campsite-only mountain prompts.",
+      "A mountain lake resort park near Helen, with a full-service lodge, cabins, campground, and trails through the Chattahoochee National Forest.",
     practicalNotes: [
-      "Best for cabin-capable or lodge-capable weekend prompts and lower-friction North Georgia escapes.",
-      "Useful bridge between scenic mountain discovery and easier booking-oriented planning.",
-      "Strong choice when the portal needs a weekend answer that feels adventurous without feeling hard-core.",
+      "The lodge is a genuine option — full rooms with a restaurant, no camping required.",
+      "Proximity to Helen adds a fun German-village stop to any weekend itinerary.",
+      "Smith Creek Trail from the park leads to Anna Ruby Falls — a worthwhile add-on hike.",
     ],
     whyItMatters:
-      "Unicoi gives Lost Track a more accommodation-friendly weekend archetype, which the current shelf still lacks.",
+      "One of the few places in North Georgia where you can stay in a proper lodge room, hike to a waterfall, and still be home by Sunday afternoon.",
     questHooks: [
       "soft-landing weekends",
       "Helen basecamp ideas",
@@ -1280,7 +1311,7 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       bookingStyle: "direct_lodge",
       overnightReadiness: "lodge_capable",
       inventoryNote:
-        "This is the clearest lodge-capable North Georgia weekend in the current Yonder set.",
+        "The most accommodation-flexible North Georgia weekend — lodge rooms, cabins, and campground all available through the same park.",
       stayOptions: [
         {
           unitType: "lodge_room",
@@ -1306,11 +1337,17 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
         leadTime: "book_early",
         priceSignal: "$$$",
         comparisonNote:
-          "The strongest comfort-forward weekend in the current set, with the broadest accommodation mix and the highest softness level.",
+          "The most accommodation-flexible North Georgia destination — lodge rooms, cabins, and tent sites all available in one park.",
       },
     },
   },
 ];
+
+// Wave 6+ regional intelligence files
+import { YONDER_GA_INTELLIGENCE } from "./yonder-intelligence-ga";
+import { YONDER_TN_KY_INTELLIGENCE } from "./yonder-intelligence-tn-ky";
+import { YONDER_NC_INTELLIGENCE } from "./yonder-intelligence-nc";
+import { YONDER_SC_AL_INTELLIGENCE } from "./yonder-intelligence-sc-al";
 
 export const YONDER_DESTINATION_INTELLIGENCE: YonderDestinationIntelligence[] = [
   ...YONDER_WAVE1_DESTINATION_INTELLIGENCE,
@@ -1318,6 +1355,10 @@ export const YONDER_DESTINATION_INTELLIGENCE: YonderDestinationIntelligence[] = 
   ...YONDER_WAVE3_DESTINATION_INTELLIGENCE,
   ...YONDER_WAVE4_DESTINATION_INTELLIGENCE,
   ...YONDER_WAVE5_DESTINATION_INTELLIGENCE,
+  ...YONDER_GA_INTELLIGENCE,
+  ...YONDER_TN_KY_INTELLIGENCE,
+  ...YONDER_NC_INTELLIGENCE,
+  ...YONDER_SC_AL_INTELLIGENCE,
 ];
 
 export const YONDER_DESTINATION_INTELLIGENCE_BY_SLUG = Object.fromEntries(
