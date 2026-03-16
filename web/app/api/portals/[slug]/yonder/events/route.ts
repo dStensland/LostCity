@@ -7,7 +7,20 @@ import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 const CACHE_NAMESPACE = "api:yonder-events";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=600";
-const MAX_EVENTS = 50;
+
+// Outdoor-relevant tags used to filter Meetup (source_id=2) events
+const OUTDOOR_TAGS = [
+  "outdoor",
+  "hiking",
+  "running",
+  "trail",
+  "nature",
+  "kayaking",
+  "climbing",
+  "paddling",
+  "cycling",
+  "camping",
+];
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -24,6 +37,10 @@ type AdventureEvent = {
   description: string | null;
   sourceUrl: string | null;
   ticketUrl: string | null;
+  categoryId: string | null;
+  isFree: boolean;
+  priceMin: number | null;
+  priceMax: number | null;
   venueName: string | null;
   venueSlug: string | null;
   venueImageUrl: string | null;
@@ -175,6 +192,11 @@ export async function GET(request: NextRequest, { params }: Props) {
     description: string | null;
     source_url: string | null;
     ticket_url: string | null;
+    category_id: string | null;
+    is_free: boolean;
+    price_min: number | null;
+    price_max: number | null;
+    source_id: number;
     tags: string[] | null;
     venue: {
       name: string;
@@ -202,6 +224,11 @@ export async function GET(request: NextRequest, { params }: Props) {
       description,
       source_url,
       ticket_url,
+      category_id,
+      is_free,
+      price_min,
+      price_max,
+      source_id,
       tags,
       venue:venues(name, slug, image_url, hero_image_url, neighborhood),
       source:sources!events_source_id_fkey(name)
@@ -213,8 +240,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     .gte("start_date", start)
     .lte("start_date", end)
     .order("start_date", { ascending: true })
-    .order("start_time", { ascending: true, nullsFirst: false })
-    .limit(MAX_EVENTS);
+    .order("start_time", { ascending: true, nullsFirst: false });
 
   if (error) {
     console.error("GET /api/portals/[slug]/yonder/events:", error.message);
@@ -224,7 +250,14 @@ export async function GET(request: NextRequest, { params }: Props) {
     );
   }
 
-  const rows = ((eventsData ?? []) as unknown as EventRow[]);
+  const allRows = (eventsData ?? []) as unknown as EventRow[];
+
+  // Filter Meetup events (source_id=2) to only outdoor-relevant content
+  const rows = allRows.filter((row) => {
+    if (row.source_id !== 2) return true;
+    const tags = row.tags ?? [];
+    return tags.some((tag) => OUTDOOR_TAGS.includes(tag));
+  });
 
   const events: AdventureEvent[] = rows.map((row) => ({
     id: row.id,
@@ -237,6 +270,10 @@ export async function GET(request: NextRequest, { params }: Props) {
     description: row.description,
     sourceUrl: row.source_url,
     ticketUrl: row.ticket_url,
+    categoryId: row.category_id,
+    isFree: row.is_free,
+    priceMin: row.price_min,
+    priceMax: row.price_max,
     venueName: row.venue?.name ?? null,
     venueSlug: row.venue?.slug ?? null,
     venueImageUrl: row.venue?.image_url ?? row.venue?.hero_image_url ?? null,

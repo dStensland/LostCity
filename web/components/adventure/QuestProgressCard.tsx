@@ -74,18 +74,17 @@ export const QuestProgressCard = memo(function QuestProgressCard({
 
       {/* Progress bar */}
       <div
-        className="relative h-3 mb-2"
+        className="relative h-2 mb-2"
         style={{
-          backgroundColor: `${ADV.STONE}28`,
+          backgroundColor: "#EBE8E3",
           borderRadius: 0,
-          border: `2px solid ${ADV.DARK}`,
         }}
       >
         <div
           className="absolute inset-y-0 left-0 transition-all duration-500"
           style={{
             width: `${progressPct}%`,
-            backgroundColor: isComplete ? "#6B8E5E" : ADV.TERRACOTTA,
+            backgroundColor: isComplete ? ADV.OLIVE : ADV.OLIVE,
             borderRadius: 0,
           }}
         />

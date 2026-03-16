@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CloudSun } from "@phosphor-icons/react";
 import { WeatherCard } from "./WeatherCard";
 import { DestinationCard } from "./DestinationCard";
+import { SectionHeader } from "./SectionHeader";
 import { useAdventureProgress } from "@/lib/hooks/useAdventureProgress";
 import { useWeather } from "@/lib/hooks/useWeather";
 import type { YonderDestinationIntelligence, YonderSeason } from "@/config/yonder-destination-intelligence";
@@ -141,20 +142,7 @@ export function ConditionsView({ portalSlug }: ConditionsViewProps) {
     winter: "Winter",
   };
 
-  const sectionHeader = (
-    <div className="flex items-center gap-2 mb-4">
-      <CloudSun size={14} weight="bold" color={ADV.TERRACOTTA} />
-      <span
-        className="text-xs font-bold uppercase"
-        style={{
-          letterSpacing: "0.12em",
-          color: ADV.TERRACOTTA,
-        }}
-      >
-        Conditions
-      </span>
-    </div>
-  );
+  const sectionHeader = <SectionHeader label="Conditions" icon={CloudSun} />;
 
   return (
     <div className="px-4 pb-10 pt-4 sm:px-0 space-y-6">
@@ -283,39 +271,6 @@ export function ConditionsView({ portalSlug }: ConditionsViewProps) {
         </div>
       )}
 
-      {/* Trail status placeholder */}
-      <div>
-        <SubsectionLabel label="Trail Status" />
-        <div
-          className="p-5"
-          style={{ border: `2px solid ${ADV.DARK}`, borderRadius: 0, backgroundColor: ADV.CARD }}
-        >
-          <p
-            className="text-xs font-bold uppercase mb-2"
-            style={{
-              letterSpacing: "0.1em",
-              color: ADV.STONE,
-            }}
-          >
-            Live Trail Conditions
-          </p>
-          <p className="text-sm leading-relaxed" style={{ color: ADV.STONE }}>
-            Trail condition reports and closures coming soon. In the meantime, check Georgia State Parks online or call ahead for current access info.
-          </p>
-          <a
-            href="https://gastateparks.org"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 inline-block text-xs font-bold uppercase hover:underline"
-            style={{
-              letterSpacing: "0.1em",
-              color: ADV.TERRACOTTA,
-            }}
-          >
-            Georgia State Parks →
-          </a>
-        </div>
-      </div>
-    </div>
+</div>
   );
 }

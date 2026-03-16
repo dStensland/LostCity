@@ -1,6 +1,6 @@
 import { getCachedPortalBySlug, getCachedPortalByVerticalAndCity, getPortalVertical } from "@/lib/portal";
 import { headers } from "next/headers";
-import { PortalHeader, DogHeader } from "@/components/headers";
+import { PortalHeader, DogHeader, AdventureHeader } from "@/components/headers";
 import { AmbientBackground } from "@/components/ambient";
 import FindView from "@/components/find/FindView";
 import CommunityHub from "@/components/community/CommunityHub";
@@ -235,6 +235,29 @@ export default async function PortalPage({ params, searchParams }: Props) {
           {/* Bottom nav spacer for mobile (not needed on map view) */}
           {dogView !== "find" && <div className="sm:hidden h-20" />}
         </div>
+      </div>
+    );
+  }
+
+  // Adventure portal — bespoke header + feed, no generic PortalHeader/nav
+  if (vertical === "adventure") {
+    return (
+      <div className="min-h-screen overflow-x-hidden">
+        <style>{`
+          body::before { opacity: 0 !important; }
+          body::after { opacity: 0 !important; }
+          .ambient-glow { opacity: 0 !important; }
+          .rain-overlay { display: none !important; }
+          .cursor-glow { display: none !important; }
+        `}</style>
+        <Suspense fallback={null}>
+          <AdventureHeader />
+        </Suspense>
+        <Suspense fallback={null}>
+          <DetailViewRouter portalSlug={portal.slug}>
+            <DefaultTemplate portal={portal} />
+          </DetailViewRouter>
+        </Suspense>
       </div>
     );
   }

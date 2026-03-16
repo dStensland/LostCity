@@ -1,7 +1,17 @@
 "use client";
 
 import { memo } from "react";
+import {
+  Sun,
+  Cloud,
+  CloudRain,
+  CloudSnow,
+  CloudLightning,
+  CloudSun,
+} from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 import { ADV } from "@/lib/adventure-tokens";
+import { getAdventureAssessment } from "@/lib/adventure-weather-utils";
 
 // ---- Types ---------------------------------------------------------------
 
@@ -15,20 +25,26 @@ export interface WeatherCardProps {
   uvIndex?: number;
 }
 
-// ---- Helpers -------------------------------------------------------------
+// ---- Icon mapping --------------------------------------------------------
 
-function getAdventureAssessment(temp: number, condition: string, windSpeed: number): string {
-  const lower = condition.toLowerCase();
-  if (lower.includes("thunder") || lower.includes("storm")) return "Stay close to town";
-  if (lower.includes("rain") || lower.includes("shower")) return "Waterfall conditions";
-  if (lower.includes("snow") || lower.includes("freez")) return "Cold-weather trails";
-  if (temp >= 95) return "Early starts only";
-  if (temp >= 85 && windSpeed < 5) return "Hot — seek shade and water";
-  if (temp >= 70 && temp <= 85 && (lower.includes("clear") || lower.includes("sunny"))) return "Great day for a hike";
-  if (temp >= 50 && temp <= 70) return "Perfect trail conditions";
-  if (temp < 40) return "Bundle up out there";
-  if (windSpeed > 20) return "Windy — avoid exposed ridges";
-  return "Decent conditions";
+function getWeatherIcon(condition: string): Icon {
+  const c = condition.toLowerCase();
+  if (c.includes("thunder") || c.includes("lightning") || c.includes("storm")) {
+    return CloudLightning;
+  }
+  if (c.includes("snow") || c.includes("flurr") || c.includes("blizzard") || c.includes("sleet") || c.includes("hail") || c.includes("freez")) {
+    return CloudSnow;
+  }
+  if (c.includes("rain") || c.includes("drizzle") || c.includes("shower") || c.includes("precip")) {
+    return CloudRain;
+  }
+  if (c.includes("partly") || c.includes("mostly cloudy") || c.includes("overcast") || c.includes("broken")) {
+    return CloudSun;
+  }
+  if (c.includes("cloud") || c.includes("fog") || c.includes("mist") || c.includes("haze") || c.includes("smoke")) {
+    return Cloud;
+  }
+  return Sun;
 }
 
 // ---- Component -----------------------------------------------------------
@@ -36,7 +52,6 @@ function getAdventureAssessment(temp: number, condition: string, windSpeed: numb
 export const WeatherCard = memo(function WeatherCard({
   temp,
   condition,
-  emoji,
   loading,
   windSpeed = 0,
   humidity = 0,
@@ -67,6 +82,8 @@ export const WeatherCard = memo(function WeatherCard({
 
   if (!condition) return null;
 
+  const WeatherIcon = getWeatherIcon(condition);
+
   return (
     <div
       style={{
@@ -75,7 +92,7 @@ export const WeatherCard = memo(function WeatherCard({
         backgroundColor: ADV.CARD,
       }}
     >
-      {/* Main temp + condition + emoji */}
+      {/* Main temp + condition + icon */}
       <div className="flex items-center justify-between p-5">
         <div>
           <div
@@ -97,13 +114,12 @@ export const WeatherCard = memo(function WeatherCard({
             {condition}
           </div>
         </div>
-        <div
-          className="text-5xl leading-none select-none"
+        <WeatherIcon
+          size={48}
+          weight="bold"
+          color={ADV.STONE}
           aria-label={condition}
-          role="img"
-        >
-          {emoji}
-        </div>
+        />
       </div>
 
       {/* Secondary stats */}

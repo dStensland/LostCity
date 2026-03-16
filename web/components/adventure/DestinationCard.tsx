@@ -6,6 +6,12 @@ import Image from "@/components/SmartImage";
 import { Check } from "@phosphor-icons/react";
 import { ADV } from "@/lib/adventure-tokens";
 
+const DIFFICULTY_COLORS: Record<string, string> = {
+  easy: ADV.OLIVE,
+  moderate: ADV.TERRACOTTA,
+  hard: ADV.DARK,
+};
+
 // ---- Types ---------------------------------------------------------------
 
 export interface DestinationCardProps {
@@ -80,7 +86,7 @@ export const DestinationCard = memo(function DestinationCard({
         ) : (
           <div
             className="absolute inset-0"
-            style={{ backgroundColor: `${ADV.DARK}0A` }}
+            style={{ backgroundColor: `${ADV.STONE}18` }}
           />
         )}
 
@@ -95,6 +101,20 @@ export const DestinationCard = memo(function DestinationCard({
             }}
           >
             {commitmentLabel}
+          </span>
+        </div>
+
+        {/* Difficulty badge — top right */}
+        <div className="absolute top-0 right-0">
+          <span
+            className="block px-2.5 py-1 text-xs font-bold text-white uppercase"
+            style={{
+              letterSpacing: "0.1em",
+              backgroundColor: DIFFICULTY_COLORS[difficultyLevel] ?? ADV.STONE,
+              borderRadius: 0,
+            }}
+          >
+            {difficultyLevel}
           </span>
         </div>
 
@@ -120,14 +140,12 @@ export const DestinationCard = memo(function DestinationCard({
           }}
         >
           <span>{driveTimeMinutes} MIN DRIVE</span>
-          <span style={{ color: `${ADV.STONE}60` }}>·</span>
-          <span className="capitalize">{difficultyLevel}</span>
         </div>
 
         {/* Name */}
         <Link
           href={`/${portalSlug}/spots/${slug}`}
-          className="block mb-2 font-bold leading-tight hover:underline"
+          className="block mb-2 font-bold leading-tight hover:underline line-clamp-2"
           style={{
             fontSize: "1.0625rem",
             color: ADV.DARK,
@@ -159,9 +177,9 @@ export const DestinationCard = memo(function DestinationCard({
                 className="px-2 py-0.5 text-xs font-bold uppercase"
                 style={{
                   letterSpacing: "0.08em",
-                  backgroundColor: `${ADV.OLIVE}18`,
-                  color: ADV.OLIVE,
-                  border: `2px solid ${ADV.OLIVE}40`,
+                  backgroundColor: "transparent",
+                  color: ADV.STONE,
+                  border: `1px solid #D1CCC5`,
                   borderRadius: 0,
                 }}
               >

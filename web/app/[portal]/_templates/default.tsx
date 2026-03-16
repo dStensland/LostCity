@@ -42,7 +42,6 @@ export async function DefaultTemplate({
   if (vertical === "adventure") {
     return (
       <AdventureFeed
-        portalId={portal.id}
         portalSlug={portal.slug}
       />
     );

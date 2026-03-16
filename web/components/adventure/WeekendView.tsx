@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, Lightning } from "@phosphor-icons/react";
+import { SectionHeader } from "./SectionHeader";
 import { DestinationCard } from "./DestinationCard";
 import {
   AdventureEventCard,
@@ -231,30 +232,7 @@ export function WeekendView({ portalSlug }: WeekendViewProps) {
 
   const subtitle = getSubtitle(weatherSignal, isWeekendWindow);
 
-  const sectionHeader = (
-    <div className="flex items-start justify-between mb-4">
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <Calendar size={14} weight="bold" color={ADV.TERRACOTTA} />
-          <span
-            className="text-xs font-bold uppercase"
-            style={{
-              letterSpacing: "0.12em",
-              color: ADV.TERRACOTTA,
-            }}
-          >
-            Weekend Escapes
-          </span>
-        </div>
-        <p
-          className="text-sm"
-          style={{ color: ADV.STONE }}
-        >
-          {subtitle}
-        </p>
-      </div>
-    </div>
-  );
+  const sectionHeader = <SectionHeader label="Weekend Escapes" icon={Calendar} />;
 
   if (isLoading || weather.loading) {
     return (
@@ -367,6 +345,12 @@ export function WeekendView({ portalSlug }: WeekendViewProps) {
 
       {/* ---- Destinations section ------------------------------------------ */}
       {sectionHeader}
+      <p
+        className="text-sm -mt-3 mb-4"
+        style={{ color: ADV.STONE }}
+      >
+        {subtitle}
+      </p>
 
       {/* Weather signal badge */}
       {weatherSignal && !weather.loading && (

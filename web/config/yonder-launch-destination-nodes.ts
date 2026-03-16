@@ -189,7 +189,7 @@ export const YONDER_LAUNCH_DESTINATION_NODES: YonderLaunchDestinationNode[] = [
     parentSpotSlug: "constitution-lakes",
     relationshipKind: "standalone_spot",
     destinationNodeType: "oddity",
-    summary: "The most Yonder-coded urban artifact in the current launch set.",
+    summary: "One of Atlanta's most beloved outsider art environments — weathered figures and found objects arranged along trails through a surprisingly serene Constitution Lakes forest.",
     questIds: ["secret_atlanta"],
     launchPriority: 96,
   },

@@ -24,6 +24,25 @@ export interface AdventureEventCardProps {
   portalSlug: string;
 }
 
+// ---- Constants -----------------------------------------------------------
+
+const ADVENTURE_DISPLAY_TAGS = new Set([
+  "outdoor", "hiking", "running", "trail", "nature", "kayaking", "climbing",
+  "paddling", "cycling", "camping", "fishing", "swimming", "wildlife",
+  "birding", "conservation", "volunteer", "cleanup", "guided",
+  "family-friendly", "free", "beginner", "advanced", "dog-friendly",
+  "waterfall", "summit", "river", "lake", "mountain", "park", "garden", "farm",
+]);
+
+// ---- Utilities -----------------------------------------------------------
+
+function stripEmoji(str: string): string {
+  return str.replace(
+    /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu,
+    "",
+  ).trim();
+}
+
 // ---- Helpers -------------------------------------------------------------
 
 function formatDateParts(startDate: string): {
@@ -76,10 +95,12 @@ export const AdventureEventCard = memo(function AdventureEventCard({
   ticketUrl,
   portalSlug,
 }: AdventureEventCardProps) {
-  const { month, day, weekday } = formatDateParts(startDate);
+  const { day, weekday } = formatDateParts(startDate);
   const timeLabel = formatTime(startTime, isAllDay);
   const thumbnail = imageUrl ?? venueImageUrl ?? null;
-  const visibleTags = (tags ?? []).slice(0, 4);
+  const visibleTags = (tags ?? [])
+    .filter((tag) => ADVENTURE_DISPLAY_TAGS.has(tag))
+    .slice(0, 4);
 
   // Primary link: ticket URL > source URL > event detail page
   const primaryHref =
@@ -102,41 +123,23 @@ export const AdventureEventCard = memo(function AdventureEventCard({
       <div
         className="flex-shrink-0 flex flex-col items-center justify-center gap-0 py-4"
         style={{
-          width: 80,
+          width: 44,
           backgroundColor: ADV.TERRACOTTA,
           fontFamily: ADV_FONT,
         }}
       >
         <span
           className="font-bold text-white leading-none"
-          style={{ fontSize: "0.6875rem", letterSpacing: "0.1em" }}
-        >
-          {month}
-        </span>
-        <span
-          className="font-bold text-white leading-none mt-0.5"
-          style={{ fontSize: "1.5rem", letterSpacing: "-0.01em" }}
-        >
-          {String(day).padStart(2, "0")}
-        </span>
-        <span
-          className="font-bold text-white leading-none mt-0.5"
-          style={{ fontSize: "0.6875rem", letterSpacing: "0.1em" }}
+          style={{ fontSize: "0.625rem", letterSpacing: "0.1em" }}
         >
           {weekday}
         </span>
-        {timeLabel && (
-          <span
-            className="font-bold text-white leading-none mt-1.5"
-            style={{
-              fontSize: "0.625rem",
-              letterSpacing: "0.06em",
-              opacity: 0.85,
-            }}
-          >
-            {timeLabel}
-          </span>
-        )}
+        <span
+          className="font-bold text-white leading-none mt-0.5"
+          style={{ fontSize: "1.125rem", letterSpacing: "-0.01em" }}
+        >
+          {String(day).padStart(2, "0")}
+        </span>
       </div>
 
       {/* ---- Content ---------------------------------------------------- */}
@@ -154,7 +157,7 @@ export const AdventureEventCard = memo(function AdventureEventCard({
               color: ADV.DARK,
             }}
           >
-            {title}
+            {stripEmoji(title)}
           </Link>
 
           {/* Venue + neighborhood */}
@@ -178,6 +181,16 @@ export const AdventureEventCard = memo(function AdventureEventCard({
                 <span style={{ opacity: 0.5 }}> · </span>
               )}
               {neighborhood}
+            </p>
+          )}
+
+          {/* Time label */}
+          {timeLabel && (
+            <p
+              className="text-sm leading-snug"
+              style={{ fontFamily: ADV_FONT, color: ADV.STONE }}
+            >
+              {timeLabel}
             </p>
           )}
 
@@ -257,8 +270,8 @@ export function AdventureEventCardSkeleton() {
       <div
         className="flex-shrink-0"
         style={{
-          width: 80,
-          height: 96,
+          width: 44,
+          height: 80,
           backgroundColor: `${ADV.STONE}12`,
         }}
       />

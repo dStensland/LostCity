@@ -2,16 +2,24 @@
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Mountains, Lightning } from "@phosphor-icons/react";
+import { Mountains, Lightning, Compass } from "@phosphor-icons/react";
 import { CommitmentFilter, type CommitmentTier } from "./CommitmentFilter";
 import { DestinationCard } from "./DestinationCard";
+import { FeaturedDestinationCard } from "./FeaturedDestinationCard";
+import { QuestMiniCard } from "./QuestMiniCard";
+import { ConditionsBanner } from "./ConditionsBanner";
+import { SectionHeader } from "./SectionHeader";
 import {
   AdventureEventCard,
   AdventureEventCardSkeleton,
 } from "./AdventureEventCard";
 import { useAdventureProgress } from "@/lib/hooks/useAdventureProgress";
+import { useWeather } from "@/lib/hooks/useWeather";
+import {
+  YONDER_LAUNCH_DESTINATION_NODE_QUESTS,
+} from "@/config/yonder-launch-destination-nodes";
 import type { YonderDestinationIntelligence } from "@/config/yonder-destination-intelligence";
-import { ADV, ADV_FONT } from "@/lib/adventure-tokens";
+import { ADV } from "@/lib/adventure-tokens";
 
 // ---- Types ---------------------------------------------------------------
 
@@ -50,25 +58,6 @@ function SkeletonCard() {
   );
 }
 
-// ---- Section header ------------------------------------------------------
-
-function SectionHeader({ label }: { label: string }) {
-  return (
-    <div className="flex items-center gap-2 mb-4">
-      <Mountains size={14} weight="bold" color={ADV.TERRACOTTA} />
-      <span
-        className="text-xs font-bold uppercase"
-        style={{
-          letterSpacing: "0.12em",
-          color: ADV.TERRACOTTA,
-        }}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
-
 // ---- Event type (matches API response) -----------------------------------
 
 type AdventureEventData = {
@@ -101,7 +90,8 @@ export function ExploreView({ portalSlug }: ExploreViewProps) {
     const tier = params.get("tier");
     return tier && VALID_TIERS.has(tier as CommitmentTier) ? (tier as CommitmentTier) : null;
   });
-  const { isVisited, markVisited } = useAdventureProgress();
+  const { isVisited, markVisited, visitedSlugs, getVisitedCount } = useAdventureProgress();
+  const weather = useWeather();
 
   const handleTierChange = (tier: CommitmentTier | null) => {
     setActiveTier(tier);
@@ -156,8 +146,47 @@ export function ExploreView({ portalSlug }: ExploreViewProps) {
     gcTime: 10 * 60 * 1000,
   });
 
+  // Fetch destination nodes for quest mini-cards
+  const { data: nodesData } = useQuery<{
+    destinationNodes: {
+      id: string;
+      title: string;
+      questIds: string[];
+      spot: { slug: string };
+    }[];
+  }>({
+    queryKey: ["adventure-destination-nodes", portalSlug],
+    queryFn: async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10_000);
+      try {
+        const res = await fetch(
+          `/api/portals/${portalSlug}/yonder/destination-nodes`,
+          { signal: controller.signal },
+        );
+        if (!res.ok) throw new Error(`Destination nodes fetch failed: ${res.status}`);
+        return res.json();
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
   const upcomingEvents = eventsData?.events ?? [];
   const destinations = useMemo(() => data?.destinations ?? [], [data?.destinations]);
+  const nodes = useMemo(() => nodesData?.destinationNodes ?? [], [nodesData?.destinationNodes]);
+
+  // Quest progress for mini-cards (only shown if user has visited at least 1 destination)
+  const questProgress = useMemo(() => {
+    return YONDER_LAUNCH_DESTINATION_NODE_QUESTS.map((quest) => {
+      const questNodes = nodes.filter((n) => n.questIds.includes(quest.id));
+      const slugs = questNodes.map((n) => n.spot.slug);
+      const visited = getVisitedCount(slugs);
+      return { quest, totalNodes: questNodes.length, visitedCount: visited };
+    }).filter((qp) => qp.totalNodes > 0);
+  }, [nodes, getVisitedCount]);
 
   // Derive available tiers in display order
   const availableTiers = useMemo((): CommitmentTier[] => {
@@ -175,7 +204,7 @@ export function ExploreView({ portalSlug }: ExploreViewProps) {
   if (isLoading) {
     return (
       <div className="px-4 pb-10 pt-4 sm:px-0">
-        <SectionHeader label="Destinations" />
+        <SectionHeader label="Destinations" icon={Mountains} />
         <div className="mb-5">
           <div
             className="h-10 w-72"
@@ -194,7 +223,7 @@ export function ExploreView({ portalSlug }: ExploreViewProps) {
   if (destinations.length === 0) {
     return (
       <div className="px-4 pb-10 pt-4 sm:px-0">
-        <SectionHeader label="Destinations" />
+        <SectionHeader label="Destinations" icon={Mountains} />
         <div
           className="p-8 text-center"
           style={{ border: `2px solid ${ADV.DARK}`, borderRadius: 0, backgroundColor: "#FFFFFF" }}
@@ -213,11 +242,45 @@ export function ExploreView({ portalSlug }: ExploreViewProps) {
     );
   }
 
+  const heroDestination = filtered[0] ?? null;
+  const gridDestinations = filtered.length > 1 ? filtered.slice(1) : [];
+
   return (
     <div className="px-4 pb-10 pt-4 sm:px-0">
-      <SectionHeader label="Destinations" />
+      {/* 1. Conditions Banner */}
+      {!weather.loading && weather.condition && (
+        <ConditionsBanner
+          temp={weather.temp}
+          condition={weather.condition}
+          emoji={weather.emoji}
+          windSpeed={weather.windSpeed}
+          humidity={weather.humidity}
+        />
+      )}
 
-      {/* Commitment filter strip */}
+      {/* 2. Your Quests — horizontal scroll, only if user has visited destinations */}
+      {visitedSlugs.length > 0 && questProgress.length > 0 && (
+        <div className="mb-8">
+          <SectionHeader label="Your Quests" icon={Compass} />
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+            {questProgress.map(({ quest, totalNodes, visitedCount }) => (
+              <QuestMiniCard
+                key={quest.id}
+                questId={quest.id}
+                title={quest.title}
+                visitedCount={visitedCount}
+                totalNodes={totalNodes}
+                portalSlug={portalSlug}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 3. Destinations section header */}
+      <SectionHeader label="Destinations" icon={Mountains} />
+
+      {/* 4. Commitment filter strip */}
       {availableTiers.length > 1 && (
         <div className="mb-5">
           <CommitmentFilter
@@ -228,7 +291,7 @@ export function ExploreView({ portalSlug }: ExploreViewProps) {
         </div>
       )}
 
-      {/* Results count */}
+      {/* 5. Results count */}
       <p
         className="mb-4 text-xs font-bold uppercase"
         style={{
@@ -239,44 +302,48 @@ export function ExploreView({ portalSlug }: ExploreViewProps) {
         {filtered.length} {activeTier ? TIER_LABEL_SUFFIX[activeTier] : "destinations"}
       </p>
 
-      {/* Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((destination) => (
-          <DestinationCard
-            key={destination.slug}
-            name={destination.name}
-            slug={destination.slug}
-            imageUrl={destination.imageUrl}
-            commitmentTier={destination.commitmentTier}
-            difficultyLevel={destination.difficultyLevel}
-            driveTimeMinutes={destination.driveTimeMinutes}
-            summary={destination.summary}
-            weatherFitTags={destination.weatherFitTags}
+      {/* 6. Featured destination hero card */}
+      {heroDestination && (
+        <div className="mb-4">
+          <FeaturedDestinationCard
+            name={heroDestination.name}
+            slug={heroDestination.slug}
+            imageUrl={heroDestination.imageUrl}
+            commitmentTier={heroDestination.commitmentTier}
+            summary={heroDestination.summary}
             portalSlug={portalSlug}
-            visited={isVisited(destination.slug)}
-            onMarkVisited={markVisited}
           />
-        ))}
-      </div>
+        </div>
+      )}
 
-      {/* ---- Upcoming events section ------------------------------------- */}
+      {/* 7. Destination grid — remaining destinations */}
+      {gridDestinations.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {gridDestinations.map((destination) => (
+            <DestinationCard
+              key={destination.slug}
+              name={destination.name}
+              slug={destination.slug}
+              imageUrl={destination.imageUrl}
+              commitmentTier={destination.commitmentTier}
+              difficultyLevel={destination.difficultyLevel}
+              driveTimeMinutes={destination.driveTimeMinutes}
+              summary={destination.summary}
+              weatherFitTags={destination.weatherFitTags}
+              portalSlug={portalSlug}
+              visited={isVisited(destination.slug)}
+              onMarkVisited={markVisited}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* 8. Upcoming Happenings events section */}
       {(eventsLoading || upcomingEvents.length > 0) && (
         <div className="mt-10">
-          <div className="flex items-center gap-2 mb-1">
-            <Lightning size={14} weight="bold" color={ADV.TERRACOTTA} />
-            <span
-              className="text-xs font-bold uppercase"
-              style={{
-                fontFamily: ADV_FONT,
-                letterSpacing: "0.12em",
-                color: ADV.TERRACOTTA,
-              }}
-            >
-              Upcoming Happenings
-            </span>
-          </div>
+          <SectionHeader label="Upcoming Happenings" icon={Lightning} />
           <p
-            className="text-sm mb-4"
+            className="text-sm mb-4 -mt-2"
             style={{ color: ADV.STONE }}
           >
             Group hikes, nature programs, and outdoor events

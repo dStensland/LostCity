@@ -37,9 +37,34 @@ export const CommitmentFilter = memo(function CommitmentFilter({
       role="group"
       aria-label="Filter by time commitment"
     >
+      {/* ALL button */}
+      {(() => {
+        const isActive = activeTier === null;
+        return (
+          <button
+            key="all"
+            type="button"
+            onClick={() => onTierChange(null)}
+            aria-pressed={isActive}
+            className="flex-shrink-0 px-4 py-2.5 text-xs font-bold transition-colors"
+            style={{
+              letterSpacing: "0.12em",
+              borderRadius: 0,
+              border: `2px solid ${ADV.DARK}30`,
+              borderRight: "none",
+              backgroundColor: isActive ? ADV.DARK : "transparent",
+              color: isActive ? ADV.CREAM : ADV.STONE,
+              cursor: "pointer",
+            }}
+          >
+            ALL
+          </button>
+        );
+      })()}
+
       {tiers.map((tier, idx) => {
         const isActive = activeTier === tier;
-        const isFirst = idx === 0;
+        const isLast = idx === tiers.length - 1;
 
         return (
           <button
@@ -51,11 +76,10 @@ export const CommitmentFilter = memo(function CommitmentFilter({
             style={{
               letterSpacing: "0.12em",
               borderRadius: 0,
-              border: `2px solid ${ADV.DARK}`,
-              borderLeft: isFirst ? `2px solid ${ADV.DARK}` : "none",
-              borderRight: `2px solid ${ADV.DARK}`,
-              backgroundColor: isActive ? ADV.TERRACOTTA : "transparent",
-              color: isActive ? "#FFFFFF" : ADV.STONE,
+              border: `2px solid ${ADV.DARK}30`,
+              borderRight: isLast ? `2px solid ${ADV.DARK}30` : "none",
+              backgroundColor: isActive ? ADV.DARK : "transparent",
+              color: isActive ? ADV.CREAM : ADV.STONE,
               cursor: "pointer",
             }}
           >

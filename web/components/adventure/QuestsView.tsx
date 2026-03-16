@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import { Compass, ArrowRight, CheckCircle } from "@phosphor-icons/react";
 import { QuestProgressCard } from "./QuestProgressCard";
+import { SectionHeader } from "./SectionHeader";
 import { useAdventureProgress } from "@/lib/hooks/useAdventureProgress";
 import {
   YONDER_LAUNCH_DESTINATION_NODE_QUESTS,
@@ -155,7 +156,7 @@ function QuestSection({
   onMarkVisited: (slug: string) => void;
   getVisitedCount: (slugs: string[]) => number;
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const nodeSlugs = nodes.map((n) => n.spot.slug);
   const visitedCount = getVisitedCount(nodeSlugs);
 
@@ -273,21 +274,7 @@ export function QuestsView({ portalSlug }: QuestsViewProps) {
     }
   };
 
-  // Section header
-  const sectionHeader = (
-    <div className="flex items-center gap-2 mb-4">
-      <Compass size={14} weight="bold" color={ADV.TERRACOTTA} />
-      <span
-        className="text-xs font-bold uppercase"
-        style={{
-          letterSpacing: "0.12em",
-          color: ADV.TERRACOTTA,
-        }}
-      >
-        Quest Lines
-      </span>
-    </div>
-  );
+  const sectionHeader = <SectionHeader label="Quest Lines" icon={Compass} />;
 
   if (isLoading) {
     return (

@@ -31,8 +31,41 @@ function TabSkeleton() {
       {Array.from({ length: 3 }).map((_, i) => (
         <div
           key={i}
-          className="h-24"
+          className="h-24 animate-pulse"
           style={{
+            border: `2px solid ${ADV.DARK}`,
+            borderRadius: 0,
+            backgroundColor: `${ADV.STONE}12`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ---- Top-level cold-load skeleton ----------------------------------------
+// Shown on initial mount before the hydrated tab content is ready.
+
+function ColdLoadSkeleton() {
+  return (
+    <div className="px-4 sm:px-6 pt-4 pb-12 space-y-4 max-w-5xl mx-auto">
+      {/* Simulated tab bar */}
+      <div
+        className="animate-pulse"
+        style={{
+          height: 62,
+          border: `2px solid ${ADV.DARK}`,
+          borderRadius: 0,
+          backgroundColor: `${ADV.STONE}12`,
+        }}
+      />
+      {/* Simulated content blocks */}
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div
+          key={i}
+          className="animate-pulse"
+          style={{
+            height: i === 0 ? 120 : 80,
             border: `2px solid ${ADV.DARK}`,
             borderRadius: 0,
             backgroundColor: `${ADV.STONE}12`,
@@ -109,7 +142,6 @@ class TabErrorBoundary extends Component<
 // ---- Types ---------------------------------------------------------------
 
 export interface AdventureFeedProps {
-  portalId: string;
   portalSlug: string;
 }
 
@@ -131,38 +163,56 @@ const NAV_ITEMS: NavItem[] = [
 
 const VALID_TABS = new Set<TabId>(["explore", "quests", "weekend", "conditions", "log"]);
 
-// ---- Desktop sidebar nav item --------------------------------------------
+// ---- Desktop tab bar (full-width) ----------------------------------------
+// The wrapper spans full viewport width with a dark bottom border and CARD
+// background. The tab buttons themselves are constrained to max-w-5xl so they
+// align with the content below.
 
-function SidebarNavItem({
-  item,
-  isActive,
-  onClick,
+function DesktopTabBar({
+  activeTab,
+  onTabChange,
 }: {
-  item: NavItem;
-  isActive: boolean;
-  onClick: () => void;
+  activeTab: TabId;
+  onTabChange: (tab: TabId) => void;
 }) {
-  const { Icon } = item;
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-left transition-colors"
+    <div
+      className="w-full"
       style={{
-        borderRadius: 0,
-        borderLeft: isActive ? `3px solid ${ADV.TERRACOTTA}` : `3px solid transparent`,
-        backgroundColor: isActive ? `${ADV.TERRACOTTA}10` : "transparent",
-        color: isActive ? ADV.TERRACOTTA : ADV.STONE,
-        letterSpacing: "0.02em",
+        backgroundColor: ADV.CARD,
+        borderBottom: `2px solid ${ADV.DARK}`,
       }}
     >
-      <Icon
-        size={16}
-        weight={isActive ? "bold" : "regular"}
-        color={isActive ? ADV.TERRACOTTA : ADV.STONE}
-      />
-      {item.label}
-    </button>
+      <div
+        className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center"
+        style={{ height: 62 }}
+      >
+        {NAV_ITEMS.map((item) => {
+          const isActive = activeTab === item.id;
+          const { Icon } = item;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onTabChange(item.id)}
+              className={`flex-1 h-full flex items-center justify-center gap-2 font-bold transition-colors${!isActive ? " hover:bg-black/5" : ""}`}
+              style={{
+                fontSize: "0.75rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                borderRadius: 0,
+                backgroundColor: isActive ? ADV.DARK : "transparent",
+                color: isActive ? ADV.CREAM : ADV.STONE,
+              }}
+              aria-current={isActive ? "page" : undefined}
+            >
+              <Icon size={14} weight={isActive ? "bold" : "regular"} />
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -199,9 +249,10 @@ function MobileBottomTabBar({
             >
               {isActive ? (
                 <span
-                  className="px-3 py-1.5 font-bold text-white flex items-center gap-1.5"
+                  className="px-3 py-1.5 font-bold flex items-center gap-1.5"
                   style={{
-                    backgroundColor: ADV.TERRACOTTA,
+                    backgroundColor: ADV.DARK,
+                    color: ADV.CREAM,
                     borderRadius: 0,
                     fontSize: "10px",
                     letterSpacing: "0.08em",
@@ -268,6 +319,13 @@ function TabContent({
 export function AdventureFeed({ portalSlug }: AdventureFeedProps) {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabId>("explore");
+  // Track whether the component has mounted so we can show a cold-load skeleton
+  // during the brief window before hydration completes (avoids blank cream flash).
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Read initial tab from URL param — supports deep links and CTA navigation.
   // startTransition defers the state update to avoid blocking the initial render.
@@ -288,118 +346,45 @@ export function AdventureFeed({ portalSlug }: AdventureFeedProps) {
     window.history.replaceState({}, "", url.toString());
   };
 
+  if (!mounted) {
+    return (
+      <div
+        className="min-h-screen"
+        style={{ backgroundColor: ADV.CREAM, fontFamily: ADV_FONT }}
+      >
+        <ColdLoadSkeleton />
+      </div>
+    );
+  }
+
   return (
     <div
       className="min-h-screen"
       style={{ backgroundColor: ADV.CREAM, fontFamily: ADV_FONT }}
     >
       {/* ------------------------------------------------------------------ */}
-      {/* MOBILE layout (< sm): bottom tab bar + content                      */}
+      {/* Desktop tab bar — full-width, above content (hidden on mobile)      */}
       {/* ------------------------------------------------------------------ */}
-
-      <div className="sm:hidden pb-20">
-        <TabContent activeTab={activeTab} portalSlug={portalSlug} />
+      <div className="hidden sm:block">
+        <DesktopTabBar activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
 
+      {/* ------------------------------------------------------------------ */}
+      {/* Tab content — single render, responsive padding                     */}
+      {/* Mobile: full-width with bottom padding for fixed tab bar            */}
+      {/* Desktop: constrained to max-w-5xl                                  */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="pb-20 sm:pb-12">
+        <div className="sm:max-w-5xl sm:mx-auto sm:px-6 sm:pt-6">
+          <TabContent activeTab={activeTab} portalSlug={portalSlug} />
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Mobile bottom tab bar (hidden on desktop)                           */}
+      {/* ------------------------------------------------------------------ */}
       <div className="sm:hidden">
         <MobileBottomTabBar activeTab={activeTab} onTabChange={handleTabChange} />
-      </div>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* DESKTOP layout (>= sm): sidebar + main content                      */}
-      {/* ------------------------------------------------------------------ */}
-
-      <div className="hidden sm:flex gap-0 max-w-7xl mx-auto px-6 pt-6 pb-12 items-start">
-
-        {/* Sidebar */}
-        <aside
-          className="w-52 flex-shrink-0 sticky top-6 self-start"
-          style={{
-            border: `2px solid ${ADV.DARK}`,
-            borderRadius: 0,
-            backgroundColor: ADV.CARD,
-          }}
-        >
-          {/* Portal branding */}
-          <div
-            className="px-4 py-5 border-b-2"
-            style={{ borderBottomColor: ADV.DARK }}
-          >
-            <p
-              className="font-bold leading-tight"
-              style={{
-                fontSize: "1.125rem",
-                color: ADV.DARK,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Lost Track
-            </p>
-            <p
-              className="text-xs mt-0.5"
-              style={{
-                fontStyle: "italic",
-                color: ADV.STONE,
-              }}
-            >
-              wander over yonder
-            </p>
-          </div>
-
-          {/* Nav links */}
-          <nav className="py-2">
-            {NAV_ITEMS.map((item) => (
-              <SidebarNavItem
-                key={item.id}
-                item={item}
-                isActive={activeTab === item.id}
-                onClick={() => handleTabChange(item.id)}
-              />
-            ))}
-          </nav>
-
-          {/* Commitment tier legend */}
-          <div
-            className="px-4 py-4 border-t-2"
-            style={{ borderTopColor: `${ADV.DARK}20` }}
-          >
-            <p
-              className="text-xs font-bold uppercase mb-2"
-              style={{
-                letterSpacing: "0.1em",
-                color: ADV.STONE,
-              }}
-            >
-              Time Commitment
-            </p>
-            {[
-              { label: "1 HR", desc: "Quick urban hit" },
-              { label: "HALF DAY", desc: "3–5 hours out" },
-              { label: "FULL DAY", desc: "All-in destination" },
-              { label: "WEEKEND", desc: "Overnight escape" },
-            ].map(({ label, desc }) => (
-              <div key={label} className="flex items-baseline gap-2 mb-1">
-                <span
-                  className="text-xs font-bold flex-shrink-0"
-                  style={{
-                    letterSpacing: "0.08em",
-                    color: ADV.TERRACOTTA,
-                  }}
-                >
-                  {label}
-                </span>
-                <span className="text-xs" style={{ color: `${ADV.STONE}90` }}>
-                  {desc}
-                </span>
-              </div>
-            ))}
-          </div>
-        </aside>
-
-        {/* Main content */}
-        <main className="flex-1 min-w-0 pl-8">
-          <TabContent activeTab={activeTab} portalSlug={portalSlug} />
-        </main>
       </div>
     </div>
   );
