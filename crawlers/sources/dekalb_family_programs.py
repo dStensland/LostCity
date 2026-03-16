@@ -25,6 +25,7 @@ from entity_persistence import persist_typed_entity_envelope
 from sources._activecommunities_family_filter import (
     infer_activecommunities_registration_open,
     infer_activecommunities_schedule_days,
+    infer_activecommunities_schedule_time_range,
     is_family_relevant_activity,
 )
 from sources.dekalb_parks_rec import (
@@ -104,6 +105,10 @@ def _build_program_record(
         date_range_description=item.get("date_range_description"),
         desc_text=desc_text,
     )
+    schedule_start_time, schedule_end_time = infer_activecommunities_schedule_time_range(
+        date_range_description=item.get("date_range_description"),
+        desc_text=desc_text,
+    )
     registration_opens = infer_activecommunities_registration_open(
         activity_online_start_time=item.get("activity_online_start_time"),
         desc_text=desc_text,
@@ -124,6 +129,8 @@ def _build_program_record(
         "session_start": session_start_str,
         "session_end": event_record.get("end_date"),
         "schedule_days": schedule_days,
+        "schedule_start_time": schedule_start_time,
+        "schedule_end_time": schedule_end_time,
         "cost_amount": price_val if price_val > 0 else None,
         "cost_period": cost_period if price_val > 0 else None,
         "registration_status": registration_status,
@@ -243,6 +250,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 venue_name = _resolve_venue_data(location_label).get("name", "DeKalb County Recreation")
                 hash_key = start_raw if start_raw else str(item.get("id"))
                 content_hash = generate_content_hash(name, venue_name, hash_key)
+                schedule_start_time, schedule_end_time = infer_activecommunities_schedule_time_range(
+                    date_range_description=item.get("date_range_description"),
+                    desc_text=desc_text,
+                )
 
                 event_record: dict = {
                     "source_id": source_id,
@@ -250,10 +261,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "title": name,
                     "description": description,
                     "start_date": start_raw or today.strftime("%Y-%m-%d"),
-                    "start_time": None,
+                    "start_time": schedule_start_time,
                     "end_date": end_raw,
-                    "end_time": None,
-                    "is_all_day": True if not start_raw else False,
+                    "end_time": schedule_end_time,
+                    "is_all_day": False if schedule_start_time else (True if not start_raw else False),
                     "category": category,
                     "subcategory": None,
                     "tags": tags,

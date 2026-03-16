@@ -1,11 +1,15 @@
 from sources._rec1_base import (
+    TenantConfig,
+    VenueInfo,
     _build_program_record,
     _parse_age_range_text,
     _parse_registration_window,
     _parse_schedule_days,
+    _resolve_venue,
     _should_skip_session_keywords,
     is_family_relevant_session,
 )
+from entity_lanes import TypedEntityEnvelope
 
 
 def test_should_skip_session_keywords_matches_title_substring() -> None:
@@ -144,3 +148,50 @@ def test_build_program_record_captures_rec1_schedule_and_registration_fields(mon
     assert program["registration_closes"] == "2026-04-06"
     assert program["metadata"]["session_id"] == 4127902
     assert program["metadata"]["days"] == "Weekdays"
+
+
+def test_resolve_venue_persists_enrichment_envelope(monkeypatch) -> None:
+    persisted = []
+
+    monkeypatch.setattr(
+        "sources._rec1_base.get_or_create_venue",
+        lambda _venue_data: 77,
+    )
+    monkeypatch.setattr(
+        "sources._rec1_base.persist_typed_entity_envelope",
+        lambda envelope: persisted.append(envelope),
+    )
+
+    venue = VenueInfo(
+        name="Bogan Park Community Recreation Center",
+        slug="bogan-park-crc",
+        address="2723 N Bogan Rd",
+        neighborhood="Buford",
+        city="Buford",
+        state="GA",
+        zip_code="30519",
+        lat=34.0979,
+        lng=-83.9948,
+        venue_type="community_center",
+    )
+
+    def build_envelope(_venue_info: VenueInfo, venue_id: int) -> TypedEntityEnvelope:
+        envelope = TypedEntityEnvelope()
+        envelope.add("destination_details", {"venue_id": venue_id, "destination_type": "community_recreation_center"})
+        return envelope
+
+    tenant = TenantConfig(
+        tenant_slug="gwinnett-county-parks-recreation",
+        county_name="Gwinnett County",
+        county_tag="gwinnett",
+        default_venue=venue,
+        known_venues={"bogan park": venue},
+        venue_enrichment_builder=build_envelope,
+    )
+
+    venue_id, venue_name = _resolve_venue("Bogan Park", tenant, {})
+
+    assert venue_id == 77
+    assert venue_name == "Bogan Park Community Recreation Center"
+    assert persisted
+    assert persisted[0].destination_details[0]["venue_id"] == 77

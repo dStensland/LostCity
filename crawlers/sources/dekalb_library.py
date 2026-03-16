@@ -14,6 +14,8 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
@@ -23,6 +25,51 @@ EVENTS_URL = f"{BASE_URL}/events?v=list"
 
 # Map branch names to venue data
 BRANCH_VENUES = {
+    "brookhaven library": {
+        "name": "Brookhaven Library",
+        "slug": "brookhaven-library",
+        "address": "1242 N. Druid Hills Road",
+        "city": "Brookhaven",
+        "state": "GA",
+        "zip": "30319",
+        "venue_type": "library",
+    },
+    "chamblee library": {
+        "name": "Chamblee Library",
+        "slug": "chamblee-library",
+        "address": "4115 Clairmont Road",
+        "city": "Chamblee",
+        "state": "GA",
+        "zip": "30341",
+        "venue_type": "library",
+    },
+    "clarkston library": {
+        "name": "Clarkston Library",
+        "slug": "clarkston-library",
+        "address": "951 N. Indian Creek Drive",
+        "city": "Clarkston",
+        "state": "GA",
+        "zip": "30021",
+        "venue_type": "library",
+    },
+    "county line ellenwood library": {
+        "name": "County Line-Ellenwood Library",
+        "slug": "county-line-ellenwood-library",
+        "address": "4331 River Road",
+        "city": "Ellenwood",
+        "state": "GA",
+        "zip": "30294",
+        "venue_type": "library",
+    },
+    "covington library": {
+        "name": "Covington Library",
+        "slug": "covington-library",
+        "address": "3500 Covington Highway",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30032",
+        "venue_type": "library",
+    },
     "decatur": {
         "name": "Decatur Library",
         "slug": "decatur-library",
@@ -31,6 +78,159 @@ BRANCH_VENUES = {
         "city": "Decatur",
         "state": "GA",
         "zip": "30030",
+        "venue_type": "library",
+    },
+    "doraville library": {
+        "name": "Doraville Library",
+        "slug": "doraville-library",
+        "address": "2421 Van Fleet Circle Suite 180",
+        "city": "Doraville",
+        "state": "GA",
+        "zip": "30360",
+        "venue_type": "library",
+    },
+    "dunwoody library": {
+        "name": "Dunwoody Library",
+        "slug": "dunwoody-library",
+        "address": "5339 Chamblee-Dunwoody Road",
+        "city": "Dunwoody",
+        "state": "GA",
+        "zip": "30338",
+        "venue_type": "library",
+    },
+    "embry hills library": {
+        "name": "Embry Hills Library",
+        "slug": "embry-hills-library",
+        "address": "3733 Chamblee-Tucker Road",
+        "city": "Chamblee",
+        "state": "GA",
+        "zip": "30341",
+        "venue_type": "library",
+    },
+    "flat shoals library": {
+        "name": "Flat Shoals Library",
+        "slug": "flat-shoals-library",
+        "address": "4022 Flat Shoals Parkway",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30034",
+        "venue_type": "library",
+    },
+    "gresham library": {
+        "name": "Gresham Library",
+        "slug": "gresham-library",
+        "address": "2418 Gresham Road SE",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30316",
+        "venue_type": "library",
+    },
+    "hairston crossing library": {
+        "name": "Hairston Crossing Library",
+        "slug": "hairston-crossing-library",
+        "address": "4911 Redan Road",
+        "city": "Stone Mountain",
+        "state": "GA",
+        "zip": "30088",
+        "venue_type": "library",
+    },
+    "lithonia davidson library": {
+        "name": "Lithonia-Davidson Library",
+        "slug": "lithonia-davidson-library",
+        "address": "6821 Church Street",
+        "city": "Lithonia",
+        "state": "GA",
+        "zip": "30058",
+        "venue_type": "library",
+    },
+    "northlake barbara loar library": {
+        "name": "Northlake-Barbara Loar Library",
+        "slug": "northlake-barbara-loar-library",
+        "address": "3772 LaVista Road",
+        "city": "Tucker",
+        "state": "GA",
+        "zip": "30084",
+        "venue_type": "library",
+    },
+    "redan trotti library": {
+        "name": "Redan-Trotti Library",
+        "slug": "redan-trotti-library",
+        "address": "1569 Wellborn Road",
+        "city": "Lithonia",
+        "state": "GA",
+        "zip": "30058",
+        "venue_type": "library",
+    },
+    "salem panola library": {
+        "name": "Salem-Panola Library",
+        "slug": "salem-panola-library",
+        "address": "5137 Salem Road",
+        "city": "Stonecrest",
+        "state": "GA",
+        "zip": "30038",
+        "venue_type": "library",
+    },
+    "scott candler library": {
+        "name": "Scott Candler Library",
+        "slug": "scott-candler-library",
+        "address": "1917 Candler Road",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30032",
+        "venue_type": "library",
+    },
+    "scottdale tobie grant homework center": {
+        "name": "Scottdale-Tobie Grant Homework Center",
+        "slug": "scottdale-tobie-grant-homework-center",
+        "address": "593 Parkdale Drive",
+        "city": "Scottdale",
+        "state": "GA",
+        "zip": "30079",
+        "venue_type": "library",
+    },
+    "stone mountain sue kellogg library": {
+        "name": "Stone Mountain-Sue Kellogg Library",
+        "slug": "stone-mountain-sue-kellogg-library",
+        "address": "952 Leon Street",
+        "city": "Stone Mountain",
+        "state": "GA",
+        "zip": "30083",
+        "venue_type": "library",
+    },
+    "stonecrest library": {
+        "name": "Stonecrest Library",
+        "slug": "stonecrest-library",
+        "address": "3123 Klondike Road",
+        "city": "Stonecrest",
+        "state": "GA",
+        "zip": "30038",
+        "venue_type": "library",
+    },
+    "toco hill avis g williams library": {
+        "name": "Toco Hill-Avis G. Williams Library",
+        "slug": "toco-hill-avis-g-williams-library",
+        "address": "1282 McConnell Drive",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30033",
+        "venue_type": "library",
+    },
+    "tucker reid h cofer library": {
+        "name": "Tucker-Reid H. Cofer Library",
+        "slug": "tucker-reid-h-cofer-library",
+        "address": "5234 LaVista Road",
+        "city": "Tucker",
+        "state": "GA",
+        "zip": "30084",
+        "venue_type": "library",
+    },
+    "wesley chapel william c brown library": {
+        "name": "Wesley Chapel-William C. Brown Library",
+        "slug": "wesley-chapel-william-c-brown-library",
+        "address": "2861 Wesley Chapel Road",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30034",
         "venue_type": "library",
     },
 }
@@ -43,10 +243,51 @@ DEFAULT_VENUE = {
     "venue_type": "library",
 }
 
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+)
+
+
+def _build_branch_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
+    """Project a DeKalb library branch into shared Family-friendly destination details."""
+    envelope = TypedEntityEnvelope()
+    branch_name = str(venue_data.get("name") or "DeKalb library branch").strip()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "library_branch",
+            "commitment_tier": "hour",
+            "primary_activity": "free indoor family library visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "free-option"],
+            "practical_notes": (
+                f"{branch_name} is a free indoor family destination with books, browsing, and branch programming. "
+                "Check the official branch listing for current hours and service details."
+            ),
+            "best_time_of_day": "any",
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Free public library access.",
+            "source_url": "https://dekalblibrary.org/locations/",
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "library",
+                "branch_name": branch_name,
+            },
+        },
+    )
+
+    return envelope
+
 
 def find_branch_venue(location_text: str) -> dict:
     """Find matching branch venue from location text."""
-    location_lower = location_text.lower()
+    location_lower = re.sub(r"[^a-z0-9]+", " ", location_text.lower()).strip()
     for key, venue in BRANCH_VENUES.items():
         if key in location_lower:
             return venue
@@ -170,6 +411,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Get location from the line after date/time
                     venue_data = find_branch_venue(location_line)
                     venue_id = get_or_create_venue(venue_data)
+                    persist_typed_entity_envelope(
+                        _build_branch_destination_envelope(venue_id, venue_data)
+                    )
 
                     href = event_urls.get(title, "")
 

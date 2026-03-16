@@ -58,6 +58,10 @@ DURATION_RE = re.compile(r"(\d+)\s+Days?", re.IGNORECASE)
 ADDRESS_RE = re.compile(
     r"(?P<address>[^,]+),?\s+(?P<city>[A-Za-z .'-]+),\s*GA\s+(?P<zip>\d{5})"
 )
+TIME_RANGE_RE = re.compile(
+    r"(?P<start>\d{1,2}(?::\d{2})?(?:\s*[ap]m)?)\s*(?:-|to)\s*(?P<end>\d{1,2}(?::\d{2})?\s*[ap]m)",
+    re.IGNORECASE,
+)
 
 BASE_TAGS = [
     "kids",
@@ -135,6 +139,51 @@ def _parse_duration_days(text: str) -> Optional[int]:
         return int(match.group(1))
     except ValueError:
         return None
+
+
+def _normalize_time_value(raw: str, fallback_ampm: Optional[str] = None) -> Optional[str]:
+    cleaned = _clean_text(raw).lower().replace(".", "")
+    match = re.match(r"(\d{1,2})(?::(\d{2}))?\s*([ap]m)?", cleaned)
+    if not match:
+        return None
+
+    hour = int(match.group(1))
+    minute = int(match.group(2) or "00")
+    ampm = match.group(3) or (fallback_ampm.lower() if fallback_ampm else None)
+    if not ampm:
+        return None
+    if match.group(3) is None and fallback_ampm and fallback_ampm.lower() == "pm" and hour < 12:
+        ampm = "am"
+    if ampm == "pm" and hour != 12:
+        hour += 12
+    if ampm == "am" and hour == 12:
+        hour = 0
+    return f"{hour:02d}:{minute:02d}"
+
+
+def _parse_schedule_time_range(text: str) -> tuple[Optional[str], Optional[str]]:
+    combined = _clean_text(text)
+    if not combined:
+        return None, None
+
+    explicit_patterns = (
+        r"full\s*day[^.]*?(?P<start>\d{1,2}(?::\d{2})?\s*[ap]m)\s*(?:-|to)\s*(?P<end>\d{1,2}(?::\d{2})?\s*[ap]m)",
+        r"monday\s*-\s*friday[^.]*?(?P<start>\d{1,2}(?::\d{2})?\s*[ap]m)\s*(?:-|to)\s*(?P<end>\d{1,2}(?::\d{2})?\s*[ap]m)",
+        r"our week is[^.]*?(?P<start>\d{1,2}(?::\d{2})?\s*[ap]m)\s*(?:-|to)\s*(?P<end>\d{1,2}(?::\d{2})?\s*[ap]m)",
+    )
+    for pattern in explicit_patterns:
+        match = re.search(pattern, combined, re.IGNORECASE)
+        if match:
+            end_ampm = re.search(r"([ap]m)", match.group("end"), re.IGNORECASE)
+            fallback_ampm = end_ampm.group(1) if end_ampm else None
+            return _normalize_time_value(match.group("start"), fallback_ampm), _normalize_time_value(match.group("end"))
+
+    match = TIME_RANGE_RE.search(combined)
+    if not match:
+        return None, None
+    end_ampm = re.search(r"([ap]m)", match.group("end"), re.IGNORECASE)
+    fallback_ampm = end_ampm.group(1) if end_ampm else None
+    return _normalize_time_value(match.group("start"), fallback_ampm), _normalize_time_value(match.group("end"))
 
 
 def _get_soup(url: str, session: requests.Session) -> Optional[BeautifulSoup]:
@@ -297,6 +346,7 @@ def _parse_camp_page(soup: BeautifulSoup, camp_url: str) -> Optional[dict]:
     price_min, price_max = _parse_price_range(price_note or "")
 
     description = _extract_camp_description(entry_content)
+    schedule_start_time, schedule_end_time = _parse_schedule_time_range(entry_content.get_text(" ", strip=True))
 
     category_links = [
         _clean_text(a.get_text(" ", strip=True))
@@ -342,6 +392,8 @@ def _parse_camp_page(soup: BeautifulSoup, camp_url: str) -> Optional[dict]:
         "price_max": price_max,
         "price_note": price_note,
         "duration_days": duration_days,
+        "schedule_start_time": schedule_start_time,
+        "schedule_end_time": schedule_end_time,
         "description": description,
         "categories": category_links,
         "camp_url": camp_url,
@@ -396,6 +448,19 @@ def _build_event_record(
     title = f"{camp['title']} at {venue_name}"
     hash_key = session.get("session_id") or session["start_date"]
     content_hash = generate_content_hash(title, venue_name, hash_key)
+    schedule_start_time = camp.get("schedule_start_time")
+    schedule_end_time = camp.get("schedule_end_time")
+    if not schedule_start_time or not schedule_end_time:
+        inferred_start_time, inferred_end_time = _parse_schedule_time_range(
+            " ".join(
+                part for part in [
+                    camp.get("description") or "",
+                    camp.get("price_note") or "",
+                ] if part
+            )
+        )
+        schedule_start_time = schedule_start_time or inferred_start_time
+        schedule_end_time = schedule_end_time or inferred_end_time
 
     record = {
         "source_id": source_id,
@@ -403,10 +468,10 @@ def _build_event_record(
         "title": title,
         "description": camp.get("description"),
         "start_date": session["start_date"],
-        "start_time": None,
+        "start_time": schedule_start_time,
         "end_date": session.get("end_date"),
-        "end_time": None,
-        "is_all_day": True,
+        "end_time": schedule_end_time,
+        "is_all_day": False if schedule_start_time or schedule_end_time else True,
         "category": "programs",
         "subcategory": "camp",
         "tags": _build_tags(camp),

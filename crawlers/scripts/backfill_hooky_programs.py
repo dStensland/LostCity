@@ -87,6 +87,10 @@ _WEEKDAY_TOKEN_MAP = {
     "sun": 7,
     "sunday": 7,
 }
+_TIME_RANGE_RE = re.compile(
+    r"(?P<start>\d{1,2}(?::\d{2})?(?:\s*[ap]m)?)\s*(?:-|to)\s*(?P<end>\d{1,2}(?::\d{2})?\s*[ap]m)",
+    re.IGNORECASE,
+)
 
 
 @dataclass
@@ -235,6 +239,51 @@ def _schedule_days(
     return [start_date.isoweekday()]
 
 
+def _normalize_time_value(raw: str, fallback_ampm: Optional[str] = None) -> Optional[str]:
+    cleaned = str(raw or "").strip().lower().replace(".", "")
+    match = re.match(r"(?P<hour>\d{1,2})(?::(?P<minute>\d{2}))?\s*(?P<ampm>[ap]m)?", cleaned)
+    if not match:
+        return None
+
+    hour = int(match.group("hour"))
+    minute = int(match.group("minute") or "00")
+    ampm = match.group("ampm") or (fallback_ampm.lower() if fallback_ampm else None)
+    if not ampm:
+        return None
+    if match.group("ampm") is None and fallback_ampm and fallback_ampm.lower() == "pm" and hour < 12:
+        ampm = "am"
+    if ampm == "pm" and hour != 12:
+        hour += 12
+    if ampm == "am" and hour == 12:
+        hour = 0
+    return f"{hour:02d}:{minute:02d}:00"
+
+
+def _schedule_time_range(*text_parts: Any) -> tuple[Optional[str], Optional[str]]:
+    combined = " ".join(str(part) for part in text_parts if part)
+    if not combined:
+        return None, None
+
+    explicit_patterns = (
+        r"full\s*day[^.]*?(?P<start>\d{1,2}(?::\d{2})?\s*[ap]m)\s*(?:-|to)\s*(?P<end>\d{1,2}(?::\d{2})?\s*[ap]m)",
+        r"monday\s*-\s*friday[^.]*?(?P<start>\d{1,2}(?::\d{2})?\s*[ap]m)\s*(?:-|to)\s*(?P<end>\d{1,2}(?::\d{2})?\s*[ap]m)",
+        r"our week is[^.]*?(?P<start>\d{1,2}(?::\d{2})?\s*[ap]m)\s*(?:-|to)\s*(?P<end>\d{1,2}(?::\d{2})?\s*[ap]m)",
+    )
+    for pattern in explicit_patterns:
+        match = re.search(pattern, combined, re.IGNORECASE)
+        if match:
+            end_ampm = re.search(r"([ap]m)", match.group("end"), re.IGNORECASE)
+            fallback_ampm = end_ampm.group(1) if end_ampm else None
+            return _normalize_time_value(match.group("start"), fallback_ampm), _normalize_time_value(match.group("end"))
+
+    match = _TIME_RANGE_RE.search(combined)
+    if not match:
+        return None, None
+    end_ampm = re.search(r"([ap]m)", match.group("end"), re.IGNORECASE)
+    fallback_ampm = end_ampm.group(1) if end_ampm else None
+    return _normalize_time_value(match.group("start"), fallback_ampm), _normalize_time_value(match.group("end"))
+
+
 def _normalize_decimal(value: Any) -> Optional[float]:
     if value is None:
         return None
@@ -269,6 +318,24 @@ def build_program_record(event_row: dict[str, Any]) -> Optional[dict[str, Any]]:
     registration_url = event_row.get("ticket_url") or event_row.get("source_url")
     price_note = event_row.get("price_note")
     title_and_tags = " ".join([title] + [str(tag) for tag in tags])
+    schedule_start_time = (
+        event_row.get("start_time").strftime("%H:%M:%S")
+        if event_row.get("start_time")
+        else None
+    )
+    schedule_end_time = (
+        event_row.get("end_time").strftime("%H:%M:%S")
+        if event_row.get("end_time")
+        else None
+    )
+    if not schedule_start_time or not schedule_end_time:
+        inferred_start_time, inferred_end_time = _schedule_time_range(
+            title,
+            event_row.get("description"),
+            price_note,
+        )
+        schedule_start_time = schedule_start_time or inferred_start_time
+        schedule_end_time = schedule_end_time or inferred_end_time
 
     record = {
         "portal_id": event_row.get("portal_id") or event_row.get("owner_portal_id"),
@@ -291,16 +358,8 @@ def build_program_record(event_row: dict[str, Any]) -> Optional[dict[str, Any]]:
             event_row.get("description"),
             price_note,
         ),
-        "schedule_start_time": (
-            event_row.get("start_time").strftime("%H:%M:%S")
-            if event_row.get("start_time")
-            else None
-        ),
-        "schedule_end_time": (
-            event_row.get("end_time").strftime("%H:%M:%S")
-            if event_row.get("end_time")
-            else None
-        ),
+        "schedule_start_time": schedule_start_time,
+        "schedule_end_time": schedule_end_time,
         "cost_amount": cost_amount,
         "cost_period": infer_cost_period(price_note),
         "cost_notes": price_note,

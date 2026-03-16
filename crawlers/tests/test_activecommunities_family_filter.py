@@ -1,6 +1,7 @@
 from sources._activecommunities_family_filter import (
     infer_activecommunities_registration_open,
     infer_activecommunities_schedule_days,
+    infer_activecommunities_schedule_time_range,
     is_family_relevant_activity,
 )
 
@@ -111,3 +112,18 @@ def test_infer_activecommunities_registration_open_prefers_payload_then_descript
         )
         == "2026-02-03"
     )
+
+
+def test_infer_activecommunities_schedule_time_range_parses_activity_time_text() -> None:
+    assert infer_activecommunities_schedule_time_range(
+        date_range_description="",
+        desc_text=(
+            "Activity Times: Mon. & Wed 4 :00 p.m. to 5:00 pm. "
+            "Registration Fees: $0 Free for Afterschool Participants"
+        ),
+    ) == ("16:00:00", "17:00:00")
+
+    assert infer_activecommunities_schedule_time_range(
+        date_range_description="Camp runs from 9am-4pm.",
+        desc_text="",
+    ) == ("09:00:00", "16:00:00")

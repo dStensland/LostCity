@@ -26,7 +26,10 @@ def test_build_program_record_projects_event_into_program_lane() -> None:
             "location": {"label": "Mason Mill Recreation Center"},
             "ages": "At least 6 but less than 10",
         },
-        desc_text="Open registration for camp begins February 3rd. Camp runs weekdays.",
+        desc_text=(
+            "Open registration for camp begins February 3rd. "
+            "Camp runs weekdays. Activity Times: Mon. & Wed 4 :00 p.m. to 5:00 pm."
+        ),
         venue_name="Mason Mill Recreation Center",
         source_id=55,
         portal_id="portal-123",
@@ -43,6 +46,8 @@ def test_build_program_record_projects_event_into_program_lane() -> None:
     assert record["cost_amount"] == 125
     assert record["cost_period"] == "per_week"
     assert record["schedule_days"] == [1, 2, 3, 4, 5]
+    assert record["schedule_start_time"] == "16:00:00"
+    assert record["schedule_end_time"] == "17:00:00"
     assert record["registration_opens"] == "2026-02-03"
     assert record["registration_status"] == "open"
     assert record["metadata"]["activity_id"] == 18779

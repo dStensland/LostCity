@@ -115,7 +115,7 @@ CREATE TABLE events (
   age_policy TEXT,
   age_min INT,
   age_max INT,
-  ticket_status TEXT,
+  ticket_status TEXT CHECK (ticket_status IS NULL OR ticket_status IN ('cancelled', 'sold-out', 'low-tickets', 'free', 'tickets-available')),
   reentry_policy TEXT,
   set_times_mentioned BOOLEAN DEFAULT false,
   is_free BOOLEAN DEFAULT false,

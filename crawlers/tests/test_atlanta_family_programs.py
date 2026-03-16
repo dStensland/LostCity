@@ -26,7 +26,7 @@ def test_build_program_record_projects_event_into_program_lane() -> None:
             "location": {"label": "Grant Park Recreation Center"},
             "ages": "At least 5 but less than 10",
         },
-        desc_text="Beginner Swim Lessons camp runs weekdays.",
+        desc_text="Beginner Swim Lessons camp runs weekdays. Activity Times: Mon. & Wed 4 :00 p.m. to 5:00 pm.",
         venue_name="Grant Park Recreation Center",
         source_id=22,
         portal_id="portal-atlanta-families",
@@ -42,6 +42,8 @@ def test_build_program_record_projects_event_into_program_lane() -> None:
     assert record["cost_amount"] == 85
     assert record["cost_period"] == "per_week"
     assert record["schedule_days"] == [1, 2, 3, 4, 5]
+    assert record["schedule_start_time"] == "16:00:00"
+    assert record["schedule_end_time"] == "17:00:00"
     assert record["registration_opens"] == "2026-01-16"
     assert record["registration_status"] == "open"
     assert record["metadata"]["activity_id"] == 11875

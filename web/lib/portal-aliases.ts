@@ -4,6 +4,7 @@ const PORTAL_SLUG_ALIASES: Record<string, string> = {
   "atlanta-test-mood-2": "atlanta",
   "atlanta-test-mood-3": "atlanta",
   "emory-test": "emory-demo",
+  "adventure": "yonder",
 };
 
 export function normalizePortalSlug(slug: string): string {

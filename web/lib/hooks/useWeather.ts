@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 // Atlanta coordinates
 const LAT = 33.749;
 const LNG = -84.388;
-const OPEN_METEO_URL = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LNG}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`;
+const OPEN_METEO_URL = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LNG}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,uv_index&temperature_unit=fahrenheit&wind_speed_unit=mph`;
 
 // Cache key and TTL (30 minutes)
 const CACHE_KEY = "weather_cache";
@@ -15,6 +15,9 @@ interface WeatherCache {
   temp: number;
   condition: string;
   emoji: string;
+  windSpeed: number;
+  humidity: number;
+  uvIndex: number;
   fetchedAt: number;
 }
 
@@ -52,6 +55,9 @@ export interface WeatherData {
   temp: number;
   condition: string;
   emoji: string;
+  windSpeed: number;
+  humidity: number;
+  uvIndex: number;
   loading: boolean;
 }
 
@@ -62,7 +68,7 @@ export interface WeatherData {
  * the weather pill entirely rather than showing stale/fake data.
  */
 export function useWeather(): WeatherData {
-  const [data, setData] = useState<{ temp: number; condition: string; emoji: string } | null>(null);
+  const [data, setData] = useState<{ temp: number; condition: string; emoji: string; windSpeed: number; humidity: number; uvIndex: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -76,7 +82,7 @@ export function useWeather(): WeatherData {
           const parsed: WeatherCache = JSON.parse(cached);
           if (Date.now() - parsed.fetchedAt < CACHE_TTL_MS) {
             if (!cancelled) {
-              setData({ temp: parsed.temp, condition: parsed.condition, emoji: parsed.emoji });
+              setData({ temp: parsed.temp, condition: parsed.condition, emoji: parsed.emoji, windSpeed: parsed.windSpeed, humidity: parsed.humidity, uvIndex: parsed.uvIndex });
               setLoading(false);
             }
             return;
@@ -95,8 +101,11 @@ export function useWeather(): WeatherData {
         const code = json.current?.weather_code as number;
         const condition = wmoToCondition(code);
         const emoji = conditionToEmoji(condition);
+        const windSpeed = Math.round(json.current?.wind_speed_10m as number);
+        const humidity = Math.round(json.current?.relative_humidity_2m as number);
+        const uvIndex = Math.round((json.current?.uv_index as number) * 10) / 10;
 
-        const cacheEntry: WeatherCache = { temp, condition, emoji, fetchedAt: Date.now() };
+        const cacheEntry: WeatherCache = { temp, condition, emoji, windSpeed, humidity, uvIndex, fetchedAt: Date.now() };
         try {
           sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheEntry));
         } catch {
@@ -104,7 +113,7 @@ export function useWeather(): WeatherData {
         }
 
         if (!cancelled) {
-          setData({ temp, condition, emoji });
+          setData({ temp, condition, emoji, windSpeed, humidity, uvIndex });
           setLoading(false);
         }
       } catch {
@@ -126,6 +135,9 @@ export function useWeather(): WeatherData {
     temp: data?.temp ?? 0,
     condition: data?.condition ?? "",
     emoji: data?.emoji ?? "",
+    windSpeed: data?.windSpeed ?? 0,
+    humidity: data?.humidity ?? 0,
+    uvIndex: data?.uvIndex ?? 0,
     loading,
   };
 }

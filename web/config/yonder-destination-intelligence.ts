@@ -129,7 +129,7 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       "Use as a gateway destination for users graduating from metro trails.",
     ],
     whyItMatters:
-      "Amicalola is the easiest high-payoff regional anchor to understand and market inside Yonder's full-day shelf.",
+      "Amicalola is the easiest high-payoff regional anchor to understand and market inside Lost Track's full-day shelf.",
     questHooks: [
       "North Georgia waterfall circuit",
       "Appalachian gateway collection",
@@ -156,7 +156,7 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       "Strong visual choice for users deciding between scenic payoff and lower-friction metro plans.",
     ],
     whyItMatters:
-      "Tallulah makes Yonder feel regional and intentional rather than like a city portal with a hiking tab.",
+      "Tallulah makes Lost Track feel regional and intentional rather than like a city portal with a hiking tab.",
     questHooks: [
       "Georgia canyon collection",
       "high-payoff overlook run",
@@ -183,7 +183,7 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       "Good candidate for 'if you only do one big trip this month' modules.",
     ],
     whyItMatters:
-      "Cloudland is the strongest current bridge from Yonder's full-day discovery into true weekend positioning.",
+      "Cloudland is the strongest current bridge from Lost Track's full-day discovery into true weekend positioning.",
     questHooks: [
       "Georgia canyon weekends",
       "waterfalls plus overlooks quest",
@@ -238,7 +238,7 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       "Useful as a graduation step after easier North Georgia trails.",
     ],
     whyItMatters:
-      "Blood Mountain gives Yonder an unmistakable Appalachian identity and a true effort-reward ladder.",
+      "Blood Mountain gives Lost Track an unmistakable Appalachian identity and a true effort-reward ladder.",
     questHooks: [
       "Appalachian starter pack",
       "Georgia summit ladder",
@@ -265,7 +265,7 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       "Road and trail access details matter more here than for park-style destinations.",
     ],
     whyItMatters:
-      "Springer Mountain is foundational quest infrastructure for Yonder even if it stays lower-volume in broad consumer use.",
+      "Springer Mountain is foundational quest infrastructure for Lost Track even if it stays lower-volume in broad consumer use.",
     questHooks: [
       "Appalachian origin quest",
       "Georgia trail milestones",
@@ -314,7 +314,7 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       "Strong option when users want mountain payoff without a difficult hike.",
     ],
     whyItMatters:
-      "Brasstown Bald gives Yonder a broadly accessible regional escape instead of only hard-hike recommendations.",
+      "Brasstown Bald gives Lost Track a broadly accessible regional escape instead of only hard-hike recommendations.",
     questHooks: [
       "Georgia high points",
       "best scenic drives",
@@ -334,14 +334,14 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "fall", "winter"],
     weatherFitTags: ["after-rain", "cool-weather", "leaf-season"],
     summary:
-      "A classic North Georgia waterfall hike with enough broad appeal to be one of Yonder's most reusable full-day recommendations.",
+      "A classic North Georgia waterfall hike with enough broad appeal to be one of Lost Track's most reusable full-day recommendations.",
     practicalNotes: [
       "Best after recent rain and in cooler-weather windows.",
       "High-value choice when users want scenic payoff without the intensity of summit-first hikes.",
       "Strong counterpart to Amicalola inside a waterfall-focused recommendation stack.",
     ],
     whyItMatters:
-      "Raven Cliff is one of the cleanest full-day recommendations Yonder can make without requiring special user context.",
+      "Raven Cliff is one of the cleanest full-day recommendations Lost Track can make without requiring special user context.",
     questHooks: [
       "North Georgia waterfall circuit",
       "cool-weather day-hike picks",
@@ -416,14 +416,14 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["summer", "fall"],
     weatherFitTags: ["clear-day", "leaf-season", "cool-weather"],
     summary:
-      "A mountain-park anchor with scenic range that helps Yonder stretch beyond the most obvious North Georgia picks.",
+      "A mountain-park anchor with scenic range that helps Lost Track stretch beyond the most obvious North Georgia picks.",
     practicalNotes: [
       "Useful as a weekend shelf pick once users have seen the more obvious flagship destinations.",
       "Stronger when positioned around overlooks, loops, and a fuller day rather than a single signature attraction.",
       "Good candidate for 'less obvious but worth it' editorial framing.",
     ],
     whyItMatters:
-      "Fort Mountain adds range and keeps Yonder's regional layer from collapsing into the same three names.",
+      "Fort Mountain adds range and keeps Lost Track's regional layer from collapsing into the same three names.",
     questHooks: [
       "less-obvious Georgia state parks",
       "mountain overlook loop",
@@ -471,14 +471,14 @@ export const YONDER_WAVE1_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["fall", "winter", "spring"],
     weatherFitTags: ["dry-weather", "cool-weather", "clear-day"],
     summary:
-      "Atlanta's most distinctive outdoor climbing anchor and one of Yonder's best chances to feel locally specific instead of generic.",
+      "Atlanta's most distinctive outdoor climbing anchor and one of Lost Track's best chances to feel locally specific instead of generic.",
     practicalNotes: [
       "Promote only in dry-weather windows.",
       "Useful for 'mildly weird / deeply local' editorial framing as much as for strict climbing audiences.",
       "Pair with stewardship or access-context copy where appropriate.",
     ],
     whyItMatters:
-      "Boat Rock is the strongest local-difference destination in the Wave 1 set and gives Yonder an outdoor identity no generic event feed can fake.",
+      "Boat Rock is the strongest local-difference destination in the Wave 1 set and gives Lost Track an outdoor identity no generic event feed can fake.",
     questHooks: [
       "Atlanta outdoors locals know",
       "climbing and bouldering starter path",
@@ -501,14 +501,14 @@ export const YONDER_WAVE2_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "fall", "winter"],
     weatherFitTags: ["after-rain", "cool-weather", "leaf-season"],
     summary:
-      "A high-signal North Georgia waterfall stop that broadens Yonder's full-day waterfall shelf beyond the obvious flagships.",
+      "A high-signal North Georgia waterfall stop that broadens Lost Track's full-day waterfall shelf beyond the obvious flagships.",
     practicalNotes: [
       "Best promoted after recent rain when water volume is stronger.",
       "Works well as a lower-friction scenic hike compared with harder summit days.",
       "Useful support anchor when the homepage needs more than one waterfall-driven recommendation.",
     ],
     whyItMatters:
-      "DeSoto gives Yonder more waterfall density, which is critical for seasonal recommendation logic and future quest clustering.",
+      "DeSoto gives Lost Track more waterfall density, which is critical for seasonal recommendation logic and future quest clustering.",
     questHooks: [
       "North Georgia waterfall circuit",
       "cool-weather scenic hikes",
@@ -535,7 +535,7 @@ export const YONDER_WAVE2_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       "A good alternate when harder waterfall hikes feel like too much commitment.",
     ],
     whyItMatters:
-      "Helton Creek helps Yonder avoid making every scenic full-day recommendation feel strenuous or expert-coded.",
+      "Helton Creek helps Lost Track avoid making every scenic full-day recommendation feel strenuous or expert-coded.",
     questHooks: [
       "easy-payoff waterfall list",
       "first North Georgia scenic trips",
@@ -555,14 +555,14 @@ export const YONDER_WAVE2_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "fall", "winter"],
     weatherFitTags: ["clear-day", "cool-weather", "leaf-season", "sunrise-friendly"],
     summary:
-      "A true summit payoff for high-intent hikers, giving Yonder a second hard-hike benchmark beyond Blood Mountain.",
+      "A true summit payoff for high-intent hikers, giving Lost Track a second hard-hike benchmark beyond Blood Mountain.",
     practicalNotes: [
       "Promote on clear days when summit-view payoff is strongest.",
       "Best used for committed hikers rather than general scenic audiences.",
       "Strong candidate for quest framing around Georgia summit progression.",
     ],
     whyItMatters:
-      "Rabun Bald deepens Yonder's summit ladder so the portal can serve ambitious hikers without repeating the same flagship every time.",
+      "Rabun Bald deepens Lost Track's summit ladder so the portal can serve ambitious hikers without repeating the same flagship every time.",
     questHooks: [
       "Georgia summit ladder",
       "hard-hike brag list",
@@ -582,14 +582,14 @@ export const YONDER_WAVE2_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["summer", "fall", "winter"],
     weatherFitTags: ["clear-day", "leaf-season", "cool-weather", "sunrise-friendly"],
     summary:
-      "An overlook-heavy mountain park that expands Yonder's weekend shelf with another scenic, camp-capable escape.",
+      "An overlook-heavy mountain park that expands Lost Track's weekend shelf with another scenic, camp-capable escape.",
     practicalNotes: [
       "Useful when weekend recommendations need something more scenic-drive and overlook oriented.",
       "Visibility matters, so clear days and foliage windows are especially valuable.",
       "Good backup weekend anchor when the most obvious parks are overexposed or crowded.",
     ],
     whyItMatters:
-      "Black Rock Mountain gives the weekend layer more range and keeps Yonder from collapsing into a tiny set of repeat park names.",
+      "Black Rock Mountain gives the weekend layer more range and keeps Lost Track from collapsing into a tiny set of repeat park names.",
     questHooks: [
       "overlook weekends",
       "fall-color mountain parks",
@@ -637,7 +637,7 @@ export const YONDER_WAVE2_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["fall", "winter", "spring"],
     weatherFitTags: ["clear-day", "leaf-season", "cool-weather", "sunrise-friendly"],
     summary:
-      "A high-upside overlook anchor that gives Yonder a cleaner wilderness-edge weekend idea without requiring a big technical hike.",
+      "A high-upside overlook anchor that gives Lost Track a cleaner wilderness-edge weekend idea without requiring a big technical hike.",
     practicalNotes: [
       "Best framed around overlook payoff, foliage, and clear-weather windows.",
       "Useful as a scenic-weekend alternative to more hike-centric recommendations.",
@@ -689,14 +689,14 @@ export const YONDER_WAVE3_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "fall", "winter"],
     weatherFitTags: ["after-rain", "cool-weather", "leaf-season"],
     summary:
-      "The cleanest metro-edge trail anchor for when Yonder needs a real nature reset without turning the day into a road trip.",
+      "The cleanest metro-edge trail anchor for when Lost Track needs a real nature reset without turning the day into a road trip.",
     practicalNotes: [
       "Best after rain and in cooler months when creek flow and ruins payoff are strongest.",
       "Ideal bridge between urban quick hits and full-day regional hikes.",
       "Use when users want an actual trail day but only have half a day to spare.",
     ],
     whyItMatters:
-      "Sweetwater is the most useful metro support anchor for keeping Yonder credible below the regional mountain layer.",
+      "Sweetwater is the most useful metro support anchor for keeping Lost Track credible below the regional mountain layer.",
     questHooks: [
       "metro-to-mountain progression",
       "best first half-day hikes",
@@ -716,14 +716,14 @@ export const YONDER_WAVE3_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "fall", "winter"],
     weatherFitTags: ["clear-day", "cool-weather", "leaf-season"],
     summary:
-      "A distinctive granite-landscape half-day option that keeps Yonder's close-in nature shelf from collapsing into the same river and forest pattern.",
+      "A distinctive granite-landscape half-day option that keeps Lost Track's close-in nature shelf from collapsing into the same river and forest pattern.",
     practicalNotes: [
       "Stronger in cooler-weather windows and clear-day conditions.",
       "Useful when the portal needs a scenic half-day recommendation outside the Chattahoochee corridor.",
       "Good candidate for beginner-friendly but still memorable trail prompts.",
     ],
     whyItMatters:
-      "Panola widens Yonder's metro support map and gives the half-day shelf a more distinctive geological identity.",
+      "Panola widens Lost Track's metro support map and gives the half-day shelf a more distinctive geological identity.",
     questHooks: [
       "Atlanta monadnock circuit",
       "close-in nature variety",
@@ -743,14 +743,14 @@ export const YONDER_WAVE3_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall", "winter"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A reliable river-adjacent half-day trail that gives Yonder a low-friction answer when users want mileage without mountain logistics.",
+      "A reliable river-adjacent half-day trail that gives Lost Track a low-friction answer when users want mileage without mountain logistics.",
     practicalNotes: [
       "Works year-round and is especially useful for repeatable close-in outdoor routines.",
       "Good fallback when bigger mountain plans feel like too much friction.",
       "Use as a confidence-building recommendation for users easing into longer trail time.",
     ],
     whyItMatters:
-      "Cochran Shoals gives Yonder repeatable half-day depth, which reduces pressure on the regional shelf to do all the work.",
+      "Cochran Shoals gives Lost Track repeatable half-day depth, which reduces pressure on the regional shelf to do all the work.",
     questHooks: [
       "river-loop regulars",
       "best close-in mileage",
@@ -777,7 +777,7 @@ export const YONDER_WAVE3_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
       "Pair with safety and river-condition context once the conditions layer deepens.",
     ],
     whyItMatters:
-      "Powers Island is the most direct way to make Yonder's water lane feel real in Atlanta before the broader paddle graph is built out.",
+      "Powers Island is the most direct way to make Lost Track's water lane feel real in Atlanta before the broader paddle graph is built out.",
     questHooks: [
       "Chattahoochee crossings",
       "summer water escapes",
@@ -797,14 +797,14 @@ export const YONDER_WAVE3_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["summer", "spring", "fall"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A cleaner put-in style support node that helps Yonder grow beyond a single Chattahoochee access story.",
+      "A cleaner put-in style support node that helps Lost Track grow beyond a single Chattahoochee access story.",
     practicalNotes: [
       "Use as support inventory for water-focused modules rather than a flagship scenic card.",
       "Most valuable in heat-aware routing and Chattahoochee-specific collections.",
       "Helpful for expanding future artifact and access-point logic without needing a new data model yet.",
     ],
     whyItMatters:
-      "Island Ford starts the access-node layer Yonder needs if it wants to own water discovery rather than just mentioning the river abstractly.",
+      "Island Ford starts the access-node layer Lost Track needs if it wants to own water discovery rather than just mentioning the river abstractly.",
     questHooks: [
       "Chattahoochee crossings",
       "river access starter pack",
@@ -824,14 +824,14 @@ export const YONDER_WAVE3_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A lower-friction camp-capable park that gives Yonder a weekend option closer to Atlanta than the North Georgia mountain set.",
+      "A lower-friction camp-capable park that gives Lost Track a weekend option closer to Atlanta than the North Georgia mountain set.",
     practicalNotes: [
       "Useful as a 'try a weekend outside without driving two hours' recommendation.",
       "Pairs well with early camping-adjacent messaging even before Camp Finder exists.",
       "Good counterweight when the weekend shelf feels too mountain-heavy.",
     ],
     whyItMatters:
-      "Chattahoochee Bend makes Yonder's weekend layer feel more reachable and less dependent on a narrow North Georgia pattern.",
+      "Chattahoochee Bend makes Lost Track's weekend layer feel more reachable and less dependent on a narrow North Georgia pattern.",
     questHooks: [
       "first overnight escapes",
       "close-in weekend basecamps",
@@ -847,7 +847,7 @@ export const YONDER_WAVE3_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
         {
           unitType: "tent_site",
           label: "Campground",
-          summary: "Closest true camp-capable weekend in the Yonder set.",
+          summary: "Closest true camp-capable weekend in the Lost Track set.",
           bookingSurface: "reserveamerica",
         },
         {
@@ -882,14 +882,14 @@ export const YONDER_WAVE4_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "The core Chattahoochee anchor that ties trails, launches, and river-day planning into one recognizable Yonder lane.",
+      "The core Chattahoochee anchor that ties trails, launches, and river-day planning into one recognizable Lost Track lane.",
     practicalNotes: [
-      "Use as the parent water-and-trail anchor when Yonder needs to explain the river system, not just a single put-in.",
+      "Use as the parent water-and-trail anchor when Lost Track needs to explain the river system, not just a single put-in.",
       "Strong in warm-weather and clear-day windows, but useful year-round for lower-friction outdoor plans.",
       "Best paired with more specific access nodes when the recommendation needs execution-level clarity.",
     ],
     whyItMatters:
-      "The NRA is the umbrella destination that makes Yonder's water and river logic legible instead of feeling like disconnected access points.",
+      "The NRA is the umbrella destination that makes Lost Track's water and river logic legible instead of feeling like disconnected access points.",
     questHooks: [
       "Chattahoochee crossings",
       "river regulars",
@@ -909,7 +909,7 @@ export const YONDER_WAVE4_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall", "winter"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A river-bluff trail with real local distinctiveness that helps Yonder connect hiking and water-adjacent discovery in one place.",
+      "A river-bluff trail with real local distinctiveness that helps Lost Track connect hiking and water-adjacent discovery in one place.",
     practicalNotes: [
       "Useful when recommendations need more payoff and texture than a basic flat river loop.",
       "Good bridge between close-in trails and water-access collections.",
@@ -936,14 +936,14 @@ export const YONDER_WAVE4_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall", "winter"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A practical access-node layer for East Palisades that starts to make Yonder's access-point logic real rather than theoretical.",
+      "A practical access-node layer for East Palisades that starts to make Lost Track's access-point logic real rather than theoretical.",
     practicalNotes: [
       "Use when route clarity matters more than broad scenic framing.",
       "Strong support inventory for future artifact and access-point collections.",
       "Best treated as a precision node inside Chattahoochee recommendations, not a flagship destination card.",
     ],
     whyItMatters:
-      "Indian Trail Entrance is the kind of support node Yonder needs if it wants to graduate from destination list to usable outdoor graph.",
+      "Indian Trail Entrance is the kind of support node Lost Track needs if it wants to graduate from destination list to usable outdoor graph.",
     questHooks: [
       "Chattahoochee crossings",
       "access-point starter pack",
@@ -963,14 +963,14 @@ export const YONDER_WAVE4_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "clear-day", "all-season"],
     summary:
-      "A true whitewater operator anchor that gives Yonder's water lane a bigger-adventure option beyond metro floats and river trails.",
+      "A true whitewater operator anchor that gives Lost Track's water lane a bigger-adventure option beyond metro floats and river trails.",
     practicalNotes: [
       "Useful when the weekend shelf needs an actual water-adventure answer, not just another park with a river nearby.",
       "Warm-weather and group-oriented framing works best here.",
       "Should be positioned as a trip prompt and operator anchor, not a generic scenic place card.",
     ],
     whyItMatters:
-      "Whitewater Express is the quickest way to make Yonder's water category feel more ambitious than tubing and launches alone.",
+      "Whitewater Express is the quickest way to make Lost Track's water category feel more ambitious than tubing and launches alone.",
     questHooks: [
       "Georgia water weekends",
       "crew adventure days",
@@ -1012,14 +1012,14 @@ export const YONDER_WAVE4_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "clear-day", "all-season"],
     summary:
-      "A north-metro river support anchor that helps Yonder avoid making every water recommendation about the Chattahoochee.",
+      "A north-metro river support anchor that helps Lost Track avoid making every water recommendation about the Chattahoochee.",
     practicalNotes: [
       "Best used to broaden the water lane and reduce repetition in warm-weather shelves.",
       "Good for closer-in paddle and riverfront recommendations north of core Atlanta.",
       "Most valuable as support density rather than a top-of-feed flagship.",
     ],
     whyItMatters:
-      "Etowah River Park expands Yonder's water identity geographically and prevents the summer lane from feeling too single-river dependent.",
+      "Etowah River Park expands Lost Track's water identity geographically and prevents the summer lane from feeling too single-river dependent.",
     questHooks: [
       "north-metro water reset",
       "river regulars",
@@ -1042,14 +1042,14 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A close-in lake weekend that gives Yonder a realistic overnight shelf without making every escape a mountain mission.",
+      "A close-in lake weekend that gives Lost Track a realistic overnight shelf without making every escape a mountain mission.",
     practicalNotes: [
       "Best used for reachable weekend prompts and first overnighters.",
       "Strong fallback when users want a real getaway without a long North Georgia drive.",
       "Useful for broad-audience cabin-or-camp framing, not just trail-first recommendations.",
     ],
     whyItMatters:
-      "Red Top Mountain is the fastest way to make Yonder's weekend layer feel more repeatable and less dependent on the same mountain pattern.",
+      "Red Top Mountain is the fastest way to make Lost Track's weekend layer feel more repeatable and less dependent on the same mountain pattern.",
     questHooks: [
       "first overnight escapes",
       "close-in lake weekends",
@@ -1097,14 +1097,14 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A quieter east-metro basecamp that broadens Yonder's weekend shelf beyond scenic-heavy mountain recommendations.",
+      "A quieter east-metro basecamp that broadens Lost Track's weekend shelf beyond scenic-heavy mountain recommendations.",
     practicalNotes: [
       "Useful for lower-key weekend prompts and first camp-capable trips.",
       "Good when the weekend shelf needs variety instead of another overlook or waterfall card.",
       "Works well for family-friendly or crew-friendly overnight suggestions.",
     ],
     whyItMatters:
-      "Hard Labor Creek gives Yonder another real overnight-capable option that makes the weekend shelf feel less repetitive.",
+      "Hard Labor Creek gives Lost Track another real overnight-capable option that makes the weekend shelf feel less repetitive.",
     questHooks: [
       "first overnight escapes",
       "camp-close-to-home",
@@ -1152,14 +1152,14 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "all-season", "clear-day"],
     summary:
-      "A lake-centered park that gives Yonder a broad-audience weekend base with easier logistics than the farthest regional anchors.",
+      "A lake-centered park that gives Lost Track a broad-audience weekend base with easier logistics than the farthest regional anchors.",
     practicalNotes: [
       "Best used for approachable weekend escapes and broad family-friendly outdoors prompts.",
       "Good counterweight when the shelf is leaning too hard into mountain-only adventure.",
       "Useful for cabin-or-campsite messaging even before a true lodging layer exists.",
     ],
     whyItMatters:
-      "Fort Yargo adds a repeatable, broadly usable overnight option to Yonder's weekend shelf instead of another one-off scenic anchor.",
+      "Fort Yargo adds a repeatable, broadly usable overnight option to Lost Track's weekend shelf instead of another one-off scenic anchor.",
     questHooks: [
       "easy getaway ladder",
       "lake park weekends",
@@ -1207,14 +1207,14 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall"],
     weatherFitTags: ["summer-friendly", "clear-day", "all-season"],
     summary:
-      "A lake-forward weekend base that strengthens Yonder's overnight water lane instead of only its hiking shelf.",
+      "A lake-forward weekend base that strengthens Lost Track's overnight water lane instead of only its hiking shelf.",
     practicalNotes: [
       "Best used for warm-weather weekend prompts and water-adjacent overnight ideas.",
-      "Useful when Yonder needs a real overnight water answer rather than another access point or float launch.",
+      "Useful when Lost Track needs a real overnight water answer rather than another access point or float launch.",
       "Good bridge between paddling logic and camp-capable recommendations.",
     ],
     whyItMatters:
-      "Don Carter helps Yonder connect its water and weekend strategies instead of treating them as separate categories.",
+      "Don Carter helps Lost Track connect its water and weekend strategies instead of treating them as separate categories.",
     questHooks: [
       "lake weekends",
       "overnight water escapes",
@@ -1262,14 +1262,14 @@ export const YONDER_WAVE5_DESTINATION_INTELLIGENCE: YonderDestinationIntelligenc
     bestSeasons: ["spring", "summer", "fall", "winter"],
     weatherFitTags: ["summer-friendly", "leaf-season", "clear-day", "all-season"],
     summary:
-      "A North Georgia lodge-and-lake base that gives Yonder a softer-landing weekend option than campsite-only mountain prompts.",
+      "A North Georgia lodge-and-lake base that gives Lost Track a softer-landing weekend option than campsite-only mountain prompts.",
     practicalNotes: [
       "Best for cabin-capable or lodge-capable weekend prompts and lower-friction North Georgia escapes.",
       "Useful bridge between scenic mountain discovery and easier booking-oriented planning.",
       "Strong choice when the portal needs a weekend answer that feels adventurous without feeling hard-core.",
     ],
     whyItMatters:
-      "Unicoi gives Yonder a more accommodation-friendly weekend archetype, which the current shelf still lacks.",
+      "Unicoi gives Lost Track a more accommodation-friendly weekend archetype, which the current shelf still lacks.",
     questHooks: [
       "soft-landing weekends",
       "Helen basecamp ideas",

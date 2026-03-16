@@ -9,6 +9,7 @@ import MinimalHeader from "./MinimalHeader";
 import BrandedHeader from "./BrandedHeader";
 import ImmersiveHeader from "./ImmersiveHeader";
 import ATLittleHeader from "./ATLittleHeader";
+import AdventureHeader from "./AdventureHeader";
 
 export interface PortalHeaderProps {
   /** Override the portal slug (for use outside portal context) */
@@ -50,6 +51,10 @@ function PortalHeaderInner({
   // Special case: ATLittle portal has its own custom header
   if (resolvedSlug === "atlanta-families") {
     return <ATLittleHeader />;
+  }
+
+  if (resolvedSlug === "yonder") {
+    return <AdventureHeader />;
   }
 
   // Common props for all header types

@@ -2,6 +2,7 @@ import CityPulseShell from "@/components/feed/CityPulseShell";
 import CivicFeedShell from "@/components/feed/CivicFeedShell";
 import ArtsFeedShell from "@/components/feed/ArtsFeedShell";
 import { FamilyFeed } from "@/components/family";
+import { AdventureFeed } from "@/components/adventure";
 import type { Portal } from "@/lib/portal-context";
 import { getPortalVertical } from "@/lib/portal";
 
@@ -35,6 +36,16 @@ export async function DefaultTemplate({
   // Community/civic portals get a purpose-built civic feed
   if (vertical === "community") {
     return <CivicFeedShell portalSlug={portal.slug} />;
+  }
+
+  // Adventure portal — bespoke AdventureFeed shell with Nordic Brutalist design
+  if (vertical === "adventure") {
+    return (
+      <AdventureFeed
+        portalId={portal.id}
+        portalSlug={portal.slug}
+      />
+    );
   }
 
   // Arts portal — bespoke feed shell with exhibition-centric sections

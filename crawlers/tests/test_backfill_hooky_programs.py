@@ -3,6 +3,7 @@ from datetime import date, time
 from scripts.backfill_hooky_programs import (
     _discover_candidate_source_slugs,
     _schedule_days,
+    _schedule_time_range,
     backfill_hooky_programs,
     build_program_record,
 )
@@ -102,6 +103,12 @@ def test_schedule_days_prefers_explicit_weekday_text() -> None:
     ) == [1, 2, 3, 4, 5]
 
 
+def test_schedule_time_range_prefers_full_day_window() -> None:
+    assert _schedule_time_range(
+        "Cost: $425/week (Full Day 9-4pm) or $350/week (Half-Day 9-1pm)"
+    ) == ("09:00:00", "16:00:00")
+
+
 def test_backfill_updates_existing_program_hashes_when_apply_true(monkeypatch) -> None:
     candidate_event = {
         "event_id": 101,
@@ -153,3 +160,37 @@ def test_backfill_updates_existing_program_hashes_when_apply_true(monkeypatch) -
     assert stats.existing == 1
     assert stats.skipped == 0
     assert updated_payloads[0]["schedule_days"] == [2, 3, 4, 5]
+
+
+def test_build_program_record_infers_schedule_times_from_price_note() -> None:
+    record = build_program_record(
+        {
+            "event_id": 101,
+            "source_id": 202,
+            "source_slug": "club-scikidz-atlanta",
+            "source_name": "Club SciKidz Atlanta",
+            "owner_portal_id": "atlanta-families-portal",
+            "portal_id": "atlanta-families-portal",
+            "venue_id": 303,
+            "venue_name": "Lutheran Church of the Resurrection",
+            "title": "Junior AI and Chat Bots at Lutheran Church of the Resurrection",
+            "description": "Step into the future with AI.",
+            "start_date": date(2026, 6, 8),
+            "end_date": date(2026, 6, 12),
+            "start_time": None,
+            "end_time": None,
+            "age_min": 9,
+            "age_max": 11,
+            "price_min": 325.0,
+            "price_max": 425.0,
+            "price_note": "Cost: $425/week (Full Day 9-4pm) or $350/week (Half-Day 9-1pm)",
+            "tags": ["stem", "kids", "coding", "camp"],
+            "source_url": "https://example.com/program",
+            "ticket_url": "https://example.com/register",
+            "content_hash": "event-hash",
+        }
+    )
+
+    assert record is not None
+    assert record["schedule_start_time"] == "09:00:00"
+    assert record["schedule_end_time"] == "16:00:00"

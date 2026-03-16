@@ -21,10 +21,7 @@ import {
   getYonderAccommodationInventorySource,
   type YonderAccommodationInventorySource,
 } from "@/config/yonder-accommodation-inventory";
-import {
-  getYonderRuntimeInventorySnapshot,
-  type YonderRuntimeInventorySnapshot,
-} from "@/lib/yonder-provider-inventory";
+import type { YonderRuntimeInventorySnapshot } from "@/lib/yonder-provider-inventory";
 
 const CACHE_NAMESPACE = "api:yonder-destinations";
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -104,7 +101,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     }>).map((row) => [row.slug, row]),
   );
 
-  const destinations = await Promise.all(YONDER_DESTINATION_INTELLIGENCE.map(async (entry) => {
+  const destinations = YONDER_DESTINATION_INTELLIGENCE.map((entry) => {
     const row = rowsBySlug.get(entry.slug);
     if (!row) return null;
     return {
@@ -121,11 +118,9 @@ export async function GET(request: NextRequest, { params }: Props) {
       accommodationInventorySource: getYonderAccommodationInventorySource(
         entry.slug,
       ),
-      runtimeInventorySnapshot: await getYonderRuntimeInventorySnapshot(
-        entry.slug,
-      ),
+      runtimeInventorySnapshot: null as YonderRuntimeInventorySnapshot | null,
     } satisfies YonderDestinationCard;
-  }));
+  });
 
   const filteredDestinations = destinations.filter(
     (entry): entry is YonderDestinationCard => entry !== null,

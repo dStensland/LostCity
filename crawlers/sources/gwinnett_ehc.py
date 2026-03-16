@@ -49,6 +49,8 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +136,122 @@ _VENUE_DATA = {
         "nature",
     ],
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    programs=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    """Project GEHC into shared Family-friendly destination richness lanes."""
+    envelope = TypedEntityEnvelope()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "nature_center",
+            "commitment_tier": "halfday",
+            "primary_activity": "nature and heritage exploration",
+            "best_seasons": ["spring", "summer", "fall"],
+            "weather_fit_tags": ["outdoor", "indoor-option", "family-daytrip"],
+            "practical_notes": (
+                "102-acre nature and heritage campus with walking trails, indoor exhibits, "
+                "historic-house interpretation, and picnic-friendly family utility."
+            ),
+            "accessibility_notes": (
+                "Family destination with indoor education spaces plus outdoor trail and campus "
+                "circulation. Confirm specific trail and historic-building accessibility on the official site."
+            ),
+            "parking_type": "free_lot",
+            "best_time_of_day": "morning",
+            "family_suitability": "yes",
+            "dog_friendly": False,
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Campus access varies by activity; confirm current exhibit, ropes-course, and program pricing on the official site.",
+            "source_url": _VENUE_DATA["website"],
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "campus_size_acres": 102,
+                "walking_trails_miles": 5,
+                "has_indoor_exhibits": True,
+                "has_historic_interpretation": True,
+                "has_picnic_area": True,
+            },
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "walking-trails-and-greenways",
+            "title": "Walking trails and greenways",
+            "feature_type": "amenity",
+            "description": (
+                "Roughly five miles of walking trails across the campus, giving families an easy nature loop option "
+                "beyond scheduled programs."
+            ),
+            "url": _VENUE_DATA["website"],
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "historic-chesser-williams-house",
+            "title": "Historic Chesser-Williams House",
+            "feature_type": "attraction",
+            "description": (
+                "Historic-house interpretation on campus adds a heritage and local-history layer to family visits."
+            ),
+            "url": _VENUE_DATA["website"],
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "indoor-environmental-exhibits",
+            "title": "Indoor environmental exhibits",
+            "feature_type": "experience",
+            "description": (
+                "Indoor environmental and heritage exhibits make GEHC a useful family destination even when the weather turns."
+            ),
+            "url": _VENUE_DATA["website"],
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "wooded-picnic-pavilion",
+            "title": "Wooded picnic pavilion",
+            "feature_type": "amenity",
+            "description": (
+                "Picnic-friendly campus utility that makes the venue more usable for half-day family plans."
+            ),
+            "url": _VENUE_DATA["website"],
+            "is_free": False,
+            "sort_order": 40,
+        },
+    )
+
+    return envelope
 
 # ---------------------------------------------------------------------------
 # Age range parsing
@@ -927,6 +1045,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
     # Ensure venue record exists
     try:
         venue_id = get_or_create_venue(_VENUE_DATA)
+        persist_result = persist_typed_entity_envelope(
+            _build_destination_envelope(venue_id)
+        )
+        if persist_result.skipped:
+            logger.warning(
+                "[ehc] skipped typed destination writes: %s",
+                persist_result.skipped,
+            )
     except Exception as exc:
         logger.error("[ehc] Failed to create/find venue: %s", exc)
         return 0, 0, 0

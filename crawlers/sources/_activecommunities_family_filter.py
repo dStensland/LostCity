@@ -64,6 +64,11 @@ _REGISTRATION_OPEN_RE = re.compile(
     r"(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})(?:st|nd|rd|th)?",
     re.IGNORECASE,
 )
+_TIME_RANGE_RE = re.compile(
+    r"(?<!\d)(?P<start>\d{1,2}(?:\s*:\s*\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)\s*(?:-|to)\s*"
+    r"(?P<end>\d{1,2}(?:\s*:\s*\d{2})?\s*(?:a\.?m\.?|p\.?m\.?))(?!\d)",
+    re.IGNORECASE,
+)
 
 
 def _parse_iso_date_prefix(raw: Optional[str]) -> Optional[date]:
@@ -80,6 +85,36 @@ def _parse_iso_date_prefix(raw: Optional[str]) -> Optional[date]:
 
 def _coerce_iso_date(value: Optional[date]) -> Optional[str]:
     return value.isoformat() if value else None
+
+
+def _normalize_time_value(raw: Optional[str], fallback_ampm: Optional[str] = None) -> Optional[str]:
+    if not raw:
+        return None
+    cleaned = str(raw).strip().lower().replace(".", "").replace(" ", "")
+    match = re.match(r"(?P<hour>\d{1,2})(?::(?P<minute>\d{2}))?(?P<ampm>[ap]m)?", cleaned)
+    if not match:
+        return None
+
+    hour = int(match.group("hour"))
+    minute = int(match.group("minute") or "00")
+    ampm = match.group("ampm") or (fallback_ampm.lower() if fallback_ampm else None)
+    if not ampm:
+        return None
+
+    if ampm == "pm" and hour != 12:
+        hour += 12
+    if ampm == "am" and hour == 12:
+        hour = 0
+    return f"{hour:02d}:{minute:02d}:00"
+
+
+def _extract_hour(raw: Optional[str]) -> Optional[int]:
+    if not raw:
+        return None
+    match = re.match(r"\s*(\d{1,2})", str(raw))
+    if not match:
+        return None
+    return int(match.group(1))
 
 
 def infer_activecommunities_schedule_days(
@@ -121,6 +156,36 @@ def infer_activecommunities_schedule_days(
     if start_date:
         return [start_date.isoweekday()]
     return None
+
+
+def infer_activecommunities_schedule_time_range(
+    *,
+    date_range_description: Optional[str],
+    desc_text: Optional[str],
+) -> tuple[Optional[str], Optional[str]]:
+    combined = " ".join(part for part in (date_range_description, desc_text) if part)
+    if not combined:
+        return None, None
+
+    match = _TIME_RANGE_RE.search(combined)
+    if not match:
+        return None, None
+
+    fallback_ampm_match = re.search(r"([ap])\.?m\.?", match.group("end"), re.IGNORECASE)
+    fallback_ampm = f"{fallback_ampm_match.group(1)}m" if fallback_ampm_match else None
+    start_fallback = fallback_ampm
+    start_has_ampm = re.search(r"[ap]\.?m\.?", match.group("start"), re.IGNORECASE)
+    if not start_has_ampm and fallback_ampm == "pm":
+        start_hour = _extract_hour(match.group("start"))
+        end_hour = _extract_hour(match.group("end"))
+        if start_hour == 12:
+            start_fallback = "pm"
+        elif start_hour is not None and end_hour is not None:
+            start_fallback = "pm" if start_hour < end_hour else "am"
+
+    start_time = _normalize_time_value(match.group("start"), start_fallback)
+    end_time = _normalize_time_value(match.group("end"))
+    return start_time, end_time
 
 
 def infer_activecommunities_registration_open(

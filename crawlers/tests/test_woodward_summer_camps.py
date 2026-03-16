@@ -47,7 +47,11 @@ def test_parse_csv_rows_extracts_camp_sessions() -> None:
     assert rows[0]["title"] == "Woodward Summer Camp: Golf Skills Camp (AM)"
     assert rows[0]["start_date"] == "2026-05-26"
     assert rows[0]["end_date"] == "2026-05-29"
+    assert rows[0]["start_time"] is None
+    assert rows[0]["end_time"] is None
     assert rows[1]["is_all_day"] is True
+    assert rows[1]["start_time"] == "07:30"
+    assert rows[1]["end_time"] == "16:00"
     assert rows[1]["age_min"] == 6
     assert rows[1]["age_max"] == 14
     assert "north-campus" in rows[2]["tags"]

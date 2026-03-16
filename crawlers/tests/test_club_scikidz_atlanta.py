@@ -85,6 +85,8 @@ def test_parse_camp_page_extracts_sessions_price_and_ages() -> None:
     assert camp["price_min"] == 350.0
     assert camp["price_max"] == 425.0
     assert camp["duration_days"] == 5
+    assert camp["schedule_start_time"] == "09:00"
+    assert camp["schedule_end_time"] == "16:00"
     assert len(camp["sessions"]) == 2
     assert camp["sessions"][0]["start_date"] == "2026-06-08"
     assert camp["sessions"][0]["session_id"] == "68465937"
@@ -146,6 +148,9 @@ def test_build_event_record_uses_session_id_for_hash_and_dates() -> None:
     )
     assert record["start_date"] == "2026-06-08"
     assert record["end_date"] == "2026-06-12"
+    assert record["start_time"] == "09:00"
+    assert record["end_time"] == "16:00"
+    assert record["is_all_day"] is False
     assert record["ticket_url"].endswith("session=68465937")
     assert record["category"] == "programs"
     assert record["subcategory"] == "camp"

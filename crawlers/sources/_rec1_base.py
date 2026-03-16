@@ -27,7 +27,7 @@ import re
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, date
-from typing import Optional
+from typing import Callable, Optional
 
 import requests
 
@@ -42,6 +42,8 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -637,6 +639,10 @@ class TenantConfig:
     skip_session_keywords: list[str] = field(default_factory=list)
     # When true, only keep youth/family-relevant sessions from broad civic catalogs.
     require_family_relevance: bool = False
+    # Optional venue-level enrichment builder for touched facilities.
+    venue_enrichment_builder: Optional[
+        Callable[[VenueInfo, int], Optional[TypedEntityEnvelope]]
+    ] = None
 
 
 # ---------------------------------------------------------------------------
@@ -1168,6 +1174,18 @@ def _resolve_venue(
     }
 
     vid = get_or_create_venue(venue_data)
+    if tenant.venue_enrichment_builder:
+        try:
+            envelope = tenant.venue_enrichment_builder(matched_venue, vid)
+            if envelope is not None:
+                persist_typed_entity_envelope(envelope)
+        except Exception as exc:
+            logger.debug(
+                "[rec1/%s] Venue enrichment failed for %s: %s",
+                tenant.tenant_slug,
+                matched_venue.slug,
+                exc,
+            )
     venue_id_cache[location_key] = vid
     return vid, matched_venue.name
 
