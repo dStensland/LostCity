@@ -602,6 +602,7 @@ function InviteCard({
                 src={invite.event.image_url}
                 alt={invite.event.title}
                 fill
+                sizes="64px"
                 className="object-cover"
               />
             </div>
@@ -698,6 +699,7 @@ function EventCard({
                 src={event.image_url}
                 alt={event.title}
                 fill
+                sizes="80px"
                 className="object-cover"
               />
             </div>

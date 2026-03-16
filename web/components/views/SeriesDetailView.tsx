@@ -271,6 +271,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
                   src={series.image_url!}
                   alt={series.title}
                   fill
+                  sizes="112px"
                   className={`object-cover transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
                   onLoad={() => setImageLoaded(true)}
                   onError={() => setImageError(true)}

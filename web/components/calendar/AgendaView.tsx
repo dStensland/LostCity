@@ -259,6 +259,7 @@ export default function AgendaView({
                           src={event.image_url}
                           alt=""
                           fill
+                          sizes="64px"
                           className="object-cover"
                         />
                       ) : (
