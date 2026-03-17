@@ -1,6 +1,6 @@
 import { getCachedPortalBySlug, getCachedPortalByVerticalAndCity, getPortalVertical } from "@/lib/portal";
 import { headers } from "next/headers";
-import { PortalHeader, DogHeader, AdventureHeader } from "@/components/headers";
+import { PortalHeader, DogHeader, AdventureHeader, ATLittleHeader } from "@/components/headers";
 import { AmbientBackground } from "@/components/ambient";
 import FindView from "@/components/find/FindView";
 import CommunityHub from "@/components/community/CommunityHub";
@@ -15,6 +15,7 @@ import { isPCMDemoPortal } from "@/lib/marketplace-art";
 import { normalizeMarketplacePersona } from "@/lib/marketplace-art";
 import { MarketplaceTemplate } from "./_templates/marketplace";
 import { DogTemplate } from "./_templates/dog";
+import { FamilyFeed } from "@/components/family";
 import DogMapView from "./_components/dog/DogMapView";
 import DogSavedView from "./_components/dog/DogSavedView";
 import { isDogPortal, DOG_PORTAL_VAR_OVERRIDES, DOG_DETAIL_VIEW_CSS } from "@/lib/dog-art";
@@ -77,7 +78,7 @@ export async function generateMetadata({
 }
 
 type ViewMode = "feed" | "find" | "community";
-type FindType = "events" | "classes" | "destinations" | "showtimes" | "regulars";
+type FindType = "events" | "classes" | "destinations" | "showtimes" | "whats_on" | "regulars";
 type FindDisplay = "list" | "map" | "calendar";
 
 type PortalSearchParams = {
@@ -239,6 +240,34 @@ export default async function PortalPage({ params, searchParams }: Props) {
     );
   }
 
+  // Family portal — bespoke header + feed, no generic PortalHeader/main wrapper
+  if (vertical === "family") {
+    const isExclusive = portal.portal_type === "business" && !portal.parent_portal_id;
+    return (
+      <div className="min-h-screen overflow-x-hidden">
+        <style>{`
+          body::before { opacity: 0 !important; }
+          body::after { opacity: 0 !important; }
+          .ambient-glow { opacity: 0 !important; }
+          .rain-overlay { display: none !important; }
+          .cursor-glow { display: none !important; }
+        `}</style>
+        <Suspense fallback={null}>
+          <ATLittleHeader />
+        </Suspense>
+        <Suspense fallback={null}>
+          <DetailViewRouter portalSlug={portal.slug}>
+            <FamilyFeed
+              portalId={portal.id}
+              portalSlug={portal.slug}
+              portalExclusive={isExclusive}
+            />
+          </DetailViewRouter>
+        </Suspense>
+      </div>
+    );
+  }
+
   // Adventure portal — bespoke header + feed, no generic PortalHeader/nav
   if (vertical === "adventure") {
     return (
@@ -291,10 +320,12 @@ export default async function PortalPage({ params, searchParams }: Props) {
   // Determine find type - support legacy view params
   // Note: "orgs" was moved to community view, redirect to events
   // Note: "spots" is a URL alias for the "destinations" findType
-  const VALID_FIND_TYPES = new Set<FindType>(["events", "classes", "destinations", "showtimes", "regulars"]);
+  const VALID_FIND_TYPES = new Set<FindType>(["events", "classes", "destinations", "showtimes", "whats_on", "regulars"]);
   let findType: FindType = "events";
   if (findTypeParam && findTypeParam !== "orgs" && findTypeParam !== "playbook") {
-    const mapped = findTypeParam === "spots" ? "destinations" : findTypeParam;
+    let mapped = findTypeParam === "spots" ? "destinations" : findTypeParam;
+    // Backward compat: ?type=showtimes now resolves to whats_on
+    if (mapped === "showtimes") mapped = "whats_on";
     findType = VALID_FIND_TYPES.has(mapped as FindType) ? (mapped as FindType) : "events";
   } else if (viewParam === "spots") {
     findType = "destinations";
@@ -313,6 +344,19 @@ export default async function PortalPage({ params, searchParams }: Props) {
     findDisplay = "map";
   } else if (viewParam === "calendar") {
     findDisplay = "calendar";
+  }
+
+  // Destinations tab defaults to list unless the URL explicitly pairs
+  // type=destinations (or view=spots) with display=map. This prevents the map
+  // from auto-loading when the user switches to this tab from another find type
+  // that had display=map, which risks exhausting browser WebGL contexts.
+  if (findType === "destinations") {
+    const destinationsTypeExplicit =
+      findTypeParam === "destinations" || viewParam === "spots";
+    const mapExplicit = findDisplayParam === "map";
+    if (!(destinationsTypeExplicit && mapExplicit)) {
+      findDisplay = "list";
+    }
   }
 
   // Check for active filters

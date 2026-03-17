@@ -4,7 +4,8 @@ const FIND_TYPE_LABELS: Record<FindType, string> = {
   events: "Events",
   classes: "Classes",
   destinations: "Places",
-  showtimes: "Now Playing",
+  showtimes: "What's On",
+  whats_on: "What's On",
   regulars: "Regulars",
 };
 

@@ -20,6 +20,9 @@ const SpotsFinder = dynamic(() => import("@/components/find/SpotsFinder"), {
 const RegularsView = dynamic(() => import("@/components/find/RegularsView"), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading regulars...</div>,
 });
+const WhatsOnView = dynamic(() => import("@/components/find/WhatsOnView"), {
+  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading...</div>,
+});
 import {
   FIND_FILTER_RESET_KEYS,
   SHOWTIMES_EXCLUDED_FILTER_KEYS,
@@ -68,8 +71,8 @@ const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = 
     ),
   },
   {
-    key: "showtimes",
-    label: getFindTypeLabel("showtimes"),
+    key: "whats_on",
+    label: getFindTypeLabel("whats_on"),
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
@@ -133,6 +136,8 @@ interface FindShellProps {
 
 // Tabs available per vertical — community portals only show Events
 const COMMUNITY_TABS = new Set<FindType>(["events"]);
+// Tabs hidden until data is populated
+const HIDDEN_TABS = new Set<FindType>(["classes"]);
 
 function FindShellInner({
   portalId,
@@ -146,7 +151,7 @@ function FindShellInner({
   const isCommunity = vertical === "community";
   const visibleTabs = isCommunity
     ? TYPE_OPTIONS.filter((t) => COMMUNITY_TABS.has(t.key))
-    : TYPE_OPTIONS;
+    : TYPE_OPTIONS.filter((t) => !HIDDEN_TABS.has(t.key));
   const viewRootRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -182,11 +187,15 @@ function FindShellInner({
     resetFindFiltersForTypeChange(params);
     params.set("view", "find");
     params.set("type", type);
+    // Clear display mode when switching tabs so stale map/calendar state doesn't
+    // carry over and auto-load an unexpected display mode (e.g. map exhausting
+    // WebGL contexts when switching to destinations).
+    params.delete("display");
     router.push(`/${portalSlug}?${params.toString()}`);
   };
 
   useEffect(() => {
-    if (findType !== "showtimes") return;
+    if (findType !== "showtimes" && findType !== "whats_on") return;
     const params = new URLSearchParams(searchParams?.toString() || "");
     const mutated = stripShowtimesExcludedParams(params);
     if (!mutated) return;
@@ -210,6 +219,10 @@ function FindShellInner({
       params.delete("display");
     } else {
       params.set("display", mode);
+    }
+    // Calendar has its own date navigation — clear date filter to avoid stale/hidden state
+    if (mode === "calendar") {
+      params.delete("date");
     }
     router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
   }, [findType, portalSlug, router, searchParams]);
@@ -330,25 +343,28 @@ function FindShellInner({
       >
         {/* Type selector tabs */}
         <div className="flex items-center justify-between gap-3">
-          <div className="flex gap-1.5 flex-1 min-w-0 overflow-x-auto scrollbar-hide">
-            {visibleTabs.map((option) => {
-              const isActive = findType === option.key;
-              return (
-                <button
-                  key={option.key}
-                  onClick={() => handleTypeChange(option.key)}
-                  aria-label={option.label}
-                  className={`shrink-0 flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full font-mono text-xs whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
-                    isActive
-                      ? "bg-gradient-to-r from-[var(--gold)] to-[var(--coral)] text-[var(--void)] font-semibold"
-                      : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/55"
-                  }`}
-                >
-                  {option.icon}
-                  <span>{option.label}</span>
-                </button>
-              );
-            })}
+          <div className="relative flex-1 min-w-0">
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pr-4 sm:pr-0">
+              {visibleTabs.map((option) => {
+                const isActive = findType === option.key;
+                return (
+                  <button
+                    key={option.key}
+                    onClick={() => handleTypeChange(option.key)}
+                    aria-label={option.label}
+                    className={`shrink-0 flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full font-mono text-xs whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
+                      isActive
+                        ? "bg-gradient-to-r from-[var(--gold)] to-[var(--coral)] text-[var(--void)] font-semibold"
+                        : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/55"
+                    }`}
+                  >
+                    {option.icon}
+                    <span>{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[var(--night)]/80 to-transparent pointer-events-none sm:hidden" />
           </div>
           {/* Desktop: display toggle + add button */}
           <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
@@ -440,6 +456,10 @@ function FindShellInner({
 
       {findType === "showtimes" && (
         <ShowtimesView portalId={portalId} portalSlug={portalSlug} />
+      )}
+
+      {findType === "whats_on" && (
+        <WhatsOnView portalId={portalId} portalSlug={portalSlug} />
       )}
 
       {findType === "destinations" && (

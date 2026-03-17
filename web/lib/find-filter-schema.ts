@@ -1,10 +1,11 @@
-export type FindType = "events" | "classes" | "destinations" | "showtimes" | "regulars";
+export type FindType = "events" | "classes" | "destinations" | "showtimes" | "whats_on" | "regulars";
 
 export const FIND_TYPES: readonly FindType[] = [
   "events",
   "classes",
   "destinations",
   "showtimes",
+  "whats_on",
   "regulars",
 ];
 
@@ -45,6 +46,7 @@ export const FIND_TYPE_FILTER_KEYS: Record<FindType, readonly string[]> = {
     "occasion",
   ],
   showtimes: ["date", "theater"],
+  whats_on: ["date", "theater"],
   regulars: ["activity", "weekday", "neighborhoods", "search"],
 };
 
@@ -65,6 +67,7 @@ export const FIND_FILTER_RESET_KEYS: readonly string[] = Array.from(
     ...FIND_TYPE_FILTER_KEYS.classes,
     ...FIND_TYPE_FILTER_KEYS.destinations,
     ...FIND_TYPE_FILTER_KEYS.showtimes,
+    ...FIND_TYPE_FILTER_KEYS.whats_on,
     ...FIND_TYPE_FILTER_KEYS.regulars,
     ...FIND_VIEW_STATE_KEYS,
   ])
