@@ -48,6 +48,7 @@ import InterestChannelsSection from "./sections/InterestChannelsSection";
 import { HangFeedSection } from "./sections/HangFeedSection";
 
 import NowShowingSection from "./sections/NowShowingSection";
+import PlanningHorizonSection from "./sections/PlanningHorizonSection";
 import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 
 import YonderRegionalEscapesSection from "./sections/YonderRegionalEscapesSection";
@@ -93,6 +94,7 @@ const SECTION_HEIGHT_ESTIMATES: Record<string, number> = {
 
 /** Map FeedBlockId → CityPulseSectionType for layout application */
 const BLOCK_TO_SECTION: Record<string, CityPulseSectionType> = {
+  horizon: "planning_horizon",
   browse: "browse",
 };
 
@@ -250,10 +252,11 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
   }, [feedLayout]);
 
   // Split sections: lineup (timeline) vs non-timeline
-  const { lineupSections, orderedSections } = useMemo(() => {
+  const { lineupSections, planningHorizonSection, orderedSections } = useMemo(() => {
     const lineup = sections.filter(
       (s) => TIMELINE_SECTION_TYPES.has(s.type),
     );
+    const horizon = sections.find((s) => s.type === "planning_horizon") ?? null;
 
     // Build ordered non-timeline sections, applying user layout
     const sectionMap = new Map(sections.map((s) => [s.type, s]));
@@ -279,7 +282,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
       .map((type) => sectionMap.get(type))
       .filter(Boolean) as typeof sections;
 
-    return { lineupSections: lineup, orderedSections: ordered };
+    return { lineupSections: lineup, planningHorizonSection: horizon, orderedSections: ordered };
   }, [sections, feedLayout]);
 
   // Theme vars from context
@@ -484,6 +487,25 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         if (hiddenBlockSet.has(blockId)) return null;
         return renderMiddleSection(blockId);
       })}
+
+      {/* Planning Horizon — big future events with urgency signals */}
+      {planningHorizonSection && !hiddenBlockSet.has("horizon") && (
+        <div
+          id="city-pulse-horizon"
+          data-feed-anchor="true"
+          data-index-label="On the Horizon"
+          data-block-id="horizon"
+          className="mt-8 scroll-mt-28"
+        >
+          <div className="h-px bg-[var(--twilight)]" />
+          <div className="pt-6">
+            <PlanningHorizonSection
+              section={planningHorizonSection}
+              portalSlug={portalSlug}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Browse — Places to Go + Things to Do (always last) */}
       {!hiddenBlockSet.has("browse") && (

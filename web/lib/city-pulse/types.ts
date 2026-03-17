@@ -161,7 +161,8 @@ export type CityPulseSectionType =
   | "browse"
   | "todays_specials"
   | "tonights_regulars"
-  | "the_scene";
+  | "the_scene"
+  | "planning_horizon";
 
 export type SectionLayout = "hero" | "carousel" | "list" | "grid";
 
@@ -368,6 +369,7 @@ export type FeedBlockId =
   | "experiences"
   | "community"
   | "cinema"
+  | "horizon"
   | "browse";
 
 /** Legacy IDs from v1 layouts — used for migration detection only */
@@ -395,6 +397,7 @@ export const DEFAULT_FEED_ORDER: FeedBlockId[] = [
   "recurring",
   "hangs",
   "cinema",
+  "horizon",
   "browse",
 ];
 
