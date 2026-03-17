@@ -62,6 +62,7 @@ import {
   buildNewFromSpotsSection,
   buildTrendingSection,
   buildBrowseSection,
+  buildPlanningHorizonSection,
   buildTabEventPool,
   isSceneEvent,
 } from "@/lib/city-pulse/section-builders";
@@ -117,6 +118,8 @@ const EVENT_SELECT = `
   is_all_day, is_free, price_min, price_max,
   category:category_id, genres, image_url, featured_blurb,
   tags, festival_id, is_tentpole, is_featured, series_id, is_recurring, source_id, organization_id,
+  importance, on_sale_date, presale_date, early_bird_deadline, sellout_risk,
+  ticket_status, ticket_status_checked_at, ticket_url, source_url,
   series:series_id(id, frequency, day_of_week, series_type),
   venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, active)
 `;
@@ -912,6 +915,25 @@ export async function GET(request: NextRequest, { params }: Props) {
       .limit(20);
   };
 
+  // Planning horizon: flagship/major events 7+ days out (arena shows, festivals)
+  const horizonStart = getLocalDateString(addDays(effectiveNow, 7));
+  const horizonEnd = getLocalDateString(addDays(effectiveNow, 90));
+  const buildHorizonQuery = () => {
+    let q = portalClient
+      .from("events")
+      .select(EVENT_SELECT)
+      .in("importance", ["flagship", "major"])
+      .gte("start_date", horizonStart)
+      .lte("start_date", horizonEnd)
+      .eq("is_active", true)
+      .is("canonical_event_id", null);
+    q = applyPortalScope(q);
+    return q
+      .order("importance", { ascending: true })
+      .order("start_date", { ascending: true })
+      .limit(20);
+  };
+
   // Evening events query — ensures Tonight section has events even when
   // the main today query's LIMIT is filled by morning/afternoon events
   const buildEveningQuery = () => {
@@ -1160,6 +1182,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     eveningEventsResult,
     todayInterestResults,
     trendingResult,
+    horizonResult,
     weatherVenuesResult,
     specialsResult,
     curatedResult,
@@ -1173,6 +1196,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     buildEveningQuery(),
     Promise.all(todayInterestQueries),
     buildTrendingQuery(),
+    buildHorizonQuery(),
     buildWeatherVenueQuery(),
     buildSpecialsQuery(),
     buildCuratedQuery(),
@@ -1228,6 +1252,12 @@ export async function GET(request: NextRequest, { params }: Props) {
       suppressEventImagesIfVenueFlagged(
         (trendingResult.data || []) as FeedEventData[],
       ) as FeedEventData[],
+    ),
+  );
+
+  const horizonEvents = dedupeEventsById(
+    filterOutInactiveVenueEvents(
+      (horizonResult.data || []) as FeedEventData[],
     ),
   );
 
@@ -1463,6 +1493,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     buildYourPeopleSection({ friendRsvps: friendRsvpEvents }),
     buildNewFromSpotsSection(newFromSpots),
     buildTrendingSection(trendingEventsWithProof, trendingDestinations, userSignals, friendsGoingMap),
+    buildPlanningHorizonSection(horizonEvents),
     buildBrowseSection(canonicalSlug, venueTypeCounts, allEventCategoryCounts),
   ].filter(Boolean) as import("@/lib/city-pulse/types").CityPulseSection[];
 

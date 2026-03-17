@@ -31,6 +31,7 @@ import {
 import type { WeatherData } from "@/lib/weather-utils";
 import type { RecommendationReason } from "@/components/ReasonBadge";
 import { isOpenAt, type HoursData } from "@/lib/hours";
+import { getPlanningUrgency, ticketStatusFreshness } from "@/lib/types/planning-horizon";
 
 export {
   SCENE_ACTIVITY_TYPES,
@@ -1115,7 +1116,17 @@ export function buildPlanningHorizonSection(
     return a.start_date.localeCompare(b.start_date);
   });
 
-  const items: CityPulseItem[] = sorted.slice(0, 12).map((e) => makeEventItem(e));
+  // Enrich with urgency + freshness so the client doesn't need to recompute
+  const items: CityPulseItem[] = sorted.slice(0, 12).map((e) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw = e as any;
+    const enriched = {
+      ...e,
+      urgency: getPlanningUrgency(raw),
+      ticket_freshness: ticketStatusFreshness(raw.ticket_status_checked_at),
+    };
+    return makeEventItem(enriched as FeedEventData);
+  });
 
   return {
     id: "planning-horizon",
