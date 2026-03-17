@@ -27,7 +27,7 @@ VENUE_DATA = {
     "name": "Starlight Drive-In Theatre",
     "slug": "starlight-drive-in",
     "address": "2000 Moreland Ave SE",
-    "neighborhood": "East Atlanta",
+    "neighborhood": "East Atlanta Village",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30316",

@@ -86,7 +86,7 @@ LOCATION_NEIGHBORHOODS = {
     "lenox park": "Buckhead",
     "chastain": "Buckhead",
     "buckhead": "Buckhead",
-    "east atlanta": "East Atlanta",
+    "east atlanta": "East Atlanta Village",
     "reynoldstown": "Reynoldstown",
     "cabbagetown": "Cabbagetown",
     "mechanicsville": "Mechanicsville",

@@ -27,7 +27,7 @@ VENUE_DATA = {
     "slug": "wild-heaven-beer",
     "address": "135B Clairemont Ave",
     "neighborhood": "Avondale Estates",
-    "city": "Decatur",
+    "city": "Avondale Estates",
     "state": "GA",
     "zip": "30030",
     "lat": 33.7745,

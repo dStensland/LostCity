@@ -16,7 +16,7 @@ VENUE_DATA = {
     "name": "Flatiron",
     "slug": "flatiron",
     "address": "520 Flat Shoals Ave SE",
-    "neighborhood": "East Atlanta",
+    "neighborhood": "East Atlanta Village",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30316",

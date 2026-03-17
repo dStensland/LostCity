@@ -20,7 +20,7 @@ VENUE_DATA = {
     "name": "Mary's",
     "slug": "marys",
     "address": "1267 Glenwood Ave SE",
-    "neighborhood": "East Atlanta",
+    "neighborhood": "East Atlanta Village",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30316",

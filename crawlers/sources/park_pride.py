@@ -26,11 +26,20 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://parkpride.org"
 API_URL = f"{BASE_URL}/wp-json/tribe/events/v1/events"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 # Fallback venue used only when an event has no venue data from the API
 FALLBACK_VENUE_DATA = {
@@ -72,7 +81,7 @@ VOLUNTEER_KEYWORDS = [
 
 # Known Atlanta neighborhoods by park name keywords — used to set neighborhood field
 PARK_NEIGHBORHOODS = {
-    "brownwood": "East Atlanta",
+    "brownwood": "East Atlanta Village",
     "lionel hampton": "Vine City",
     "murphey candler": "Brookhaven",
     "piedmont": "Midtown",
@@ -166,6 +175,51 @@ def build_venue_from_api(venue_data: dict) -> Optional[dict]:
     }
 
 
+def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityEnvelope | None:
+    venue_type = str(venue_data.get("venue_type") or "").strip().lower()
+    if venue_type != "park":
+        return None
+
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "park",
+            "commitment_tier": "halfday",
+            "primary_activity": "family park visit",
+            "best_seasons": ["spring", "summer", "fall"],
+            "weather_fit_tags": ["outdoor", "free-option", "family-daytrip"],
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Open park access is typically free; check event-specific pages for volunteer projects, festivals, or special programming.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": venue_type,
+                "city": str(venue_data.get("city") or "atlanta").lower(),
+                "supports_org": "park_pride",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "free-outdoor-play-space",
+            "title": "Free outdoor play space",
+            "feature_type": "amenity",
+            "description": "This public park is a free outdoor option for family time, open-air play, and pairing with nearby neighborhood outings.",
+            "url": BASE_URL,
+            "price_note": "Open park access is typically free.",
+            "is_free": True,
+            "sort_order": 10,
+        },
+    )
+    return envelope
+
+
 def determine_category_and_tags(
     title: str, description: str
 ) -> tuple[str, Optional[str], list[str]]:
@@ -218,6 +272,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # Cache of park slug -> venue_id to avoid redundant DB lookups
     venue_cache: dict[str, int] = {}
+    enriched_venue_slugs: set[str] = set()
     current_hashes: set[str] = set()
 
     try:
@@ -306,6 +361,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             slug = venue_dict["slug"]
                             if slug not in venue_cache:
                                 venue_cache[slug] = get_or_create_venue(venue_dict)
+                            if slug not in enriched_venue_slugs:
+                                destination_envelope = _build_destination_envelope(
+                                    venue_dict, venue_cache[slug]
+                                )
+                                if destination_envelope is not None:
+                                    persist_typed_entity_envelope(destination_envelope)
+                                enriched_venue_slugs.add(slug)
                             venue_id = venue_cache[slug]
                             venue_name_for_hash = venue_dict["name"]
 

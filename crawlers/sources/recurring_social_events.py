@@ -79,7 +79,7 @@ VENUES = {
         "name": "TEN ATL",
         "slug": "ten-atl",
         "address": "495 Flat Shoals Ave SE",
-        "neighborhood": "East Atlanta",
+        "neighborhood": "East Atlanta Village",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
@@ -147,7 +147,7 @@ VENUES = {
         "name": "Joe's Coffeehouse",
         "slug": "joes-coffeehouse",
         "address": "510 Flat Shoals Ave SE",
-        "neighborhood": "East Atlanta",
+        "neighborhood": "East Atlanta Village",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
@@ -169,7 +169,7 @@ VENUES = {
         "name": "Southern Feed Store",
         "slug": "southern-feed-store",
         "address": "1245 Glenwood Ave SE Suite 6",
-        "neighborhood": "East Atlanta",
+        "neighborhood": "East Atlanta Village",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
@@ -472,18 +472,7 @@ VENUES = {
         "venue_type": "brewery",
         "website": "https://wreckingbarbrewpub.com",
     },
-    # Additional karaoke venues
-    "sister-louisas": {
-        "name": "Sister Louisa's Church of the Living Room & Ping Pong Emporium",
-        "slug": "sister-louisas-church",
-        "address": "466 Edgewood Ave SE",
-        "neighborhood": "Old Fourth Ward",
-        "city": "Atlanta",
-        "state": "GA",
-        "zip": "30312",
-        "venue_type": "bar",
-        "website": "https://www.sisterlouisaschurch.com",
-    },
+    # Sister Louisa's — handled entirely by dedicated source (sister_louisas.py)
     # ========== Phase 0b: New recurring venue additions ==========
     # Trivia venues
     "thinking-man": {
@@ -862,7 +851,7 @@ VENUES = {
         "name": "East Atlanta Comics",
         "slug": "east-atlanta-comics",
         "address": "508 Flat Shoals Ave SE",
-        "neighborhood": "East Atlanta",
+        "neighborhood": "East Atlanta Village",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
@@ -1203,12 +1192,12 @@ VENUES = {
     },
     "wild-heaven-avondale": {
         "name": "Wild Heaven Beer (Avondale)",
-        "slug": "wild-heaven-avondale",
-        "address": "135 Maple St",
+        "slug": "wild-heaven-beer",
+        "address": "135B Clairemont Ave",
         "neighborhood": "Avondale Estates",
-        "city": "Decatur",
+        "city": "Avondale Estates",
         "state": "GA",
-        "zip": "30002",
+        "zip": "30030",
         "venue_type": "brewery",
         "website": "https://wildheavenbeer.com",
     },
@@ -2316,8 +2305,7 @@ EVENT_TEMPLATES = [
         "tags": ["open-mic", "poetry", "spoken-word", "weekly"],
     },
     # Wrecking Bar Sunday Brunch — venue attribute, not a programmed event (moved to venue_specials)
-    # NOTE: Sister Louisa's bingo + karaoke handled by dedicated sources
-    # (sister-louisas-church for Drag Bingo, sister-louisas for karaoke)
+    # NOTE: Sister Louisa's bingo + karaoke handled by dedicated source (sister_louisas.py)
     # ========== DISCOVERED FROM VENUE WEBSITES (Feb 2026) ==========
     # Star Community Bar: handled by dedicated source upgrade (star_community_bar.py)
     # Fado Irish Pub — Buckhead

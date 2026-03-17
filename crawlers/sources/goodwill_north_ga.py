@@ -42,7 +42,7 @@ VENUE_DATA = {
     "name": "Goodwill of North Georgia",
     "slug": "goodwill-north-georgia",
     "address": "2201 Glenwood Ave SE",
-    "neighborhood": "East Atlanta",
+    "neighborhood": "East Atlanta Village",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30316",
