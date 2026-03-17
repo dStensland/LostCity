@@ -1074,6 +1074,62 @@ export function buildExperiencesSection(
 }
 
 // ---------------------------------------------------------------------------
+// Planning Horizon section (7+ days out, flagship + major events only)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a "On the Horizon" section for events more than 7 days away.
+ * Only includes flagship and major importance events.
+ * Requires minimum 3 items — returns null when insufficient data.
+ *
+ * This builder reads from the same events pool already fetched for the feed,
+ * so no extra DB round-trip is needed. The `importance` field is included in
+ * the events table but not currently in the EVENT_LIST_SELECT — if it isn't
+ * present, the filter degrades gracefully to an empty result (returns null).
+ */
+export function buildPlanningHorizonSection(
+  events: FeedEventData[],
+): CityPulseSection | null {
+  const now = new Date();
+  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const weekFromNowStr = weekFromNow.toISOString().split("T")[0];
+
+  const horizonEvents = events.filter((e) => {
+    const importance = (e as Record<string, unknown>).importance as string | undefined;
+    return (
+      (importance === "flagship" || importance === "major") &&
+      e.start_date >= weekFromNowStr
+    );
+  });
+
+  if (horizonEvents.length < 3) return null;
+
+  // Sort: flagship first, then by date
+  const sorted = [...horizonEvents].sort((a, b) => {
+    const aImportance = (a as Record<string, unknown>).importance as string | undefined;
+    const bImportance = (b as Record<string, unknown>).importance as string | undefined;
+    if (aImportance !== bImportance) {
+      if (aImportance === "flagship") return -1;
+      if (bImportance === "flagship") return 1;
+    }
+    return a.start_date.localeCompare(b.start_date);
+  });
+
+  const items: CityPulseItem[] = sorted.slice(0, 12).map((e) => makeEventItem(e));
+
+  return {
+    id: "planning-horizon",
+    type: "planning_horizon",
+    title: "On the Horizon",
+    subtitle: "Big events worth planning around",
+    priority: "secondary",
+    accent_color: "var(--gold)",
+    items,
+    layout: "carousel",
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Browse section (static structure)
 // ---------------------------------------------------------------------------
 

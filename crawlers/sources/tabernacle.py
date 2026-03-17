@@ -9,7 +9,7 @@ Format: DAY (3-letter), DD, MON (3-letter), TITLE
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from playwright.sync_api import sync_playwright
 
@@ -297,6 +297,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             evt["price_note"] = fields["price_note"]
                         if fields.get("is_free"):
                             evt["is_free"] = True
+                        if fields.get("ticket_status") and not evt.get("ticket_status"):
+                            evt["ticket_status"] = fields["ticket_status"]
+                            evt["ticket_status_checked_at"] = datetime.now(timezone.utc).isoformat()
                     detail_fetches += 1
                     page.wait_for_timeout(1000)
 

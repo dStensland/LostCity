@@ -30,6 +30,10 @@ CREATE TABLE sources (
 --   - generic `opportunities` is not a supported shared entity family; use
 --     concrete families like `open_calls` or `volunteer_opportunities`
 
+-- Enum: venue_environment
+-- Used by venues.indoor_outdoor to classify where activity primarily happens.
+CREATE TYPE venue_environment AS ENUM ('indoor', 'outdoor', 'both');
+
 -- Venues table: normalized venue information
 CREATE TABLE venues (
   id SERIAL PRIMARY KEY,
@@ -43,6 +47,7 @@ CREATE TABLE venues (
   lat DECIMAL(10, 8),
   lng DECIMAL(11, 8),
   venue_type TEXT,
+  indoor_outdoor venue_environment, -- 'indoor' | 'outdoor' | 'both' | NULL (unknown)
   location_designator TEXT NOT NULL DEFAULT 'standard',
   website TEXT,
   menu_url TEXT,
@@ -63,6 +68,7 @@ CREATE TABLE venues (
   ),
   aliases TEXT[],
   last_verified_at TIMESTAMPTZ,
+  library_pass JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -220,6 +226,7 @@ CREATE UNIQUE INDEX idx_event_links_event_type_url ON event_links(event_id, type
 CREATE INDEX idx_crawl_logs_source_id ON crawl_logs(source_id);
 CREATE INDEX idx_crawl_logs_started_at ON crawl_logs(started_at);
 CREATE INDEX idx_venues_city_id_for_spots ON venues(city, id);
+CREATE INDEX IF NOT EXISTS idx_venues_library_pass_eligible ON venues ((library_pass->>'eligible')) WHERE library_pass IS NOT NULL;
 
 -- Aggregate upcoming event counts by venue for spots/find discovery.
 CREATE OR REPLACE FUNCTION get_spot_event_counts(
@@ -686,6 +693,7 @@ CREATE INDEX IF NOT EXISTS idx_programs_program_type ON programs(program_type, s
 CREATE INDEX IF NOT EXISTS idx_programs_registration_status ON programs(registration_status, status);
 CREATE INDEX IF NOT EXISTS idx_programs_age_range ON programs(age_min, age_max) WHERE age_min IS NOT NULL OR age_max IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_programs_season ON programs(season, status) WHERE season IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_programs_tags ON programs USING GIN(tags) WHERE tags IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_programs_status ON programs(status, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_programs_content_hash ON programs ((metadata->>'content_hash')) WHERE metadata ? 'content_hash';
 
@@ -1575,6 +1583,7 @@ CREATE TABLE IF NOT EXISTS editorial_mentions (
   article_url TEXT NOT NULL,
   article_title TEXT NOT NULL,
   mention_type TEXT NOT NULL DEFAULT 'feature',
+  relevance TEXT NOT NULL DEFAULT 'primary',
   published_at TIMESTAMPTZ,
   guide_name TEXT,
   snippet TEXT,
@@ -1607,6 +1616,9 @@ CREATE TABLE IF NOT EXISTS editorial_mentions (
       'feature'
     )
   ),
+  CONSTRAINT editorial_mentions_relevance_check CHECK (
+    relevance IN ('primary', 'incidental')
+  ),
   CONSTRAINT editorial_mentions_snippet_length CHECK (
     snippet IS NULL OR length(snippet) <= 500
   )
@@ -1622,6 +1634,10 @@ CREATE INDEX IF NOT EXISTS idx_editorial_mentions_published
 
 CREATE INDEX IF NOT EXISTS idx_editorial_mentions_source
   ON editorial_mentions(source_key);
+
+CREATE INDEX IF NOT EXISTS idx_editorial_mentions_relevance
+  ON editorial_mentions(venue_id, is_active, relevance)
+  WHERE relevance = 'primary';
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_editorial_mentions_article_venue
   ON editorial_mentions(article_url, venue_id);

@@ -156,6 +156,7 @@ export type CityPulseSectionType =
   | "new_from_spots"
   | "trending"
   | "coming_up"
+  | "planning_horizon"
   | "experiences"
   | "browse"
   | "todays_specials"

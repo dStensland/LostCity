@@ -68,6 +68,11 @@ from closed_venues import CLOSED_VENUE_SLUGS
 
 logger = logging.getLogger(__name__)
 
+_RECOVERABLE_EVENT_DUPLICATE_INDEXES = (
+    "idx_events_unique_source_venue_slot_norm_title_timed",
+    "idx_events_unique_source_venue_slot_norm_title_notimed",
+)
+
 _AGGREGATOR_SOURCE_PREFIXES = (
     "ticketmaster",
     "eventbrite",
@@ -568,7 +573,12 @@ def _step_enrich_music(event_data: dict, ctx: InsertContext) -> dict:
     if event_data.get("category") != "music":
         return event_data
 
-    _music_title_for_enrich = event_data.get("title", "")
+    # Use pre-parsed headliner name if available (from _step_parse_artists),
+    # otherwise fall back to the raw title for extraction.
+    if ctx.parsed_artists:
+        _music_title_for_enrich = ctx.parsed_artists[0].get("name") or event_data.get("title", "")
+    else:
+        _music_title_for_enrich = event_data.get("title", "")
     _music_image_for_enrich = event_data.get("image_url")
     _music_genres_for_enrich = ctx.genres
     try:
@@ -671,13 +681,19 @@ def _step_resolve_series(event_data: dict, ctx: InsertContext) -> dict:
         series_hint = {
             "series_type": "class_series",
             "series_title": event_data.get("title"),
+            "venue_id": event_data.get("venue_id"),
         }
 
     if not series_hint and event_data.get("is_recurring"):
         series_hint = {
             "series_type": "recurring_show",
             "series_title": event_data.get("title"),
+            "venue_id": event_data.get("venue_id"),
         }
+
+    # Include venue_id for venue-scoped series matching (class_series, recurring_show)
+    if event_data.get("venue_id") and series_hint:
+        series_hint.setdefault("venue_id", event_data["venue_id"])
 
     ctx.series_hint = series_hint
     return event_data
@@ -896,7 +912,8 @@ def _step_finalize(event_data: dict, ctx: InsertContext) -> dict:
         if genres and not series_hint.get("genres"):
             series_hint["genres"] = genres
         series_id = get_or_create_series(
-            ctx.client, series_hint, event_data.get("category")
+            ctx.client, series_hint, event_data.get("category"),
+            venue_id=series_hint.get("venue_id"),
         )
         if series_id:
             event_data["series_id"] = series_id
@@ -975,8 +992,8 @@ INSERT_PIPELINE = [
     _step_resolve_venue,
     _step_normalize_image,
     _step_enrich_film,
-    _step_enrich_music,
     _step_parse_artists,
+    _step_enrich_music,
     _step_infer_category,
     _step_resolve_series,
     _step_infer_genres,
@@ -1016,6 +1033,63 @@ def _write_event_extraction(client, event_id: int, extraction_data: dict) -> Non
         client.table("event_extractions").upsert(payload, on_conflict="event_id").execute()
     except Exception as e:
         logger.debug("Failed to write event_extractions for event %s: %s", event_id, e)
+
+
+# ---------------------------------------------------------------------------
+# Importance inference
+# ---------------------------------------------------------------------------
+
+def _maybe_infer_importance(event_id: int, event_data: dict) -> None:
+    """Auto-set importance based on venue capacity tier. Never downgrades."""
+    if not writes_enabled():
+        return
+
+    venue_id = event_data.get("venue_id")
+    if not venue_id:
+        return
+
+    current_importance = event_data.get("importance", "standard")
+    if current_importance in ("flagship", "major"):
+        return  # Already elevated, don't touch
+
+    venue = get_venue_by_id_cached(int(venue_id))
+    if not venue:
+        return
+
+    capacity_tier = venue.get("capacity_tier")
+
+    should_upgrade = False
+    if capacity_tier and capacity_tier >= 4:
+        should_upgrade = True
+    elif event_data.get("series_id"):
+        # Check if event is part of a festival via series
+        try:
+            client = get_client()
+            series = (
+                client.table("series")
+                .select("festival_id")
+                .eq("id", event_data["series_id"])
+                .maybeSingle()
+                .execute()
+            )
+            if series.data and series.data.get("festival_id"):
+                should_upgrade = True
+        except Exception:
+            pass
+
+    if should_upgrade:
+        try:
+            client = get_client()
+            client.table("events").update({"importance": "major"}).eq(
+                "id", event_id
+            ).eq("importance", "standard").execute()
+            logger.info(
+                "Auto-inferred importance='major' for event %s (venue tier=%s)",
+                event_id,
+                capacity_tier,
+            )
+        except Exception as e:
+            logger.debug("importance inference failed for event %s: %s", event_id, e)
 
 
 # ---------------------------------------------------------------------------
@@ -1073,8 +1147,27 @@ def insert_event(
     if has_event_extractions_table():
         extraction_data = _pop_extraction_columns(event_data)
 
-    result = _insert_event_record(client, event_data)
-    event_id = result.data[0]["id"]
+    try:
+        result = _insert_event_record(client, event_data)
+        event_id = result.data[0]["id"]
+    except Exception as exc:
+        if not _is_recoverable_event_duplicate(exc):
+            raise
+        existing = find_existing_event_for_insert(event_data)
+        if not existing:
+            raise
+        if ctx.parsed_artists and not event_data.get("_parsed_artists"):
+            event_data["_parsed_artists"] = ctx.parsed_artists
+        smart_update_existing_event(existing, event_data)
+        if images_for_insert:
+            upsert_event_images(existing["id"], images_for_insert)
+        if links_for_insert:
+            upsert_event_links(existing["id"], links_for_insert)
+        logger.info(
+            "Recovered duplicate event insert as smart update: %s",
+            (event_data.get("title") or "untitled")[:80],
+        )
+        return existing["id"]
 
     # Write extraction data to the separate table
     if extraction_data:
@@ -1084,7 +1177,7 @@ def insert_event(
 
     if ctx.parsed_artists:
         try:
-            upsert_event_artists(event_id, ctx.parsed_artists)
+            upsert_event_artists(event_id, ctx.parsed_artists, pre_parsed=True)
         except Exception as e:
             logger.debug(f"Auto event_artists failed for event {event_id}: {e}")
 
@@ -1100,6 +1193,8 @@ def insert_event(
         except Exception as e:
             logger.debug(f"Auto event_links failed for event {event_id}: {e}")
 
+    _maybe_infer_importance(event_id, event_data)
+
     return event_id
 
 
@@ -1107,6 +1202,13 @@ def insert_event(
 def _insert_event_record(client, event_data: dict):
     """Insert event row with retries for transient socket/network errors."""
     return client.table("events").insert(event_data).execute()
+
+
+def _is_recoverable_event_duplicate(exc: Exception) -> bool:
+    text = str(exc or "")
+    if "duplicate key value violates unique constraint" not in text:
+        return False
+    return any(index_name in text for index_name in _RECOVERABLE_EVENT_DUPLICATE_INDEXES)
 
 
 def update_event(event_id: int, event_data: dict) -> None:
@@ -1221,6 +1323,34 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
         updates["ticket_url"] = incoming["ticket_url"]
     if _should_promote_incoming_url(existing.get("source_url"), incoming.get("source_url")):
         updates["source_url"] = incoming["source_url"]
+
+    # Planning horizon fields — only set if incoming has value AND existing is empty
+    for field in (
+        "on_sale_date",
+        "presale_date",
+        "early_bird_deadline",
+        "announce_date",
+        "registration_opens",
+        "registration_closes",
+        "registration_url",
+        "sellout_risk",
+    ):
+        if incoming.get(field) and not existing.get(field):
+            updates[field] = incoming[field]
+
+    # importance: only upgrade, never downgrade (flagship > major > standard)
+    _IMPORTANCE_RANK = {"flagship": 3, "major": 2, "standard": 1}
+    incoming_importance = incoming.get("importance", "standard")
+    existing_importance = existing.get("importance", "standard")
+    if _IMPORTANCE_RANK.get(incoming_importance, 0) > _IMPORTANCE_RANK.get(existing_importance, 0):
+        updates["importance"] = incoming_importance
+
+    # ticket_status_checked_at: always take the most recent
+    incoming_checked = incoming.get("ticket_status_checked_at")
+    existing_checked = existing.get("ticket_status_checked_at")
+    if incoming_checked:
+        if not existing_checked or incoming_checked > existing_checked:
+            updates["ticket_status_checked_at"] = incoming_checked
 
     if not existing.get("portal_id"):
         incoming_portal_id = incoming.get("portal_id")
@@ -1414,6 +1544,8 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
                     )
         except Exception as e:
             logger.debug(f"Artist backfill on update failed for event {event_id}: {e}")
+
+    _maybe_infer_importance(event_id, {**existing, **updates})
 
     return bool(updates)
 

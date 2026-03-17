@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import CategoryIcon from "@/components/CategoryIcon";
 import { MobileFilterSheet } from "@/components/MobileFilterSheet";
 import { formatGenre } from "@/lib/series-utils";
@@ -9,6 +10,8 @@ import { triggerHaptic } from "@/lib/haptics";
 
 type FindFilterBarProps = {
   variant?: "full" | "compact";
+  /** Hide all date-related filters (used in calendar mode where dates are navigated directly) */
+  hideDate?: boolean;
   portalId?: string;
   portalExclusive?: boolean;
   portalSlug?: string;
@@ -102,12 +105,15 @@ function catColor(value: string): string {
 type MobileFilterStripProps = {
   f: ReturnType<typeof useFilterEngine>;
   variant: "full" | "compact";
+  hideDate?: boolean;
   onOpenSheet: () => void;
   onSetDate: (date: string) => void;
   vertical?: string | null;
+  bigEventsActive?: boolean;
+  onToggleBigEvents?: () => void;
 };
 
-function MobileFilterStrip({ f, variant, onOpenSheet, onSetDate, timeEmphasis, vertical }: MobileFilterStripProps & { timeEmphasis: "tonight" | "weekend" | null }) {
+function MobileFilterStrip({ f, variant, hideDate, onOpenSheet, onSetDate, timeEmphasis, vertical, bigEventsActive, onToggleBigEvents }: MobileFilterStripProps & { timeEmphasis: "tonight" | "weekend" | null }) {
   const mobileCategories = vertical === "community" ? CIVIC_MOBILE_CATEGORIES : MOBILE_CATEGORIES;
   const handleCategoryTap = useCallback((value: string) => {
     triggerHaptic("selection");
@@ -163,8 +169,8 @@ function MobileFilterStrip({ f, variant, onOpenSheet, onSetDate, timeEmphasis, v
         {/* Thin vertical divider */}
         <div className="flex-shrink-0 w-px h-5 bg-white/10" />
 
-        {/* Date quick-select pills — only in full variant */}
-        {variant === "full" && (
+        {/* Date quick-select pills — only in full variant, hidden in calendar mode */}
+        {variant === "full" && !hideDate && (
           <>
             <button
               onClick={() => handleDateTap("today")}
@@ -243,6 +249,20 @@ function MobileFilterStrip({ f, variant, onOpenSheet, onSetDate, timeEmphasis, v
           Free
         </button>
 
+        {/* Big Events pill — filters to flagship + major events */}
+        {onToggleBigEvents && (
+          <button
+            onClick={() => { triggerHaptic("selection"); onToggleBigEvents(); }}
+            className={`flex-shrink-0 min-h-[44px] px-3.5 rounded-full font-mono text-xs font-medium border transition-transform active:scale-95 ${
+              bigEventsActive
+                ? "bg-[var(--gold)]/20 text-[var(--gold)] border-[var(--gold)]/35"
+                : "bg-white/5 backdrop-blur-sm text-[var(--soft)] border-white/10"
+            }`}
+          >
+            Big Events
+          </button>
+        )}
+
         {/* Clear — only visible when filters are active, trailing pill */}
         {f.hasFilters && (
           <button
@@ -260,11 +280,41 @@ function MobileFilterStrip({ f, variant, onOpenSheet, onSetDate, timeEmphasis, v
   );
 }
 
-export default function FindFilterBar({ variant = "full", portalId, portalExclusive = false, portalSlug, vertical }: FindFilterBarProps) {
+export default function FindFilterBar({ variant = "full", hideDate = false, portalId, portalExclusive = false, portalSlug, vertical }: FindFilterBarProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const f = useFilterEngine({ portalId, portalExclusive });
   const filterCounts = useFilterCounts(portalSlug);
   const timeEmphasis = useTimeEmphasis();
   const categoryCounts = filterCounts.category || {};
+
+  // ─── Big Events filter (importance=flagship,major + 3-month date range) ────
+  const bigEventsActive = searchParams.get("importance") === "flagship,major";
+
+  const toggleBigEvents = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (bigEventsActive) {
+      params.delete("importance");
+      params.delete("start_date");
+      params.delete("end_date");
+    } else {
+      params.set("importance", "flagship,major");
+      // Auto-set 3-month date range when activating
+      const today = new Date().toISOString().split("T")[0];
+      const threeMonths = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0];
+      params.set("start_date", today);
+      params.set("end_date", threeMonths);
+      // Clear any short date filters that would conflict
+      params.delete("date");
+    }
+    params.set("view", "find");
+    params.delete("page");
+    const url = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.replace(url, { scroll: false });
+  }, [bigEventsActive, searchParams, pathname, router]);
   const isCommunity = vertical === "community";
 
   // For civic portals, filter desktop category dropdown to relevant options
@@ -284,9 +334,12 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
     setActiveDropdown((prev) => (prev === id ? null : id));
   }, []);
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click — use "click" (not "mousedown") so the
+  // closing click is consumed by the handler and doesn't pass through to
+  // elements beneath the dropdown (e.g. event cards).
   useEffect(() => {
-    const onDocClick = (event: MouseEvent) => {
+    if (!activeDropdown) return;
+    const onDocClick = (event: globalThis.MouseEvent) => {
       const target = event.target as Node;
       if (
         categoryDropdownRef.current?.contains(target) ||
@@ -294,9 +347,9 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
       ) return;
       setActiveDropdown(null);
     };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, []);
+    document.addEventListener("click", onDocClick, true);
+    return () => document.removeEventListener("click", onDocClick, true);
+  }, [activeDropdown]);
 
   // ─── Derived labels ────────────────────────────────────────────────────────
   const isSpecificDate = /^\d{4}-\d{2}-\d{2}$/.test(f.currentDateFilter);
@@ -396,8 +449,8 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
               )}
             </div>
 
-            {/* Date dropdown */}
-            {variant === "full" && (
+            {/* Date dropdown — hidden in calendar mode */}
+            {variant === "full" && !hideDate && (
               <div className="relative" ref={dateDropdownRef}>
                 <button
                   onClick={() => toggleDropdown("date")}
@@ -473,8 +526,8 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
               </div>
             )}
 
-            {/* Desktop Tonight / Weekend quick-chips */}
-            {variant === "full" && (
+            {/* Desktop Tonight / Weekend quick-chips — hidden in calendar mode */}
+            {variant === "full" && !hideDate && (
               <>
                 <button
                   onClick={() => handleSetDate(f.effectiveDateFilter === "today" ? "" : "today")}
@@ -502,6 +555,18 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
                 </button>
               </>
             )}
+
+            {/* Big Events pill — filters to flagship + major events */}
+            <button
+              onClick={toggleBigEvents}
+              className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gold)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
+                bigEventsActive
+                  ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40 shadow-sm"
+                  : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:bg-[var(--twilight)]/40 hover:border-[var(--twilight)]"
+              }`}
+            >
+              Big Events
+            </button>
 
             {/* Filters button (opens mobile sheet) */}
             <button
@@ -538,8 +603,8 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
       {/* Genre sub-bar */}
       {visibleGenreOptions.length > 0 && (
         <div className="hidden sm:block">
-          <div className="py-1.5">
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+          <div className="py-1.5 relative">
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pr-6">
               <span className="flex-shrink-0 text-xs font-mono uppercase tracking-wider text-[var(--muted)] mr-1">Genre</span>
               {visibleGenreOptions.map((opt) => {
                 const isActive = f.currentGenres.includes(opt.genre);
@@ -558,6 +623,8 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
                 );
               })}
             </div>
+            {/* Fade mask to show strip is scrollable */}
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[var(--night)] to-transparent pointer-events-none" />
           </div>
         </div>
       )}
@@ -566,10 +633,13 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
       <MobileFilterStrip
         f={f}
         variant={variant}
+        hideDate={hideDate}
         onOpenSheet={() => setMobileSheetOpen(true)}
         onSetDate={handleSetDate}
         timeEmphasis={timeEmphasis}
         vertical={vertical}
+        bigEventsActive={bigEventsActive}
+        onToggleBigEvents={toggleBigEvents}
       />
 
       {/* Mobile filter sheet */}
@@ -584,6 +654,7 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
         categoryOptions={f.categoryOptions}
         tagGroups={f.tagGroupOptions}
         vibeGroups={f.vibeGroupOptions}
+        hideDate={hideDate}
         onToggleCategory={f.toggleCategory}
         onSetDateFilter={handleSetDate}
         onToggleFreeOnly={f.toggleFreeOnly}
