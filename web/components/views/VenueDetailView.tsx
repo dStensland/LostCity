@@ -1,11 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Image from "@/components/SmartImage";
+import React, { useState, useMemo } from "react";
 import { SPOT_TYPES, formatPriceLevel, getSpotTypeLabels, type SpotType } from "@/lib/spots-constants";
 import FollowButton from "@/components/FollowButton";
-import RecommendButton from "@/components/RecommendButton";
 import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
 import LinkifyText from "@/components/LinkifyText";
@@ -36,17 +33,26 @@ import {
   InstagramLogo,
   Phone,
   Tag,
+  ArrowCounterClockwise,
+  ArrowLeft,
+  ShareNetwork,
 } from "@phosphor-icons/react";
 import { SectionHeader } from "@/components/detail/SectionHeader";
 import { QuickActionLink } from "@/components/detail/QuickActionLink";
 import { CollapsibleSection } from "@/components/detail/CollapsibleSection";
 import NeonBackButton from "@/components/detail/NeonBackButton";
 import DetailShell from "@/components/detail/DetailShell";
+import DetailHeroImage from "@/components/detail/DetailHeroImage";
+import { DetailStickyBar } from "@/components/detail/DetailStickyBar";
 import Badge from "@/components/ui/Badge";
 import Dot from "@/components/ui/Dot";
+import SaveButton from "@/components/SaveButton";
 import VenueShowtimes, { type ShowtimeEvent } from "@/components/VenueShowtimes";
 import DogNearbySection from "@/components/detail/DogNearbySection";
 import { DestinationDetailSections } from "@/components/adventure/DestinationDetailSections";
+import { LibraryPassCallout, type LibraryPassData } from "@/components/family/LibraryPassCallout";
+import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
+import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
 import dynamic from "next/dynamic";
 
 const DogTagModal = dynamic(
@@ -92,6 +98,7 @@ type SpotData = {
   walkable_neighbor_count: number | null;
   lat: number | null;
   lng: number | null;
+  library_pass: LibraryPassData | null;
 };
 
 type UpcomingEvent = {
@@ -169,10 +176,26 @@ type NearbyDestinations = {
   fun: NearbyDestination[];
 };
 
+export type SpotApiResponse = {
+  spot: SpotData;
+  upcomingEvents: UpcomingEvent[];
+  nearbyDestinations: NearbyDestinations | null;
+  highlights: VenueHighlight[];
+  features: VenueFeature[];
+  specials: VenueSpecial[];
+  editorialMentions: EditorialMention[];
+  occasions: VenueOccasion[];
+  attachedChildDestinations: { id: number; name: string; slug: string | null; image_url: string | null; short_description: string | null }[];
+  artifacts?: { id: number; name: string; slug: string | null; image_url: string | null; short_description: string | null }[];
+  walkableNeighbors: WalkableNeighbor[];
+};
+
 interface VenueDetailViewProps {
   slug: string;
   portalSlug: string;
   onClose: () => void;
+  /** Server-fetched data — skips client fetch when provided */
+  initialData?: SpotApiResponse;
 }
 
 const dogVibeLabels: Record<string, string> = {
@@ -193,181 +216,139 @@ function CollapsibleVenueTags({ venueId }: { venueId: number }) {
   );
 }
 
-export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDetailViewProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [spot, setSpot] = useState<SpotData | null>(null);
-  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
-  const [nearbyDestinations, setNearbyDestinations] = useState<NearbyDestinations | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [error, setError] = useState<string | null>(null);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [isLowRes, setIsLowRes] = useState(false);
-  const [highlights, setHighlights] = useState<VenueHighlight[]>([]);
-  const [features, setFeatures] = useState<VenueFeature[]>([]);
-  const [specials, setSpecials] = useState<VenueSpecial[]>([]);
-  const [attachedChildDestinations, setAttachedChildDestinations] = useState<{id: number; name: string; slug: string | null; image_url: string | null; short_description: string | null}[]>([]);
-  const [editorialMentions, setEditorialMentions] = useState<EditorialMention[]>([]);
-  const [occasions, setOccasions] = useState<VenueOccasion[]>([]);
-  const [walkableNeighbors, setWalkableNeighbors] = useState<WalkableNeighbor[]>([]);
+export default function VenueDetailView({ slug, portalSlug, onClose, initialData }: VenueDetailViewProps) {
+  const { portal } = usePortal();
+  const { toEvent: handleEventClick, toSpot: handleSpotClick } = useDetailNavigation(portalSlug);
+
+  const { data: fetchedData, status, error, retry } = useDetailFetch<SpotApiResponse>(
+    initialData ? null : `/api/spots/${slug}`,
+    { entityLabel: "spot" }
+  );
+  const data = initialData ?? fetchedData;
+
+  const [vibesOverride, setVibesOverride] = useState<string[] | null>(null);
   const [showTagModal, setShowTagModal] = useState(false);
   const [showOutingSheet, setShowOutingSheet] = useState(false);
-  const { portal } = usePortal();
 
-  useEffect(() => {
-    let cancelled = false;
-    const controller = new AbortController();
+  // Derive all data slices from fetch response
+  const spot = data?.spot ?? null;
+  const upcomingEvents = useMemo(() => data?.upcomingEvents ?? [], [data]);
+  const nearbyDestinations = useMemo(() => data?.nearbyDestinations ?? null, [data]);
+  const highlights = useMemo(() => data?.highlights ?? [], [data]);
+  const features = useMemo(
+    () => filterVenueFeaturesForPortal(data?.features ?? [], { portalSlug, venueSlug: slug }),
+    [data, portalSlug, slug]
+  );
+  const specials = useMemo(() => data?.specials ?? [], [data]);
+  const editorialMentions = useMemo(() => data?.editorialMentions ?? [], [data]);
+  const occasions = useMemo(() => data?.occasions ?? [], [data]);
+  const attachedChildDestinations = useMemo(
+    () => data?.attachedChildDestinations ?? data?.artifacts ?? [],
+    [data]
+  );
+  const walkableNeighbors = useMemo(() => data?.walkableNeighbors ?? [], [data]);
+  const vibes = vibesOverride ?? spot?.vibes ?? null;
 
-    async function fetchSpot() {
-      setStatus("loading");
-      setError(null);
-      setImageLoaded(false);
-      setImageError(false);
-      setIsLowRes(false);
-
-      const MAX_RETRIES = 2;
-
-      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-        try {
-          if (attempt > 0) {
-            await new Promise((r) => setTimeout(r, 500 * attempt));
-            if (cancelled) return;
-          }
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
-          const res = await fetch(`/api/spots/${slug}`, { signal: controller.signal });
-          clearTimeout(timeoutId);
-          if (cancelled) return;
-          if (!res.ok) {
-            if ((res.status === 503 || res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
-              continue;
-            }
-            throw new Error(res.status === 404 ? "Spot not found" : `Failed to load spot (${res.status})`);
-          }
-          const data = await res.json();
-          if (cancelled) return;
-          setSpot(data.spot);
-          setUpcomingEvents(data.upcomingEvents || []);
-          setNearbyDestinations(data.nearbyDestinations || null);
-          setHighlights(data.highlights || []);
-          setFeatures(
-            filterVenueFeaturesForPortal(data.features || [], {
-              portalSlug,
-              venueSlug: slug,
-            })
-          );
-          setSpecials(data.specials || []);
-          setEditorialMentions(data.editorialMentions || []);
-          setOccasions(data.occasions || []);
-          setAttachedChildDestinations(
-            data.attachedChildDestinations || data.artifacts || []
-          );
-          setStatus("ready");
-          return;
-        } catch (err) {
-          if (controller.signal.aborted) return;
-          if (cancelled) return;
-          if (attempt === MAX_RETRIES) {
-            setError(err instanceof Error ? err.message : "Failed to load spot");
-            setStatus("error");
-          }
-        }
-      }
+  // Batch ScopedStyles CSS for highlights (must be before early returns)
+  const highlightsCss = useMemo(() => {
+    if (highlights.length === 0) return null;
+    const parts: string[] = [];
+    for (const h of highlights) {
+      const config = HIGHLIGHT_CONFIG[h.highlight_type];
+      const cls = createCssVarClass("--highlight-color", config?.color || "#A78BFA", `hl-${h.highlight_type}`);
+      if (cls?.css) parts.push(cls.css);
     }
+    return parts.length > 0 ? parts.join("\n") : null;
+  }, [highlights]);
 
-    fetchSpot();
-    return () => { cancelled = true; controller.abort(); };
-  }, [slug]);
+  const isDog = isDogPortal(portalSlug);
 
-  useEffect(() => {
-    if (!spot || !spot.walkable_neighbor_count) return;
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    async function fetchWalkable() {
-      try {
-        const res = await fetch(`/api/spots/${slug}/walkable`, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (!res.ok) return;
-        const data = await res.json();
-        setWalkableNeighbors(data.neighbors || []);
-      } catch {
-        if (controller.signal.aborted) return;
-      }
-    }
-
-    fetchWalkable();
-    return () => controller.abort();
-  }, [spot?.id, spot?.walkable_neighbor_count, slug]);
-
-  const navigateToDetail = (param: string, value: string | number) => {
-    const params = new URLSearchParams(searchParams?.toString() || "");
-    params.delete("event");
-    params.delete("spot");
-    params.delete("series");
-    params.delete("festival");
-    params.delete("org");
-    params.set(param, String(value));
-    router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
-  };
-
-  const handleEventClick = (id: number) => navigateToDetail("event", id);
-  const handleSpotClick = (spotSlug: string) => navigateToDetail("spot", spotSlug);
-
+  // ── LOADING SKELETON ─────────────────────────────────────────────────
   if (status === "loading") {
-    return (
-      <div className="pt-6 pb-8" role="status" aria-label="Loading venue details">
+    const skeletonTopBar = (
+      <div className="flex items-center px-4 lg:px-6 py-3">
         <NeonBackButton onClose={onClose} floating={false} />
-        <div className="lg:flex lg:gap-0">
-          {/* Sidebar skeleton */}
-          <div className="lg:w-[340px] lg:flex-shrink-0">
-            <Skeleton className="aspect-video lg:aspect-[16/10] w-full rounded-lg" />
-            <div className="p-4 space-y-3">
-              <Skeleton className="h-7 w-28 rounded-full" delay="0.06s" />
-              <Skeleton className="h-7 w-[80%] rounded" delay="0.1s" />
-              <Skeleton className="h-5 w-[50%] rounded" delay="0.14s" />
-              <div className="flex gap-2 pt-2">
-                <Skeleton className="h-8 w-16 rounded-lg" delay="0.18s" />
-                <Skeleton className="h-8 w-16 rounded-lg" delay="0.2s" />
-                <Skeleton className="h-8 w-16 rounded-lg" delay="0.22s" />
-                <Skeleton className="h-8 w-16 rounded-lg" delay="0.24s" />
-              </div>
-            </div>
-          </div>
-          {/* Content skeleton */}
-          <div className="flex-1 p-4 lg:p-8 space-y-6">
-            <Skeleton className="h-3 w-32 rounded" delay="0.3s" />
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full rounded-lg" delay="0.34s" />
-              <Skeleton className="h-10 w-full rounded-lg" delay="0.38s" />
-              <Skeleton className="h-10 w-full rounded-lg" delay="0.42s" />
-            </div>
-          </div>
+      </div>
+    );
+    const skeletonSidebar = (
+      <div role="status" aria-label="Loading venue details">
+        <Skeleton className="aspect-video lg:aspect-[16/10] w-full" />
+        <div className="px-5 pt-4 pb-3 space-y-2">
+          <Skeleton className="h-5 w-28 rounded-full" delay="0.06s" />
+          <Skeleton className="h-7 w-[80%] rounded" delay="0.1s" />
+          <Skeleton className="h-4 w-[50%] rounded" delay="0.14s" />
+        </div>
+        <div className="mx-5 border-t border-[var(--twilight)]/40" />
+        <div className="px-3 py-2 grid grid-cols-4 gap-1">
+          <Skeleton className="h-10 rounded-lg" delay="0.18s" />
+          <Skeleton className="h-10 rounded-lg" delay="0.2s" />
+          <Skeleton className="h-10 rounded-lg" delay="0.22s" />
+          <Skeleton className="h-10 rounded-lg" delay="0.24s" />
+        </div>
+        <div className="mx-5 border-t border-[var(--twilight)]/40" />
+        <div className="px-5 py-3 space-y-2">
+          <Skeleton className="h-3 w-12 rounded" delay="0.26s" />
+          <Skeleton className="h-4 w-[70%] rounded" delay="0.28s" />
+          <Skeleton className="h-4 w-[60%] rounded" delay="0.3s" />
         </div>
       </div>
     );
-  }
-
-  if (error || !spot) {
-    return (
-      <div className="pt-6" role="alert">
-        <NeonBackButton onClose={onClose} floating={false} />
-        <div className="text-center py-12">
-          <p className="text-[var(--muted)]">{error || "Spot not found"}</p>
+    const skeletonContent = (
+      <div className="p-4 lg:p-8 space-y-6">
+        <Skeleton className="h-3 w-32 rounded" delay="0.3s" />
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-full rounded-lg" delay="0.34s" />
+          <Skeleton className="h-10 w-full rounded-lg" delay="0.38s" />
+          <Skeleton className="h-10 w-full rounded-lg" delay="0.42s" />
         </div>
       </div>
+    );
+    return (
+      <DetailShell
+        topBar={skeletonTopBar}
+        sidebar={skeletonSidebar}
+        content={skeletonContent}
+      />
+    );
+  }
+
+  // ── ERROR STATE ──────────────────────────────────────────────────────
+  if (error || !spot) {
+    return (
+      <DetailShell
+        onClose={onClose}
+        singleColumn
+        content={
+          <div className="flex flex-col items-center justify-center py-20 px-4" role="alert">
+            <p className="text-[var(--soft)] mb-6">{error || "Spot not found"}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--dusk)] transition-colors font-mono text-sm focus-ring"
+              >
+                <ArrowLeft size={16} weight="bold" />
+                Go Back
+              </button>
+              <button
+                onClick={retry}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:brightness-110 transition-all focus-ring"
+              >
+                <ArrowCounterClockwise size={16} weight="bold" />
+                Try Again
+              </button>
+            </div>
+          </div>
+        }
+      />
     );
   }
 
   const primaryType = spot.spot_type as SpotType | null;
   const typeInfo = primaryType ? SPOT_TYPES[primaryType] : null;
   const priceDisplay = formatPriceLevel(spot.price_level);
-  const showImage = spot.image_url && !imageError;
-  const isDog = isDogPortal(portalSlug);
 
-  const dogHighlightVibes = isDog && spot.vibes
-    ? spot.vibes.filter((v) => v in dogVibeLabels)
+  const dogHighlightVibes = isDog && vibes
+    ? vibes.filter((v) => v in dogVibeLabels)
     : [];
 
   const hasTransit = spot.nearest_marta_station || spot.beltline_adjacent || (spot.parking_type && spot.parking_type.length > 0) || spot.transit_score;
@@ -376,29 +357,12 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Hero image — compact */}
-      {showImage ? (
-        <div className="aspect-video lg:aspect-[16/10] bg-[var(--night)] overflow-hidden relative">
-          {!imageLoaded && (
-            <Skeleton className="absolute inset-0" />
-          )}
-          <Image
-            src={spot.image_url!}
-            alt={spot.name}
-            fill
-            sizes="(max-width: 1024px) 100vw, 340px"
-            className={`${isLowRes ? "object-contain" : "object-cover"} brightness-[0.85] contrast-[1.05] transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
-            onLoad={(e) => {
-              setImageLoaded(true);
-              if (e.currentTarget.naturalWidth < 600) setIsLowRes(true);
-            }}
-            onError={() => setImageError(true)}
-          />
-        </div>
-      ) : (
-        <div className="aspect-video lg:aspect-[16/10] bg-gradient-to-b from-[var(--dusk)] to-[var(--night)] flex items-center justify-center">
-          <CategoryIcon type={primaryType || ""} size={40} className="opacity-20" />
-        </div>
-      )}
+      <DetailHeroImage
+        imageUrl={spot.image_url}
+        alt={spot.name}
+        category={primaryType}
+        priority
+      />
 
       {/* Identity */}
       <div className="px-5 pt-4 pb-3 space-y-2">
@@ -420,9 +384,9 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         })()}
 
         {/* Name */}
-        <h2 className="text-xl lg:text-lg font-bold text-[var(--cream)] leading-tight">
+        <h1 className="text-xl lg:text-2xl font-bold text-[var(--cream)] leading-tight">
           {spot.name}
-        </h2>
+        </h1>
 
         {/* Neighborhood + Price + Status */}
         <p className="text-sm text-[var(--soft)] flex items-center gap-1.5 flex-wrap">
@@ -504,11 +468,14 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
       <div className="mx-5 border-t border-[var(--twilight)]/40" />
 
       {/* Vibes */}
-      {spot.vibes && spot.vibes.length > 0 && (
+      {vibes && vibes.length > 0 && (
         <div className="px-5 py-3 flex flex-wrap gap-1.5">
-          {spot.vibes.slice(0, 4).map((vibe) => (
+          {vibes.slice(0, 4).map((vibe) => (
             <Badge key={vibe} variant="neutral" size="sm">{vibe.replace(/-/g, " ")}</Badge>
           ))}
+          {vibes.length > 4 && (
+            <Badge variant="neutral" size="sm">+{vibes.length - 4}</Badge>
+          )}
         </div>
       )}
 
@@ -580,6 +547,11 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         </div>
       )}
 
+      {/* ── LIBRARY PASS (family portal only) ─────────────── */}
+      {portal?.settings?.vertical === "family" && spot.library_pass?.eligible && (
+        <LibraryPassCallout libraryPass={spot.library_pass} />
+      )}
+
       {/* ── ABOUT ─────────────────────────────────────────── */}
       {spot.description && (
         <div>
@@ -593,6 +565,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
       {/* ── WHILE YOU'RE HERE (Highlights) ────────────────── */}
       {highlights.length > 0 && (
         <div>
+          {highlightsCss && <ScopedStyles css={highlightsCss} />}
           <SectionHeader title="While You're Here" variant="divider" />
           <div className="space-y-3">
             {highlights.map((h) => {
@@ -601,7 +574,6 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
               const highlightColorClass = createCssVarClass("--highlight-color", config?.color || "#A78BFA", `hl-${h.highlight_type}`);
               return (
                 <div key={h.id} className={`flex items-start gap-3 p-3 rounded-lg border border-[var(--twilight)]/40 bg-[var(--dusk)] ${highlightColorClass?.className ?? ""}`}>
-                  <ScopedStyles css={highlightColorClass?.css} />
                   {IconComp && (
                     <IconComp
                       size={20}
@@ -728,9 +700,47 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
 
   // ── TOP BAR ─────────────────────────────────────────────────────────────
   const topBar = (
-    <div className="flex items-center px-4 lg:px-6 py-3">
+    <div className="flex items-center justify-between px-4 lg:px-6 py-3">
       <NeonBackButton onClose={onClose} floating={false} />
+      <div className="flex items-center gap-1">
+        <SaveButton venueId={spot.id} size="sm" />
+        <button
+          onClick={async () => {
+            const url = window.location.href;
+            try {
+              if (navigator.share) {
+                await navigator.share({ title: spot.name, url });
+              } else {
+                await navigator.clipboard.writeText(url);
+              }
+            } catch (e) {
+              if ((e as Error).name !== "AbortError") {
+                try { await navigator.clipboard.writeText(url); } catch { /* ignore */ }
+              }
+            }
+          }}
+          className="inline-flex items-center justify-center min-w-[48px] min-h-[48px] p-3 text-[var(--muted)] rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] hover:scale-110 transition-all active:scale-95 focus-ring"
+          aria-label="Share"
+        >
+          <ShareNetwork size={20} weight="light" className="icon-drop-shadow" />
+        </button>
+      </div>
     </div>
+  );
+
+  // ── BOTTOM BAR (mobile only) ────────────────────────────────────────────
+  const bottomBar = (
+    <DetailStickyBar
+      className="lg:hidden"
+      primaryAction={spot.website ? {
+        label: "Visit Website",
+        href: spot.website,
+        icon: <Globe size={18} weight="bold" />,
+      } : undefined}
+      secondaryActions={
+        <FollowButton targetVenueId={spot.id} size="sm" />
+      }
+    />
   );
 
   return (
@@ -739,6 +749,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         topBar={topBar}
         sidebar={sidebarContent}
         content={contentZone}
+        bottomBar={bottomBar}
       />
 
       {/* Modals */}
@@ -747,10 +758,10 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
           venueId={spot.id}
           venueName={spot.name}
           venueType={spot.spot_type}
-          existingVibes={spot.vibes}
+          existingVibes={vibes}
           onClose={() => setShowTagModal(false)}
           onSuccess={(updatedVibes) => {
-            setSpot((prev) => prev ? { ...prev, vibes: updatedVibes } : prev);
+            setVibesOverride(updatedVibes);
             setShowTagModal(false);
           }}
         />

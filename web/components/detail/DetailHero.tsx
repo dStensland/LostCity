@@ -194,7 +194,7 @@ function HeroOverlay({
 }) {
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 glass-wet detail-hero-overlay"
+      className="absolute bottom-0 left-0 right-0 detail-hero-overlay"
     >
       <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-14">
         <div className="flex flex-wrap items-center gap-2 mb-2">

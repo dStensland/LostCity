@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useMemo } from "react";
 import Image from "@/components/SmartImage";
 import Skeleton from "@/components/Skeleton";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
@@ -13,6 +12,7 @@ import RSVPButton from "@/components/RSVPButton";
 import AddToCalendar from "@/components/AddToCalendar";
 import ShareEventButton from "@/components/ShareEventButton";
 import InviteToEventButton from "@/components/InviteToEventButton";
+import SaveButton from "@/components/SaveButton";
 import VenueVibes from "@/components/VenueVibes";
 import LinkifyText from "@/components/LinkifyText";
 import { formatTime, formatPriceDetailed } from "@/lib/formats";
@@ -43,6 +43,8 @@ import {
   Buildings,
   Flag,
   Ticket,
+  ArrowCounterClockwise,
+  ArrowLeft,
 } from "@phosphor-icons/react";
 
 const OutingPlannerSheet = dynamic(
@@ -54,8 +56,12 @@ import { SectionHeader } from "@/components/detail/SectionHeader";
 import { parseRecurrenceRule } from "@/lib/recurrence";
 import NeonBackButton from "@/components/detail/NeonBackButton";
 import DetailShell from "@/components/detail/DetailShell";
+import DetailHeroImage from "@/components/detail/DetailHeroImage";
+import { DetailStickyBar } from "@/components/detail/DetailStickyBar";
 import Badge from "@/components/ui/Badge";
 import Dot from "@/components/ui/Dot";
+import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
+import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
 
 type EventData = {
   id: number;
@@ -154,10 +160,20 @@ type NearbyDestinations = {
   fun: NearbyDestination[];
 };
 
+export type EventApiResponse = {
+  event: EventData;
+  eventArtists: EventArtist[];
+  venueEvents: RelatedEvent[];
+  nearbyEvents: RelatedEvent[];
+  nearbyDestinations: NearbyDestinations;
+};
+
 interface EventDetailViewProps {
   eventId: number;
   portalSlug: string;
   onClose: () => void;
+  /** Server-fetched data — skips client fetch when provided */
+  initialData?: EventApiResponse;
 }
 
 function isExhibition(event: EventData): boolean {
@@ -224,102 +240,46 @@ function CommunityTagsSection({
   );
 }
 
+/** Wraps FriendsGoing + WhosGoing — WhosGoing handles its own empty state */
+function SocialProofSection({ eventId }: { eventId: number }) {
+  return (
+    <div>
+      <FriendsGoing eventId={eventId} className="mb-4" />
+      <WhosGoing eventId={eventId} />
+    </div>
+  );
+}
 
-export default function EventDetailView({ eventId, portalSlug, onClose }: EventDetailViewProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+
+export default function EventDetailView({ eventId, portalSlug, onClose, initialData }: EventDetailViewProps) {
   const { portal } = usePortal();
+  const { toEvent: handleEventClick, toSpot: handleSpotClick, toSeries: handleSeriesClick, toFestival: handleFestivalClick } = useDetailNavigation(portalSlug);
   const [showNightSheet, setShowNightSheet] = useState(false);
-  const [event, setEvent] = useState<EventData | null>(null);
-  const [eventArtists, setEventArtists] = useState<EventArtist[]>([]);
-  const [venueEvents, setVenueEvents] = useState<RelatedEvent[]>([]);
-  const [nearbyEvents, setNearbyEvents] = useState<RelatedEvent[]>([]);
-  const [nearbyDestinations, setNearbyDestinations] = useState<NearbyDestinations>({
-    food: [],
-    drinks: [],
-    nightlife: [],
-    fun: [],
-  });
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [error, setError] = useState<string | null>(null);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [isLowRes, setIsLowRes] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    const controller = new AbortController();
+  const fetchUrl = useMemo(
+    () => {
+      if (initialData) return null;
+      if (!portal?.id) return null; // Wait for portal context
+      return `/api/events/${eventId}?portal_id=${portal.id}`;
+    },
+    [eventId, portal?.id, initialData]
+  );
 
-    async function fetchEvent() {
-      setStatus("loading");
-      setError(null);
-      setImageLoaded(false);
-      setImageError(false);
-      setIsLowRes(false);
+  const { data: fetchedData, status, error, retry } = useDetailFetch<EventApiResponse>(
+    fetchUrl,
+    { entityLabel: "event" }
+  );
+  const data = initialData ?? fetchedData;
 
-      const eventUrl = portal?.id ? `/api/events/${eventId}?portal_id=${portal.id}` : `/api/events/${eventId}`;
-      const MAX_RETRIES = 2;
-
-      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-        try {
-          if (attempt > 0) {
-            await new Promise((r) => setTimeout(r, 500 * attempt));
-            if (cancelled) return;
-          }
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
-          const res = await fetch(eventUrl, { signal: controller.signal });
-          clearTimeout(timeoutId);
-          if (cancelled) return;
-          if (!res.ok) {
-            if ((res.status === 503 || res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
-              continue;
-            }
-            throw new Error(res.status === 404 ? "Event not found" : `Failed to load event (${res.status})`);
-          }
-          const data = await res.json();
-          if (cancelled) return;
-          setEvent(data.event);
-          setEventArtists(data.eventArtists || []);
-          setVenueEvents(data.venueEvents || []);
-          setNearbyEvents(data.nearbyEvents || []);
-          setNearbyDestinations(data.nearbyDestinations || {
-            food: [],
-            drinks: [],
-            nightlife: [],
-            fun: [],
-          });
-          setStatus("ready");
-          return;
-        } catch (err) {
-          if (controller.signal.aborted) return;
-          if (cancelled) return;
-          if (attempt === MAX_RETRIES) {
-            setError(err instanceof Error ? err.message : "Failed to load event");
-            setStatus("error");
-          }
-        }
-      }
-    }
-
-    fetchEvent();
-    return () => { cancelled = true; controller.abort(); };
-  }, [eventId, portal?.id]);
-
-  const navigateToDetail = (param: string, value: string | number) => {
-    const params = new URLSearchParams(searchParams?.toString() || "");
-    params.delete("event");
-    params.delete("spot");
-    params.delete("series");
-    params.delete("festival");
-    params.delete("org");
-    params.set(param, String(value));
-    router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
-  };
-
-  const handleEventClick = (id: number) => navigateToDetail("event", id);
-  const handleSpotClick = (slug: string) => navigateToDetail("spot", slug);
-  const handleSeriesClick = (slug: string) => navigateToDetail("series", slug);
-  const handleFestivalClick = (slug: string) => navigateToDetail("festival", slug);
+  // Derive data slices
+  const event = data?.event ?? null;
+  const eventArtists = useMemo(() => data?.eventArtists ?? [], [data]);
+  const venueEvents = useMemo(() => data?.venueEvents ?? [], [data]);
+  const nearbyEvents = useMemo(() => data?.nearbyEvents ?? [], [data]);
+  const nearbyDestinations = useMemo<NearbyDestinations>(
+    () => data?.nearbyDestinations ?? { food: [], drinks: [], nightlife: [], fun: [] },
+    [data]
+  );
 
   const allDestinations = useMemo(() => {
     const { food, drinks, nightlife, fun } = nearbyDestinations;
@@ -332,57 +292,116 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     });
   }, [nearbyDestinations]);
 
+  // Hooks that depend on event — must be called unconditionally (before early returns)
+  const isLive = useMemo(() => {
+    if (!event?.start_date || !event.start_time) return false;
+    const now = new Date();
+    const eventDate = new Date(event.start_date + "T00:00:00");
+    const isToday = eventDate.toDateString() === now.toDateString();
+    if (!isToday) return false;
+    const [hours, minutes] = event.start_time.split(":").map(Number);
+    const eventStart = new Date(eventDate);
+    eventStart.setHours(hours, minutes, 0, 0);
+    const eventEnd = new Date(eventStart);
+    if (event.end_time) {
+      const [endH, endM] = event.end_time.split(":").map(Number);
+      eventEnd.setHours(endH, endM, 0, 0);
+    } else {
+      eventEnd.setHours(eventStart.getHours() + 3, eventStart.getMinutes(), 0, 0);
+    }
+    return now >= eventStart && now <= eventEnd;
+  }, [event?.start_date, event?.start_time, event?.end_time]);
+
+  const displayParticipants = useMemo(
+    () => event ? getDisplayParticipants(eventArtists, { eventTitle: event.title, eventCategory: event.category }) : [],
+    [eventArtists, event?.title, event?.category, event]
+  );
+  const participantLabels = useMemo(
+    () => event
+      ? getLineupLabels(displayParticipants, { eventCategory: event.category })
+      : { sectionTitle: "Lineup", headlinerLabel: "Headliner", supportLabel: "Support", artistNoun: "artist", descriptionLead: "", grouping: "flat" as const },
+    [displayParticipants, event?.category, event]
+  );
+
   // ── LOADING SKELETON ──────────────────────────────────────────────────
   if (status === "loading") {
-    return (
-      <div className="pt-6 pb-8" role="status" aria-label="Loading event details">
+    const skeletonTopBar = (
+      <div className="flex items-center px-4 lg:px-6 py-3">
         <NeonBackButton onClose={onClose} floating={false} />
-        <div className="lg:flex lg:gap-0">
-          {/* Sidebar skeleton */}
-          <div className="lg:w-[340px] lg:flex-shrink-0">
-            <Skeleton className="aspect-video lg:aspect-[16/10] w-full rounded-lg" />
-            <div className="p-4 space-y-3">
-              <Skeleton className="h-7 w-[80%] rounded" delay="0.1s" />
-              <Skeleton className="h-4 w-[50%] rounded" delay="0.14s" />
-              <Skeleton className="h-4 w-[60%] rounded" delay="0.18s" />
-              <div className="flex gap-2 pt-2">
-                <Skeleton className="h-8 w-16 rounded-full" delay="0.22s" />
-                <Skeleton className="h-8 w-16 rounded-full" delay="0.24s" />
-                <Skeleton className="h-8 w-16 rounded-full" delay="0.26s" />
-              </div>
-            </div>
-          </div>
-          {/* Content skeleton */}
-          <div className="flex-1 p-4 lg:p-8 space-y-6">
-            <Skeleton className="h-3 w-32 rounded" delay="0.3s" />
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full rounded-lg" delay="0.34s" />
-              <Skeleton className="h-10 w-full rounded-lg" delay="0.38s" />
-              <Skeleton className="h-10 w-full rounded-lg" delay="0.42s" />
-            </div>
-          </div>
+      </div>
+    );
+    const skeletonSidebar = (
+      <div role="status" aria-label="Loading event details">
+        <Skeleton className="aspect-video lg:aspect-[16/10] w-full" />
+        <div className="px-5 pt-4 pb-3 space-y-2">
+          <Skeleton className="h-7 w-[80%] rounded" delay="0.1s" />
+          <Skeleton className="h-4 w-[50%] rounded" delay="0.14s" />
+          <Skeleton className="h-4 w-[60%] rounded" delay="0.18s" />
+        </div>
+        <div className="mx-5 border-t border-[var(--twilight)]/40" />
+        <div className="px-5 py-3 flex gap-1.5">
+          <Skeleton className="h-6 w-16 rounded-full" delay="0.22s" />
+          <Skeleton className="h-6 w-20 rounded-full" delay="0.24s" />
+        </div>
+        <div className="mx-5 border-t border-[var(--twilight)]/40" />
+        <div className="px-5 py-3">
+          <Skeleton className="h-12 w-full rounded-lg" delay="0.28s" />
         </div>
       </div>
+    );
+    const skeletonContent = (
+      <div className="p-4 lg:p-8 space-y-6">
+        <Skeleton className="h-3 w-32 rounded" delay="0.3s" />
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-full rounded-lg" delay="0.34s" />
+          <Skeleton className="h-10 w-full rounded-lg" delay="0.38s" />
+          <Skeleton className="h-10 w-full rounded-lg" delay="0.42s" />
+        </div>
+      </div>
+    );
+    return (
+      <DetailShell
+        topBar={skeletonTopBar}
+        sidebar={skeletonSidebar}
+        content={skeletonContent}
+      />
     );
   }
 
   // ── ERROR STATE ───────────────────────────────────────────────────────
   if (error || !event) {
     return (
-      <div className="pt-6" role="alert">
-        <NeonBackButton onClose={onClose} floating={false} />
-        <div className="text-center py-12">
-          <p className="text-[var(--muted)]">{error || "Event not found"}</p>
-        </div>
-      </div>
+      <DetailShell
+        onClose={onClose}
+        singleColumn
+        content={
+          <div className="flex flex-col items-center justify-center py-20 px-4" role="alert">
+            <p className="text-[var(--soft)] mb-6">{error || "Event not found"}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--dusk)] transition-colors font-mono text-sm focus-ring"
+              >
+                <ArrowLeft size={16} weight="bold" />
+                Go Back
+              </button>
+              <button
+                onClick={retry}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:brightness-110 transition-all focus-ring"
+              >
+                <ArrowCounterClockwise size={16} weight="bold" />
+                Try Again
+              </button>
+            </div>
+          </div>
+        }
+      />
     );
   }
 
   // ── DERIVED VALUES ────────────────────────────────────────────────────
-  const isLive = event.is_live || false;
   const isDog = isDogPortal(portalSlug);
   const recurrenceText = parseRecurrenceRule(event.recurrence_rule);
-  const showImage = event.image_url && !imageError;
   const dogTags = isDog && event.tags
     ? event.tags.filter((t) => ["dog-friendly", "pets", "adoption", "outdoor", "family-friendly"].includes(t))
     : [];
@@ -438,13 +457,6 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       showSignals.reentryPolicy ||
       showSignals.hasSetTimesMention
   );
-  const displayParticipants = getDisplayParticipants(eventArtists, {
-    eventTitle: event.title,
-    eventCategory: event.category,
-  });
-  const participantLabels = getLineupLabels(displayParticipants, {
-    eventCategory: event.category,
-  });
   const hasLineup = displayParticipants.length > 0;
 
   // Price + date/time for sidebar
@@ -468,6 +480,38 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   const isActuallyTicketed = isTicketingUrl(event.ticket_url);
   const sourceLooksTicketed = isTicketingUrl(event.source_url);
 
+  // Hero overlay (LIVE badge + source attribution)
+  const heroOverlay = (
+    <>
+      {isLive && (
+        <div className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] rounded-full font-mono text-xs font-medium z-10">
+          <span className="w-2 h-2 bg-[var(--void)] rounded-full animate-pulse" />
+          LIVE NOW
+        </div>
+      )}
+      {event.source_url && !isLive && (
+        <a
+          href={event.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute top-3 right-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded text-2xs font-mono text-[var(--muted)] hover:text-[var(--soft)] transition-colors z-10 focus-ring"
+          title="View original source"
+        >
+          <ArrowSquareOut size={12} weight="light" className="inline-block mr-1 -mt-0.5" />
+          Source
+        </a>
+      )}
+    </>
+  );
+
+  // Primary CTA info for mobile sticky bar
+  const primaryCtaUrl = event.ticket_url || event.source_url;
+  const primaryCtaLabel = event.ticket_url
+    ? (isLive ? "Join Now" : isActuallyTicketed ? "Get Tickets" : event.is_free ? "RSVP Free" : "Learn More")
+    : event.source_url
+      ? (event.is_free ? "RSVP Free" : "Get Tickets")
+      : null;
+
   // ── SIDEBAR ───────────────────────────────────────────────────────────
   const sidebarContent = (
     <div className="flex flex-col h-full">
@@ -476,63 +520,21 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       />
 
       {/* Hero image — compact */}
-      {showImage ? (
-        <div className={`aspect-video lg:aspect-[16/10] bg-[var(--night)] overflow-hidden relative ${isLive ? "ring-2 ring-[var(--coral)] ring-opacity-50" : ""}`}>
-          {!imageLoaded && (
-            <Skeleton className="absolute inset-0" />
-          )}
-          <Image
-            src={event.image_url!}
-            alt={event.title}
-            fill
-            sizes="(max-width: 1024px) 100vw, 340px"
-            className={`${isLowRes ? "object-contain" : "object-cover"} brightness-[0.85] contrast-[1.05] transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
-            onLoad={(e) => {
-              setImageLoaded(true);
-              if (e.currentTarget.naturalWidth < 600) setIsLowRes(true);
-            }}
-            onError={() => setImageError(true)}
-            priority
-          />
-          {/* LIVE badge */}
-          {isLive && (
-            <div className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] rounded-full font-mono text-xs font-medium z-10">
-              <span className="w-2 h-2 bg-[var(--void)] rounded-full animate-pulse" />
-              LIVE NOW
-            </div>
-          )}
-          {/* Source attribution */}
-          {event.source_url && !isLive && (
-            <a
-              href={event.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="absolute top-3 right-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded text-2xs font-mono text-[var(--muted)] hover:text-[var(--soft)] transition-colors z-10 focus-ring"
-              title="View original source"
-            >
-              <ArrowSquareOut size={12} weight="light" className="inline-block mr-1 -mt-0.5" />
-              Source
-            </a>
-          )}
-        </div>
-      ) : (
-        <div className={`aspect-video lg:aspect-[16/10] bg-gradient-to-b from-[var(--dusk)] to-[var(--night)] flex items-center justify-center relative ${isLive ? "ring-2 ring-[var(--coral)] ring-opacity-50" : ""}`}>
-          <CategoryIcon type={event.category || "other"} size={40} className="opacity-20" />
-          {isLive && (
-            <div className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] rounded-full font-mono text-xs font-medium z-10">
-              <span className="w-2 h-2 bg-[var(--void)] rounded-full animate-pulse" />
-              LIVE NOW
-            </div>
-          )}
-        </div>
-      )}
+      <DetailHeroImage
+        imageUrl={event.image_url}
+        alt={event.title}
+        category={event.category || "other"}
+        isLive={isLive}
+        priority
+        overlay={heroOverlay}
+      />
 
       {/* Identity */}
       <div className="px-5 pt-4 pb-3 space-y-2">
         {/* Title */}
-        <h2 className="text-xl lg:text-lg font-bold text-[var(--cream)] leading-tight">
+        <h1 className="text-xl lg:text-2xl font-bold text-[var(--cream)] leading-tight">
           {event.title}
-        </h2>
+        </h1>
 
         {/* Venue link + neighborhood */}
         {event.venue && (
@@ -708,7 +710,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
           {event.venue && event.venue.lat != null && event.venue.lng != null && (
             <button
               onClick={() => setShowNightSheet(true)}
-              className="inline-flex items-center justify-center w-10 h-10 rounded-lg text-[var(--soft)] hover:text-[var(--cream)] hover:bg-white/5 transition-colors focus-ring"
+              className="inline-flex items-center justify-center w-10 h-10 rounded-lg text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/30 transition-colors focus-ring"
               title="Plan Night"
             >
               <ForkKnife size={18} weight="duotone" />
@@ -750,11 +752,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       )}
 
       {/* ── SOCIAL PROOF ─────────────────────────────────────── */}
-      <div>
-        <FriendsGoing eventId={event.id} className="mb-4" />
-        <SectionHeader title="Who's Going" variant="divider" />
-        <WhosGoing eventId={event.id} />
-      </div>
+      <SocialProofSection eventId={event.id} />
 
       {/* ── LOCATION ─────────────────────────────────────────── */}
       {event.venue && event.venue.address && (
@@ -913,10 +911,35 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
 
   // ── TOP BAR ───────────────────────────────────────────────────────────
   const topBar = (
-    <div className="flex items-center px-4 lg:px-6 py-3">
+    <div className="flex items-center justify-between px-4 lg:px-6 py-3">
       <NeonBackButton onClose={onClose} floating={false} />
+      <div className="flex items-center gap-1">
+        <SaveButton eventId={event.id} size="sm" />
+        <ShareEventButton eventId={event.id} eventTitle={event.title} variant="icon" />
+      </div>
     </div>
   );
+
+  // ── BOTTOM BAR (mobile only) ──────────────────────────────────────────
+  const bottomBar = primaryCtaUrl && primaryCtaLabel ? (
+    <DetailStickyBar
+      className="lg:hidden"
+      primaryAction={{
+        label: primaryCtaLabel,
+        href: primaryCtaUrl,
+        icon: <Ticket size={18} weight="bold" />,
+      }}
+      secondaryActions={
+        <RSVPButton
+          eventId={event.id}
+          venueId={event.venue?.id}
+          venueName={event.venue?.name}
+          venueType={event.venue?.venue_type}
+          variant="compact"
+        />
+      }
+    />
+  ) : null;
 
   return (
     <>
@@ -924,6 +947,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         topBar={topBar}
         sidebar={sidebarContent}
         content={contentZone}
+        bottomBar={bottomBar}
       />
 
       {/* Outing Planner */}
