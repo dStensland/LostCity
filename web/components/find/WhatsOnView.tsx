@@ -16,7 +16,8 @@ interface WhatsOnViewProps {
 
 export default function WhatsOnView({ portalId, portalSlug }: WhatsOnViewProps) {
   const searchParams = useSearchParams();
-  const initialVertical = (searchParams?.get("vertical") as WhatsOnVertical) || "film";
+  const rawVertical = searchParams?.get("vertical");
+  const initialVertical: WhatsOnVertical = rawVertical === "music" ? "music" : "film";
   const [activeVertical, setActiveVertical] = useState<WhatsOnVertical>(initialVertical);
 
   const handleVerticalChange = useCallback((vertical: WhatsOnVertical) => {
@@ -34,7 +35,7 @@ export default function WhatsOnView({ portalId, portalSlug }: WhatsOnViewProps) 
   return (
     <div>
       {/* Sub-tab bar */}
-      <div className="flex items-center gap-0 px-4 pt-3 pb-0">
+      <div className="flex items-center gap-4 px-4 pt-3 pb-0">
         {verticals.map(({ key, label }) => {
           const isActive = activeVertical === key;
           return (
@@ -42,8 +43,6 @@ export default function WhatsOnView({ portalId, portalSlug }: WhatsOnViewProps) 
               key={key}
               onClick={() => handleVerticalChange(key)}
               className={`px-0 pb-2.5 font-mono text-xs font-semibold tracking-[0.08em] transition-colors ${
-                key !== "film" ? "ml-4" : ""
-              } ${
                 isActive
                   ? "text-[var(--coral)] border-b-2 border-[var(--coral)]"
                   : "text-[var(--muted)] hover:text-[var(--cream)]"

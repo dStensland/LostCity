@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { DatePillStrip } from "@/components/find/DatePillStrip";
 import { MusicShowCard, type MusicShow } from "@/components/find/MusicShowCard";
 import CategoryIcon from "@/components/CategoryIcon";
+import { getLocalDateString } from "@/lib/formats";
 
 export interface MusicListingsViewProps {
   portalId: string;
@@ -21,10 +22,7 @@ interface MusicApiResponse {
 
 interface CachedData {
   shows: MusicShow[];
-}
-
-function toLocalIsoDate(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  loaded: boolean;
 }
 
 // --------------- Skeleton ---------------
@@ -52,7 +50,7 @@ function MusicSkeleton() {
 // --------------- Main component ---------------
 
 export default function MusicListingsView({ portalId, portalSlug }: MusicListingsViewProps) {
-  const today = toLocalIsoDate(new Date());
+  const today = getLocalDateString(new Date());
 
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [shows, setShows] = useState<MusicShow[]>([]);
@@ -67,7 +65,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
   const prefetchDate = useCallback((date: string) => {
     if (cacheRef.current.has(date)) return;
     // Mark as pending to prevent duplicate prefetches
-    cacheRef.current.set(date, { shows: [] });
+    cacheRef.current.set(date, { shows: [], loaded: false });
     const params = new URLSearchParams({ date });
     fetch(`/api/whats-on/music?${params}`)
       .then((res) => (res.ok ? res.json() : null))
@@ -76,7 +74,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
           cacheRef.current.delete(date);
           return;
         }
-        cacheRef.current.set(date, { shows: data.shows || [] });
+        cacheRef.current.set(date, { shows: data.shows || [], loaded: true });
       })
       .catch(() => {
         cacheRef.current.delete(date);
@@ -89,7 +87,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
       if (!date) return;
 
       const cached = cacheRef.current.get(date);
-      if (cached && cached.shows.length > 0) {
+      if (cached?.loaded) {
         setShows(cached.shows);
         setLoading(false);
         // Prefetch adjacent dates
@@ -110,7 +108,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
         const data: MusicApiResponse = await res.json();
         const fetched = data.shows || [];
         setShows(fetched);
-        cacheRef.current.set(date, { shows: fetched });
+        cacheRef.current.set(date, { shows: fetched, loaded: true });
         // Prefetch adjacent dates
         const dates = meta?.available_dates || [];
         const idx = dates.indexOf(date);
@@ -132,7 +130,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
     async function fetchMeta() {
       setMetaLoading(true);
       try {
-        const dateStr = toLocalIsoDate(new Date());
+        const dateStr = getLocalDateString(new Date());
         const params = new URLSearchParams({ date: dateStr, meta: "true" });
         const res = await fetch(`/api/whats-on/music?${params}`);
         if (!res.ok) return;
@@ -142,7 +140,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
 
         const fetched = data.shows || [];
         setShows(fetched);
-        cacheRef.current.set(dateStr, { shows: fetched });
+        cacheRef.current.set(dateStr, { shows: fetched, loaded: true });
 
         let initialDate = dateStr;
         if (data.meta?.available_dates?.length) {
@@ -191,7 +189,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
         for (let i = 0; i < 7; i++) {
           const d = new Date(now);
           d.setDate(d.getDate() + i);
-          pills.push(toLocalIsoDate(d));
+          pills.push(getLocalDateString(d));
         }
         return pills;
       })();
@@ -244,6 +242,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
                   show={show}
                   portalSlug={portalSlug}
                   portalId={portalId}
+                  selectedDate={selectedDate}
                 />
               ))}
             </div>

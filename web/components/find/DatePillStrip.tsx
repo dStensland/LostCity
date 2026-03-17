@@ -44,7 +44,7 @@ export function DatePillStrip({
     summaryItems && summaryItems.length > 0 && summaryItems.some((s) => Number(s.value) > 0);
 
   return (
-    <section className="mb-4 rounded-2xl border border-[var(--twilight)]/80 bg-[var(--void)]/70 backdrop-blur-md p-3 sm:p-4">
+    <section className="mb-4 rounded-2xl border border-[var(--twilight)]/80 bg-[var(--void)] p-3 sm:p-4">
       <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pb-0.5">
         {dates.map((dateStr) => {
           const isActive = selectedDate === dateStr;

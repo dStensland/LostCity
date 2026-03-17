@@ -11,9 +11,7 @@ export interface MusicShow {
   start_time: string | null;
   is_free: boolean;
   tags: string[];
-  genres: string[];
   age_policy: string | null;
-  ticket_url: string | null;
   artists: {
     name: string;
     is_headliner: boolean;
@@ -31,6 +29,7 @@ export interface MusicShowCardProps {
   show: MusicShow;
   portalSlug: string;
   portalId?: string;
+  selectedDate: string;
 }
 
 // Prefetch event detail on pointer-down so data loads before navigation completes
@@ -46,15 +45,22 @@ function prefetchEventDetail(eventId: number, portalId?: string) {
   });
 }
 
-function isShowLive(startTime: string | null): boolean {
+function toLocalIsoDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function isShowLive(startTime: string | null, selectedDate: string): boolean {
   if (!startTime) return false;
+  // Only show NOW badge when viewing today's date
+  const now = new Date();
+  if (selectedDate !== toLocalIsoDate(now)) return false;
+
   const parts = startTime.split(":");
   if (parts.length < 2) return false;
   const hour = parseInt(parts[0], 10);
   const minute = parseInt(parts[1], 10);
   if (isNaN(hour) || isNaN(minute)) return false;
 
-  const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const startMinutes = hour * 60 + minute;
   const diffMinutes = nowMinutes - startMinutes;
@@ -74,6 +80,7 @@ export const MusicShowCard = memo(function MusicShowCard({
   show,
   portalSlug,
   portalId,
+  selectedDate,
 }: MusicShowCardProps) {
   const headliner =
     show.artists.find((a) => a.is_headliner) ||
@@ -84,7 +91,7 @@ export const MusicShowCard = memo(function MusicShowCard({
 
   const supportingActs = show.artists.filter((a) => a !== headliner);
 
-  const isLive = isShowLive(show.start_time);
+  const isLive = isShowLive(show.start_time, selectedDate);
   const isAllAges =
     show.tags.includes("all-ages") || show.age_policy === "All ages";
 

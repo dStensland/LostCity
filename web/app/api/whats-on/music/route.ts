@@ -8,6 +8,7 @@ import {
 import { getLocalDateString } from "@/lib/formats";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 import { applyFeedGate } from "@/lib/feed-gate";
+import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 
 // ISR: revalidate every 5 minutes
 export const revalidate = 300;
@@ -49,7 +50,6 @@ type MusicEvent = {
   genres: string[] | null;
   age_policy: string | null;
   ticket_url: string | null;
-  image_url: string | null;
   venue: MusicVenue | null;
   event_artists: MusicArtist[] | null;
 };
@@ -60,10 +60,7 @@ type ShowShape = {
   start_time: string | null;
   is_free: boolean;
   tags: string[];
-  genres: string[];
   age_policy: string | null;
-  ticket_url: string | null;
-  image_url: string | null;
   artists: {
     name: string;
     is_headliner: boolean;
@@ -81,7 +78,6 @@ function toShow(event: MusicEvent): ShowShape {
   const artists = (event.event_artists ?? [])
     .slice()
     .sort((a, b) => {
-      // Headliners first, then by billing_order ascending
       if (a.is_headliner !== b.is_headliner) return a.is_headliner ? -1 : 1;
       const aOrder = a.billing_order ?? 9999;
       const bOrder = b.billing_order ?? 9999;
@@ -94,16 +90,12 @@ function toShow(event: MusicEvent): ShowShape {
     start_time: event.start_time,
     is_free: event.is_free ?? false,
     tags: event.tags ?? [],
-    genres: event.genres ?? [],
     age_policy: event.age_policy,
-    ticket_url: event.ticket_url,
-    image_url: event.image_url,
     artists: artists.map((a) => ({
       name: a.name,
       is_headliner: a.is_headliner,
       billing_order: a.billing_order,
     })),
-    // venue is guaranteed non-null at this point (filtered before calling toShow)
     venue: {
       id: event.venue!.id,
       name: event.venue!.name,
@@ -111,6 +103,13 @@ function toShow(event: MusicEvent): ShowShape {
       neighborhood: event.venue!.neighborhood,
     },
   };
+}
+
+/** Check if a venue is in the portal's city scope */
+function isVenueInScope(venue: MusicVenue | null, portalCity: string): boolean {
+  if (!venue) return false;
+  if (!venue.city) return true; // null city = assume in scope
+  return venue.city.toLowerCase() === portalCity.toLowerCase();
 }
 
 export async function GET(request: NextRequest) {
@@ -134,17 +133,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const cacheKey = [date, includeMeta ? "1" : "0"].join("|");
+  // Resolve portal context for city scoping
+  const portalContext = await resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request));
+  const portalCity = portalContext.filters.city || "Atlanta";
+
+  const cacheKey = [date, includeMeta ? "1" : "0", portalCity].join("|");
 
   const result = await getOrSetSharedCacheJson<Record<string, unknown>>(
     MUSIC_CACHE_NAMESPACE,
     cacheKey,
     MUSIC_CACHE_TTL_MS,
     async () => {
-      // Exclude Nashville events by filtering on venue city.
-      // The Atlanta portal should only show Atlanta-metro events.
-      const EXCLUDED_CITIES = ["Nashville", "Franklin", "Murfreesboro"];
-
       let musicQuery = supabase
         .from("events")
         .select(
@@ -154,10 +153,7 @@ export async function GET(request: NextRequest) {
           start_time,
           is_free,
           tags,
-          genres,
           age_policy,
-          ticket_url,
-          image_url,
           venue:venues!events_venue_id_fkey(
             id,
             name,
@@ -188,9 +184,9 @@ export async function GET(request: NextRequest) {
 
       const typedEvents = (events as unknown as MusicEvent[] | null) ?? [];
 
-      // Filter out events with no venue or in excluded cities (Nashville leak)
+      // Filter: must have venue, venue must be in portal city scope
       const shows: ShowShape[] = typedEvents
-        .filter((e) => e.venue !== null && !EXCLUDED_CITIES.includes(e.venue!.city ?? ""))
+        .filter((e) => isVenueInScope(e.venue, portalCity))
         .map(toShow);
 
       const responsePayload: Record<string, unknown> = { date, shows };
@@ -198,23 +194,36 @@ export async function GET(request: NextRequest) {
       if (includeMeta) {
         const dateWindowEnd = addDaysToDateString(date, MUSIC_META_LOOKAHEAD_DAYS);
 
-        const { data: dateRows } = await supabase
+        // Meta query: also apply feed gate and city scope
+        const { data: metaRows } = await supabase
           .from("events")
-          .select("start_date")
+          .select(
+            `
+            start_date,
+            venue:venues!events_venue_id_fkey(city)
+          `,
+          )
           .eq("category_id", "music")
+          .or("is_feed_ready.eq.true,is_feed_ready.is.null")
           .gte("start_date", date)
           .lte("start_date", dateWindowEnd)
           .not("start_time", "is", null)
           .order("start_date", { ascending: true })
           .limit(MUSIC_META_DATE_LIMIT);
 
-        const available_dates = [
-          ...new Set(
-            (
-              (dateRows as unknown as { start_date: string }[] | null) ?? []
-            ).map((r) => r.start_date),
-          ),
-        ];
+        type MetaRow = { start_date: string; venue: { city: string | null } | null };
+        const typedMetaRows = (metaRows as unknown as MetaRow[] | null) ?? [];
+
+        // Filter meta rows by city scope too
+        const scopedDates = typedMetaRows
+          .filter((r) => {
+            if (!r.venue) return false;
+            if (!r.venue.city) return true;
+            return r.venue.city.toLowerCase() === portalCity.toLowerCase();
+          })
+          .map((r) => r.start_date);
+
+        const available_dates = [...new Set(scopedDates)];
 
         responsePayload.meta = { available_dates };
       }
