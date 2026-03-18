@@ -12,10 +12,10 @@ import logging
 import requests
 from typing import Optional
 from dotenv import load_dotenv
-from anthropic import Anthropic
 from db import get_client
 from utils import fetch_page, extract_text_content
 from config import get_config
+from llm_client import generate_text
 from tags import VALID_VIBES, VALID_VENUE_TYPES as CANONICAL_VENUE_TYPES
 
 logger = logging.getLogger(__name__)
@@ -130,6 +130,7 @@ RULES:
 3. For vibes, only use values from the allowed list. Vibes are ATMOSPHERE and IDENTITY traits.
 4. For activities, use the activities list. Activities are things the venue OFFERS (dj nights, karaoke, trivia, etc).
 5. Set confidence (0.0-1.0) based on how clear the website content was.
+6. For description, write 1-2 sentences that would help someone decide whether to visit. Focus on what makes the place distinctive — what it IS, not what events are happening. Use a neutral editorial tone (not marketing copy). If the website doesn't reveal enough to write a useful description, use null.
 
 VIBES (atmosphere/identity — pick all that apply from this list only):
 {_CANONICAL_VIBES_STR}
@@ -159,6 +160,7 @@ If the venue clearly hosts scheduled public events (concerts, comedy shows, art 
 OUTPUT FORMAT:
 Return valid JSON matching this schema:
 {{
+  "description": "1-2 sentence venue description" | null,
   "vibes": ["vibe1", "vibe2"] | null,
   "activities": ["activity1", "activity2"] | null,
   "venue_type": "type" | null,
@@ -168,17 +170,14 @@ Return valid JSON matching this schema:
   "reasoning": "Brief explanation of findings"
 }}"""
 
-# Anthropic client singleton
-_anthropic_client: Optional[Anthropic] = None
-
-
-def get_anthropic_client() -> Anthropic:
-    """Get or create Anthropic client."""
-    global _anthropic_client
-    if _anthropic_client is None:
-        cfg = get_config()
-        _anthropic_client = Anthropic(api_key=cfg.llm.anthropic_api_key)
-    return _anthropic_client
+def _resolve_llm_provider_and_model() -> tuple[Optional[str], Optional[str]]:
+    cfg = get_config()
+    provider = (cfg.llm.provider or "").strip().lower()
+    if provider in ("", "auto"):
+        provider = "openai" if cfg.llm.openai_api_key else "anthropic"
+    if provider == "openai":
+        return "openai", cfg.llm.openai_model
+    return "anthropic", "claude-3-haiku-20240307"
 
 
 def haversine_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -391,24 +390,18 @@ def extract_venue_info_from_website(website_url: str) -> Optional[dict]:
             logger.warning(f"Insufficient content from {website_url}")
             return None
 
-        # Call Claude for extraction (use Haiku for cost efficiency)
-        client = get_anthropic_client()
-
         user_message = f"""Venue Website URL: {website_url}
 
 Website Content:
 {text_content}"""
 
-        response = client.messages.create(
-            model="claude-3-haiku-20240307",
-            max_tokens=512,
-            temperature=cfg.llm.temperature,
-            system=WEBSITE_ANALYSIS_PROMPT,
-            messages=[{"role": "user", "content": user_message}]
+        provider_override, model_override = _resolve_llm_provider_and_model()
+        response_text = generate_text(
+            WEBSITE_ANALYSIS_PROMPT,
+            user_message,
+            provider_override=provider_override,
+            model_override=model_override,
         )
-
-        # Parse the response
-        response_text = response.content[0].text
 
         # Extract JSON from response
         json_str = response_text
@@ -820,6 +813,12 @@ def enrich_websites_only(limit: int = 50, dry_run: bool = False) -> dict:
             # Build update dict - merge with existing data
             updates = {}
 
+            # Description: use new if missing
+            new_description = extracted.get("description")
+            if new_description and not venue.get("description"):
+                updates["description"] = new_description.strip()
+                print(f"  Description: {new_description[:80]}...")
+
             # Vibes: union of existing + new
             new_vibes = extracted.get("vibes")
             if new_vibes:
@@ -896,10 +895,10 @@ if __name__ == "__main__":
             exit(1)
         stats = enrich_hours_only(limit=args.limit, venue_type=args.venue_type, dry_run=args.dry_run)
     elif args.website_enrich:
-        # Website enrichment uses Anthropic API, not Google
+        # Website enrichment uses the shared LLM provider configuration
         cfg = get_config()
-        if not cfg.llm.anthropic_api_key:
-            print("Error: ANTHROPIC_API_KEY environment variable not set")
+        if not (cfg.llm.openai_api_key or cfg.llm.anthropic_api_key):
+            print("Error: no LLM API key configured (OPENAI_API_KEY or ANTHROPIC_API_KEY)")
             exit(1)
         stats = enrich_websites_only(limit=args.limit, dry_run=args.dry_run)
     elif args.addresses:

@@ -745,6 +745,24 @@ def main() -> int:
             cross_source.append("--dry-run")
         best_effort_steps.append(("Canonicalize cross-source duplicates", cross_source))
 
+        # Fuzzy cross-source dedup (catches near-duplicates missed by exact canonicalization)
+        fuzzy_dedup = [
+            py,
+            str(ROOT / "post_crawl_dedup.py"),
+            "--write",
+            "--days",
+            "30",
+        ]
+        if args.dry_run:
+            fuzzy_dedup = [
+                py,
+                str(ROOT / "post_crawl_dedup.py"),
+                "--dry-run",
+                "--days",
+                "30",
+            ]
+        best_effort_steps.append(("Fuzzy cross-source dedup", fuzzy_dedup))
+
     required_failures = 0
     best_effort_failures = 0
     stop_required_pipeline = False

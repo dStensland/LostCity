@@ -239,10 +239,19 @@ export function formatPriceDetailed(event: PriceableEvent): PriceFormatResult {
 
   // Has explicit price
   if (event.price_min !== null && event.price_min !== undefined) {
+    // $0 means free — don't show "$0"
+    if (event.price_min === 0) {
+      return { text: "Free", isFree: true, isEstimate: false };
+    }
     if (event.price_min === event.price_max || event.price_max === null) {
       return { text: `$${event.price_min}`, isFree: false, isEstimate: false };
     }
     return { text: `$${event.price_min}–${event.price_max}`, isFree: false, isEstimate: false };
+  }
+
+  // Unknown pricing (is_free is null/undefined, no price data) — nudge user to check venue
+  if (event.is_free === null || event.is_free === undefined) {
+    return { text: "See venue", isFree: false, isEstimate: false };
   }
 
   // Don't show estimated prices - return empty string for venue/category defaults

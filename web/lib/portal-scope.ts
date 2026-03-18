@@ -240,7 +240,7 @@ export function isVenueCityInScope(
   portalCity: string | null | undefined,
   options: CityFilterOptions = {}
 ): boolean {
-  const { allowMissingCity = true } = options;
+  const { allowMissingCity = false } = options;
 
   if (!portalCity) return true;
   if (!venueCity) return allowMissingCity;

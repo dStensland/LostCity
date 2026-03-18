@@ -65,6 +65,7 @@ from planning_capabilities import (
 )
 from utils import is_likely_non_event_image
 from closed_venues import CLOSED_VENUE_SLUGS
+from tba_policy import classify_tba_event
 
 logger = logging.getLogger(__name__)
 
@@ -833,6 +834,9 @@ def _step_set_flags(event_data: dict, ctx: InsertContext) -> dict:
 
     if event_data.get("price_min") is not None and event_data["price_min"] > 0:
         event_data["is_free"] = False
+    elif event_data.get("is_free") is False and event_data.get("price_min") is None:
+        # is_free=False with no price data is semantically "unknown" — normalize to None
+        event_data["is_free"] = None
 
     return event_data
 
@@ -844,9 +848,14 @@ def _step_show_signals(event_data: dict, ctx: InsertContext) -> dict:
     )
     if events_support_show_signal_columns():
         event_data.update(derive_show_signals(event_data))
+        # Stamp the check time whenever ticket_status is present so the
+        # planning horizon urgency signals stay current.
+        if event_data.get("ticket_status"):
+            event_data["ticket_status_checked_at"] = datetime.utcnow().isoformat()
     else:
         for field in signal_fields:
             event_data.pop(field, None)
+        event_data.pop("ticket_status_checked_at", None)
     return event_data
 
 
@@ -1039,43 +1048,80 @@ def _write_event_extraction(client, event_id: int, extraction_data: dict) -> Non
 # Importance inference
 # ---------------------------------------------------------------------------
 
-def _maybe_infer_importance(event_id: int, event_data: dict) -> None:
-    """Auto-set importance based on venue capacity tier. Never downgrades."""
-    if not writes_enabled():
-        return
+# ---------------------------------------------------------------------------
+# Importance inference: determines which events earn "major" tier
+# ---------------------------------------------------------------------------
+# An event earns "major" (= worth planning ahead for) if ANY of:
+#   1. Part of a festival (has festival_id or series→festival_id)
+#   2. Arena concert/show: capacity_tier 5, music or theater category
+#   3. Amphitheater headliner: capacity_tier 4, music category
+#   4. Has sellout_risk in (medium, high)
+#
+# EXCLUDED regardless of venue size:
+#   - Regular-season sports (category=sports)
+#   - Tours, fitness, community, unknown categories
+#   - Classes (is_class=true)
+#   - Admin/billing noise (title patterns)
+#   - Tier 3 and below venues (Tabernacle, Masquerade, Eastern, etc.)
 
-    venue_id = event_data.get("venue_id")
-    if not venue_id:
+_IMPORTANCE_ELIGIBLE_CATEGORIES_TIER5 = frozenset({"music", "theater", "comedy", "art", "food_drink", "family"})
+_IMPORTANCE_ELIGIBLE_CATEGORIES_TIER4 = frozenset({"music"})
+
+_IMPORTANCE_SKIP_TITLE_RES = [
+    re.compile(r"^tours?:", re.IGNORECASE),
+    re.compile(r"\btour\b.*\bpark\b", re.IGNORECASE),
+    re.compile(r"\bopen gym\b", re.IGNORECASE),
+    re.compile(r"\bworkout day\b", re.IGNORECASE),
+    re.compile(r"\bselect.a.seat\b", re.IGNORECASE),
+    re.compile(r"\bsymposium\b", re.IGNORECASE),
+    re.compile(r"\bconference\b", re.IGNORECASE),
+    re.compile(r"\btraining event\b", re.IGNORECASE),
+    re.compile(r"\bmember open\b", re.IGNORECASE),
+    re.compile(r"\bsuite season\b", re.IGNORECASE),
+    re.compile(r"\bsth deposit\b", re.IGNORECASE),
+    re.compile(r"^event for calendar\b", re.IGNORECASE),
+]
+
+
+def _maybe_infer_importance(event_id: int, event_data: dict) -> None:
+    """Auto-set importance='major' for events worth planning ahead for.
+
+    Criteria: arena/amphitheater concerts, festival programs, or sellout risk.
+    Regular-season sports, tours, classes, and tier-3-and-below venues are excluded.
+    Never downgrades.
+    """
+    if not writes_enabled():
         return
 
     current_importance = event_data.get("importance", "standard")
     if current_importance in ("flagship", "major"):
         return  # Already elevated, don't touch
 
-    venue = get_venue_by_id_cached(int(venue_id))
-    if not venue:
+    # Quick-reject: classes and title noise
+    if event_data.get("is_class"):
+        return
+    title = event_data.get("title", "")
+    if any(p.search(title) for p in _IMPORTANCE_SKIP_TITLE_RES):
         return
 
-    capacity_tier = venue.get("capacity_tier")
-
+    category = event_data.get("category", "")
     should_upgrade = False
-    if capacity_tier and capacity_tier >= 4:
+
+    # Path 1: sellout risk
+    if event_data.get("sellout_risk") in ("medium", "high"):
         should_upgrade = True
-    elif event_data.get("series_id"):
-        # Check if event is part of a festival via series
-        try:
-            client = get_client()
-            series = (
-                client.table("series")
-                .select("festival_id")
-                .eq("id", event_data["series_id"])
-                .maybeSingle()
-                .execute()
-            )
-            if series.data and series.data.get("festival_id"):
+
+    # Path 2: venue capacity — tier 5 (arenas/stadiums) or tier 4 (amphitheaters)
+    if not should_upgrade:
+        venue_id = event_data.get("venue_id")
+        if venue_id:
+            venue = get_venue_by_id_cached(int(venue_id))
+            capacity_tier = venue.get("capacity_tier") if venue else None
+
+            if capacity_tier and capacity_tier >= 5 and category in _IMPORTANCE_ELIGIBLE_CATEGORIES_TIER5:
                 should_upgrade = True
-        except Exception:
-            pass
+            elif capacity_tier and capacity_tier >= 4 and category in _IMPORTANCE_ELIGIBLE_CATEGORIES_TIER4:
+                should_upgrade = True
 
     if should_upgrade:
         try:
@@ -1084,9 +1130,9 @@ def _maybe_infer_importance(event_id: int, event_data: dict) -> None:
                 "id", event_id
             ).eq("importance", "standard").execute()
             logger.info(
-                "Auto-inferred importance='major' for event %s (venue tier=%s)",
+                "Auto-inferred importance='major' for event %s (category=%s)",
                 event_id,
-                capacity_tier,
+                category,
             )
         except Exception as e:
             logger.debug("importance inference failed for event %s: %s", event_id, e)
@@ -1345,12 +1391,20 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     if _IMPORTANCE_RANK.get(incoming_importance, 0) > _IMPORTANCE_RANK.get(existing_importance, 0):
         updates["importance"] = incoming_importance
 
+    # ticket_status: update when incoming has a value (show signals ran)
+    incoming_ticket_status = incoming.get("ticket_status")
+    if incoming_ticket_status and incoming_ticket_status != existing.get("ticket_status"):
+        updates["ticket_status"] = incoming_ticket_status
+
     # ticket_status_checked_at: always take the most recent
     incoming_checked = incoming.get("ticket_status_checked_at")
     existing_checked = existing.get("ticket_status_checked_at")
     if incoming_checked:
         if not existing_checked or incoming_checked > existing_checked:
             updates["ticket_status_checked_at"] = incoming_checked
+    elif incoming_ticket_status:
+        # ticket_status was set but checked_at wasn't stamped upstream — stamp it now
+        updates["ticket_status_checked_at"] = datetime.utcnow().isoformat()
 
     if not existing.get("portal_id"):
         incoming_portal_id = incoming.get("portal_id")
@@ -2180,24 +2234,39 @@ def update_event_extraction_metadata(
 def deactivate_tba_events() -> int:
     """
     Report future events that still have no start_time after enrichment.
-    Returns number of TBA events found.
+    Returns the number of actionable TBA events still remaining.
     """
     client = get_client()
     today = datetime.now().strftime("%Y-%m-%d")
 
     result = (
         client.table("events")
-        .select("id", count="exact")
+        .select("id,title,source_url,ticket_url", count="exact")
         .gte("start_date", today)
         .is_("start_time", "null")
         .eq("is_all_day", False)
         .execute()
     )
 
-    tba_count = result.count or 0
-    if tba_count > 0:
+    rows = result.data or []
+    actionable_count = 0
+    non_actionable_count = 0
+    for row in rows:
+        actionable, _reason = classify_tba_event(row)
+        if actionable:
+            actionable_count += 1
+        else:
+            non_actionable_count += 1
+
+    if actionable_count > 0:
         logger.info(
-            f"Found {tba_count} TBA events (missing start_time) — hidden from feeds via API filter"
+            "Found %s actionable TBA events (missing start_time) — hidden from feeds via API filter",
+            actionable_count,
+        )
+    if non_actionable_count > 0:
+        logger.info(
+            "Excluded %s intentional/structural date-only rows from actionable TBA count",
+            non_actionable_count,
         )
 
-    return tba_count
+    return actionable_count
