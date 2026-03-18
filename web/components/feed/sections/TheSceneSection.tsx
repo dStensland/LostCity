@@ -222,8 +222,9 @@ export default function TheSceneSection({ portalSlug }: Props) {
   const handleDayToggle = useCallback((day: string) => {
     triggerHaptic("selection");
     setActiveDays((prev) => {
-      if (prev.includes(day)) return prev.filter((d) => d !== day);
-      return [...prev, day];
+      // Single-select: tap to select, tap again to deselect (show all)
+      if (prev.length === 1 && prev[0] === day) return [];
+      return [day];
     });
     setShowAllRows(false);
   }, []);

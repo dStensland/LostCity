@@ -217,13 +217,8 @@ export default function RegularsView({ portalId, portalSlug }: RegularsViewProps
     (day: string) => {
       triggerHaptic("selection");
       setActiveWeekdays((prev) => {
-        const current = new Set(prev);
-        if (current.has(day)) {
-          current.delete(day);
-        } else {
-          current.add(day);
-        }
-        const next = Array.from(current);
+        // Single-select: tap to select, tap again to deselect (show all)
+        const next = prev.length === 1 && prev[0] === day ? [] : [day];
         syncUrl(activeActivities, next);
         return next;
       });
