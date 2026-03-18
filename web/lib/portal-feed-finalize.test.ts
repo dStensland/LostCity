@@ -13,13 +13,13 @@ describe("portal-feed-finalize", () => {
           id: "holiday-1",
           display_order: -2,
           max_items: 2,
-          auto_filter: { tags: ["ramadan"] },
+          auto_filter: { tags: ["st-patricks-day"] },
           block_type: "collapsible_events",
         },
       ],
       new Map([
         [
-          "ramadan",
+          "st-patricks-day",
           [
             { id: 1, title: "Iftar" },
             { id: 2, title: "Prayer" },

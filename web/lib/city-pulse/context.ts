@@ -64,12 +64,6 @@ const HOLIDAYS: HolidayConfig[] = [
     active: (_y, m, d) => m === 2 && d >= 10 && d <= 13,
   },
   {
-    slug: "ramadan",
-    title: "Ramadan",
-    accent_color: "#c5a028",
-    active: (_y, m, d) => (m === 3 && d >= 1) || (m === 4 && d <= 1),
-  },
-  {
     slug: "holi",
     title: "Holi",
     accent_color: "#e040fb",
