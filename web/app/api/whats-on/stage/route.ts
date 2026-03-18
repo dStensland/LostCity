@@ -9,7 +9,7 @@ import { getLocalDateString } from "@/lib/formats";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 import { applyFeedGate } from "@/lib/feed-gate";
 import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
-import { applyFederatedPortalScopeToQuery } from "@/lib/portal-scope";
+import { applyFederatedPortalScopeToQuery, isVenueCityInScope } from "@/lib/portal-scope";
 import { getPortalSourceAccess } from "@/lib/federation";
 
 // ISR: revalidate every 5 minutes
@@ -119,11 +119,10 @@ function toShow(event: StageEvent): StageShow {
   };
 }
 
-/** Check if a venue is in the portal's city scope */
+/** Check if a venue is in the portal's city scope (uses metro expansion) */
 function isVenueInScope(venue: StageVenue | null, portalCity: string): boolean {
   if (!venue) return false;
-  if (!venue.city) return false; // null city = unknown = exclude from city-scoped results
-  return venue.city.toLowerCase() === portalCity.toLowerCase();
+  return isVenueCityInScope(venue.city, portalCity);
 }
 
 export async function GET(request: NextRequest) {
@@ -266,12 +265,11 @@ export async function GET(request: NextRequest) {
         type MetaRow = { start_date: string; venue: { city: string | null } | null };
         const typedMetaRows = (metaRows as unknown as MetaRow[] | null) ?? [];
 
-        // Filter meta rows by city scope too
+        // Filter meta rows by city scope too (uses metro expansion)
         const scopedDates = typedMetaRows
           .filter((r) => {
             if (!r.venue) return false;
-            if (!r.venue.city) return false;
-            return r.venue.city.toLowerCase() === portalCity.toLowerCase();
+            return isVenueCityInScope(r.venue.city, portalCity);
           })
           .map((r) => r.start_date);
 
