@@ -47,6 +47,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     destinations=True,
     destination_details=True,
     venue_features=True,
+    venue_specials=True,
 )
 
 BASE_URL = "https://atlantabg.org"
@@ -233,6 +234,19 @@ def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityE
             "url": venue_data.get("website") or BASE_URL,
             "is_free": False,
             "sort_order": 40,
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "children-under-3-free-daytime-admission",
+            "title": "Children under 3 free daytime admission",
+            "description": f"{venue_name} offers free daytime admission for children under 3, which makes it materially easier to treat the garden as a family outing with very young kids.",
+            "price_note": "Children under 3 are free for daytime garden admission.",
+            "is_free": True,
+            "source_url": "https://atlantabg.org/tickets",
+            "category": "admission",
         },
     )
     return envelope

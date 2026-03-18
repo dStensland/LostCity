@@ -336,16 +336,6 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
           </div>
         );
 
-      // festivals block removed — big events covered by On the Horizon section
-      case "festivals":
-        return null;
-      case "community":
-        return null;
-
-      // experiences block removed — destinations now in browse section
-      case "experiences":
-        return null;
-
       case "cinema":
         return (
           <div

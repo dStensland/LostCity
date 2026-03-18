@@ -29,6 +29,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     destinations=True,
     destination_details=True,
     venue_features=True,
+    venue_specials=True,
 )
 
 VENUE_DATA = {
@@ -115,6 +116,19 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "url": BASE_URL,
             "is_free": True,
             "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "sunday-funday-free-admission",
+            "title": "Sunday FUNday free admission",
+            "description": "On the first Sunday of the month during the academic year, Sunday FUNdays offer free admission plus drop-in family art-making at the museum.",
+            "price_note": "Free admission during Sunday FUNday programming.",
+            "is_free": True,
+            "source_url": f"{BASE_URL}/childrens-and-family-programs",
+            "category": "admission",
         },
     )
     return envelope

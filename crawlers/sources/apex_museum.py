@@ -41,6 +41,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     destinations=True,
     destination_details=True,
     venue_features=True,
+    venue_specials=True,
 )
 
 VENUE_DATA = {
@@ -147,6 +148,19 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "url": BASE_URL,
             "is_free": False,
             "sort_order": 30,
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "children-under-4-free-admission",
+            "title": "Children under 4 free admission",
+            "description": "APEX keeps the visit materially easier for families with very young kids by offering free admission for children under 4.",
+            "price_note": "Children under 4 are free.",
+            "is_free": True,
+            "source_url": BASE_URL,
+            "category": "admission",
         },
     )
     return envelope

@@ -221,6 +221,51 @@ def test_build_child_event_marks_parade_free_and_suppresses_registration_ticket(
     assert "Ralph McGill Ave" in parade["description"]
 
 
+DAY_HOMEPAGE_HTML = """
+<html>
+  <head>
+    <script type="application/ld+json">
+      [{
+        "@context": "https://schema.org",
+        "@type": "Event",
+        "name": "404 Day 2026",
+        "startDate": "2026-04-04",
+        "endDate": "2026-04-04",
+        "isAccessibleForFree": true,
+        "url": "https://404day.com"
+      }]
+    </script>
+  </head>
+  <body><h1>404 Day</h1></body>
+</html>
+"""
+
+DAY_EVENTS_HTML = """
+<html><body>
+  <button class="card overflow-hidden !p-0 text-left group cursor-pointer w-full">
+    <div class="aspect-video relative overflow-hidden">
+      <img alt="404 Day" src="/_next/image?url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2Fmain.jpg&w=640&q=75" />
+    </div>
+    <div class="p-4">
+      <div class="text-[#FF8A3D] text-xs">April 4, 2026</div>
+      <h3>404 Day</h3>
+      <p>The main festival at Piedmont Park.</p>
+    </div>
+  </button>
+  <button class="card overflow-hidden !p-0 text-left group cursor-pointer w-full">
+    <div class="aspect-video relative overflow-hidden">
+      <img alt="Stankonia" src="/_next/image?url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2Fstankonia.jpg&w=640&q=75" />
+    </div>
+    <div class="p-4">
+      <div class="text-[#FF8A3D] text-xs">April 4, 2026</div>
+      <h3>404 Day: Old Atlanta vs. New Atlanta</h3>
+      <p>Legends and rising stars at Stankonia Studios.</p>
+    </div>
+  </button>
+</body></html>
+"""
+
+
 def test_crawl_stitches_parent_and_child_events():
     html_by_url = {
         "https://404weekend.com": HOMEPAGE_HTML,
@@ -229,21 +274,29 @@ def test_crawl_stitches_parent_and_child_events():
         "https://404weekend.com/event/404-day-weekend-city-takeover/": CITY_HTML,
         "https://404weekend.com/event/2nd-annual-404-day-parade/": PARADE_HTML,
         "https://404weekend.com/event/404-day-weekend-celebration-night-party/": NIGHT_HTML,
+        # Phase 2: 404day.com pages
+        "https://404day.com": DAY_HOMEPAGE_HTML,
+        "https://404day.com/events": DAY_EVENTS_HTML,
     }
 
     inserted_titles = []
 
     with patch("sources.four04_weekend._fetch_html", side_effect=lambda url: html_by_url[url]):
-        with patch("sources.four04_weekend.get_or_create_venue", side_effect=[11, 12, 13, 14]):
+        # 4 weekend venues + 2 from 404day.com (Piedmont Park + Stankonia)
+        with patch("sources.four04_weekend.get_or_create_venue", side_effect=[11, 12, 13, 14, 15, 16]):
             with patch("sources.four04_weekend.find_event_by_hash", return_value=None):
                 with patch("sources.four04_weekend.insert_event", side_effect=lambda record: inserted_titles.append(record["title"])):
                     found, new, updated = crawl({"id": 99, "slug": "404-weekend"})
 
-    assert found == 4
-    assert new == 4
+    # 4 weekend + 2 from 404day.com = 6
+    assert found == 6
+    assert new == 6
     assert updated == 0
     assert inserted_titles[0] == "404 Day Weekend 2026"
     assert "404 Day Weekend City Takeover" in inserted_titles
     assert "2nd Annual 404 Day Parade" in inserted_titles
     assert "404 Day Weekend Celebration & Night Party" in inserted_titles
+    # 404day.com events folded in
+    assert "404 Day 2026" in inserted_titles
+    assert "404 Day: Old Atlanta vs. New Atlanta" in inserted_titles
     assert normalize_title("404 Day! Weekend Celebration &amp; Night Party") == "404 Day Weekend Celebration & Night Party"

@@ -12,3 +12,6 @@ def test_build_destination_envelope_for_carlos_museum() -> None:
         "free-emory-art-and-antiquities-anchor",
         "compact-campus-museum-stop",
     }
+    assert {special["slug"] for special in envelope.venue_specials} == {
+        "sunday-funday-free-admission",
+    }

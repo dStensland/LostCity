@@ -38,6 +38,19 @@ import type { Metadata } from "next";
 
 export const revalidate = 300;
 
+/** Suppresses ambient background effects for portals with their own visual language. */
+function AmbientSuppression() {
+  return (
+    <style>{`
+      body::before { opacity: 0 !important; }
+      body::after { opacity: 0 !important; }
+      .ambient-glow { opacity: 0 !important; }
+      .rain-overlay { display: none !important; }
+      .cursor-glow { display: none !important; }
+    `}</style>
+  );
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -180,13 +193,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
     const marketplacePersona = normalizeMarketplacePersona(searchParamsData.persona);
     return (
       <div className="min-h-screen overflow-x-hidden bg-[var(--mkt-ivory)] text-[var(--mkt-charcoal)]">
-        <style>{`
-          body::before { opacity: 0 !important; }
-          body::after { opacity: 0 !important; }
-          .ambient-glow { opacity: 0 !important; }
-          .rain-overlay { display: none !important; }
-          .cursor-glow { display: none !important; }
-        `}</style>
+        <AmbientSuppression />
         <Suspense fallback={null}>
           <DetailViewRouter portalSlug={portal.slug}>
             <MarketplaceTemplate portal={portal} persona={marketplacePersona} />
@@ -201,15 +208,8 @@ export default async function PortalPage({ params, searchParams }: Props) {
     const dogView = searchParamsData.view;
     return (
       <div className="min-h-screen overflow-x-hidden" style={{ background: "#FFFBEB" }}>
-        <style>{`
-          body::before { opacity: 0 !important; }
-          body::after { opacity: 0 !important; }
-          .ambient-glow { opacity: 0 !important; }
-          .rain-overlay { display: none !important; }
-          .cursor-glow { display: none !important; }
-          .dog-portal-root { ${DOG_PORTAL_VAR_OVERRIDES} }
-          .dog-portal-root ${DOG_DETAIL_VIEW_CSS}
-        `}</style>
+        <AmbientSuppression />
+        <style>{`.dog-portal-root { ${DOG_PORTAL_VAR_OVERRIDES} }.dog-portal-root ${DOG_DETAIL_VIEW_CSS}`}</style>
         <div className="dog-portal-root">
           <Suspense fallback={null}>
             <DogHeader portalSlug={portal.slug} />
@@ -245,13 +245,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
     const isExclusive = portal.portal_type === "business" && !portal.parent_portal_id;
     return (
       <div className="min-h-screen overflow-x-hidden">
-        <style>{`
-          body::before { opacity: 0 !important; }
-          body::after { opacity: 0 !important; }
-          .ambient-glow { opacity: 0 !important; }
-          .rain-overlay { display: none !important; }
-          .cursor-glow { display: none !important; }
-        `}</style>
+        <AmbientSuppression />
         <Suspense fallback={null}>
           <ATLittleHeader />
         </Suspense>
@@ -272,13 +266,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
   if (vertical === "adventure") {
     return (
       <div className="min-h-screen overflow-x-hidden">
-        <style>{`
-          body::before { opacity: 0 !important; }
-          body::after { opacity: 0 !important; }
-          .ambient-glow { opacity: 0 !important; }
-          .rain-overlay { display: none !important; }
-          .cursor-glow { display: none !important; }
-        `}</style>
+        <AmbientSuppression />
         <Suspense fallback={null}>
           <AdventureHeader />
         </Suspense>
@@ -390,15 +378,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(portalPageSchema) }}
       />
-      {disableAmbientEffects && (
-        <style>{`
-          body::before { opacity: 0 !important; }
-          body::after { opacity: 0 !important; }
-          .ambient-glow { opacity: 0 !important; }
-          .rain-overlay { display: none !important; }
-          .cursor-glow { display: none !important; }
-        `}</style>
-      )}
+      {disableAmbientEffects && <AmbientSuppression />}
       {!disableAmbientEffects && <AmbientBackground />}
       <PortalHeader
         portalSlug={portal.slug}

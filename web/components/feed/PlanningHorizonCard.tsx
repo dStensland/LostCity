@@ -29,7 +29,7 @@ function UrgencyPill({ urgency }: { urgency: NonNullable<PlanningUrgency> }) {
   switch (urgency.type) {
     case "just_on_sale":
       return (
-        <span className={`${base} bg-[var(--coral)]/15 text-[var(--coral)] border border-[var(--coral)]/30 animate-pulse`}>
+        <span className={`${base} bg-[var(--coral)]/15 text-[var(--coral)] border border-[var(--coral)]/30 motion-safe:animate-pulse`}>
           {urgency.label}
         </span>
       );
@@ -91,8 +91,9 @@ function formatPrice(
   priceMax: number | null,
 ): string | null {
   if (isFree) return "Free";
-  if (!priceMin && !priceMax) return null;
-  if (priceMin && priceMax && priceMin !== priceMax) {
+  if (priceMin == null && priceMax == null) return null;
+  if (priceMin === 0 && (priceMax === 0 || priceMax == null)) return "Free";
+  if (priceMin != null && priceMax != null && priceMin !== priceMax) {
     return `$${priceMin}\u2013$${priceMax}`;
   }
   if (priceMin) return `From $${priceMin}`;
@@ -125,7 +126,7 @@ function TicketCTA({ event }: { event: PlanningHorizonCardProps["event"] }) {
         <button
           type="button"
           onClick={openExternal}
-          className="block w-full py-2 text-center rounded-lg font-mono text-xs font-medium bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)] hover:bg-[var(--dusk)] hover:border-[var(--soft)]/30 transition-colors cursor-pointer"
+          className="block w-full min-h-[44px] flex items-center justify-center text-center rounded-lg font-mono text-xs font-medium bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)] hover:bg-[var(--dusk)] hover:border-[var(--soft)]/30 transition-colors cursor-pointer"
         >
           {stale ? "Check Venue Site" : "Learn More"}
         </button>
@@ -133,14 +134,15 @@ function TicketCTA({ event }: { event: PlanningHorizonCardProps["event"] }) {
     );
   }
 
-  // Free event with ticket URL
-  if (is_free) {
+  // Free event (is_free flag or ticket_status='free') with ticket URL
+  const effectivelyFree = is_free === true || ticket_status === "free";
+  if (effectivelyFree) {
     return (
       <div className="mt-auto pt-3">
         <button
           type="button"
           onClick={openExternal}
-          className="block w-full py-2 text-center rounded-lg font-mono text-xs font-medium bg-[var(--neon-green)]/15 text-[var(--neon-green)] border border-[var(--neon-green)]/30 hover:bg-[var(--neon-green)]/25 transition-colors cursor-pointer"
+          className="block w-full min-h-[44px] flex items-center justify-center text-center rounded-lg font-mono text-xs font-medium bg-[var(--neon-green)]/15 text-[var(--neon-green)] border border-[var(--neon-green)]/30 hover:bg-[var(--neon-green)]/25 transition-colors cursor-pointer"
         >
           Get Tickets (Free)
         </button>
@@ -154,7 +156,7 @@ function TicketCTA({ event }: { event: PlanningHorizonCardProps["event"] }) {
       <button
         type="button"
         onClick={openExternal}
-        className="block w-full py-2 text-center rounded-lg font-mono text-xs font-medium bg-[var(--coral)] text-[var(--void)] hover:opacity-90 transition-opacity cursor-pointer"
+        className="block w-full min-h-[44px] flex items-center justify-center text-center rounded-lg font-mono text-xs font-medium bg-[var(--coral)] text-[var(--void)] hover:opacity-90 transition-opacity cursor-pointer"
       >
         Get Tickets
       </button>
@@ -253,7 +255,7 @@ export const PlanningHorizonCard = memo(function PlanningHorizonCard({
 
         {/* Title */}
         <h3
-          className={`text-lg font-semibold leading-snug mb-1 ${
+          className={`text-lg font-semibold leading-snug mb-1 line-clamp-2 ${
             isCancelled
               ? "line-through text-[var(--muted)]"
               : isSoldOut

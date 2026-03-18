@@ -190,8 +190,8 @@ export default function LineupSection({
 
   const [activeTabId, setActiveTabId] = useState(TABS[0].id);
   const [activeChipId, setActiveChipId] = useState("all");
-  const [showAllRows, setShowAllRows] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [tabFetchError, setTabFetchError] = useState<string | null>(null);
 
   // Login nudge state
   const filterInteractionCount = useRef(0);
@@ -283,14 +283,13 @@ export default function LineupSection({
   const handleChipTap = useCallback((chipId: string) => {
     triggerHaptic("selection");
     setActiveChipId(chipId);
-    setShowAllRows(false);
     trackFilterInteraction();
   }, [trackFilterInteraction]);
 
   const handleTabClick = useCallback(async (tabId: string) => {
     setActiveTabId(tabId);
+    setTabFetchError(null);
     // Filter persists across tabs — do NOT reset activeChipId
-    setShowAllRows(false);
     if (tabId !== "today" && !lazyData[tabId] && fetchTab) {
       setLoadingTab(tabId);
       try {
@@ -314,6 +313,9 @@ export default function LineupSection({
             ),
           }));
         }
+      } catch {
+        const activeLabel = TABS.find((t) => t.id === tabId)?.label ?? tabId;
+        setTabFetchError(`Couldn't load ${activeLabel.toLowerCase()} events. Tap to retry.`);
       } finally {
         setLoadingTab(null);
       }
@@ -641,8 +643,19 @@ export default function LineupSection({
         </div>
       )}
 
+      {/* Tab fetch error */}
+      {tabFetchError && loadingTab !== activeTabId && (
+        <button
+          type="button"
+          onClick={() => handleTabClick(activeTabId)}
+          className="w-full py-6 text-center font-mono text-xs text-[var(--muted)] hover:text-[var(--soft)] transition-colors"
+        >
+          {tabFetchError}
+        </button>
+      )}
+
       {/* Event grid */}
-      {loadingTab !== activeTabId && (
+      {loadingTab !== activeTabId && !tabFetchError && (
         <>
           {visibleItems.length > 0 && (
             <div className="flex gap-3 mt-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-1">

@@ -326,6 +326,7 @@ SOURCE_OVERRIDES = {
     "the-maker-station": "sources.maker_station",
     "chattahoochee-food-works": "sources.the_works",
     "wild-heaven-beer-avondale": "sources.wild_heaven_beer",
+    "woodstock-arts-theatre": "sources.woodstock_arts_theatre",
     # Support portal slug-to-filename mismatches
     "good-samaritan-health-center": "sources.good_samaritan_health",
     "red-cross-cpr-atlanta": "sources.red_cross_cpr",

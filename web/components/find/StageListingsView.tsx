@@ -74,7 +74,7 @@ export default function StageListingsView({ portalId, portalSlug }: StageListing
   const prefetchDate = useCallback((date: string) => {
     if (cacheRef.current.has(date)) return;
     cacheRef.current.set(date, { shows: [], loaded: false });
-    const params = new URLSearchParams({ date });
+    const params = new URLSearchParams({ date, portal: portalSlug });
     fetch(`/api/whats-on/stage?${params}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data: StageApiResponse | null) => {
@@ -87,7 +87,7 @@ export default function StageListingsView({ portalId, portalSlug }: StageListing
       .catch(() => {
         cacheRef.current.delete(date);
       });
-  }, []);
+  }, [portalSlug]);
 
   // Fetch shows for a given date (checks cache first)
   const fetchShows = useCallback(
@@ -109,7 +109,7 @@ export default function StageListingsView({ portalId, portalSlug }: StageListing
 
       setLoading(true);
       try {
-        const params = new URLSearchParams({ date });
+        const params = new URLSearchParams({ date, portal: portalSlug });
         const res = await fetch(`/api/whats-on/stage?${params}`);
         if (!res.ok) return;
         const data: StageApiResponse = await res.json();
@@ -128,7 +128,7 @@ export default function StageListingsView({ portalId, portalSlug }: StageListing
         setLoading(false);
       }
     },
-    [meta?.available_dates, prefetchDate],
+    [meta?.available_dates, prefetchDate, portalSlug],
   );
 
   // Fetch meta + initial data on mount
@@ -137,7 +137,7 @@ export default function StageListingsView({ portalId, portalSlug }: StageListing
       setMetaLoading(true);
       try {
         const dateStr = getLocalDateString(new Date());
-        const params = new URLSearchParams({ date: dateStr, meta: "true" });
+        const params = new URLSearchParams({ date: dateStr, meta: "true", portal: portalSlug });
         const res = await fetch(`/api/whats-on/stage?${params}`);
         if (!res.ok) return;
         const data: StageApiResponse = await res.json();

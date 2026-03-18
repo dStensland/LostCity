@@ -15,3 +15,6 @@ def test_build_destination_envelope_projects_family_garden_details() -> None:
         "indoor-conservatories-and-weather-flex-space",
         "shade-and-conservatory-reset-flex",
     }
+    assert {special["slug"] for special in envelope.venue_specials} == {
+        "children-under-3-free-daytime-admission",
+    }

@@ -9,6 +9,9 @@ import { getLocalDateString } from "@/lib/formats";
 import { isChainCinemaVenue } from "@/lib/cinema-filter";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 import { applyFeedGate } from "@/lib/feed-gate";
+import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
+import { applyFederatedPortalScopeToQuery, isVenueCityInScope } from "@/lib/portal-scope";
+import { getPortalSourceAccess } from "@/lib/federation";
 
 // Cache 5 min public, 10 min stale-while-revalidate
 export const revalidate = 300;
@@ -32,6 +35,7 @@ type ShowtimeVenue = {
   name: string;
   slug: string;
   neighborhood: string | null;
+  city: string | null;
 };
 type ShowtimeSeries = {
   id: string;
@@ -278,6 +282,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Resolve portal context for city + portal_id scoping
+  const portalContext = await resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request));
+  const portalCity = portalContext.filters.city || "Atlanta";
+  const portalId = portalContext.portalId;
+  const sourceAccess = portalId ? await getPortalSourceAccess(portalId) : null;
+
   const cacheKey = [
     date,
     mode,
@@ -285,6 +295,8 @@ export async function GET(request: NextRequest) {
     special ? "1" : "0",
     includeMeta ? "1" : "0",
     includeChains ? "1" : "0",
+    portalCity,
+    portalId ?? "none",
   ].join("|");
   const result = await getOrSetSharedCacheJson<Record<string, unknown>>(
     SHOWTIMES_CACHE_NAMESPACE,
@@ -307,7 +319,8 @@ export async function GET(request: NextRequest) {
         id,
         name,
         slug,
-        neighborhood
+        neighborhood,
+        city
       ),
       series:series!events_series_id_fkey(
         id,
@@ -326,6 +339,11 @@ export async function GET(request: NextRequest) {
         .order("start_time", { ascending: true })
         .limit(SHOWTIMES_EVENT_LIMIT);
       showtimesQuery = applyFeedGate(showtimesQuery);
+      showtimesQuery = applyFederatedPortalScopeToQuery(showtimesQuery, {
+        portalId,
+        publicOnlyWhenNoPortal: true,
+        sourceIds: sourceAccess?.sourceIds ?? [],
+      });
       const { data: events, error } = await showtimesQuery;
 
       if (error) {
@@ -333,9 +351,15 @@ export async function GET(request: NextRequest) {
       }
 
       const typedEvents = (events as unknown as ShowtimeEvent[] | null) || [];
+
+      // Filter: must have venue and venue must be in portal city scope
+      const cityFilteredEvents = typedEvents.filter((e) =>
+        e.venue && isVenueCityInScope(e.venue.city, portalCity),
+      );
+
       const venueFilteredEvents = includeChains
-        ? typedEvents
-        : typedEvents.filter((event) => !isChainCinemaVenue(event.venue));
+        ? cityFilteredEvents
+        : cityFilteredEvents.filter((event) => !isChainCinemaVenue(event.venue));
 
       // Split into regular showtimes vs special screenings
       const regularEvents = venueFilteredEvents.filter((e) =>
@@ -376,7 +400,7 @@ export async function GET(request: NextRequest) {
     // Explicit limit to avoid PostgREST default of 1000 truncating dates.
     let availableDates: string[] = [];
     if (includeChains) {
-      const { data: dateRows } = await supabase
+      let chainsMetaQuery = supabase
         .from("events")
         .select("start_date")
         .eq("category_id", "film")
@@ -386,6 +410,12 @@ export async function GET(request: NextRequest) {
         .not("start_time", "is", null)
         .order("start_date", { ascending: true })
         .limit(SHOWTIMES_META_DATE_LIMIT);
+      chainsMetaQuery = applyFederatedPortalScopeToQuery(chainsMetaQuery, {
+        portalId,
+        publicOnlyWhenNoPortal: true,
+        sourceIds: sourceAccess?.sourceIds ?? [],
+      });
+      const { data: dateRows } = await chainsMetaQuery;
 
       availableDates = [
         ...new Set(
@@ -395,14 +425,15 @@ export async function GET(request: NextRequest) {
         ),
       ];
     } else {
-      const { data: dateRows } = await supabase
+      let indieMetaQuery = supabase
         .from("events")
         .select(
           `
           start_date,
           venue:venues!events_venue_id_fkey(
             name,
-            slug
+            slug,
+            city
           )
         `,
         )
@@ -413,12 +444,22 @@ export async function GET(request: NextRequest) {
         .not("start_time", "is", null)
         .order("start_date", { ascending: true })
         .limit(SHOWTIMES_META_DATE_LIMIT);
+      indieMetaQuery = applyFederatedPortalScopeToQuery(indieMetaQuery, {
+        portalId,
+        publicOnlyWhenNoPortal: true,
+        sourceIds: sourceAccess?.sourceIds ?? [],
+      });
+      const { data: dateRows } = await indieMetaQuery;
 
       const filteredRows = (
         (dateRows as unknown as
           | { start_date: string; venue: ShowtimeVenue | null }[]
           | null) || []
-      ).filter((row) => !isChainCinemaVenue(row.venue));
+      ).filter(
+        (row) =>
+          isVenueCityInScope(row.venue?.city, portalCity) &&
+          !isChainCinemaVenue(row.venue),
+      );
 
       availableDates = [...new Set(filteredRows.map((row) => row.start_date))];
     }

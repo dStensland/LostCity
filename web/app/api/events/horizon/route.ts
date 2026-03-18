@@ -76,8 +76,8 @@ export async function GET(request: Request) {
       .order("start_date", { ascending: true })
       .limit(40); // over-fetch to allow for city filtering
 
-    // Scope to portal when provided — use strict portal_id match (no null fallback)
-    // to prevent cross-city leakage from unattributed events
+    // Scope to portal when provided — includes null portal_id as fallback,
+    // with filterByPortalCity below catching cross-city leakage
     if (portalId) {
       query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
     }

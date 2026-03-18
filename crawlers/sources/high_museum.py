@@ -158,6 +158,19 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "category": "admission",
         },
     )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "children-5-and-under-free",
+            "title": "Children 5 and under free",
+            "description": "Children age 5 and under receive free admission, which lowers the cost of treating the High as a family museum day even outside the free monthly window.",
+            "price_note": "Children 5 and under are free.",
+            "is_free": True,
+            "source_url": BASE_URL,
+            "category": "admission",
+        },
+    )
     return envelope
 
 # Known event type categories — matched as exact lines only, not substrings

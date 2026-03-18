@@ -66,7 +66,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
     if (cacheRef.current.has(date)) return;
     // Mark as pending to prevent duplicate prefetches
     cacheRef.current.set(date, { shows: [], loaded: false });
-    const params = new URLSearchParams({ date });
+    const params = new URLSearchParams({ date, portal: portalSlug });
     fetch(`/api/whats-on/music?${params}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data: MusicApiResponse | null) => {
@@ -79,7 +79,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
       .catch(() => {
         cacheRef.current.delete(date);
       });
-  }, []);
+  }, [portalSlug]);
 
   // Fetch shows for a given date (checks cache first)
   const fetchShows = useCallback(
@@ -102,7 +102,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
 
       setLoading(true);
       try {
-        const params = new URLSearchParams({ date });
+        const params = new URLSearchParams({ date, portal: portalSlug });
         const res = await fetch(`/api/whats-on/music?${params}`);
         if (!res.ok) return;
         const data: MusicApiResponse = await res.json();
@@ -122,7 +122,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
         setLoading(false);
       }
     },
-    [meta?.available_dates, prefetchDate],
+    [meta?.available_dates, prefetchDate, portalSlug],
   );
 
   // Fetch meta + initial data on mount
@@ -131,7 +131,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
       setMetaLoading(true);
       try {
         const dateStr = getLocalDateString(new Date());
-        const params = new URLSearchParams({ date: dateStr, meta: "true" });
+        const params = new URLSearchParams({ date: dateStr, meta: "true", portal: portalSlug });
         const res = await fetch(`/api/whats-on/music?${params}`);
         if (!res.ok) return;
         const data: MusicApiResponse = await res.json();

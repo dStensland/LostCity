@@ -8,7 +8,7 @@
  * Minimum 2 items to render.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CityPulseSection, CityPulseEventItem } from "@/lib/city-pulse/types";
 import { Binoculars } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
@@ -39,6 +39,14 @@ export default function PlanningHorizonSection({ section, portalSlug }: Props) {
   );
 
   const [activeMonth, setActiveMonth] = useState<string | null>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+
+  // Reset carousel scroll position when month filter changes
+  useEffect(() => {
+    if (carouselRef.current) {
+      carouselRef.current.scrollLeft = 0;
+    }
+  }, [activeMonth]);
 
   // Filter events by selected month (null = show all)
   const filteredItems = useMemo(() => {
@@ -72,7 +80,7 @@ export default function PlanningHorizonSection({ section, portalSlug }: Props) {
           <button
             onClick={() => setActiveMonth(null)}
             className={[
-              "shrink-0 px-2.5 py-1 rounded-full font-mono text-2xs font-medium tracking-wide transition-all whitespace-nowrap",
+              "shrink-0 px-3 py-2 min-h-[44px] flex items-center justify-center rounded-full font-mono text-2xs font-medium tracking-wide transition-all whitespace-nowrap",
               activeMonth === null
                 ? "border"
                 : "text-[var(--muted)] hover:text-[var(--soft)] border border-transparent hover:border-[var(--twilight)]/40",
@@ -98,7 +106,7 @@ export default function PlanningHorizonSection({ section, portalSlug }: Props) {
                 key={monthKey}
                 onClick={() => setActiveMonth(monthKey)}
                 className={[
-                  "shrink-0 px-2.5 py-1 rounded-full font-mono text-2xs font-medium tracking-wide transition-all whitespace-nowrap",
+                  "shrink-0 px-3 py-2 min-h-[44px] flex items-center justify-center rounded-full font-mono text-2xs font-medium tracking-wide transition-all whitespace-nowrap",
                   isActive
                     ? "border"
                     : "text-[var(--muted)] hover:text-[var(--soft)] border border-transparent hover:border-[var(--twilight)]/40",
@@ -121,7 +129,7 @@ export default function PlanningHorizonSection({ section, portalSlug }: Props) {
       )}
 
       {/* Horizontal scroll carousel */}
-      <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 -mx-4 px-4">
+      <div ref={carouselRef} className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 -mx-4 px-4">
         {filteredItems.map((item) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const rawEvent = item.event as any;

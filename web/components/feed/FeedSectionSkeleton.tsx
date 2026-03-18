@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HorseIcon } from "@/components/ui/HorseSpinner";
 
 interface FeedSectionSkeletonProps {
@@ -269,21 +269,26 @@ export default function FeedSectionSkeleton({
  *   return showSkeleton ? <FeedSectionSkeleton /> : <Content />;
  */
 export function useMinSkeletonDelay(isLoading: boolean, minMs = 400): boolean {
-  const [minElapsed, setMinElapsed] = useState(false);
-  const [wasLoading, setWasLoading] = useState(isLoading);
+  const [showSkeleton, setShowSkeleton] = useState(isLoading);
+  const loadStartRef = useRef<number>(isLoading ? Date.now() : 0);
 
   useEffect(() => {
     if (isLoading) {
-      // Reset the timer whenever loading restarts
-      setMinElapsed(false);
-      setWasLoading(true);
-      const t = setTimeout(() => setMinElapsed(true), minMs);
-      return () => clearTimeout(t);
+      // Loading started — record start time, show skeleton
+      loadStartRef.current = Date.now();
+      setShowSkeleton(true);
+    } else if (loadStartRef.current > 0) {
+      // Loading ended — wait for remaining minimum time before hiding
+      const elapsed = Date.now() - loadStartRef.current;
+      const remaining = minMs - elapsed;
+      if (remaining <= 0) {
+        setShowSkeleton(false);
+      } else {
+        const t = setTimeout(() => setShowSkeleton(false), remaining);
+        return () => clearTimeout(t);
+      }
     }
   }, [isLoading, minMs]);
 
-  // Show skeleton if: still loading OR loading just finished but min time hasn't elapsed
-  if (isLoading) return true;
-  if (wasLoading && !minElapsed) return true;
-  return false;
+  return showSkeleton;
 }

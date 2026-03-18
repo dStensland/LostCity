@@ -15,6 +15,7 @@ Sources:
 - What Now Atlanta (sitemap index — monthly sub-sitemaps)
 - Axios Atlanta (RSS via tag feed)
 - ATL Bucket List (RSS — venue-rich listicles)
+- Atlanta Downtown Blog (RSS — CAP/ADID neighborhood content, small biz spotlights, holiday guides)
 
 Phase 1: Discover articles via RSS/sitemap/sitemap-index
 Phase 2: Fetch each article page, extract body text, match venue names
@@ -109,6 +110,27 @@ EDITORIAL_SOURCES: dict[str, dict] = {
         "feed_url": "https://atlbucketlist.com/feed/",
         "method": "rss",
         "display_name": "ATL Bucket List",
+    },
+    "atlantadowntown_blog": {
+        # Central Atlanta Progress / ADID Downtown blog.
+        # Publishes holiday guides, small business spotlights, neighborhood
+        # feature posts, and seasonal content — all venue-rich and Downtown-focused.
+        # WordPress-based site: try standard /feed/ first; fall back to sitemap.
+        "feed_url": "https://www.atlantadowntown.com/downtown-blog/feed/",
+        "method": "rss",
+        "display_name": "Atlanta Downtown Blog",
+        # Only pick up articles that mention identifiable venue names — the blog
+        # covers a mix of civic news and neighborhood content. We rely on the
+        # standard venue-matching pipeline to filter relevance.
+        "url_filter": None,
+    },
+    "visit_roswell_blog": {
+        # Roswell CVB blog — dining spotlights, event roundups, Michelin coverage,
+        # new venue openings, and seasonal guides for the Canton Street corridor
+        # and broader Roswell area. Venue-rich editorial.
+        "feed_url": "https://www.visitroswellga.com/blog/rss.xml",
+        "method": "rss",
+        "display_name": "Visit Roswell Blog",
     },
 }
 

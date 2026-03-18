@@ -1128,9 +1128,9 @@ This is the current autonomous burn-down queue from the live production audit. I
 
 ### Batch E: Specials and cheap/free recurring value
 
-- current production state is still thin, but no longer singleton-thin:
-  - `active_specials=3`
-  - `free_or_low_cost_specials=3`
+- current production state is still thin relative to total destination coverage, but it is now a real layer:
+  - `active_specials=7`
+  - `free_or_low_cost_specials=7`
 - targets:
   - family museum free windows
   - recurring low-cost admission offers
@@ -1138,15 +1138,15 @@ This is the current autonomous burn-down queue from the live production audit. I
 
 ### Current production floor after this queue setup
 
-- `venue_count=593`
-- `target_type_count=144`
-- `with_destination_details=144`
-- `with_features=144`
-- `with_specials=3`
+- `venue_count=606`
+- `target_type_count=142`
+- `with_destination_details=142`
+- `with_features=142`
+- `with_specials=6`
 - detail coverage still worth improving:
-  - `with_parking_type=82`
-  - `with_accessibility_notes=69`
-  - `with_practical_notes=118`
+  - `with_parking_type=80`
+  - `with_accessibility_notes=67`
+  - `with_practical_notes=116`
 
 ### Latest execution notes
 
@@ -1177,17 +1177,107 @@ This is the current autonomous burn-down queue from the live production audit. I
 - the live production Family audit is now clean on target-type destination coverage:
   - `gap_candidates=[]`
   - every current Family-linked target-type venue row has both `venue_destination_details` and active `venue_features`
-- the free/cheap-value layer is now starting to look like a real graph instead of a single exception:
-  - `high-museum` keeps `free-second-sunday-admission`
+- the free/cheap-value layer is now a meaningful graph instead of a single exception:
+  - `high-museum-of-art` carries `free-second-sunday-admission` and `children-5-and-under-free`
   - `atlanta-contemporary` now carries `always-free-gallery-admission`
   - `fernbank-science-center` now carries `always-free-general-admission`
   - `cdc-museum` now carries `always-free-museum-admission`
+  - `michael-c-carlos-museum` now carries `sunday-funday-free-admission`
+  - `atlanta-botanical-garden` and `atlanta-botanical-garden-gainesville` now carry `children-under-3-free-daytime-admission`
+  - `apex-museum` now carries `children-under-4-free-admission`
 - the next real gaps are now depth gaps, not coverage gaps:
   - more Family specials and cheap/free recurring value
   - more parking / accessibility / practical-note depth across the long tail
   - stronger water-play / playground / outing-shape specificity where current rows are still generic
 
 This queue is now the default execution order unless a stronger production gap appears.
+
+### Next autonomous burn-down
+
+This is the current default execution order for continued Family destination work without needing re-prioritization every turn.
+
+#### Batch F: Family admission-value expansion
+
+Goal: turn the current specials layer from `7` useful offers into a real family-planning filter.
+
+Priority targets:
+- `childrens-museum-atlanta`
+- `fernbank-museum`
+- `georgia-aquarium`
+- `atlanta-history-center`
+- `civil-rights-center`
+- `museum-of-illusions-atlanta`
+
+Acceptance criteria:
+- add only durable, official, recurring admission-value facts
+- prefer age-based free windows, recurring free days, and durable member/public access rules
+- do not encode one-off promo copy or seasonal marketing pages as destination truth
+
+#### Batch G: Long-tail practical-depth pass
+
+Goal: improve outing usability where coverage exists but planning confidence is still thin.
+
+Priority fields:
+- `parking_type`
+- `best_time_of_day`
+- `practical_notes`
+- `accessibility_notes`
+
+Priority target clusters:
+- libraries with only minimal utility framing
+- rec centers with generic family framing but weak practical notes
+- smaller museum / culture stops that still read like descriptions instead of planning advice
+
+Acceptance criteria:
+- practical notes should answer visit-shape questions, not repeat the venue description
+- accessibility notes should describe friction and fit, not generic inclusivity language
+
+#### Batch H: Park utility specificity
+
+Goal: make the park graph more decision-useful for actual family outings.
+
+Priority targets:
+- top Atlanta parks already visible in `atlanta-families`
+- broad-map system rows that still only carry generic park amenity language
+
+Priority utility wedges:
+- bathrooms / reset points
+- shade / heat management
+- stroller friction
+- picnic / basecamp quality
+- “short stop” vs “half-day” vs “full-day” reality
+
+Acceptance criteria:
+- prefer official-source support
+- avoid generic copy like “great for families”
+- encode what kind of day the place actually becomes
+
+#### Batch I: Water-play and playground richness
+
+Goal: deepen the strongest family moat beyond simple venue presence.
+
+Priority targets:
+- parks with official splash-pad or aquatic-center pages already in the network
+- playground-bearing venues with only broad play-space features today
+
+Priority fields / signals:
+- water-play vs pool vs fountain distinction
+- shade and bathroom support
+- fenced / open feel when official source supports it
+- younger-kid vs broad-age fit when the source clearly signals it
+
+Acceptance criteria:
+- keep this in `venue_features` / `venue_destination_details`
+- do not invent a new entity family
+
+#### Batch J: Audit hardening
+
+Goal: keep the Family layer measurable as depth increases.
+
+Priority follow-ups:
+- separate Family-specific specials reporting from global `venue_specials`
+- add a “durable family value offers” section to the audit output
+- track practical-depth coverage by venue type so the next batch stays data-driven
 
 ## What To Avoid
 

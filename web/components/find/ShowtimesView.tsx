@@ -98,13 +98,21 @@ function formatShowtime(time: string): string {
 }
 
 // Prefetch event detail on pointer-down so data loads before navigation completes
-const prefetchedUrls = new Set<string>();
+// NOTE: prefetchedUrls is intentionally module-scoped so it persists across
+// component re-mounts, but is bounded to 50 entries to prevent unbounded growth.
+const MAX_PREFETCH_CACHE = 50;
+const prefetchedUrlsModule = new Set<string>();
 function prefetchEventDetail(eventId: number, portalId?: string) {
   const url = portalId ? `/api/events/${eventId}?portal_id=${portalId}` : `/api/events/${eventId}`;
-  if (prefetchedUrls.has(url)) return;
-  prefetchedUrls.add(url);
+  if (prefetchedUrlsModule.has(url)) return;
+  // Evict oldest entry when at capacity
+  if (prefetchedUrlsModule.size >= MAX_PREFETCH_CACHE) {
+    const first = prefetchedUrlsModule.values().next().value;
+    if (first !== undefined) prefetchedUrlsModule.delete(first);
+  }
+  prefetchedUrlsModule.add(url);
   fetch(url, { priority: "low" } as RequestInit).catch(() => {
-    prefetchedUrls.delete(url);
+    prefetchedUrlsModule.delete(url);
   });
 }
 
@@ -437,6 +445,7 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
   const [meta, setMeta] = useState<ShowtimesMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [metaLoading, setMetaLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const zeroResultsSignatureRef = useRef<string | null>(null);
 
   const dateScrollRef = useRef<HTMLDivElement>(null);
@@ -455,6 +464,7 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
           date: dateStr,
           meta: "true",
           include_chains: "true",
+          portal: portalSlug,
         });
         const res = await fetch(`/api/showtimes?${params.toString()}`);
         if (!res.ok) return;
@@ -492,7 +502,7 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
           }
         }
       } catch {
-        // fail silently
+        setError("Something went wrong loading showtimes");
         setSelectedDate(requestedDate || toLocalIsoDate(new Date()));
       } finally {
         setMetaLoading(false);
@@ -509,7 +519,7 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
     if (cacheRef.current.has(key)) return;
     // Mark as pending to prevent duplicate prefetches
     cacheRef.current.set(key, {});
-    const params = new URLSearchParams({ date, mode: apiMode, include_chains: "true" });
+    const params = new URLSearchParams({ date, mode: apiMode, include_chains: "true", portal: portalSlug });
     fetch(`/api/showtimes?${params}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -520,11 +530,12 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
         });
       })
       .catch(() => { cacheRef.current.delete(key); });
-  }, []);
+  }, [portalSlug]);
 
   // Fetch showtimes when date or view mode changes
   const fetchShowtimes = useCallback(async (date: string, mode: string) => {
     if (!date) return;
+    setError(null);
 
     // Check client cache first — instant switch
     const cacheKey = `${date}|${mode}`;
@@ -557,7 +568,7 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
 
     try {
       const apiMode = mode === "by-movie" ? "by-film" : "by-theater";
-      const params = new URLSearchParams({ date, mode: apiMode, include_chains: "true" });
+      const params = new URLSearchParams({ date, mode: apiMode, include_chains: "true", portal: portalSlug });
       const res = await fetch(`/api/showtimes?${params}`);
       if (!res.ok) return;
       const data = await res.json();
@@ -576,11 +587,11 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
         if (idx < dates.length - 1) prefetchDate(dates[idx + 1], mode);
       }
     } catch {
-      // fail silently
+      setError("Something went wrong loading showtimes");
     } finally {
       setLoading(false);
     }
-  }, [meta?.available_dates, prefetchDate]);
+  }, [meta?.available_dates, prefetchDate, portalSlug]);
 
   // Re-fetch when filters change (skip initial load — that's handled by meta fetch)
   const isInitialMount = useRef(true);
@@ -751,8 +762,25 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
       {/* Initial loading skeleton (only shown when no data yet) */}
       {metaLoading && <ShowtimesSkeleton />}
 
+      {/* Error state */}
+      {error && !metaLoading && (
+        <div className="py-10 text-center space-y-3">
+          <div className="text-[var(--muted)] font-mono text-sm">{error}</div>
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              fetchShowtimes(selectedDate, viewMode);
+            }}
+            className="px-4 py-2 rounded-lg font-mono text-xs border border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--coral)]/40 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
       {/* Content area — keeps stale data visible with loading overlay during date switches */}
-      {!metaLoading && (
+      {!metaLoading && !error && (
         <div className="relative">
           {/* Loading overlay — dims stale content instead of replacing it */}
           {loading && (films.length > 0 || theaters.length > 0) && (

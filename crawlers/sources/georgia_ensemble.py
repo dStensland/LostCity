@@ -128,58 +128,56 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
     return None, None
 
 
+def extract_text_from_cufon(element) -> str:
+    """
+    Extract properly-spaced text from a cufon-rendered element.
+
+    The GET.org site uses the old <cufon> canvas font-replacement library.
+    Each word is rendered as a separate <cufon> element with an `alt` attribute
+    containing the word (with its trailing space). Playwright's inner_text()
+    concatenates these without spaces, producing "DRAGONSLOVETACOS...".
+
+    Reading the `alt` attributes of all cufon child elements gives us the
+    correctly-spaced text.
+    """
+    text = element.evaluate(
+        'el => Array.from(el.querySelectorAll("cufon")).map(c => c.getAttribute("alt") || "").join("")'
+    )
+    return text.strip()
+
+
 def extract_title_from_heading(heading_text: str) -> Optional[str]:
     """
-    Extract clean title from h5 headings like:
+    Extract clean title from h5 heading text like:
     'DRAGONS LOVE TACOS, adapted by Ernie Nolan... November 22 - December 13, 2025'
-    Returns just 'Dragons Love Tacos'
+    Returns just 'Dragons Love Tacos'.
 
-    Note: Site may concatenate text without spaces, so we handle both cases.
+    Expects properly-spaced text (extracted via cufon alt attributes, not inner_text).
     """
     if not heading_text:
         return None
 
     # Remove content after the first date pattern or director credit
-    # Use \s* to handle both spaced and non-spaced text
-    heading_text = re.sub(r'\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s*\d{1,2}.*', '', heading_text, flags=re.IGNORECASE)
-    heading_text = re.sub(r'\s*Directed by.*', '', heading_text, flags=re.IGNORECASE)
-    heading_text = re.sub(r'\s*by\s+\w+.*', '', heading_text, flags=re.IGNORECASE)
-    heading_text = re.sub(r',\s*(adapted|created|written|based on).*', '', heading_text, flags=re.IGNORECASE)
+    heading_text = re.sub(
+        r'\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s*\d{1,2}.*',
+        '',
+        heading_text,
+        flags=re.IGNORECASE,
+    )
+    heading_text = re.sub(r'\s*Directed?\s*/?\s*Music\s*Directed?\s*by.*', '', heading_text, flags=re.IGNORECASE)
+    heading_text = re.sub(r'\s*Directed?\s*by.*', '', heading_text, flags=re.IGNORECASE)
+    heading_text = re.sub(r',\s*(adapted|created|written|based on|conceived|performed).*', '', heading_text, flags=re.IGNORECASE)
+    heading_text = re.sub(r'\s+by\s+[A-Z][a-z].*', '', heading_text)
 
-    # Extract title (usually between <em> tags or at start)
-    em_match = re.search(r'<em[^>]*>(.*?)</em>', heading_text)
-    if em_match:
-        title = em_match.group(1)
-    else:
-        # Take first part before comma or attribution
-        title = heading_text.split(',')[0]
+    # Take everything up to the first comma that's followed by attribution
+    title = heading_text.strip().rstrip(',').strip()
 
-    # Clean up HTML tags and extra formatting
-    title = re.sub(r'<[^>]+>', '', title)
+    # Normalize whitespace
     title = re.sub(r'\s+', ' ', title).strip()
-    title = title.rstrip(',').strip()  # Remove trailing commas
 
-    # Handle ALLCAPSCONCATENATED titles by inserting spaces
-    # Look for lowercase followed by uppercase, or letter followed by number
-    if title.isupper() and ' ' not in title:
-        # Insert spaces before capital letters that follow lowercase
-        # This handles cases like "DRAGONSLOVETACOS" -> still all caps, need different approach
-        # Try to match known titles or use word boundaries
-        known_titles = {
-            'DRAGONSLOVETACOS': 'Dragons Love Tacos',
-            'THEGIVER': 'The Giver',
-            'FORBIDDENBROADWAY': 'Forbidden Broadway',
-            'AWRINKLEINTIME': 'A Wrinkle In Time',
-            'RINGOFFIRE': 'Ring of Fire',
-        }
-        # Check if title starts with any known pattern
-        for concat, proper in known_titles.items():
-            if title.upper().startswith(concat):
-                title = proper
-                break
-        else:
-            # Fallback: title case for all caps without spaces
-            title = title.title()
+    # Convert ALL CAPS to title case for readability
+    if title.isupper():
+        title = title.title()
 
     return title if is_valid_title(title) else None
 
@@ -216,11 +214,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             for heading in show_headings:
                 try:
-                    heading_html = heading.inner_html()
-                    heading_text = heading.inner_text()
+                    # Use cufon alt attributes to get properly-spaced text.
+                    # inner_text() concatenates words without spaces on this site.
+                    heading_text = extract_text_from_cufon(heading)
 
-                    # Extract title
-                    title = extract_title_from_heading(heading_html)
+                    # Extract title from the spaced text
+                    title = extract_title_from_heading(heading_text)
                     if not title:
                         continue
 

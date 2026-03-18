@@ -1,9 +1,12 @@
 """
-Crawler for 404 Day Weekend (404weekend.com).
+Unified crawler for 404 Day / 404 Day Weekend.
 
-Uses the official 404 Weekend site as the canonical source. The schedule page
-provides the published event windows and CTA links, while the homepage and
-detail pages provide stable official URLs, images, and structured metadata.
+Combines two official sites into one festival structure:
+  - 404weekend.com — parade, 5K, block party, gala, city takeover, night party
+  - 404day.com — main Piedmont Park music festival + Stankonia Studios concert
+
+All events are children under a single "404 Day Weekend" parent event.
+The 404-day source is deactivated; this crawler owns the entire festival.
 """
 
 from __future__ import annotations
@@ -26,6 +29,13 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://404weekend.com"
 EVENTS_URL = f"{BASE_URL}/events/"
 PARADE_URL = f"{BASE_URL}/parade/"
+
+# 404day.com — main festival site (Piedmont Park + Stankonia)
+DAY_BASE_URL = "https://404day.com"
+DAY_EVENTS_URL = f"{DAY_BASE_URL}/events"
+DAY_TICKETS_URL = f"{DAY_BASE_URL}/tickets"
+DAY_OG_IMAGE = f"{DAY_BASE_URL}/404day-atlanta-music-festival-flyer.jpg"
+
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
@@ -111,6 +121,32 @@ KNOWN_VENUES = {
         "venue_type": "festival",
         "spot_type": "festival",
         "website": BASE_URL,
+    },
+    "Piedmont Park": {
+        "name": "Piedmont Park",
+        "slug": "piedmont-park",
+        "address": "400 Park Dr NE",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30309",
+        "lat": 33.7873,
+        "lng": -84.3733,
+        "venue_type": "park",
+        "spot_type": "outdoor",
+        "website": "https://piedmontpark.org",
+    },
+    "Stankonia Studios": {
+        "name": "Stankonia Studios",
+        "slug": "stankonia-studios",
+        "address": "Atlanta, GA",
+        "neighborhood": "Atlanta",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "",
+        "venue_type": "music_venue",
+        "spot_type": "music_venue",
+        "website": DAY_BASE_URL,
     },
 }
 
@@ -418,8 +454,8 @@ def build_parent_event(
         "venue_id": venue_id,
         "title": title,
         "description": (
-            "Official 404 Day Weekend programming across Atlanta featuring the parade, "
-            "block party, scholarship gala, citywide activations, celebration, and 5K."
+            "Atlanta's annual 404 Day celebration: free music festival at Piedmont Park, "
+            "parade, block party, scholarship gala, 5K, citywide activations, and more."
         ),
         "start_date": start_date,
         "start_time": None,
@@ -558,6 +594,158 @@ def build_child_event(
     }
 
 
+def _extract_sanity_image_from_src(src: str) -> Optional[str]:
+    """Extract original Sanity CDN URL from a Next.js image proxy URL."""
+    from urllib.parse import unquote
+
+    if not src:
+        return None
+    if "_next/image" in src and "url=" in src:
+        match = re.search(r"url=([^&]+)", src)
+        if match:
+            raw = unquote(match.group(1))
+            return raw.split("?")[0]
+    if "cdn.sanity.io" in src:
+        return src.split("?")[0]
+    return None
+
+
+def _parse_404day_event_cards(html: str) -> list[dict]:
+    """Parse 404day.com /events page cards (Next.js + Sanity CMS)."""
+    soup = BeautifulSoup(html, "html.parser")
+    cards = soup.select("button.card.overflow-hidden")
+    results: list[dict] = []
+
+    for card in cards:
+        title_el = card.find(["h3", "h2"])
+        if not title_el:
+            continue
+        title = unescape(title_el.get_text(" ", strip=True))
+        if not title:
+            continue
+
+        description = ""
+        content_div = card.select_one("div.p-4")
+        if content_div:
+            p_el = content_div.find("p")
+            if p_el:
+                description = p_el.get_text(" ", strip=True)
+
+        image_url: Optional[str] = None
+        img = card.find("img")
+        if img:
+            srcset = img.get("srcset", "")
+            if srcset:
+                entries = [e.strip() for e in srcset.split(",") if e.strip()]
+                if entries:
+                    candidate = entries[-1].split()[0]
+                    image_url = _extract_sanity_image_from_src(candidate)
+            if not image_url:
+                image_url = _extract_sanity_image_from_src(img.get("src", ""))
+
+        results.append({
+            "title": title,
+            "description": description,
+            "button_url": DAY_TICKETS_URL,
+            "image_url": image_url,
+        })
+
+    return results
+
+
+def _build_piedmont_park_child(source_id: int, card: dict, jsonld: Optional[dict]) -> dict:
+    """Build child event for the main 404 Day festival at Piedmont Park."""
+    start_date = "2026-04-04"
+    if jsonld:
+        raw_start = jsonld.get("startDate", "")
+        if raw_start:
+            start_date = raw_start[:10]
+
+    image_url = card.get("image_url") or DAY_OG_IMAGE
+    description = card.get("description") or (
+        "Atlanta's annual free outdoor music and culture festival. "
+        "Live music, local food vendors, and community spirit in Piedmont Park."
+    )
+    if len(description) > 600:
+        description = description[:597] + "..."
+
+    venue_data = build_venue_data("Piedmont Park")
+    venue_id = get_or_create_venue(venue_data)
+    content_hash = generate_content_hash("404 Day 2026", "Piedmont Park", start_date)
+
+    return {
+        "source_id": source_id,
+        "venue_id": venue_id,
+        "title": "404 Day 2026",
+        "description": description,
+        "start_date": start_date,
+        "start_time": None,
+        "end_date": start_date,
+        "end_time": None,
+        "is_all_day": True,
+        "category": "music",
+        "subcategory": "festival",
+        "tags": ["404-day", "festival", "free", "outdoor", "midtown", "piedmont-park", "tentpole"],
+        "price_min": 0,
+        "price_max": 0,
+        "price_note": "Free to attend",
+        "is_free": True,
+        "is_tentpole": False,  # Parent is the tentpole
+        "source_url": DAY_BASE_URL,
+        "ticket_url": DAY_TICKETS_URL,
+        "image_url": image_url,
+        "raw_text": json.dumps({"jsonld": jsonld, "card": card}, sort_keys=True),
+        "extraction_confidence": 0.95,
+        "is_recurring": False,
+        "recurrence_rule": None,
+        "content_hash": content_hash,
+    }
+
+
+def _build_stankonia_child(source_id: int, card: dict) -> dict:
+    """Build child event for the Old Atlanta vs. New Atlanta concert at Stankonia."""
+    start_date = "2026-04-04"
+    description = card.get("description") or (
+        "A one-night collision of Atlanta legends and rising stars celebrating the "
+        "past, present, and future of the 404, live at Stankonia Studios."
+    )
+    if len(description) > 600:
+        description = description[:597] + "..."
+
+    title = "404 Day: Old Atlanta vs. New Atlanta"
+    venue_data = build_venue_data("Stankonia Studios")
+    venue_id = get_or_create_venue(venue_data)
+    content_hash = generate_content_hash(title, "Stankonia Studios", start_date)
+
+    return {
+        "source_id": source_id,
+        "venue_id": venue_id,
+        "title": title,
+        "description": description,
+        "start_date": start_date,
+        "start_time": None,
+        "end_date": start_date,
+        "end_time": None,
+        "is_all_day": False,
+        "category": "music",
+        "subcategory": "concert",
+        "tags": ["404-day", "hip-hop", "atlanta", "concert", "culture", "live-music"],
+        "price_min": None,
+        "price_max": None,
+        "price_note": "Ticketed — capacity is limited",
+        "is_free": False,
+        "is_tentpole": False,
+        "source_url": DAY_EVENTS_URL,
+        "ticket_url": card.get("button_url") or DAY_TICKETS_URL,
+        "image_url": card.get("image_url"),
+        "raw_text": json.dumps(card, sort_keys=True),
+        "extraction_confidence": 0.90,
+        "is_recurring": False,
+        "recurrence_rule": None,
+        "content_hash": content_hash,
+    }
+
+
 def _upsert_event(event_record: dict) -> tuple[int, int]:
     existing = find_event_by_hash(event_record["content_hash"])
     if existing:
@@ -568,7 +756,7 @@ def _upsert_event(event_record: dict) -> tuple[int, int]:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl official 404 Day Weekend events and the tentpole weekend event."""
+    """Crawl 404weekend.com + 404day.com as a unified 404 Day festival."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -639,5 +827,57 @@ def crawl(source: dict) -> tuple[int, int, int]:
         new_count, updated_count = _upsert_event(child_event)
         events_new += new_count
         events_updated += updated_count
+
+    # -----------------------------------------------------------------
+    # Phase 2: Fold in 404day.com events (Piedmont Park + Stankonia)
+    # -----------------------------------------------------------------
+    try:
+        day_homepage_html = _fetch_html(DAY_BASE_URL)
+        day_events_html = _fetch_html(DAY_EVENTS_URL)
+    except requests.RequestException as exc:
+        logger.warning("404 Day: failed to fetch 404day.com — %s (weekend events still saved)", exc)
+        return events_found, events_new, events_updated
+
+    # JSON-LD from homepage gives authoritative date for main festival
+    day_main_jsonld = None
+    for obj in _load_jsonld_objects(day_homepage_html):
+        if obj.get("@type") == "Event":
+            day_main_jsonld = obj
+            break
+
+    # Parse HTML cards from /events page
+    day_cards = _parse_404day_event_cards(day_events_html)
+    logger.info("404 Day: found %d event cards on 404day.com/events", len(day_cards))
+
+    # Identify cards: Piedmont Park main fest vs Stankonia concert
+    main_card: dict = {}
+    stankonia_card: Optional[dict] = None
+    for card in day_cards:
+        title_lower = card["title"].lower()
+        if "old atlanta" in title_lower or "new atlanta" in title_lower or "stankonia" in title_lower:
+            stankonia_card = card
+        elif "404 day" in title_lower and not main_card:
+            main_card = card
+
+    if not main_card and day_cards:
+        main_card = day_cards[0]
+
+    # Piedmont Park festival (free, all-day music festival)
+    if main_card:
+        piedmont_event = _build_piedmont_park_child(source_id, main_card, day_main_jsonld)
+        events_found += 1
+        new_count, updated_count = _upsert_event(piedmont_event)
+        events_new += new_count
+        events_updated += updated_count
+        logger.info("404 Day: Piedmont Park festival → new=%d, updated=%d", new_count, updated_count)
+
+    # Stankonia concert (ticketed, evening)
+    if stankonia_card:
+        stankonia_event = _build_stankonia_child(source_id, stankonia_card)
+        events_found += 1
+        new_count, updated_count = _upsert_event(stankonia_event)
+        events_new += new_count
+        events_updated += updated_count
+        logger.info("404 Day: Stankonia concert → new=%d, updated=%d", new_count, updated_count)
 
     return events_found, events_new, events_updated

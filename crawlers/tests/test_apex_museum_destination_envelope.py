@@ -13,3 +13,6 @@ def test_build_destination_envelope_for_apex_museum() -> None:
         "compact-history-museum-stop",
         "stackable-sweet-auburn-cultural-stop",
     }
+    assert {special["slug"] for special in envelope.venue_specials} == {
+        "children-under-4-free-admission",
+    }

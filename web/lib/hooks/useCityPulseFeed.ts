@@ -109,14 +109,20 @@ export function useCityPulseFeed(options: UseCityPulseFeedOptions) {
   }, [query]);
 
   const fetchTab = useCallback(async (tab: "this_week" | "coming_up") => {
-    const url = new URL(`/api/portals/${portalSlug}/city-pulse`, window.location.origin);
-    url.searchParams.set("tab", tab);
-    if (timeSlotOverride) url.searchParams.set("time_slot", timeSlotOverride);
-    if (dayOverride) url.searchParams.set("day", dayOverride);
-    appendInterests(url, interestsRef.current);
-    const res = await fetch(url.toString(), { credentials: "include" });
-    if (!res.ok) throw new Error(`Tab fetch failed: ${res.status}`);
-    return res.json() as Promise<CityPulseResponse>;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const url = new URL(`/api/portals/${portalSlug}/city-pulse`, window.location.origin);
+      url.searchParams.set("tab", tab);
+      if (timeSlotOverride) url.searchParams.set("time_slot", timeSlotOverride);
+      if (dayOverride) url.searchParams.set("day", dayOverride);
+      appendInterests(url, interestsRef.current);
+      const res = await fetch(url.toString(), { credentials: "include", signal: controller.signal });
+      if (!res.ok) throw new Error(`Tab fetch failed: ${res.status}`);
+      return res.json() as Promise<CityPulseResponse>;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }, [portalSlug, timeSlotOverride, dayOverride]);
 
   return {

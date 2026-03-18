@@ -12,3 +12,7 @@ def test_build_destination_envelope_for_high_museum() -> None:
     assert "family-art-making-and-kids-programs" in feature_slugs
     assert "weather-proof-midtown-family-culture-stop" in feature_slugs
     assert "easy-museum-breaks-and-resets" in feature_slugs
+    assert {special["slug"] for special in envelope.venue_specials} == {
+        "children-5-and-under-free",
+        "free-second-sunday-admission",
+    }

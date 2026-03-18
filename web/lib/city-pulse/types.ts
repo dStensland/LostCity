@@ -161,8 +161,7 @@ export type CityPulseSectionType =
   | "browse"
   | "todays_specials"
   | "tonights_regulars"
-  | "the_scene"
-  | "planning_horizon";
+  | "the_scene";
 
 export type SectionLayout = "hero" | "carousel" | "list" | "grid";
 
