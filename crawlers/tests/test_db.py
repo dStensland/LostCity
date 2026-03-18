@@ -443,10 +443,11 @@ class TestGetOrCreateVenue:
         assert venue_id == 42
         client.table.assert_called_with("venues")
 
+    @patch("db.venues._maybe_update_existing_venue")
     @patch("db.venues.writes_enabled", return_value=True)
     @patch("db.venues.get_client")
     def test_reactivates_existing_venue_when_source_marks_it_active(
-        self, mock_get_client, _mock_writes_enabled, sample_venue_data
+        self, mock_get_client, _mock_writes_enabled, _mock_update, sample_venue_data
     ):
         """Should reactivate an inactive venue when the crawler explicitly marks it active."""
         client = MagicMock()
@@ -469,8 +470,9 @@ class TestGetOrCreateVenue:
         assert venue_id == 42
         table.update.assert_called_once_with({"active": True})
 
+    @patch("db.venues._maybe_update_existing_venue")
     @patch("db.venues.get_client")
-    def test_finds_existing_venue_by_name(self, mock_get_client, sample_venue_data):
+    def test_finds_existing_venue_by_name(self, mock_get_client, _mock_update, sample_venue_data):
         """Should return existing venue ID when name matches."""
         client = MagicMock()
         mock_get_client.return_value = client
@@ -492,8 +494,9 @@ class TestGetOrCreateVenue:
 
         assert venue_id == 99
 
+    @patch("db.venues._maybe_update_existing_venue")
     @patch("db.venues.get_client")
-    def test_finds_existing_venue_by_name_alias(self, mock_get_client, sample_venue_data):
+    def test_finds_existing_venue_by_name_alias(self, mock_get_client, _mock_update, sample_venue_data):
         """Should reuse deterministic singular/plural venue aliases before creating a new row."""
         client = MagicMock()
         mock_get_client.return_value = client
@@ -731,6 +734,69 @@ class TestInsertEvent:
         assert event_id == 321
         inserted_data = table.insert.call_args_list[0][0][0]
         assert inserted_data["is_active"] is True
+
+    @patch("db.events.upsert_event_links")
+    @patch("db.events.upsert_event_images")
+    @patch("db.events.smart_update_existing_event")
+    @patch("db.events.find_existing_event_for_insert")
+    @patch("db.events.find_cross_source_canonical_for_insert", return_value=None)
+    @patch("db.events.get_festival_source_hint", return_value=None)
+    @patch("db.events.events_support_field_metadata_columns", return_value=False)
+    @patch("db.events.events_support_content_kind_column", return_value=True)
+    @patch("db.events.events_support_is_active_column", return_value=True)
+    @patch("db.events.get_source_info")
+    @patch("db.events.get_venue_by_id_cached")
+    @patch("db.events.get_client")
+    def test_insert_event_recovers_timed_duplicate_conflict_as_update(
+        self,
+        mock_get_client,
+        mock_get_venue,
+        mock_get_source_info,
+        _mock_events_active,
+        _mock_content_kind,
+        _mock_field_cols,
+        _mock_festival_hint,
+        _mock_find_cross_source,
+        mock_find_existing,
+        mock_smart_update,
+        mock_upsert_images,
+        mock_upsert_links,
+        sample_event_data,
+    ):
+        client = MagicMock()
+        mock_get_client.return_value = client
+        mock_get_venue.return_value = {"vibes": []}
+        mock_get_source_info.return_value = {
+            "slug": "test-source",
+            "url": "https://example.com/source",
+            "source_type": "organization",
+        }
+
+        existing = {"id": 987, "title": sample_event_data["title"], "source_id": sample_event_data["source_id"]}
+        mock_find_existing.side_effect = [
+            None,
+            existing,
+        ]
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.insert.return_value = table
+        table.execute.side_effect = Exception(
+            'duplicate key value violates unique constraint "idx_events_unique_source_venue_slot_norm_title_timed"'
+        )
+
+        from db import insert_event
+
+        event_data = dict(sample_event_data)
+        event_data["links"] = [{"type": "event", "url": "https://example.com/event"}]
+        event_data["images"] = [{"url": "https://example.com/image.jpg"}]
+
+        event_id = insert_event(event_data)
+
+        assert event_id == 987
+        mock_smart_update.assert_called_once()
+        mock_upsert_images.assert_called_once_with(987, [{"url": "https://example.com/image.jpg"}])
+        mock_upsert_links.assert_called_once_with(987, [{"type": "event", "url": "https://example.com/event"}])
 
     @patch("db.events.upsert_event_artists")
     @patch("db.events.parse_lineup_from_title")
@@ -1767,7 +1833,9 @@ class TestSmartUpdateExistingEvent:
         updated = smart_update_existing_event(existing, incoming)
 
         assert updated is True
-        updates = table.update.call_args[0][0]
+        # use call_args_list[0] to get the smart-update dict specifically;
+        # _maybe_infer_importance may add a second update call for importance.
+        updates = table.update.call_args_list[0][0][0]
         assert updates["start_time"] == "19:30:00"
 
     @patch("db.events.upsert_event_artists")

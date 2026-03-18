@@ -253,8 +253,8 @@ const CATEGORY_PATTERNS: { pattern: RegExp; category: string; label: string }[] 
   { pattern: /\bdrink\b/i, category: "food_drink", label: "drinks" },
   { pattern: /\bnightlife\b/i, category: "nightlife", label: "nightlife" },
   { pattern: /\bdj\b/i, category: "nightlife", label: "DJ" },
-  { pattern: /\bfitness\b/i, category: "fitness", label: "fitness" },
-  { pattern: /\byoga\b/i, category: "fitness", label: "yoga" },
+  { pattern: /\bfitness\b/i, category: "exercise", label: "fitness" },
+  { pattern: /\byoga\b/i, category: "exercise", label: "yoga" },
   { pattern: /\bkids\b/i, category: "family", label: "kids" },
   { pattern: /\bfamily\b/i, category: "family", label: "family" },
 ];

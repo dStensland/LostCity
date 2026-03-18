@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
-import { useMemo, useState } from "react";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
+import SmartImage from "@/components/SmartImage";
 import { phoneHref } from "@/lib/forth-types";
 
 interface HotelHeaderProps {
@@ -29,13 +27,6 @@ export default function HotelHeader({
   onOpenPlanner,
   plannerOpen = false,
 }: HotelHeaderProps) {
-  const [logoFailed, setLogoFailed] = useState(false);
-  const resolvedLogoSrc = useMemo(() => {
-    if (!logoUrl) return null;
-    const proxied = getProxiedImageSrc(logoUrl);
-    return typeof proxied === "string" ? proxied : null;
-  }, [logoUrl]);
-
   function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   }
@@ -66,18 +57,20 @@ export default function HotelHeader({
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         {/* Hotel branding — wordmark only, no "Concierge" badge */}
         <Link href={`/${portalSlug}`} className="flex items-center">
-          {resolvedLogoSrc && !logoFailed ? (
+          {logoUrl ? (
             <div className="relative h-8 w-auto">
-              <Image
-                src={resolvedLogoSrc}
+              <SmartImage
+                src={logoUrl}
                 alt={portalName}
                 height={32}
                 width={120}
                 className="object-contain"
                 style={{ height: "32px", width: "auto" }}
-                onError={() => {
-                  setLogoFailed(true);
-                }}
+                fallback={
+                  <span className="font-display font-semibold text-xl tracking-[0.15em] uppercase text-[var(--hotel-charcoal)]">
+                    {portalName}
+                  </span>
+                }
               />
             </div>
           ) : (

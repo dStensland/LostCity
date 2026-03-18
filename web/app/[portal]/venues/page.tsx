@@ -1,11 +1,10 @@
 import { notFound, redirect } from "next/navigation";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { PortalHeader } from "@/components/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getLocalDateString } from "@/lib/formats";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
 import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import FilmPortalNav from "../_components/film/FilmPortalNav";
 import FilmShowtimeBoard from "../_components/film/FilmShowtimeBoard";
@@ -231,8 +230,8 @@ export default async function FilmVenuesPage({ params }: Props) {
                 className="group overflow-hidden rounded-2xl border border-[#2f3a56] bg-[#0c1322] hover:border-[#4a628f]"
               >
                 <div className="relative h-40">
-                  <Image
-                    src={getProxiedImageSrc(venue.imageUrl || FALLBACK_PHOTOS[index % FALLBACK_PHOTOS.length])}
+                  <SmartImage
+                    src={venue.imageUrl || FALLBACK_PHOTOS[index % FALLBACK_PHOTOS.length]}
                     alt={venue.name}
                     fill
                     unoptimized

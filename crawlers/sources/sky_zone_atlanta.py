@@ -2,357 +2,380 @@
 Crawler for Sky Zone Trampoline Parks - Atlanta area locations.
 
 Sky Zone has multiple Atlanta-area locations (Roswell, Alpharetta, etc.) offering
-trampoline parks, open jump, toddler time, glow events, and fitness classes.
+trampoline parks with special events like GLOW nights, Toddler Time, Fitness classes,
+and Sensory-Friendly sessions.
+
+Data source: Sky Zone's custom WordPress REST API at
+  POST /wp-json/skyzone/v1/park/events
+  params: park_id (numeric, found via data-park_id on events-calendar page), timezone
+
+The API returns the current week only (no pagination to future weeks). Each location
+page must be fetched individually to get its park_id. The API nonce is publicly
+accessible from the page JS (skyzoneVars.restnonce) but the endpoint also accepts
+requests without a valid nonce in practice.
+
+Note: Atlanta location is currently former Defy Atlanta (acquired by Sky Zone).
 """
 
 from __future__ import annotations
 
-import re
+import asyncio
 import logging
+import re
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+import aiohttp
+from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_venue,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, normalize_time_format
 
 logger = logging.getLogger(__name__)
 
-# Sky Zone locations in Atlanta area
+# Sky Zone Atlanta-area locations with their numeric park_ids.
+# The park_id is found via: soup.find(class_="events-calendar-data")["data-park_id"]
+# on the /events-calendar/ page. These IDs are stable WP post IDs.
 SKY_ZONE_LOCATIONS = [
     {
         "name": "Sky Zone Atlanta",
         "slug": "sky-zone-atlanta",
         "address": "3200 Northlake Pkwy NE",
+        "neighborhood": "Northlake",
         "city": "Atlanta",
+        "state": "GA",
         "zip": "30345",
-        "url": "https://www.skyzone.com/atlanta/",
+        "lat": 33.8617,
+        "lng": -84.2848,
+        "website": "https://www.skyzone.com/atlanta/",
+        "events_calendar_url": "https://www.skyzone.com/atlanta/events-calendar/",
+        "park_id": "101305",
     },
     {
         "name": "Sky Zone Roswell",
         "slug": "sky-zone-roswell",
         "address": "10800 Alpharetta Hwy",
+        "neighborhood": None,
         "city": "Roswell",
+        "state": "GA",
         "zip": "30076",
-        "url": "https://www.skyzone.com/roswell/",
+        "lat": 34.0291,
+        "lng": -84.3584,
+        "website": "https://www.skyzone.com/roswell/",
+        "events_calendar_url": "https://www.skyzone.com/roswell/events-calendar/",
+        "park_id": "34956",
     },
-    # NOTE: Sky Zone Alpharetta appears to be closed - URL returns 404
 ]
 
+EVENTS_API_URL = "https://www.skyzone.com/wp-json/skyzone/v1/park/events"
 
-def parse_date_from_text(date_text: str) -> Optional[str]:
-    """Parse date from various formats."""
-    if not date_text:
+VENUE_DATA_TEMPLATE = {
+    "venue_type": "entertainment",
+    "vibes": ["family-friendly", "kids", "active", "indoor", "trampoline"],
+}
+
+REQUEST_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Content-Type": "application/x-www-form-urlencoded",
+    "Origin": "https://www.skyzone.com",
+}
+
+
+def parse_month_day_to_date(date_str: str, year: int) -> Optional[str]:
+    """
+    Parse 'M/DD' format (e.g. '3/21') into a YYYY-MM-DD string.
+    Uses the given year. Returns None on failure.
+    """
+    try:
+        m, d = date_str.strip().split("/")
+        return datetime(year, int(m), int(d)).strftime("%Y-%m-%d")
+    except (ValueError, TypeError):
         return None
 
-    date_text = date_text.strip()
-    current_year = datetime.now().year
 
-    # Try ISO format
-    if re.match(r'\d{4}-\d{2}-\d{2}', date_text):
-        return date_text[:10]
+def parse_time_range(time_str: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Parse '8:00pm - 10:00pm' into ('20:00', '22:00').
+    Returns (start_time, end_time). Either may be None on failure.
+    """
+    if not time_str:
+        return None, None
 
-    # Try "Month DD, YYYY" format
-    match = re.search(
-        r'(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}),?\s+(\d{4})',
-        date_text,
-        re.IGNORECASE
+    # Normalize to lowercase
+    time_str = time_str.strip().lower()
+
+    # Pattern: HH:MM[am|pm] - HH:MM[am|pm]
+    match = re.match(
+        r"(\d{1,2}:\d{2}(?:am|pm)?)\s*[-–]\s*(\d{1,2}:\d{2}(?:am|pm)?)",
+        time_str,
+        re.IGNORECASE,
     )
-    if match:
-        month, day, year = match.groups()
-        try:
-            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
+    if not match:
+        # Try single time
+        single = re.match(r"(\d{1,2}:\d{2}(?:am|pm)?)", time_str, re.IGNORECASE)
+        if single:
+            return _parse_time(single.group(1)), None
+        return None, None
 
-    # Try "Mon DD" format
-    match = re.search(
-        r'(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})',
-        date_text,
-        re.IGNORECASE
-    )
-    if match:
-        month_abbr, day = match.groups()
-        try:
-            dt = datetime.strptime(f"{month_abbr} {day} {current_year}", "%b %d %Y")
-            if dt.date() < datetime.now().date():
-                dt = datetime.strptime(f"{month_abbr} {day} {current_year + 1}", "%b %d %Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    # Try MM/DD/YYYY format
-    match = re.search(r'(\d{1,2})/(\d{1,2})/(\d{4})', date_text)
-    if match:
-        month, day, year = match.groups()
-        try:
-            dt = datetime.strptime(f"{month}/{day}/{year}", "%m/%d/%Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    return None
+    return _parse_time(match.group(1)), _parse_time(match.group(2))
 
 
-def parse_time_from_text(time_text: str) -> Optional[str]:
-    """Parse time from text."""
-    if not time_text:
+def _parse_time(t: str) -> Optional[str]:
+    """Convert '8:00pm' or '20:00' to 'HH:MM:SS' string."""
+    if not t:
         return None
-    return normalize_time_format(time_text)
+    t = t.strip().lower()
+    try:
+        if "am" in t or "pm" in t:
+            fmt = "%I:%M%p" if ":" in t else "%I%p"
+            dt = datetime.strptime(t, fmt)
+        else:
+            dt = datetime.strptime(t, "%H:%M")
+        return dt.strftime("%H:%M:%S")
+    except ValueError:
+        return None
 
 
-def determine_tags(title: str, description: str = "") -> list[str]:
-    """Extract relevant tags from event content."""
-    text = f"{title} {description}".lower()
-    tags = ["family-friendly", "kids", "indoor", "active", "trampoline"]
+def determine_tags(event_name: str) -> list[str]:
+    """Return relevant tags based on event name keywords."""
+    name_lower = event_name.lower()
+    tags = ["family-friendly", "kids", "indoor", "active"]
 
-    if any(word in text for word in ["toddler", "little", "preschool", "ages 2-5", "ages 3-6"]):
-        tags.append("toddlers")
-    if any(word in text for word in ["glow", "glow night", "black light"]):
+    if any(w in name_lower for w in ["glow", "cosmic", "blacklight", "black light"]):
         tags.append("glow-night")
-    if any(word in text for word in ["fitness", "workout", "exercise", "class", "skyfit"]):
-        tags.append("fitness")
-    if any(word in text for word in ["open jump", "general admission", "freestyle"]):
-        tags.append("open-jump")
-    if any(word in text for word in ["special needs", "sensory", "autism", "all abilities"]):
-        tags.append("sensory-friendly")
-    if any(word in text for word in ["teen", "teens only", "13+"]):
+    if any(w in name_lower for w in ["toddler", "little", "preschool"]):
+        tags.append("toddlers")
+    if any(w in name_lower for w in ["teen", "teens only"]):
         tags.append("teens")
-    if any(word in text for word in ["dodgeball", "basketball", "skyslam"]):
-        tags.append("sports")
-    if any(word in text for word in ["parents night out", "parents' night"]):
+    if any(w in name_lower for w in ["fitness", "skyfit", "workout"]):
+        tags.append("fitness")
+    if any(w in name_lower for w in ["sensory", "all abilities", "autism"]):
+        tags.append("sensory-friendly")
+    if any(w in name_lower for w in ["parent", "parents night"]):
         tags.append("parents-night-out")
 
     return list(set(tags))
 
 
-def extract_price_info(text: str) -> tuple[Optional[float], Optional[float], Optional[str], bool]:
-    """Extract price information from text."""
-    text_lower = text.lower()
+async def fetch_week_calendar(
+    session: aiohttp.ClientSession, location: dict
+) -> BeautifulSoup:
+    """
+    Call the Sky Zone events API for this location's current week.
+    Returns a BeautifulSoup of the returned HTML fragment.
+    """
+    data = {
+        "park_id": location["park_id"],
+        "timezone": "America/New_York",
+    }
+    headers = {
+        **REQUEST_HEADERS,
+        "Referer": location["events_calendar_url"],
+    }
 
-    if "free" in text_lower or "no charge" in text_lower:
-        return 0, 0, "Free", True
-
-    amounts = re.findall(r'\$(\d+(?:\.\d{2})?)', text)
-    if not amounts:
-        return None, None, None, False
-
-    amounts = [float(a) for a in amounts]
-    return min(amounts), max(amounts), None, False
+    async with session.post(EVENTS_API_URL, data=data, headers=headers) as resp:
+        resp.raise_for_status()
+        body = await resp.json(content_type=None)
+        return BeautifulSoup(body.get("html", ""), "html.parser")
 
 
-def crawl_location(page, location: dict, source_id: int) -> tuple[int, int, int]:
-    """Crawl events for a single Sky Zone location."""
+def parse_events_from_calendar_html(
+    soup: BeautifulSoup, location: dict, source_id: int, venue_id: int
+) -> list[dict]:
+    """
+    Parse calendar-date divs from Sky Zone API response HTML.
+    Only extracts days with a calendar-event child (special events).
+    Normal open-jump days have an empty calendar-content div — those are not events.
+    """
+    events = []
+    current_year = datetime.now().year
+
+    for date_div in soup.find_all(class_="calendar-date"):
+        # Get the date label ('3/21')
+        date_label_el = date_div.find(class_="calendar-head__date")
+        if not date_label_el:
+            continue
+        date_label = date_label_el.get_text(strip=True)
+        start_date = parse_month_day_to_date(date_label, current_year)
+        if not start_date:
+            continue
+
+        # Get park hours (useful for context but not used as start_time)
+        hours_el = date_div.find(class_="calendar-head__hours")
+        park_hours = hours_el.get_text(strip=True) if hours_el else None
+
+        # Extract special events from calendar-event divs
+        for event_div in date_div.find_all(class_="calendar-event"):
+            name_el = event_div.find(class_="calendar-event__name")
+            time_el = event_div.find(class_="calendar-event__hours")
+            link_el = event_div.find("a", href=True)
+
+            if not name_el:
+                continue
+
+            event_name = name_el.get_text(strip=True)
+            if not event_name:
+                continue
+
+            time_text = time_el.get_text(strip=True) if time_el else None
+            start_time, end_time = (
+                parse_time_range(time_text) if time_text else (None, None)
+            )
+
+            learn_more_url = (
+                link_el["href"] if link_el else location["events_calendar_url"]
+            )
+
+            description = f"{event_name} at {location['name']}." + (
+                f" Park hours: {park_hours}." if park_hours else ""
+            )
+
+            events.append(
+                {
+                    "source_id": source_id,
+                    "venue_id": venue_id,
+                    "title": event_name,
+                    "description": description,
+                    "start_date": start_date,
+                    "start_time": start_time,
+                    "end_date": start_date,
+                    "end_time": end_time,
+                    "is_all_day": False,
+                    "category": "family",
+                    "subcategory": "active",
+                    "tags": determine_tags(event_name),
+                    "price_min": None,
+                    "price_max": None,
+                    "price_note": None,
+                    "is_free": False,
+                    "source_url": location["events_calendar_url"],
+                    "ticket_url": learn_more_url,
+                    "image_url": None,
+                    "raw_text": f"{event_name} | {start_date} | {time_text or ''}",
+                    "extraction_confidence": 0.90,
+                    "is_recurring": True,
+                    "recurrence_rule": None,
+                    "content_hash": generate_content_hash(
+                        event_name, location["name"], start_date
+                    ),
+                }
+            )
+
+    return events
+
+
+async def crawl_location(
+    session: aiohttp.ClientSession, location: dict, source_id: int
+) -> tuple[int, int, int]:
+    """Crawl special events for a single Sky Zone location."""
     events_found = 0
     events_new = 0
     events_updated = 0
 
     venue_data = {
+        **VENUE_DATA_TEMPLATE,
         "name": location["name"],
         "slug": location["slug"],
         "address": location["address"],
-        "neighborhood": None,
+        "neighborhood": location.get("neighborhood"),
         "city": location["city"],
-        "state": "GA",
+        "state": location["state"],
         "zip": location["zip"],
-        "venue_type": "entertainment",
-        "website": location["url"],
+        "lat": location.get("lat"),
+        "lng": location.get("lng"),
+        "website": location["website"],
     }
 
     venue_id = get_or_create_venue(venue_data)
+    logger.info(
+        "Crawling Sky Zone events: %s (park_id=%s)",
+        location["name"],
+        location["park_id"],
+    )
 
-    logger.info(f"Fetching events for {location['name']}: {location['url']}")
+    try:
+        soup = await fetch_week_calendar(session, location)
+    except Exception as e:
+        logger.error("Failed to fetch calendar for %s: %s", location["name"], e)
+        return 0, 0, 0
 
-    # Try multiple possible event URLs
-    urls_to_try = [
-        f"{location['url']}/events",
-        f"{location['url']}/activities",
-        location["url"],
-    ]
+    event_records = parse_events_from_calendar_html(soup, location, source_id, venue_id)
+    events_found = len(event_records)
 
-    for url in urls_to_try:
-        try:
-            page.goto(url, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
-
-            # Scroll to load content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            # Extract images
-            image_map = extract_images_from_page(page)
-
-            # Get page text
-            body_text = page.inner_text("body")
-
-            # Check for event keywords
-            event_keywords = ["toddler time", "glow", "open jump", "special event", "fitness", "skyfit"]
-            if not any(keyword in body_text.lower() for keyword in event_keywords):
-                logger.debug(f"No event keywords found on {url}")
-                continue
-
-            # Parse events from text
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                if len(line) < 5:
-                    i += 1
-                    continue
-
-                # Look for event titles
-                is_event_title = False
-                title = None
-
-                for event_type in ["Toddler Time", "Glow Night", "Teen Night", "Open Jump",
-                                 "SkyFit", "Fitness", "Special Event", "Sensory", "All Abilities",
-                                 "Parents Night Out", "Cosmic Jump"]:
-                    if event_type.lower() in line.lower():
-                        is_event_title = True
-                        title = line
-                        break
-
-                if not is_event_title:
-                    i += 1
-                    continue
-
-                # Look for date nearby
-                start_date = None
-                start_time = None
-                description = ""
-
-                for j in range(i + 1, min(i + 10, len(lines))):
-                    check_line = lines[j]
-
-                    date_result = parse_date_from_text(check_line)
-                    if date_result:
-                        start_date = date_result
-                        time_result = parse_time_from_text(check_line)
-                        if time_result:
-                            start_time = time_result
-                        break
-
-                    if len(check_line) > 20 and not re.match(r'^\d{1,2}:\d{2}', check_line):
-                        description = check_line
-
-                if not start_date:
-                    i += 1
-                    continue
-
-                events_found += 1
-
-                # Extract price
-                context_text = " ".join(lines[i:min(i+10, len(lines))])
-                price_min, price_max, price_note, is_free = extract_price_info(context_text)
-
-                # Determine tags
-                tags = determine_tags(title, description)
-
-                content_hash = generate_content_hash(
-                    title, location["name"], start_date
+    for record in event_records:
+        existing = find_event_by_hash(record["content_hash"])
+        if existing:
+            smart_update_existing_event(existing, record)
+            events_updated += 1
+        else:
+            try:
+                insert_event(record)
+                events_new += 1
+                logger.info(
+                    "Added: %s on %s at %s",
+                    record["title"],
+                    record["start_date"],
+                    location["name"],
                 )
-
-
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": title,
-                    "description": description if description else f"{title} at {location['name']}",
-                    "start_date": start_date,
-                    "start_time": start_time,
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": "family",
-                    "subcategory": "active",
-                    "tags": tags,
-                    "price_min": price_min,
-                    "price_max": price_max,
-                    "price_note": price_note,
-                    "is_free": is_free,
-                    "source_url": url,
-                    "ticket_url": url,
-                    "image_url": image_map.get(title),
-                    "raw_text": f"{title} | {start_date} | {description[:200]}"[:500],
-                    "extraction_confidence": 0.75,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                    i += 1
-                    continue
-
-                try:
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info(f"Added: {title} on {start_date} at {location['name']}")
-                except Exception as e:
-                    logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            # If we found events, stop trying other URLs for this location
-            if events_found > 0:
-                break
-
-        except PlaywrightTimeout:
-            logger.warning(f"Timeout loading {url}")
-            continue
-        except Exception as e:
-            logger.warning(f"Error loading {url}: {e}")
-            continue
+            except Exception as e:
+                logger.error("Failed to insert %s: %s", record["title"], e)
 
     return events_found, events_new, events_updated
 
 
-def crawl(source: dict) -> tuple[int, int, int]:
-    """
-    Crawl all Sky Zone Atlanta locations.
-    """
-    source_id = source["id"]
+async def _run_all(source_id: int) -> tuple[int, int, int]:
+    """Run all Sky Zone location crawls within a shared aiohttp session."""
     total_found = 0
     total_new = 0
     total_updated = 0
 
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+    connector = aiohttp.TCPConnector(limit=2)
+    timeout = aiohttp.ClientTimeout(total=30)
 
-            # Crawl each location
-            for location in SKY_ZONE_LOCATIONS:
-                try:
-                    found, new, updated = crawl_location(page, location, source_id)
-                    total_found += found
-                    total_new += new
-                    total_updated += updated
-                except Exception as e:
-                    logger.error(f"Failed to crawl {location['name']}: {e}")
-                    continue
+    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+        for location in SKY_ZONE_LOCATIONS:
+            try:
+                found, new, updated = await crawl_location(session, location, source_id)
+                total_found += found
+                total_new += new
+                total_updated += updated
+            except Exception as e:
+                logger.error("Failed to crawl %s: %s", location["name"], e)
+                continue
 
-            browser.close()
+    return total_found, total_new, total_updated
 
-        logger.info(
-            f"Sky Zone Atlanta crawl complete: {total_found} found, {total_new} new, {total_updated} updated"
-        )
 
-    except Exception as e:
-        logger.error(f"Failed to crawl Sky Zone Atlanta: {e}")
-        raise
+def crawl(source: dict) -> tuple[int, int, int]:
+    """
+    Crawl all Sky Zone Atlanta-area locations.
+
+    Uses the Sky Zone WP REST API (/wp-json/skyzone/v1/park/events) which returns
+    the current week's calendar as HTML. Only days with special events (GLOW nights,
+    Toddler Time, Fitness classes, Sensory sessions) have populated calendar-content
+    divs — normal open-jump days are empty and are not created as events.
+
+    The API has no pagination. It always returns the current 7-day window. This means
+    we only ever have this week's special events, which is accurate: Sky Zone doesn't
+    post future weeks in advance on the calendar.
+    """
+    source_id = source["id"]
+
+    total_found, total_new, total_updated = asyncio.run(_run_all(source_id))
+
+    logger.info(
+        "Sky Zone Atlanta crawl complete: %d found, %d new, %d updated",
+        total_found,
+        total_new,
+        total_updated,
+    )
 
     return total_found, total_new, total_updated

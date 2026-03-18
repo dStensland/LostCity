@@ -22,8 +22,17 @@ from bs4 import BeautifulSoup
 from utils import slugify
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 BASE_URL = "https://www.cobbcounty.gov"
 # Department 85 is the Library department
@@ -169,6 +178,71 @@ CATEGORY_MAP = {
     "lego": "play",
     "toy": "play",
 }
+
+
+def _build_branch_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
+    """Project a Cobb library branch into shared Family-friendly destination details."""
+    envelope = TypedEntityEnvelope()
+    branch_name = str(venue_data.get("name") or "Cobb library branch").strip()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "library_branch",
+            "commitment_tier": "hour",
+            "primary_activity": "free indoor family library visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "free-option"],
+            "practical_notes": (
+                f"{branch_name} is a free indoor family destination with books, browsing, and library programming. "
+                "Check the official branch listing for current hours and event timing."
+            ),
+            "best_time_of_day": "any",
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Free public library access.",
+            "source_url": "https://www.cobbcounty.org/library",
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "library",
+                "branch_name": branch_name,
+                "county": "cobb",
+            },
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "free-indoor-family-stop",
+            "title": "Free indoor family stop",
+            "feature_type": "amenity",
+            "description": f"{branch_name} is a free indoor place for browsing, reading, and easy family time out of the weather.",
+            "url": "https://www.cobbcounty.org/library",
+            "price_note": "Free public library access.",
+            "is_free": True,
+            "sort_order": 5,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "storytime-and-family-programs",
+            "title": "Storytime and family programs",
+            "feature_type": "experience",
+            "description": f"{branch_name} regularly hosts free storytimes, reading events, and family-friendly branch programming.",
+            "url": EVENTS_PAGE,
+            "price_note": "Most branch programs are free; confirm event details on the official calendar.",
+            "is_free": True,
+            "sort_order": 15,
+        },
+    )
+
+    return envelope
 
 
 def determine_category(title: str, description: str) -> str:
@@ -403,6 +477,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         events_found = len(raw_events)
 
         today = datetime.now().date()
+        enriched_venue_ids: set[int] = set()
 
         # Process each event
         for raw_event in raw_events:
@@ -488,6 +563,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     }
 
                 venue_id = get_or_create_venue(venue_data)
+                if venue_id and venue_id not in enriched_venue_ids:
+                    persist_typed_entity_envelope(
+                        _build_branch_destination_envelope(venue_id, venue_data)
+                    )
+                    enriched_venue_ids.add(venue_id)
 
                 # Determine category from title/description keywords
                 category = determine_category(final_title, description)

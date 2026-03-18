@@ -49,7 +49,7 @@ import { HangFeedSection } from "./sections/HangFeedSection";
 
 import NowShowingSection from "./sections/NowShowingSection";
 import PlanningHorizonSection from "./sections/PlanningHorizonSection";
-import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
+import FeedSectionSkeleton, { useMinSkeletonDelay } from "@/components/feed/FeedSectionSkeleton";
 
 import YonderRegionalEscapesSection from "./sections/YonderRegionalEscapesSection";
 import YonderDestinationNodeQuestsSection from "./sections/YonderDestinationNodeQuestsSection";
@@ -336,8 +336,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
           </div>
         );
 
-      // festivals + community blocks removed — covered by CityBriefing
-      // (Coming Up = festivals, Today in Atlanta = local news)
+      // festivals block removed — big events covered by On the Horizon section
       case "festivals":
         return null;
       case "community":
@@ -371,7 +370,9 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
     }
   };
 
-  const lineupLoading = isLoading && lineupSections.length === 0;
+  const lineupDataLoading = !lineupSections.length && isLoading;
+  // Enforce minimum skeleton display time to prevent jarring flash-in/out
+  const lineupLoading = useMinSkeletonDelay(lineupDataLoading, 400);
   const hasAnyTabEvents = tabCounts && (tabCounts.today > 0 || tabCounts.this_week > 0 || tabCounts.coming_up > 0);
 
   // After initial load failure with no data at all, show error
@@ -443,7 +444,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         style={{ minHeight: lineupLoading ? 400 : undefined }}
       >
         {lineupLoading ? (
-          <FeedSectionSkeleton accentColor="var(--coral)" minHeight={400} />
+          <FeedSectionSkeleton accentColor="var(--coral)" minHeight={400} onRetry={refresh} />
         ) : lineupSections.length > 0 || hasAnyTabEvents ? (
           <div>
             <LineupSection

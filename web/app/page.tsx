@@ -535,6 +535,237 @@ export default function Home() {
               </div>
             </ScrollReveal>
 
+            {/* ── LOST SEASON ───────────────────────────────────────
+                Stadium navy. Yellow LED tick strip at top.
+                Font-mono wordmark. No-fuss sports energy.
+                Heavy left edge. Electric yellow accent.
+            ──────────────────────────────────────────────────────── */}
+            <ScrollReveal direction="up" delay={320}>
+              <div
+                className="overflow-hidden h-full flex flex-col"
+                style={{
+                  backgroundColor: "#0A0E1A",
+                  border: "1px solid rgba(245,230,66,0.25)",
+                  borderLeft: "3px solid rgba(245,230,66,0.7)",
+                  borderRadius: "4px",
+                  minHeight: "220px",
+                }}
+              >
+                {/* LED tick strip */}
+                <div
+                  className="relative flex-shrink-0"
+                  style={{ height: "16px", backgroundColor: "#0A0E1A" }}
+                >
+                  <div className="absolute inset-0 flex items-center justify-center gap-[2px]">
+                    {Array.from({ length: 32 }).map((_, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          width: "4px",
+                          height: "6px",
+                          backgroundColor: "#F5E642",
+                          opacity: i % 3 === 0 ? 0.8 : 0.12,
+                          borderRadius: "0.5px",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex flex-col flex-1 p-3 pt-2">
+                  {/* Category stamp */}
+                  <div
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "7px",
+                      fontWeight: 700,
+                      letterSpacing: "0.2em",
+                      textTransform: "uppercase",
+                      color: "#F5E642",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    Sports
+                  </div>
+
+                  {/* Wordmark */}
+                  <div className="mb-2">
+                    <div
+                      className="font-[family-name:var(--font-mono)]"
+                      style={{ fontSize: "7px", fontWeight: 500, letterSpacing: "0.35em", textTransform: "uppercase", color: "rgba(245,230,66,0.6)" }}
+                    >
+                      Lost
+                    </div>
+                    <div
+                      className="font-[family-name:var(--font-masthead)] leading-[0.85]"
+                      style={{ fontSize: "clamp(2.8rem, 12vw, 4rem)", color: "#F0F0EC", letterSpacing: "-0.01em" }}
+                    >
+                      SEASON
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div style={{ width: "20px", height: "2px", backgroundColor: "#F5E642" }} />
+                      <span
+                        className="font-[family-name:var(--font-mono)]"
+                        style={{ fontSize: "9px", color: "#F5E642", letterSpacing: "0.06em" }}
+                      >
+                        in the game.
+                      </span>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: "10px", lineHeight: 1.55, color: "#8A8FA8", flex: 1 }}>
+                    Every team, every league, every game day in Atlanta.
+                  </p>
+
+                  {/* Bottom bar */}
+                  <div
+                    className="mt-3 pt-2 flex items-center justify-between"
+                    style={{ borderTop: "1px solid rgba(245,230,66,0.2)" }}
+                  >
+                    <span
+                      style={{ fontFamily: "var(--font-mono)", fontSize: "8px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#F5E642" }}
+                    >
+                      Coming soon
+                    </span>
+                    <span
+                      className="font-[family-name:var(--font-masthead)]"
+                      style={{ fontSize: "14px", color: "#F5E642" }}
+                    >
+                      01
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            {/* ── LOST TRADES ───────────────────────────────────────
+                Warm off-black. Ghost business card decoration.
+                Slate blue accents. IBM Plex Mono + italic serif.
+                Stroke box label. Professional but not stuffy.
+            ──────────────────────────────────────────────────────── */}
+            <ScrollReveal direction="up" delay={400}>
+              <div
+                className="relative overflow-hidden h-full flex flex-col"
+                style={{
+                  backgroundColor: "#111009",
+                  border: "1px solid rgba(79,124,172,0.35)",
+                  borderRadius: "8px",
+                  minHeight: "220px",
+                }}
+              >
+                {/* Ghost business card decoration */}
+                <div
+                  className="absolute pointer-events-none"
+                  aria-hidden
+                  style={{
+                    bottom: "8px",
+                    right: "8px",
+                    zIndex: 0,
+                    width: "80px",
+                    height: "50px",
+                    transform: "rotate(-8deg)",
+                    border: "1px solid rgba(79,124,172,0.35)",
+                    backgroundColor: "rgba(79,124,172,0.06)",
+                    borderRadius: "2px",
+                  }}
+                >
+                  {/* Horizontal rules inside ghost card */}
+                  <div style={{ position: "absolute", top: "30%", left: "8px", right: "8px", height: "1px", backgroundColor: "rgba(79,124,172,0.2)" }} />
+                  <div style={{ position: "absolute", top: "65%", left: "8px", right: "8px", height: "1px", backgroundColor: "rgba(79,124,172,0.2)" }} />
+                  {/* 3×3 dot grid bottom-right */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: "6px",
+                      right: "6px",
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, 2px)",
+                      gap: "2px",
+                    }}
+                  >
+                    {Array.from({ length: 9 }).map((_, i) => (
+                      <div
+                        key={i}
+                        style={{ width: "2px", height: "2px", borderRadius: "50%", backgroundColor: "rgba(79,124,172,0.2)" }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="relative flex flex-col flex-1 p-3 pt-5" style={{ zIndex: 10 }}>
+                  {/* Stroke-only label */}
+                  <div
+                    className="self-start mb-2"
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "7px",
+                      fontWeight: 500,
+                      letterSpacing: "0.22em",
+                      textTransform: "uppercase",
+                      color: "#4F7CAC",
+                      border: "1px solid #4F7CAC",
+                      padding: "2px 5px",
+                    }}
+                  >
+                    Professional
+                  </div>
+
+                  {/* Wordmark */}
+                  <div className="mb-3 flex-1 flex flex-col justify-center">
+                    <div
+                      className="font-[family-name:var(--font-mono)]"
+                      style={{ fontSize: "9px", color: "#4F7CAC", opacity: 0.5, letterSpacing: "0.1em" }}
+                    >
+                      // lost
+                    </div>
+                    <div
+                      className="font-[family-name:var(--font-serif)] italic leading-[0.85]"
+                      style={{ fontSize: "clamp(3rem, 14vw, 4.2rem)", color: "#F0EBE2", letterSpacing: "-0.02em", marginTop: "-2px" }}
+                    >
+                      Trades
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <div style={{ width: "20px", height: "1px", backgroundColor: "#4F7CAC", opacity: 0.5 }} />
+                      <span
+                        className="font-[family-name:var(--font-mono)]"
+                        style={{ fontSize: "9px", color: "#4F7CAC", letterSpacing: "0.06em" }}
+                      >
+                        where work gets interesting.
+                      </span>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: "10px", lineHeight: 1.55, color: "#7A7268", marginBottom: "10px" }}>
+                    Conferences, networking, and career events worth showing up for.
+                  </p>
+
+                  {/* Bottom bar */}
+                  <div
+                    className="flex items-center justify-between pt-2"
+                    style={{ borderTop: "1px solid rgba(79,124,172,0.25)", opacity: 0.6 }}
+                  >
+                    <span
+                      style={{ fontFamily: "var(--font-mono)", fontSize: "8px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#4F7CAC", opacity: 1 }}
+                    >
+                      Coming soon
+                    </span>
+                    {/* 3×3 micro dot grid */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1.5px)", gap: "2px" }}>
+                      {Array.from({ length: 9 }).map((_, i) => (
+                        <div
+                          key={i}
+                          style={{ width: "1.5px", height: "1.5px", borderRadius: "50%", backgroundColor: "rgba(79,124,172,0.4)" }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+
           </div>
         </div>
       </div>

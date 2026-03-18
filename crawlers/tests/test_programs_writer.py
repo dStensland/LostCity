@@ -4,6 +4,7 @@ from db.programs import (
     _generate_disambiguated_program_slug,
     insert_program,
     reset_program_identity_cache,
+    update_program,
 )
 
 
@@ -126,3 +127,79 @@ def test_insert_program_uses_in_process_cache_to_avoid_same_run_duplicates(monke
     assert len(inserted_payloads) == 1
     assert updated["id"] == "program-123"
     assert updated["payload"]["metadata"]["session_id"] == 4127902
+
+
+def test_insert_program_overrides_stale_portal_id_from_source_owner(monkeypatch) -> None:
+    reset_program_identity_cache()
+    inserted_payloads: list[dict] = []
+
+    monkeypatch.setattr("db.programs.find_program_by_hash", lambda _hash: None)
+    monkeypatch.setattr("db.programs.find_program_by_identity", lambda **_kwargs: None)
+    monkeypatch.setattr("db.programs.get_client", lambda: object())
+    monkeypatch.setattr("db.programs.writes_enabled", lambda: True)
+    monkeypatch.setattr(
+        "db.programs.get_source_info",
+        lambda _source_id: {"owner_portal_id": "atlanta-families-portal"},
+    )
+    monkeypatch.setattr(
+        "db.programs._insert_program_record",
+        lambda _client, payload: inserted_payloads.append(dict(payload)) or SimpleNamespace(data=[{"id": "program-456"}]),
+    )
+
+    program_id = insert_program(
+        {
+            "portal_id": "hooky-portal",
+            "source_id": 1303,
+            "venue_id": 5624,
+            "name": "Portal Repair Program",
+            "program_type": "camp",
+            "session_start": "2026-06-08",
+            "metadata": {},
+            "_venue_name": "Cobb County Parks & Recreation",
+        }
+    )
+
+    assert program_id == "program-456"
+    assert inserted_payloads[0]["portal_id"] == "atlanta-families-portal"
+
+
+def test_update_program_overrides_stale_portal_id_from_source_owner(monkeypatch) -> None:
+    executed: dict[str, object] = {}
+
+    class FakeQuery:
+        def update(self, payload):
+            executed["payload"] = payload
+            return self
+
+        def eq(self, column, value):
+            executed["eq"] = (column, value)
+            return self
+
+        def execute(self):
+            executed["executed"] = True
+            return SimpleNamespace(data=[])
+
+    class FakeClient:
+        def table(self, name):
+            executed["table"] = name
+            return FakeQuery()
+
+    monkeypatch.setattr("db.programs.writes_enabled", lambda: True)
+    monkeypatch.setattr("db.programs.get_client", lambda: FakeClient())
+    monkeypatch.setattr(
+        "db.programs.get_source_info",
+        lambda _source_id: {"owner_portal_id": "atlanta-families-portal"},
+    )
+
+    update_program(
+        "program-123",
+        {
+            "portal_id": "hooky-portal",
+            "source_id": 1303,
+            "registration_status": "open",
+        },
+    )
+
+    assert executed["table"] == "programs"
+    assert executed["payload"]["portal_id"] == "atlanta-families-portal"
+    assert executed["eq"] == ("id", "program-123")

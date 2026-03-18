@@ -42,6 +42,10 @@ VENUE_DATA = {
 }
 
 
+class NoCurrentCycleError(ValueError):
+    """The source is reachable, but no current GROOM'D cycle is published."""
+
+
 def parse_registration_page(text: str, today: date | None = None) -> dict:
     """Extract the current official GROOM'D event details."""
     today = today or datetime.now().date()
@@ -60,7 +64,7 @@ def parse_registration_page(text: str, today: date | None = None) -> dict:
     start_date = date(year, month, int(start_day_str))
     end_date = date(year, month, int(end_day_str))
     if end_date < today:
-        raise ValueError("GROOM'D registration page only exposes a past-dated cycle")
+        raise NoCurrentCycleError("GROOM'D registration page only exposes a past-dated cycle")
 
     venue_match = re.search(
         r"Georgia International Convention Center,\s*2000 Convention Center Concourse,\s*College Park,\s*GA\s*30337",
@@ -96,7 +100,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
     response.raise_for_status()
 
     page_text = BeautifulSoup(response.text, "html.parser").get_text(" ", strip=True)
-    event = parse_registration_page(page_text)
+    try:
+        event = parse_registration_page(page_text)
+    except NoCurrentCycleError as exc:
+        stale_removed = remove_stale_source_events(source_id, current_hashes)
+        if stale_removed:
+            logger.info("Removed %s stale GROOM'D events after refresh", stale_removed)
+        logger.info("GROOM'D crawl complete: no current cycle published (%s)", exc)
+        return 0, 0, 0
+
     venue_id = get_or_create_venue(VENUE_DATA)
 
     content_hash = generate_content_hash(event["title"], VENUE_DATA["name"], event["start_date"])

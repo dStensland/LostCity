@@ -85,6 +85,48 @@ _AGE_BANDS: list[tuple[str, int, int]] = [
     ("teen", 13, 18),
 ]
 
+# Keywords in a program name that indicate adults-only content.  Matched
+# case-insensitively against the lowercased program title.
+ADULT_KEYWORDS: list[str] = [
+    "aarp",
+    "senior",
+    "seniors",
+    "turning 65",
+    "medicare",
+    "adult only",
+    "adults only",
+    "21+",
+    "55+",
+    "50+",
+    "adult acrylic",
+    "adult watercolor",
+    "adult pottery",
+    "adult doubles",
+    "adult singles",
+    "adult beginner",
+    "adult intermediate",
+    "adult advanced",
+    "wine and",
+    "wine &",
+    "cocktail",
+]
+
+
+def is_adult_program(name: str, age_min: Optional[int]) -> bool:
+    """Return True when a program is clearly adults-only.
+
+    Detection is intentionally broad: keyword match OR age_min >= 18.
+    The caller should add 'adults-only' to the tags array but NOT skip the
+    record — adult programs belong in the Atlanta base portal, just not in
+    the family portal lane where the 'adults-only' tag is an exclusion filter.
+    """
+    name_lower = name.lower()
+    if any(kw in name_lower for kw in ADULT_KEYWORDS):
+        return True
+    if age_min is not None and age_min >= 18:
+        return True
+    return False
+
 
 def _age_band_tags(age_min: Optional[int], age_max: Optional[int]) -> list[str]:
     """Return age-band tags that overlap with [age_min, age_max]."""
@@ -590,6 +632,15 @@ def _infer_category_and_tags(
         if "family-friendly" in tags:
             tags.remove("family-friendly")
 
+    # Adults-only detection: keyword match or structured age data.
+    # Tag the record rather than skipping it — adult programs belong in the
+    # Atlanta base portal, just not the family portal lane.
+    if is_adult_program(session_name, age_min):
+        if "adults-only" not in tags:
+            tags.append("adults-only")
+        if "family-friendly" in tags:
+            tags.remove("family-friendly")
+
     return category, tags
 
 
@@ -1070,6 +1121,18 @@ def _build_program_record(
     # Registration status from session fullness
     is_full = session.get("sessionFull", False)
     reg_status = "closed" if is_full else "open"
+
+    # Clamp stale open status: if the registration deadline has already passed,
+    # mark closed regardless of what the API reports. The API only updates this
+    # field when something changes on their side, so programs can sit as "open"
+    # indefinitely after their deadline.
+    if reg_status == "open" and registration_closes:
+        try:
+            closes_date = date.fromisoformat(registration_closes)
+            if closes_date < date.today():
+                reg_status = "closed"
+        except (ValueError, TypeError):
+            pass
 
     # Build the record
     program: dict = {

@@ -2,8 +2,7 @@
 Crawler for Sister Louisa's Church of the Living Room & Ping Pong Emporium.
 Edgewood Ave iconic dive bar with ping pong and art.
 
-Generates recurring Wednesday karaoke events.
-(Drag Bingo is handled by the sister-louisas-church source.)
+Generates recurring events: Tuesday tarot, Wednesday karaoke, Wednesday drag bingo.
 """
 
 from __future__ import annotations
@@ -80,6 +79,19 @@ WEEKLY_SCHEDULE = [
         "category": "nightlife",
         "subcategory": "nightlife.karaoke",
         "tags": ["karaoke", "nightlife", "weekly", "lgbtq-friendly"],
+    },
+    {
+        "day": 2,  # Wednesday
+        "title": "Drag Bingo at Sister Louisa's",
+        "description": (
+            "Drag Bingo hosted by Atlanta's finest drag queens at Sister Louisa's Church "
+            "on Edgewood Ave. Play bingo, win prizes, and support local drag talent. "
+            "Free to play, tips appreciated."
+        ),
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.bingo",
+        "tags": ["bingo", "drag", "nightlife", "weekly", "lgbtq-friendly", "free"],
     },
 ]
 

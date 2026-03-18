@@ -1,11 +1,10 @@
 import { notFound, redirect } from "next/navigation";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { PortalHeader } from "@/components/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getLocalDateString } from "@/lib/formats";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
 import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import { isFilmPortalVertical } from "@/lib/portal-taxonomy";
 import FilmPortalNav from "../_components/film/FilmPortalNav";
@@ -293,8 +292,8 @@ export default async function CommunityHubPage({ params }: Props) {
           {spotlight ? (
             <article className="relative overflow-hidden rounded-3xl border border-[#2a3349] bg-[#0d1424]">
               <div className="absolute inset-0">
-                <Image
-                  src={getProxiedImageSrc(spotlight.image_url || FALLBACK_PHOTOS[0])}
+                <SmartImage
+                  src={spotlight.image_url || FALLBACK_PHOTOS[0]}
                   alt={spotlight.title}
                   fill
                   unoptimized
@@ -345,8 +344,8 @@ export default async function CommunityHubPage({ params }: Props) {
                 <div className="flex items-start gap-3">
                   <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full border border-[#3a4969] bg-[#121e36]">
                     {hasPhoto(group.logo_url) ? (
-                      <Image
-                        src={getProxiedImageSrc(group.logo_url)}
+                      <SmartImage
+                        src={group.logo_url}
                         alt={group.name}
                         fill
                         unoptimized
@@ -354,8 +353,8 @@ export default async function CommunityHubPage({ params }: Props) {
                         sizes="44px"
                       />
                     ) : (
-                      <Image
-                        src={getProxiedImageSrc(FALLBACK_PHOTOS[index % FALLBACK_PHOTOS.length])}
+                      <SmartImage
+                        src={FALLBACK_PHOTOS[index % FALLBACK_PHOTOS.length]}
                         alt={group.name}
                         fill
                         unoptimized

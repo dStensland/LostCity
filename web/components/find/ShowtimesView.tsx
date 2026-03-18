@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { useSearchParams } from "next/navigation";
 import { formatTimeSplit } from "@/lib/formats";
 import CategoryIcon from "@/components/CategoryIcon";
+import { CalendarBlank } from "@phosphor-icons/react";
 import {
   createFindFilterSnapshot,
   trackFindZeroResults,
@@ -113,13 +114,18 @@ function FilmPoster({ film }: { film: { title: string; image_url: string | null 
   return (
     <div className="flex-shrink-0 w-[60px] h-[90px] sm:w-[68px] sm:h-[102px] rounded-lg overflow-hidden bg-[var(--dusk)] border border-[var(--twilight)]/50">
       {film.image_url ? (
-        <Image
+        <SmartImage
           src={film.image_url}
           alt={film.title}
           width={68}
           height={102}
           className="w-full h-full object-cover"
           unoptimized
+          fallback={
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--twilight)]/30 to-[var(--void)]/80">
+              <CategoryIcon type="film" size={24} glow="subtle" />
+            </div>
+          }
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--twilight)]/30 to-[var(--void)]/80">
@@ -345,13 +351,18 @@ function TheaterAccordionCard({ theater, portalSlug, portalId }: { theater: Thea
               <div key={film.series_id || film.title} className="flex gap-2.5">
                 <div className="flex-shrink-0 w-[44px] h-[66px] rounded-md overflow-hidden bg-[var(--dusk)] border border-[var(--twilight)]/40">
                   {film.image_url ? (
-                    <Image
+                    <SmartImage
                       src={film.image_url}
                       alt={film.title}
                       width={44}
                       height={66}
                       className="w-full h-full object-cover"
                       unoptimized
+                      fallback={
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--twilight)]/30 to-[var(--void)]/80">
+                          <CategoryIcon type="film" size={16} glow="subtle" />
+                        </div>
+                      }
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--twilight)]/30 to-[var(--void)]/80">
@@ -419,7 +430,7 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
   );
 
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [viewMode, setViewMode] = useState<"by-movie" | "by-theater">("by-movie");
+  const [viewMode, setViewMode] = useState<"by-movie" | "by-theater">("by-theater");
 
   const [films, setFilms] = useState<Film[]>([]);
   const [theaters, setTheaters] = useState<TheaterGroup[]>([]);
@@ -429,6 +440,7 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
   const zeroResultsSignatureRef = useRef<string | null>(null);
 
   const dateScrollRef = useRef<HTMLDivElement>(null);
+  const filmDateInputRef = useRef<HTMLInputElement>(null);
 
   // Client-side cache: date|mode → { films, theaters }
   const cacheRef = useRef<Map<string, { films?: Film[]; theaters?: TheaterGroup[] }>>(new Map());
@@ -645,8 +657,17 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
     <div>
       {/* Date pills + summary */}
       <section className="mb-4 rounded-2xl border border-[var(--twilight)]/80 bg-[var(--void)]/70 backdrop-blur-md p-3 sm:p-4">
-        <div ref={dateScrollRef} className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pb-0.5">
-          {datePills.map((dateStr) => {
+        <div ref={dateScrollRef} className="flex items-center gap-2 -mx-1 px-1 pb-0.5">
+          {/* Selected date pill when beyond visible range */}
+          {datePills.indexOf(selectedDate) >= 5 && (
+            <button
+              type="button"
+              className="flex-shrink-0 px-3.5 py-2 rounded-full font-mono text-xs whitespace-nowrap bg-gradient-to-r from-[var(--gold)] to-[var(--coral)] text-[var(--void)] font-semibold shadow-[0_4px_12px_rgba(0,0,0,0.25)]"
+            >
+              {formatDatePill(selectedDate)}
+            </button>
+          )}
+          {datePills.slice(0, 5).map((dateStr) => {
             const isActive = selectedDate === dateStr;
             return (
               <button
@@ -662,6 +683,30 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
               </button>
             );
           })}
+          {datePills.length > 5 && (
+            <div className="relative flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => filmDateInputRef.current?.showPicker()}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-full font-mono text-xs whitespace-nowrap bg-[var(--night)]/70 border border-[var(--twilight)]/70 text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--coral)]/40 transition-all"
+              >
+                <CalendarBlank weight="bold" size={14} />
+                <span className="hidden sm:inline">Pick date</span>
+              </button>
+              <input
+                ref={filmDateInputRef}
+                type="date"
+                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                tabIndex={-1}
+                min={datePills[0]}
+                max={datePills[datePills.length - 1]}
+                value={selectedDate}
+                onChange={(e) => {
+                  if (e.target.value) setSelectedDate(e.target.value);
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {!metaLoading && (filmCount > 0 || theaterCount > 0) && (

@@ -25,6 +25,8 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from sources._dunwoody_camp_pdf import extract_title_date_pairs_from_pdf
 
 logger = logging.getLogger(__name__)
@@ -71,6 +73,72 @@ BASE_TAGS = [
     "rsvp-required",
     "tween",
 ]
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "park",
+            "commitment_tier": "halfday",
+            "primary_activity": "family river park visit",
+            "best_seasons": ["spring", "summer", "fall"],
+            "weather_fit_tags": ["outdoor", "family-daytrip"],
+            "best_time_of_day": "morning",
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "practical_notes": (
+                "Island Ford gives families access to Chattahoochee River exploration, pond canoeing, and trail time inside the national recreation area."
+            ),
+            "fee_note": "Open park access and special camp programming can have different pricing or registration requirements.",
+            "source_url": SOURCE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": VENUE_DATA.get("venue_type"),
+                "city": "sandy springs",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "river-and-pond-exploration",
+            "title": "River and pond exploration",
+            "feature_type": "experience",
+            "description": "Island Ford's official camp materials emphasize river exploration, pond canoeing, and hands-on outdoor activities for older kids and families.",
+            "url": SOURCE_URL,
+            "price_note": "Some guided experiences and camp sessions require separate registration.",
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "forest-trails-and-outdoor-adventure",
+            "title": "Forest trails and outdoor adventure",
+            "feature_type": "amenity",
+            "description": "Hiking trails and adventure-oriented outdoor programming make Island Ford a strong Family micro-adventure destination in close metro.",
+            "url": SOURCE_URL,
+            "price_note": "Trail access and organized programming vary by site rules and schedule.",
+            "is_free": True,
+            "sort_order": 20,
+        },
+    )
+    return envelope
 
 
 def _clean_text(value: Optional[str]) -> str:
@@ -203,6 +271,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         return 0, 0, 0
 
     venue_id = get_or_create_venue(VENUE_DATA)
+    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
     today = date.today().strftime("%Y-%m-%d")
 
     for row in rows:
@@ -213,7 +282,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             events_found += 1
             existing = find_event_by_hash(record["content_hash"])
             if existing:
-                if smart_update_existing_event(existing["id"], record):
+                if smart_update_existing_event(existing, record):
                     events_updated += 1
             else:
                 if insert_event(record):

@@ -9,7 +9,7 @@
  */
 
 import type { CityPulseEventItem } from "./types";
-import { SPORTS_SIGNAL_GENRES } from "./sports-signals";
+import { SPECTATOR_SPORTS_GENRES, RECREATION_SIGNAL_GENRES } from "./sports-signals";
 
 // ---------------------------------------------------------------------------
 // Interest chip type
@@ -61,7 +61,8 @@ const genreMatch =
     );
   };
 
-const sportsSignalMatch = genreMatch(...SPORTS_SIGNAL_GENRES);
+const spectatorSportsMatch = genreMatch(...SPECTATOR_SPORTS_GENRES);
+const recreationSignalMatch = genreMatch(...RECREATION_SIGNAL_GENRES);
 const DANCE_SIGNAL_GENRES = [
   "dance",
   "salsa",
@@ -147,11 +148,19 @@ export const INTEREST_CHIPS: InterestChip[] = [
   },
   {
     id: "sports",
-    label: "Sports",
-    iconName: "PersonSimpleRun",
+    label: "Game Day",
+    iconName: "Trophy",
     color: "#7DD3FC",
     type: "category",
-    match: (item) => catMatch("sports")(item) || sportsSignalMatch(item),
+    match: (item) => catMatch("sports")(item) || spectatorSportsMatch(item),
+  },
+  {
+    id: "recreation",
+    label: "Rec Sports",
+    iconName: "PersonSimpleRun",
+    color: "#86EFAC",
+    type: "category",
+    match: (item) => catMatch("recreation")(item) || recreationSignalMatch(item),
   },
   {
     id: "family",
@@ -170,12 +179,12 @@ export const INTEREST_CHIPS: InterestChip[] = [
     match: catMatch("theater"),
   },
   {
-    id: "fitness",
-    label: "Fitness",
+    id: "exercise",
+    label: "Exercise",
     iconName: "Barbell",
     color: "#5EEAD4",
     type: "category",
-    match: catMatch("fitness"),
+    match: (item) => catMatch("exercise")(item) || catMatch("fitness")(item),
   },
   // --- Special chips ---
   {
@@ -358,7 +367,9 @@ const CHIP_COUNT_KEYS: Record<string, string[]> = {
   improv: ["genre:improv", "tag:improv"],
   dj_electronic: ["genre:dj", "genre:electronic", "genre:edm", "tag:dj", "tag:electronic", "tag:edm"],
   food_specials: ["genre:happy-hour", "genre:food-specials", "genre:specials", "genre:oysters", "genre:taco-tuesday", "genre:wings", "genre:drink-specials", "tag:happy-hour", "tag:food-specials", "tag:specials", "tag:oysters", "tag:taco-tuesday", "tag:wings", "tag:drink-specials"],
-  sports: SPORTS_SIGNAL_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),
+  sports: SPECTATOR_SPORTS_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),
+  recreation: RECREATION_SIGNAL_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),
+
   dance: DANCE_SIGNAL_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),
   markets: MARKET_SIGNAL_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),
   gaming: GAMING_SIGNAL_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),

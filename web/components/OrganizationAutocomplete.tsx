@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 
 interface OrganizationResult {
@@ -221,7 +221,7 @@ export default function OrganizationAutocomplete({
             >
               <div className="flex items-center gap-2">
                 {organization.logo_url && (
-                  <Image
+                  <SmartImage
                     src={organization.logo_url}
                     alt={organization.name}
                     width={24}

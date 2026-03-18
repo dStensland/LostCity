@@ -22,6 +22,7 @@ from db.client import (
     _next_temp_id,
     _log_write_skip,
 )
+from db.sources import get_source_info
 
 logger = logging.getLogger(__name__)
 
@@ -214,6 +215,18 @@ def reset_program_identity_cache() -> None:
     _SEEN_PROGRAM_IDENTITIES.clear()
 
 
+def _normalize_program_portal_id(program_data: dict) -> None:
+    """Force program portal attribution to follow the owning source when known."""
+    source_id = program_data.get("source_id")
+    if not source_id:
+        return
+
+    source_info = get_source_info(source_id)
+    owner_portal_id = source_info.get("owner_portal_id") if source_info else None
+    if owner_portal_id and program_data.get("portal_id") != owner_portal_id:
+        program_data["portal_id"] = owner_portal_id
+
+
 # ---------------------------------------------------------------------------
 # Dedup lookup
 # ---------------------------------------------------------------------------
@@ -286,6 +299,8 @@ def insert_program(program_data: dict) -> Optional[str]:
 
     Pipeline: validate → generate slug → dedupe → insert.
     """
+    _normalize_program_portal_id(program_data)
+
     name = program_data.get("name", "").strip()
     if not name:
         logger.warning("Skipping program with empty name")
@@ -411,6 +426,8 @@ def update_program(program_id: str, updates: dict) -> None:
     if not writes_enabled():
         _log_write_skip(f"update programs id={program_id}")
         return
+
+    _normalize_program_portal_id(updates)
 
     # Filter to valid columns, excluding immutable fields
     filtered = {

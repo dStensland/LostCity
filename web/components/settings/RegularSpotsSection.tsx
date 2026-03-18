@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { MapPin, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth-context";
 import { MAX_REGULAR_SPOTS, type RegularSpotVenue } from "@/lib/types/profile";
@@ -33,7 +33,7 @@ const SpotRow = memo(function SpotRow({ spot, onRemove, removing }: SpotRowProps
     <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--night)] border border-[var(--twilight)]/40">
       <div className="w-10 h-10 flex-shrink-0 rounded-lg overflow-hidden bg-[var(--twilight)]">
         {spot.image_url ? (
-          <Image
+          <SmartImage
             src={spot.image_url}
             alt={spot.name}
             width={40}

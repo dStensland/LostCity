@@ -34,6 +34,16 @@ _MONTH_NAME_MAP = {
     "dec": 12,
 }
 
+_DATE_SUFFIX_RE = re.compile(
+    r"\s+(?:"
+    r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?"
+    r"|(?:week\s+)?\d+(?:st|nd|rd|th)?\s+week"
+    r"|\bday\s+\d+"
+    r"|\bsession\s+\d+"
+    r")\s*$",
+    re.IGNORECASE,
+)
+
 _WEEKDAY_PATTERN = re.compile(
     r"\b(mon(?:day)?|tue(?:s|sday)?|wed(?:nesday|s)?|thu(?:r|rs|rsday|sday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b",
     re.IGNORECASE,
@@ -115,6 +125,78 @@ def _extract_hour(raw: Optional[str]) -> Optional[int]:
     if not match:
         return None
     return int(match.group(1))
+
+
+def normalize_activecommunities_age(raw: Optional[int]) -> Optional[int]:
+    """
+    Convert ACTIVENet age sentinel values to None.
+
+    ACTIVENet returns 0 for both age_min_year and age_max_year when the
+    activity has no age restriction, not to mean "infant" (age 0).
+    Treat 0 as missing data so the filtering logic isn't misled.
+    Also treat values > 90 as missing (API encodes "adults" as 99 or 120).
+    """
+    if raw is None:
+        return None
+    if raw == 0:
+        return None
+    if raw > 90:
+        return None
+    return raw
+
+
+# Ordered from most-specific to least-specific so the first match wins.
+_AGE_NAME_PATTERNS: list[re.Pattern] = [
+    re.compile(r"ages?\s+(\d+)\s*[-\u2013to]+\s*(\d+)", re.IGNORECASE),
+    re.compile(r"\((\d+)\s*[-\u2013]\s*(\d+)\s*(?:yr|year)", re.IGNORECASE),
+    re.compile(r"(\d+)\s*[-\u2013]\s*(\d+)\s*(?:yr|year)", re.IGNORECASE),
+    re.compile(r"grade[s]?\s+(\d+)\s*[-\u2013]\s*(\d+)", re.IGNORECASE),
+    re.compile(r"(\d+)\s*&\s*under", re.IGNORECASE),
+]
+
+
+def parse_age_from_name(name: str) -> tuple[Optional[int], Optional[int]]:
+    """Extract age range from program name patterns like 'Ages 5-12' or '(6-8 yrs)'.
+
+    Called as a fallback after normalize_activecommunities_age() when both
+    age_min and age_max are still None — meaning the API didn't supply age
+    data but the title may contain it.
+
+    Returns (age_min, age_max) or (None, None) if nothing parseable is found.
+    Only returns ranges where 0 < age_min < age_max <= 18, to avoid treating
+    adult programs (e.g. "18-65 yrs") as youth programs.
+    """
+    name_lower = name.lower()
+    for pattern in _AGE_NAME_PATTERNS:
+        m = pattern.search(name_lower)
+        if m is None:
+            continue
+        groups = m.groups()
+        if len(groups) == 2:
+            a, b = int(groups[0]), int(groups[1])
+            # Grade-to-age conversion: grade + 5 approximates school age
+            if "grade" in pattern.pattern.lower():
+                a, b = a + 5, b + 5
+            if 0 < a < b <= 18:
+                return a, b
+        elif len(groups) == 1:
+            upper = int(groups[0])
+            if 0 < upper <= 18:
+                return 0, upper
+    return None, None
+
+
+def normalize_activecommunities_session_title(name: str) -> str:
+    """
+    Strip trailing per-day date suffixes from ACTIVENet session titles.
+
+    ACTIVENet lists multi-day camps as individual daily sessions:
+      "Gresham 2026 Spring Break Camp Apr. 6th"
+      "Gresham 2026 Spring Break Camp Apr. 7th"
+    This strips the trailing date/session suffix so callers can group
+    consecutive same-venue sessions into a single program record.
+    """
+    return _DATE_SUFFIX_RE.sub("", name).strip()
 
 
 def infer_activecommunities_schedule_days(

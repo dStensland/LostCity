@@ -21,8 +21,9 @@ import {
 // Destination category mappings for venues (post-consolidation types)
 // ---------------------------------------------------------------------------
 
+// A venue can appear in multiple categories (e.g. a bar that serves food).
 const DESTINATION_CATEGORIES: Record<string, string[]> = {
-  food: ["restaurant", "food_hall", "cooking_school"],
+  food: ["restaurant", "food_hall", "cooking_school", "bar", "brewery", "sports_bar"],
   drinks: ["bar", "brewery", "distillery", "winery", "rooftop", "sports_bar"],
   nightlife: ["club"],
   caffeine: ["coffee_shop"],
@@ -88,6 +89,7 @@ export type NearbyDestination = {
 type SpotRecord = {
   id: number;
   neighborhood?: string | null;
+  city?: string | null;
   lat?: number | null;
   lng?: number | null;
   [key: string]: unknown;
@@ -323,6 +325,7 @@ async function fetchNearbyDestinations(
       .from("venues")
       .select(selectFields)
       .eq("neighborhood", spot.neighborhood)
+      .eq("city", spot.city as string)
       .in("venue_type", allDestinationTypes)
       .eq("active", true)
       .neq("id", spot.id)
@@ -336,7 +339,7 @@ async function fetchNearbyDestinations(
     // Geo-bounded query: fetch venues within ~1.5mi bounding box instead of full table scan
     const latDelta = 1.5 / 69; // ~1.5 miles in degrees latitude
     const lngDelta = 1.5 / (69 * Math.cos((spot.lat * Math.PI) / 180));
-    const { data, error } = await supabase
+    let geoQuery = supabase
       .from("venues")
       .select(selectFields)
       .in("venue_type", allDestinationTypes)
@@ -347,6 +350,8 @@ async function fetchNearbyDestinations(
       .gte("lng", spot.lng - lngDelta)
       .lte("lng", spot.lng + lngDelta)
       .limit(50);
+    if (spot.city) geoQuery = geoQuery.eq("city", spot.city);
+    const { data, error } = await geoQuery;
     if (error) {
       console.error("[spot-detail] nearby geo query failed:", error.message);
       return nearbyDestinations;
@@ -372,16 +377,11 @@ async function fetchNearbyDestinations(
     }
 
     const venueType = dest.venue_type || "";
-    let category: string | null = null;
+    const destWithDistance = { ...dest, distance };
     for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
-      if (types.includes(venueType)) {
-        category = cat;
-        break;
+      if (types.includes(venueType) && nearbyDestinations[cat]) {
+        nearbyDestinations[cat].push(destWithDistance);
       }
-    }
-
-    if (category && nearbyDestinations[category]) {
-      nearbyDestinations[category].push({ ...dest, distance });
     }
   }
 

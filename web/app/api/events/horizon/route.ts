@@ -52,7 +52,7 @@ export async function GET(request: Request) {
       .select(
         `
         id, title, start_date, end_date, start_time, importance,
-        category_id, image_url, source_url,
+        category_id, image_url, source_url, featured_blurb,
         on_sale_date, presale_date, early_bird_deadline, announce_date,
         registration_opens, registration_closes, registration_url,
         ticket_status, ticket_status_checked_at, sellout_risk,
@@ -66,6 +66,11 @@ export async function GET(request: Request) {
       .lte("start_date", endDate)
       .eq("is_active", true)
       .is("canonical_event_id", null)
+      // Exclude event types that don't belong in a planning-ahead feed
+      .neq("category_id", "tours")
+      .not("category_id", "in", "(sports,recreation)")
+      .neq("category_id", "unknown")
+      .neq("is_class", true)
       // flagship events first (alphabetical: "flagship" < "major"), then chronological
       .order("importance", { ascending: true })
       .order("start_date", { ascending: true })
@@ -99,6 +104,7 @@ export async function GET(request: Request) {
         return {
           ...ev,
           category: ev.category_id ?? null,
+          featured_blurb: ev.featured_blurb ?? null,
           venue: ev.venue ?? null,
           urgency: getPlanningUrgency(ev),
           ticket_freshness: ticketStatusFreshness(ev.ticket_status_checked_at),

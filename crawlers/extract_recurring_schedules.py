@@ -3,7 +3,7 @@ extract_recurring_schedules.py
 
 Scans Atlanta bar/restaurant/music venue websites for recurring weekly events
 (trivia nights, karaoke, DJ nights, open mics, game nights, drag shows, etc.)
-using Playwright for page fetching and Claude for extraction.
+using Playwright for page fetching and the configured LLM provider for extraction.
 
 Usage:
     python extract_recurring_schedules.py                   # dry run, all venues
@@ -23,7 +23,6 @@ from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Optional
 
-import anthropic
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 # ---------------------------------------------------------------------------
@@ -32,6 +31,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 sys.path.insert(0, str(Path(__file__).parent))
 
 from config import get_config
+from llm_client import generate_text
 from db import (
     get_client,
     get_or_create_venue,
@@ -184,17 +184,16 @@ def fetch_venue_content(
 
 
 # ---------------------------------------------------------------------------
-# Claude extraction
+# LLM extraction
 # ---------------------------------------------------------------------------
 
 def extract_recurring_events(
-    client: anthropic.Anthropic,
     venue_name: str,
     website: str,
     page_url: str,
     page_text: str,
 ) -> list[dict]:
-    """Send page content to Claude and return list of extracted recurring events."""
+    """Send page content to the configured LLM and return recurring events."""
     # Truncate to avoid context overruns — first 8000 chars is plenty
     truncated_text = page_text[:8000]
 
@@ -206,14 +205,19 @@ def extract_recurring_events(
     )
 
     try:
-        response = client.messages.create(
-            model=MODEL,
-            max_tokens=MAX_TOKENS,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        raw = response.content[0].text.strip()
+        cfg = get_config()
+        provider = (cfg.llm.provider or "").strip().lower()
+        if provider in ("", "auto"):
+            provider = "openai" if cfg.llm.openai_api_key else "anthropic"
+        model_override = cfg.llm.openai_model if provider == "openai" else MODEL
+        raw = generate_text(
+            "",
+            prompt,
+            provider_override=provider,
+            model_override=model_override,
+        ).strip()
 
-        # Strip markdown code fences if Claude wrapped the JSON
+        # Strip markdown code fences if the LLM wrapped the JSON
         if raw.startswith("```"):
             lines = raw.splitlines()
             # Drop first and last fence lines
@@ -232,15 +236,15 @@ def extract_recurring_events(
         parsed = json.loads(raw)
         events = parsed.get("events", [])
         if not isinstance(events, list):
-            logger.warning(f"Claude returned unexpected 'events' type: {type(events)}")
+            logger.warning(f"LLM returned unexpected 'events' type: {type(events)}")
             return []
         return events
 
     except json.JSONDecodeError as exc:
-        logger.warning(f"Claude returned non-JSON for {venue_name}: {exc}")
+        logger.warning(f"LLM returned non-JSON for {venue_name}: {exc}")
         return []
-    except anthropic.APIError as exc:
-        logger.error(f"Claude API error for {venue_name}: {exc}")
+    except Exception as exc:
+        logger.error(f"LLM extraction error for {venue_name}: {exc}")
         return []
 
 
@@ -437,7 +441,7 @@ def process_venues(
     """
     For each venue:
       1. Fetch page content with Playwright
-      2. Extract recurring events with Claude
+      2. Extract recurring events with the configured LLM
       3. Validate results
       4. If execute: insert into DB
       5. Collect results for report
@@ -445,12 +449,9 @@ def process_venues(
     Returns list of per-venue result dicts.
     """
     cfg = get_config()
-    anthropic_key = cfg.llm.anthropic_api_key
-    if not anthropic_key:
-        logger.error("ANTHROPIC_API_KEY not set. Cannot run extraction.")
+    if not (cfg.llm.openai_api_key or cfg.llm.anthropic_api_key):
+        logger.error("No LLM API key configured. Set OPENAI_API_KEY or ANTHROPIC_API_KEY.")
         sys.exit(1)
-
-    claude = anthropic.Anthropic(api_key=anthropic_key)
 
     results: list[dict] = []
 
@@ -495,10 +496,9 @@ def process_venues(
             else:
                 page_url = website
 
-            # Call Claude
+            # Call LLM
             time.sleep(CLAUDE_DELAY_SECONDS)
             raw_events = extract_recurring_events(
-                claude,
                 venue_name=venue_name,
                 website=website,
                 page_url=page_url,

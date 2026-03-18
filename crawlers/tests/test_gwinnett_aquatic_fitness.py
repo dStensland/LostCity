@@ -1,6 +1,10 @@
 from datetime import date
 
-from sources.gwinnett_aquatic_fitness import parse_days_value, parse_session
+from sources.gwinnett_aquatic_fitness import (
+    _build_destination_envelope,
+    parse_days_value,
+    parse_session,
+)
 
 
 def test_parse_days_value_supports_multiple_weekdays():
@@ -51,3 +55,16 @@ def test_parse_session_skips_full_or_closed_classes():
     }
 
     assert parse_session(session, date(2026, 3, 10)) is None
+
+
+def test_build_destination_envelope_marks_aquatic_center() -> None:
+    venue_data = {
+        "name": "Collins Hill Park Aquatic Center",
+        "slug": "collins-hill-park-aquatic-center",
+        "venue_type": "community_center",
+    }
+
+    envelope = _build_destination_envelope(venue_data, 2202)
+
+    assert envelope.destination_details[0]["destination_type"] == "aquatic_center"
+    assert envelope.venue_features[0]["slug"] == "public-pool-and-aquatics-programs"

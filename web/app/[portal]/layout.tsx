@@ -6,6 +6,7 @@ import PortalThemeClient from "@/components/PortalThemeClient";
 import CannyWidget from "@/components/CannyWidget";
 import PortalFooter from "@/components/PortalFooter";
 import { PortalTracker } from "./_components/PortalTracker";
+import { NavigationProgress } from "@/components/ui/NavigationProgress";
 import { Cormorant_Garamond, DM_Sans, Inter, Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import { Suspense } from "react";
 import { isPCMDemoPortal } from "@/lib/marketplace-art";
@@ -167,6 +168,7 @@ export default async function PortalLayout({ children, params }: Props) {
           isAdventure ? spaceGrotesk.variable : "",
         ].filter(Boolean).join(" ")}
       >
+        <NavigationProgress />
         <Suspense fallback={null}>
           <PortalTracker portalSlug={portal.slug} />
         </Suspense>

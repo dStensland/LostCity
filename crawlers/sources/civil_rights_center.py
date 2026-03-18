@@ -23,6 +23,8 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +36,13 @@ HEADERS = {
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     )
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 VENUE_DATA = {
     "name": "National Center for Civil and Human Rights",
@@ -67,6 +76,79 @@ VENUE_DATA = {
     },
     "vibes": ["historic", "educational", "cultural", "downtown", "civil-rights"],
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "history_museum",
+            "commitment_tier": "halfday",
+            "primary_activity": "civil rights museum visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+            "parking_type": "garage",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "The National Center for Civil and Human Rights works best as a focused downtown history stop, especially for school-age kids and families ready for a more serious museum experience."
+            ),
+            "accessibility_notes": (
+                "Its indoor layout makes the visit physically lower-friction than an outdoor history site, but the subject matter often works better as a paced, conversation-friendly family outing than a quick stop."
+            ),
+            "family_suitability": "caution",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "General admission and special exhibitions vary by date; it is best treated as a purposeful museum stop rather than a casual drop-in attraction.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "museum",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "civil-rights-history-and-dialogue-stop",
+            "title": "Civil rights history and dialogue stop",
+            "feature_type": "amenity",
+            "description": "The center is strongest as a museum stop built around civil rights history, reflection, and conversation rather than quick entertainment value.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "school-age-history-anchor",
+            "title": "School-age history anchor",
+            "feature_type": "amenity",
+            "description": "The center can be a strong family history anchor for school-age kids, especially when paired with enough time for discussion and processing instead of a rushed downtown stop.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "purposeful-downtown-museum-stop",
+            "title": "Purposeful downtown museum stop",
+            "feature_type": "amenity",
+            "description": "This is a better fit as the main intentional downtown museum plan than as a casual add-on between lighter attractions.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    return envelope
 
 MONTH_PATTERN = re.compile(
     r"(January|February|March|April|May|June|July|August|September|October|November|December)"
@@ -295,6 +377,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     venue_id = get_or_create_venue(VENUE_DATA)
+    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     with requests.Session() as session:
         session.headers.update(HEADERS)

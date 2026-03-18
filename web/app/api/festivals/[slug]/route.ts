@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
@@ -29,6 +29,7 @@ export async function GET(
     );
   }
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
+  const portalClient = await createPortalScopedClient(portalContext.portalId);
 
   const { data: festivalData, error } = await supabase
     .from("festivals")
@@ -70,7 +71,7 @@ export async function GET(
   const programIds = programs.map((p) => p.id);
   const today = getLocalDateString();
 
-  let eventsQuery = supabase
+  let eventsQuery = portalClient
     .from("events")
     .select(`
       id,

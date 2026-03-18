@@ -1,4 +1,4 @@
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -10,7 +10,6 @@ import type { Portal } from "@/lib/portal-context";
 import { createClient } from "@/lib/supabase/server";
 import { getLocalDateString } from "@/lib/formats";
 import { getAllFestivals, type Festival } from "@/lib/festivals";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
 import { getPortalSourceAccess } from "@/lib/federation";
 import FilmPortalNav from "./FilmPortalNav";
 import FilmShowtimeBoard from "./FilmShowtimeBoard";
@@ -737,8 +736,8 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
 
       <section className="relative overflow-hidden rounded-[2rem] border border-[#2a3349] bg-[#070b14]">
         <div className="absolute inset-0">
-          <Image
-            src={getProxiedImageSrc(heroPhoto)}
+          <SmartImage
+            src={heroPhoto}
             alt="Atlanta film scene"
             fill
             unoptimized
@@ -790,8 +789,8 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
           <aside className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
             {heroTiles.map((tilePhoto, index) => (
               <div key={`${tilePhoto}-${index}`} className="relative h-32 overflow-hidden rounded-2xl border border-[#35415e] sm:h-36 lg:h-40">
-                <Image
-                  src={getProxiedImageSrc(tilePhoto)}
+                <SmartImage
+                  src={tilePhoto}
                   alt="Atlanta film spotlight"
                   fill
                   unoptimized
@@ -838,8 +837,8 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
                 className="group relative h-64 w-44 shrink-0 snap-start overflow-hidden rounded-2xl border border-[#2f3a56] bg-[#0c1322]"
               >
                 {film.image_url ? (
-                  <Image
-                    src={getProxiedImageSrc(film.image_url)}
+                  <SmartImage
+                    src={film.image_url}
                     alt={film.title}
                     fill
                     unoptimized
@@ -879,8 +878,8 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
                 className="group relative h-64 w-44 shrink-0 snap-start overflow-hidden rounded-2xl border border-[#2f3a56] bg-[#0c1322]"
               >
                 {film.image_url ? (
-                  <Image
-                    src={getProxiedImageSrc(film.image_url)}
+                  <SmartImage
+                    src={film.image_url}
                     alt={film.title}
                     fill
                     unoptimized
@@ -934,8 +933,8 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
                   className="group block overflow-hidden rounded-2xl border border-[#2a334a] bg-[#0d1424] hover:border-[#445a85]"
                 >
                   <div className="relative h-28">
-                    <Image
-                      src={getProxiedImageSrc(venue.heroImage || FALLBACK_PHOTOS[index % FALLBACK_PHOTOS.length])}
+                    <SmartImage
+                      src={venue.heroImage || FALLBACK_PHOTOS[index % FALLBACK_PHOTOS.length]}
                       alt={venue.venueName}
                       fill
                       unoptimized
@@ -997,8 +996,8 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
                   href={item.href}
                   className="group relative h-72 w-[18.5rem] shrink-0 snap-start overflow-hidden rounded-2xl border border-[#2f3a56] bg-[#0c1322]"
                 >
-                  <Image
-                    src={getProxiedImageSrc(cardPhoto)}
+                  <SmartImage
+                    src={cardPhoto}
                     alt={item.title}
                     fill
                     unoptimized
@@ -1041,8 +1040,8 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
           className="group relative block overflow-hidden rounded-2xl border border-[#2a334a] bg-[#0d1424] hover:border-[#445a85]"
         >
           <div className="relative h-40">
-            <Image
-              src={getProxiedImageSrc(FALLBACK_PHOTOS[1])}
+            <SmartImage
+              src={FALLBACK_PHOTOS[1]}
               alt="Atlanta Film Scene"
               fill
               unoptimized
@@ -1082,8 +1081,8 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
         <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
           <article className="relative overflow-hidden rounded-3xl border border-[#29344d] bg-[#0a111f]">
             <div className="absolute inset-0">
-              <Image
-                src={getProxiedImageSrc(communityHeroPhoto)}
+              <SmartImage
+                src={communityHeroPhoto}
                 alt="Atlanta film community meetup"
                 fill
                 unoptimized
@@ -1125,8 +1124,8 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
                   <div className="flex items-start gap-3">
                     <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full border border-[#3a4969] bg-[#121e36]">
                       {hasPhoto(group.logo_url) ? (
-                        <Image
-                          src={getProxiedImageSrc(group.logo_url)}
+                        <SmartImage
+                          src={group.logo_url}
                           alt={group.name}
                           fill
                           unoptimized

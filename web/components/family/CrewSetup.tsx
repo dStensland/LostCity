@@ -204,6 +204,22 @@ function AddKidForm({ onSave, onCancel, saving }: AddKidFormProps) {
         Add a kid
       </p>
 
+      {/* COPPA-aligned privacy notice */}
+      <p
+        className="text-xs leading-relaxed"
+        style={{
+          color: WARM_STONE,
+          fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
+          backgroundColor: `${SKY}10`,
+          border: `1px solid ${SKY}30`,
+          borderRadius: 8,
+          padding: "8px 10px",
+        }}
+      >
+        This helps us recommend age-appropriate activities. We never share your
+        child&rsquo;s information. Use nicknames, not real names.
+      </p>
+
       {error && (
         <div
           className="p-2.5 rounded-lg text-xs border"

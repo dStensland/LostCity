@@ -12,6 +12,8 @@ export const CATEGORY_CONFIG = {
   food_drink: { label: "Food & Drink", color: "#FDBA74" },
   sports: { label: "Sports", color: "#7DD3FC" },
   fitness: { label: "Fitness", color: "#5EEAD4" },
+  recreation: { label: "Recreation", color: "#86EFAC" },
+  exercise: { label: "Exercise", color: "#5EEAD4" },
   nightlife: { label: "Nightlife", color: "#E879F9" },
   family: { label: "Family", color: "#A78BFA" },
   learning: { label: "Learning", color: "#A8E6CF" },
@@ -153,11 +155,11 @@ const MAP_PIN_FAMILY_LOOKUP: Record<string, string> = {
 
   // Mint #34D399 — community & wellness (brighter, more visible)
   community: "#34D399", fitness: "#34D399", fitness_center: "#34D399",
-  wellness: "#34D399", outdoors: "#34D399", outdoor: "#34D399", park: "#34D399",
+  exercise: "#34D399", wellness: "#34D399", outdoors: "#34D399", outdoor: "#34D399", park: "#34D399",
   garden: "#34D399", yoga: "#34D399", community_center: "#34D399",
 
   // Cyan #22D3EE — sports & screen (more saturated, distinct from violet)
-  sports: "#22D3EE", sports_venue: "#22D3EE", film: "#22D3EE", cinema: "#22D3EE",
+  sports: "#22D3EE", recreation: "#22D3EE", sports_venue: "#22D3EE", film: "#22D3EE", cinema: "#22D3EE",
   tours: "#22D3EE", arena: "#22D3EE", convention_center: "#22D3EE",
 
   // Bright Violet #A78BFA — arts & learning (brighter, more visible)

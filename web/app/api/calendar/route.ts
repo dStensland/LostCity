@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
@@ -7,15 +7,13 @@ import { parseIntParam } from "@/lib/api-utils";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { fetchSocialProofCounts } from "@/lib/social-proof";
 import {
-  applyPortalScopeToQuery,
+  applyFederatedPortalScopeToQuery,
   excludeSensitiveEvents,
   filterByPortalCity,
-  parsePortalContentFilters,
-  applyPortalCategoryFilters,
-  filterByPortalContentScope,
 } from "@/lib/portal-scope";
 import { applyFeedGate } from "@/lib/feed-gate";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import { getPortalSourceAccess } from "@/lib/federation";
 
 const CALENDAR_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — matches CDN s-maxage=300
 const CALENDAR_CACHE_MAX_ENTRIES = 200;
@@ -73,6 +71,7 @@ export async function GET(request: NextRequest) {
   // Parse filters (excluding date filters)
   const categories = searchParams.get("categories")?.split(",").filter(Boolean);
   const neighborhoods = searchParams.get("neighborhoods")?.split(",").filter(Boolean);
+  const genres = searchParams.get("genres")?.split(",").filter(Boolean);
   const priceFilter = searchParams.get("price");
   const portalExclusive = searchParams.get("portal_exclusive") === "true";
   const portalContext = await resolvePortalQueryContext(supabase, searchParams);
@@ -82,10 +81,9 @@ export async function GET(request: NextRequest) {
       { status: 400 }
     );
   }
-  const portalClient = await createPortalScopedClient(portalContext.portalId);
   const portalId = portalContext.portalId;
+  const sourceAccess = portalId ? await getPortalSourceAccess(portalId) : null;
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
-  const portalContentFilters = parsePortalContentFilters(portalContext.filters as Record<string, unknown> | null);
 
   // Type for calendar events
   type CalendarEvent = {
@@ -110,7 +108,7 @@ export async function GET(request: NextRequest) {
 
   // Helper to build base query with filters
   const buildQuery = () => {
-    let query = portalClient
+    let query = supabase
       .from("events")
       .select(`
         id,
@@ -155,6 +153,11 @@ export async function GET(request: NextRequest) {
       query = query.in("venue.neighborhood", neighborhoods);
     }
 
+    // Apply genre filter (series-level genres stored on events via tags or series join)
+    if (genres && genres.length > 0) {
+      query = query.overlaps("tags", genres);
+    }
+
     // Apply price filter
     if (priceFilter === "free") {
       query = query.eq("is_free", true);
@@ -168,17 +171,14 @@ export async function GET(request: NextRequest) {
 
     query = applyFeedGate(query);
 
-    query = applyPortalScopeToQuery(query, {
+    query = applyFederatedPortalScopeToQuery(query, {
       portalId,
       portalExclusive,
       publicOnlyWhenNoPortal: true,
+      sourceIds: sourceAccess?.sourceIds ?? [],
     });
 
     query = excludeSensitiveEvents(query);
-
-    query = applyPortalCategoryFilters(query, portalContentFilters, {
-      userCategoriesActive: !!(categories && categories.length > 0),
-    });
 
     return query;
   };
@@ -189,6 +189,7 @@ export async function GET(request: NextRequest) {
     year,
     categories?.join(",") ?? "",
     neighborhoods?.join(",") ?? "",
+    genres?.join(",") ?? "",
     priceFilter ?? "",
     portalExclusive ? "exclusive" : "inclusive",
   ].join("|");
@@ -244,10 +245,9 @@ export async function GET(request: NextRequest) {
           if (page > 10) break;
         }
 
-        const cityFiltered = filterByPortalCity(allEvents, portalCity, {
+        const events = filterByPortalCity(allEvents, portalCity, {
           allowMissingCity: true,
         });
-        const events = filterByPortalContentScope(cityFiltered, portalContentFilters);
 
         // Flatten genres from series into top-level event field
         const eventsWithGenres = events.map((event) => {

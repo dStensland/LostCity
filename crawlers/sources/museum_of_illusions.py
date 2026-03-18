@@ -19,10 +19,18 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import get_client, get_or_create_venue
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
 HOMEPAGE = "https://museumofillusions.us/atlanta/"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 VENUE_DATA = {
     "name": "Museum of Illusions Atlanta",
@@ -57,6 +65,80 @@ VENUE_DATA = {
         "tourist",
     ],
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "interactive_museum",
+            "commitment_tier": "hour",
+            "primary_activity": "family illusion museum visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+            "parking_type": "garage",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "Museum of Illusions works best as a shorter downtown family stop or pairable indoor attraction rather than a full half-day anchor. "
+                "It is best used when a family wants novelty and easy indoor time without committing to a long walking day."
+            ),
+            "accessibility_notes": (
+                "Its indoor layout and shorter outing shape make it relatively easy for strollers and lower-energy family plans compared with walking-heavier attractions."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Admission pricing varies by date and ticket type.",
+            "source_url": HOMEPAGE,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "museum",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "interactive-photo-illusion-galleries",
+            "title": "Interactive photo-illusion galleries",
+            "feature_type": "amenity",
+            "description": "Museum of Illusions offers an indoor, interactive gallery format that works well for shorter family visits and novelty-driven play.",
+            "url": HOMEPAGE,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "short-downtown-family-reset-stop",
+            "title": "Short downtown family reset stop",
+            "feature_type": "amenity",
+            "description": "Its shorter outing shape makes the museum a good downtown reset stop between bigger family anchors.",
+            "url": HOMEPAGE,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "predictable-short-stop-indoor-novelty",
+            "title": "Predictable short-stop indoor novelty",
+            "feature_type": "amenity",
+            "description": "The museum works well when a family wants a clearly bounded indoor stop with less walking and easier pacing than a larger downtown attraction.",
+            "url": HOMEPAGE,
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    return envelope
 
 
 def _extract_og_meta(html: str) -> tuple[Optional[str], Optional[str]]:
@@ -108,6 +190,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.warning("Museum of Illusions Atlanta: og: enrichment failed: %s", exc)
 
     venue_id = get_or_create_venue(venue_data)
+    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     # Push the freshest image/description back onto the existing venue row.
     update: dict = {}

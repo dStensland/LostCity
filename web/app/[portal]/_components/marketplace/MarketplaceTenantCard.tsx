@@ -1,4 +1,4 @@
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import Link from "next/link";
 import type { PCMTenant } from "@/lib/marketplace-data";
 import {
@@ -6,7 +6,6 @@ import {
   TENANT_CATEGORY_LABELS,
   type TenantCategory,
 } from "@/lib/marketplace-art";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
 
 interface MarketplaceTenantCardProps {
   tenant: PCMTenant;
@@ -46,8 +45,8 @@ export default function MarketplaceTenantCard({
       {/* Thumbnail */}
       <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-[var(--mkt-cream)]">
         {tenant.image_url ? (
-          <Image
-            src={getProxiedImageSrc(tenant.image_url)}
+          <SmartImage
+            src={tenant.image_url}
             alt={tenant.name}
             fill
             sizes="64px"

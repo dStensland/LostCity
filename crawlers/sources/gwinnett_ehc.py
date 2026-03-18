@@ -974,17 +974,22 @@ def _get_session_details(
     return data.get("details", {}).get("info")
 
 
-def _get_session_description(
+def _get_session_description_and_image(
     http_session: requests.Session,
     checkout_key: str,
     csrf_key: str,
     csrf_token: str,
     session_id: int,
-) -> Optional[str]:
+) -> tuple[Optional[str], Optional[str]]:
     """
-    GET HTML description from activityRegistration endpoint.
+    GET HTML description and image from activityRegistration endpoint.
 
-    Returns plain-text description stripped of HTML, or None.
+    Returns (plain-text description, image_url) — either may be None.
+
+    The activityRegistration HTML contains:
+      - A description div (rec1-catalog-item-description)
+      - An <img> tag pointing to data.rec1.com/customer_images/... when a
+        program image has been uploaded by the park.
     """
     url = f"{_CATALOG_BASE}/activityRegistration/{checkout_key}/{session_id}"
     headers = {
@@ -1002,15 +1007,24 @@ def _get_session_description(
         logger.debug(
             "[ehc] Description fetch failed for session %s: %s", session_id, exc
         )
-        return None
+        return None, None
 
     soup = BeautifulSoup(html_text, "html.parser")
+
+    # Extract image — rec1 stores program photos at data.rec1.com/customer_images/
+    image_url: Optional[str] = None
+    for img in soup.find_all("img", src=True):
+        src = str(img.get("src", ""))
+        if "rec1.com" in src and "customer_images" in src:
+            image_url = src.strip()
+            break
+
     desc_div = soup.find("div", class_="rec1-catalog-item-description")
     if desc_div:
-        return _strip_html(str(desc_div), max_len=800)
+        return _strip_html(str(desc_div), max_len=800), image_url
 
     # Fallback: strip all HTML from the response
-    return _strip_html(html_text, max_len=800) or None
+    return _strip_html(html_text, max_len=800) or None, image_url
 
 
 # ---------------------------------------------------------------------------
@@ -1207,9 +1221,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if pm is not None:
                             price_min, price_max, is_free = pm, px, ifr
 
-                # ---- Fetch description ----------------------------------------
+                # ---- Fetch description and image ------------------------------
                 time.sleep(_REQUEST_DELAY)
-                description = _get_session_description(
+                description, session_image_url = _get_session_description_and_image(
                     http_session, checkout_key, csrf_key, csrf_token, session_id
                 )
 
@@ -1267,7 +1281,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "price_note": None,
                     "source_url": source_url,
                     "ticket_url": source_url,
-                    "image_url": None,
+                    "image_url": session_image_url,
                     "raw_text": title,
                     "extraction_confidence": 0.90,
                     "is_recurring": series_hint is not None,

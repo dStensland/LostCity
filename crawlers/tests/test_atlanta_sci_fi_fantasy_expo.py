@@ -1,6 +1,6 @@
 from datetime import date
 
-from sources.atlanta_sci_fi_fantasy_expo import parse_source_pages
+from sources.atlanta_sci_fi_fantasy_expo import NoCurrentCycleError, parse_source_pages
 
 
 def test_parse_source_pages_extracts_current_cycle() -> None:
@@ -78,7 +78,7 @@ def test_parse_source_pages_rejects_past_cycle() -> None:
 
     try:
         parse_source_pages(homepage_html, schedule_html, "", today=date(2026, 3, 16))
-    except ValueError as exc:
+    except NoCurrentCycleError as exc:
         assert "past-dated cycle" in str(exc)
     else:
         raise AssertionError("Expected past-only Atlanta Sci-Fi & Fantasy Expo cycle to be rejected")

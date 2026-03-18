@@ -1,22 +1,29 @@
 """
 Crawler for Piedmont Healthcare Classes (classes.inquicker.com).
 
-Classes include maternity education, CPR, baby basics, breastfeeding, etc.
-The Inquicker platform is JavaScript-heavy - requires Playwright.
+The public site is a React shell backed by the ClassFind API on
+classfindapi.beryl.net. The structured occurrences payload already exposes
+class titles, descriptions, dates, times, fees, venue data, and detail images,
+so this crawler uses the API directly instead of scraping rendered page text.
 """
 
 from __future__ import annotations
 
-import re
 import logging
+import re
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright, Page
+import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
+from db import (
+    find_event_by_hash,
+    get_or_create_venue,
+    get_portal_id_by_slug,
+    insert_event,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 # Portal ID for Piedmont-exclusive events
 PORTAL_SLUG = "piedmont"
@@ -24,7 +31,24 @@ PORTAL_SLUG = "piedmont"
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://classes.inquicker.com"
-CLASSES_URL = f"{BASE_URL}/?ClientID=12422"
+API_BASE_URL = "https://classfindapi.beryl.net"
+CLIENT_ID = 12422
+LANGUAGE_CODE = "en-US"
+CLASSES_URL = f"{BASE_URL}/?ClientID={CLIENT_ID}"
+AUTH_URL = f"{API_BASE_URL}/api/v3/authenticate"
+CATEGORIES_URL = f"{API_BASE_URL}/api/v3/categories/language/{LANGUAGE_CODE}"
+OCCURRENCES_URL = f"{API_BASE_URL}/api/v4/occurrences"
+
+REQUEST_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    ),
+    "Accept": "*/*",
+    "Referer": f"{BASE_URL}/",
+    "Origin": BASE_URL,
+    "clientid": str(CLIENT_ID),
+}
 
 # Categories to crawl
 CATEGORIES = [
@@ -53,376 +77,275 @@ CATEGORY_MAP = {
 }
 
 
-def goto_with_retry(page: Page, url: str, *, attempts: int = 3, timeout_ms: int = 45000) -> None:
-    """Navigate with retry/backoff for transient renderer/network failures."""
-    last_exc: Exception | None = None
-    for attempt in range(1, attempts + 1):
-        try:
-            page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
-            return
-        except Exception as exc:  # noqa: BLE001 - crawler retry guard
-            last_exc = exc
-            if attempt >= attempts:
-                raise
-            page.wait_for_timeout(1500 * attempt)
-    if last_exc:
-        raise last_exc
+def _request_headers(session_token: Optional[str] = None) -> dict[str, str]:
+    headers = dict(REQUEST_HEADERS)
+    if session_token:
+        headers["sessiontoken"] = session_token
+    return headers
 
 
-def parse_date(date_text: str) -> Optional[str]:
-    """Parse date from various formats."""
-    # Match patterns like "Monday, February 16, 2026"
-    match = re.search(
-        r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+"
-        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+"
-        r"(\d{1,2}),?\s+(\d{4})",
-        date_text,
-        re.IGNORECASE
+def _authenticate_session(session: requests.Session) -> str:
+    response = session.get(
+        AUTH_URL,
+        headers={**_request_headers(), "Content-Type": "application/json"},
+        timeout=20,
     )
-    if match:
-        month = match.group(2)
-        day = match.group(3)
-        year = match.group(4)
-        try:
-            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    # Match patterns like "02/16/2026"
-    match = re.search(r"(\d{1,2})/(\d{1,2})/(\d{4})", date_text)
-    if match:
-        try:
-            dt = datetime.strptime(match.group(0), "%m/%d/%Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    return None
+    response.raise_for_status()
+    token = response.json().get("SessionToken")
+    if not token:
+        raise ValueError("Piedmont Classes auth did not return SessionToken")
+    return token
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time to HH:MM format."""
-    match = re.search(r"@?\s*(\d{1,2}):(\d{2})\s*(AM|PM)", time_text, re.IGNORECASE)
-    if match:
-        hour = int(match.group(1))
-        minute = match.group(2)
-        period = match.group(3).upper()
-
-        if period == "PM" and hour != 12:
-            hour += 12
-        elif period == "AM" and hour == 12:
-            hour = 0
-
-        return f"{hour:02d}:{minute}"
-    return None
+def _fetch_category_ids(session: requests.Session, session_token: str) -> dict[str, int]:
+    response = session.get(
+        CATEGORIES_URL,
+        headers=_request_headers(session_token),
+        timeout=20,
+    )
+    response.raise_for_status()
+    categories = response.json()
+    return {
+        item["CategoryName"]: item["CategoryId"]
+        for item in categories
+        if item.get("CategoryName") and item.get("CategoryId") is not None
+    }
 
 
-def parse_price(text: str) -> tuple[bool, Optional[float], Optional[float]]:
-    """Parse price from text. Returns (is_free, price_min, price_max)."""
-    if "FREE" in text.upper():
-        return True, None, None
+def _fetch_occurrences(
+    session: requests.Session,
+    session_token: str,
+    category_id: int,
+) -> list[dict]:
+    response = session.post(
+        OCCURRENCES_URL,
+        headers={**_request_headers(session_token), "Content-Type": "application/json"},
+        json={
+            "NextOccurrence": True,
+            "clientid": CLIENT_ID,
+            "CategoryID": category_id,
+            "Keyword": "",
+            "LanguageCode": LANGUAGE_CODE,
+        },
+        timeout=30,
+    )
+    response.raise_for_status()
+    return response.json() or []
 
-    match = re.search(r"\$(\d+(?:\.\d{2})?)", text)
-    if match:
-        price = float(match.group(1))
-        return False, price, price
 
-    return False, None, None
+def _parse_occurrence_datetime(raw: Optional[str]) -> tuple[Optional[str], Optional[str]]:
+    if not raw:
+        return None, None
+    try:
+        parsed = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except ValueError:
+        return None, None
+    return parsed.strftime("%Y-%m-%d"), parsed.strftime("%H:%M:%S")
 
 
-def get_or_create_class_venue(venue_text: str) -> Optional[int]:
-    """Parse venue from class listing and get/create in database."""
-    lines = venue_text.strip().split("\n")
-    if len(lines) < 2:
+def _build_detail_url(class_id: Optional[int], occurrence_id: Optional[str]) -> str:
+    if class_id and occurrence_id:
+        return (
+            f"{BASE_URL}/details/?ClientID={CLIENT_ID}"
+            f"&ClassID={class_id}&OccurrenceID={occurrence_id}&lang={LANGUAGE_CODE}"
+        )
+    return CLASSES_URL
+
+
+def _slugify(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
+
+def _build_description(occurrence: dict) -> Optional[str]:
+    parts: list[str] = []
+    for key in (
+        "ClassDescription",
+        "ParkingNotes",
+        "SupplyNotes",
+        "EnrolleeNotes",
+        "ClosingNotes",
+        "InclementWeatherPolicyMessage",
+    ):
+        value = occurrence.get(key)
+        if not value:
+            continue
+        cleaned = " ".join(str(value).split())
+        if cleaned and cleaned not in parts:
+            parts.append(cleaned)
+    if not parts:
+        return None
+    return " ".join(parts)[:2000]
+
+
+def _get_or_create_class_venue(occurrence: dict) -> Optional[int]:
+    business_name = occurrence.get("BusinessName")
+    if not business_name:
         return None
 
-    name = lines[0].strip()
-    address_line = lines[1].strip() if len(lines) > 1 else ""
-
-    # Parse address
-    address_match = re.match(r"(.+),\s*(\w+),\s*(\w{2})\s*(\d{5})?", address_line)
-    if address_match:
-        address = address_match.group(1)
-        city = address_match.group(2)
-        state = address_match.group(3)
-        zip_code = address_match.group(4) or ""
-    else:
-        address = address_line
-        city = "Atlanta"
-        state = "GA"
-        zip_code = ""
-
-    # Create slug from name
-    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    address_parts = [
+        occurrence.get("AddressLineOne"),
+        occurrence.get("AddressLineTwo"),
+    ]
+    address = ", ".join(part.strip() for part in address_parts if part and str(part).strip())
 
     venue_data = {
-        "name": name,
-        "slug": slug,
-        "address": address,
-        "city": city,
-        "state": state,
-        "zip": zip_code,
+        "name": business_name.strip(),
+        "slug": _slugify(str(business_name)),
+        "address": address or None,
+        "city": occurrence.get("City") or "Atlanta",
+        "state": occurrence.get("State") or "GA",
+        "zip": occurrence.get("ZipCode") or "",
         "venue_type": "hospital",
         "website": "https://www.piedmont.org",
     }
-
     return get_or_create_venue(venue_data)
 
 
-def crawl_category(page: Page, category: str, source_id: int, portal_id: str) -> tuple[int, int, int]:
-    """Crawl a single category and return (found, new, updated)."""
+def crawl_category(
+    session: requests.Session,
+    session_token: str,
+    category_name: str,
+    category_id: int,
+    source_id: int,
+    portal_id: str,
+) -> tuple[int, int, int]:
+    """Crawl a single category from the ClassFind occurrences API."""
     events_found = 0
     events_new = 0
     events_updated = 0
 
-    cat_info = CATEGORY_MAP.get(category, ("learning", "health", ["health-education"]))
-    event_category, subcategory, base_tags = cat_info
+    event_category, subcategory, base_tags = CATEGORY_MAP.get(
+        category_name, ("learning", "health", ["health-education"])
+    )
 
-    try:
-        # Click category
-        logger.info(f"Crawling category: {category}")
-        page.click(f"text={category}", timeout=8000)
-        page.wait_for_timeout(1500)
+    occurrences = _fetch_occurrences(session, session_token, category_id)
+    now_date = datetime.now().date()
 
-        # Extract images from page
-        image_map = extract_images_from_page(page)
+    for occurrence in occurrences:
+        title = occurrence.get("ClassName")
+        start_date, start_time = _parse_occurrence_datetime(occurrence.get("StartDateTime"))
+        end_date, end_time = _parse_occurrence_datetime(occurrence.get("EndDateTime"))
+        if not title or not start_date:
+            continue
+        if datetime.strptime(start_date, "%Y-%m-%d").date() < now_date:
+            continue
 
-        # Wait for results to load
-        page.wait_for_selector("text=Classes", timeout=8000)
+        venue_id = _get_or_create_class_venue(occurrence)
+        venue_name = occurrence.get("BusinessName") or "Piedmont Healthcare"
+        fee = occurrence.get("Fee")
+        price_min = float(fee) if isinstance(fee, (int, float)) else None
+        price_max = float(fee) if isinstance(fee, (int, float)) else None
+        is_free = bool(price_min == 0.0 and price_max == 0.0)
+        detail_url = _build_detail_url(occurrence.get("ClassID"), occurrence.get("OccurrenceID"))
+        description = _build_description(occurrence)
 
-        # Scroll to load all content - reduced iterations
-        for _ in range(2):
-            page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-            page.wait_for_timeout(500)
+        events_found += 1
+        content_hash = generate_content_hash(title, venue_name, start_date)
+        tags = ["piedmont", "healthcare", "class"] + base_tags
+        room_name = occurrence.get("RoomName")
+        days_held = occurrence.get("DaysHeld")
 
-        # Get page content
-        content = page.inner_text("body")
+        event_record = {
+            "source_id": source_id,
+            "venue_id": venue_id,
+            "portal_id": portal_id,
+            "title": title,
+            "description": description,
+            "start_date": start_date,
+            "start_time": start_time,
+            "end_date": end_date,
+            "end_time": end_time,
+            "is_all_day": False,
+            "category": event_category,
+            "category_id": event_category,
+            "subcategory": subcategory,
+            "tags": tags,
+            "price_min": price_min,
+            "price_max": price_max,
+            "price_note": occurrence.get("PaymentMethodNames") or "Registration required via Inquicker.",
+            "is_free": is_free,
+            "source_url": detail_url,
+            "ticket_url": detail_url,
+            "image_url": occurrence.get("PhotoUrl"),
+            "raw_text": " | ".join(
+                value
+                for value in (
+                    title,
+                    days_held,
+                    room_name,
+                    occurrence.get("BusinessName"),
+                )
+                if value
+            ),
+            "extraction_confidence": 0.96,
+            "is_recurring": False,
+            "recurrence_rule": None,
+            "content_hash": content_hash,
+            "is_class": True,
+            "class_category": subcategory,
+        }
 
-        # Parse classes - look for pattern: Title, Description, Venue, Date, Price
-        # Classes are separated by "Add to Cart" or "Add to Waitlist"
-        sections = re.split(r"Add to (?:Cart|Waitlist)", content)
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+            continue
 
-        for section in sections:
-            lines = [l.strip() for l in section.split("\n") if l.strip()]
-            if len(lines) < 5:
-                continue
-
-            # Find the class title - usually first substantial line after nav items
-            title = None
-            description = None
-            venue_text = None
-            date_text = None
-            time_text = None
-            price_text = None
-
-            # UI elements and navigation items to skip
-            skip_words = [
-                "Classes", "Events", "Category", "Reset", "Filter", "Sort", "Home", "Search",
-                "Click for More Dates", "Class Name", "Date Range", "Location", "Price",
-                "View Details", "Register", "Sign Up", "Log In", "My Account", "Cart",
-                "Showing", "results", "No classes", "Loading", "Please wait",
-                "(Class Name", "(Date", "(Location", "(Price", "A-Z", "Z-A",
-                "Ascending", "Descending", "Clear All", "Apply", "Cancel",
-                category
-            ]
-
-            for i, line in enumerate(lines):
-                # Skip navigation items and UI elements
-                if any(sw.lower() in line.lower() for sw in skip_words) or len(line) < 10:
-                    continue
-
-                # Skip lines that look like UI controls (parentheses with sorting, buttons, etc.)
-                if line.startswith("(") or line.endswith(")"):
-                    continue
-
-                # Skip lines that are just numbers or very short
-                if re.match(r"^\d+$", line) or re.match(r"^[A-Z]{1,3}$", line):
-                    continue
-
-                # First substantial line is likely the title - must look like a class name
-                # Good titles usually have multiple words and don't contain certain patterns
-                if not title and len(line) > 15 and len(line) < 100:
-                    # Skip if it looks like a button or UI element
-                    if re.match(r"^(Click|View|Show|Hide|Select|Choose|More|See|Get)\s", line, re.IGNORECASE):
-                        continue
-                    title = line
-                    continue
-
-                # Description follows title
-                if title and not description and len(line) > 50:
-                    description = line[:500]
-                    continue
-
-                # Look for venue (contains "Piedmont" or address pattern)
-                if "Piedmont" in line and not venue_text:
-                    # Get venue name and address (next line)
-                    venue_lines = [line]
-                    if i + 1 < len(lines) and re.search(r"\d+.*,.*[A-Z]{2}", lines[i + 1]):
-                        venue_lines.append(lines[i + 1])
-                    venue_text = "\n".join(venue_lines)
-                    continue
-
-                # Look for date
-                if re.search(r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)", line):
-                    date_text = line
-                    continue
-
-                # Look for time (@ HH:MM AM/PM or just HH:MM AM/PM)
-                if re.search(r"@?\s*\d{1,2}:\d{2}\s*(AM|PM)", line, re.IGNORECASE) and not date_text:
-                    time_text = line
-                    continue
-                if re.search(r"\d{1,2}:\d{2}\s*(AM|PM)", line, re.IGNORECASE) and not time_text:
-                    time_text = line
-                    continue
-
-                # Look for price
-                if re.search(r"(\$\d+|\bFREE\b)", line, re.IGNORECASE):
-                    price_text = line
-                    continue
-
-            if not title or not date_text:
-                continue
-
-            # Parse extracted data
-            start_date = parse_date(date_text)
-            if not start_date:
-                continue
-
-            # Skip past dates
-            try:
-                event_date = datetime.strptime(start_date, "%Y-%m-%d")
-                if event_date.date() < datetime.now().date():
-                    continue
-            except ValueError:
-                continue
-
-            # Try time_text first, then fall back to extracting time from date_text
-            start_time = parse_time(time_text) if time_text else None
-            if not start_time and date_text:
-                start_time = parse_time(date_text)
-            is_free, price_min, price_max = parse_price(price_text or "")
-
-            # Get or create venue
-            venue_id = None
-            venue_name = "Piedmont Healthcare"
-            if venue_text:
-                venue_id = get_or_create_class_venue(venue_text)
-                venue_name = venue_text.split("\n")[0]
-
-            events_found += 1
-
-            # Generate content hash
-            content_hash = generate_content_hash(title, venue_name, start_date)
-
-            # Check if exists
-
-            # Build tags
-            tags = ["piedmont", "healthcare", "class"] + base_tags
-
-            event_record = {
-                "source_id": source_id,
-                "venue_id": venue_id,
-                "portal_id": portal_id,
-                "title": title,
-                "description": description,
-                "start_date": start_date,
-                "start_time": start_time,
-                "end_date": None,
-                "end_time": None,
-                "is_all_day": False,
-                "category": event_category,
-                "category_id": event_category,
-                "subcategory": subcategory,
-                "tags": tags,
-                "price_min": price_min,
-                "price_max": price_max,
-                "price_note": "Registration required via Inquicker.",
-                "is_free": is_free,
-                "source_url": CLASSES_URL,
-                "ticket_url": CLASSES_URL,
-                "image_url": image_map.get(title),
-                "raw_text": f"{title} - {start_date}",
-                "extraction_confidence": 0.85,
-                "is_recurring": False,
-                "recurrence_rule": None,
-                "content_hash": content_hash,
-                "is_class": True,
-                "class_category": "fitness",
-            }
-
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                smart_update_existing_event(existing, event_record)
-                events_updated += 1
-                continue
-
-            try:
-                insert_event(event_record)
-                events_new += 1
-                logger.info(f"Added: {title} on {start_date}")
-            except Exception as e:
-                logger.error(f"Failed to insert: {title}: {e}")
-
-        # Go back to main page for next category
-        goto_with_retry(page, CLASSES_URL, attempts=3, timeout_ms=45000)
-        page.wait_for_timeout(1000)
-
-    except Exception as e:
-        logger.error(f"Error crawling category {category}: {e}")
-        # Try to recover by going back to main page
         try:
-            goto_with_retry(page, CLASSES_URL, attempts=3, timeout_ms=45000)
-            page.wait_for_timeout(1000)
-        except:
-            pass
+            insert_event(event_record)
+            events_new += 1
+            logger.info("Added: %s on %s", title, start_date)
+        except Exception as exc:
+            logger.error("Failed to insert Piedmont class %s: %s", title, exc)
 
     return events_found, events_new, events_updated
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Piedmont classes from Inquicker platform using Playwright."""
+    """Crawl Piedmont classes from the ClassFind API."""
     source_id = source["id"]
     total_found = 0
     total_new = 0
     total_updated = 0
 
-    # Get portal ID for Piedmont-exclusive events
     portal_id = get_portal_id_by_slug(PORTAL_SLUG)
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        with requests.Session() as session:
+            session_token = _authenticate_session(session)
+            category_ids = _fetch_category_ids(session, session_token)
 
-            logger.info(f"Fetching Piedmont Classes: {CLASSES_URL}")
-            goto_with_retry(page, CLASSES_URL, attempts=3, timeout_ms=45000)
-            page.wait_for_timeout(2000)
-
-            # Crawl each category
-            for category in CATEGORIES:
+            for category_name in CATEGORIES:
+                category_id = category_ids.get(category_name)
+                if category_id is None:
+                    logger.warning("Piedmont category missing from API: %s", category_name)
+                    continue
                 try:
-                    found, new, updated = crawl_category(page, category, source_id, portal_id)
+                    found, new, updated = crawl_category(
+                        session,
+                        session_token,
+                        category_name,
+                        category_id,
+                        source_id,
+                        portal_id,
+                    )
                     total_found += found
                     total_new += new
                     total_updated += updated
-                    logger.info(f"{category}: {found} found, {new} new, {updated} updated")
-                except Exception as e:
-                    logger.error(f"Failed to crawl {category}: {e}")
+                    logger.info("%s: %s found, %s new, %s updated", category_name, found, new, updated)
+                except Exception as exc:
+                    logger.error("Failed to crawl Piedmont category %s: %s", category_name, exc)
                     continue
 
-            browser.close()
-
         logger.info(
-            f"Piedmont Classes crawl complete: {total_found} found, {total_new} new, {total_updated} updated"
+            "Piedmont Classes crawl complete: %s found, %s new, %s updated",
+            total_found,
+            total_new,
+            total_updated,
         )
 
-    except Exception as e:
-        logger.error(f"Failed to crawl Piedmont Classes: {e}")
+    except Exception as exc:
+        logger.error("Failed to crawl Piedmont Classes: %s", exc)
         raise
 
     return total_found, total_new, total_updated

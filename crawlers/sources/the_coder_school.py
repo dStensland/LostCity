@@ -475,6 +475,14 @@ def _fetch_location_page(location_slug: str) -> Optional[BeautifulSoup]:
         return None
 
 
+def _extract_og_image(soup: BeautifulSoup) -> Optional[str]:
+    """Extract og:image meta tag value from a parsed page."""
+    tag = soup.find("meta", property="og:image")
+    if tag and tag.get("content"):
+        return tag["content"].strip() or None
+    return None
+
+
 # ── per-location crawl ────────────────────────────────────────────────────────
 
 
@@ -496,12 +504,15 @@ def _crawl_location(loc: dict, source_id: int) -> tuple[int, int, int]:
     # 2. Parse camp schedule from HTML
     soup = _fetch_location_page(loc["location_slug"])
     camp_events: list[dict] = []
+    location_image_url: Optional[str] = None
     if soup:
+        location_image_url = _extract_og_image(soup)
         camp_events = _parse_camp_table(soup, loc)
         logger.info(
-            "[the-coder-school] %s: found %d camp sessions in table",
+            "[the-coder-school] %s: found %d camp sessions in table (image=%s)",
             loc["name"],
             len(camp_events),
+            "yes" if location_image_url else "no",
         )
     else:
         logger.warning(
@@ -512,6 +523,12 @@ def _crawl_location(loc: dict, source_id: int) -> tuple[int, int, int]:
     coaching_events = _generate_code_coaching_events(loc)
 
     all_events = camp_events + coaching_events
+
+    # Apply the location's image to all events that don't already have one
+    if location_image_url:
+        for ev in all_events:
+            if not ev.get("image_url"):
+                ev["image_url"] = location_image_url
 
     for ev in all_events:
         found += 1

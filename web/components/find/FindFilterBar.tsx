@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useState, useEffect, useRef, useCallback } from "react";
 import CategoryIcon from "@/components/CategoryIcon";
 import { MobileFilterSheet } from "@/components/MobileFilterSheet";
 import { formatGenre } from "@/lib/series-utils";
@@ -40,28 +39,6 @@ function useFilterCounts(portalSlug?: string) {
   return counts;
 }
 
-// ─── Time-aware emphasis helper ─────────────────────────────────────────────
-
-function useTimeEmphasis() {
-  const [emphasis, setEmphasis] = useState<"tonight" | "weekend" | null>(null);
-
-  useEffect(() => {
-    const now = new Date();
-    const hour = now.getHours();
-    const day = now.getDay(); // 0=Sun, 5=Fri, 6=Sat
-
-    if (hour >= 17) {
-      // After 5pm: emphasize Tonight
-      setEmphasis("tonight");
-    } else if (day === 5 || day === 6) {
-      // Friday or Saturday: emphasize Weekend
-      setEmphasis("weekend");
-    }
-  }, []);
-
-  return emphasis;
-}
-
 const DATE_OPTIONS = [
   { value: "today", label: "Today" },
   { value: "tomorrow", label: "Tomorrow" },
@@ -76,13 +53,15 @@ type DropdownId = "category" | "date" | null;
 // The 8 categories most likely to surface relevant results on mobile.
 // "Free" is not a category — it maps to the freeOnly filter toggle.
 const MOBILE_CATEGORIES = [
-  { value: "music",      label: "Music" },
-  { value: "food_drink", label: "Food & Drink" },
-  { value: "comedy",     label: "Comedy" },
-  { value: "nightlife",  label: "Nightlife" },
-  { value: "art",        label: "Art" },
-  { value: "sports",     label: "Sports" },
-  { value: "family",     label: "Family" },
+  { value: "music",       label: "Music" },
+  { value: "food_drink",  label: "Food & Drink" },
+  { value: "comedy",      label: "Comedy" },
+  { value: "nightlife",   label: "Nightlife" },
+  { value: "art",         label: "Art" },
+  { value: "sports",      label: "Sports" },
+  { value: "recreation",  label: "Recreation" },
+  { value: "exercise",    label: "Exercise" },
+  { value: "family",      label: "Family" },
 ] as const;
 
 // Civic portals show only relevant categories on mobile
@@ -104,26 +83,16 @@ function catColor(value: string): string {
 
 type MobileFilterStripProps = {
   f: ReturnType<typeof useFilterEngine>;
-  variant: "full" | "compact";
-  hideDate?: boolean;
   onOpenSheet: () => void;
-  onSetDate: (date: string) => void;
   vertical?: string | null;
-  bigEventsActive?: boolean;
-  onToggleBigEvents?: () => void;
 };
 
-function MobileFilterStrip({ f, variant, hideDate, onOpenSheet, onSetDate, timeEmphasis, vertical, bigEventsActive, onToggleBigEvents }: MobileFilterStripProps & { timeEmphasis: "tonight" | "weekend" | null }) {
+function MobileFilterStrip({ f, onOpenSheet, vertical }: MobileFilterStripProps) {
   const mobileCategories = vertical === "community" ? CIVIC_MOBILE_CATEGORIES : MOBILE_CATEGORIES;
   const handleCategoryTap = useCallback((value: string) => {
     triggerHaptic("selection");
     f.toggleCategory(value);
   }, [f]);
-
-  const handleDateTap = useCallback((date: string) => {
-    triggerHaptic("selection");
-    onSetDate(date);
-  }, [onSetDate]);
 
   const handleFreeTap = useCallback(() => {
     triggerHaptic("selection");
@@ -168,39 +137,6 @@ function MobileFilterStrip({ f, variant, hideDate, onOpenSheet, onSetDate, timeE
 
         {/* Thin vertical divider */}
         <div className="flex-shrink-0 w-px h-5 bg-white/10" />
-
-        {/* Date quick-select pills — only in full variant, hidden in calendar mode */}
-        {variant === "full" && !hideDate && (
-          <>
-            <button
-              onClick={() => handleDateTap("today")}
-              className={`flex-shrink-0 min-h-[44px] px-3.5 rounded-full font-mono text-xs font-medium border transition-transform active:scale-95 ${
-                f.effectiveDateFilter === "today"
-                  ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40"
-                  : timeEmphasis === "tonight"
-                  ? "bg-[var(--gold)]/10 text-[var(--gold)] border-[var(--gold)]/30"
-                  : "bg-white/5 backdrop-blur-sm text-[var(--soft)] border-white/10"
-              }`}
-            >
-              {timeEmphasis === "tonight" ? "Tonight" : "Today"}
-            </button>
-            <button
-              onClick={() => handleDateTap("weekend")}
-              className={`flex-shrink-0 min-h-[44px] px-3.5 rounded-full font-mono text-xs font-medium border transition-transform active:scale-95 ${
-                f.effectiveDateFilter === "weekend"
-                  ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40"
-                  : timeEmphasis === "weekend"
-                  ? "bg-[var(--gold)]/10 text-[var(--gold)] border-[var(--gold)]/30"
-                  : "bg-white/5 backdrop-blur-sm text-[var(--soft)] border-white/10"
-              }`}
-            >
-              Weekend
-            </button>
-
-            {/* Thin vertical divider */}
-            <div className="flex-shrink-0 w-px h-5 bg-white/10" />
-          </>
-        )}
 
         {/* Category pills */}
         {mobileCategories.map((cat) => {
@@ -249,20 +185,6 @@ function MobileFilterStrip({ f, variant, hideDate, onOpenSheet, onSetDate, timeE
           Free
         </button>
 
-        {/* Big Events pill — filters to flagship + major events */}
-        {onToggleBigEvents && (
-          <button
-            onClick={() => { triggerHaptic("selection"); onToggleBigEvents(); }}
-            className={`flex-shrink-0 min-h-[44px] px-3.5 rounded-full font-mono text-xs font-medium border transition-transform active:scale-95 ${
-              bigEventsActive
-                ? "bg-[var(--gold)]/20 text-[var(--gold)] border-[var(--gold)]/35"
-                : "bg-white/5 backdrop-blur-sm text-[var(--soft)] border-white/10"
-            }`}
-          >
-            Big Events
-          </button>
-        )}
-
         {/* Clear — only visible when filters are active, trailing pill */}
         {f.hasFilters && (
           <button
@@ -281,40 +203,9 @@ function MobileFilterStrip({ f, variant, hideDate, onOpenSheet, onSetDate, timeE
 }
 
 export default function FindFilterBar({ variant = "full", hideDate = false, portalId, portalExclusive = false, portalSlug, vertical }: FindFilterBarProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const f = useFilterEngine({ portalId, portalExclusive });
   const filterCounts = useFilterCounts(portalSlug);
-  const timeEmphasis = useTimeEmphasis();
   const categoryCounts = filterCounts.category || {};
-
-  // ─── Big Events filter (importance=flagship,major + 3-month date range) ────
-  const bigEventsActive = searchParams.get("importance") === "flagship,major";
-
-  const toggleBigEvents = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (bigEventsActive) {
-      params.delete("importance");
-      params.delete("start_date");
-      params.delete("end_date");
-    } else {
-      params.set("importance", "flagship,major");
-      // Auto-set 3-month date range when activating
-      const today = new Date().toISOString().split("T")[0];
-      const threeMonths = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0];
-      params.set("start_date", today);
-      params.set("end_date", threeMonths);
-      // Clear any short date filters that would conflict
-      params.delete("date");
-    }
-    params.set("view", "find");
-    params.delete("page");
-    const url = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.replace(url, { scroll: false });
-  }, [bigEventsActive, searchParams, pathname, router]);
   const isCommunity = vertical === "community";
 
   // For civic portals, filter desktop category dropdown to relevant options
@@ -526,48 +417,6 @@ export default function FindFilterBar({ variant = "full", hideDate = false, port
               </div>
             )}
 
-            {/* Desktop Tonight / Weekend quick-chips — hidden in calendar mode */}
-            {variant === "full" && !hideDate && (
-              <>
-                <button
-                  onClick={() => handleSetDate(f.effectiveDateFilter === "today" ? "" : "today")}
-                  className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
-                    f.effectiveDateFilter === "today"
-                      ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40 shadow-sm"
-                      : timeEmphasis === "tonight"
-                      ? "bg-[var(--gold)]/10 text-[var(--gold)] border-[var(--gold)]/30 hover:bg-[var(--gold)]/20"
-                      : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:bg-[var(--twilight)]/40 hover:border-[var(--twilight)]"
-                  }`}
-                >
-                  {timeEmphasis === "tonight" ? "Tonight" : "Today"}
-                </button>
-                <button
-                  onClick={() => handleSetDate(f.effectiveDateFilter === "weekend" ? "" : "weekend")}
-                  className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
-                    f.effectiveDateFilter === "weekend"
-                      ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40 shadow-sm"
-                      : timeEmphasis === "weekend"
-                      ? "bg-[var(--gold)]/10 text-[var(--gold)] border-[var(--gold)]/30 hover:bg-[var(--gold)]/20"
-                      : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:bg-[var(--twilight)]/40 hover:border-[var(--twilight)]"
-                  }`}
-                >
-                  Weekend
-                </button>
-              </>
-            )}
-
-            {/* Big Events pill — filters to flagship + major events */}
-            <button
-              onClick={toggleBigEvents}
-              className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gold)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
-                bigEventsActive
-                  ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40 shadow-sm"
-                  : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:bg-[var(--twilight)]/40 hover:border-[var(--twilight)]"
-              }`}
-            >
-              Big Events
-            </button>
-
             {/* Filters button (opens mobile sheet) */}
             <button
               onClick={() => setMobileSheetOpen(true)}
@@ -632,14 +481,8 @@ export default function FindFilterBar({ variant = "full", hideDate = false, port
       {/* Mobile filter strip */}
       <MobileFilterStrip
         f={f}
-        variant={variant}
-        hideDate={hideDate}
         onOpenSheet={() => setMobileSheetOpen(true)}
-        onSetDate={handleSetDate}
-        timeEmphasis={timeEmphasis}
         vertical={vertical}
-        bigEventsActive={bigEventsActive}
-        onToggleBigEvents={toggleBigEvents}
       />
 
       {/* Mobile filter sheet */}

@@ -33,8 +33,8 @@ VENUE_DATA = {
     "zip": "30312",
     "lat": 33.7418,
     "lng": -84.4089,
-    "venue_type": "nightclub",
-    "spot_type": "nightclub",
+    "venue_type": "music_venue",
+    "spot_type": "music_venue",
     "website": BASE_URL,
 }
 

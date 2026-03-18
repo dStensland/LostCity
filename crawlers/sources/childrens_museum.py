@@ -24,12 +24,21 @@ import requests
 
 from db import get_client, get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://childrensmuseumatlanta.org"
 # The _cma_calendar JSON lives on the homepage, not /events/ (which 404s)
 HOMEPAGE_URL = BASE_URL + "/"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 VENUE_DATA = {
     "name": "Children's Museum of Atlanta",
@@ -63,6 +72,80 @@ VENUE_DATA = {
         "downtown",
     ],
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "childrens_museum",
+            "commitment_tier": "halfday",
+            "primary_activity": "family children's museum visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+            "parking_type": "garage",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "Children's Museum of Atlanta works best as a timed indoor play-and-learning stop, especially for younger kids and downtown family days that need a weather-proof anchor. "
+                "It is also one of the easiest places downtown for bathroom breaks and attention-span resets."
+            ),
+            "accessibility_notes": (
+                "Its indoor, interactive format makes it one of the easier family destinations for strollers, shorter attention spans, and quick resets in the middle of a downtown day."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Admission pricing varies by date and membership status; special programs can carry separate scheduling windows.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "museum",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "interactive-play-and-learning-floor",
+            "title": "Interactive play and learning floor",
+            "feature_type": "amenity",
+            "description": "The museum's hands-on play format makes it a practical younger-kid anchor for energy-burning and learning in one indoor stop.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "downtown-younger-kid-weather-proof-anchor",
+            "title": "Downtown younger-kid weather-proof anchor",
+            "feature_type": "amenity",
+            "description": "The museum is one of the strongest downtown family backups when weather shifts or a younger-kid plan needs an easier indoor anchor.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "bathroom-and-attention-span-reset-friendly",
+            "title": "Bathroom and attention-span reset friendly",
+            "feature_type": "amenity",
+            "description": "The museum is easier than most downtown attractions when a younger-kid plan needs fast bathroom access, short play bursts, or a mid-day reset.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    return envelope
 
 # Titles that describe permanent/daily operations — not real events.
 SKIP_TITLES = {
@@ -419,6 +502,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     logger.info("Found %d special programs in CMA calendar", len(special_programs))
 
     venue_id = get_or_create_venue(VENUE_DATA)
+    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     # Enrich venue with og:image and og:description extracted from the homepage we already fetched
     try:

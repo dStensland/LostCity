@@ -1,0 +1,22 @@
+version: 1
+slug: gwinnett-parks-family-map
+name: Gwinnett Parks Family Map
+integration_method: python
+defaults:
+  category: family
+  tags:
+  - parks
+  - playgrounds
+  - water-play
+  - gwinnett-county
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.gwinnettcounty.com/government/departments/parks-recreation/parks
+detail:
+  enabled: true
+data_goals:
+- destinations
+- destination_details
+- venue_features

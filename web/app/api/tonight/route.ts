@@ -112,7 +112,7 @@ async function setCachedTonightResponse(
 
 // Categories that appeal to young hip crowd
 const HIP_CATEGORIES = ["music", "comedy", "nightlife", "art", "film", "theater", "sports"];
-const GENERIC_CATEGORIES = ["family", "fitness", "classes"];
+const GENERIC_CATEGORIES = ["family", "exercise", "recreation", "classes"];
 
 // Venue name patterns that indicate hip/cool venues
 const HIP_VENUE_PATTERNS = [

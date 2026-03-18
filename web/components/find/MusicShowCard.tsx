@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { memo } from "react";
+import SmartImage from "@/components/SmartImage";
+import CategoryIcon from "@/components/CategoryIcon";
 import { formatTimeSplit } from "@/lib/formats";
+import { MAPBOX_TOKEN } from "@/lib/map-config";
 import Dot from "@/components/ui/Dot";
 
 export interface MusicShow {
@@ -22,6 +25,9 @@ export interface MusicShow {
     name: string;
     slug: string;
     neighborhood: string | null;
+    image_url: string | null;
+    lat: number | null;
+    lng: number | null;
   };
 }
 
@@ -47,6 +53,10 @@ function prefetchEventDetail(eventId: number, portalId?: string) {
 
 function toLocalIsoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function venueMapUrl(lat: number, lng: number): string {
+  return `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/pin-s+ff6b7a(${lng},${lat})/${lng},${lat},15,0/160x240@2x?access_token=${MAPBOX_TOKEN}`;
 }
 
 function isShowLive(startTime: string | null, selectedDate: string): boolean {
@@ -110,10 +120,35 @@ export const MusicShowCard = memo(function MusicShowCard({
       href={href}
       scroll={false}
       onPointerDown={() => prefetchEventDetail(show.event_id, portalId)}
-      className={`group block rounded-xl border ${borderClass} bg-[var(--night)]/45 p-3 sm:p-3.5 hover:border-[var(--coral)]/40 transition-colors`}
+      className={`group block rounded-xl border ${borderClass} bg-[var(--night)]/45 overflow-hidden hover:border-[var(--coral)]/40 transition-colors`}
     >
-      <div className="flex items-start gap-2.5 justify-between">
-        {/* Left: artist + venue info */}
+      <div className="flex items-stretch">
+        {/* Venue image rail */}
+        <div className="flex-shrink-0 w-[72px] sm:w-[80px] relative bg-[var(--dusk)]">
+          {show.venue.image_url ? (
+            <SmartImage
+              src={show.venue.image_url}
+              alt={show.venue.name}
+              fill
+              className="object-cover"
+              sizes="80px"
+            />
+          ) : show.venue.lat && show.venue.lng ? (
+            <SmartImage
+              src={venueMapUrl(show.venue.lat, show.venue.lng)}
+              alt={show.venue.name}
+              fill
+              className="object-cover"
+              sizes="80px"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[var(--twilight)]/30 to-[var(--void)]/80">
+              <CategoryIcon type="music" size={22} glow="subtle" />
+            </div>
+          )}
+        </div>
+        {/* Content */}
+        <div className="flex-1 min-w-0 p-3 sm:p-3.5 flex items-start gap-2.5 justify-between">
         <div className="flex-1 min-w-0">
           {/* Hero: headliner or title */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -178,6 +213,7 @@ export const MusicShowCard = memo(function MusicShowCard({
           <span className={timeChipClass} tabIndex={-1}>
             {formatShowtime(show.start_time)}
           </span>
+        </div>
         </div>
       </div>
     </Link>

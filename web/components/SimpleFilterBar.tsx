@@ -12,7 +12,7 @@ import { formatGenre } from "@/lib/series-utils";
 const CATEGORY_GROUPS = {
   "Popular": ["music", "food_drink", "nightlife"],
   "Arts & Culture": ["art", "theater", "comedy", "film", "dance", "words"],
-  "Activities": ["sports", "fitness", "gaming", "outdoors", "family", "tours"],
+  "Activities": ["sports", "recreation", "exercise", "gaming", "outdoors", "family", "tours"],
   "Community": ["community", "meetup", "learning", "religious", "markets", "wellness"],
 } as const;
 

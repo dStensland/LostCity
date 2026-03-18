@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useMemo } from "react";
 import Image from "@/components/SmartImage";
 import { format, parseISO } from "date-fns";
 import LinkifyText from "../LinkifyText";
@@ -9,21 +8,31 @@ import Skeleton from "@/components/Skeleton";
 import ScopedStyles from "@/components/ScopedStyles";
 import { GenreChip } from "@/components/ActivityChip";
 import { createCssVarClass } from "@/lib/css-utils";
-import { usePortalOptional } from "@/lib/portal-context";
-import { InfoCard } from "@/components/detail/InfoCard";
+import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series-utils";
+import { usePortal } from "@/lib/portal-context";
 import { SectionHeader } from "@/components/detail/SectionHeader";
-import NeonBackButton from "@/components/detail/NeonBackButton";
+import DetailShell from "@/components/detail/DetailShell";
+import DetailHeroImage from "@/components/detail/DetailHeroImage";
+import { DetailStickyBar } from "@/components/detail/DetailStickyBar";
+import Dot from "@/components/ui/Dot";
+import GettingThereSection from "@/components/GettingThereSection";
+import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
+import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
 import { formatRecurrence, type Frequency, type DayOfWeek } from "@/lib/recurrence";
 import {
-  CaretRight,
   CaretDown,
   Play,
   Repeat,
   MapPin,
   CalendarBlank,
   FilmSlate,
-  WarningCircle,
+  CaretRight,
+  Ticket,
+  ArrowCounterClockwise,
+  ArrowLeft,
 } from "@phosphor-icons/react";
+
+// ── Types ────────────────────────────────────────────────────────────────
 
 type SeriesData = {
   id: string;
@@ -57,6 +66,16 @@ type VenueShowtime = {
     name: string;
     slug: string;
     neighborhood: string | null;
+    image_url?: string | null;
+    address?: string | null;
+    nearest_marta_station?: string | null;
+    marta_walk_minutes?: number | null;
+    marta_lines?: string[] | null;
+    beltline_adjacent?: boolean | null;
+    beltline_segment?: string | null;
+    parking_type?: string[] | null;
+    parking_free?: boolean | null;
+    transit_score?: number | null;
   };
   events: {
     id: number;
@@ -66,28 +85,19 @@ type VenueShowtime = {
   }[];
 };
 
+type SeriesApiResponse = {
+  series: SeriesData;
+  events: unknown[];
+  venueShowtimes: VenueShowtime[];
+};
+
 interface SeriesDetailViewProps {
   slug: string;
   portalSlug: string;
   onClose: () => void;
 }
 
-// Series type config
-const SERIES_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
-  film: { label: "Film", color: "var(--series-type-film, #A5B4FC)" },
-  recurring_show: { label: "Recurring Show", color: "var(--series-type-recurring, #F9A8D4)" },
-  festival_program: { label: "Program", color: "var(--series-type-festival, #FBBF24)" },
-  convention: { label: "Convention", color: "var(--series-type-convention, #22D3EE)" },
-  tour: { label: "Tour", color: "var(--series-type-tour, #C4B5FD)" },
-};
-
-function getSeriesTypeLabel(type: string): string {
-  return SERIES_TYPE_CONFIG[type]?.label || "Series";
-}
-
-function getSeriesTypeColor(type: string): string {
-  return SERIES_TYPE_CONFIG[type]?.color || "var(--series-type-default, #94A3B8)";
-}
+// ── Helpers ──────────────────────────────────────────────────────────────
 
 function formatTime(timeStr: string | null): string {
   if (!timeStr) return "";
@@ -99,499 +109,445 @@ function formatTime(timeStr: string | null): string {
 }
 
 function formatDate(dateStr: string): string {
-  const date = parseISO(dateStr);
-  return format(date, "EEE, MMM d");
+  return format(parseISO(dateStr), "EEE, MMM d");
 }
 
-// Group events by date within venue
-function groupEventsByDate(
-  events: VenueShowtime["events"]
-): Map<string, VenueShowtime["events"]> {
-  const groups = new Map<string, VenueShowtime["events"]>();
-  for (const event of events) {
-    if (!groups.has(event.date)) {
-      groups.set(event.date, []);
-    }
-    groups.get(event.date)!.push(event);
-  }
-  return groups;
-}
+// ── Component ────────────────────────────────────────────────────────────
 
 export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDetailViewProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const portalContext = usePortalOptional();
-  const portalId = portalContext?.portal?.id || null;
-  const [series, setSeries] = useState<SeriesData | null>(null);
-  const [venueShowtimes, setVenueShowtimes] = useState<VenueShowtime[]>([]);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [error, setError] = useState<string | null>(null);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [expandedSingleVenue, setExpandedSingleVenue] = useState(false);
-  const [expandedMultiVenue, setExpandedMultiVenue] = useState(false);
+  const { portal } = usePortal();
+  const { toEvent, toSpot, toFestival } = useDetailNavigation(portalSlug);
+  const [expandedDates, setExpandedDates] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    const controller = new AbortController();
+  const fetchUrl = useMemo(() => {
+    if (!portal?.id) return null;
+    return `/api/series/${slug}?portal_id=${portal.id}`;
+  }, [slug, portal?.id]);
 
-    async function fetchSeries() {
-      setStatus("loading");
-      setError(null);
-      setImageLoaded(false);
-      setImageError(false);
-      setExpandedSingleVenue(false);
-      setExpandedMultiVenue(false);
+  const { data, status, error, retry } = useDetailFetch<SeriesApiResponse>(fetchUrl, {
+    entityLabel: "series",
+  });
 
-      const qs = portalId ? `?${new URLSearchParams({ portal_id: portalId }).toString()}` : "";
-      const MAX_RETRIES = 2;
+  const series = data?.series ?? null;
+  const venueShowtimes = useMemo(() => data?.venueShowtimes ?? [], [data]);
+  const totalEvents = useMemo(
+    () => venueShowtimes.reduce((sum, vs) => sum + vs.events.length, 0),
+    [venueShowtimes]
+  );
 
-      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-        try {
-          if (attempt > 0) {
-            await new Promise((r) => setTimeout(r, 500 * attempt));
-            if (cancelled) return;
-          }
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
-          const res = await fetch(`/api/series/${slug}${qs}`, { signal: controller.signal });
-          clearTimeout(timeoutId);
-          if (cancelled) return;
-          if (!res.ok) {
-            if ((res.status === 503 || res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
-              continue;
-            }
-            throw new Error(res.status === 404 ? "Series not found" : `Failed to load series (${res.status})`);
-          }
-          const data = await res.json();
-          if (cancelled) return;
-          setSeries(data.series);
-          setVenueShowtimes(data.venueShowtimes || []);
-          setStatus("ready");
-          return;
-        } catch (err) {
-          if (controller.signal.aborted) return;
-          if (cancelled) return;
-          if (attempt === MAX_RETRIES) {
-            setError(err instanceof Error ? err.message : "Failed to load series");
-            setStatus("error");
-          }
-        }
+  // Flatten all events sorted by date for the dates list
+  const allEvents = useMemo(() => {
+    const events: { id: number; date: string; time: string | null; ticketUrl: string | null; venueName?: string }[] = [];
+    for (const vs of venueShowtimes) {
+      for (const e of vs.events) {
+        events.push({ ...e, venueName: vs.venue.name });
       }
     }
+    return events.sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? ""));
+  }, [venueShowtimes]);
 
-    fetchSeries();
+  const nextEvent = allEvents[0] ?? null;
 
-    return () => { cancelled = true; controller.abort(); };
-  }, [slug, portalId]);
+  // Single venue for venue section
+  const singleVenue = useMemo(() => {
+    if (venueShowtimes.length !== 1) return null;
+    return venueShowtimes[0].venue;
+  }, [venueShowtimes]);
 
-  const navigateToDetail = (param: string, value: string | number) => {
-    const params = new URLSearchParams(searchParams?.toString() || "");
-    params.delete("event");
-    params.delete("spot");
-    params.delete("series");
-    params.delete("festival");
-    params.delete("org");
-    params.set(param, String(value));
-    router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
-  };
-
-  const handleEventClick = (id: number) => navigateToDetail("event", id);
-  const handleVenueClick = (venueSlug: string) => navigateToDetail("spot", venueSlug);
-  const handleFestivalClick = (festivalSlug: string) => navigateToDetail("festival", festivalSlug);
+  // ── LOADING ──────────────────────────────────────────────────────────
 
   if (status === "loading") {
-    return (
-      <div className="pt-6 pb-8" role="status" aria-label="Loading series details">
-        {/* Hero skeleton with floating back button */}
-        <div className="relative rounded-xl overflow-hidden mb-6 border border-[var(--twilight)] bg-[var(--dusk)]">
-          <NeonBackButton onClose={onClose} />
-          <div className="p-6 flex items-start gap-4">
-            {/* Poster */}
-            <Skeleton className="w-28 h-40 rounded-lg flex-shrink-0" />
-
-            {/* Info */}
-            <div className="flex-1 min-w-0 pt-1">
-              {/* Type badge */}
-              <Skeleton className="h-5 w-20 rounded" delay="0.06s" />
-              {/* Title */}
-              <Skeleton className="h-7 w-[75%] rounded mt-2" delay="0.1s" />
-              {/* Metadata (year, rating, runtime) */}
-              <div className="flex items-center gap-2 mt-3">
-                <Skeleton className="h-4 w-10 rounded" delay="0.16s" />
-                <Skeleton className="h-4 w-8 rounded" delay="0.18s" />
-                <Skeleton className="h-4 w-14 rounded" delay="0.2s" />
-              </div>
-              {/* Genre pills */}
-              <div className="flex gap-1.5 mt-3">
-                <Skeleton className="h-5 w-16 rounded-full" delay="0.24s" />
-                <Skeleton className="h-5 w-14 rounded-full" delay="0.26s" />
-                <Skeleton className="h-5 w-18 rounded-full" delay="0.28s" />
-              </div>
-            </div>
-          </div>
+    const skeletonSidebar = (
+      <div role="status" aria-label="Loading series details">
+        <div className="aspect-[16/10] bg-[var(--dusk)]">
+          <Skeleton className="w-full h-full" />
         </div>
-
-        {/* Description skeleton */}
-        <div className="border border-[var(--twilight)] rounded-xl p-4 bg-[var(--dusk)] mb-6">
-          <Skeleton className="h-3 w-12 rounded mb-2" delay="0.32s" />
-          <Skeleton className="h-4 w-full rounded" delay="0.36s" />
-          <Skeleton className="h-4 w-[80%] rounded mt-1.5" delay="0.38s" />
+        <div className="px-5 pt-4 pb-3 space-y-2">
+          <Skeleton className="h-5 w-20 rounded" delay="0.06s" />
+          <Skeleton className="h-7 w-[75%] rounded" delay="0.1s" />
+          <Skeleton className="h-4 w-[50%] rounded" delay="0.14s" />
         </div>
-
-        {/* Showtimes section skeleton */}
-        <Skeleton className="h-3 w-32 rounded mb-4" delay="0.42s" />
-        <div className="space-y-3">
-          <Skeleton className="h-24 w-full rounded-xl" delay="0.46s" />
-          <Skeleton className="h-24 w-full rounded-xl" delay="0.5s" />
+        <div className="mx-5 border-t border-[var(--twilight)]/40" />
+        <div className="px-5 py-3">
+          <Skeleton className="h-12 w-full rounded-lg" delay="0.2s" />
         </div>
       </div>
     );
+    const skeletonContent = (
+      <div className="p-4 lg:p-8 space-y-6">
+        <Skeleton className="h-3 w-16 rounded" delay="0.24s" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-full rounded" delay="0.28s" />
+          <Skeleton className="h-4 w-[80%] rounded" delay="0.3s" />
+        </div>
+        <Skeleton className="h-3 w-32 rounded" delay="0.36s" />
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-full rounded-lg" delay="0.4s" />
+          <Skeleton className="h-10 w-full rounded-lg" delay="0.44s" />
+        </div>
+      </div>
+    );
+    return <DetailShell onClose={onClose} sidebar={skeletonSidebar} content={skeletonContent} />;
   }
+
+  // ── ERROR ────────────────────────────────────────────────────────────
 
   if (error || !series) {
     return (
-      <div className="pt-6" role="alert">
-        <div className="relative rounded-xl overflow-hidden mb-6 bg-[var(--dusk)] border border-[var(--twilight)]">
-          <NeonBackButton onClose={onClose} />
-          <div className="text-center py-16">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--twilight)]/50 flex items-center justify-center">
-              <WarningCircle size={24} weight="light" className="text-[var(--muted)]" aria-hidden="true" />
+      <DetailShell
+        onClose={onClose}
+        singleColumn
+        content={
+          <div className="flex flex-col items-center justify-center py-20 px-4" role="alert">
+            <p className="text-[var(--soft)] mb-6">{error || "Series not found"}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--dusk)] transition-colors font-mono text-sm focus-ring"
+              >
+                <ArrowLeft size={16} weight="bold" />
+                Go Back
+              </button>
+              <button
+                onClick={retry}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:brightness-110 transition-all focus-ring"
+              >
+                <ArrowCounterClockwise size={16} weight="bold" />
+                Try Again
+              </button>
             </div>
-            <p className="text-[var(--muted)]">{error || "Series not found"}</p>
           </div>
-        </div>
-      </div>
+        }
+      />
     );
   }
 
+  // ── DERIVED VALUES ──────────────────────────────────────────────────
+
   const typeColor = getSeriesTypeColor(series.series_type);
   const typeLabel = getSeriesTypeLabel(series.series_type);
-  const showImage = series.image_url && !imageError;
-  const totalEvents = venueShowtimes.reduce((sum, vs) => sum + vs.events.length, 0);
   const accentClass = createCssVarClass("--accent-color", typeColor, "accent");
+  const isFilm = series.series_type === "film";
+  const isRecurring = series.series_type === "recurring_show";
 
-  return (
-    <div className={`pt-6 pb-8 ${accentClass?.className ?? ""}`}>
-      <ScopedStyles css={accentClass?.css} />
-      {/* Hero with poster and info */}
-      <div className="relative rounded-xl overflow-hidden mb-6 border border-[var(--twilight)] series-hero-bg">
-        {/* Floating back button */}
-        <NeonBackButton onClose={onClose} />
-        <div className="p-6 flex items-start gap-4">
-          {/* Poster */}
-          <div className="flex-shrink-0">
-            {showImage ? (
-              <div className="relative w-28 h-40 rounded-lg overflow-hidden border border-[var(--twilight)]">
-                {!imageLoaded && (
-                  <Skeleton className="absolute inset-0" />
-                )}
-                <Image
-                  src={series.image_url!}
-                  alt={series.title}
-                  fill
-                  sizes="112px"
-                  className={`object-cover transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
-                  onLoad={() => setImageLoaded(true)}
-                  onError={() => setImageError(true)}
-                />
-              </div>
-            ) : (
-              <div
-                className="w-28 h-40 rounded-lg flex items-center justify-center bg-accent-20"
-              >
-                {series.series_type === "film" ? (
-                  <FilmSlate size={40} weight="light" className="text-accent" aria-hidden="true" />
-                ) : (
-                  <CalendarBlank size={40} weight="light" className="text-accent" aria-hidden="true" />
-                )}
-              </div>
-            )}
+  const recurrenceLabel = isRecurring && series.frequency
+    ? formatRecurrence(series.frequency as Frequency, series.day_of_week as DayOfWeek) ||
+      (series.frequency.charAt(0).toUpperCase() + series.frequency.slice(1) +
+        (series.day_of_week ? ` on ${series.day_of_week}s` : ""))
+    : null;
+
+  // ── SIDEBAR ─────────────────────────────────────────────────────────
+
+  const sidebarContent = (
+    <div className={`flex flex-col h-full ${accentClass?.className ?? ""}`}>
+      {/* Hero */}
+      {series.image_url ? (
+        <DetailHeroImage
+          imageUrl={series.image_url}
+          alt={series.title}
+          category={isFilm ? "film" : "other"}
+        />
+      ) : (
+        <div className="aspect-[16/10] bg-gradient-to-b from-[var(--dusk)] to-[var(--night)] flex items-center justify-center">
+          {isFilm ? (
+            <FilmSlate size={48} weight="light" className="text-accent opacity-30" aria-hidden="true" />
+          ) : (
+            <Repeat size={48} weight="light" className="text-accent opacity-30" aria-hidden="true" />
+          )}
+        </div>
+      )}
+
+      {/* Identity */}
+      <div className="px-5 pt-4 pb-3 space-y-2">
+        {/* Type badge */}
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-mono font-semibold uppercase tracking-widest bg-accent-20 text-accent">
+          {typeLabel}
+        </span>
+
+        {/* Title */}
+        <h1 className="text-xl lg:text-2xl font-bold text-[var(--cream)] leading-tight">
+          {series.title}
+        </h1>
+
+        {/* Recurring metadata */}
+        {recurrenceLabel && (
+          <div className="flex items-center gap-2 text-sm text-[var(--soft)]">
+            <Repeat size={16} weight="light" className="text-accent flex-shrink-0" aria-hidden="true" />
+            <span>{recurrenceLabel}</span>
           </div>
+        )}
 
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            {/* Type badge */}
-            <span
-              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium uppercase tracking-widest mb-2 bg-accent-20 text-accent"
+        {/* Film metadata */}
+        {isFilm && (
+          <p className="text-sm flex items-center gap-1.5 flex-wrap text-[var(--soft)]">
+            {series.year && <span className="text-[var(--cream)]">{series.year}</span>}
+            {series.rating && (
+              <>
+                {series.year && <Dot />}
+                <span className="px-1 py-0.5 border border-[var(--muted)] rounded text-xs">{series.rating}</span>
+              </>
+            )}
+            {series.runtime_minutes && (
+              <>
+                <Dot />
+                <span>{Math.floor(series.runtime_minutes / 60)}h {series.runtime_minutes % 60}m</span>
+              </>
+            )}
+          </p>
+        )}
+
+        {/* Venue link (single-venue) */}
+        {singleVenue && (
+          <button
+            onClick={() => toSpot(singleVenue.slug)}
+            className="flex items-center gap-1.5 text-sm text-[var(--soft)] hover:text-[var(--coral)] transition-colors text-left focus-ring"
+          >
+            <MapPin size={14} weight="light" className="flex-shrink-0" aria-hidden="true" />
+            <span>{singleVenue.name}</span>
+            {singleVenue.neighborhood && (
+              <span className="text-[var(--muted)]">· {singleVenue.neighborhood}</span>
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* Next date CTA */}
+      {nextEvent && (
+        <>
+          <div className="mx-5 border-t border-[var(--twilight)]/40" />
+          <div className="px-5 py-3">
+            <button
+              onClick={() => toEvent(nextEvent.id)}
+              className="w-full flex items-center justify-between px-4 py-3 min-h-[44px] rounded-lg bg-accent-20 text-accent text-sm font-medium hover:brightness-110 transition-all focus-ring"
             >
-              {typeLabel}
-            </span>
+              <span>Next: {formatDate(nextEvent.date)}</span>
+              {nextEvent.time && <span className="font-mono text-xs opacity-80">{formatTime(nextEvent.time)}</span>}
+            </button>
+          </div>
+        </>
+      )}
 
-            <h2 className="text-xl font-bold text-[var(--cream)] leading-tight mb-2">
-              {series.title}
-            </h2>
-
-            {/* Film metadata */}
-            {series.series_type === "film" && (
-              <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--muted)] mb-3">
-                {series.year && <span>{series.year}</span>}
-                {series.rating && (
-                  <span className="px-1 py-0.5 border border-[var(--muted)] rounded text-xs">
-                    {series.rating}
-                  </span>
-                )}
-                {series.runtime_minutes && (
-                  <span>
-                    {Math.floor(series.runtime_minutes / 60)}h {series.runtime_minutes % 60}m
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Recurring show metadata */}
-            {series.series_type === "recurring_show" && series.frequency && (
-              <div className="flex items-center gap-2 text-sm text-[var(--muted)] mb-3">
-                <Repeat size={16} weight="light" aria-hidden="true" />
-                <span className="capitalize">{series.frequency}</span>
-                {series.day_of_week && <span className="capitalize">on {series.day_of_week}s</span>}
-              </div>
-            )}
-
+      {/* Director + Trailer (film only) */}
+      {isFilm && (series.director || series.trailer_url) && (
+        <>
+          <div className="mx-5 border-t border-[var(--twilight)]/40" />
+          <div className="px-5 py-3 space-y-2">
             {series.director && (
-              <p className="text-sm text-[var(--muted)] mb-2">
+              <p className="text-sm text-[var(--muted)]">
                 Directed by <span className="text-[var(--soft)]">{series.director}</span>
               </p>
             )}
+            {series.trailer_url && (
+              <a
+                href={series.trailer_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-sm text-accent hover:text-[var(--cream)] transition-colors focus-ring"
+              >
+                <Play size={16} weight="fill" aria-hidden="true" />
+                Watch Trailer
+              </a>
+            )}
+          </div>
+        </>
+      )}
 
-            {/* Genres */}
-            {series.genres && series.genres.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {series.genres.slice(0, 4).map((genre) => (
-                  <GenreChip
-                    key={genre}
-                    genre={genre}
-                    category={series.series_type === "film" ? "film" : null}
-                    portalSlug={portalSlug}
-                  />
-                ))}
+      {/* Festival parent link */}
+      {series.festival && (
+        <>
+          <div className="mx-5 border-t border-[var(--twilight)]/40" />
+          <div className="px-5 py-3">
+            <button
+              onClick={() => toFestival(series.festival!.slug)}
+              className="w-full flex items-center justify-between p-3 min-h-[44px] rounded-lg border border-[var(--twilight)] bg-[var(--dusk)] hover:border-[var(--coral)]/40 transition-colors text-left focus-ring"
+            >
+              <div className="min-w-0">
+                <p className="text-xs font-mono uppercase tracking-[0.14em] text-[var(--muted)]">Part of</p>
+                <p className="text-[var(--cream)] font-medium text-sm truncate">{series.festival.name}</p>
+              </div>
+              <CaretRight size={16} weight="bold" className="text-[var(--muted)] flex-shrink-0 ml-2" />
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Spacer + Genre pills */}
+      <div className="hidden lg:flex flex-1" />
+      {series.genres && series.genres.length > 0 && (
+        <>
+          <div className="mx-5 border-t border-[var(--twilight)]/40" />
+          <div className="px-5 py-3 flex flex-wrap gap-1.5">
+            {series.genres.slice(0, 5).map((genre) => (
+              <GenreChip
+                key={genre}
+                genre={genre}
+                category={isFilm ? "film" : null}
+                portalSlug={portalSlug}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  // ── CONTENT ─────────────────────────────────────────────────────────
+
+  const DATES_COLLAPSED = 5;
+  const showExpandDates = allEvents.length > DATES_COLLAPSED;
+  const visibleEvents = expandedDates ? allEvents : allEvents.slice(0, DATES_COLLAPSED);
+
+  const contentBody = (
+    <div className={`px-4 lg:px-8 py-6 ${accentClass?.className ?? ""}`}>
+      {/* About */}
+      {series.description && (
+        <>
+          <SectionHeader title="About" variant="inline" />
+          <div className="text-sm text-[var(--soft)] leading-relaxed whitespace-pre-wrap pb-2">
+            <LinkifyText text={series.description} />
+          </div>
+        </>
+      )}
+
+      {/* Venue section (single-venue series) */}
+      {singleVenue && (
+        <>
+          <SectionHeader
+            title="Venue"
+            rightAction={
+              <button
+                onClick={() => toSpot(singleVenue.slug)}
+                className="text-xs font-mono text-[var(--coral)] hover:text-[var(--cream)] transition-colors focus-ring"
+              >
+                View venue →
+              </button>
+            }
+          />
+          <div className="rounded-xl border border-[var(--twilight)] overflow-hidden bg-[var(--card-bg,var(--night))] mb-2">
+            {singleVenue.image_url && (
+              <div className="relative h-32 overflow-hidden">
+                <Image
+                  src={singleVenue.image_url}
+                  alt={singleVenue.name}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 640px"
+                  className="object-cover brightness-[0.85]"
+                />
               </div>
             )}
-          </div>
-        </div>
-      </div>
-
-      {series.festival && (
-        <button
-          onClick={() => handleFestivalClick(series.festival!.slug)}
-          className={`w-full mb-5 flex items-center justify-between gap-3 rounded-lg border border-[var(--twilight)] bg-[var(--void)] px-4 py-3 min-h-[44px] text-left transition-colors hover:border-[var(--coral)]/50 focus-ring ${accentClass?.className ?? ""}`}
-        >
-          <div className="min-w-0">
-            <p className="text-xs font-mono uppercase tracking-[0.14em] text-[var(--muted)]">Part of</p>
-            <p className="text-[var(--cream)] font-medium truncate">{series.festival.name}</p>
-          </div>
-          <span className="text-xs font-mono text-[var(--soft)]">View festival</span>
-        </button>
-      )}
-
-      {/* Description */}
-      {series.description && (
-        <InfoCard className="mb-6">
-          <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] mb-2">
-            About
-          </h2>
-          <p className="text-[var(--soft)] text-sm leading-relaxed whitespace-pre-wrap">
-            <LinkifyText text={series.description} />
-          </p>
-        </InfoCard>
-      )}
-
-      {/* Trailer link */}
-      {series.trailer_url && (
-        <a
-          href={series.trailer_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-lg bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--twilight)]/80 transition-colors mb-6 focus-ring"
-        >
-          <Play size={20} weight="fill" aria-hidden="true" />
-          Watch Trailer
-        </a>
-      )}
-
-      {/* Recurring show callout */}
-      {series.series_type === "recurring_show" && series.frequency && (
-        <div
-          className="rounded-xl border p-4 mb-6 series-callout"
-        >
-          <div className="flex items-start gap-3">
-            <Repeat size={20} weight="light" className="flex-shrink-0 mt-0.5 text-accent" aria-hidden="true" />
-            <div>
-              <p className="font-medium text-[var(--cream)]">
-                {formatRecurrence(series.frequency as Frequency, series.day_of_week as DayOfWeek) || (series.frequency.charAt(0).toUpperCase() + series.frequency.slice(1))}
-                {venueShowtimes[0]?.events[0]?.time && ` at ${formatTime(venueShowtimes[0].events[0].time)}`}
-              </p>
-              {venueShowtimes.length === 1 && venueShowtimes[0].venue && (
-                <p className="text-sm text-[var(--muted)] mt-0.5">
-                  at {venueShowtimes[0].venue.name}
-                  {venueShowtimes[0].venue.neighborhood && ` (${venueShowtimes[0].venue.neighborhood})`}
-                </p>
+            <div className="p-4 space-y-2">
+              <button
+                onClick={() => toSpot(singleVenue.slug)}
+                className="text-left group focus-ring"
+              >
+                <h3 className="text-base font-semibold text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
+                  {singleVenue.name}
+                </h3>
+                {singleVenue.neighborhood && (
+                  <p className="text-sm text-[var(--muted)]">{singleVenue.neighborhood}</p>
+                )}
+              </button>
+              {singleVenue.address && (
+                <p className="text-xs text-[var(--muted)]">{singleVenue.address}</p>
               )}
+              <GettingThereSection transit={singleVenue} variant="compact" />
             </div>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Showtimes by venue */}
-      <div>
-        <SectionHeader
-          title={
-            totalEvents > 0
-              ? `${totalEvents} Upcoming ${series.series_type === "film" ? "Showtime" : "Event"}${totalEvents !== 1 ? "s" : ""}`
-              : "No Upcoming Showtimes"
-          }
-        />
+      {/* Upcoming Dates */}
+      <SectionHeader
+        title={
+          totalEvents > 0
+            ? `Upcoming ${isFilm ? "Showtimes" : "Dates"}`
+            : `No Upcoming ${isFilm ? "Showtimes" : "Dates"}`
+        }
+        count={totalEvents > 0 ? totalEvents : undefined}
+      />
 
-        {venueShowtimes.length > 0 ? (
-          <div className="space-y-4">
-            {/* Compact single-venue layout for recurring shows */}
-            {series.series_type === "recurring_show" && venueShowtimes.length === 1 ? (
-              <>
-                <div className="rounded-xl border border-[var(--twilight)] overflow-hidden bg-[var(--dusk)]">
-                  {/* Venue header */}
-                  <button
-                    onClick={() => handleVenueClick(venueShowtimes[0].venue.slug)}
-                    className="w-full p-3 border-b border-[var(--twilight)]/50 flex items-center gap-2 hover:bg-[var(--twilight)]/20 transition-colors group focus-ring"
-                  >
-                    <MapPin size={16} weight="light" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" />
-                    <span className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
-                      {venueShowtimes[0].venue.name}
-                    </span>
-                    {venueShowtimes[0].venue.neighborhood && (
-                      <span className="text-xs text-[var(--muted)] font-mono">
-                        ({venueShowtimes[0].venue.neighborhood})
-                      </span>
-                    )}
-                    <CaretRight size={16} weight="bold" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto" />
-                  </button>
+      {allEvents.length > 0 ? (
+        <div className="space-y-1">
+          {visibleEvents.map((event, index) => (
+            <button
+              key={event.id}
+              onClick={() => toEvent(event.id)}
+              className={`w-full flex items-center gap-3 px-3 min-h-[44px] rounded-lg transition-colors focus-ring ${
+                index === 0
+                  ? "py-2.5 bg-accent-20 hover:brightness-110"
+                  : "py-2 hover:bg-[var(--twilight)]/30"
+              }`}
+            >
+              <span className={`text-sm ${index === 0 ? "font-medium text-[var(--cream)]" : "text-[var(--soft)]"}`}>
+                {formatDate(event.date)}
+              </span>
+              {event.time && (
+                <span className="font-mono text-xs text-[var(--muted)]">{formatTime(event.time)}</span>
+              )}
+              {/* Show venue name for multi-venue series */}
+              {venueShowtimes.length > 1 && event.venueName && (
+                <>
+                  <span className="flex-1" />
+                  <span className="text-xs text-[var(--muted)] truncate max-w-[140px]">{event.venueName}</span>
+                </>
+              )}
+              <CaretRight size={14} weight="bold" className={`ml-auto flex-shrink-0 ${index === 0 ? "text-accent" : "text-[var(--muted)]"}`} />
+            </button>
+          ))}
 
-                  {/* Compact date list */}
-                  <div className="p-3">
-                    {venueShowtimes[0].events.length > 0 && (
-                      <div className="space-y-1.5">
-                        {(expandedSingleVenue ? venueShowtimes[0].events : venueShowtimes[0].events.slice(0, 3)).map((event, index) => (
-                          <button
-                            key={event.id}
-                            onClick={() => handleEventClick(event.id)}
-                            className={`w-full flex items-center gap-3 px-2 min-h-[44px] focus-ring ${
-                              index === 0 ? "py-1.5 rounded-lg bg-[var(--twilight)]/30 hover:bg-[var(--coral)] hover:text-[var(--void)]" : "py-1 rounded hover:bg-[var(--twilight)]/30"
-                            } transition-colors ${index === 0 ? "group/next" : "text-left"}`}
-                          >
-                            {index === 0 && <span className="text-xs font-medium text-accent">Next</span>}
-                            <span className={`${index === 0 ? "text-sm font-medium text-[var(--cream)] group-hover/next:text-inherit" : "text-sm text-[var(--soft)]"}`}>
-                              {formatDate(event.date)}
-                            </span>
-                            {event.time && (
-                              <span className={`font-mono text-xs ${index === 0 ? "text-[var(--muted)] group-hover/next:text-inherit" : "text-[var(--muted)]"}`}>
-                                {formatTime(event.time)}
-                              </span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {venueShowtimes[0].events.length > 3 && (
-                  <button
-                    onClick={() => setExpandedSingleVenue((prev) => !prev)}
-                    aria-expanded={expandedSingleVenue}
-                    className="w-full py-2.5 min-h-[44px] text-sm font-medium text-accent hover:text-[var(--cream)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--card-bg-hover)] transition-colors flex items-center justify-center gap-2 focus-ring"
-                  >
-                    {expandedSingleVenue ? "Show fewer dates" : `See all ${venueShowtimes[0].events.length} dates`}
-                    <CaretDown
-                      size={16}
-                      weight="bold"
-                      className={`transition-transform ${expandedSingleVenue ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                )}
-              </>
-            ) : (
-              /* Standard multi-venue layout */
-              <>
-                {(expandedMultiVenue ? venueShowtimes : venueShowtimes.slice(0, 3)).map((vs) => {
-                  const eventsByDate = groupEventsByDate(vs.events);
-
-                  return (
-                    <div
-                      key={vs.venue.id}
-                      className="rounded-xl border border-[var(--twilight)] overflow-hidden bg-[var(--dusk)]"
-                    >
-                      {/* Venue header */}
-                      <button
-                        onClick={() => handleVenueClick(vs.venue.slug)}
-                        className="w-full p-3 border-b border-[var(--twilight)]/50 flex items-center gap-2 hover:bg-[var(--twilight)]/20 transition-colors group focus-ring"
-                      >
-                        <MapPin size={16} weight="light" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" />
-                        <span className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
-                          {vs.venue.name}
-                        </span>
-                        {vs.venue.neighborhood && (
-                          <span className="text-xs text-[var(--muted)] font-mono">
-                            ({vs.venue.neighborhood})
-                          </span>
-                        )}
-                        <CaretRight size={16} weight="bold" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto" />
-                      </button>
-
-                      {/* Dates and times */}
-                      <div className="divide-y divide-[var(--twilight)]/30">
-                        {Array.from(eventsByDate.entries()).map(([date, dateEvents]) => (
-                          <div key={date} className="px-3 py-2.5">
-                            <div className="flex items-center gap-3">
-                              {/* Date */}
-                              <div className="flex-shrink-0 w-24">
-                                <span className="text-sm font-medium text-[var(--soft)]">
-                                  {formatDate(date)}
-                                </span>
-                              </div>
-
-                              {/* Times */}
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                {dateEvents.map((event) => (
-                                  <button
-                                    key={event.id}
-                                    onClick={() => handleEventClick(event.id)}
-                                    className="font-mono text-xs px-2 py-1 min-h-[44px] rounded bg-[var(--twilight)]/50 text-[var(--cream)] hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors focus-ring"
-                                  >
-                                    {formatTime(event.time) || "Time TBA"}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-                {venueShowtimes.length > 3 && (
-                  <button
-                    onClick={() => setExpandedMultiVenue((prev) => !prev)}
-                    aria-expanded={expandedMultiVenue}
-                    className="w-full py-2.5 min-h-[44px] text-sm font-medium text-accent hover:text-[var(--cream)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--card-bg-hover)] transition-colors flex items-center justify-center gap-2 focus-ring"
-                  >
-                    {expandedMultiVenue ? "Show fewer venues" : `See all ${venueShowtimes.length} venues`}
-                    <CaretDown
-                      size={16}
-                      weight="bold"
-                      className={`transition-transform ${expandedMultiVenue ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                )}
-              </>
-            )}
+          {showExpandDates && (
+            <button
+              onClick={() => setExpandedDates((prev) => !prev)}
+              aria-expanded={expandedDates}
+              className="w-full py-2.5 min-h-[44px] text-sm font-medium text-accent hover:text-[var(--cream)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--card-bg-hover)] transition-colors flex items-center justify-center gap-2 mt-2 focus-ring"
+            >
+              {expandedDates ? "Show fewer dates" : `See all ${allEvents.length} dates`}
+              <CaretDown
+                size={16}
+                weight="bold"
+                className={`transition-transform ${expandedDates ? "rotate-180" : ""}`}
+              />
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="py-8 text-center border border-[var(--twilight)] rounded-xl bg-[var(--card-bg,var(--night))]">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
+            <CalendarBlank size={24} weight="light" className="text-[var(--muted)]" aria-hidden="true" />
           </div>
-        ) : (
-          <div className="py-8 text-center border border-[var(--twilight)] rounded-xl bg-[var(--dusk)]">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
-              <CalendarBlank size={24} weight="light" className="text-[var(--muted)]" />
-            </div>
-            <p className="text-[var(--muted)] text-sm">No upcoming showtimes scheduled</p>
-            <p className="text-[var(--muted)] text-xs mt-1">Check back later for new dates</p>
-          </div>
-        )}
-      </div>
+          <p className="text-[var(--muted)] text-sm">No upcoming {isFilm ? "showtimes" : "dates"} scheduled</p>
+          <p className="text-[var(--muted)] text-xs mt-1">Check back later for new dates</p>
+        </div>
+      )}
     </div>
+  );
+
+  // ── MOBILE STICKY BAR ───────────────────────────────────────────────
+
+  const nextTicketUrl = nextEvent?.ticketUrl ?? null;
+  const mobileBottomBar = nextTicketUrl ? (
+    <DetailStickyBar
+      primaryAction={{
+        label: isFilm ? "Get Tickets" : "Get Tickets",
+        href: nextTicketUrl,
+        icon: <Ticket size={16} weight="light" />,
+      }}
+      primaryColor={typeColor}
+      containerClassName="max-w-3xl"
+    />
+  ) : undefined;
+
+  // ── RENDER ──────────────────────────────────────────────────────────
+
+  return (
+    <>
+      <ScopedStyles css={accentClass?.css} />
+      <DetailShell
+        onClose={onClose}
+        sidebar={sidebarContent}
+        content={contentBody}
+        bottomBar={mobileBottomBar}
+      />
+    </>
   );
 }

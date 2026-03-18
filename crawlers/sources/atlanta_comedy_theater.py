@@ -233,12 +233,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             event_image = img_url
                             break
 
-                    # Build series hint for show runs
+                    # Build series hint for show runs (theater runs, not recurring hangs)
                     description = f"{title} at Atlanta Comedy Theater"
                     series_hint = None
                     if end_date and end_date != start_date:
                         series_hint = {
-                            "series_type": "recurring_show",
+                            "series_type": "other",
                             "series_title": title,
                             "description": description,
                         }
@@ -265,7 +265,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "image_url": event_image,
                         "raw_text": f"{title}",
                         "extraction_confidence": 0.82,
-                        "is_recurring": True if end_date and end_date != start_date else False,
+                        "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }

@@ -1,6 +1,6 @@
 from datetime import date
 
-from sources.atlanta_aquatic_fitness import parse_item
+from sources.atlanta_aquatic_fitness import _build_destination_envelope, parse_item
 
 
 def test_parse_item_builds_rosel_fann_water_aerobics():
@@ -70,3 +70,17 @@ def test_parse_item_builds_rosel_fann_ms_hayes_title_without_duplication():
 
     assert parsed is not None
     assert parsed["title"] == "Water Aerobics with Ms. Hayes at Rosel Fann Recreation & Aquatic Center"
+
+
+def test_build_destination_envelope_marks_aquatic_center() -> None:
+    venue_data = {
+        "name": "CT Martin Recreation & Aquatic Center",
+        "slug": "ct-martin-recreation-aquatic-center",
+        "venue_type": "recreation",
+    }
+
+    envelope = _build_destination_envelope(venue_data, 2201)
+
+    assert envelope.destination_details[0]["destination_type"] == "aquatic_center"
+    assert envelope.destination_details[0]["family_suitability"] == "yes"
+    assert envelope.venue_features[0]["slug"] == "public-pool-and-aquatics-programs"

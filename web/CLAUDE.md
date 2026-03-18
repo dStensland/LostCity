@@ -661,6 +661,7 @@ When writing recipes, prefer semantic tokens (Layer 2–3) over primitives. For 
 ❌ min-w-[1.5rem]            → min-w-6            (use Tailwind spacing scale)
 ❌ rounded-2xl (list rows)   → rounded-xl          (list row cards are 12px)
 ❌ inline gradient bg        → find-row-card-bg    (use the utility class)
+❌ <Image src={dynamicUrl}>  → <SmartImage src={dynamicUrl}> (crashes on unknown hosts)
 ```
 
 ### Accepted Exceptions
@@ -754,6 +755,57 @@ Each portal has its own design language (typography, colors, layout), but shared
 - **Reference the component recipes above.** They exist because we've rebuilt the same patterns multiple times. Copy them — don't improvise from primitives.
 
 When building a new portal's unique pages (Adventure's trail detail, Arts' exhibition page), start from the Pencil designs if they exist, but use the shared token system for colors, typography, and spacing. The portal's personality comes from layout, content hierarchy, and accent colors — not from reinventing the button.
+
+---
+
+## Images: SmartImage vs next/image
+
+**CRITICAL: Never use `import Image from "next/image"` for dynamic or external image URLs.** An unconfigured hostname in `next.config.ts` `remotePatterns` causes `next/image` to throw a render error that crashes the entire page — not just the image.
+
+### Use `SmartImage` (default choice)
+
+```typescript
+import SmartImage from "@/components/SmartImage";
+
+// Dynamic URLs from API/database — SmartImage handles everything
+<SmartImage src={event.image_url} alt={event.title} fill />
+
+// With blurhash placeholder
+<SmartImage src={venue.image_url} alt="" fill blurhash={venue.blurhash} />
+
+// With custom fallback on error
+<SmartImage src={org.logo_url} alt="" width={40} height={40}
+  fallback={<div className="w-10 h-10 bg-[var(--twilight)] rounded-full" />}
+/>
+```
+
+SmartImage provides three layers of crash protection:
+1. **Proxy**: Unknown hosts route through `/api/image-proxy` (local URL, always allowed)
+2. **Passthrough loader**: External URLs from unknown hosts skip hostname validation
+3. **Error boundary**: If `next/image` still throws, re-renders with passthrough loader + fallback UI
+
+You do NOT need to call `getProxiedImageSrc()` — SmartImage handles proxying internally.
+
+### Use `Image` from next/image (rare — static local assets only)
+
+```typescript
+import Image from "next/image";
+
+// ONLY for static imports or guaranteed-local paths
+import heroImg from "@/public/hero.jpg";
+<Image src={heroImg} alt="Hero" />
+<Image src="/portals/atlanta/skyline.jpg" alt="Skyline" fill />
+```
+
+### Quick Reference
+
+```
+❌ <Image src={event.image_url} />           → crashes on unknown hostname
+❌ <Image src={getProxiedImageSrc(url)} />   → still crashes if proxy misses
+✅ <SmartImage src={event.image_url} />       → always safe, degrades gracefully
+✅ <Image src="/local/static.jpg" />          → fine for local assets
+✅ <Image src={importedStaticImage} />        → fine for static imports
+```
 
 ---
 

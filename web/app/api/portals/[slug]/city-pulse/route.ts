@@ -688,9 +688,6 @@ export async function GET(request: NextRequest, { params }: Props) {
       .neq("category_id", "film") // Film → Now Showing (separate block)
       .not("tags", "cs", '{"activism"}'); // Activism → separate opt-in block
     q = applyFeedGate(q);
-    q = q
-      .or("is_tentpole.eq.false,is_tentpole.is.null") // Tentpole → Big Stuff
-      .is("festival_id", null); // Festival → Big Stuff
     q = applyPortalScope(q);
     return q;
   };
@@ -705,10 +702,16 @@ export async function GET(request: NextRequest, { params }: Props) {
     tags: string[] | null;
   };
 
-  /** Exclude recurring events that belong in Regular Hangs (The Scene) */
-  const excludeSceneRows = (rows: CountRow[]): CountRow[] =>
+  /** Premium tags that promote a recurring event into the Lineup */
+  const LINEUP_PREMIUM_TAGS = new Set(["touring", "album-release", "one-night-only"]);
+
+  /** Exclude recurring events that don't belong in the Lineup:
+   *  1. Scene events (trivia, karaoke, open mic, etc.) → Regular Hangs
+   *  2. Generic recurring without premium signals → category feeds, not Lineup */
+  const excludeNonLineupRecurring = (rows: CountRow[]): CountRow[] =>
     rows.filter((row) => {
       if (!row.series_id && !row.is_recurring) return true;
+      // Check Scene exclusion
       const pseudo = {
         id: 0, title: row.title ?? "", start_date: "", start_time: null, is_all_day: false,
         is_free: false, price_min: null, price_max: null, image_url: null,
@@ -719,7 +722,11 @@ export async function GET(request: NextRequest, { params }: Props) {
         genres: row.genres,
         tags: row.tags,
       };
-      return !isSceneEvent(pseudo as never);
+      if (isSceneEvent(pseudo as never)) return false;
+      // Generic recurring without premium tags → not Lineup material
+      const tags = row.tags ?? [];
+      if (!tags.some((t) => LINEUP_PREMIUM_TAGS.has(t))) return false;
+      return true;
     });
 
   const dedupeCountRows = (rows: CountRow[]): CountRow[] => {
@@ -737,7 +744,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   /** Count events by category and genre/tag, after scene exclusion + series deduplication */
   const buildCategoryCounts = (rows: CountRow[]): Record<string, number> => {
-    const deduped = dedupeCountRows(excludeSceneRows(rows));
+    const deduped = dedupeCountRows(excludeNonLineupRecurring(rows));
     const counts: Record<string, number> = {};
     for (const row of deduped) {
       if (row.category_id) {
@@ -858,26 +865,11 @@ export async function GET(request: NextRequest, { params }: Props) {
       ? supabase.from("profiles").select("display_name, username").eq("id", userId).maybeSingle()
       : Promise.resolve({ data: null });
 
-  // Venue type counts for browse section "Places to Go" tiles
-  const buildVenueTypeCountsQuery = () => {
-    let q = supabase
-      .from("venues")
-      .select("venue_type")
-      .eq("active", true)
-      .not("venue_type", "is", null);
-    if (geoCenter) {
-      const radiusKm = portalFilters.geo_radius_km ?? 25;
-      const degOffset = radiusKm / 111;
-      q = q
-        .gte("lat", geoCenter[0] - degOffset)
-        .lte("lat", geoCenter[0] + degOffset)
-        .gte("lng", geoCenter[1] - degOffset)
-        .lte("lng", geoCenter[1] + degOffset);
-    } else if (portalCity) {
-      q = q.ilike("city", `%${portalCity}%`);
-    }
-    return q;
-  };
+  // Venue type counts for browse section "Places to Go" tiles — server-side aggregation
+  const buildVenueTypeCountsQuery = () =>
+    supabase.rpc("get_venue_type_counts", { p_city: portalCity ?? null } as never) as unknown as Promise<{
+      data: { venue_type: string; cnt: number }[] | null;
+    }>;
 
   // Curated sections (same as portal feed)
   const buildCuratedQuery = () => {
@@ -915,9 +907,9 @@ export async function GET(request: NextRequest, { params }: Props) {
       .limit(20);
   };
 
-  // Planning horizon: flagship/major events 7+ days out (arena shows, festivals)
+  // Planning horizon: flagship/major events 7+ days out, 6 months ahead
   const horizonStart = getLocalDateString(addDays(effectiveNow, 7));
-  const horizonEnd = getLocalDateString(addDays(effectiveNow, 90));
+  const horizonEnd = getLocalDateString(addDays(effectiveNow, 180));
   const buildHorizonQuery = () => {
     let q = portalClient
       .from("events")
@@ -926,12 +918,17 @@ export async function GET(request: NextRequest, { params }: Props) {
       .gte("start_date", horizonStart)
       .lte("start_date", horizonEnd)
       .eq("is_active", true)
-      .is("canonical_event_id", null);
+      .is("canonical_event_id", null)
+      // Exclude event types that don't belong in a planning-ahead feed
+      .neq("category_id", "tours")
+      .not("category_id", "in", "(sports,recreation)")
+      .neq("category_id", "unknown")
+      .neq("is_class", true);
     q = applyPortalScope(q);
     return q
       .order("importance", { ascending: true })
       .order("start_date", { ascending: true })
-      .limit(20);
+      .limit(100);
   };
 
   // Evening events query — ensures Tonight section has events even when
@@ -1008,16 +1005,16 @@ export async function GET(request: NextRequest, { params }: Props) {
   };
 
   // ---------------------------------------------------------------------------
-  // Tab counts — always fetched (cheap HEAD queries, zero rows transferred)
+  // Tab counts — pre-computed summary table (one lightweight query instead of 3)
   // ---------------------------------------------------------------------------
 
-  // Unified count + category queries (one per tab window).
-  // Each returns lightweight rows with series_id for dedup + category/genre/tags for chips.
-  const countCategoryQueries = Promise.all([
-    buildCountCategoryQuery(today, today),
-    buildCountCategoryQuery(tomorrow, weekAhead),
-    buildCountCategoryQuery(weekAhead, fourWeeksAhead),
-  ]);
+  // fetch_category_counts holds pre-computed {window, dimension, value, cnt} rows
+  // refreshed by refresh_feed_counts() after each crawl run.
+  type PrecomputedCountRow = { window: string; dimension: string; value: string; cnt: number };
+  const precomputedCountsQuery = supabase
+    .from("feed_category_counts")
+    .select("window, dimension, value, cnt")
+    .eq("portal_id", portalData.id) as unknown as Promise<{ data: PrecomputedCountRow[] | null }>;
 
   // ---------------------------------------------------------------------------
   // Tab-only mode: ?tab=this_week or ?tab=coming_up
@@ -1134,9 +1131,9 @@ export async function GET(request: NextRequest, { params }: Props) {
     const tabRows = (tabCountResult.data || []) as CountRow[];
     const isWeekTab = requestedTab === "this_week";
     const tabCountsObj = {
-      today: dedupeCountRows(excludeSceneRows(todayRows)).length,
-      this_week: isWeekTab ? dedupeCountRows(excludeSceneRows(tabRows)).length : 0,
-      coming_up: isWeekTab ? 0 : dedupeCountRows(excludeSceneRows(tabRows)).length,
+      today: dedupeCountRows(excludeNonLineupRecurring(todayRows)).length,
+      this_week: isWeekTab ? dedupeCountRows(excludeNonLineupRecurring(tabRows)).length : 0,
+      coming_up: isWeekTab ? 0 : dedupeCountRows(excludeNonLineupRecurring(tabRows)).length,
     };
 
     const tabResponse: CityPulseResponse = {
@@ -1174,13 +1171,9 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Fetches today events + counts. Skips week/coming-up event data.
   // ---------------------------------------------------------------------------
 
-  const todayInterestQueries = buildInterestQueries(today, today);
-
-
   const [
     todayEventsResult,
     eveningEventsResult,
-    todayInterestResults,
     trendingResult,
     horizonResult,
     weatherVenuesResult,
@@ -1189,12 +1182,11 @@ export async function GET(request: NextRequest, { params }: Props) {
     headersResult,
     profileResult,
     userSignals,
-    countCategoryResults,
+    precomputedCountsResult,
     venueTypeResult,
   ] = await Promise.all([
     buildEventQuery(today, today, 300),
     buildEveningQuery(),
-    Promise.all(todayInterestQueries),
     buildTrendingQuery(),
     buildHorizonQuery(),
     buildWeatherVenueQuery(),
@@ -1203,43 +1195,60 @@ export async function GET(request: NextRequest, { params }: Props) {
     buildHeadersQuery(),
     buildProfileQuery(),
     loadUserSignals(),
-    countCategoryQueries,
+    precomputedCountsQuery,
     buildVenueTypeCountsQuery(),
   ]);
 
-  // Aggregate venue type counts for browse "Places to Go" tiles
+  // Aggregate venue type counts for browse "Places to Go" tiles (RPC returns pre-aggregated rows)
   const venueTypeCounts: Record<string, number> = {};
-  for (const row of (venueTypeResult.data || []) as { venue_type: string }[]) {
+  for (const row of (venueTypeResult.data || []) as { venue_type: string; cnt: number }[]) {
     if (row.venue_type) {
-      venueTypeCounts[row.venue_type] = (venueTypeCounts[row.venue_type] || 0) + 1;
+      venueTypeCounts[row.venue_type] = (row.cnt || 0);
     }
   }
 
-  const ccRows = countCategoryResults.map(
-    (r) => (r.data || []) as CountRow[],
-  );
+  // Build category_counts and tab_counts from pre-computed summary table.
+  // Rows shape: { window: 'today'|'week'|'coming_up', dimension: 'category'|'genre'|'tag', value, cnt }
+  const precomputedRows = (precomputedCountsResult.data || []) as PrecomputedCountRow[];
+
+  const buildPrecomputedCategoryCounts = (win: string): Record<string, number> => {
+    const counts: Record<string, number> = {};
+    for (const row of precomputedRows) {
+      if (row.window !== win) continue;
+      const key = row.dimension === "category" ? row.value
+        : row.dimension === "genre" ? `genre:${row.value}`
+        : `tag:${row.value}`;
+      counts[key] = row.cnt;
+    }
+    return counts;
+  };
+
+  const countForWindow = (win: string): number => {
+    let total = 0;
+    for (const row of precomputedRows) {
+      if (row.window === win && row.dimension === "category") total += row.cnt;
+    }
+    return total;
+  };
+
   const tab_counts = {
-    today: dedupeCountRows(excludeSceneRows(ccRows[0])).length,
-    this_week: dedupeCountRows(excludeSceneRows(ccRows[1])).length,
-    coming_up: dedupeCountRows(excludeSceneRows(ccRows[2])).length,
+    today: countForWindow("today"),
+    this_week: countForWindow("week"),
+    coming_up: countForWindow("coming_up"),
   };
 
   // ---------------------------------------------------------------------------
   // Process raw results
   // ---------------------------------------------------------------------------
 
-  // Merge today + evening + per-interest events, deduplicating by ID
+  // Merge today + evening events, deduplicating by ID.
+  // Per-interest queries removed from initial load: buildEventQuery(today, today, 300)
+  // already returns up to 300 events covering all categories.
   const todayRaw = (todayEventsResult.data || []) as FeedEventData[];
   const eveningRaw = (eveningEventsResult.data || []) as FeedEventData[];
   const seenIds = new Set(todayRaw.map((e) => e.id));
   for (const e of eveningRaw) {
     if (!seenIds.has(e.id)) { seenIds.add(e.id); todayRaw.push(e); }
-  }
-  // Merge per-interest results — guarantees ≤6 events per active category
-  for (const r of todayInterestResults) {
-    for (const e of (r.data || []) as FeedEventData[]) {
-      if (!seenIds.has(e.id)) { seenIds.add(e.id); todayRaw.push(e); }
-    }
   }
   const todayEvents = dedupeEventsById(
     filterOutInactiveVenueEvents(
@@ -1455,12 +1464,11 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Combined event category counts (all time windows) for browse section
   // ---------------------------------------------------------------------------
 
+  // Sum category counts across all windows from the pre-computed table
   const allEventCategoryCounts: Record<string, number> = {};
-  for (const rows of ccRows) {
-    for (const row of dedupeCountRows(excludeSceneRows(rows))) {
-      if (row.category_id) {
-        allEventCategoryCounts[row.category_id] = (allEventCategoryCounts[row.category_id] || 0) + 1;
-      }
+  for (const row of precomputedRows) {
+    if (row.dimension === "category") {
+      allEventCategoryCounts[row.value] = (allEventCategoryCounts[row.value] || 0) + row.cnt;
     }
   }
 
@@ -1624,9 +1632,9 @@ export async function GET(request: NextRequest, { params }: Props) {
     events_pulse: eventsPulse,
     tab_counts,
     category_counts: {
-      today: buildCategoryCounts(ccRows[0]),
-      this_week: buildCategoryCounts(ccRows[1]),
-      coming_up: buildCategoryCounts(ccRows[2]),
+      today: buildPrecomputedCategoryCounts("today"),
+      this_week: buildPrecomputedCategoryCounts("week"),
+      coming_up: buildPrecomputedCategoryCounts("coming_up"),
     },
   };
 

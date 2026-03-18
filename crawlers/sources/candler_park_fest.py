@@ -15,12 +15,23 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://fallfest.candlerpark.org"
 EVENTS_URL = "https://fallfest.candlerpark.org"
+CANDLER_PARK_URL = "https://candlerpark.org/candler-park/"
+CANDLER_POOL_URL = "https://candlerpark.org/cp-pool/"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 VENUE_DATA = {
     "name": "Candler Park",
@@ -36,6 +47,46 @@ VENUE_DATA = {
     "spot_type": "park",
     "website": "https://www.candlerpark.org",
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "park",
+            "commitment_tier": "halfday",
+            "primary_activity": "family neighborhood park visit",
+            "best_seasons": ["spring", "summer", "fall"],
+            "weather_fit_tags": ["outdoor", "free-option", "family-daytrip"],
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Open park access is free; pool access and special events vary by season.",
+            "source_url": CANDLER_PARK_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "city": "atlanta",
+                "venue_type": "park",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "public-pool-and-summer-aquatics",
+            "title": "Public pool and summer aquatics",
+            "feature_type": "amenity",
+            "description": "The Candler Park neighborhood site points families to the city-run Candler Park Pool, making the park more useful as a summer cooling and swim destination than a festival venue alone.",
+            "url": CANDLER_POOL_URL,
+            "price_note": "Pool operations and access details are managed by Atlanta DPR and vary by season.",
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    return envelope
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -69,6 +120,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Candler Park: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

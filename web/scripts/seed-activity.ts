@@ -64,19 +64,19 @@ const SAVE_COUNTS: Record<string, number> = { power: 10, regular: 5, casual: 3 }
 const CATEGORY_MAP: Record<string, string> = {
   music: "music", art: "art", comedy: "comedy", theater: "theater",
   film: "film", sports: "sports", food: "food_drink", food_drink: "food_drink",
-  nightlife: "nightlife", community: "community", fitness: "fitness",
-  wellness: "fitness", family: "family", tech: "tech", networking: "tech",
+  nightlife: "nightlife", community: "community", fitness: "exercise",
+  wellness: "exercise", family: "family", tech: "tech", networking: "tech",
   tours: "tours", history: "tours", games: "games", trivia: "games",
   outdoor: "outdoor", dance: "dance", pets: "family", gardening: "community",
   classes: "classes", beer: "food_drink", wine: "food_drink", bbq: "food_drink",
   brunch: "food_drink", markets: "food_drink", hiphop: "music", latin: "dance",
-  dj: "nightlife", yoga: "fitness", running: "fitness", drag: "nightlife",
+  dj: "nightlife", yoga: "exercise", running: "exercise", drag: "nightlife",
   pride: "community", halloween: "community", charity: "community",
   activism: "community", urban: "community", talks: "tech", startup: "tech",
   photography: "art", gallery: "art", vintage: "art", alternative: "music",
   classical: "music", festivals: "community", books: "community",
   cars: "sports", soccer: "sports", travel: "community", karaoke: "nightlife",
-  meditation: "fitness", volunteer: "community",
+  meditation: "exercise", volunteer: "community",
 };
 
 // ─── Recommendation note templates by personality archetype ─────────────────

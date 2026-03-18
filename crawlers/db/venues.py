@@ -98,6 +98,77 @@ def _normalize_venue_name(value: Optional[str]) -> str:
     return re.sub(r"\s+", " ", (value or "").strip().lower())
 
 
+_LEADING_ARTICLES = {"the", "a", "an"}
+
+
+def _strip_article(name: str) -> str:
+    """Strip a leading English article from a lowercased, stripped venue name."""
+    parts = name.split(None, 1)
+    if len(parts) == 2 and parts[0] in _LEADING_ARTICLES:
+        return parts[1]
+    return name
+
+
+def _proximity_name_match(name_a: str, name_b: str) -> bool:
+    """
+    Return True if two nearby venue names are close enough to be the same place.
+
+    Rules (applied in order):
+
+    1. Short-name guard: if either normalised name is fewer than 3 chars, skip.
+
+    2. Article-stripped exact match: strip leading articles ("The", "A", "An")
+       from both names; if they are then identical, merge. This handles
+       "The Masquerade" == "Masquerade" without any ratio gymnastics.
+
+    3. Substring match: one name must be a substring of the other AND:
+       - The shorter name must be at least 60 % of the longer name's character
+         length (blocks "Ponce" (5) vs "Ponce City Market" (17) — 29 %).
+       - Both names must have at least 2 words (blocks single-word fragments
+         like "Terminal" or "Park" matching multi-word names).
+       Falls through to Jaccard if guards fail.
+
+    4. Word-token Jaccard: strip punctuation, tokenise both names into words,
+       compute len(intersection) / len(union), require >= 0.5.
+       Both names must have at least 2 tokens for Jaccard to fire.
+       Handles "Terminal West" vs "Terminal West - Dolby Live" (token J = 0.5).
+    """
+    a = name_a.lower().strip()
+    b = name_b.lower().strip()
+
+    # Guard: minimum length
+    if min(len(a), len(b)) < 3:
+        return False
+
+    # Article-stripped exact match ("The Masquerade" == "Masquerade")
+    if _strip_article(a) == _strip_article(b):
+        return True
+
+    shorter_len = min(len(a), len(b))
+    longer_len = max(len(a), len(b))
+    words_a = a.split()
+    words_b = b.split()
+
+    # Substring match — both-names two-word guard + 60 % ratio guard.
+    # Falls through to Jaccard if guards fail (don't hard-reject).
+    if a in b or b in a:
+        if len(words_a) >= 2 and len(words_b) >= 2 and shorter_len / longer_len >= 0.60:
+            return True
+
+    # Jaccard on alpha-only word tokens (requires >= 2 tokens in each name).
+    # Punctuation is stripped so "Terminal West - Dolby Live" tokenises to
+    # {"terminal", "west", "dolby", "live"} — no stray "-" token.
+    tokens_a = set(re.sub(r"[^a-z0-9 ]", " ", a).split())
+    tokens_b = set(re.sub(r"[^a-z0-9 ]", " ", b).split())
+    if len(tokens_a) >= 2 and len(tokens_b) >= 2:
+        intersection = tokens_a & tokens_b
+        union = tokens_a | tokens_b
+        if union and len(intersection) / len(union) >= 0.5:
+            return True
+
+    return False
+
+
 def _is_permanently_closed_venue(venue_data: dict) -> bool:
     slug = (venue_data.get("slug") or "").strip().lower()
     name = _normalize_venue_name(venue_data.get("name"))
@@ -242,6 +313,93 @@ def _sanitize_venue_payload(venue_data: dict) -> dict:
     return sanitized
 
 
+# ===== VENUE BACKFILL =====
+
+# Fields eligible for NULL→non-NULL backfill on existing venue records.
+# Identity/administrative fields (name, slug, city, state, active) are excluded.
+_VENUE_BACKFILL_FIELDS = {
+    "address", "zip", "neighborhood", "description", "image_url",
+    "hero_image_url", "website", "venue_type", "vibes", "spot_type",
+    "hours", "phone",
+}
+
+
+def _maybe_update_existing_venue(venue_id: int, venue_data: dict) -> None:
+    """Backfill NULL fields on an existing venue with incoming non-NULL data."""
+    if not writes_enabled():
+        return
+
+    client = get_client()
+    existing = client.table("venues").select("*").eq("id", venue_id).execute()
+    if not existing.data:
+        return
+    current = existing.data[0]
+
+    updates: dict = {}
+
+    for field in _VENUE_BACKFILL_FIELDS - {"description", "lat", "lng", "image_url", "hero_image_url", "vibes"}:
+        incoming_val = venue_data.get(field)
+        current_val = current.get(field)
+        if incoming_val and not current_val:
+            updates[field] = incoming_val
+
+    # Special case: description — prefer longer even if existing is non-NULL
+    incoming_desc = venue_data.get("description") or ""
+    current_desc = current.get("description") or ""
+    if incoming_desc and (not current_desc or len(incoming_desc) > len(current_desc) + 50):
+        updates["description"] = incoming_desc
+
+    # Special case: lat/lng — both must be NULL, both must be provided
+    if not current.get("lat") and not current.get("lng"):
+        if venue_data.get("lat") and venue_data.get("lng"):
+            updates["lat"] = venue_data["lat"]
+            updates["lng"] = venue_data["lng"]
+
+    # image_url / hero_image_url — backfill NULL only, normalize before storing
+    for img_field in ("image_url", "hero_image_url"):
+        incoming_val = venue_data.get(img_field)
+        current_val = current.get(img_field)
+        if incoming_val and not current_val:
+            updates[img_field] = _normalize_image_url(incoming_val)
+
+    # vibes — backfill NULL/empty only, validate against VALID_VIBES
+    incoming_vibes = venue_data.get("vibes")
+    current_vibes = current.get("vibes")
+    if incoming_vibes and not current_vibes:
+        valid = [v for v in incoming_vibes if v in VALID_VIBES]
+        if valid:
+            updates["vibes"] = valid
+
+    # venue_type: crawler VENUE_DATA is a higher-trust signal than early LLM
+    # classification — allow override even when current is non-NULL.
+    incoming_type = venue_data.get("venue_type")
+    current_type = current.get("venue_type")
+    if (
+        incoming_type
+        and current_type
+        and incoming_type != current_type
+        and incoming_type in VALID_VENUE_TYPES
+    ):
+        updates["venue_type"] = incoming_type
+        logger.info(
+            "Correcting venue_type for '%s': %s -> %s (crawler override)",
+            current.get("name") or "unknown",
+            current_type,
+            incoming_type,
+        )
+
+    if not updates:
+        return
+
+    client.table("venues").update(updates).eq("id", venue_id).execute()
+    logger.info(
+        "Backfilled venue %s (id=%d): %s",
+        current.get("name") or venue_data.get("name") or "unknown",
+        venue_id,
+        ", ".join(sorted(updates.keys())),
+    )
+
+
 # ===== VENUE CRUD =====
 
 def get_or_create_virtual_venue() -> int:
@@ -348,13 +506,17 @@ def get_or_create_venue(venue_data: dict) -> int:
     if slug:
         result = client.table("venues").select("id, active").eq("slug", slug).execute()
         if result.data and len(result.data) > 0:
-            return _maybe_reactivate_existing_venue(result.data[0])
+            venue_id = _maybe_reactivate_existing_venue(result.data[0])
+            _maybe_update_existing_venue(venue_id, venue_data)
+            return venue_id
 
     name = venue_data.get("name")
     if name:
         result = client.table("venues").select("id, active").eq("name", name).execute()
         if result.data and len(result.data) > 0:
-            return _maybe_reactivate_existing_venue(result.data[0])
+            venue_id = _maybe_reactivate_existing_venue(result.data[0])
+            _maybe_update_existing_venue(venue_id, venue_data)
+            return venue_id
 
         for alias in _venue_name_aliases(name):
             result = client.table("venues").select("id, active").eq("name", alias).execute()
@@ -364,7 +526,9 @@ def get_or_create_venue(venue_data: dict) -> int:
                     alias,
                     name,
                 )
-                return _maybe_reactivate_existing_venue(result.data[0])
+                venue_id = _maybe_reactivate_existing_venue(result.data[0])
+                _maybe_update_existing_venue(venue_id, venue_data)
+                return venue_id
 
     lat = venue_data.get("lat")
     lng = venue_data.get("lng")
@@ -382,20 +546,13 @@ def get_or_create_venue(venue_data: dict) -> int:
                 .execute()
             )
             if nearby.data:
-                name_lower = name.lower().strip()
                 for row in nearby.data:
-                    existing_name = (row.get("name") or "").lower().strip()
-                    shorter = min(len(name_lower), len(existing_name))
-                    if shorter < 3:
-                        continue
-                    if (
-                        name_lower in existing_name
-                        or existing_name in name_lower
-                        or name_lower[:shorter] == existing_name[:shorter]
-                    ):
+                    existing_name = row.get("name") or ""
+                    if _proximity_name_match(name, existing_name):
                         logger.info(
                             f"Proximity dedup: reusing '{row['name']}' (id={row['id']}) for '{name}'"
                         )
+                        _maybe_update_existing_venue(row["id"], venue_data)
                         return row["id"]
         except Exception as e:
             logger.debug(f"Proximity dedup check failed: {e}")

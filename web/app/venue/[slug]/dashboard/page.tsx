@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { notFound } from "next/navigation";
 import { getLocalDateString } from "@/lib/formats";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
@@ -191,12 +191,11 @@ export default async function VenueDashboardPage({ params }: Props) {
             </div>
             <div className="flex gap-4">
               {venue.image_url && (
-                <Image
+                <SmartImage
                   src={venue.image_url}
                   alt={venue.name}
                   width={128}
                   height={128}
-                  unoptimized
                   className="w-32 h-32 object-cover rounded"
                 />
               )}

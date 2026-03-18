@@ -32,37 +32,44 @@ function haversineKm(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Return the Friday–Sunday date range for the upcoming weekend.
-// If today is already Sat or Sun, use the current weekend.
-function getWeekendRange(): { friday: string; sunday: string } {
+// Return the Saturday–Sunday date range for the upcoming weekend.
+// "Weekend" for a family portal means Sat and Sun only — not Friday.
+// If today is Saturday, return today–Sunday.
+// If today is Sunday, return today only (saturday = sunday = today).
+// Mon–Fri: return the coming Saturday and Sunday.
+function getWeekendRange(): { saturday: string; sunday: string } {
   const now = new Date();
   const day = now.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
 
-  let daysToFriday: number;
-  if (day === 0) {
-    // Sunday — weekend started yesterday (Fri was 2 days ago); show this Sun
-    daysToFriday = -2;
-  } else if (day === 6) {
-    // Saturday — show Fri–Sun of current weekend
-    daysToFriday = -1;
-  } else if (day <= 5) {
-    // Mon–Fri: days until next Friday
-    daysToFriday = 5 - day;
+  let daysToSaturday: number;
+  if (day === 6) {
+    // Today is Saturday
+    daysToSaturday = 0;
+  } else if (day === 0) {
+    // Today is Sunday — show today as both bounds
+    daysToSaturday = 0; // sunday = saturday below
   } else {
-    daysToFriday = 0;
+    // Mon–Fri: days until next Saturday
+    daysToSaturday = 6 - day;
   }
 
-  const friday = new Date(now);
-  friday.setDate(now.getDate() + daysToFriday);
+  const saturday = new Date(now);
+  saturday.setDate(now.getDate() + daysToSaturday);
 
-  const sunday = new Date(friday);
-  sunday.setDate(friday.getDate() + 2);
+  let sunday: Date;
+  if (day === 0) {
+    // Today is Sunday — only show Sunday
+    sunday = new Date(now);
+  } else {
+    sunday = new Date(saturday);
+    sunday.setDate(saturday.getDate() + 1);
+  }
 
   function fmt(d: Date): string {
     return d.toISOString().split("T")[0];
   }
 
-  return { friday: fmt(friday), sunday: fmt(sunday) };
+  return { saturday: fmt(saturday), sunday: fmt(sunday) };
 }
 
 type VenueShape = {
@@ -130,7 +137,7 @@ function isNearAtlantaCenter(venue: VenueShape): boolean {
 }
 
 // GET /api/weekend?portal=atlanta-families
-// Returns family activities for the upcoming weekend (Fri–Sun)
+// Returns family activities for the upcoming weekend (Sat–Sun)
 // grouped into sections: best_bets, free, easy_wins, big_outings
 export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(
@@ -171,7 +178,7 @@ export async function GET(request: NextRequest) {
     }
 
     const portalId = portalContext.portalId;
-    const { friday, sunday } = getWeekendRange();
+    const { saturday, sunday } = getWeekendRange();
 
     const sourceAccess = await getPortalSourceAccess(portalId);
     const sourceIds = sourceAccess?.sourceIds ?? [];
@@ -212,7 +219,7 @@ export async function GET(request: NextRequest) {
     let query = serviceClient
       .from("events")
       .select(eventSelect)
-      .gte("start_date", friday)
+      .gte("start_date", saturday)
       .lte("start_date", sunday)
       .is("canonical_event_id", null)
       .or("is_sensitive.eq.false,is_sensitive.is.null")
@@ -239,10 +246,20 @@ export async function GET(request: NextRequest) {
 
     const allEvents = (eventsData ?? []) as WeekendEvent[];
 
+    // Exclude events starting before 6:00 AM — these are never family activities
+    // (volunteer graveyard shifts, overnight events, etc.).
+    // All-day events have no start_time and are always included.
+    function isReasonableHour(e: WeekendEvent): boolean {
+      if (e.is_all_day || !e.start_time) return true;
+      const hour = parseInt(e.start_time.split(":")[0] ?? "0", 10);
+      return hour >= 6;
+    }
+
     // Apply indoor filter post-query (derived from venue_type)
-    const events = indoorOnly
+    const events = (indoorOnly
       ? allEvents.filter((e) => isIndoorVenue(e.venue))
-      : allEvents;
+      : allEvents
+    ).filter(isReasonableHour);
 
     // De-duplicate by id
     const seen = new Set<number>();
@@ -284,7 +301,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       {
-        weekend: { friday, sunday },
+        weekend: { saturday, sunday },
         total: unique.length,
         sections: {
           best_bets: bestBets,

@@ -39,7 +39,7 @@ interface Props {
 // Category priority for showing dots (most colorful/interesting first)
 const CATEGORY_PRIORITY = [
   "music", "art", "comedy", "theater", "film", "nightlife",
-  "food_drink", "sports", "fitness", "community", "family", "other"
+  "food_drink", "sports", "recreation", "exercise", "community", "family", "other"
 ];
 
 // Genre-specific colors for film events
@@ -171,12 +171,22 @@ export default function CalendarView({
   }, []);
 
   // Navigation handlers - immediate updates, CSS handles transitions
+  // Auto-select first day of the new month (selectedDate will be refined
+  // by the useEffect below once event data loads).
   const goToPrevMonth = useCallback(() => {
-    setCurrentMonth((m) => subMonths(m, 1));
+    setCurrentMonth((m) => {
+      const prev = subMonths(m, 1);
+      setSelectedDate(startOfMonth(prev));
+      return prev;
+    });
   }, []);
 
   const goToNextMonth = useCallback(() => {
-    setCurrentMonth((m) => addMonths(m, 1));
+    setCurrentMonth((m) => {
+      const next = addMonths(m, 1);
+      setSelectedDate(startOfMonth(next));
+      return next;
+    });
   }, []);
 
   const goToToday = useCallback(() => {
@@ -609,11 +619,12 @@ export default function CalendarView({
                               className={`${denseDay ? "p-3" : "p-3.5"} rounded-xl border border-[var(--twilight)]/85 bg-[var(--card-bg)] calendar-event-card group animate-fade-up hover:border-[var(--coral)]/35`}
                               style={{ animationDelay: `${Math.min(index, 8) * 35}ms` }}
                             >
-                              <Link
-                                href={`/${portalSlug}?event=${event.id}`}
-                                scroll={false}
-                                className="block"
-                              >
+                              <div className="flex items-start gap-3">
+                                <Link
+                                  href={`/${portalSlug}?event=${event.id}`}
+                                  scroll={false}
+                                  className="block min-w-0 flex-1"
+                                >
                                 {isFeatured ? (
                                   /* Featured card: thumbnail + content side-by-side */
                                   <div className="flex gap-3">
@@ -691,28 +702,33 @@ export default function CalendarView({
                                     )}
                                   </>
                                 )}
-                              </Link>
+                                </Link>
 
-                              {/* RSVP + Social Proof row */}
-                              <div className="mt-2 flex items-center gap-1.5">
-                                <RSVPButton eventId={event.id} variant={ultraDenseDay ? "compact" : "default"} size="sm" />
-                                {!ultraDenseDay && goingCount > 0 && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
-                                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    {goingCount} going
-                                  </span>
-                                )}
-                                {!ultraDenseDay && interestedCount > 0 && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--gold)]/10 border border-[var(--gold)]/20 font-mono text-xs font-medium text-[var(--gold)]">
-                                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                                    </svg>
-                                    {interestedCount} maybe
-                                  </span>
-                                )}
+                                <div className="flex-shrink-0 self-center">
+                                  <RSVPButton eventId={event.id} variant={ultraDenseDay ? "compact" : "default"} size="sm" />
+                                </div>
                               </div>
+
+                              {!ultraDenseDay && (goingCount > 0 || interestedCount > 0) && (
+                                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                  {goingCount > 0 && (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
+                                      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                      {goingCount} going
+                                    </span>
+                                  )}
+                                  {interestedCount > 0 && (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--gold)]/10 border border-[var(--gold)]/20 font-mono text-xs font-medium text-[var(--gold)]">
+                                      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                      </svg>
+                                      {interestedCount} maybe
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           );
                         })}

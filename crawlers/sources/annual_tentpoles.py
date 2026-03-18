@@ -706,7 +706,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         "image_url": None,
         "raw_text": f"{config.base_title} window {start_date.isoformat()} to {end_date.isoformat()}",
         "extraction_confidence": 0.85,
-        "is_recurring": True,
+        "is_recurring": False,
         "recurrence_rule": None,
         "content_hash": content_hash,
     }

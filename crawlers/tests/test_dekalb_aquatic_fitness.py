@@ -1,6 +1,10 @@
 from datetime import date
 
-from sources.dekalb_aquatic_fitness import parse_item, parse_schedule
+from sources.dekalb_aquatic_fitness import (
+    _build_destination_envelope,
+    parse_item,
+    parse_schedule,
+)
 
 
 def test_parse_schedule_handles_multiple_days():
@@ -40,3 +44,16 @@ def test_parse_item_builds_occurrences():
         (date(2026, 3, 20), 4),
         (date(2026, 3, 27), 4),
     ]
+
+
+def test_build_destination_envelope_marks_aquatic_center() -> None:
+    venue_data = {
+        "name": "East Central DeKalb Community & Senior Center",
+        "slug": "east-central-dekalb-community-senior-center",
+        "venue_type": "community_center",
+    }
+
+    envelope = _build_destination_envelope(venue_data, 2203)
+
+    assert envelope.destination_details[0]["destination_type"] == "aquatic_center"
+    assert envelope.venue_features[0]["slug"] == "public-pool-and-aquatics-programs"

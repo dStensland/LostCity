@@ -26,10 +26,10 @@ export default function InviteToEventButton({ eventId, eventTitle, variant = "ic
       <>
         <button
           onClick={() => setIsOpen(true)}
-          className="p-2 text-[var(--muted)] hover:text-[var(--coral)] hover:bg-[var(--twilight)]/50 rounded-lg transition-all"
+          className="inline-flex items-center justify-center w-10 h-10 text-[var(--muted)] rounded-xl border border-[var(--twilight)] hover:bg-[var(--dusk)] hover:text-[var(--cream)] hover:border-[var(--soft)] transition-all active:scale-95"
           title="Invite friends"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 icon-drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
           </svg>
         </button>

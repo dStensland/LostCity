@@ -445,7 +445,7 @@ export default function RSVPButton({
 
   // Variant-specific styles
   const getButtonClasses = () => {
-    const baseClasses = "relative z-[1] font-mono font-medium rounded-xl transition-all duration-150 flex items-center gap-2 active:scale-[0.98] touch-action-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]";
+    const baseClasses = "relative z-[1] font-mono font-medium rounded-xl transition-all duration-150 flex items-center gap-2 whitespace-nowrap active:scale-[0.98] touch-action-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]";
     const animationClass = isAnimating ? "scale-95" : "scale-100";
     const celebrationClass = celebrationTone === "coral"
       ? "rsvp-button-enter-going"
@@ -475,7 +475,7 @@ export default function RSVPButton({
     return `${baseClasses} ${sizeClasses[size]} ${
       status
         ? `${currentConfig?.color} text-[var(--void)] shadow-sm`
-        : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
+        : "bg-[var(--dusk)] text-[var(--soft)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--soft)] hover:bg-[var(--twilight)]"
     } ${animationClass} ${celebrationClass}`;
   };
 

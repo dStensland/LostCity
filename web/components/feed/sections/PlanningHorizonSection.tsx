@@ -3,11 +3,12 @@
 /**
  * Planning Horizon section — big future events with urgency signals.
  *
- * Carousel layout: wider cards than ComingUp's list rows.
- * Shows flagship + major events more than 7 days away.
- * Minimum 3 items to render.
+ * Month selector pills (with counts) filter a horizontal card carousel.
+ * Shows flagship + major events across the next 6 months.
+ * Minimum 2 items to render.
  */
 
+import { useMemo, useState } from "react";
 import type { CityPulseSection, CityPulseEventItem } from "@/lib/city-pulse/types";
 import { Binoculars } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
@@ -18,12 +19,39 @@ interface Props {
   portalSlug: string;
 }
 
+/** Format "2026-04" → "Apr" */
+function monthLabel(key: string): string {
+  const [year, month] = key.split("-");
+  const date = new Date(Number(year), Number(month) - 1, 1);
+  return date.toLocaleDateString("en-US", { month: "short" });
+}
+
 export default function PlanningHorizonSection({ section, portalSlug }: Props) {
   const eventItems = section.items.filter(
     (i): i is CityPulseEventItem => i.item_type === "event",
   );
 
-  if (eventItems.length < 3) return null;
+  // Month counts from server — keys like "2026-04", "2026-05"
+  const monthCounts = (section.meta?.month_counts ?? {}) as Record<string, number>;
+  const sortedMonths = useMemo(
+    () => Object.keys(monthCounts).sort(),
+    [monthCounts],
+  );
+
+  const [activeMonth, setActiveMonth] = useState<string | null>(null);
+
+  // Filter events by selected month (null = show all)
+  const filteredItems = useMemo(() => {
+    if (!activeMonth) return eventItems;
+    return eventItems.filter((item) => {
+      const startDate = item.event.start_date;
+      return startDate.startsWith(activeMonth);
+    });
+  }, [eventItems, activeMonth]);
+
+  if (eventItems.length < 2) return null;
+
+  const showMonthSelector = sortedMonths.length > 1;
 
   return (
     <section>
@@ -33,15 +61,68 @@ export default function PlanningHorizonSection({ section, portalSlug }: Props) {
         priority="secondary"
         accentColor="var(--gold)"
         icon={<Binoculars weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=find&type=events&importance=flagship,major`}
+        seeAllHref={`/${portalSlug}?view=find&type=events&dateRange=month`}
         seeAllLabel="All big events"
       />
 
+      {/* Month selector pills */}
+      {showMonthSelector && (
+        <div className="flex items-center gap-1.5 mb-3 overflow-x-auto scrollbar-none -mx-1 px-1">
+          {/* "All" pill */}
+          <button
+            onClick={() => setActiveMonth(null)}
+            className={[
+              "shrink-0 px-2.5 py-1 rounded-full font-mono text-2xs font-medium tracking-wide transition-all whitespace-nowrap",
+              activeMonth === null
+                ? "border"
+                : "text-[var(--muted)] hover:text-[var(--soft)] border border-transparent hover:border-[var(--twilight)]/40",
+            ].join(" ")}
+            style={
+              activeMonth === null
+                ? {
+                    color: "var(--gold)",
+                    backgroundColor: "color-mix(in srgb, var(--gold) 12%, transparent)",
+                    borderColor: "color-mix(in srgb, var(--gold) 30%, transparent)",
+                  }
+                : undefined
+            }
+          >
+            All ({eventItems.length})
+          </button>
+
+          {sortedMonths.map((monthKey) => {
+            const isActive = activeMonth === monthKey;
+            const count = monthCounts[monthKey];
+            return (
+              <button
+                key={monthKey}
+                onClick={() => setActiveMonth(monthKey)}
+                className={[
+                  "shrink-0 px-2.5 py-1 rounded-full font-mono text-2xs font-medium tracking-wide transition-all whitespace-nowrap",
+                  isActive
+                    ? "border"
+                    : "text-[var(--muted)] hover:text-[var(--soft)] border border-transparent hover:border-[var(--twilight)]/40",
+                ].join(" ")}
+                style={
+                  isActive
+                    ? {
+                        color: "var(--gold)",
+                        backgroundColor: "color-mix(in srgb, var(--gold) 12%, transparent)",
+                        borderColor: "color-mix(in srgb, var(--gold) 30%, transparent)",
+                      }
+                    : undefined
+                }
+              >
+                {monthLabel(monthKey)} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Horizontal scroll carousel */}
       <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 -mx-4 px-4">
-        {eventItems.slice(0, 12).map((item) => {
-          // Urgency and freshness are pre-computed server-side to avoid
-          // timezone inconsistencies between server (UTC) and client (local).
+        {filteredItems.map((item) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const rawEvent = item.event as any;
 
@@ -58,6 +139,13 @@ export default function PlanningHorizonSection({ section, portalSlug }: Props) {
           );
         })}
       </div>
+
+      {/* Empty state for filtered month */}
+      {activeMonth && filteredItems.length === 0 && (
+        <p className="py-4 text-center text-sm text-[var(--muted)]">
+          No big events in {monthLabel(activeMonth)}
+        </p>
+      )}
     </section>
   );
 }

@@ -30,6 +30,8 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +73,13 @@ BASE_TAGS = [
     "seasonal",
     "rsvp-required",
 ]
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 
 def _clean_text(value: Optional[str]) -> str:
@@ -232,6 +241,68 @@ def _build_venue_data(name: str, raw_address: str, anchor_name: Optional[str]) -
     }
 
 
+def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
+    venue_name = _clean_text(venue_data.get("name"))
+    city = _clean_text(venue_data.get("city") or "Atlanta")
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "community_center",
+            "commitment_tier": "halfday",
+            "primary_activity": "family STEM camp site visit",
+            "best_seasons": ["summer"],
+            "weather_fit_tags": ["indoor", "outdoor-indoor-mix", "family-daytrip"],
+            "best_time_of_day": "morning",
+            "family_suitability": "yes",
+            "reservation_required": True,
+            "permit_required": False,
+            "practical_notes": (
+                f"{venue_name} works primarily as a Club SciKidz family camp site, so it is most useful when the family plan is anchored by a registered STEM camp session rather than casual drop-in use."
+            ),
+            "accessibility_notes": (
+                "These sites are better understood as structured camp-day locations than as general wandering destinations, which means arrival, pickup, and the specific registered program shape matter more than broad on-site exploration."
+            ),
+            "fee_note": "Camp registration is required; sessions and pricing vary by program and week.",
+            "source_url": venue_data.get("website") or LOCATIONS_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "community_center",
+                "city": city.lower(),
+                "site_pattern": "club_scikidz",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "registered-stem-camp-site",
+            "title": "Registered STEM camp site",
+            "feature_type": "amenity",
+            "description": f"{venue_name} serves as a scheduled Club SciKidz STEM camp location rather than a generic drop-in family destination.",
+            "url": venue_data.get("website") or LOCATIONS_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "planned-camp-day-not-casual-stop",
+            "title": "Planned camp day, not casual stop",
+            "feature_type": "amenity",
+            "description": "These locations are strongest when the family day is built around a scheduled camp session, with arrival, pickup, and weekly program logistics doing most of the work.",
+            "url": venue_data.get("website") or LOCATIONS_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    return envelope
+
+
 def _parse_locations_page(soup: BeautifulSoup) -> tuple[dict[str, dict], set[str]]:
     venue_map: dict[str, dict] = {}
     concept_urls: set[str] = set()
@@ -306,6 +377,14 @@ def _parse_session_link_text(text: str) -> tuple[Optional[str], Optional[str]]:
     except ValueError:
         return None, None
     return start_date, _clean_text(match.group("location"))
+
+
+def _extract_og_image(soup: BeautifulSoup) -> Optional[str]:
+    """Extract og:image from a parsed page."""
+    tag = soup.find("meta", property="og:image")
+    if tag and tag.get("content"):
+        return tag["content"].strip() or None
+    return None
 
 
 def _parse_camp_page(soup: BeautifulSoup, camp_url: str) -> Optional[dict]:
@@ -398,6 +477,7 @@ def _parse_camp_page(soup: BeautifulSoup, camp_url: str) -> Optional[dict]:
         "categories": category_links,
         "camp_url": camp_url,
         "sessions": sessions,
+        "image_url": _extract_og_image(soup),
     }
 
 
@@ -481,7 +561,7 @@ def _build_event_record(
         "is_free": False,
         "source_url": camp["camp_url"],
         "ticket_url": session["registration_url"],
-        "image_url": None,
+        "image_url": camp.get("image_url"),
         "raw_text": " | ".join(
             part
             for part in [
@@ -522,7 +602,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     venue_ids: dict[str, int] = {}
     for key, venue_data in venue_map.items():
-        venue_ids[key] = get_or_create_venue(venue_data)
+        venue_id = get_or_create_venue(venue_data)
+        persist_typed_entity_envelope(_build_destination_envelope(venue_id, venue_data))
+        venue_ids[key] = venue_id
 
     events_found = 0
     events_new = 0

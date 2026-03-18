@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { Users, User } from "@phosphor-icons/react";
 
 interface FriendHang {
@@ -55,7 +55,7 @@ function MiniAvatar({
       title={name}
     >
       {src ? (
-        <Image
+        <SmartImage
           src={src}
           alt={name}
           width={20}
@@ -81,7 +81,7 @@ function FriendRow({ hang }: { hang: FriendHang }) {
     <div className="flex items-center gap-2 py-1">
       <span className="flex-shrink-0 w-7 h-7 rounded-full overflow-hidden border border-[var(--twilight)]/60 bg-[var(--twilight)]">
         {profile.avatar_url ? (
-          <Image
+          <SmartImage
             src={profile.avatar_url}
             alt={name}
             width={28}

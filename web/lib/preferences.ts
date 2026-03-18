@@ -12,7 +12,7 @@ export const PREFERENCE_CATEGORIES = [
   { value: "nightlife", label: "Nightlife", icon: "nightlife", emoji: "🌙" },
   { value: "sports", label: "Sports", icon: "sports", emoji: "⚽" },
   { value: "community", label: "Community", icon: "community", emoji: "🤝" },
-  { value: "fitness", label: "Fitness", icon: "fitness", emoji: "💪" },
+  { value: "exercise", label: "Exercise", icon: "exercise", emoji: "💪" },
   { value: "family", label: "Family", icon: "family", emoji: "👨‍👩‍👧" },
   { value: "outdoors", label: "Outdoors", icon: "outdoors", emoji: "🌳" },
   { value: "words", label: "Words", icon: "words", emoji: "📚" },

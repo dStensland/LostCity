@@ -29,6 +29,8 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from sources._tribe_events_base import TribeConfig, crawl_tribe
 
 logger = logging.getLogger(__name__)
@@ -46,6 +48,13 @@ HEADERS = {
         "Chrome/122.0.0.0 Safari/537.36"
     )
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 VENUE_DATA = {
     "name": "Atlanta History Center",
@@ -79,6 +88,80 @@ VENUE_DATA = {
     },
     "vibes": ["historic", "family-friendly", "all-ages", "educational", "gardens"],
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "history_museum",
+            "commitment_tier": "halfday",
+            "primary_activity": "family history campus visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["outdoor-indoor-mix", "family-daytrip"],
+            "parking_type": "free_lot",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "Atlanta History Center works best as a half-day campus outing, because museum galleries, historic houses, and garden space can be mixed into a longer family history day. "
+                "It rewards families who plan for a slower pace instead of treating it like a quick single-building stop."
+            ),
+            "accessibility_notes": (
+                "The indoor galleries provide the lowest-friction entry point, while the larger campus and historic-house layer adds more walking than a compact museum stop."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "General admission, exhibitions, and special programs vary by date and package.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "museum",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "historic-houses-gardens-and-galleries",
+            "title": "Historic houses, gardens, and galleries",
+            "feature_type": "amenity",
+            "description": "Atlanta History Center works as a fuller family history campus because it combines galleries, historic houses, and gardens in one visit.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "buckhead-history-campus-day",
+            "title": "Buckhead history campus day",
+            "feature_type": "amenity",
+            "description": "Its Buckhead campus format makes Atlanta History Center more than a single exhibition stop and supports longer family history days.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "longer-walking-campus-with-indoor-reset-points",
+            "title": "Longer walking campus with indoor reset points",
+            "feature_type": "amenity",
+            "description": "Atlanta History Center asks more walking than a compact museum, but its indoor galleries and campus rhythm make it easier to break the day into manageable pieces.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    return envelope
 
 _SUMMER_CAMP_GRADE_AGES = {
     "K-2": (5, 8),
@@ -545,6 +628,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_found, events_new, events_updated = crawl_tribe(source, _CONFIG)
 
     venue_id = get_or_create_venue(VENUE_DATA)
+    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     exhibit_found, exhibit_new, exhibit_updated = _crawl_exhibitions(source["id"], venue_id)
     camp_found, camp_new, camp_updated = _crawl_summer_camps(source["id"], venue_id)

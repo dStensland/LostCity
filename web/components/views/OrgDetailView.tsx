@@ -114,8 +114,8 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
   const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
-    const controller = new AbortController();
     let cancelled = false;
+    let activeController: AbortController | null = null;
 
     async function fetchProducer() {
       setStatus("loading");
@@ -131,9 +131,10 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
             await new Promise((r) => setTimeout(r, 500 * attempt));
             if (cancelled) return;
           }
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          activeController = new AbortController();
+          const timeoutId = setTimeout(() => activeController?.abort(), 10000);
           const res = await fetch(`/api/organizations/by-slug/${slug}`, {
-            signal: controller.signal,
+            signal: activeController.signal,
           });
           clearTimeout(timeoutId);
           if (cancelled) return;
@@ -151,7 +152,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
           setStatus("ready");
           return;
         } catch (err) {
-          if (controller.signal.aborted) return;
+          if (activeController?.signal.aborted) return;
           if (cancelled) return;
           if (attempt === MAX_RETRIES) {
             setError(err instanceof Error ? err.message : "Failed to load organizer");
@@ -165,7 +166,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
 
     return () => {
       cancelled = true;
-      controller.abort();
+      activeController?.abort();
     };
   }, [slug]);
 

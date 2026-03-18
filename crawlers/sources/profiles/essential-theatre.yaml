@@ -1,0 +1,24 @@
+version: 1
+slug: essential-theatre
+name: Essential Theatre
+source_type: organization
+integration_method: api
+discovery:
+  enabled: true
+  type: json
+  urls:
+    - https://www.essentialtheatre.com/wp-json/wp/v2/et_play?per_page=100
+    - https://www.essentialtheatre.com/wp-json/wp/v2/et_program?per_page=50
+  fetch:
+    render_js: false
+detail:
+  enabled: false
+data_goals:
+  - events
+  - images
+notes: |
+  Georgia's longest-running company for Georgia playwrights.
+  Resident company at 7 Stages in Little Five Points.
+  Annual festival in August. Southern Fried Bake-Off in January.
+  WordPress REST API with custom `et_play` post type.
+  Performance dates embedded in HTML content, not structured fields.

@@ -1,7 +1,11 @@
 from scrape_venue_specials import (
+    extract_event_items,
+    _extract_popmenu_embedded_text,
+    _supplement_with_fallback,
     _fallback_extract_data,
     _fallback_extract_specials,
     _looks_like_parked_site,
+    validate_specials,
 )
 
 
@@ -40,7 +44,7 @@ def test_fallback_extract_specials_handles_weekly_specials_block():
 
     taco_tuesday = next(s for s in specials if s["title"] == "Taco Tuesday")
     assert taco_tuesday["days"] == [2]
-    assert taco_tuesday["type"] == "event_night"
+    assert taco_tuesday["type"] == "recurring_deal"
     assert taco_tuesday["price_note"] == "$3 taco special"
 
     brunch_days = sorted(s["days"][0] for s in specials if s["title"] == "Weekend Brunch")
@@ -114,12 +118,12 @@ def test_fallback_extract_specials_skips_dated_or_marketing_candidates():
     assert specials == [
         {
             "title": "Teacher Happy Hour",
-            "type": "event_night",
+            "type": "happy_hour",
             "description": None,
             "days": [5],
             "time_start": "15:00",
             "time_end": "18:00",
-            "price_note": "3pm - 6pm",
+            "price_note": None,
             "_days_already_parsed": True,
         }
     ]
@@ -145,7 +149,7 @@ def test_fallback_extract_specials_expands_day_ranges_and_compact_time_ranges():
     assert specials == [
         {
             "title": "Weekend Brunch",
-            "type": "event_night",
+            "type": "brunch",
             "description": None,
             "days": [5, 6, 7],
             "time_start": "11:00",
@@ -155,7 +159,7 @@ def test_fallback_extract_specials_expands_day_ranges_and_compact_time_ranges():
         },
         {
             "title": "Weekend Brunch",
-            "type": "event_night",
+            "type": "brunch",
             "description": None,
             "days": [6],
             "time_start": "12:00",
@@ -178,3 +182,131 @@ def test_fallback_extract_specials_prefers_weekend_over_daily_service_copy():
 
     brunch_days = sorted(s["days"] for s in specials if s["title"] == "Weekend Brunch")
     assert brunch_days == [[6, 7]]
+
+
+def test_fallback_extract_specials_reads_menu_style_special_headers():
+    specials = _fallback_extract_specials(
+        "Brunch, Lunch, and Dinner Menus\n"
+        "Lunch Menu\n"
+        "Mon-Fri 11am-3pm\n"
+        "Dinner Menu\n"
+        "Mon-Thurs 5pm-9pm\n"
+        "Fri-Sat 5pm-10pm\n"
+        "Sunday 4pm-9pm\n"
+        "Brunch Menu\n"
+        "Sat-Sun 10am-3pm\n"
+        "Happy Hour Menu\n"
+        "Bar Menu\n"
+        "Mon-Fri 3pm-5pm\n"
+    )
+
+    assert specials == [
+        {
+            "title": "Weekend Brunch",
+            "type": "brunch",
+            "description": None,
+            "days": [6, 7],
+            "time_start": "10:00",
+            "time_end": "15:00",
+            "price_note": None,
+            "_days_already_parsed": True,
+        },
+        {
+            "title": "Happy Hour",
+            "type": "happy_hour",
+            "description": None,
+            "days": [1, 2, 3, 4, 5],
+            "time_start": "15:00",
+            "time_end": "17:00",
+            "price_note": None,
+            "_days_already_parsed": True,
+        },
+    ]
+
+
+def test_validate_specials_keeps_food_drink_deals_even_if_llm_marks_event_night():
+    specials = validate_specials(
+        [
+            {
+                "title": "Taco Tuesday",
+                "type": "event_night",
+                "description": "Every Tuesday with $3 tacos and rotating fillings.",
+                "days": [2],
+                "price_note": "$3 tacos",
+            },
+            {
+                "title": "Teacher Happy Hour",
+                "type": "event_night",
+                "description": "Fridays 3pm to 6pm with half-price cocktails.",
+                "days": [5],
+                "time_start": "15:00",
+                "time_end": "18:00",
+                "price_note": "half-price cocktails",
+            },
+        ]
+    )
+
+    assert [special["type"] for special in specials] == ["recurring_deal", "happy_hour"]
+
+
+def test_extract_event_items_only_routes_programmed_entertainment_nights():
+    events = extract_event_items(
+        [
+            {
+                "title": "Trivia Night",
+                "type": "event_night",
+                "description": "Every Wednesday at 8pm.",
+                "days": [3],
+                "time_start": "20:00",
+            },
+            {
+                "title": "Wine Wednesday",
+                "type": "event_night",
+                "description": "Half-price bottles every Wednesday.",
+                "days": [3],
+                "price_note": "half-price bottles",
+            },
+            {
+                "title": "Happy Hour",
+                "type": "happy_hour",
+                "description": "$6 drafts weekdays.",
+                "days": [1, 2, 3, 4, 5],
+                "price_note": "$6 drafts",
+            },
+        ]
+    )
+
+    assert len(events) == 1
+    assert events[0]["title"] == "Trivia Night"
+
+
+def test_supplement_with_fallback_fills_sparse_llm_output():
+    data, supplemented = _supplement_with_fallback(
+        {
+            "specials": [],
+            "hours": None,
+        },
+        "Brunch Menu\nSat-Sun 10am-3pm\nHappy Hour Menu\nMon-Fri 3pm-5pm\n",
+    )
+
+    assert supplemented == ["specials"]
+    assert [item["title"] for item in data["specials"]] == ["Weekend Brunch", "Happy Hour"]
+    assert data["hours"] is None
+
+
+def test_extract_popmenu_embedded_text_surfaces_hidden_special_menus():
+    html = """
+    <html><body>
+    <script>
+    window.__DATA__ = {
+      "Menu:174201":{"__typename":"Menu","id":174201,"name":"Taco Tuesday","slug":"taco-tuesday"},
+      "MenuSection:4216665":{"__typename":"MenuSection","id":4216665,"name":"$3 Tacos"},
+      "MenuItem:11671176":{"__typename":"MenuItem","id":11671176,"isEnabled":true,"name":"Chorizo Taco","menu":{"__ref":"Menu:174201"},"section":{"__ref":"MenuSection:4216665"}}
+    };
+    </script>
+    </body></html>
+    """
+
+    lines = _extract_popmenu_embedded_text(html)
+
+    assert lines == ["Taco Tuesday | $3 Tacos | Chorizo Taco"]

@@ -13,7 +13,8 @@ const HIGH_SIGNAL_CATEGORIES = new Set([
 const LOW_SIGNAL_CATEGORIES = new Set([
   "community",
   "learning",
-  "fitness",
+  "exercise",
+  "recreation",
   "volunteer",
   "religion",
 ]);

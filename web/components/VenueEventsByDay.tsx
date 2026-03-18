@@ -73,7 +73,7 @@ const buildLineupSummary = (event: VenueEvent) => {
       .map((artist) => artist.name)
       .filter((name) => name && name !== headliner);
 
-    if (event.category === "sports" && sorted.length >= 2) {
+    if ((event.category === "sports" || event.category === "recreation") && sorted.length >= 2) {
       const matchup = `${sorted[0].name} vs ${sorted[1].name}`;
       if (normalizeLabel(matchup) !== normalizeLabel(event.title)) {
         return matchup;
@@ -359,11 +359,13 @@ export function VenueEventCard({
   onClick,
   href,
   compact,
+  subtitle,
 }: {
   event: VenueEvent;
   onClick?: () => void;
   href?: string;
   compact: boolean;
+  subtitle?: string;
 }) {
   const { time, period } = formatTimeSplit(event.start_time);
   const accentColor = event.category ? getCategoryColor(event.category) : "var(--neon-magenta)";
@@ -394,6 +396,9 @@ export function VenueEventCard({
             {event.title}
           </h3>
         </div>
+        {subtitle && (
+          <p className="text-xs text-[var(--muted)] mt-0.5 truncate">{subtitle}</p>
+        )}
         {lineupSummary && (
           <p className="mt-1 text-xs sm:text-xs text-[var(--cream)]/80 truncate">
             {lineupSummary}

@@ -255,6 +255,34 @@ def parse_schedule_text(text: str, year: int) -> dict:
     }
 
 
+def _parse_schedule_safe(text: str, year: int) -> dict:
+    """Try to parse schedule text; return empty schedule on failure."""
+    try:
+        return parse_schedule_text(text, year)
+    except ValueError:
+        # Site may have changed format (e.g. bare ISO dates). Return empty
+        # schedule — build_child_event will fill dates from JSON-LD.
+        logger.debug("Could not parse schedule text %r — will use JSON-LD dates", text)
+        # Try bare ISO date as fallback
+        try:
+            d = date.fromisoformat(text.strip()[:10])
+            return {
+                "start_date": d.isoformat(),
+                "start_time": None,
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": True,
+            }
+        except ValueError:
+            return {
+                "start_date": None,
+                "start_time": None,
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": True,
+            }
+
+
 def parse_schedule_cards(html: str, year: int) -> dict[str, dict]:
     soup = BeautifulSoup(html, "html.parser")
     cards: dict[str, dict] = {}
@@ -262,7 +290,7 @@ def parse_schedule_cards(html: str, year: int) -> dict[str, dict]:
     for card in soup.select(".events-grid .event-card"):
         title_el = card.select_one(".event-title")
         time_el = card.select_one(".event-time")
-        if not title_el or not time_el:
+        if not title_el:
             continue
 
         raw_title = " ".join(title_el.get_text(" ", strip=True).split())
@@ -272,10 +300,15 @@ def parse_schedule_cards(html: str, year: int) -> dict[str, dict]:
         button = card.select_one(".event-button[href]")
         image = card.select_one(".event-image img")
 
-        schedule = parse_schedule_text(time_el.get_text(" ", strip=True), year)
+        schedule_text = time_el.get_text(" ", strip=True) if time_el else ""
+        schedule = _parse_schedule_safe(schedule_text, year) if schedule_text else {
+            "start_date": None, "start_time": None,
+            "end_date": None, "end_time": None, "is_all_day": True,
+        }
+
         cards[title] = {
             "title": title,
-            "schedule_text": time_el.get_text(" ", strip=True),
+            "schedule_text": schedule_text,
             "location_name": location.get_text(" ", strip=True) if location else "",
             "description": description.get_text(" ", strip=True) if description else "",
             "button_label": button.get_text(" ", strip=True) if button else "",
@@ -562,9 +595,33 @@ def crawl(source: dict) -> tuple[int, int, int]:
     for subevent in subevents:
         raw_title = subevent.get("name", "")
         title = normalize_title(raw_title)
-        if not title or title not in cards:
-            logger.warning("404 Weekend subevent missing schedule card: %s", raw_title or "unknown")
+        if not title:
+            logger.warning("404 Weekend subevent has no title — skipping")
             continue
+
+        # Build a synthetic card from JSON-LD if HTML card parsing missed it
+        if title not in cards:
+            sub_start_date, sub_start_time = parse_iso_datetime(subevent.get("startDate"))
+            sub_end_date, sub_end_time = parse_iso_datetime(subevent.get("endDate"))
+            location = subevent.get("location") or {}
+            location_name = location.get("name") if isinstance(location, dict) else ""
+            image_data = subevent.get("image")
+            image_url = image_data.get("url") if isinstance(image_data, dict) else image_data if isinstance(image_data, str) else None
+            cards[title] = {
+                "title": title,
+                "schedule_text": "",
+                "location_name": location_name or "",
+                "description": subevent.get("description") or "",
+                "button_label": "",
+                "button_url": subevent.get("url"),
+                "image_url": image_url,
+                "start_date": sub_start_date,
+                "start_time": sub_start_time,
+                "end_date": sub_end_date,
+                "end_time": sub_end_time,
+                "is_all_day": not sub_start_time,
+            }
+            logger.info("404 Weekend: built card from JSON-LD for %s", title)
 
         detail_url = collection_events.get(title, {}).get("url") or subevent.get("url")
         if detail_url and detail_url not in detail_cache:

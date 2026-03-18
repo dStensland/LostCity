@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { CalendarPlus, Plus, CaretRight } from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth-context";
 import { usePlans } from "@/lib/hooks/usePlans";
@@ -44,7 +44,7 @@ function PlanCard({ plan }: { plan: Plan }) {
         {/* Creator avatar */}
         <div className="flex-shrink-0 w-9 h-9 rounded-lg overflow-hidden bg-[var(--twilight)]">
           {plan.creator.avatar_url ? (
-            <Image
+            <SmartImage
               src={plan.creator.avatar_url}
               alt=""
               width={36}

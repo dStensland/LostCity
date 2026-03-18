@@ -90,6 +90,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     events=True,
     destinations=True,
     destination_details=True,
+    venue_features=True,
 )
 
 
@@ -122,6 +123,35 @@ def _build_branch_destination_envelope(venue_id: int, venue_data: dict) -> Typed
                 "venue_type": "library",
                 "branch_name": branch_name,
             },
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "free-indoor-family-stop",
+            "title": "Free indoor family stop",
+            "feature_type": "amenity",
+            "description": f"{branch_name} is a free indoor place for browsing, reading, and easy family time out of the weather.",
+            "url": "https://www.fulcolibrary.org/locations/",
+            "price_note": "Free public library access.",
+            "is_free": True,
+            "sort_order": 5,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "storytime-and-family-programs",
+            "title": "Storytime and family programs",
+            "feature_type": "experience",
+            "description": f"{branch_name} regularly hosts free storytimes, reading events, and family-friendly branch programming.",
+            "url": "https://fulcolibrary.bibliocommons.com/v2/events",
+            "price_note": "Most branch programs are free; confirm event details on the official calendar.",
+            "is_free": True,
+            "sort_order": 15,
         },
     )
 

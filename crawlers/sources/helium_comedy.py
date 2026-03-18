@@ -16,12 +16,18 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
 from dedupe import generate_content_hash
+from source_destination_sync import ensure_venue_destination_fields
 from utils import extract_event_links, find_event_url, enrich_event_record
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://atlanta.heliumcomedy.com"
 EVENTS_URL = f"{BASE_URL}/events"
+PLANNING_NOTE = (
+    "Use the official Helium event page for showtime-specific seating, ticket rules, and the "
+    "club's item-minimum policy before arrival. This is a ticketed comedy-room experience rather "
+    "than a casual drop-in bar set."
+)
 
 VENUE_DATA = {
     "name": "Helium Comedy Club Atlanta",
@@ -90,6 +96,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            ensure_venue_destination_fields(venue_id, planning_notes=PLANNING_NOTE)
 
             logger.info(f"Fetching Helium Comedy Club Atlanta: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

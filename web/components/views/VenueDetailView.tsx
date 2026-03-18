@@ -4,7 +4,6 @@ import React, { useState, useMemo } from "react";
 import { SPOT_TYPES, formatPriceLevel, getSpotTypeLabels, type SpotType } from "@/lib/spots-constants";
 import FollowButton from "@/components/FollowButton";
 import VenueTagList from "@/components/VenueTagList";
-import FlagButton from "@/components/FlagButton";
 import LinkifyText from "@/components/LinkifyText";
 import Skeleton from "@/components/Skeleton";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
@@ -14,21 +13,13 @@ import { type HoursData } from "@/lib/hours";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import { isDogPortal } from "@/lib/dog-art";
-import { HIGHLIGHT_CONFIG, type VenueHighlight } from "@/lib/venue-highlights";
-import {
-  filterVenueFeaturesForPortal,
-  type VenueFeature,
-} from "@/lib/venue-features";
-import VenueFeaturesSection from "@/components/detail/VenueFeaturesSection";
 import { AccoladesSection, type EditorialMention } from "@/components/detail/AccoladesSection";
-import VenueSpecialsSection, { type VenueSpecial } from "@/components/detail/VenueSpecialsSection";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
 import GettingThereSection, { type WalkableNeighbor } from "@/components/GettingThereSection";
 import { usePortal } from "@/lib/portal-context";
 import { ATTACHED_CHILD_DESTINATION_SECTION_TITLE } from "@/lib/destination-graph";
 import {
   CaretRight,
-  ForkKnife,
   Globe,
   InstagramLogo,
   Phone,
@@ -59,8 +50,8 @@ const DogTagModal = dynamic(
   () => import("@/app/[portal]/_components/dog/DogTagModal"),
   { ssr: false }
 );
-const OutingPlannerSheet = dynamic(
-  () => import("@/components/outing-planner/OutingPlannerSheet"),
+const HangButton = dynamic(
+  () => import("@/components/hangs/HangButton").then((m) => ({ default: m.HangButton })),
   { ssr: false },
 );
 
@@ -180,9 +171,9 @@ export type SpotApiResponse = {
   spot: SpotData;
   upcomingEvents: UpcomingEvent[];
   nearbyDestinations: NearbyDestinations | null;
-  highlights: VenueHighlight[];
-  features: VenueFeature[];
-  specials: VenueSpecial[];
+  highlights: unknown[];
+  features: unknown[];
+  specials: unknown[];
   editorialMentions: EditorialMention[];
   occasions: VenueOccasion[];
   attachedChildDestinations: { id: number; name: string; slug: string | null; image_url: string | null; short_description: string | null }[];
@@ -228,18 +219,11 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
 
   const [vibesOverride, setVibesOverride] = useState<string[] | null>(null);
   const [showTagModal, setShowTagModal] = useState(false);
-  const [showOutingSheet, setShowOutingSheet] = useState(false);
 
   // Derive all data slices from fetch response
   const spot = data?.spot ?? null;
   const upcomingEvents = useMemo(() => data?.upcomingEvents ?? [], [data]);
   const nearbyDestinations = useMemo(() => data?.nearbyDestinations ?? null, [data]);
-  const highlights = useMemo(() => data?.highlights ?? [], [data]);
-  const features = useMemo(
-    () => filterVenueFeaturesForPortal(data?.features ?? [], { portalSlug, venueSlug: slug }),
-    [data, portalSlug, slug]
-  );
-  const specials = useMemo(() => data?.specials ?? [], [data]);
   const editorialMentions = useMemo(() => data?.editorialMentions ?? [], [data]);
   const occasions = useMemo(() => data?.occasions ?? [], [data]);
   const attachedChildDestinations = useMemo(
@@ -248,18 +232,6 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
   );
   const walkableNeighbors = useMemo(() => data?.walkableNeighbors ?? [], [data]);
   const vibes = vibesOverride ?? spot?.vibes ?? null;
-
-  // Batch ScopedStyles CSS for highlights (must be before early returns)
-  const highlightsCss = useMemo(() => {
-    if (highlights.length === 0) return null;
-    const parts: string[] = [];
-    for (const h of highlights) {
-      const config = HIGHLIGHT_CONFIG[h.highlight_type];
-      const cls = createCssVarClass("--highlight-color", config?.color || "#A78BFA", `hl-${h.highlight_type}`);
-      if (cls?.css) parts.push(cls.css);
-    }
-    return parts.length > 0 ? parts.join("\n") : null;
-  }, [highlights]);
 
   const isDog = isDogPortal(portalSlug);
 
@@ -405,7 +377,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
         {spot.website && (
           <QuickActionLink
             href={spot.website}
-            icon={<Globe size={18} weight="light" aria-hidden="true" />}
+            icon={<Globe size={16} weight="light" aria-hidden="true" />}
             label="Website"
             compact
           />
@@ -413,7 +385,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
         {spot.instagram && (
           <QuickActionLink
             href={`https://instagram.com/${spot.instagram.replace("@", "")}`}
-            icon={<InstagramLogo size={18} weight="light" aria-hidden="true" />}
+            icon={<InstagramLogo size={16} weight="light" aria-hidden="true" />}
             label="Instagram"
             compact
           />
@@ -421,7 +393,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
         {spot.phone && (
           <QuickActionLink
             href={`tel:${spot.phone}`}
-            icon={<Phone size={18} weight="light" aria-hidden="true" />}
+            icon={<Phone size={16} weight="light" aria-hidden="true" />}
             label="Call"
             external={false}
             compact
@@ -433,6 +405,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
             address={spot.address}
             city={spot.city}
             state={spot.state}
+            compact
           />
         )}
       </div>
@@ -443,7 +416,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
       {/* Hours */}
       {(spot.hours || spot.hours_display || spot.is_24_hours) && (
         <div className="px-5 py-3">
-          <h3 className="font-mono text-2xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] mb-2">Hours</h3>
+          <h3 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] mb-2">Hours</h3>
           <HoursSection
             hours={spot.hours}
             hoursDisplay={spot.hours_display}
@@ -515,26 +488,52 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
 
       {/* Action buttons */}
       <div className="px-5 py-3 flex gap-2">
-        <div className="flex-1">
-          <FollowButton targetVenueId={spot.id} size="sm" className="w-full" />
-        </div>
-        {spot.lat != null && spot.lng != null && (
-          <button
-            onClick={() => setShowOutingSheet(true)}
-            className="flex-1 inline-flex items-center justify-center gap-2 min-h-[36px] rounded-lg text-sm font-semibold text-[var(--void)] bg-[var(--coral)] hover:brightness-110 transition-all focus-ring"
-          >
-            <ForkKnife size={16} weight="duotone" />
-            Plan Evening
-          </button>
-        )}
+        <FollowButton targetVenueId={spot.id} size="sm" rounded="xl" className="flex-1" />
+        <HangButton
+          venue={{
+            id: spot.id,
+            name: spot.name,
+            slug: spot.slug,
+            image_url: spot.image_url,
+            neighborhood: spot.neighborhood,
+          }}
+          rounded="xl"
+          className="flex-1 min-h-[36px]"
+        />
       </div>
     </div>
   );
 
   // ── CONTENT ZONE ────────────────────────────────────────────────────────
   const contentZone = (
-    <div className="px-4 lg:px-8 py-6 space-y-8">
-      {/* ── PRIMARY: UPCOMING EVENTS ──────────────────────── */}
+    <div className="px-4 lg:px-8 py-4 space-y-8">
+      {/* ── 1. TAGS (Occasions) ────────────────────────────── */}
+      {occasions.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {occasions.map((o) => (
+            <Badge key={o.occasion} variant="accent" accentColor="var(--gold)" size="sm">
+              {OCCASION_LABELS[o.occasion] || o.occasion.replace(/_/g, " ")}
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {/* ── 2. ABOUT + COMMUNITY TAGS ─────────────────────── */}
+      <div>
+        {spot.description && (
+          <>
+            <SectionHeader title="About" variant="divider" />
+            <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
+              <LinkifyText text={spot.description} />
+            </p>
+          </>
+        )}
+        <div className={spot.description ? "mt-4" : ""}>
+          <CollapsibleVenueTags venueId={spot.id} />
+        </div>
+      </div>
+
+      {/* ── 3. UPCOMING EVENTS ─────────────────────────────── */}
       {upcomingEvents.length > 0 && (
         <div>
           <VenueShowtimes
@@ -543,6 +542,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
             venueType={spot.spot_type}
             title="Upcoming Events"
             onEventClick={handleEventClick}
+            bare
           />
         </div>
       )}
@@ -552,59 +552,6 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
         <LibraryPassCallout libraryPass={spot.library_pass} />
       )}
 
-      {/* ── ABOUT ─────────────────────────────────────────── */}
-      {spot.description && (
-        <div>
-          <SectionHeader title="About" variant="divider" />
-          <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
-            <LinkifyText text={spot.description} />
-          </p>
-        </div>
-      )}
-
-      {/* ── WHILE YOU'RE HERE (Highlights) ────────────────── */}
-      {highlights.length > 0 && (
-        <div>
-          {highlightsCss && <ScopedStyles css={highlightsCss} />}
-          <SectionHeader title="While You're Here" variant="divider" />
-          <div className="space-y-3">
-            {highlights.map((h) => {
-              const config = HIGHLIGHT_CONFIG[h.highlight_type];
-              const IconComp = config?.Icon;
-              const highlightColorClass = createCssVarClass("--highlight-color", config?.color || "#A78BFA", `hl-${h.highlight_type}`);
-              return (
-                <div key={h.id} className={`flex items-start gap-3 p-3 rounded-lg border border-[var(--twilight)]/40 bg-[var(--dusk)] ${highlightColorClass?.className ?? ""}`}>
-                  {IconComp && (
-                    <IconComp
-                      size={20}
-                      weight="light"
-                      className="flex-shrink-0 mt-0.5 icon-neon-subtle text-[var(--highlight-color)]"
-                    />
-                  )}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-[var(--cream)]">{h.title}</span>
-                      <span className="text-2xs font-mono uppercase text-[var(--muted)]">
-                        {config?.label}
-                      </span>
-                    </div>
-                    {h.description && (
-                      <p className="text-sm text-[var(--soft)] mt-1 leading-relaxed">{h.description}</p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── FEATURES ──────────────────────────────────────── */}
-      <VenueFeaturesSection features={features} venueType={spot.spot_type} />
-
-      {/* ── SPECIALS ──────────────────────────────────────── */}
-      <VenueSpecialsSection specials={specials} />
-
       {/* ── ADVENTURE DESTINATION DETAILS ─────────────────── */}
       {portal?.settings?.vertical === "adventure" && spot.slug && (
         <DestinationDetailSections
@@ -613,7 +560,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
         />
       )}
 
-      {/* ── ARTIFACTS / CHILD DESTINATIONS ────────────────── */}
+      {/* ── CHILD DESTINATIONS ─────────────────────────────── */}
       {attachedChildDestinations.length > 0 && (
         <div>
           <SectionHeader
@@ -626,7 +573,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
               <button
                 key={artifact.id}
                 onClick={() => artifact.slug && handleSpotClick(artifact.slug)}
-                className="block w-full text-left p-3 min-h-[44px] border border-[var(--twilight)]/40 rounded-lg bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group focus-ring"
+                className="block w-full text-left p-3 min-h-[44px] border border-[var(--twilight)]/40 rounded-lg bg-[var(--night)] hover:border-[var(--coral)]/50 transition-colors group focus-ring"
               >
                 <div className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
@@ -647,39 +594,12 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
         </div>
       )}
 
-      {/* ── SIGNAL: EDITORIAL MENTIONS ─────────────────────── */}
+      {/* ── 4. ACCOLADES ───────────────────────────────────── */}
       {editorialMentions.length > 0 && (
         <AccoladesSection mentions={editorialMentions} />
       )}
 
-      {/* ── SIGNAL: PERFECT FOR (Occasions) ───────────────── */}
-      {occasions.length > 0 && (
-        <div>
-          <SectionHeader title="Perfect For" variant="divider" />
-          <div className="flex flex-wrap gap-1.5">
-            {occasions.map((o) => (
-              <span
-                key={o.occasion}
-                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-[var(--gold)]/10 text-[var(--gold)] border border-[var(--gold)]/20"
-              >
-                {OCCASION_LABELS[o.occasion] || o.occasion.replace(/_/g, " ")}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── COMMUNITY ─────────────────────────────────────── */}
-      <div className="border-t border-[var(--twilight)]/30 pt-5 space-y-3">
-        <CollapsibleVenueTags venueId={spot.id} />
-        <FlagButton
-          entityType="venue"
-          entityId={spot.id}
-          entityName={spot.name}
-        />
-      </div>
-
-      {/* ── DISCOVERY: NEARBY ─────────────────────────────── */}
+      {/* ── 5. NEARBY ──────────────────────────────────────── */}
       {nearbyDestinations && (
         <NearbySection
           nearbySpots={nearbyDestinations}
@@ -695,13 +615,13 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
           onSpotClick={handleSpotClick}
         />
       )}
+
     </div>
   );
 
   // ── TOP BAR ─────────────────────────────────────────────────────────────
   const topBar = (
-    <div className="flex items-center justify-between px-4 lg:px-6 py-3">
-      <NeonBackButton onClose={onClose} floating={false} />
+    <div className="flex items-center justify-end px-4 lg:px-6 py-3">
       <div className="flex items-center gap-1">
         <SaveButton venueId={spot.id} size="sm" />
         <button
@@ -719,7 +639,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
               }
             }
           }}
-          className="inline-flex items-center justify-center min-w-[48px] min-h-[48px] p-3 text-[var(--muted)] rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] hover:scale-110 transition-all active:scale-95 focus-ring"
+          className="inline-flex items-center justify-center min-w-[48px] min-h-[48px] p-3 text-[var(--soft)] rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-all active:scale-95 focus-ring"
           aria-label="Share"
         >
           <ShareNetwork size={20} weight="light" className="icon-drop-shadow" />
@@ -767,25 +687,6 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
         />
       )}
 
-      {showOutingSheet && spot.lat != null && spot.lng != null && (
-        <OutingPlannerSheet
-          anchor={{
-            type: "venue",
-            venue: {
-              id: spot.id,
-              name: spot.name,
-              slug: spot.slug,
-              lat: spot.lat,
-              lng: spot.lng,
-            },
-          }}
-          portalId={portal?.id || ""}
-          portalSlug={portalSlug}
-          portalVertical={portal?.settings?.vertical}
-          isOpen={showOutingSheet}
-          onClose={() => setShowOutingSheet(false)}
-        />
-      )}
     </>
   );
 }

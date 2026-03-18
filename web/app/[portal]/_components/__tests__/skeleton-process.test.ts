@@ -23,14 +23,17 @@ describe("portal skeleton process guardrails", () => {
     expect(happeningLoader).toContain('data-skeleton-route="happening-now"');
   });
 
-  it("uses the shared skeleton vertical resolver in client loading files", () => {
+  it("uses the shared skeleton vertical resolver in loading files", () => {
     const routeLoader = read("loading.tsx");
     const eventLoader = read("events/[id]/loading.tsx");
     const happeningLoader = read("happening-now/loading.tsx");
 
-    for (const source of [routeLoader, eventLoader, happeningLoader]) {
+    // Root loading.tsx is a server component — uses inferSkeletonVerticalFromSlug
+    expect(routeLoader).toContain("inferSkeletonVerticalFromSlug");
+
+    // Sub-route loaders are client components — use resolveSkeletonVertical
+    for (const source of [eventLoader, happeningLoader]) {
       expect(source).toContain("resolveSkeletonVertical");
-      expect(source).not.toContain("inferVerticalFromSlug(");
     }
   });
 });

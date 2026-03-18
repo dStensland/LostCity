@@ -56,8 +56,8 @@ function parseSubcategory(key: string): { parent: string; label: string } | null
     adventure: "outdoors", sightseeing: "outdoors", outdoor: "outdoors",
     // Gaming
     gaming: "gaming",
-    // Fitness
-    fitness: "fitness", dance: "fitness",
+    // Exercise
+    fitness: "exercise", dance: "exercise",
     // Other/special
     special_event: "other", convention: "other", festival: "other", reception: "other",
     experimental: "other", safety: "other", "support-group": "community",

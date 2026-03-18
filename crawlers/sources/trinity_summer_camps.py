@@ -496,36 +496,58 @@ def _build_event_record(
     return record
 
 
-def crawl(source_id: int, dry_run: bool = False) -> list[dict]:
-    logger.info("Crawling Trinity summer camps")
+def crawl(source: dict) -> tuple[int, int, int]:
+    """Crawl Trinity summer camps. Returns (events_found, events_new, events_updated)."""
+    source_id = source["id"]
+    events_found = 0
+    events_new = 0
+    events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
-    pricing_csv = _fetch_text(PRICING_EXPORT_URL)
-    description_text = _fetch_text(DESCRIPTIONS_EXPORT_URL)
+    logger.info("Crawling Trinity summer camps (source_id=%s)", source_id)
+
+    try:
+        venue_id = get_or_create_venue(VENUE_DATA)
+        pricing_csv = _fetch_text(PRICING_EXPORT_URL)
+        description_text = _fetch_text(DESCRIPTIONS_EXPORT_URL)
+    except Exception as exc:
+        logger.error("Trinity summer camps: failed to fetch data: %s", exc)
+        return 0, 0, 0
 
     rows = _parse_pricing_sheet(pricing_csv)
     descriptions = _parse_description_doc(description_text)
 
     logger.info("Parsed %s Trinity summer camp rows", len(rows))
 
-    events: list[dict] = []
     for row in rows:
         description = _build_description(row, descriptions)
         event_record = _build_event_record(source_id, venue_id, row, description)
-        events.append(event_record)
+        events_found += 1
 
-        if dry_run:
-            continue
+        try:
+            existing_event = find_event_by_hash(event_record["content_hash"])
+            if existing_event:
+                smart_update_existing_event(existing_event, event_record)
+                events_updated += 1
+            else:
+                insert_event(event_record)
+                events_new += 1
+        except Exception as exc:
+            logger.error(
+                "Trinity summer camps: failed to upsert '%s' (%s): %s",
+                row.get("title"),
+                row.get("start_date"),
+                exc,
+            )
 
-        existing_event = find_event_by_hash(event_record["content_hash"])
-        if existing_event:
-            smart_update_existing_event(existing_event["id"], event_record)
-        else:
-            insert_event(event_record)
-
-    logger.info("Finished Trinity crawl with %s events", len(events))
-    return events
+    logger.info(
+        "Trinity summer camps crawl complete: %d found, %d new, %d updated",
+        events_found,
+        events_new,
+        events_updated,
+    )
+    return events_found, events_new, events_updated
 
 
 if __name__ == "__main__":
-    crawl(source_id=0, dry_run=True)
+    logging.basicConfig(level=logging.INFO)
+    crawl({"id": 0})

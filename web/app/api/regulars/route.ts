@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import {
   applyRateLimit,
   RATE_LIMITS,
@@ -16,15 +16,15 @@ import {
 import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 import {
   applyFederatedPortalScopeToQuery,
+  excludeSensitiveEvents,
   filterByPortalCity,
-  parsePortalContentFilters,
-  filterByPortalContentScope,
 } from "@/lib/portal-scope";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { getLocalDateString } from "@/lib/formats";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import {
   dedupeEventsById,
+  dedupeEventsFuzzy,
   filterOutInactiveVenueEvents,
 } from "@/lib/event-feed-health";
 import { applyVenueGate } from "@/lib/feed-gate";
@@ -67,14 +67,8 @@ export async function GET(request: NextRequest) {
     );
   }
   const portalId = portalContext.portalId;
-  const [portalClient, sourceAccess] = await Promise.all([
-    createPortalScopedClient(portalId),
-    portalId ? getPortalSourceAccess(portalId) : Promise.resolve(null),
-  ]);
+  const sourceAccess = portalId ? await getPortalSourceAccess(portalId) : null;
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
-  const portalContentFilters = parsePortalContentFilters(
-    portalContext.filters as Record<string, unknown> | null,
-  );
 
   // Date range: today through +7 days (portal-local time, not UTC)
   const now = new Date();
@@ -103,7 +97,7 @@ export async function GET(request: NextRequest) {
   // Build query — recurring events only, excluding non-hang categories
   // (film showtimes, theater runs, community activism, etc. have series_id
   // but aren't "regular hangs" — they dominate the results otherwise)
-  let query = portalClient
+  let query = supabase
     .from("events")
     .select(EVENT_SELECT)
     .gte("start_date", today)
@@ -111,19 +105,21 @@ export async function GET(request: NextRequest) {
     .not("series_id", "is", null)
     .is("canonical_event_id", null)
     .eq("is_regular_ready", true)
-    .or("is_class.eq.false,is_class.is.null")
-    .or("is_sensitive.eq.false,is_sensitive.is.null")
-    .not("category_id", "in", "(film,theater,family,learning)") // Showtimes, theater runs, kids events, classes — never regular hangs
+    .not("is_class", "eq", true)
+    .not("category_id", "in", "(film,theater,family,learning,support_group,community)") // Showtimes, theater runs, kids events, classes, recovery meetings, volunteer shifts — never regular hangs
     .not("tags", "cs", '{"class"}'); // Exclude class-tagged events (paint-and-sip, workshops)
 
   query = applyVenueGate(query);
 
-  // Apply portal scope (federation, city filter)
-  if (sourceAccess) {
-    query = applyFederatedPortalScopeToQuery(query, {
-      ...sourceAccess,
-    }) as typeof query;
-  }
+  // Apply portal scope (federation)
+  query = applyFederatedPortalScopeToQuery(query, {
+    portalId,
+    portalExclusive,
+    publicOnlyWhenNoPortal: true,
+    sourceIds: sourceAccess?.sourceIds ?? [],
+  });
+
+  query = excludeSensitiveEvents(query);
 
   // Optional weekday filtering — compute target dates
   if (weekdayParam) {
@@ -161,13 +157,9 @@ export async function GET(request: NextRequest) {
     events = filterByPortalCity(events, portalCity) as EventRow[];
   }
 
-  // Filter by portal content scope
-  if (portalContentFilters) {
-    events = filterByPortalContentScope(events, portalContentFilters) as EventRow[];
-  }
-
   // Dedup & health
   events = dedupeEventsById(events);
+  events = dedupeEventsFuzzy(events) as EventRow[];
   events = filterOutInactiveVenueEvents(events) as EventRow[];
 
   // Strip server-only venue fields to reduce payload (~357KB → ~100KB)

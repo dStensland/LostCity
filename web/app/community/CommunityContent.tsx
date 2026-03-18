@@ -14,7 +14,7 @@ import { createCssVarClass } from "@/lib/css-utils";
 // Event categories that producers can create events in
 const EVENT_CATEGORIES = [
   "music", "comedy", "art", "theater", "film", "community",
-  "food_drink", "sports", "fitness", "nightlife", "family",
+  "food_drink", "sports", "recreation", "exercise", "nightlife", "family",
   "learning", "wellness", "outdoors"
 ] as const;
 

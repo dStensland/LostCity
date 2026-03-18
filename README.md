@@ -9,7 +9,7 @@ AI-powered event discovery for Atlanta. We crawl, extract, and deduplicate event
 - Python 3.11+
 - Node.js 18+
 - Supabase account (for database)
-- Anthropic API key (for LLM extraction)
+- OpenAI or Anthropic API key (for LLM extraction)
 
 ### Setup
 
@@ -123,7 +123,7 @@ The current cleanup status is documented in [reports/migration-front-cleanup-202
 ## Data Flow
 
 1. **Crawl**: Fetch event listings from source websites/APIs
-2. **Extract**: Use Claude to extract structured event data from raw HTML/text
+2. **Extract**: Use the configured LLM provider to extract structured event data from raw HTML/text
 3. **Normalize**: Standardize venues, dates, categories
 4. **Dedupe**: Identify and merge duplicate events
 5. **Store**: Save to Postgres via Supabase

@@ -18,8 +18,17 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 # Keywords that indicate student/alumni-only events (not public)
 STUDENT_ONLY_KEYWORDS = [
@@ -78,6 +87,66 @@ VENUES = {
         "website": "https://spelman.edu",
     },
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "art_museum",
+            "commitment_tier": "hour",
+            "primary_activity": "campus art museum visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+            "parking_type": "street",
+            "best_time_of_day": "afternoon",
+            "practical_notes": (
+                "Spelman Museum works best as a purposeful West End culture stop for school-age families, especially when paired with another nearby history or campus destination instead of carrying the entire day on its own."
+            ),
+            "accessibility_notes": (
+                "This is a lower-walking indoor museum stop once families are on campus, but campus navigation and street-parking friction still shape the outing."
+            ),
+            "family_suitability": "caution",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Check the museum for current exhibitions and any special public program access.",
+            "source_url": MUSEUM_BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "museum",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "hbcu-art-museum-and-rotating-exhibitions",
+            "title": "HBCU art museum and rotating exhibitions",
+            "feature_type": "experience",
+            "description": "Spelman Museum gives families a distinctive HBCU art and culture stop with rotating exhibitions that fit better for school-age kids than toddler-first outings.",
+            "url": MUSEUM_BASE_URL,
+            "is_free": True,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "west-end-cultural-pairing-stop",
+            "title": "West End cultural pairing stop",
+            "feature_type": "amenity",
+            "description": "The museum is strongest as a compact West End culture stop paired with another nearby destination rather than as a full independent family day.",
+            "url": MUSEUM_BASE_URL,
+            "is_free": True,
+            "sort_order": 20,
+        },
+    )
+    return envelope
 
 
 def _clean_text(value: str) -> str:
@@ -467,6 +536,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Categorize event and get venue
                 category, subcategory, venue_data = categorize_event(event_data, title)
                 venue_id = get_or_create_venue(venue_data)
+                if venue_data["slug"] == VENUES["museum"]["slug"]:
+                    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
                 # Check for duplicates
                 content_hash = generate_content_hash(title, venue_data["name"], start_date)
@@ -576,6 +647,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Categorize event and get venue
                 category, subcategory, venue_data = categorize_event({}, title)
                 venue_id = get_or_create_venue(venue_data)
+                if venue_data["slug"] == VENUES["museum"]["slug"]:
+                    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
                 # Build description
                 description = "Annual event at Spelman College, ranked #1 HBCU in the nation."
@@ -627,6 +700,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 continue
 
         museum_venue_id = get_or_create_venue(VENUES["museum"])
+        persist_typed_entity_envelope(_build_destination_envelope(museum_venue_id))
         for exhibit in museum_exhibitions:
             try:
                 end_date = exhibit.get("end_date")

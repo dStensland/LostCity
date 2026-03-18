@@ -249,12 +249,8 @@ export function formatPriceDetailed(event: PriceableEvent): PriceFormatResult {
     return { text: `$${event.price_min}–${event.price_max}`, isFree: false, isEstimate: false };
   }
 
-  // Unknown pricing (is_free is null/undefined, no price data) — nudge user to check venue
-  if (event.is_free === null || event.is_free === undefined) {
-    return { text: "See venue", isFree: false, isEstimate: false };
-  }
-
-  // Don't show estimated prices - return empty string for venue/category defaults
+  // Don't show estimated prices (from venue or category) — return empty string
+  // This handles venue.typical_price_min/max and category_data estimates
   return { text: "", isFree: false, isEstimate: false };
 }
 

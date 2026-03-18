@@ -12,13 +12,26 @@ from datetime import datetime, timedelta
 from typing import Optional
 import httpx
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, find_existing_event_for_insert
+from db import get_or_create_venue, get_venue_by_slug, insert_event, find_event_by_hash, smart_update_existing_event, find_existing_event_for_insert
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.piedmontpark.org"
 API_URL = "https://piedmontpark.org/wp-json/tribe/events/v1/events"
+PLAYGROUNDS_URL = "https://piedmontpark.org/things-to-do/playgrounds/"
+POOL_SPLASHPAD_URL = "https://piedmontpark.org/things-to-do/pool-and-splash-pad/"
+FAQ_URL = "https://piedmontpark.org/faq/"
+MAPS_URL = "https://piedmontpark.org/maps/"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 VENUE_DATA = {
     "name": "Piedmont Park",
@@ -34,6 +47,142 @@ VENUE_DATA = {
     "spot_type": "outdoor",
     "website": BASE_URL,
 }
+
+DESTINATION_ALIAS_SLUGS = ["piedmont-park-greystone"]
+
+
+def _build_destination_envelope(
+    venue_id: int,
+    *,
+    venue_name: str = "Piedmont Park",
+    alias_of: Optional[str] = None,
+) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    practical_subject = venue_name if venue_name != "Piedmont Park" else "The park"
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "park",
+            "commitment_tier": "halfday",
+            "primary_activity": "family park visit",
+            "best_seasons": ["spring", "summer", "fall"],
+            "weather_fit_tags": ["outdoor", "free-option", "family-daytrip"],
+            "practical_notes": (
+                f"{practical_subject} is best understood through Piedmont Park's official visitor FAQ and family-use pages: "
+                "the park is open daily from 6am-11pm, and Piedmont's official visitor FAQ "
+                "maps restroom access near the Legacy Fountain, Noguchi Playscape, Charles Allen Gate, "
+                "tennis center, dog park, and Magnolia Hall. The playground zone also has close access "
+                "to bathrooms and picnic tables. It works best as a flexible basecamp-style park day rather than a one-path outing."
+            ),
+            "accessibility_notes": (
+                "The aquatic center page explicitly calls out ADA accessibility, and the park's main "
+                "circulation is lower-friction for strollers than rougher trail-style family destinations. Shade, lawns, and nearby facilities make it easier to stretch the visit without overcommitting."
+            ),
+            "parking_type": "garage",
+            "best_time_of_day": "morning",
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Open park access is free; some attractions, rentals, pool access, and special events carry separate costs.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "source_slug": "piedmont-park",
+                "city": "atlanta",
+                "park_hours": "6am-11pm daily",
+                "restroom_hours": "8am-6pm daily",
+                "alias_of": alias_of,
+            },
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "playgrounds-and-kid-play-areas",
+            "title": "Playgrounds and kid play areas",
+            "feature_type": "amenity",
+            "description": "Piedmont Park's official family-use pages include dedicated playground areas, making it one of the city's core park options for younger-kid outdoor time.",
+            "url": PLAYGROUNDS_URL,
+            "is_free": True,
+            "sort_order": 10,
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "pool-and-splash-pad",
+            "title": "Pool and splash pad",
+            "feature_type": "amenity",
+            "description": "Piedmont Park's official park pages include a dedicated pool and splash-pad area, which makes the park materially stronger for hot-weather family outings.",
+            "url": POOL_SPLASHPAD_URL,
+            "price_note": "The Legacy Fountain splash pad is free; pool access has separate admission and seasonal hours.",
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "restrooms-and-picnic-table-support",
+            "title": "Restrooms and picnic-table support",
+            "feature_type": "amenity",
+            "description": "Piedmont Park's official playground and visitor FAQ pages call out nearby restrooms plus picnic-table support, which lowers friction for longer family outings.",
+            "url": FAQ_URL,
+            "is_free": True,
+            "sort_order": 30,
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "stroller-friendly-paved-park-loops",
+            "title": "Stroller-friendly paved park loops",
+            "feature_type": "experience",
+            "description": "The official park map and visitor guidance make Piedmont a strong option for stroller-heavy laps, flexible family wandering, and easy pairing with play stops.",
+            "url": MAPS_URL,
+            "is_free": True,
+            "sort_order": 40,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "shade-lawns-and-flexible-basecamp-day",
+            "title": "Shade, lawns, and flexible basecamp day",
+            "feature_type": "amenity",
+            "description": "Piedmont is strongest when families use it as a flexible basecamp with lawn time, shaded resets, and easy movement between play, water, and bathroom stops.",
+            "url": FAQ_URL,
+            "is_free": True,
+            "sort_order": 50,
+        },
+    )
+
+    return envelope
+
+
+def _persist_destination_alias_envelopes() -> None:
+    for slug in DESTINATION_ALIAS_SLUGS:
+        alias_venue = get_venue_by_slug(slug)
+        if not alias_venue:
+            continue
+        persist_typed_entity_envelope(
+            _build_destination_envelope(
+                alias_venue["id"],
+                venue_name=alias_venue.get("name") or "Piedmont Park",
+                alias_of=VENUE_DATA["slug"],
+            )
+        )
 
 WEEKS_AHEAD = 6
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
@@ -242,6 +391,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
+        persist_typed_entity_envelope(_build_destination_envelope(venue_id))
+        _persist_destination_alias_envelopes()
 
         # Fetch events from API - use 50 per page (API's max limit)
         page = 1

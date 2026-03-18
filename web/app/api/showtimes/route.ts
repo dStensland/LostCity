@@ -239,13 +239,18 @@ function toTheatersResponse(filmMap: ReturnType<typeof buildFilmMap>) {
     }
   }
 
-  // Sort theaters alphabetically by name
+  // Sort theaters: indie cinemas first (by priority), then chains alphabetically
   return Array.from(theaterMap.values())
     .map((t) => ({
       ...t,
       films: t.films.sort((a, b) => a.title.localeCompare(b.title)),
     }))
-    .sort((a, b) => a.venue_name.localeCompare(b.venue_name));
+    .sort((a, b) => {
+      const aChain = isChainCinemaVenue({ name: a.venue_name, slug: a.venue_slug });
+      const bChain = isChainCinemaVenue({ name: b.venue_name, slug: b.venue_slug });
+      if (aChain !== bChain) return aChain ? 1 : -1; // indie first
+      return a.venue_name.localeCompare(b.venue_name);
+    });
 }
 
 export async function GET(request: NextRequest) {

@@ -9,15 +9,17 @@ import {
 } from "@/lib/types/programs";
 import { isAgeMatch, type KidProfile } from "@/lib/types/kid-profiles";
 import type { EventWithLocation } from "@/lib/search";
+import { FAMILY_TOKENS } from "@/lib/family-design-tokens";
 
 // ---- Palette (Afternoon Field) -------------------------------------------
-const CANVAS = "#F0EDE4";
-const CARD = "#FAFAF6";
-const SAGE = "#5E7A5E";
-const SKY = "#78B7D0";
-const TEXT = "#1E2820";
-const MUTED = "#756E63";
-const BORDER = "#E0DDD4";
+const CANVAS = FAMILY_TOKENS.canvas;
+const CARD = FAMILY_TOKENS.card;
+const SAGE = FAMILY_TOKENS.sage;
+const SKY = FAMILY_TOKENS.sky;
+const TEXT = FAMILY_TOKENS.text;
+const MUTED = FAMILY_TOKENS.textSecondary;
+const BORDER = FAMILY_TOKENS.border;
+// School-off wash: a lighter sage tint not in the shared token set
 const SAGE_WASH = "#EEF2EE";
 
 // ---- Fonts ----------------------------------------------------------------
@@ -29,18 +31,13 @@ const OUTFIT = "var(--font-plus-jakarta-sans, system-ui, sans-serif)";
 
 interface CalendarViewProps {
   portalSlug: string;
+  /** portalId is accepted for backwards-compat but not used directly — events are fetched via slug. */
   portalId?: string;
   activeKidIds?: string[];
   kids?: KidProfile[];
 }
 
 type ViewMode = "month" | "week" | "agenda";
-
-type RadarResponse = {
-  opening_soon: ProgramWithVenue[];
-  closing_soon: ProgramWithVenue[];
-  filling_fast: ProgramWithVenue[];
-};
 
 // ---- Data fetchers --------------------------------------------------------
 
@@ -61,19 +58,12 @@ async function fetchCalendarPrograms(portalSlug: string): Promise<ProgramWithVen
   return (json.programs ?? []) as ProgramWithVenue[];
 }
 
-async function fetchRegistrationRadar(portalSlug: string): Promise<RadarResponse> {
-  const res = await fetch(`/api/programs/registration-radar?portal=${encodeURIComponent(portalSlug)}`);
-  if (!res.ok) return { opening_soon: [], closing_soon: [], filling_fast: [] };
-  return (await res.json()) as RadarResponse;
-}
-
-async function fetchDayEvents(portalId: string, date: string): Promise<EventWithLocation[]> {
+async function fetchDayEvents(portalSlug: string, date: string): Promise<EventWithLocation[]> {
   const params = new URLSearchParams({
     date,
     tags: "family-friendly",
-    portal_id: portalId,
+    portal: portalSlug,
     limit: "12",
-    useCursor: "true",
   });
   const res = await fetch(`/api/events?${params.toString()}`);
   if (!res.ok) return [];
@@ -513,14 +503,14 @@ function DayDetailPanel({
   year,
   month,
   day,
-  portalId,
+  portalSlug,
   programs,
   schoolEvents,
 }: {
   year: number;
   month: number;
   day: number;
-  portalId?: string;
+  portalSlug: string;
   programs: ProgramWithVenue[];
   schoolEvents: SchoolCalendarEvent[];
 }) {
@@ -531,11 +521,10 @@ function DayDetailPanel({
   // Programs starting on this exact day
   const dayPrograms = programs.filter((p) => p.session_start === dateKey);
 
-  // Events from API — only fetch when portalId is available
+  // Events from API — fetches family-friendly events for the selected day
   const { data: rawDayEvents = [], isLoading: loadingEvents } = useQuery({
-    queryKey: ["family-calendar-day-events", portalId ?? "", dateKey],
-    queryFn: () => fetchDayEvents(portalId!, dateKey),
-    enabled: Boolean(portalId),
+    queryKey: ["family-calendar-day-events", portalSlug, dateKey],
+    queryFn: () => fetchDayEvents(portalSlug, dateKey),
     staleTime: 2 * 60 * 1000,
   });
 
@@ -607,7 +596,7 @@ function DayDetailPanel({
       ))}
 
       {/* Events */}
-      {loadingEvents && portalId && (
+      {loadingEvents && (
         <div
           className="rounded-xl border px-3 py-3"
           style={{ backgroundColor: CARD, borderColor: BORDER }}
@@ -690,7 +679,6 @@ function MonthGridPanel({
 
 export const CalendarView = memo(function CalendarView({
   portalSlug,
-  portalId,
   activeKidIds = [],
   kids = [],
 }: CalendarViewProps) {
@@ -727,13 +715,6 @@ export const CalendarView = memo(function CalendarView({
     queryKey: ["family-calendar-programs", portalSlug],
     queryFn: () => fetchCalendarPrograms(portalSlug),
     staleTime: 2 * 60 * 1000,
-  });
-
-  // Registration radar — keep fetched so the data layer is warm, but not used in grid view
-  useQuery({
-    queryKey: ["family-calendar-radar", portalSlug],
-    queryFn: () => fetchRegistrationRadar(portalSlug),
-    staleTime: 60 * 1000,
   });
 
   // Build set of school-off dates for background coloring
@@ -849,7 +830,7 @@ export const CalendarView = memo(function CalendarView({
         year={currentYear}
         month={currentMonth}
         day={selectedDay}
-        portalId={portalId}
+        portalSlug={portalSlug}
         programs={programs}
         schoolEvents={schoolEvents}
       />

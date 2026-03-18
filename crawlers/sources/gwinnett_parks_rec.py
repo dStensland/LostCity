@@ -54,6 +54,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     programs=True,
     destinations=True,
     destination_details=True,
+    venue_features=True,
 )
 
 # ---------------------------------------------------------------------------
@@ -383,6 +384,34 @@ def _build_destination_envelope(venue_info: VenueInfo, venue_id: int) -> TypedEn
                 },
             },
         )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "indoor-family-recreation-space",
+                "title": "Indoor family recreation space",
+                "feature_type": "amenity",
+                "description": f"{venue_info.name} gives families an indoor recreation option with weather-proof community-center space and youth programming through Gwinnett Parks.",
+                "url": "https://secure.rec1.com/GA/gwinnett-county-parks-recreation/catalog",
+                "price_note": "Drop-in access and building amenities vary by center.",
+                "is_free": False,
+                "sort_order": 10,
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "family-classes-and-seasonal-camps",
+                "title": "Family classes and seasonal camps",
+                "feature_type": "experience",
+                "description": f"{venue_info.name} regularly hosts youth classes, family recreation programming, and seasonal camps through Gwinnett Parks.",
+                "url": "https://secure.rec1.com/GA/gwinnett-county-parks-recreation/catalog",
+                "price_note": "Registration costs vary by program and season.",
+                "is_free": False,
+                "sort_order": 20,
+            },
+        )
         return envelope
 
     if venue_info.slug in _PARK_SLUGS:
@@ -407,6 +436,20 @@ def _build_destination_envelope(venue_info: VenueInfo, venue_id: int) -> TypedEn
                     "venue_type": venue_info.venue_type,
                     "county": "gwinnett",
                 },
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "free-outdoor-play-space",
+                "title": "Free outdoor play space",
+                "feature_type": "amenity",
+                "description": f"{venue_info.name} is a free Gwinnett park option for low-friction family outdoor time, open-air play, and pairing with seasonal county programming.",
+                "url": "https://secure.rec1.com/GA/gwinnett-county-parks-recreation/catalog",
+                "price_note": "Open park access is free.",
+                "is_free": True,
+                "sort_order": 10,
             },
         )
         return envelope

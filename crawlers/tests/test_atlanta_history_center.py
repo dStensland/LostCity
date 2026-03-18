@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from bs4 import BeautifulSoup
 
 from sources.atlanta_history_center import (
@@ -74,6 +76,8 @@ def test_parse_summer_camp_records_prefers_heading_structure_when_present():
 
 
 def test_parse_exhibition_record_marks_current_exhibit_as_ongoing():
+    future_close = date.today() + timedelta(days=30)
+    future_close_text = future_close.strftime("%B %d, %Y").replace(" 0", " ")
     html = """
     <html>
       <head>
@@ -83,12 +87,12 @@ def test_parse_exhibition_record_marks_current_exhibit_as_ongoing():
       <body>
         <main>
           <h1>Their Finest Hour: Atlanta Remembers World War II</h1>
-          <p>Their Finest Hour: Atlanta Remembers World War II closes on March 15, 2026.</p>
+          <p>Their Finest Hour: Atlanta Remembers World War II closes on FUTURE_CLOSE_DATE.</p>
           <p>Included with admission to Atlanta History Center.</p>
         </main>
       </body>
     </html>
-    """
+    """.replace("FUTURE_CLOSE_DATE", future_close_text)
     soup = BeautifulSoup(html, "html.parser")
 
     record = _parse_exhibition_record(
@@ -101,7 +105,7 @@ def test_parse_exhibition_record_marks_current_exhibit_as_ongoing():
     assert record is not None
     assert record["title"] == "Their Finest Hour: Atlanta Remembers World War II"
     assert record["content_kind"] == "exhibit"
-    assert record["end_date"] == "2026-03-15"
+    assert record["end_date"] == future_close.strftime("%Y-%m-%d")
     assert record["price_note"] == "Included with admission"
 
 

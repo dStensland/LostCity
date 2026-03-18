@@ -10,7 +10,7 @@
 
 import { useMemo, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { useFeedVisible } from "@/lib/feed-visibility";
 import type {
   FeedContext,
@@ -437,7 +437,7 @@ export default function GreetingBar({ header, context, portalSlug, quickLinks, d
             bottom: "-15%",
           }}
         >
-          <Image
+          <SmartImage
             src={cityPhoto}
             alt=""
             fill

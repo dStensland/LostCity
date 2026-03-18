@@ -1339,7 +1339,7 @@ Only request `regularOpeningHours`—other hours types (secondaryOpeningHours, s
 
 ## Appendix H: AI Extraction System
 
-For sources with unstructured HTML or complex layouts, the system uses Claude (Anthropic LLM) to extract structured event data instead of writing brittle parsers.
+For sources with unstructured HTML or complex layouts, the system uses the configured LLM provider (OpenAI or Anthropic) to extract structured event data instead of writing brittle parsers.
 
 ### Module: crawlers/extract.py
 
@@ -1352,7 +1352,9 @@ The extraction system provides two main functions:
 ```python
 # From config.py
 llm:
-    model: "claude-3-5-sonnet-20241022"
+    provider: "auto"
+    model: "claude-sonnet-4-20250514"
+    openai_model: "gpt-4o-mini"
     max_tokens: 8000
     temperature: 0.0  # Deterministic extraction
 ```
@@ -1361,7 +1363,7 @@ Each extraction call costs ~$0.01-0.05 depending on content length. Use manual p
 
 ### Input Truncation
 
-Raw content is truncated to **50,000 characters** (line 195 of extract.py) to fit within Claude's context window and control costs. For multi-page sources, use batch mode to extract from each page separately.
+Raw content is truncated to **50,000 characters** (line 195 of extract.py) to fit within the configured LLM context budget and control costs. For multi-page sources, use batch mode to extract from each page separately.
 
 ### Output Schema (Pydantic Models)
 
@@ -1421,7 +1423,7 @@ Plus subcategories for nightlife:
 
 ### Malformed JSON Handling
 
-Claude sometimes returns JSON with trailing commas or unquoted keys. The extraction system handles this (line 220-224):
+LLM output can sometimes return JSON with trailing commas or unquoted keys. The extraction system handles this (line 220-224):
 ```python
 try:
     data = json.loads(json_str)

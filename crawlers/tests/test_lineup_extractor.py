@@ -95,6 +95,54 @@ def test_evening_with_plus_band_preserved() -> None:
     assert entries == [{"name": "Florence + The Machine", "role": "headliner"}]
 
 
+# ── Bug class: "X & the Y" band names must not be split ──────────────
+
+
+def test_ampersand_the_band_name_preserved() -> None:
+    """'Mel Bryant & the Mercy Makers' is a single band, not two artists."""
+    entries = split_lineup_text_with_roles("Mel Bryant & the Mercy Makers")
+    assert entries == [{"name": "Mel Bryant & the Mercy Makers", "role": "headliner"}]
+
+
+def test_ampersand_the_band_with_support() -> None:
+    entries = split_lineup_text_with_roles(
+        "Mel Bryant & the Mercy Makers w/ Sid Jerr-Dan"
+    )
+    assert entries[0] == {"name": "Mel Bryant & the Mercy Makers", "role": "headliner"}
+    assert entries[1] == {"name": "Sid Jerr-Dan", "role": "support"}
+
+
+def test_tom_petty_and_the_heartbreakers_preserved() -> None:
+    entries = split_lineup_text_with_roles("Tom Petty & the Heartbreakers")
+    assert entries == [{"name": "Tom Petty & the Heartbreakers", "role": "headliner"}]
+
+
+def test_evening_with_band_ampersand_the_preserved() -> None:
+    """'An Evening With Hootie & the Blowfish' should not split the band."""
+    entries = split_lineup_text_with_roles("An Evening With Hootie & the Blowfish")
+    assert entries == [{"name": "Hootie & the Blowfish", "role": "headliner"}]
+
+
+def test_parse_lineup_ampersand_the_band_preserved() -> None:
+    entries = parse_lineup_from_title("Mel Bryant & the Mercy Makers")
+    assert len(entries) == 1
+    assert entries[0]["name"] == "Mel Bryant & the Mercy Makers"
+
+
+def test_ampersand_his_band_name_preserved() -> None:
+    """'James Brown & His Famous Flames' is a single act."""
+    entries = split_lineup_text_with_roles("James Brown & His Famous Flames")
+    assert entries == [{"name": "James Brown & His Famous Flames", "role": "headliner"}]
+
+
+def test_ampersand_coheadliners_still_split() -> None:
+    """'Ben Strawn & Rolling Jane' (no article) should still split."""
+    entries = split_lineup_text_with_roles("An Evening With Ben Strawn & Rolling Jane")
+    assert len(entries) == 2
+    assert entries[0]["name"] == "Ben Strawn"
+    assert entries[1]["name"] == "Rolling Jane"
+
+
 def test_ampersand_not_split_in_extract() -> None:
     """'Simon & Garfunkel' should not be split on '&'.
 

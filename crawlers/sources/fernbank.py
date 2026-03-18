@@ -17,12 +17,21 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record, parse_date_range
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.fernbankmuseum.org"
 EVENTS_URL = f"{BASE_URL}/events/calendar-of-events/"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 VENUE_DATA = {
     "name": "Fernbank Museum of Natural History",
@@ -49,6 +58,81 @@ VENUE_DATA = {
     },
     "vibes": ["family-friendly", "educational", "interactive", "nature", "dinosaurs"],
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "natural_history_museum",
+            "commitment_tier": "halfday",
+            "primary_activity": "family museum and nature visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "outdoor-indoor-mix", "rainy-day", "family-daytrip"],
+            "parking_type": "free_lot",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "Fernbank works best as a half-day museum outing with optional outdoor nature add-ons, which makes it easier "
+                "to scale the day up or down depending on weather and kid energy. It is especially useful when families want a real outing with indoor bathrooms and an outdoor bonus instead of an all-outdoor commitment."
+            ),
+            "accessibility_notes": (
+                "Indoor museum galleries give Fernbank a lower-friction entry point for strollers and shorter visits, "
+                "while the surrounding outdoor areas add extra walking when families want more range. That makes it easier to adjust for shade, stamina, and heat than a pure trail destination."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Admission, giant-screen films, and special events vary by date and package.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "museum",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "dinosaurs-and-natural-history-galleries",
+            "title": "Dinosaurs and natural history galleries",
+            "feature_type": "amenity",
+            "description": "Fernbank's museum galleries make it one of the strongest kid-focused natural history anchors in the city.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "museum-plus-outdoor-nature-flex",
+            "title": "Museum plus outdoor nature flex",
+            "feature_type": "amenity",
+            "description": "Fernbank gives families an indoor core plus optional outdoor nature time, which makes it more flexible than a museum-only or trail-only stop.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "indoor-bathroom-core-with-outdoor-bonus",
+            "title": "Indoor bathroom core with outdoor bonus",
+            "feature_type": "amenity",
+            "description": "Fernbank gives families a reliable indoor museum base for restrooms and resets, with outdoor trails and nature space as an optional add-on instead of a requirement.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    return envelope
 
 
 def _enrich_venue_data(page) -> None:
@@ -125,6 +209,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             _enrich_venue_data(page)
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Fernbank Museum: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

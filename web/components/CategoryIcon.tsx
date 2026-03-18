@@ -147,6 +147,7 @@ const ICON_MAP: Record<string, ComponentType<IconProps>> = {
   // Sports & Fitness - dynamic energy
   sports: PersonSimpleRun,
   fitness: Barbell,
+  exercise: Barbell,
   fitness_center: Barbell,
   recreation: PersonSimpleRun,
   arena: Trophy,

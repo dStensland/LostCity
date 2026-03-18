@@ -15,6 +15,8 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
@@ -22,9 +24,17 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://carlos.emory.edu"
 EVENTS_URL = f"{BASE_URL}/events"
 
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
+
 VENUE_DATA = {
     "name": "Michael C. Carlos Museum",
-    "slug": "carlos-museum",
+    # Match the canonical production venue row instead of relying on name fallback.
+    "slug": "michael-c-carlos-museum",
     "address": "571 South Kilgo Cir",
     "neighborhood": "Emory",
     "city": "Atlanta",
@@ -48,6 +58,66 @@ VENUE_DATA = {
     },
     "vibes": ["free", "educational", "cultural", "art", "historic", "university"],
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "art_museum",
+            "commitment_tier": "hour",
+            "primary_activity": "art and antiquities museum visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip", "free-option"],
+            "parking_type": "paid_lot",
+            "best_time_of_day": "afternoon",
+            "practical_notes": (
+                "Carlos Museum works best as a compact Emory museum stop, especially for families who want a shorter culture outing instead of committing to a larger all-day museum campus."
+            ),
+            "accessibility_notes": (
+                "Its indoor galleries and relatively contained footprint keep the visit lower-friction for strollers and shorter attention spans than larger museum outings."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "The museum remains one of Atlanta's stronger low-cost or free-feeling family culture stops depending on current admission policy and campus access.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "art_museum",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "free-emory-art-and-antiquities-anchor",
+            "title": "Emory art and antiquities anchor",
+            "feature_type": "amenity",
+            "description": "Carlos Museum gives families an easier university-adjacent culture stop built around art, antiquities, and rotating exhibitions.",
+            "url": BASE_URL,
+            "is_free": True,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "compact-campus-museum-stop",
+            "title": "Compact campus museum stop",
+            "feature_type": "amenity",
+            "description": "The museum's contained indoor layout makes it easier to fit into a shorter family outing than a larger destination museum day.",
+            "url": BASE_URL,
+            "is_free": True,
+            "sort_order": 20,
+        },
+    )
+    return envelope
 
 
 def _enrich_venue_data(page) -> None:
@@ -101,6 +171,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             _enrich_venue_data(page)
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Michael C. Carlos Museum: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

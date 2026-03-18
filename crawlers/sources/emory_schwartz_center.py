@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from source_destination_sync import ensure_venue_destination_fields
 from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,11 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://schwartz.emory.edu"
 TICKETS_URL = "https://tickets.arts.emory.edu/events"
 EVENTS_URL = TICKETS_URL  # Use ticket system for event listings
+PLANNING_NOTE = (
+    "Use the official Emory Arts ticketing page for seating, parking, and campus-arrival details "
+    "before heading to the Schwartz Center. Many programs run on Emory's campus schedule rather "
+    "than standard standalone-theater assumptions."
+)
 
 VENUE_DATA = {
     "name": "Schwartz Center for Performing Arts",
@@ -146,6 +152,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             soup = BeautifulSoup(html, "html.parser")
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            ensure_venue_destination_fields(venue_id, planning_notes=PLANNING_NOTE)
 
             # Sequential parsing - track current event as we find links
             all_links = soup.find_all('a', href=True)

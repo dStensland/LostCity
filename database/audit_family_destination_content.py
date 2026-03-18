@@ -34,6 +34,8 @@ FAMILY_VENUE_TYPES = (
     "museum",
     "garden",
     "community_center",
+    "recreation",
+    "aquatic_center",
     "pool",
     "campground",
     "trail",
@@ -207,6 +209,52 @@ def build_report(target: str, portal_slug: str) -> dict:
                 (portal_id, portal_id, list(FAMILY_VENUE_TYPES)),
             )
 
+            city_breakdown = _fetch_all(
+                cur,
+                """
+                with family_venues as (
+                  select distinct e.venue_id
+                  from portal_source_access psa
+                  join events e on e.source_id = psa.source_id
+                  where psa.portal_id = %s
+                    and e.venue_id is not null
+                    and coalesce(e.is_active, true) = true
+                    and e.start_date >= current_date
+                  union
+                  select distinct venue_id
+                  from programs
+                  where portal_id = %s
+                    and venue_id is not null
+                    and status = 'active'
+                )
+                select
+                  coalesce(v.city, 'unknown') as city,
+                  count(*)::int as venue_count,
+                  count(*) filter (
+                    where exists (
+                      select 1
+                      from venue_destination_details d
+                      where d.venue_id = v.id
+                    )
+                  )::int as with_destination_details,
+                  count(*) filter (
+                    where exists (
+                      select 1
+                      from venue_features f
+                      where f.venue_id = v.id
+                        and f.is_active = true
+                    )
+                  )::int as with_features
+                from family_venues fv
+                join venues v on v.id = fv.venue_id
+                where v.venue_type = any(%s)
+                group by coalesce(v.city, 'unknown')
+                order by venue_count desc, city asc
+                limit 15
+                """,
+                (portal_id, portal_id, list(FAMILY_VENUE_TYPES)),
+            )
+
             destination_detail_coverage = _fetch_all(
                 cur,
                 """
@@ -266,7 +314,7 @@ def build_report(target: str, portal_slug: str) -> dict:
                     f.*,
                     case
                       when lower(coalesce(f.slug, '') || ' ' || coalesce(f.title, '') || ' ' || coalesce(f.description, ''))
-                        ~ '(splash|sprayground|spray|water play|play fountain|wading)'
+                        ~ '(splash|sprayground|spray|water play|play fountain|wading|pool|aquatic)'
                         then 'water_play'
                       when lower(coalesce(f.slug, '') || ' ' || coalesce(f.title, '') || ' ' || coalesce(f.description, ''))
                         ~ '(playground|play area|tot lot|nature play)'
@@ -468,6 +516,76 @@ def build_report(target: str, portal_slug: str) -> dict:
                 """,
                 (portal_id, portal_id, list(FAMILY_VENUE_TYPES)),
             )
+
+            broad_map_systems = _fetch_all(
+                cur,
+                """
+                with system_destinations as (
+                  select
+                    d.venue_id,
+                    case
+                      when d.metadata->>'source_slug' is not null then d.metadata->>'source_slug'
+                      when d.metadata->>'jurisdiction' = 'cobb-county' then 'cobb-parks-family-map'
+                      when d.metadata->>'jurisdiction' = 'dekalb-county' then 'dekalb-parks-family-map'
+                      when d.metadata->>'jurisdiction' = 'gwinnett-county' then 'gwinnett-parks-family-map'
+                      when d.metadata->>'source_type' = 'family_system_overlay'
+                        and lower(coalesce(d.metadata->>'city', '')) = 'atlanta'
+                        then 'atlanta-parks-family-map'
+                      else null
+                    end as system_slug
+                  from venue_destination_details d
+                  join venues v on v.id = d.venue_id
+                  where v.venue_type = any(%s)
+                    and (
+                      d.metadata->>'source_slug' is not null
+                      or d.metadata->>'jurisdiction' in ('cobb-county', 'dekalb-county', 'gwinnett-county')
+                      or (
+                        d.metadata->>'source_type' = 'family_system_overlay'
+                        and lower(coalesce(d.metadata->>'city', '')) = 'atlanta'
+                      )
+                    )
+                )
+                select
+                  sd.system_slug,
+                  count(*)::int as destination_rows,
+                  count(distinct sd.venue_id)::int as venue_count,
+                  count(distinct sd.venue_id) filter (
+                    where exists (
+                      select 1
+                      from venue_features f
+                      where f.venue_id = sd.venue_id
+                        and f.is_active = true
+                    )
+                  )::int as venues_with_features,
+                  count(distinct sd.venue_id) filter (
+                    where exists (
+                      select 1
+                      from venue_features f
+                      where f.venue_id = sd.venue_id
+                        and f.is_active = true
+                        and lower(
+                          coalesce(f.slug, '') || ' ' || coalesce(f.title, '') || ' ' || coalesce(f.description, '')
+                        ) ~ '(splash|sprayground|spray|water play|play fountain|wading|pool|aquatic)'
+                    )
+                  )::int as water_play_venues,
+                  count(distinct sd.venue_id) filter (
+                    where exists (
+                      select 1
+                      from venue_features f
+                      where f.venue_id = sd.venue_id
+                        and f.is_active = true
+                        and lower(
+                          coalesce(f.slug, '') || ' ' || coalesce(f.title, '') || ' ' || coalesce(f.description, '')
+                        ) ~ '(playground|play area|tot lot|nature play)'
+                    )
+                  )::int as playground_venues
+                from system_destinations sd
+                where sd.system_slug is not null
+                group by sd.system_slug
+                order by venue_count desc, sd.system_slug asc
+                """,
+                (list(FAMILY_VENUE_TYPES),),
+            )
     finally:
         conn.close()
 
@@ -481,11 +599,13 @@ def build_report(target: str, portal_slug: str) -> dict:
         "ok": True,
         "family_venue_summary": summary,
         "venue_type_breakdown": venue_type_breakdown,
+        "city_breakdown": city_breakdown,
         "destination_detail_coverage": detail,
         "feature_wedges": feature_wedges,
         "specials_summary": specials,
         "gap_candidates": gap_candidates,
         "source_gap_candidates": source_gap_candidates,
+        "broad_map_systems": broad_map_systems,
     }
 
 
@@ -563,6 +683,14 @@ def main() -> int:
             f"{row['venue_count']} venues"
         )
 
+    print("top metro cities:")
+    for row in report["city_breakdown"][:10]:
+        print(
+            f"  - {row['city']}: {row['venue_count']} venues, "
+            f"details={row['with_destination_details']}, "
+            f"features={row['with_features']}"
+        )
+
     print("top gap candidates:")
     for row in report["gap_candidates"][:10]:
         print(
@@ -579,6 +707,16 @@ def main() -> int:
             f"{row['venue_count']} venues, "
             f"details={row['venues_with_destination_details']}, "
             f"features={row['venues_with_features']}"
+        )
+
+    print("broad map systems:")
+    for row in report.get("broad_map_systems", [])[:10]:
+        print(
+            f"  - {row['system_slug']}: {row['venue_count']} venues, "
+            f"details={row['destination_rows']}, "
+            f"features={row['venues_with_features']}, "
+            f"water_play={row['water_play_venues']}, "
+            f"playground={row['playground_venues']}"
         )
 
     return 0

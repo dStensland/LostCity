@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import type { AddItineraryItemInput } from "@/lib/itinerary-utils";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
 import OutingSuggestionList from "@/components/outing-planner/OutingSuggestionList";
 import type { OutingSuggestion } from "@/lib/outing-suggestions-utils";
 
@@ -281,9 +280,6 @@ export default function ItineraryAddDrawer({
 
               <div className="space-y-1.5">
                 {results.map((result) => {
-                  const imgSrc = result.image_url
-                    ? getProxiedImageSrc(result.image_url)
-                    : null;
                   return (
                     <button
                       key={`${result.type}-${result.id}`}
@@ -291,9 +287,9 @@ export default function ItineraryAddDrawer({
                       className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/5 transition-colors text-left"
                     >
                       <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 shrink-0">
-                        {imgSrc ? (
-                          <Image
-                            src={typeof imgSrc === "string" ? imgSrc : ""}
+                        {result.image_url ? (
+                          <SmartImage
+                            src={result.image_url}
                             alt={result.title}
                             width={40}
                             height={40}

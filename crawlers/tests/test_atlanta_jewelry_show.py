@@ -1,6 +1,6 @@
 from datetime import date
 
-from sources.atlanta_jewelry_show import parse_show_window
+from sources.atlanta_jewelry_show import NoCurrentCycleError, parse_show_window
 
 
 def test_parse_show_window_extracts_current_spring_season() -> None:
@@ -25,7 +25,7 @@ def test_parse_show_window_rejects_past_only_season() -> None:
 
     try:
         parse_show_window(text, today=date(2026, 3, 16))
-    except ValueError as exc:
+    except NoCurrentCycleError as exc:
         assert "past-dated season" in str(exc)
     else:
         raise AssertionError("Expected past-only season to be rejected")

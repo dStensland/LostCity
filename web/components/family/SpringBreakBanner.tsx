@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import { SCHOOL_SYSTEM_LABELS, type SchoolSystem } from "@/lib/types/programs";
+import { SCHOOL_SYSTEM_LABELS, type SchoolSystem, type SchoolCalendarEvent } from "@/lib/types/programs";
 
 // Spring break 2026: April 6–10 (APS, DeKalb, Cobb, Gwinnett share this window)
 const SPRING_BREAK_START = new Date("2026-04-06T00:00:00");
@@ -15,9 +15,21 @@ const SHOW_WITHIN_DAYS = 21;
 const AMBER = "#C48B1D";
 const SAGE = "#5E7A5E";
 
+const SPRING_BREAK_EVENT: SchoolCalendarEvent = {
+  id: "spring-break-2026",
+  school_system: "aps",
+  event_type: "break",
+  name: "Spring Break",
+  start_date: SPRING_BREAK_START_STR,
+  end_date: SPRING_BREAK_END_STR,
+  school_year: "2025-26",
+};
+
 interface SpringBreakBannerProps {
   portalSlug: string;
   schoolSystem?: SchoolSystem | null;
+  /** When provided, the CTA opens the Break Planner instead of navigating to Find view. */
+  onOpenPlanner?: (breakEvent: SchoolCalendarEvent) => void;
 }
 
 function getDaysUntil(target: Date): number {
@@ -29,6 +41,7 @@ function getDaysUntil(target: Date): number {
 export const SpringBreakBanner = memo(function SpringBreakBanner({
   portalSlug,
   schoolSystem,
+  onOpenPlanner,
 }: SpringBreakBannerProps) {
   const now = new Date();
   const daysUntilStart = getDaysUntil(SPRING_BREAK_START);
@@ -60,7 +73,7 @@ export const SpringBreakBanner = memo(function SpringBreakBanner({
     ? `${startLabel} – ${endLabel}${systemName ? ` · ${systemName}` : ""}`
     : `${startLabel} – ${endLabel}${systemName ? ` · ${systemName}` : ""}`;
 
-  const filterHref = `/${portalSlug}?view=find&date_from=${SPRING_BREAK_START_STR}&date_to=${SPRING_BREAK_END_STR}`;
+  const filterHref = `/${portalSlug}?tab=programs`;
 
   return (
     <div
@@ -101,42 +114,62 @@ export const SpringBreakBanner = memo(function SpringBreakBanner({
               {subText}
             </p>
 
-            <Link
-              href={filterHref}
-              className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 rounded-xl text-xs font-semibold transition-all hover:opacity-90 active:scale-95"
-              style={{
-                backgroundColor: SAGE,
-                color: "#fff",
-                fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)",
-              }}
-            >
-              Find Spring Break Activities
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
+            {onOpenPlanner ? (
+              <button
+                type="button"
+                onClick={() => onOpenPlanner(SPRING_BREAK_EVENT)}
+                className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 rounded-xl text-xs font-semibold transition-all hover:opacity-90 active:scale-95"
+                style={{
+                  backgroundColor: SAGE,
+                  color: "#fff",
+                  fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)",
+                }}
+              >
+                Plan Spring Break Week
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            ) : (
+              <Link
+                href={filterHref}
+                className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 rounded-xl text-xs font-semibold transition-all hover:opacity-90 active:scale-95"
+                style={{
+                  backgroundColor: SAGE,
+                  color: "#fff",
+                  fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)",
+                }}
+              >
+                Find Spring Break Activities
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            )}
           </div>
         </div>
 
         {/* Right: countdown orb — hidden on mobile when ongoing (no countdown to show) */}
         {!isOngoing && (
           <div
-            className="hidden sm:flex flex-shrink-0 flex-col items-center justify-center w-24 h-24 rounded-full"
+            className="hidden sm:flex flex-shrink-0 flex-col items-center justify-center rounded-full"
             style={{
-              backgroundColor: `${AMBER}14`,
-              border: `2px solid ${AMBER}30`,
+              width: 84,
+              height: 84,
+              backgroundColor: AMBER,
+              boxShadow: `0 2px 12px ${AMBER}50`,
             }}
             aria-label={`${daysUntilStart} days until Spring Break`}
           >
             <span
-              className="text-4xl font-bold leading-none tabular-nums"
-              style={{ color: AMBER, fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)" }}
+              className="font-bold leading-none tabular-nums"
+              style={{ color: "#fff", fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)", fontSize: 36 }}
             >
               {daysUntilStart}
             </span>
             <span
-              className="text-xs mt-1 font-medium"
-              style={{ color: "#756E63", fontFamily: "var(--font-dm-sans, 'DM Sans', system-ui, sans-serif)" }}
+              className="text-xs mt-0.5 font-medium"
+              style={{ color: "rgba(255,255,255,0.8)", fontFamily: "var(--font-dm-sans, 'DM Sans', system-ui, sans-serif)" }}
             >
               {daysUntilStart === 1 ? "day" : "days"}
             </span>
@@ -146,22 +179,24 @@ export const SpringBreakBanner = memo(function SpringBreakBanner({
         {/* Mobile: small inline countdown badge when upcoming */}
         {!isOngoing && (
           <div
-            className="sm:hidden flex-shrink-0 flex flex-col items-center justify-center w-14 h-14 rounded-full"
+            className="sm:hidden flex-shrink-0 flex flex-col items-center justify-center rounded-full"
             style={{
-              backgroundColor: `${AMBER}14`,
-              border: `2px solid ${AMBER}30`,
+              width: 52,
+              height: 52,
+              backgroundColor: AMBER,
+              boxShadow: `0 2px 8px ${AMBER}40`,
             }}
             aria-hidden="true"
           >
             <span
               className="text-xl font-bold leading-none tabular-nums"
-              style={{ color: AMBER, fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)" }}
+              style={{ color: "#fff", fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)" }}
             >
               {daysUntilStart}
             </span>
             <span
               className="text-2xs font-medium"
-              style={{ color: "#756E63", fontFamily: "var(--font-dm-sans, 'DM Sans', system-ui, sans-serif)" }}
+              style={{ color: "rgba(255,255,255,0.8)", fontFamily: "var(--font-dm-sans, 'DM Sans', system-ui, sans-serif)" }}
             >
               days
             </span>

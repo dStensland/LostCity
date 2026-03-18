@@ -17,9 +17,18 @@ from bs4 import BeautifulSoup
 
 from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 BASE_URL = "https://ci.ovationtix.com/35355"
 API_BASE_URL = "https://web.ovationtix.com/trs/api/rest"
@@ -83,6 +92,129 @@ VENUES = {
         "website": "https://ksuowls.com",
     },
 }
+
+
+def _build_destination_envelope(venue_key: str, venue_id: int) -> TypedEntityEnvelope | None:
+    envelope = TypedEntityEnvelope()
+
+    if venue_key == "zuckerman":
+        envelope.add(
+            "destination_details",
+            {
+                "venue_id": venue_id,
+                "destination_type": "art_museum",
+                "commitment_tier": "hour",
+                "primary_activity": "campus art museum visit",
+                "best_seasons": ["spring", "summer", "fall", "winter"],
+                "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+                "parking_type": "paid_lot",
+                "best_time_of_day": "afternoon",
+                "practical_notes": (
+                    "Zuckerman works best as a compact campus museum stop for families already heading to Kennesaw "
+                    "or pairing art with another north-metro outing, not as a full-city day destination."
+                ),
+                "accessibility_notes": (
+                    "The museum is an easier lower-walking art stop than a larger campus attraction, but families should still expect university-campus parking and navigation."
+                ),
+                "family_suitability": "yes",
+                "reservation_required": False,
+                "permit_required": False,
+                "fee_note": "Check the museum for current exhibition access and any special ticketed programs.",
+                "source_url": VENUES[venue_key]["website"],
+                "metadata": {
+                    "source_type": "family_destination_enrichment",
+                    "venue_type": "museum",
+                    "city": "kennesaw",
+                },
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "free-campus-art-museum-stop",
+                "title": "Free campus art museum stop",
+                "feature_type": "amenity",
+                "description": "Zuckerman gives families a compact university art stop that fits better as a paired outing than an all-day plan.",
+                "url": VENUES[venue_key]["website"],
+                "is_free": True,
+                "sort_order": 10,
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "temporary-art-exhibitions-and-campus-culture",
+                "title": "Temporary art exhibitions and campus culture",
+                "feature_type": "experience",
+                "description": "Rotating exhibitions make Zuckerman a useful repeatable culture stop for school-age families in the north metro.",
+                "url": VENUES[venue_key]["website"],
+                "is_free": True,
+                "sort_order": 20,
+            },
+        )
+        return envelope
+
+    if venue_key == "fine_arts":
+        envelope.add(
+            "destination_details",
+            {
+                "venue_id": venue_id,
+                "destination_type": "art_gallery",
+                "commitment_tier": "hour",
+                "primary_activity": "campus gallery visit",
+                "best_seasons": ["spring", "summer", "fall", "winter"],
+                "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+                "parking_type": "paid_lot",
+                "best_time_of_day": "afternoon",
+                "practical_notes": (
+                    "The Fine Arts Gallery works best as a short campus exhibition stop paired with another Kennesaw plan rather than as a destination that carries a full family day by itself."
+                ),
+                "accessibility_notes": (
+                    "Indoor gallery access keeps walking friction fairly low once families are on campus, but visitor parking and campus wayfinding still shape the outing."
+                ),
+                "family_suitability": "yes",
+                "reservation_required": False,
+                "permit_required": False,
+                "fee_note": "Check ArtsKSU for current gallery exhibitions and any ticketed campus arts events.",
+                "source_url": VENUES[venue_key]["website"],
+                "metadata": {
+                    "source_type": "family_destination_enrichment",
+                    "venue_type": "gallery",
+                    "city": "kennesaw",
+                },
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "student-and-regional-art-gallery-stop",
+                "title": "Student and regional art gallery stop",
+                "feature_type": "experience",
+                "description": "The Fine Arts Gallery gives families a short visual-arts stop tied to Kennesaw State's student and regional arts programming.",
+                "url": VENUES[venue_key]["website"],
+                "is_free": True,
+                "sort_order": 10,
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "short-campus-exhibition-pairing-stop",
+                "title": "Short campus exhibition pairing stop",
+                "feature_type": "amenity",
+                "description": "This is a stronger add-on for an existing north-metro day than a main attraction, especially for school-age kids with some art interest.",
+                "url": VENUES[venue_key]["website"],
+                "is_free": True,
+                "sort_order": 20,
+            },
+        )
+        return envelope
+
+    return None
 
 
 def _audienceview_headers() -> dict[str, str]:
@@ -217,6 +349,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     venue_key = get_venue_key(venue_text)
                     venue_data = VENUES[venue_key]
                     venue_id = get_or_create_venue(venue_data)
+                    destination_envelope = _build_destination_envelope(venue_key, venue_id)
+                    if destination_envelope:
+                        persist_typed_entity_envelope(destination_envelope)
 
                     description = _clean_description((production or {}).get("description"))
                     image_url = _logo_url((production or {}).get("logoUrl"))

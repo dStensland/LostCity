@@ -6,8 +6,9 @@ import dynamic from "next/dynamic";
 
 const ShowtimesView = dynamic(() => import("./ShowtimesView"));
 const MusicListingsView = dynamic(() => import("./MusicListingsView"));
+const StageListingsView = dynamic(() => import("./StageListingsView"));
 
-type WhatsOnVertical = "film" | "music";
+type WhatsOnVertical = "film" | "music" | "stage";
 
 interface WhatsOnViewProps {
   portalId: string;
@@ -17,7 +18,8 @@ interface WhatsOnViewProps {
 export default function WhatsOnView({ portalId, portalSlug }: WhatsOnViewProps) {
   const searchParams = useSearchParams();
   const rawVertical = searchParams?.get("vertical");
-  const initialVertical: WhatsOnVertical = rawVertical === "music" ? "music" : "film";
+  const initialVertical: WhatsOnVertical =
+    rawVertical === "music" ? "music" : rawVertical === "stage" ? "stage" : "film";
   const [activeVertical, setActiveVertical] = useState<WhatsOnVertical>(initialVertical);
 
   const handleVerticalChange = useCallback((vertical: WhatsOnVertical) => {
@@ -30,6 +32,7 @@ export default function WhatsOnView({ portalId, portalSlug }: WhatsOnViewProps) 
   const verticals: { key: WhatsOnVertical; label: string }[] = [
     { key: "film", label: "Film" },
     { key: "music", label: "Music" },
+    { key: "stage", label: "Stage" },
   ];
 
   return (
@@ -61,6 +64,9 @@ export default function WhatsOnView({ portalId, portalSlug }: WhatsOnViewProps) 
       )}
       {activeVertical === "music" && (
         <MusicListingsView portalId={portalId} portalSlug={portalSlug} />
+      )}
+      {activeVertical === "stage" && (
+        <StageListingsView portalId={portalId} portalSlug={portalSlug} />
       )}
     </div>
   );

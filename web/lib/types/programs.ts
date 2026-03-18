@@ -1,5 +1,18 @@
 // Programs entity types — maps to database/schema.sql programs table
 
+/**
+ * Library pass data embedded in the venues.library_pass JSONB column.
+ * Shared between LibraryPassCallout and LibraryPassSection.
+ */
+export type LibraryPassData = {
+  eligible: boolean;
+  program: string;
+  benefit: string;
+  passes_per_checkout: number | null;
+  notes: string | null;
+  url: string;
+};
+
 export type ProgramType =
   | "camp"
   | "enrichment"
@@ -64,6 +77,9 @@ export interface Program {
   updated_at: string;
 }
 
+/** Venue environment classification — mirrors DB enum venue_environment */
+export type VenueEnvironment = "indoor" | "outdoor" | "both";
+
 export interface ProgramWithVenue extends Program {
   venue: {
     id: number;
@@ -74,6 +90,7 @@ export interface ProgramWithVenue extends Program {
     lat: number | null;
     lng: number | null;
     image_url: string | null;
+    indoor_outdoor: VenueEnvironment | null;
   } | null;
 }
 

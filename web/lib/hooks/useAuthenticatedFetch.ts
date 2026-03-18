@@ -133,7 +133,10 @@ export function useAuthenticatedFetch() {
           return { data: null, error: errorMessage, status: response.status };
         }
 
-        // Parse successful response
+        // Parse successful response (204 No Content has no body)
+        if (response.status === 204) {
+          return { data: null as T, error: null, status: response.status };
+        }
         const data = await response.json();
         return { data: data as T, error: null, status: response.status };
       } catch (error) {

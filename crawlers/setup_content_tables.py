@@ -29,17 +29,17 @@ ORGANIZATIONS = [
     {"id": "atlanta-symphony", "name": "Atlanta Symphony Orchestra", "slug": "atlanta-symphony", "org_type": "arts_nonprofit", "website": "https://aso.org", "categories": ["music"], "neighborhood": "Midtown"},
     {"id": "georgia-symphony", "name": "Georgia Symphony Orchestra", "slug": "georgia-symphony", "org_type": "arts_nonprofit", "website": "https://georgiasymphony.org", "instagram": "georgiasymphony", "description": "For over 70 years, the Georgia Symphony has engaged audiences through imaginative programming, visionary leadership, and critically acclaimed performances.", "categories": ["music"], "neighborhood": "Marietta", "city": "Marietta"},
     {"id": "atlanta-opera", "name": "Atlanta Opera", "slug": "atlanta-opera", "org_type": "arts_nonprofit", "website": "https://atlantaopera.org", "categories": ["music", "theater"], "neighborhood": "Midtown"},
-    {"id": "atlanta-ballet", "name": "Atlanta Ballet", "slug": "atlanta-ballet", "org_type": "arts_nonprofit", "website": "https://atlantaballet.com", "categories": ["theater", "fitness"], "neighborhood": "Midtown"},
+    {"id": "atlanta-ballet", "name": "Atlanta Ballet", "slug": "atlanta-ballet", "org_type": "arts_nonprofit", "website": "https://atlantaballet.com", "categories": ["theater", "exercise"], "neighborhood": "Midtown"},
 
     # Community Organizations
-    {"id": "atlanta-beltline-inc", "name": "Atlanta BeltLine Inc", "slug": "atlanta-beltline-inc", "org_type": "community_group", "website": "https://beltline.org", "categories": ["art", "community", "fitness"], "neighborhood": None},
-    {"id": "trees-atlanta", "name": "Trees Atlanta", "slug": "trees-atlanta", "org_type": "community_group", "website": "https://treesatlanta.org", "categories": ["community", "fitness"], "neighborhood": None},
+    {"id": "atlanta-beltline-inc", "name": "Atlanta BeltLine Inc", "slug": "atlanta-beltline-inc", "org_type": "community_group", "website": "https://beltline.org", "categories": ["art", "community", "exercise"], "neighborhood": None},
+    {"id": "trees-atlanta", "name": "Trees Atlanta", "slug": "trees-atlanta", "org_type": "community_group", "website": "https://treesatlanta.org", "categories": ["community", "exercise"], "neighborhood": None},
     {"id": "park-pride", "name": "Park Pride", "slug": "park-pride", "org_type": "community_group", "website": "https://parkpride.org", "categories": ["community"], "neighborhood": None},
     {"id": "atlanta-audubon", "name": "Atlanta Audubon Society", "slug": "atlanta-audubon", "org_type": "community_group", "website": "https://atlantaaudubon.org", "categories": ["community", "learning"], "neighborhood": None},
 
-    # Running & Fitness
-    {"id": "atlanta-track-club", "name": "Atlanta Track Club", "slug": "atlanta-track-club", "org_type": "running_club", "website": "https://atlantatrackclub.org", "categories": ["fitness", "community"], "neighborhood": None},
-    {"id": "november-project-atl", "name": "November Project Atlanta", "slug": "november-project-atl", "org_type": "running_club", "website": "https://november-project.com/atlanta", "categories": ["fitness", "community"], "neighborhood": None},
+    # Running & Exercise
+    {"id": "atlanta-track-club", "name": "Atlanta Track Club", "slug": "atlanta-track-club", "org_type": "running_club", "website": "https://atlantatrackclub.org", "categories": ["exercise", "community"], "neighborhood": None},
+    {"id": "november-project-atl", "name": "November Project Atlanta", "slug": "november-project-atl", "org_type": "running_club", "website": "https://november-project.com/atlanta", "categories": ["exercise", "community"], "neighborhood": None},
 
     # Food & Drink
     {"id": "taste-of-atlanta", "name": "Taste of Atlanta", "slug": "taste-of-atlanta", "org_type": "food_festival", "website": "https://tasteofatlanta.com", "categories": ["food_drink", "festival"], "neighborhood": "Midtown"},

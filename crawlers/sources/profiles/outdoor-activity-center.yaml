@@ -1,0 +1,23 @@
+version: 1
+slug: outdoor-activity-center
+name: Outdoor Activity Center
+integration_method: html
+defaults:
+  category: family
+  tags:
+  - nature
+  - environmental-education
+  - family
+  - west-atlanta
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.wawa-online.org/outdoor-center
+detail:
+  enabled: true
+  use_open_graph: true
+data_goals:
+- destinations
+- destination_details
+- venue_features

@@ -18,12 +18,21 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, get_client, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://zooatlanta.org"
 EVENTS_URL = f"{BASE_URL}/visit/events/"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 VENUE_DATA = {
     "name": "Zoo Atlanta",
@@ -64,6 +73,82 @@ VENUE_DATA = {
         "habitats make it one of the South's premier family destinations."
     ),
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "zoo",
+            "commitment_tier": "halfday",
+            "primary_activity": "family zoo visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["outdoor", "family-daytrip"],
+            "parking_type": "paid_lot",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "Zoo Atlanta is easiest as an earlier-start family outing, because it is a walking-heavy destination "
+                "that works best before heat, crowds, or kid energy dips build up. Families should think in loops "
+                "and rest breaks rather than trying to do the whole zoo at one speed."
+            ),
+            "accessibility_notes": (
+                "The zoo is more stroller-friendly than a trail destination, but it still asks more walking than a "
+                "compact indoor stop and is more weather-exposed, so shade and sit-down pacing matter more here than at the city's indoor anchors."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "General admission, animal experiences, and special events vary by date and package.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "zoo",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "animal-habitats-and-family-walking-circuits",
+            "title": "Animal habitats and family walking circuits",
+            "feature_type": "experience",
+            "description": "Zoo Atlanta works as a classic family animal outing built around habitat loops and slower-paced exhibit stops.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "grant-park-family-anchor",
+            "title": "Grant Park family anchor",
+            "feature_type": "amenity",
+            "description": "Its Grant Park location makes the zoo one of the easier big-ticket family anchors to pair with nearby park time or other neighborhood stops.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "shade-and-rest-break-pacing",
+            "title": "Shade and rest-break pacing",
+            "feature_type": "amenity",
+            "description": "Zoo Atlanta is strongest for families who pace the day around shade, snack, and sit-down breaks instead of treating it like a short indoor attraction.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    return envelope
 
 
 def extract_background_image_url(element) -> Optional[str]:
@@ -230,6 +315,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 logger.debug("Zoo Atlanta: could not extract og meta from homepage: %s", _meta_exc)
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             # Persist any og: enrichment to the venue record
             try:

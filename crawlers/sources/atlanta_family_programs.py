@@ -27,6 +27,9 @@ from sources._activecommunities_family_filter import (
     infer_activecommunities_schedule_days,
     infer_activecommunities_schedule_time_range,
     is_family_relevant_activity,
+    normalize_activecommunities_age,
+    normalize_activecommunities_session_title,
+    parse_age_from_name,
 )
 from sources.atlanta_dpr import (
     ACTIVITY_SEARCH_URL,
@@ -156,6 +159,101 @@ def _build_program_record(
     return program_data
 
 
+def _consolidate_daily_sessions(raw_items: list[dict]) -> list[dict]:
+    """
+    Merge per-day ACTIVENet session records into single multi-day program records.
+
+    ACTIVENet lists some multi-day camps as individual daily sessions where the
+    date is embedded in the title, e.g.:
+      "Gresham 2026 Spring Break Camp Apr. 6th"   (start=Apr 6, end=Apr 6)
+      "Gresham 2026 Spring Break Camp Apr. 7th"   (start=Apr 7, end=Apr 7)
+      ...
+      "Gresham 2026 Spring Break Camp Apr. 10th"  (start=Apr 10, end=Apr 10)
+
+    Groups by (normalized_title, location_label) and merges to a single record
+    spanning the earliest start_date through the latest end_date.  The first
+    item's metadata is kept; the title is set to the normalized (suffix-stripped)
+    form.
+    """
+    from collections import defaultdict
+
+    # Key: (normalized_title, location_label)
+    groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for item in raw_items:
+        raw_name = (item.get("name") or "").strip()
+        normalized = normalize_activecommunities_session_title(raw_name)
+        location_label = (item.get("location") or {}).get("label") or ""
+        key = (normalized.lower(), location_label.lower().strip())
+        groups[key].append(item)
+
+    consolidated: list[dict] = []
+    for (_, _), group in groups.items():
+        if len(group) == 1:
+            consolidated.append(group[0])
+            continue
+
+        # Multiple daily sessions — merge into one record
+        representative = dict(group[0])
+        normalized_name = normalize_activecommunities_session_title(
+            (representative.get("name") or "").strip()
+        )
+        # Find earliest start and latest end across all sessions
+        starts = [
+            item.get("date_range_start")
+            for item in group
+            if item.get("date_range_start")
+        ]
+        ends = [
+            item.get("date_range_end") or item.get("date_range_start")
+            for item in group
+            if (item.get("date_range_end") or item.get("date_range_start"))
+        ]
+        if starts:
+            representative["date_range_start"] = min(starts)
+        if ends:
+            representative["date_range_end"] = max(ends)
+        representative["name"] = normalized_name
+        # Mark how many sessions were merged (stored in metadata)
+        representative["_merged_session_count"] = len(group)
+        consolidated.append(representative)
+        logger.debug(
+            "Atlanta family programs: merged %d daily sessions into '%s'",
+            len(group),
+            normalized_name,
+        )
+
+    return consolidated
+
+
+def _collect_all_items(session, csrf) -> list[dict]:
+    """Fetch all pages from the ACTIVENet catalog and return the raw item list."""
+    import time
+
+    first = _fetch_page(session, csrf, 1)
+    if first is None:
+        return []
+
+    _, _total_records, total_pages = first
+    total_pages = min(total_pages, MAX_PAGES)
+
+    all_items: list[dict] = []
+    for page_num in range(1, total_pages + 1):
+        if page_num == 1:
+            result = first
+        else:
+            time.sleep(REQUEST_DELAY)
+            result = _fetch_page(session, csrf, page_num)
+            if result is None:
+                break
+
+        items, _, _ = result
+        if not items:
+            break
+        all_items.extend(items)
+
+    return all_items
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl family-relevant public programs from Atlanta DPR's ACTIVENet catalog."""
     from db.sources import get_source_info
@@ -174,144 +272,138 @@ def crawl(source: dict) -> tuple[int, int, int]:
     if not session or not csrf:
         return 0, 0, 0
 
-    first = _fetch_page(session, csrf, 1)
-    if first is None:
-        logger.error("Atlanta family programs: failed to fetch page 1")
+    # Collect all raw items first so we can consolidate per-day sessions
+    raw_items = _collect_all_items(session, csrf)
+    if not raw_items:
+        logger.error("Atlanta family programs: failed to fetch any items")
         return 0, 0, 0
 
-    _, _total_records, total_pages = first
-    total_pages = min(total_pages, MAX_PAGES)
+    items_to_process = _consolidate_daily_sessions(raw_items)
+    logger.info(
+        "Atlanta family programs: %d raw items → %d after session consolidation",
+        len(raw_items),
+        len(items_to_process),
+    )
 
-    for page_num in range(1, total_pages + 1):
-        if page_num == 1:
-            result = first
-        else:
-            import time
-
-            time.sleep(REQUEST_DELAY)
-            result = _fetch_page(session, csrf, page_num)
-            if result is None:
-                break
-
-        items, _, _ = result
-        if not items:
-            break
-
-        for item in items:
-            try:
-                name: str = (item.get("name") or "").strip()
-                if not name:
-                    continue
-
-                desc_html: str = item.get("desc") or ""
-                desc_text = BeautifulSoup(desc_html, "html.parser").get_text(" ", strip=True)
-
-                if _should_skip_dedicated_item(name, desc_text):
-                    continue
-
-                start_raw = _parse_date(item.get("date_range_start"))
-                end_raw = _parse_date(item.get("date_range_end"))
-
-                if start_raw:
-                    start_dt = datetime.strptime(start_raw, "%Y-%m-%d").date()
-                    if start_dt < today and not end_raw:
-                        continue
-                if end_raw:
-                    end_dt = datetime.strptime(end_raw, "%Y-%m-%d").date()
-                    if end_dt < today:
-                        continue
-
-                age_min: Optional[int] = item.get("age_min_year")
-                age_max: Optional[int] = item.get("age_max_year")
-                if age_max is not None and age_max > 90:
-                    age_max = None
-
-                category, tags = _classify(name, desc_text, age_min, age_max)
-                if not is_family_relevant_activity(
-                    name=name,
-                    desc_text=desc_text,
-                    age_min=age_min,
-                    age_max=age_max,
-                    category=category,
-                    tags=tags,
-                    blocked_keywords=_BLOCKED_KEYWORDS,
-                ):
-                    continue
-
-                location_label: str = item.get("location", {}).get("label") or ""
-                venue_key = location_label.lower().strip()
-                if venue_key not in venue_cache:
-                    venue_cache[venue_key] = get_or_create_venue(_resolve_venue_data(location_label))
-                venue_id = venue_cache[venue_key]
-
-                price_min, price_max, is_free = _extract_prices(desc_html)
-                detail_url = item.get("detail_url") or ACTIVITY_SEARCH_URL
-                description = desc_text[:1000] if desc_text else None
-                venue_name = _resolve_venue_data(location_label).get("name", "Atlanta DPR")
-                hash_key = start_raw if start_raw else str(item.get("id"))
-                content_hash = generate_content_hash(name, venue_name, hash_key)
-                schedule_start_time, schedule_end_time = infer_activecommunities_schedule_time_range(
-                    date_range_description=item.get("date_range_description"),
-                    desc_text=desc_text,
-                )
-
-                event_record: dict = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": name,
-                    "description": description,
-                    "start_date": start_raw or today.strftime("%Y-%m-%d"),
-                    "start_time": schedule_start_time,
-                    "end_date": end_raw,
-                    "end_time": schedule_end_time,
-                    "is_all_day": False if schedule_start_time else (True if not start_raw else False),
-                    "category": category,
-                    "subcategory": None,
-                    "tags": tags,
-                    "price_min": price_min,
-                    "price_max": price_max,
-                    "price_note": None,
-                    "is_free": is_free,
-                    "source_url": detail_url,
-                    "ticket_url": detail_url,
-                    "image_url": None,
-                    "raw_text": f"{name} | {location_label} | {item.get('ages', '')}",
-                    "extraction_confidence": 0.88,
-                    "is_recurring": bool(end_raw and start_raw and end_raw != start_raw),
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-                if age_min is not None:
-                    event_record["age_min"] = age_min
-                if age_max is not None:
-                    event_record["age_max"] = age_max
-
-                events_found += 1
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                else:
-                    insert_event(event_record)
-                    events_new += 1
-
-                program_record = _build_program_record(
-                    event_record=event_record,
-                    item=item,
-                    desc_text=desc_text,
-                    venue_name=venue_name,
-                    source_id=source_id,
-                    portal_id=portal_id,
-                    age_min=age_min,
-                    age_max=age_max,
-                )
-                if program_record:
-                    program_envelope.add("programs", program_record)
-            except Exception as exc:
-                logger.error("Atlanta family programs: error processing item %s: %s", item.get("id"), exc)
+    for item in items_to_process:
+        try:
+            name: str = (item.get("name") or "").strip()
+            if not name:
                 continue
 
-        program_envelope = _flush_program_envelope(program_envelope)
+            desc_html: str = item.get("desc") or ""
+            desc_text = BeautifulSoup(desc_html, "html.parser").get_text(" ", strip=True)
+
+            if _should_skip_dedicated_item(name, desc_text):
+                continue
+
+            start_raw = _parse_date(item.get("date_range_start"))
+            end_raw = _parse_date(item.get("date_range_end"))
+
+            if start_raw:
+                start_dt = datetime.strptime(start_raw, "%Y-%m-%d").date()
+                if start_dt < today and not end_raw:
+                    continue
+            if end_raw:
+                end_dt = datetime.strptime(end_raw, "%Y-%m-%d").date()
+                if end_dt < today:
+                    continue
+
+            # ACTIVENet returns 0 (not None) when there is no age restriction.
+            # normalize_activecommunities_age converts 0 and >90 to None.
+            age_min: Optional[int] = normalize_activecommunities_age(item.get("age_min_year"))
+            age_max: Optional[int] = normalize_activecommunities_age(item.get("age_max_year"))
+            # Fallback: extract age range from the program name when the
+            # API didn't supply structured age data.
+            if age_min is None and age_max is None:
+                age_min, age_max = parse_age_from_name(name)
+
+            category, tags = _classify(name, desc_text, age_min, age_max)
+            if not is_family_relevant_activity(
+                name=name,
+                desc_text=desc_text,
+                age_min=age_min,
+                age_max=age_max,
+                category=category,
+                tags=tags,
+                blocked_keywords=_BLOCKED_KEYWORDS,
+            ):
+                continue
+
+            location_label: str = item.get("location", {}).get("label") or ""
+            venue_key = location_label.lower().strip()
+            if venue_key not in venue_cache:
+                venue_cache[venue_key] = get_or_create_venue(_resolve_venue_data(location_label))
+            venue_id = venue_cache[venue_key]
+
+            price_min, price_max, is_free = _extract_prices(desc_html)
+            detail_url = item.get("detail_url") or ACTIVITY_SEARCH_URL
+            description = desc_text[:1000] if desc_text else None
+            venue_name = _resolve_venue_data(location_label).get("name", "Atlanta DPR")
+            # Hash on normalized name + venue + start_date so consolidated
+            # sessions don't re-insert on next crawl.
+            hash_key = start_raw if start_raw else str(item.get("id"))
+            content_hash = generate_content_hash(name, venue_name, hash_key)
+            schedule_start_time, schedule_end_time = infer_activecommunities_schedule_time_range(
+                date_range_description=item.get("date_range_description"),
+                desc_text=desc_text,
+            )
+
+            event_record: dict = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": name,
+                "description": description,
+                "start_date": start_raw or today.strftime("%Y-%m-%d"),
+                "start_time": schedule_start_time,
+                "end_date": end_raw,
+                "end_time": schedule_end_time,
+                "is_all_day": False if schedule_start_time else (True if not start_raw else False),
+                "category": category,
+                "subcategory": None,
+                "tags": tags,
+                "price_min": price_min,
+                "price_max": price_max,
+                "price_note": None,
+                "is_free": is_free,
+                "source_url": detail_url,
+                "ticket_url": detail_url,
+                "image_url": None,
+                "raw_text": f"{name} | {location_label} | {item.get('ages', '')}",
+                "extraction_confidence": 0.88,
+                "is_recurring": bool(end_raw and start_raw and end_raw != start_raw),
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
+            if age_min is not None:
+                event_record["age_min"] = age_min
+            if age_max is not None:
+                event_record["age_max"] = age_max
+
+            events_found += 1
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+            else:
+                insert_event(event_record)
+                events_new += 1
+
+            program_record = _build_program_record(
+                event_record=event_record,
+                item=item,
+                desc_text=desc_text,
+                venue_name=venue_name,
+                source_id=source_id,
+                portal_id=portal_id,
+                age_min=age_min,
+                age_max=age_max,
+            )
+            if program_record:
+                program_envelope.add("programs", program_record)
+        except Exception as exc:
+            logger.error("Atlanta family programs: error processing item %s: %s", item.get("id"), exc)
+            continue
 
     program_envelope = _flush_program_envelope(program_envelope)
 

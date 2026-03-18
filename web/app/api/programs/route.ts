@@ -6,6 +6,7 @@ import {
   isValidString,
   parseIntParam,
   escapeSQLPattern,
+  validationError,
 } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
@@ -45,9 +46,24 @@ export async function GET(request: NextRequest) {
   const dayFilter = parseIntParam(searchParams.get("day"));
   const qFilter = searchParams.get("q");
   const sortParam = searchParams.get("sort") ?? "session_start";
+  // tag=sports|arts|stem|... — filters by activity tag using array containment
+  const tagFilter = searchParams.get("tag");
   const includeEventsFallback = searchParams.get("include_events_fallback") === "true";
+  // environment=indoor|outdoor|both — filters programs by their venue's indoor_outdoor classification
+  const environmentFilter = searchParams.get("environment");
   // active=true: exclude past programs (session_end < today) and adult-only programs (age_min > 17)
   const activeOnly = searchParams.get("active") === "true";
+
+  // Range-validate age and cost_max before use in PostgREST filter strings
+  if (ageFilter !== null && (ageFilter < 0 || ageFilter > 18)) {
+    return validationError("age must be between 0 and 18");
+  }
+  if (costMaxFilter !== null) {
+    const costMaxParsed = parseFloat(costMaxFilter);
+    if (isNaN(costMaxParsed) || costMaxParsed < 0 || costMaxParsed > 10000) {
+      return validationError("cost_max must be between 0 and 10000");
+    }
+  }
 
   try {
     const supabase = await createClient();
@@ -70,6 +86,14 @@ export async function GET(request: NextRequest) {
     const portalId = portalContext.portalId;
 
     // Query programs table first
+    const today = new Date().toISOString().split("T")[0];
+    // Guard against stale programs that have null session_end but a session_start
+    // from more than 2 years ago (e.g. "N.H Scott 2021-2022 12 & Under Girls Basketball"
+    // with session_start from 2021 and no explicit end date).
+    const twoYearsAgo = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0];
+
     let programsQuery = supabase
       .from("programs")
       .select(
@@ -102,11 +126,21 @@ export async function GET(request: NextRequest) {
         lunch_included,
         tags,
         status,
-        venue:venues(id, name, neighborhood, address, city, lat, lng, image_url)
+        venue:venues(id, name, neighborhood, address, city, lat, lng, image_url, indoor_outdoor)
       `
       )
       .eq("portal_id", portalId)
-      .eq("status", "active");
+      .eq("status", "active")
+      // Temporal gate:
+      // - Programs with a future or present session_end → included
+      // - Programs with null session_end AND session_start within last 2 years → included (ongoing)
+      // - Programs with null session_end AND null session_start → included (no date info)
+      // - Programs with null session_end AND session_start older than 2 years → excluded (stale)
+      .or(
+        `session_end.gte.${today},and(session_end.is.null,or(session_start.is.null,session_start.gte.${twoYearsAgo}))`
+      )
+      // Exclude programs explicitly tagged as adults-only (AARP, adult leagues, etc.)
+      .not("tags", "cs", "{adults-only}");
 
     if (typeFilter && isValidString(typeFilter, 1, 50)) {
       programsQuery = programsQuery.eq("program_type", typeFilter);
@@ -123,9 +157,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (activeOnly) {
-      const today = new Date().toISOString().split("T")[0];
-      // Exclude sessions that have already ended; keep programs with no end date
-      programsQuery = programsQuery.or(`session_end.is.null,session_end.gte.${today}`);
+      // session_end filter is already applied unconditionally above.
       // Exclude adult-only programs: age_min > 17 means no one under 18 qualifies,
       // age_max > 60 means the program spans well into adult range (not family-focused)
       programsQuery = programsQuery.or(`age_min.is.null,age_min.lte.17`);
@@ -170,6 +202,20 @@ export async function GET(request: NextRequest) {
         `name.ilike.%${escaped}%,description.ilike.%${escaped}%`
       );
     }
+
+    // tag filter: array containment — programs whose tags include the requested activity tag
+    const VALID_ACTIVITY_TAGS = new Set([
+      "sports", "arts", "stem", "nature", "swimming", "coding",
+      "theater", "dance", "gymnastics", "music", "cooking", "general",
+    ]);
+    if (tagFilter && isValidString(tagFilter, 1, 30) && VALID_ACTIVITY_TAGS.has(tagFilter)) {
+      programsQuery = programsQuery.contains("tags", [tagFilter]);
+    }
+
+    // environment filter: uses the venue's indoor_outdoor classification
+    // We filter post-query (client-side) since Supabase doesn't support filtering
+    // on nested joins via query builder. The index on venues.indoor_outdoor still
+    // speeds up the DB read; we just do the final filter in JS.
 
     // Apply sort
     switch (sortParam) {
@@ -244,14 +290,36 @@ export async function GET(request: NextRequest) {
         lat: number | null;
         lng: number | null;
         image_url: string | null;
+        indoor_outdoor: "indoor" | "outdoor" | "both" | null;
       } | null;
     };
 
     // Post-query: filter out adult-titled programs that slip through DB filters
     const ADULT_TITLE_RE = /\badult/i;
-    const programs = ((programsData ?? []) as ProgramRow[]).filter(
-      (p) => !ADULT_TITLE_RE.test(p.name)
+    // Post-query: filter out programs whose title contains a past school-year range
+    // (e.g. "N.H Scott 2021-2022 Girls Basketball"). These have stale session_start
+    // dates and fabricated far-future session_end values that bypass temporal gates.
+    // Matches year ranges where the starting year ends before 2025.
+    const PAST_SCHOOL_YEAR_RE = /\b20(1\d|2[0-4])[-\u2013]\d{2,4}\b/;
+    let programs = ((programsData ?? []) as ProgramRow[]).filter(
+      (p) => !ADULT_TITLE_RE.test(p.name) && !PAST_SCHOOL_YEAR_RE.test(p.name)
     );
+
+    // Post-query: environment filter on venue.indoor_outdoor
+    // We filter here rather than in SQL because Supabase query builder doesn't
+    // support WHERE conditions on nested join columns.
+    if (environmentFilter && isValidString(environmentFilter, 1, 20)) {
+      const validEnvValues = new Set(["indoor", "outdoor", "both"]);
+      if (validEnvValues.has(environmentFilter)) {
+        programs = programs.filter((p) => {
+          const env = p.venue?.indoor_outdoor;
+          if (!env) return false; // skip unknown-classified venues
+          if (environmentFilter === "indoor") return env === "indoor" || env === "both";
+          if (environmentFilter === "outdoor") return env === "outdoor" || env === "both";
+          return env === environmentFilter;
+        });
+      }
+    }
 
     // Compatibility mode only: fall back to recurring events when explicitly requested.
     if (programs.length === 0 && offset === 0 && includeEventsFallback) {

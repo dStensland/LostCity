@@ -73,7 +73,7 @@ const LINKS = {
   morningClasses: (p: string): QuickLink => ({
     label: "Classes",
     icon: "Barbell",
-    href: buildHref(p, { categories: "fitness", date: "today" }),
+    href: buildHref(p, { categories: "exercise", date: "today" }),
     accent_color: "var(--neon-cyan)",
   }),
   farmersMarkets: (p: string): QuickLink => ({
@@ -259,7 +259,7 @@ const LINKS = {
   danceFitness: (p: string): QuickLink => ({
     label: "Dance & Fitness",
     icon: "Barbell",
-    href: buildHref(p, { categories: "fitness,dance", date: "today" }),
+    href: buildHref(p, { categories: "exercise,dance", date: "today" }),
     accent_color: "var(--neon-cyan)",
   }),
 } satisfies Record<string, LinkFactory>;

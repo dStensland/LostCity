@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { useMemo, useState } from "react";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
 import type { Destination } from "@/lib/forth-types";
 
 const DEFAULT_DESTINATION_IMAGE = "https://forthatlanta.com/hubfs/Forth/Website/Images/Club/hero-banner-club-faq-desktop.jpg";
@@ -80,11 +79,9 @@ export default function HotelDestinationCard({
     const seen = new Set<string>();
     for (const source of rawSources) {
       if (!source) continue;
-      const proxied = getProxiedImageSrc(source);
-      if (typeof proxied !== "string") continue;
-      if (seen.has(proxied)) continue;
-      seen.add(proxied);
-      unique.push(proxied);
+      if (seen.has(source)) continue;
+      seen.add(source);
+      unique.push(source);
     }
     return unique;
   }, [destination.venue.image_url]);
@@ -105,7 +102,7 @@ export default function HotelDestinationCard({
     >
       <div className="relative aspect-[4/3] bg-[var(--hotel-sand)] overflow-hidden rounded-t-[inherit] [clip-path:inset(0_round_0.75rem_0.75rem_0_0)]">
         {imageSrc ? (
-          <Image
+          <SmartImage
             src={imageSrc}
             alt={destination.venue.name}
             fill

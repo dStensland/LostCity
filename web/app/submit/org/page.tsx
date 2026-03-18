@@ -30,7 +30,7 @@ const CATEGORIES = [
   "film",
   "food_drink",
   "community",
-  "fitness",
+  "exercise",
   "family",
   "learning",
 ];

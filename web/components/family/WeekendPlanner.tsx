@@ -1,28 +1,33 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
+import { useWeekendForecast } from "@/lib/hooks/useWeekendForecast";
+import { matchesEnvironmentFilter } from "@/lib/family-constants";
+import type { GenericFilter } from "./KidFilterChips";
 import type { EventWithLocation } from "@/lib/search";
 import type { KidProfile } from "@/lib/types/kid-profiles";
+import { LibraryPassSection } from "./LibraryPassSection";
+import { FamilyDestinationCard, type FamilyDestination } from "./FamilyDestinationCard";
+import { FAMILY_TOKENS } from "@/lib/family-design-tokens";
 
 // ---- Palette (Afternoon Field) -------------------------------------------
 
-const CANVAS = "#F0EDE4";
-const CARD = "#FAFAF6";
-const SAGE = "#5E7A5E";
-const AMBER = "#C48B1D";
-const MOSS = "#7A9E7A";
-const TEXT = "#1E2820";
-const MUTED = "#756E63";
-const BORDER = "#E0DDD4";
-const SAGE_WASH = "#EEF2EE";
+const CANVAS = FAMILY_TOKENS.canvas;
+const CARD = FAMILY_TOKENS.card;
+const SAGE = FAMILY_TOKENS.sage;
+const AMBER = FAMILY_TOKENS.amber;
+const MOSS = FAMILY_TOKENS.moss;
+const TEXT = FAMILY_TOKENS.text;
+const MUTED = FAMILY_TOKENS.textSecondary;
+const BORDER = FAMILY_TOKENS.border;
 
 // ---- Font helpers --------------------------------------------------------
 
-const FONT_HEADING = "var(--font-plus-jakarta-sans, system-ui, sans-serif)";
-const FONT_BODY = "var(--font-dm-sans, system-ui, sans-serif)";
+const FONT_HEADING = FAMILY_TOKENS.fontHeading;
+const FONT_BODY = FAMILY_TOKENS.fontBody;
 
 // ---- Title helpers -------------------------------------------------------
 
@@ -43,6 +48,7 @@ interface WeekendPlannerProps {
   portalSlug: string;
   activeKidIds?: string[];
   kids?: KidProfile[];
+  activeGenericFilters?: GenericFilter[];
 }
 
 // ---- Date helpers --------------------------------------------------------
@@ -166,6 +172,18 @@ async function fetchWeekendEvents(portalSlug: string): Promise<EventWithLocation
       price_max: null,
       price_note: null,
     } as unknown as EventWithLocation));
+}
+
+async function fetchWeekendDestinations(
+  portalSlug: string,
+  environment?: "indoor" | "outdoor"
+): Promise<FamilyDestination[]> {
+  const params = new URLSearchParams({ portal: portalSlug, limit: "6", sort: "popular" });
+  if (environment) params.set("environment", environment);
+  const res = await fetch(`/api/family/destinations?${params.toString()}`);
+  if (!res.ok) return [];
+  const json = await res.json();
+  return (json.destinations ?? []) as FamilyDestination[];
 }
 
 // ---- Kid color helpers ---------------------------------------------------
@@ -578,7 +596,13 @@ function DayColumn({
             dateString={dateString}
           />
         </>
-      ) : null}
+      ) : (
+        <AddSomethingCard
+          portalSlug={portalSlug}
+          dayLabel={friendlyDay}
+          dateString={dateString}
+        />
+      )}
     </div>
   );
 }
@@ -744,6 +768,449 @@ function RecommendationCard({
   );
 }
 
+// ---- Weekend forecast strip ----------------------------------------------
+
+const SKY = "#78B7D0";
+const RAIN_COLOR = SKY;
+const SUN_COLOR = SAGE;
+
+interface DayForecastPillProps {
+  label: string; // "Saturday" | "Sunday"
+  emoji: string;
+  tempHigh: number;
+  tempLow: number;
+  condition: string;
+}
+
+function DayForecastPill({ label, emoji, tempHigh, tempLow, condition }: DayForecastPillProps) {
+  const isRainy =
+    condition.toLowerCase().includes("rain") ||
+    condition.toLowerCase().includes("shower") ||
+    condition.toLowerCase().includes("thunder") ||
+    condition.toLowerCase().includes("drizzle");
+  const pillColor = isRainy ? RAIN_COLOR : SUN_COLOR;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        backgroundColor: `${pillColor}14`,
+        border: `1px solid ${pillColor}30`,
+        borderRadius: 10,
+        padding: "7px 12px",
+        flex: 1,
+      }}
+    >
+      <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{emoji}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p
+          style={{
+            fontFamily: FONT_HEADING,
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.5px",
+            textTransform: "uppercase",
+            color: pillColor,
+            marginBottom: 1,
+          }}
+        >
+          {label}
+        </p>
+        <p
+          style={{
+            fontFamily: FONT_BODY,
+            fontSize: 12,
+            fontWeight: 600,
+            color: TEXT,
+            lineHeight: 1.2,
+          }}
+        >
+          {tempHigh}° / {tempLow}°
+        </p>
+        <p
+          style={{
+            fontFamily: FONT_BODY,
+            fontSize: 10,
+            color: MUTED,
+            marginTop: 1,
+          }}
+        >
+          {condition}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function WeekendForecastStrip({
+  portalSlug,
+}: {
+  portalSlug: string;
+}) {
+  const { saturday, sunday, loading, hasRain } = useWeekendForecast();
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", gap: 8, padding: "0 20px 12px" }}>
+        {[1, 2].map((i) => (
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              height: 64,
+              borderRadius: 10,
+              backgroundColor: BORDER,
+              opacity: 0.5,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  // Don't render if we have no forecast data
+  if (!saturday && !sunday) return null;
+
+  return (
+    <div style={{ padding: "0 20px 4px" }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: hasRain ? 8 : 0 }}>
+        {saturday && (
+          <DayForecastPill
+            label="Saturday"
+            emoji={saturday.emoji}
+            tempHigh={saturday.tempHigh}
+            tempLow={saturday.tempLow}
+            condition={saturday.condition}
+          />
+        )}
+        {sunday && (
+          <DayForecastPill
+            label="Sunday"
+            emoji={sunday.emoji}
+            tempHigh={sunday.tempHigh}
+            tempLow={sunday.tempLow}
+            condition={sunday.condition}
+          />
+        )}
+      </div>
+
+      {/* Rain advisory: nudge toward indoor alternatives */}
+      {hasRain && (
+        <div
+          style={{
+            backgroundColor: `${SKY}10`,
+            border: `1px solid ${SKY}30`,
+            borderRadius: 8,
+            padding: "6px 10px",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <span style={{ fontSize: 13 }}>☂️</span>
+          <span
+            style={{
+              fontFamily: FONT_BODY,
+              fontSize: 11,
+              color: MUTED,
+              lineHeight: 1.4,
+            }}
+          >
+            Rain possible this weekend.{" "}
+            <Link
+              href={`/${portalSlug}?tab=programs`}
+              style={{ color: SKY, fontWeight: 600 }}
+            >
+              See indoor options →
+            </Link>
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---- Budget Picks section ------------------------------------------------
+
+/**
+ * Compact horizontal scroll of free and low-cost weekend events.
+ * Derives from existing fetched data — no additional API call.
+ */
+function BudgetPicksSection({
+  events,
+  portalSlug,
+  isLoading,
+}: {
+  events: EventWithLocation[];
+  portalSlug: string;
+  isLoading: boolean;
+}) {
+  // Take free events first, then low-cost (price_max <= 15), cap at 4
+  const freeEvents = events.filter((e) => e.is_free);
+  const cheapEvents = events.filter(
+    (e) =>
+      !e.is_free &&
+      e.price_max !== null &&
+      e.price_max !== undefined &&
+      (e.price_max as number) <= 15
+  );
+  const picks = [...freeEvents, ...cheapEvents].slice(0, 4);
+
+  // Only render when we have at least 2 picks or we're loading
+  if (!isLoading && picks.length < 2) return null;
+
+  return (
+    <div style={{ paddingTop: 20 }}>
+      {/* Section header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 20px 10px",
+        }}
+      >
+        <p
+          style={{
+            fontFamily: FONT_HEADING,
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "1.2px",
+            color: AMBER,
+            textTransform: "uppercase",
+            margin: 0,
+          }}
+        >
+          Budget Picks
+        </p>
+        <Link
+          href={`/${portalSlug}?view=find&type=events&date=weekend&free=1`}
+          style={{
+            fontFamily: FONT_BODY,
+            fontSize: 12,
+            color: SAGE,
+            textDecoration: "none",
+          }}
+        >
+          All free →
+        </Link>
+      </div>
+
+      {/* Horizontal scroll row */}
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          overflowX: "auto",
+          padding: "0 20px 4px",
+          scrollbarWidth: "none",
+        }}
+      >
+        {isLoading
+          ? [1, 2, 3].map((i) => (
+              <div
+                key={i}
+                style={{
+                  flexShrink: 0,
+                  width: 160,
+                  height: 96,
+                  borderRadius: 12,
+                  backgroundColor: BORDER,
+                  opacity: 0.5,
+                }}
+              />
+            ))
+          : picks.map((event) => {
+              const displayTitle = stripProgramCode(event.title);
+              const timeLabel = event.start_time ? formatEventTime(event.start_time) : null;
+              const priceLabel =
+                event.is_free
+                  ? "Free"
+                  : event.price_max != null
+                  ? `$${event.price_max}`
+                  : null;
+
+              return (
+                <Link
+                  key={event.id}
+                  href={`/${portalSlug}?event=${event.id}`}
+                  style={{
+                    flexShrink: 0,
+                    width: 160,
+                    backgroundColor: CARD,
+                    borderRadius: 12,
+                    border: `1px solid ${BORDER}`,
+                    borderTop: `3px solid ${AMBER}`,
+                    padding: "10px 12px",
+                    textDecoration: "none",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                    boxShadow: "0 1px 4px rgba(30,40,32,0.06)",
+                  }}
+                >
+                  {/* Price badge */}
+                  {priceLabel && (
+                    <span
+                      style={{
+                        alignSelf: "flex-start",
+                        fontFamily: FONT_BODY,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: event.is_free ? "#3D6B3D" : "#7A5C00",
+                        backgroundColor: event.is_free ? "#5E7A5E14" : `${AMBER}14`,
+                        borderRadius: 6,
+                        padding: "2px 6px",
+                        letterSpacing: "0.3px",
+                      }}
+                    >
+                      {priceLabel}
+                    </span>
+                  )}
+
+                  {/* Title */}
+                  <p
+                    style={{
+                      fontFamily: FONT_HEADING,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: TEXT,
+                      lineHeight: 1.3,
+                      margin: 0,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {displayTitle}
+                  </p>
+
+                  {/* Venue + time */}
+                  <p
+                    style={{
+                      fontFamily: FONT_BODY,
+                      fontSize: 11,
+                      color: MUTED,
+                      margin: 0,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {timeLabel ? `${timeLabel} · ` : ""}{event.venue?.name ?? ""}
+                  </p>
+                </Link>
+              );
+            })}
+      </div>
+    </div>
+  );
+}
+
+// ---- Weekend Destinations section ----------------------------------------
+
+function WeekendDestinationsSection({
+  destinations,
+  isLoading,
+  portalSlug,
+  satIsRainy,
+  sunIsRainy,
+}: {
+  destinations: FamilyDestination[];
+  isLoading: boolean;
+  portalSlug: string;
+  satIsRainy: boolean;
+  sunIsRainy: boolean;
+}) {
+  if (!isLoading && destinations.length === 0) return null;
+
+  // Choose section header based on forecast
+  let headerLabel = "Weekend Destinations";
+  if (satIsRainy && !sunIsRainy) {
+    headerLabel = "Indoor Picks for Saturday";
+  } else if (!satIsRainy && sunIsRainy) {
+    headerLabel = "Outdoor Picks for Sunday";
+  } else if (satIsRainy && sunIsRainy) {
+    headerLabel = "Indoor Activities This Weekend";
+  }
+
+  return (
+    <div style={{ paddingTop: 20 }}>
+      {/* Section header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 20px 10px",
+        }}
+      >
+        <p
+          style={{
+            fontFamily: FONT_HEADING,
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "1.2px",
+            color: SAGE,
+            textTransform: "uppercase",
+            margin: 0,
+          }}
+        >
+          {headerLabel}
+        </p>
+        <Link
+          href={`/${portalSlug}?view=find&type=destinations`}
+          style={{
+            fontFamily: FONT_BODY,
+            fontSize: 12,
+            color: SAGE,
+            textDecoration: "none",
+          }}
+        >
+          All →
+        </Link>
+      </div>
+
+      {/* Horizontal scroll row */}
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          overflowX: "auto",
+          padding: "0 20px 4px",
+          scrollbarWidth: "none",
+        }}
+      >
+        {isLoading
+          ? [1, 2].map((i) => (
+              <div
+                key={i}
+                style={{
+                  flexShrink: 0,
+                  width: 260,
+                  height: 200,
+                  borderRadius: 14,
+                  backgroundColor: BORDER,
+                  opacity: 0.5,
+                }}
+              />
+            ))
+          : destinations.map((d) => (
+              <FamilyDestinationCard
+                key={d.id}
+                destination={d}
+                portalSlug={portalSlug}
+                layout="carousel"
+              />
+            ))}
+      </div>
+    </div>
+  );
+}
+
 // ---- Main component ------------------------------------------------------
 
 export const WeekendPlanner = memo(function WeekendPlanner({
@@ -751,10 +1218,43 @@ export const WeekendPlanner = memo(function WeekendPlanner({
   portalSlug,
   activeKidIds = [],
   kids = [],
+  activeGenericFilters = [],
 }: Omit<WeekendPlannerProps, "portalId"> & { portalId?: string }) {
   const { saturday, sunday } = getWeekendDates();
   const satStr = toDateString(saturday);
   const sunStr = toDateString(sunday);
+
+  const indoorActive = activeGenericFilters.includes("indoor");
+  const outdoorActive = activeGenericFilters.includes("outdoor");
+
+  // Weekend forecast for destination environment prioritization
+  const { saturday: satForecast, sunday: sunForecast } = useWeekendForecast();
+
+  const satIsRainy =
+    !!satForecast?.condition &&
+    (satForecast.condition.toLowerCase().includes("rain") ||
+      satForecast.condition.toLowerCase().includes("shower") ||
+      satForecast.condition.toLowerCase().includes("thunder"));
+
+  const sunIsRainy =
+    !!sunForecast?.condition &&
+    (sunForecast.condition.toLowerCase().includes("rain") ||
+      sunForecast.condition.toLowerCase().includes("shower") ||
+      sunForecast.condition.toLowerCase().includes("thunder"));
+
+  // Prefer indoor when more rainy days, outdoor when more sunny days
+  const weekendDestEnvironment: "indoor" | "outdoor" | undefined = (() => {
+    const rainyCount = (satIsRainy ? 1 : 0) + (sunIsRainy ? 1 : 0);
+    if (rainyCount >= 1) return "indoor";
+    if (rainyCount === 0 && (satForecast || sunForecast)) return "outdoor";
+    return undefined;
+  })();
+
+  const { data: weekendDestinations = [], isLoading: loadingDestinations } = useQuery({
+    queryKey: ["family-weekend-destinations", portalSlug, weekendDestEnvironment],
+    queryFn: () => fetchWeekendDestinations(portalSlug, weekendDestEnvironment),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const { data: allEvents = [], isLoading } = useQuery({
     queryKey: ["family-weekend-events", portalSlug],
@@ -762,23 +1262,36 @@ export const WeekendPlanner = memo(function WeekendPlanner({
     staleTime: 60 * 1000,
   });
 
+  // Apply indoor/outdoor filter if a chip is active
+  const filteredEvents = useMemo(() => {
+    if (indoorActive) {
+      return allEvents.filter((e) =>
+        matchesEnvironmentFilter(e.venue?.venue_type, "indoor")
+      );
+    }
+    if (outdoorActive) {
+      return allEvents.filter((e) =>
+        matchesEnvironmentFilter(e.venue?.venue_type, "outdoor")
+      );
+    }
+    return allEvents;
+  }, [allEvents, indoorActive, outdoorActive]);
+
   // Split by day
-  const satEvents = allEvents.filter((e) => e.start_date === satStr).slice(0, 4);
-  const sunEvents = allEvents.filter((e) => e.start_date === sunStr).slice(0, 4);
+  const satEvents = filteredEvents.filter((e) => e.start_date === satStr).slice(0, 4);
+  const sunEvents = filteredEvents.filter((e) => e.start_date === sunStr).slice(0, 4);
 
   // Perfect For section: top events that have an image (prefer richer cards)
-  const recommendations = allEvents
+  const recommendations = filteredEvents
     .filter((e) => e.image_url)
     .slice(0, 3);
   // Fall back to any top events if no images
-  const recEvents = recommendations.length >= 2 ? recommendations : allEvents.slice(0, 3);
+  const recEvents = recommendations.length >= 2 ? recommendations : filteredEvents.slice(0, 3);
 
   // Date range label
   const satLabel = saturday.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const sunLabel = sunday.toLocaleDateString("en-US", { day: "numeric" });
   const dateRangeLabel = `${satLabel}–${sunLabel}`;
-
-  const isEmptyState = !isLoading && allEvents.length === 0;
 
   return (
     <div style={{ backgroundColor: CANVAS, paddingBottom: 32 }}>
@@ -841,96 +1354,59 @@ export const WeekendPlanner = memo(function WeekendPlanner({
         </div>
       )}
 
-      {/* ---- Full empty state ---- */}
-      {isEmptyState && (
-        <div
-          style={{
-            padding: "48px 20px",
-            textAlign: "center",
-          }}
-        >
-          <div
-            className="inline-flex items-center justify-center rounded-2xl mb-4"
-            style={{ width: 56, height: 56, backgroundColor: SAGE_WASH }}
-          >
-            <span style={{ fontSize: 28 }}>🌤️</span>
-          </div>
-          <p
-            style={{
-              fontFamily: FONT_HEADING,
-              fontSize: 16,
-              fontWeight: 700,
-              color: TEXT,
-              marginBottom: 6,
-            }}
-          >
-            Weekend is wide open
-          </p>
-          <p
-            style={{
-              fontFamily: FONT_BODY,
-              fontSize: 13,
-              color: MUTED,
-              marginBottom: 16,
-              maxWidth: 280,
-              marginLeft: "auto",
-              marginRight: "auto",
-            }}
-          >
-            Find family-friendly events happening this Saturday and Sunday.
-          </p>
-          <Link
-            href={`/${portalSlug}?view=find&type=events&date=weekend`}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "10px 24px",
-              borderRadius: 24,
-              backgroundColor: SAGE,
-              color: "#fff",
-              fontFamily: FONT_BODY,
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: "none",
-            }}
-          >
-            Browse weekend events →
-          </Link>
-        </div>
-      )}
+      {/* ---- Weekend weather forecast ---- */}
+      <WeekendForecastStrip portalSlug={portalSlug} />
 
-      {/* ---- Two-column Sat / Sun grid ---- */}
-      {!isEmptyState && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 10,
-            padding: "4px 12px",
-            maxWidth: 800,
-          }}
-        >
-          <DayColumn
-            label={formatDayLabel(saturday)}
-            date={saturday}
-            events={satEvents}
-            portalSlug={portalSlug}
-            activeKidIds={activeKidIds}
-            kids={kids}
-            isLoading={isLoading}
-          />
-          <DayColumn
-            label={formatDayLabel(sunday)}
-            date={sunday}
-            events={sunEvents}
-            portalSlug={portalSlug}
-            activeKidIds={activeKidIds}
-            kids={kids}
-            isLoading={isLoading}
-          />
-        </div>
-      )}
+      {/* ---- Two-column Sat / Sun grid — always rendered, each column shows its own empty state ---- */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 10,
+          padding: "4px 12px",
+          maxWidth: 800,
+        }}
+      >
+        <DayColumn
+          label={formatDayLabel(saturday)}
+          date={saturday}
+          events={satEvents}
+          portalSlug={portalSlug}
+          activeKidIds={activeKidIds}
+          kids={kids}
+          isLoading={isLoading}
+        />
+        <DayColumn
+          label={formatDayLabel(sunday)}
+          date={sunday}
+          events={sunEvents}
+          portalSlug={portalSlug}
+          activeKidIds={activeKidIds}
+          kids={kids}
+          isLoading={isLoading}
+        />
+      </div>
+
+      {/* ---- Budget Picks ---- */}
+      <BudgetPicksSection
+        events={filteredEvents}
+        portalSlug={portalSlug}
+        isLoading={isLoading}
+      />
+
+      {/* ---- Weekend Destinations ---- */}
+      <WeekendDestinationsSection
+        destinations={weekendDestinations}
+        isLoading={loadingDestinations}
+        portalSlug={portalSlug}
+        satIsRainy={satIsRainy}
+        sunIsRainy={sunIsRainy}
+      />
+
+      {/* ---- Free with Library Card ---- */}
+      <div style={{ paddingTop: 20 }}>
+        <LibraryPassSection portalSlug={portalSlug} />
+      </div>
 
       {/* ---- Perfect For This Weekend ---- */}
       {!isLoading && recEvents.length > 0 && (

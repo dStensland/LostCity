@@ -85,7 +85,7 @@ GOOGLE_TYPE_MAP = {
     "stadium": "arena",
     "bowling_alley": "games",
     "amusement_center": "games",
-    "gym": "fitness",
+    "gym": "fitness_center",
     "spa": "wellness",
     "book_store": "bookstore",
     "library": "library",

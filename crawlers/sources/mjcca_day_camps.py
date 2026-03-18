@@ -344,9 +344,25 @@ def _fetch_ajax_page(session: requests.Session, offset: int) -> list[dict]:
     return _parse_page(response.text)
 
 
+def _fetch_camp_image(session: requests.Session, url: str) -> Optional[str]:
+    """Fetch a camp detail page and extract the og:image URL."""
+    try:
+        resp = session.get(url, timeout=20)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        tag = soup.find("meta", property="og:image")
+        if tag and tag.get("content"):
+            return tag["content"].strip() or None
+    except Exception as exc:
+        logger.debug("[mjcca-day-camps] Failed to fetch image from %s: %s", url, exc)
+    return None
+
+
 def _fetch_rows() -> list[dict]:
     all_rows: list[dict] = []
     seen_hashes: set[str] = set()
+    # Map from camp detail URL to image URL (one fetch per unique camp concept)
+    image_cache: dict[str, Optional[str]] = {}
     session = requests.Session()
 
     for page_num in range(MAX_PAGES):
@@ -359,6 +375,13 @@ def _fetch_rows() -> list[dict]:
             if row["hash_key"] in seen_hashes:
                 continue
             seen_hashes.add(row["hash_key"])
+
+            # Fetch image from detail page once per unique camp URL
+            detail_url = row.get("source_url") or ""
+            if detail_url and detail_url not in image_cache:
+                image_cache[detail_url] = _fetch_camp_image(session, detail_url)
+            row["image_url"] = image_cache.get(detail_url)
+
             all_rows.append(row)
             new_rows += 1
 
@@ -399,7 +422,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
         "is_free": False,
         "source_url": row["source_url"],
         "ticket_url": row["ticket_url"],
-        "image_url": None,
+        "image_url": row.get("image_url"),
         "raw_text": f"{title} | {description}",
         "extraction_confidence": 0.9,
         "is_recurring": False,

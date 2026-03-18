@@ -58,6 +58,7 @@ export const AMBIENT_DISABLED_VERTICALS = [
   "marketplace",
   "dog",
   "adventure",
+  "family",
 ] as const;
 
 export const GLOBAL_EFFECTS_SUPPRESSED_VERTICALS = [

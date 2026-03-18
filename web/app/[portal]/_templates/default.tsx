@@ -1,7 +1,6 @@
 import CityPulseShell from "@/components/feed/CityPulseShell";
 import CivicFeedShell from "@/components/feed/CivicFeedShell";
 import ArtsFeedShell from "@/components/feed/ArtsFeedShell";
-import { FamilyFeed } from "@/components/family";
 import { AdventureFeed } from "@/components/adventure";
 import type { Portal } from "@/lib/portal-context";
 import { getPortalVertical } from "@/lib/portal";
@@ -15,23 +14,13 @@ interface DefaultTemplateProps {
  *
  * Each vertical gets its own bespoke shell rather than a shared shell
  * with feature flags. This keeps each feed focused and maintainable.
+ *
+ * Note: family vertical is handled upstream in page.tsx and never reaches here.
  */
 export async function DefaultTemplate({
   portal,
 }: DefaultTemplateProps) {
   const vertical = getPortalVertical(portal);
-
-  // Family portal — custom FamilyFeed shell
-  if (vertical === "family" || portal.slug === "atlanta-families") {
-    const isExclusive = portal.portal_type === "business" && !portal.parent_portal_id;
-    return (
-      <FamilyFeed
-        portalId={portal.id}
-        portalSlug={portal.slug}
-        portalExclusive={isExclusive}
-      />
-    );
-  }
 
   // Community/civic portals get a purpose-built civic feed
   if (vertical === "community") {

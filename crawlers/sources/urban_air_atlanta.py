@@ -1,354 +1,398 @@
 """
-Crawler for Urban Air Adventure Parks - Atlanta locations.
+Crawler for Urban Air Adventure Parks - Atlanta area locations.
 
-Urban Air has multiple Atlanta-area locations (Snellville, Buford, etc.) offering
-trampoline parks, obstacle courses, climbing walls, and special events.
+Urban Air has multiple Atlanta-area locations (Snellville, Buford, Kennesaw) offering
+indoor adventure parks with weekly activities like Jumperoo, Teen Night, Sensory
+Friendly Play, Parents Night Out, and Family Night.
+
+Data source situation (verified 2026-03-17):
+- Each location has a 'Weekly Activities' page at /weekly-activities/
+- The 'This Week at Urban Air' section is powered by a per-location Google Calendar
+- The calendar embed URL is in a <a class="calendar-cta"> button on the weekly-activities page
+- The calendar iCal feed is fetchable at:
+    https://calendar.google.com/calendar/ical/{CALENDAR_ID}/public/basic.ics
+
+Current state per location:
+- Buford: Google Calendar configured (ID: 4nja8gu3m5v3reiff2oli3k0t8@group.calendar.google.com),
+  but calendar is currently empty — no events posted
+- Snellville: No Google Calendar ID configured (empty calendar-cta href)
+- Kennesaw: No Google Calendar ID configured (empty calendar-cta href)
+
+Urban Air also has a custom WP REST endpoint (/wp-json/urban_air/get-location-data)
+that appears to be used for other data but returns empty responses without a proper
+location context payload (possibly requires session cookies or a specific nonce).
+
+Until Urban Air locations actively post events to their Google Calendars, this crawler
+will return 0 events — which is accurate. The venue records are still valuable as
+destinations. We check weekly and will capture events as soon as they're posted.
 """
 
 from __future__ import annotations
 
-import re
+import asyncio
 import logging
+import re
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+import aiohttp
+from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_venue,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, normalize_time_format
 
 logger = logging.getLogger(__name__)
 
-# Urban Air locations in Atlanta area
+# Urban Air Atlanta-area locations.
+# google_calendar_id is extracted from the calendar-cta button href on the weekly-activities page.
+# None means the location hasn't configured a public Google Calendar.
 URBAN_AIR_LOCATIONS = [
-    {
-        "name": "Urban Air Snellville",
-        "slug": "urban-air-snellville",
-        "address": "1905 Scenic Hwy N",
-        "city": "Snellville",
-        "zip": "30078",
-        "url": "https://www.urbanair.com/georgia-snellville/",
-    },
     {
         "name": "Urban Air Buford",
         "slug": "urban-air-buford",
         "address": "3235 Woodward Crossing Blvd",
+        "neighborhood": None,
         "city": "Buford",
+        "state": "GA",
         "zip": "30519",
-        "url": "https://www.urbanair.com/georgia-buford/",
+        "lat": 34.1090,
+        "lng": -83.9977,
+        "website": "https://www.urbanair.com/georgia-buford/",
+        "weekly_activities_url": "https://www.urbanair.com/georgia-buford/weekly-activities/",
+        # Verified 2026-03-17 — configured but calendar currently empty
+        "google_calendar_id": "4nja8gu3m5v3reiff2oli3k0t8@group.calendar.google.com",
     },
     {
         "name": "Urban Air Kennesaw",
         "slug": "urban-air-kennesaw",
         "address": "400 Ernest W Barrett Pkwy NW",
+        "neighborhood": None,
         "city": "Kennesaw",
+        "state": "GA",
         "zip": "30144",
-        "url": "https://www.urbanair.com/georgia-kennesaw/",
+        "lat": 34.0234,
+        "lng": -84.6130,
+        "website": "https://www.urbanair.com/georgia-kennesaw/",
+        "weekly_activities_url": "https://www.urbanair.com/georgia-kennesaw/weekly-activities/",
+        # Verified 2026-03-17 — not configured
+        "google_calendar_id": None,
+    },
+    {
+        "name": "Urban Air Snellville",
+        "slug": "urban-air-snellville",
+        "address": "1905 Scenic Hwy N",
+        "neighborhood": None,
+        "city": "Snellville",
+        "state": "GA",
+        "zip": "30078",
+        "lat": 33.8584,
+        "lng": -84.0197,
+        "website": "https://www.urbanair.com/georgia-snellville/",
+        "weekly_activities_url": "https://www.urbanair.com/georgia-snellville/weekly-activities/",
+        # Verified 2026-03-17 — not configured
+        "google_calendar_id": None,
     },
 ]
 
+VENUE_DATA_TEMPLATE = {
+    "venue_type": "entertainment",
+    "vibes": ["family-friendly", "kids", "active", "indoor"],
+}
 
-def parse_date_from_text(date_text: str) -> Optional[str]:
-    """Parse date from various formats."""
-    if not date_text:
-        return None
+REQUEST_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    ),
+}
 
-    date_text = date_text.strip()
-    current_year = datetime.now().year
-
-    # Try ISO format
-    if re.match(r'\d{4}-\d{2}-\d{2}', date_text):
-        return date_text[:10]
-
-    # Try "Month DD, YYYY" format
-    match = re.search(
-        r'(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}),?\s+(\d{4})',
-        date_text,
-        re.IGNORECASE
-    )
-    if match:
-        month, day, year = match.groups()
-        try:
-            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    # Try "Mon DD" format
-    match = re.search(
-        r'(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})',
-        date_text,
-        re.IGNORECASE
-    )
-    if match:
-        month_abbr, day = match.groups()
-        try:
-            dt = datetime.strptime(f"{month_abbr} {day} {current_year}", "%b %d %Y")
-            if dt.date() < datetime.now().date():
-                dt = datetime.strptime(f"{month_abbr} {day} {current_year + 1}", "%b %d %Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    return None
+GCAL_ICAL_URL_TEMPLATE = (
+    "https://calendar.google.com/calendar/ical/{cal_id}/public/basic.ics"
+)
 
 
-def parse_time_from_text(time_text: str) -> Optional[str]:
-    """Parse time from text."""
-    if not time_text:
-        return None
-    return normalize_time_format(time_text)
+def determine_tags(title: str) -> list[str]:
+    """Return relevant tags based on event title keywords."""
+    title_lower = title.lower()
+    tags = ["family-friendly", "kids", "indoor", "active"]
 
-
-def determine_tags(title: str, description: str = "") -> list[str]:
-    """Extract relevant tags from event content."""
-    text = f"{title} {description}".lower()
-    tags = ["family-friendly", "kids", "indoor", "active", "trampoline"]
-
-    if any(word in text for word in ["toddler", "little", "preschool", "ages 2-5", "ages 3-6"]):
-        tags.append("toddlers")
-    if any(word in text for word in ["glow", "glow night", "black light"]):
-        tags.append("glow-night")
-    if any(word in text for word in ["fitness", "workout", "exercise", "class"]):
-        tags.append("fitness")
-    if any(word in text for word in ["jump time", "general admission", "freestyle"]):
-        tags.append("open-jump")
-    if any(word in text for word in ["special needs", "sensory", "autism-friendly"]):
-        tags.append("sensory-friendly")
-    if any(word in text for word in ["teen", "teens only", "13+"]):
+    if any(w in title_lower for w in ["teen", "teens only"]):
         tags.append("teens")
-    if any(word in text for word in ["dodgeball", "basketball", "ninja", "warrior"]):
-        tags.append("sports")
-    if any(word in text for word in ["climb", "climbing wall", "rope course"]):
-        tags.append("climbing")
+    if any(
+        w in title_lower
+        for w in [
+            "toddler",
+            "jumperoo",
+            "little",
+            "preschool",
+            "5 & under",
+            "5 and under",
+        ]
+    ):
+        tags.append("toddlers")
+    if any(w in title_lower for w in ["sensory", "autism", "special needs"]):
+        tags.append("sensory-friendly")
+    if any(w in title_lower for w in ["parent", "parents night", "date night"]):
+        tags.append("parents-night-out")
+    if any(w in title_lower for w in ["glow", "blacklight", "black light"]):
+        tags.append("glow-night")
+    if any(w in title_lower for w in ["fitness", "workout"]):
+        tags.append("fitness")
+    if any(w in title_lower for w in ["school day", "homeschool", "pe credit"]):
+        tags.append("school-day")
 
     return list(set(tags))
 
 
-def extract_price_info(text: str) -> tuple[Optional[float], Optional[float], Optional[str], bool]:
-    """Extract price information from text."""
-    text_lower = text.lower()
+def parse_ical_events(
+    ical_text: str, location: dict, source_id: int, venue_id: int
+) -> list[dict]:
+    """
+    Parse VEVENT entries from an iCal string.
+    Returns a list of event record dicts ready for insert_event().
+    """
+    events = []
 
-    if "free" in text_lower or "no charge" in text_lower:
-        return 0, 0, "Free", True
+    # Split into VEVENT blocks
+    vevent_blocks = re.findall(r"BEGIN:VEVENT(.*?)END:VEVENT", ical_text, re.DOTALL)
 
-    amounts = re.findall(r'\$(\d+(?:\.\d{2})?)', text)
-    if not amounts:
-        return None, None, None, False
+    for block in vevent_blocks:
+        props = {}
+        # iCal properties may be folded across lines — unfold first
+        unfolded = re.sub(r"\r?\n[ \t]", "", block)
+        for line in unfolded.splitlines():
+            if ":" in line:
+                key, _, value = line.partition(":")
+                # Strip property parameters (e.g. DTSTART;TZID=America/New_York)
+                key = key.split(";")[0].strip()
+                props[key] = value.strip()
 
-    amounts = [float(a) for a in amounts]
-    return min(amounts), max(amounts), None, False
+        summary = props.get("SUMMARY", "").strip()
+        dtstart = props.get("DTSTART", "").strip()
+        dtend = props.get("DTEND", "").strip()
+        description = props.get("DESCRIPTION", "").strip()
+        url = props.get("URL", location["weekly_activities_url"]).strip()
+
+        if not summary or not dtstart:
+            continue
+
+        # Parse date/datetime — handles YYYYMMDD and YYYYMMDDTHHmmss[Z]
+        start_date, start_time = _parse_ical_dt(dtstart)
+        end_date, end_time = _parse_ical_dt(dtend) if dtend else (start_date, None)
+
+        if not start_date:
+            continue
+
+        events.append(
+            {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": summary,
+                "description": description or f"{summary} at {location['name']}.",
+                "start_date": start_date,
+                "start_time": start_time,
+                "end_date": end_date,
+                "end_time": end_time,
+                "is_all_day": start_time is None,
+                "category": "family",
+                "subcategory": "active",
+                "tags": determine_tags(summary),
+                "price_min": None,
+                "price_max": None,
+                "price_note": None,
+                "is_free": False,
+                "source_url": location["weekly_activities_url"],
+                "ticket_url": url,
+                "image_url": None,
+                "raw_text": f"{summary} | {start_date}",
+                "extraction_confidence": 0.90,
+                "is_recurring": True,
+                "recurrence_rule": None,
+                "content_hash": generate_content_hash(
+                    summary, location["name"], start_date
+                ),
+            }
+        )
+
+    return events
 
 
-def crawl_location(page, location: dict, source_id: int) -> tuple[int, int, int]:
-    """Crawl events for a single Urban Air location."""
+def _parse_ical_dt(dt_str: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Parse iCal DTSTART/DTEND value.
+    Returns (date_str 'YYYY-MM-DD', time_str 'HH:MM:SS') or (date_str, None).
+    """
+    dt_str = dt_str.strip().rstrip("Z")
+    try:
+        if "T" in dt_str:
+            dt = datetime.strptime(dt_str[:15], "%Y%m%dT%H%M%S")
+            return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M:%S")
+        else:
+            dt = datetime.strptime(dt_str[:8], "%Y%m%d")
+            return dt.strftime("%Y-%m-%d"), None
+    except ValueError:
+        return None, None
+
+
+async def discover_calendar_id(
+    session: aiohttp.ClientSession, location: dict
+) -> Optional[str]:
+    """
+    Fetch the weekly-activities page and extract the Google Calendar ID
+    from the calendar-cta button, in case we need to re-discover it.
+    Returns the calendar ID string or None.
+    """
+    try:
+        async with session.get(
+            location["weekly_activities_url"], headers=REQUEST_HEADERS
+        ) as resp:
+            html = await resp.text()
+        soup = BeautifulSoup(html, "html.parser")
+        cal_link = soup.find("a", class_="calendar-cta")
+        if not cal_link:
+            return None
+        href = cal_link.get("href", "")
+        match = re.search(r"src=([^&\"'\s]+@group\.calendar\.google\.com)", href)
+        return match.group(1) if match else None
+    except Exception as e:
+        logger.warning("Could not discover calendar ID for %s: %s", location["name"], e)
+        return None
+
+
+async def crawl_location(
+    session: aiohttp.ClientSession, location: dict, source_id: int
+) -> tuple[int, int, int]:
+    """
+    Crawl a single Urban Air location.
+    Creates the venue record, then fetches events from its Google Calendar iCal feed.
+    Locations without a configured Google Calendar produce 0 events (accurate).
+    """
     events_found = 0
     events_new = 0
     events_updated = 0
 
     venue_data = {
+        **VENUE_DATA_TEMPLATE,
         "name": location["name"],
         "slug": location["slug"],
         "address": location["address"],
-        "neighborhood": None,
+        "neighborhood": location.get("neighborhood"),
         "city": location["city"],
-        "state": "GA",
+        "state": location["state"],
         "zip": location["zip"],
-        "venue_type": "entertainment",
-        "website": location["url"],
+        "lat": location.get("lat"),
+        "lng": location.get("lng"),
+        "website": location["website"],
     }
 
     venue_id = get_or_create_venue(venue_data)
 
-    logger.info(f"Fetching events for {location['name']}: {location['url']}")
+    cal_id = location.get("google_calendar_id")
 
-    # Try multiple possible event URLs
-    urls_to_try = [
-        location["url"],
-        f"{location['url']}/events",
-        f"{location['url']}/calendar",
-    ]
+    # If no calendar ID hardcoded, try to discover it from the page
+    if not cal_id:
+        cal_id = await discover_calendar_id(session, location)
+        if cal_id:
+            logger.info(
+                "Discovered new Google Calendar ID for %s: %s", location["name"], cal_id
+            )
+        else:
+            logger.info(
+                "%s: no Google Calendar configured — venue record created, 0 events",
+                location["name"],
+            )
+            return 0, 0, 0
 
-    for url in urls_to_try:
-        try:
-            page.goto(url, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+    # Fetch the iCal feed
+    ical_url = GCAL_ICAL_URL_TEMPLATE.format(cal_id=cal_id.replace("@", "%40"))
+    try:
+        async with session.get(ical_url, headers=REQUEST_HEADERS) as resp:
+            resp.raise_for_status()
+            ical_text = await resp.text()
+    except Exception as e:
+        logger.error("Failed to fetch iCal for %s: %s", location["name"], e)
+        return 0, 0, 0
 
-            # Scroll to load content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+    event_records = parse_ical_events(ical_text, location, source_id, venue_id)
+    events_found = len(event_records)
 
-            # Extract images
-            image_map = extract_images_from_page(page)
+    if events_found == 0:
+        logger.info(
+            "%s: Google Calendar iCal is empty — venue record maintained, 0 events",
+            location["name"],
+        )
 
-            # Get page text
-            body_text = page.inner_text("body")
-
-            # Check for event keywords
-            event_keywords = ["toddler time", "glow night", "jump time", "special event", "fitness"]
-            if not any(keyword in body_text.lower() for keyword in event_keywords):
-                logger.debug(f"No event keywords found on {url}")
-                continue
-
-            # Parse events from text
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                if len(line) < 5:
-                    i += 1
-                    continue
-
-                # Look for event titles
-                is_event_title = False
-                title = None
-
-                for event_type in ["Toddler Time", "Little Jumpers", "Glow Night", "Teen Night",
-                                 "Jump Time", "Fitness", "Special Event", "Sensory", "Survivor Night"]:
-                    if event_type.lower() in line.lower():
-                        is_event_title = True
-                        title = line
-                        break
-
-                if not is_event_title:
-                    i += 1
-                    continue
-
-                # Look for date nearby
-                start_date = None
-                start_time = None
-                description = ""
-
-                for j in range(i + 1, min(i + 10, len(lines))):
-                    check_line = lines[j]
-
-                    date_result = parse_date_from_text(check_line)
-                    if date_result:
-                        start_date = date_result
-                        time_result = parse_time_from_text(check_line)
-                        if time_result:
-                            start_time = time_result
-                        break
-
-                    if len(check_line) > 20 and not re.match(r'^\d{1,2}:\d{2}', check_line):
-                        description = check_line
-
-                if not start_date:
-                    i += 1
-                    continue
-
-                events_found += 1
-
-                # Extract price
-                context_text = " ".join(lines[i:min(i+10, len(lines))])
-                price_min, price_max, price_note, is_free = extract_price_info(context_text)
-
-                # Determine tags
-                tags = determine_tags(title, description)
-
-                content_hash = generate_content_hash(
-                    title, location["name"], start_date
+    for record in event_records:
+        existing = find_event_by_hash(record["content_hash"])
+        if existing:
+            smart_update_existing_event(existing, record)
+            events_updated += 1
+        else:
+            try:
+                insert_event(record)
+                events_new += 1
+                logger.info(
+                    "Added: %s on %s at %s",
+                    record["title"],
+                    record["start_date"],
+                    location["name"],
                 )
-
-
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": title,
-                    "description": description if description else f"{title} at {location['name']}",
-                    "start_date": start_date,
-                    "start_time": start_time,
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": "family",
-                    "subcategory": "active",
-                    "tags": tags,
-                    "price_min": price_min,
-                    "price_max": price_max,
-                    "price_note": price_note,
-                    "is_free": is_free,
-                    "source_url": url,
-                    "ticket_url": url,
-                    "image_url": image_map.get(title),
-                    "raw_text": f"{title} | {start_date} | {description[:200]}"[:500],
-                    "extraction_confidence": 0.75,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                    i += 1
-                    continue
-
-                try:
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info(f"Added: {title} on {start_date} at {location['name']}")
-                except Exception as e:
-                    logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            # If we found events, stop trying other URLs for this location
-            if events_found > 0:
-                break
-
-        except PlaywrightTimeout:
-            logger.warning(f"Timeout loading {url}")
-            continue
-        except Exception as e:
-            logger.warning(f"Error loading {url}: {e}")
-            continue
+            except Exception as e:
+                logger.error("Failed to insert %s: %s", record["title"], e)
 
     return events_found, events_new, events_updated
 
 
-def crawl(source: dict) -> tuple[int, int, int]:
-    """
-    Crawl all Urban Air Atlanta locations.
-    """
-    source_id = source["id"]
+async def _run_all(source_id: int) -> tuple[int, int, int]:
+    """Run all Urban Air location crawls within a shared aiohttp session."""
     total_found = 0
     total_new = 0
     total_updated = 0
 
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+    connector = aiohttp.TCPConnector(limit=2)
+    timeout = aiohttp.ClientTimeout(total=30)
 
-            # Crawl each location
-            for location in URBAN_AIR_LOCATIONS:
-                try:
-                    found, new, updated = crawl_location(page, location, source_id)
-                    total_found += found
-                    total_new += new
-                    total_updated += updated
-                except Exception as e:
-                    logger.error(f"Failed to crawl {location['name']}: {e}")
-                    continue
+    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+        for location in URBAN_AIR_LOCATIONS:
+            try:
+                found, new, updated = await crawl_location(session, location, source_id)
+                total_found += found
+                total_new += new
+                total_updated += updated
+            except Exception as e:
+                logger.error("Failed to crawl %s: %s", location["name"], e)
+                continue
 
-            browser.close()
+    return total_found, total_new, total_updated
 
-        logger.info(
-            f"Urban Air Atlanta crawl complete: {total_found} found, {total_new} new, {total_updated} updated"
-        )
 
-    except Exception as e:
-        logger.error(f"Failed to crawl Urban Air Atlanta: {e}")
-        raise
+def crawl(source: dict) -> tuple[int, int, int]:
+    """
+    Crawl all Urban Air Atlanta-area locations.
+
+    Each location's events come from a per-location Google Calendar iCal feed.
+    The calendar ID is hardcoded per location (stable once configured by the park
+    manager) with a fallback to discover it from the weekly-activities page.
+
+    As of 2026-03-17:
+    - Buford has a calendar configured but it's empty
+    - Kennesaw and Snellville have no calendar configured
+    Returns 0 events per location until Urban Air park managers post events.
+    """
+    source_id = source["id"]
+
+    total_found, total_new, total_updated = asyncio.run(_run_all(source_id))
+
+    logger.info(
+        "Urban Air Atlanta crawl complete: %d found, %d new, %d updated",
+        total_found,
+        total_new,
+        total_updated,
+    )
 
     return total_found, total_new, total_updated

@@ -32,12 +32,21 @@ from db import (
 )
 from dedupe import generate_content_hash
 from description_fetcher import fetch_description_from_url
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from utils import extract_images_from_page, enrich_event_record
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.atlantajcc.org"
 CALENDAR_URL = f"{BASE_URL}/calendar/"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 VENUE_DATA = {
     "name": "Marcus Jewish Community Center of Atlanta",
@@ -54,6 +63,79 @@ VENUE_DATA = {
     "website": BASE_URL,
     "vibes": ["family-friendly", "all-ages", "faith-jewish"],
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "community_center",
+            "commitment_tier": "halfday",
+            "primary_activity": "family community-center campus visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "outdoor-indoor-mix", "family-daytrip"],
+            "parking_type": "free_lot",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "MJCCA works best as a family campus stop when the plan centers on a specific class, event, or community activity, rather than as a generic drop-in attraction."
+            ),
+            "accessibility_notes": (
+                "Its campus format offers lower-friction indoor access than a large outdoor destination, but families usually get the most value when they arrive with a program or event in mind."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Some public cultural events are ticketed, while many classes, camps, fitness, and membership-based programs have separate registration or access rules.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "community_center",
+                "city": "dunwoody",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "family-campus-program-hub",
+            "title": "Family campus program hub",
+            "feature_type": "amenity",
+            "description": "MJCCA is one of the stronger family program campuses in the metro, with recurring classes, camps, performances, and community events in one place.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "indoor-community-and-cultural-flex",
+            "title": "Indoor community and cultural flex",
+            "feature_type": "amenity",
+            "description": "The center's indoor community-space mix makes it useful for family plans that need more weather-flex than a purely outdoor program destination.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "planned-program-day-rather-than-drop-in-stop",
+            "title": "Planned program day rather than drop-in stop",
+            "feature_type": "amenity",
+            "description": "MJCCA is strongest when the family day is anchored by a known class, performance, or program instead of treating the campus like a casual wander destination.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    return envelope
 
 
 def parse_date(date_str: str) -> Optional[str]:
@@ -409,6 +491,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching MJCCA calendar: {CALENDAR_URL}")
             page.goto(CALENDAR_URL, wait_until="domcontentloaded", timeout=30000)

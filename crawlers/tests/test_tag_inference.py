@@ -300,6 +300,7 @@ class TestInferGenres:
         assert "electronic" in genres
 
     def test_infer_fitness_5k_as_run(self):
+        """Legacy fitness category still infers run genre (backward compat)."""
         event = {
             "title": "Neighborhood 5K Run/Walk",
             "description": "",
@@ -307,6 +308,37 @@ class TestInferGenres:
         }
         genres = infer_genres(event)
         assert "run" in genres
+
+    def test_infer_exercise_5k_as_run(self):
+        """New exercise category also infers run genre."""
+        event = {
+            "title": "Neighborhood 5K Run/Walk",
+            "description": "",
+            "category": "exercise",
+        }
+        genres = infer_genres(event)
+        assert "run" in genres
+
+    def test_infer_recreation_pickup_as_pickup_genre(self):
+        """Recreation category with pickup title infers pickup genre."""
+        event = {
+            "title": "Friday Pickup Basketball at the Rec Center",
+            "description": "",
+            "category": "recreation",
+        }
+        genres = infer_genres(event)
+        assert "pickup" in genres
+
+    def test_exercise_and_fitness_both_infer_yoga(self):
+        """Both exercise and fitness categories map yoga title to yoga genre."""
+        for cat in ("exercise", "fitness"):
+            event = {
+                "title": "Sunrise Yoga Flow",
+                "description": "",
+                "category": cat,
+            }
+            genres = infer_genres(event)
+            assert "yoga" in genres, f"Expected yoga genre for category={cat}"
 
 
 class TestInferIsReligious:
@@ -391,3 +423,30 @@ class TestInferIsReligious:
     def test_art_category_not_touched(self):
         event = {"title": "Sunday Worship Art Show", "category": "art"}
         assert infer_is_religious(event, venue_type="church") is False
+
+
+class TestDateNightInference:
+    """Tests for date-night tag inference scoping."""
+
+    def test_date_night_not_inferred_from_description(self):
+        """Park event with 'wine' only in description should NOT get date-night."""
+        event = {"title": "Summer Festival in the Park", "description": "Enjoy wine and cheese from local vendors"}
+        tags = infer_tags(event, preserve_existing=False)
+        assert "date-night" not in tags
+
+    def test_date_night_inferred_from_title(self):
+        """Event with jazz in title SHOULD get date-night."""
+        event = {"title": "Jazz Night at the Lounge", "description": ""}
+        tags = infer_tags(event, preserve_existing=False)
+        assert "date-night" in tags
+
+
+class TestAgeTagConflictResolution:
+    """Tests for age tag conflict resolution."""
+
+    def test_all_ages_removes_21_plus(self):
+        """Event with both all-ages and 21+ signals should keep only all-ages."""
+        event = {"title": "All Ages Show", "description": "", "tags": ["21+"]}
+        tags = infer_tags(event, preserve_existing=True)
+        assert "all-ages" in tags
+        assert "21+" not in tags

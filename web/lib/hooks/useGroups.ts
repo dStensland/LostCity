@@ -217,7 +217,8 @@ export function useLeaveGroup() {
         throw new Error(result.error);
       }
 
-      return result.data!;
+      // 204 No Content returns null data — that's success
+      return result.data ?? { success: true };
     },
     onSuccess: (_data, groupId) => {
       queryClient.invalidateQueries({ queryKey: ["groups", "mine"] });

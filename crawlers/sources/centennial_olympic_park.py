@@ -19,10 +19,18 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import get_client, get_or_create_venue
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
 HOMEPAGE = "https://www.gwcca.org/centennial-olympic-park"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 VENUE_DATA = {
     "name": "Centennial Olympic Park",
@@ -58,6 +66,98 @@ VENUE_DATA = {
         "fountain",
     ],
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "park",
+            "commitment_tier": "halfday",
+            "primary_activity": "family downtown park visit",
+            "best_seasons": ["spring", "summer", "fall"],
+            "weather_fit_tags": ["outdoor", "free-option", "family-daytrip"],
+            "parking_type": "garage",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "Centennial works best as a short downtown family stop or cooling break, especially when paired "
+                "with nearby attractions rather than treated like a full standalone park day. It is strongest as a "
+                "free water-play and reset stop inside a larger downtown family plan."
+            ),
+            "accessibility_notes": (
+                "The park's paved downtown layout makes it a lower-friction option for strollers and short walks "
+                "than larger trail-style parks, which makes it easier to use for quick resets or toddler wandering without a long approach."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Open park access is free; major festivals and special events vary by calendar.",
+            "source_url": HOMEPAGE,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "city": "atlanta",
+                "landmark_type": "olympic_park",
+            },
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "fountain-rings-and-water-play",
+            "title": "Fountain Rings and water play",
+            "feature_type": "amenity",
+            "description": "Centennial Olympic Park's Fountain of Rings makes it one of the clearest free city-core water-play stops for families between nearby downtown attractions.",
+            "url": HOMEPAGE,
+            "is_free": True,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "free-downtown-open-lawn-and-gather-space",
+            "title": "Free downtown open lawn and gather space",
+            "feature_type": "amenity",
+            "description": "The park's lawn, seating, and central downtown location make it an easy free family stop to pair with museums, attractions, or a short city outing.",
+            "url": HOMEPAGE,
+            "is_free": True,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "flat-paved-downtown-stroller-loop",
+            "title": "Flat paved downtown stroller loop",
+            "feature_type": "experience",
+            "description": "Centennial's flat, paved layout makes it one of the easier downtown parks for stroller loops, toddler wandering, and quick family resets between attractions.",
+            "url": HOMEPAGE,
+            "is_free": True,
+            "sort_order": 30,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "free-water-play-downtown-reset",
+            "title": "Free water-play downtown reset",
+            "feature_type": "amenity",
+            "description": "Centennial is one of the clearest downtown choices when families need free water play, easy stroller movement, and a short reset between ticketed attractions.",
+            "url": HOMEPAGE,
+            "is_free": True,
+            "sort_order": 40,
+        },
+    )
+
+    return envelope
 
 
 def _extract_og_meta(html: str) -> tuple[Optional[str], Optional[str]]:
@@ -109,6 +209,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.warning("Centennial Olympic Park: og: enrichment failed: %s", exc)
 
     venue_id = get_or_create_venue(venue_data)
+    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
+    try:
+        get_client().table("venue_features").update({"is_active": False}).eq(
+            "venue_id", venue_id
+        ).eq("slug", "fountain-rings-and-open-lawn").execute()
+    except Exception as exc:
+        logger.warning(
+            "Centennial Olympic Park: failed to retire legacy fountain feature: %s",
+            exc,
+        )
 
     # Push the freshest image/description back onto the existing venue row.
     update: dict = {}

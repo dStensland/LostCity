@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { PortalHeader } from "@/components/headers";
@@ -7,7 +7,6 @@ import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import { createClient } from "@/lib/supabase/server";
 import { getLocalDateString } from "@/lib/formats";
 import { getPortalSourceAccess } from "@/lib/federation";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
 import FilmPortalNav from "./FilmPortalNav";
 
 type RawProgramRow = {
@@ -207,8 +206,8 @@ export default async function FilmProgramsPage({ portalSlug }: FilmProgramsPageP
               <article key={program.id} className="overflow-hidden rounded-2xl border border-[#29354f] bg-[#0e1526]">
                 <Link href={`/${portal.slug}/series/${program.slug}`} className="group block">
                   <div className="relative h-44">
-                    <Image
-                      src={getProxiedImageSrc(program.image_url || FALLBACK_PHOTOS[index % FALLBACK_PHOTOS.length])}
+                    <SmartImage
+                      src={program.image_url || FALLBACK_PHOTOS[index % FALLBACK_PHOTOS.length]}
                       alt={program.title}
                       fill
                       unoptimized

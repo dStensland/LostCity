@@ -4,7 +4,7 @@
 **Portal Slug:** `adventure` (vertical subdomain: `adventure.lostcity.ai`)
 **Brand Name:** Lost Track
 **Tagline:** "Wander over yonder"
-**Type:** Regional adventure discovery portal (Atlanta → North Georgia)
+**Type:** Regional adventure discovery portal (Atlanta → Regional, 4-hour radius across GA, TN, NC, SC, AL, KY)
 
 ---
 
@@ -36,9 +36,10 @@ Yonder operates on a **commitment spectrum**, not a fixed radius:
 | Tier | Range | Examples |
 |------|-------|---------|
 | Walk out your door | 0-15 min | BeltLine, city parks, outdoor fitness |
-| Quick drive | 15-45 min | Sweetwater Creek, Arabia Mountain, Kennesaw Mountain |
-| Day trip | 1-2 hr | Amicalola Falls, Tallulah Gorge, ropes courses, tubing |
-| Weekend trip | 2-4 hr | Ocoee rafting, Cohutta backpacking, mountain camping |
+| Quick drive | 15-60 min | Sweetwater Creek, Arabia Mountain, Kennesaw Mountain, Blankets Creek, Lake Allatoona |
+| Day trip | 1-2 hr | Amicalola Falls, Tallulah Gorge, Lake Rabun, Helen tubing, Bull Mountain MTB |
+| Full day | 2-3 hr | Ocoee River, Lake Jocassee, Cheaha SP, Caesars Head, Cloudland Canyon, caves |
+| Weekend trip | 3-4 hr | Great Smoky Mountains NP, Nantahala River, Blue Ridge Parkway, Pisgah NF, Mammoth Cave |
 
 This is a fundamentally different data model from city-centric portals. Distance/commitment is the primary navigation axis.
 
@@ -301,18 +302,12 @@ Already seeded in migration 274:
 - Kennesaw Mountain Trail
 - Morningside Nature Preserve
 
-**Need to add:**
-- Amicalola Falls
-- Tallulah Gorge
-- Cloudland Canyon
-- Raven Cliff Falls
-- DeSoto Falls
-- Helton Creek Falls
-- Blood Mountain / AT approach
-- Springer Mountain (AT southern terminus)
-- Panola Mountain
-- Boat Rock (bouldering)
-- Chattahoochee River access points (6+)
+**Need to add (Waves 6-10):**
+- Wave 6 — Ring 1 gap-fill (10 destinations): Panola Mountain, Boat Rock (bouldering), Chattahoochee River access points (6+), additional metro green spaces
+- Wave 7 — Ring 2 gap-fill (15 destinations): Amicalola Falls, Tallulah Gorge, Raven Cliff Falls, DeSoto Falls, Helton Creek Falls, Blood Mountain / AT approach, Springer Mountain (AT southern terminus), Lake Rabun, Helen tubing corridor, Bull Mountain MTB, additional North GA destinations
+- Wave 8 — Ring 3 multi-state expansion (20 destinations): Cloudland Canyon, Ocoee River (TN), Lake Jocassee (SC), Cheaha State Park (AL), Caesars Head (SC), Table Rock (SC), Desoto Falls (AL), caves (Manitou Cave AL, Raccoon Mountain TN), additional TN/NC/SC/AL destinations
+- Wave 9 — Ring 4 Smokies / Pisgah / national parks (15 destinations): Great Smoky Mountains NP, Nantahala River (NC), Blue Ridge Parkway overlooks, Pisgah National Forest, Linville Gorge, Waterrock Knob, Mammoth Cave (KY), additional national forest destinations
+- Wave 10 — Hidden gems and specialty (10 destinations): lesser-known waterfalls, fire towers, swimming holes, and climbing areas across the 6-state radius
 
 ### Camping Sites (Phase 2 — 20+ sites)
 - GA State Parks with camping (Sweetwater Creek, Vogel, Cloudland Canyon, Amicalola, Black Rock Mountain, Fort Mountain)

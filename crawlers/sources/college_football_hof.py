@@ -17,15 +17,24 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 BASE_URL = "https://www.cfbhall.com"
 HAPPENINGS_URL = f"{BASE_URL}/happenings/"
 
 VENUE_DATA = {
     "name": "College Football Hall of Fame",
-    "slug": "college-football-hof",
+    "slug": "college-football-hall-of-fame",
     "address": "250 Marietta St NW",
     "neighborhood": "Downtown",
     "city": "Atlanta",
@@ -50,6 +59,69 @@ VENUE_DATA = {
     },
     "vibes": ["sports", "interactive", "family-friendly", "educational", "downtown"],
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "sports_museum",
+            "commitment_tier": "halfday",
+            "primary_activity": "interactive football history visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+            "parking_type": "garage",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "The Hall of Fame works best as a planned downtown family anchor for school-age kids who "
+                "want an interactive sports stop. It is easier to pair with other downtown attractions than "
+                "to treat as a quick errand stop."
+            ),
+            "accessibility_notes": (
+                "Indoor exhibits and elevator-served circulation make this a lower-friction sports-history stop "
+                "than an outdoor stadium visit, but it still plays best for families ready for a purposeful museum-style outing."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "General admission applies; check the Hall of Fame for current ticket pricing and exhibit access.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "museum",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "interactive-football-history-galleries",
+            "title": "Interactive football history galleries",
+            "feature_type": "amenity",
+            "description": "The Hall of Fame blends football history with interactive exhibits that make it a stronger family stop than a static trophy museum.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "downtown-sports-history-anchor",
+            "title": "Downtown sports history anchor",
+            "feature_type": "experience",
+            "description": "This is one of the city's clearest school-age downtown sports anchors when families want a purposeful indoor plan built around football.",
+            "url": HAPPENINGS_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    return envelope
 
 def _enrich_venue_data(page) -> None:
     """
@@ -228,6 +300,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             _enrich_venue_data(page)
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching College Football Hall of Fame: {HAPPENINGS_URL}")
             page.goto(HAPPENINGS_URL, wait_until="domcontentloaded", timeout=30000)

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import {
   MapPin,
   Clock,
@@ -406,7 +406,7 @@ export function ProgramDetailSheet({
         {/* Hero image */}
         <div style={{ height: 200, overflow: "hidden", position: "relative", backgroundColor: SAGE_WASH }}>
           {p.venue?.image_url ? (
-            <Image
+            <SmartImage
               src={p.venue.image_url}
               alt={p.venue.name ?? "Venue"}
               fill

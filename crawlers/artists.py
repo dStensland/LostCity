@@ -204,4 +204,4 @@ def resolve_and_link_event_artists(event_id: int, category: Optional[str] = None
                 {"artist_id": artist["id"]}
             ).eq("id", row["id"]).execute()
         except Exception as e:
-            logger.debug(f"Artist resolution failed for '{row['name']}': {e}")
+            logger.warning(f"Artist resolution failed for '{row['name']}': {e}")

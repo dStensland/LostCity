@@ -2,7 +2,6 @@
 
 import { ArrowSquareOut } from "@phosphor-icons/react";
 import { SectionHeader } from "./SectionHeader";
-import Badge from "@/components/ui/Badge";
 
 // ---------------------------------------------------------------------------
 // Types & constants
@@ -42,12 +41,6 @@ const MENTION_TYPE_WEIGHT: Record<string, number> = {
   feature: 4,
 };
 
-const SOURCE_ACCENT: Record<string, string> = {
-  best_of: "var(--coral)",
-  guide_inclusion: "var(--gold)",
-  opening: "var(--neon-green)",
-};
-
 export function getEditorialSourceLabel(sourceKey: string): string {
   return EDITORIAL_SOURCE_LABELS[sourceKey] || sourceKey;
 }
@@ -58,7 +51,7 @@ export function getEditorialSourceLabel(sourceKey: string): string {
 
 export function AccoladesSection({
   mentions,
-  title = "Accolades",
+  title = "In the Press",
 }: {
   mentions: EditorialMention[];
   title?: string;
@@ -72,79 +65,29 @@ export function AccoladesSection({
   return (
     <div>
       <SectionHeader title={title} variant="divider" />
-      <div className="space-y-2">
-        {sorted.map((m) => {
-          const accent = SOURCE_ACCENT[m.mention_type] ?? "var(--soft)";
-          return (
-            <a
-              key={m.id}
-              href={m.article_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex flex-col gap-1.5 px-3.5 py-3 rounded-card border border-[var(--twilight)]/40 bg-[var(--night)] hover:border-[var(--coral)]/30 hover:bg-[var(--dusk)] transition-all duration-150 focus-ring"
-            >
-              {/* Source + badge row */}
-              <div className="flex items-center justify-between">
-                <span
-                  className="font-mono text-xs font-bold uppercase tracking-[0.12em]"
-                  style={{ color: accent }}
-                >
-                  {getEditorialSourceLabel(m.source_key)}
-                </span>
-                {m.mention_type === "best_of" && (
-                  <Badge
-                    variant="accent"
-                    accentColor="var(--gold)"
-                    size="sm"
-                  >
-                    Best Of
-                  </Badge>
-                )}
-                {m.mention_type === "guide_inclusion" && (
-                  <Badge variant="neutral" size="sm">
-                    Guide
-                  </Badge>
-                )}
-                {m.mention_type === "opening" && (
-                  <Badge variant="success" size="sm">
-                    Opening
-                  </Badge>
-                )}
-              </div>
-
-              {/* Title */}
-              <p className="text-sm font-medium text-[var(--cream)] leading-snug line-clamp-2">
-                {m.article_title}
-              </p>
-
-              {/* Optional snippet */}
-              {m.snippet && (
-                <p className="text-xs text-[var(--soft)] italic line-clamp-1">
-                  {m.snippet}
-                </p>
-              )}
-
-              {/* Date + exit icon */}
-              <div className="flex items-center justify-between mt-0.5">
-                {m.published_at ? (
-                  <span className="text-xs text-[var(--muted)]">
-                    {new Date(m.published_at).toLocaleDateString("en-US", {
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </span>
-                ) : (
-                  <span />
-                )}
-                <ArrowSquareOut
-                  size={12}
-                  weight="light"
-                  className="text-[var(--muted)] group-hover:text-[var(--soft)] transition-colors flex-shrink-0"
-                />
-              </div>
-            </a>
-          );
-        })}
+      <div className="space-y-1">
+        {sorted.map((m) => (
+          <a
+            key={m.id}
+            href={m.article_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-2 py-1.5 text-sm hover:opacity-80 transition-opacity focus-ring rounded"
+          >
+            <span className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] shrink-0">
+              {getEditorialSourceLabel(m.source_key)}
+            </span>
+            <span className="text-[var(--twilight)]">&mdash;</span>
+            <span className="text-[var(--soft)] truncate flex-1">
+              {m.article_title}
+            </span>
+            <ArrowSquareOut
+              size={12}
+              weight="light"
+              className="text-[var(--muted)] group-hover:text-[var(--soft)] transition-colors shrink-0"
+            />
+          </a>
+        ))}
       </div>
     </div>
   );

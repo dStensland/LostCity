@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 import { getLocalDateString } from "@/lib/formats";
-import { excludeSensitiveEvents } from "@/lib/portal-scope";
+import { excludeSensitiveEvents, filterByPortalCity } from "@/lib/portal-scope";
 
 // Sanitize API key - remove any whitespace, control chars, or URL encoding artifacts
 function sanitizeKey(key: string | undefined): string | undefined {
@@ -153,7 +153,7 @@ export async function getEventById(id: number): Promise<EventWithProducer | null
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, location_designator, vibes, description, venue_type, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score, lat, lng),
+      venue:venues(id, name, slug, image_url, address, neighborhood, city, state, location_designator, vibes, description, venue_type, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score, lat, lng),
       organization:organizations(id, name, slug, org_type, website, instagram, logo_url, description),
       series:series_id(
         id,
@@ -179,7 +179,7 @@ export async function getEventById(id: number): Promise<EventWithProducer | null
 
 export async function getRelatedEvents(
   event: Event,
-  options?: { portalId?: string },
+  options?: { portalId?: string; portalCity?: string },
   limit = 4
 ): Promise<{ venueEvents: Event[]; sameDateEvents: Event[] }> {
   const today = getLocalDateString();
@@ -213,19 +213,38 @@ export async function getRelatedEvents(
             .limit(limit);
         })()
       : Promise.resolve({ data: null }),
-    // Get other events on the same date (scoped to portal)
+    // Get other events on the same date — neighborhood/geo scoped
     (() => {
+      const neighborhood = event.venue?.neighborhood;
+      const venueLat = event.venue?.lat;
+      const venueLng = event.venue?.lng;
+
       let q = supabase
         .from("events")
         .select(
           `
           *,
-          venue:venues(id, name, slug, address, neighborhood, city, state, location_designator)
+          venue:venues!inner(id, name, slug, address, neighborhood, city, state, location_designator, lat, lng)
         `
         )
         .eq("start_date", event.start_date)
         .neq("id", event.id)
         .is("canonical_event_id", null);
+
+      // Geographic scoping: neighborhood > bounding box > city-wide fallback
+      if (neighborhood) {
+        q = q.eq("venues.neighborhood", neighborhood);
+      } else if (venueLat != null && venueLng != null) {
+        const LAT_DELTA = 0.022; // ~1.5 miles
+        const LNG_DELTA = 0.027;
+        q = q
+          .gte("venues.lat", venueLat - LAT_DELTA)
+          .lte("venues.lat", venueLat + LAT_DELTA)
+          .gte("venues.lng", venueLng - LNG_DELTA)
+          .lte("venues.lng", venueLng + LNG_DELTA);
+      }
+      // If neither neighborhood nor lat/lng: city-wide fallback (filterByPortalCity handles scoping below)
+
       if (portalId) {
         q = q.or(`portal_id.eq.${portalId},portal_id.is.null`);
       }
@@ -236,8 +255,14 @@ export async function getRelatedEvents(
     })(),
   ]);
 
-  const venueEvents = (venueEventsResult.data as Event[]) || [];
-  const sameDateEvents = (sameDateEventsResult.data as Event[]) || [];
+  const portalCity = options?.portalCity;
+  let venueEvents = (venueEventsResult.data as Event[]) || [];
+  let sameDateEvents = (sameDateEventsResult.data as Event[]) || [];
+
+  if (portalCity) {
+    venueEvents = filterByPortalCity(venueEvents, portalCity);
+    sameDateEvents = filterByPortalCity(sameDateEvents, portalCity);
+  }
 
   return { venueEvents, sameDateEvents };
 }

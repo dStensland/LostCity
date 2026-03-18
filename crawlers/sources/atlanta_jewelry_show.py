@@ -44,6 +44,10 @@ VENUE_DATA = {
 }
 
 
+class NoCurrentCycleError(ValueError):
+    """The official site is reachable, but only a past Atlanta Jewelry Show season is posted."""
+
+
 def parse_show_window(page_text: str, today: date | None = None) -> dict:
     """Extract the announced current Atlanta Jewelry Show season from homepage text."""
     today = today or datetime.now().date()
@@ -72,7 +76,7 @@ def parse_show_window(page_text: str, today: date | None = None) -> dict:
     end_date = date(parsed_year, month, int(end_day_str))
 
     if end_date < today:
-        raise ValueError("Atlanta Jewelry Show official homepage only exposes a past-dated season")
+        raise NoCurrentCycleError("Atlanta Jewelry Show official homepage only exposes a past-dated season")
 
     return {
         "title": full_title,
@@ -98,7 +102,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
     )
     response.raise_for_status()
     page_text = BeautifulSoup(response.text, "html.parser").get_text("\n", strip=True)
-    show = parse_show_window(page_text)
+    try:
+        show = parse_show_window(page_text)
+    except NoCurrentCycleError as exc:
+        stale_removed = remove_stale_source_events(source_id, current_hashes)
+        if stale_removed:
+            logger.info("Removed %s stale Atlanta Jewelry Show events after refresh", stale_removed)
+        logger.info("Atlanta Jewelry Show crawl complete: no current season published (%s)", exc)
+        return 0, 0, 0
 
     venue_id = get_or_create_venue(VENUE_DATA)
     title = show["title"]

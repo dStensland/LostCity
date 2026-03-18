@@ -17,11 +17,17 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from source_destination_sync import ensure_venue_destination_fields
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://northsidetavern.com"
 WEEKS_AHEAD = 6
+PLANNING_NOTE = (
+    "Use the venue site for nightly cover and lineup details before heading over. "
+    "Northside Tavern is a long-running small-room blues bar, so arrival timing matters more "
+    "than formal seat selection and nearby street parking is usually part of the plan."
+)
 
 VENUE_DATA = {
     "name": "Northside Tavern",
@@ -143,6 +149,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     venue_id = get_or_create_venue(VENUE_DATA)
     logger.info(f"Northside Tavern venue record ensured (ID: {venue_id})")
+    ensure_venue_destination_fields(venue_id, planning_notes=PLANNING_NOTE)
 
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 

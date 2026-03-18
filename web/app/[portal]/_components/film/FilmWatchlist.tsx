@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { Bookmark, ArrowRight } from "@phosphor-icons/react";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
 
 type SavedFilmEvent = {
   id: number;
@@ -144,8 +143,8 @@ export default function FilmWatchlist({ portalSlug }: FilmWatchlistProps) {
             >
               <div className="relative h-16 w-11 shrink-0 overflow-hidden rounded-[3px] border border-[#3b4768] bg-[#0c1220]">
                 {imageUrl ? (
-                  <Image
-                    src={getProxiedImageSrc(imageUrl)}
+                  <SmartImage
+                    src={imageUrl}
                     alt={event.series?.title || event.title}
                     fill
                     sizes="44px"

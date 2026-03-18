@@ -22,11 +22,21 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "http://www.fernbank.edu"
 EVENTS_URL = f"{BASE_URL}/fsc.html"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
 
 VENUE_DATA = {
     "name": "Fernbank Science Center",
@@ -59,6 +69,94 @@ VENUE_DATA = {
     },
     "vibes": ["free", "educational", "family-friendly", "science", "planetarium"],
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "science_center",
+            "commitment_tier": "halfday",
+            "primary_activity": "family science center visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "outdoor-indoor-mix", "rainy-day", "family-daytrip", "free-option"],
+            "parking_type": "free_lot",
+            "best_time_of_day": "afternoon",
+            "practical_notes": (
+                "Fernbank Science Center is one of the city's strongest free family education stops, and works well as a lower-cost museum-style outing with planetarium and observatory add-ons. "
+                "It is especially strong when a family wants real STEM value without committing to a full-price or all-day attraction."
+            ),
+            "accessibility_notes": (
+                "Its indoor exhibit and planetarium core make it a lower-friction family visit than larger outdoor science or nature destinations, with optional trail time if energy allows. "
+                "That makes it easier for shorter visits, school-age kids, and weather-flex family plans."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "General admission is free; some planetarium programs or special events can have schedule-specific access rules.",
+            "source_url": EVENTS_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "museum",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "free-planetarium-and-science-hall",
+            "title": "Free planetarium and science hall",
+            "feature_type": "amenity",
+            "description": "Fernbank Science Center combines science exhibits and planetarium programming in one free family education stop.",
+            "url": EVENTS_URL,
+            "is_free": True,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "observatory-and-free-learning-anchor",
+            "title": "Observatory and free learning anchor",
+            "feature_type": "amenity",
+            "description": "Its observatory and public-learning focus make Fernbank Science Center one of the stronger low-cost STEM anchors in the metro.",
+            "url": EVENTS_URL,
+            "is_free": True,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "free-stem-stop-with-real-depth",
+            "title": "Free STEM stop with real depth",
+            "feature_type": "amenity",
+            "description": "Fernbank Science Center is one of the best low-cost family options when the goal is real learning value, not just a quick novelty stop.",
+            "url": EVENTS_URL,
+            "is_free": True,
+            "sort_order": 30,
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "always-free-general-admission",
+            "title": "Always-free general admission",
+            "description": "General admission is free, making Fernbank Science Center one of the strongest recurring no-ticket STEM outings for families in the city.",
+            "price_note": "General admission is free.",
+            "is_free": True,
+            "source_url": EVENTS_URL,
+            "category": "admission",
+        },
+    )
+    return envelope
 
 
 def parse_date(date_text: str) -> Optional[str]:
@@ -177,6 +275,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         })
 
         venue_id = get_or_create_venue(VENUE_DATA)
+        persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
         logger.info(f"Fetching Fernbank Science Center: {EVENTS_URL}")
         response = session.get(EVENTS_URL, timeout=30)

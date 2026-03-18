@@ -333,7 +333,6 @@ export default function LineupSection({
   // Events that belong in other blocks are excluded to avoid duplication:
   //   • Regular Hangs — recurring events matching an activity type
   //   • Now Showing — film showtimes (series_type = "film")
-  //   • Big Stuff — tentpole events & festival-linked events
   const tabEventPools = useMemo(() => {
     const pools: Record<string, CityPulseEventItem[]> = {};
     const dedup = (items: CityPulseEventItem[]) => {
@@ -351,9 +350,6 @@ export default function LineupSection({
           if (ev.category === "film") return false;
           // Activism/mobilize → separate opt-in block
           if (evTags.includes("activism") || evTags.includes("mobilize")) return false;
-          // Festival-linked events → Big Stuff block (individual sessions within a festival)
-          // Note: is_tentpole events now STAY in the Lineup — they deserve hero treatment here
-          if (ev.festival_id) return false;
         }
         // Recurring fall-throughs: recurring events that don't match any Scene
         // activity type AND have no premium signal (touring, album-release, tour

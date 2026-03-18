@@ -1,29 +1,27 @@
 "use client";
 
-import { memo, useState, useDeferredValue } from "react";
+import { memo, useState, useDeferredValue, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  formatScheduleDays,
-  formatCost,
-  formatAgeRange,
-  isRegistrationUrgent,
   type ProgramWithVenue,
   type ProgramType,
-  type RegistrationStatus,
+  type CostPeriod,
 } from "@/lib/types/programs";
 import { isAgeMatch, type KidProfile } from "@/lib/types/kid-profiles";
-import { formatTime } from "@/lib/formats";
+import { ACTIVITY_TAGS, type ActivityTagKey } from "@/lib/family-constants";
+import type { GenericFilter } from "./KidFilterChips";
 import { ProgramDetailSheet } from "./ProgramDetailSheet";
+import { ProgramCard } from "./ProgramCard";
+import { FAMILY_TOKENS } from "@/lib/family-design-tokens";
 
 // ---- Palette ---------------------------------------------------------------
 
-const CARD_BG = "#FAFAF6";
-const SAGE = "#5E7A5E";
-const AMBER = "#C48B1D";
-const MOSS = "#7A9E7A";
-const TEXT = "#1E2820";
-const MUTED = "#756E63";
-const BORDER = "#E0DDD4";
+const CARD_BG = FAMILY_TOKENS.card;
+const SAGE = FAMILY_TOKENS.sage;
+const AMBER = FAMILY_TOKENS.amber;
+const TEXT = FAMILY_TOKENS.text;
+const MUTED = FAMILY_TOKENS.textSecondary;
+const BORDER = FAMILY_TOKENS.border;
 
 // ---- Types -----------------------------------------------------------------
 
@@ -31,6 +29,7 @@ interface ProgramsBrowserProps {
   portalSlug: string;
   activeKidIds?: string[];
   kids?: KidProfile[];
+  activeGenericFilters?: GenericFilter[];
 }
 
 type CategoryFilter = "all" | "camps" | "enrichment" | "leagues" | "classes";
@@ -43,14 +42,169 @@ const CATEGORY_PILLS: Array<{ id: CategoryFilter; label: string; type?: ProgramT
   { id: "classes", label: "Classes", type: "class" },
 ];
 
+// Only show a curated subset of activity tags in the filter row —
+// those most likely to have data and be actionable for parents.
+const FILTER_ACTIVITY_TAGS: ActivityTagKey[] = [
+  "sports",
+  "arts",
+  "stem",
+  "swimming",
+  "music",
+  "theater",
+  "dance",
+  "coding",
+  "gymnastics",
+  "nature",
+  "cooking",
+];
+
+// ---- Cost filter ----------------------------------------------------------
+
+type CostFilter = "free" | "under_50" | "under_100" | "under_200" | "any";
+
+interface CostFilterOption {
+  id: CostFilter;
+  label: string;
+  /** Max weekly cost (null = no limit, 0 = free only). */
+  maxWeekly: number | null;
+}
+
+const COST_FILTER_OPTIONS: CostFilterOption[] = [
+  { id: "any",      label: "Any price",    maxWeekly: null },
+  { id: "free",     label: "Free",         maxWeekly: 0 },
+  { id: "under_50", label: "Under $50/wk", maxWeekly: 50 },
+  { id: "under_100",label: "Under $100/wk",maxWeekly: 100 },
+  { id: "under_200",label: "Under $200/wk",maxWeekly: 200 },
+];
+
+/**
+ * Normalize a cost to a per-week equivalent for comparison.
+ * Returns null if cost is null (treated as free/unknown — passes through).
+ */
+function normalizeToWeekly(
+  amount: number | null,
+  period: CostPeriod | null
+): number | null {
+  if (amount === null) return null;
+  if (amount === 0) return 0;
+  switch (period) {
+    case "per_week":    return amount;
+    case "per_session": return amount; // treat session ≈ week (conservative estimate)
+    case "per_month":   return amount / 4;
+    case "per_season":  return amount / 12; // ~12 weeks per season
+    default:            return amount; // unknown period — use raw amount
+  }
+}
+
+/** Returns true if the program passes the cost filter. */
+function matchesCostFilter(program: ProgramWithVenue, filter: CostFilter): boolean {
+  if (filter === "any") return true;
+  const weeklyEquiv = normalizeToWeekly(program.cost_amount, program.cost_period);
+  if (filter === "free") {
+    // Free = cost is null, 0, or genuinely $0
+    return weeklyEquiv === null || weeklyEquiv === 0;
+  }
+  const max = COST_FILTER_OPTIONS.find((o) => o.id === filter)?.maxWeekly ?? null;
+  if (max === null) return true;
+  // Null cost passes through (don't exclude programs with unknown cost)
+  if (weeklyEquiv === null) return true;
+  return weeklyEquiv <= max;
+}
+
+// ---- Commitment filter ----------------------------------------------------
+
+type CommitmentFilter = "drop_in" | "half_day" | "full_day" | "multi_day" | "any";
+
+interface CommitmentFilterOption {
+  id: CommitmentFilter;
+  label: string;
+  description: string;
+}
+
+const COMMITMENT_FILTER_OPTIONS: CommitmentFilterOption[] = [
+  { id: "any",       label: "Any",       description: "Show all" },
+  { id: "drop_in",   label: "Drop-in",   description: "1–3 hours" },
+  { id: "half_day",  label: "Half day",  description: "3–5 hours" },
+  { id: "full_day",  label: "Full day",  description: "6–8 hours" },
+  { id: "multi_day", label: "Multi-day", description: "Multiple days" },
+];
+
+/**
+ * Compute session duration in hours from HH:MM:SS strings.
+ * Returns null if either time is missing.
+ */
+function sessionDurationHours(
+  startTime: string | null,
+  endTime: string | null
+): number | null {
+  if (!startTime || !endTime) return null;
+  const [sh, sm] = startTime.split(":").map(Number);
+  const [eh, em] = endTime.split(":").map(Number);
+  if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) return null;
+  const startMins = sh * 60 + sm;
+  const endMins = eh * 60 + em;
+  if (endMins <= startMins) return null; // overnight or bad data
+  return (endMins - startMins) / 60;
+}
+
+/** Returns true if the program spans multiple calendar days. */
+function isMultiDay(program: ProgramWithVenue): boolean {
+  if (!program.session_start || !program.session_end) return false;
+  return program.session_start !== program.session_end;
+}
+
+/** Returns true if the program passes the commitment filter. */
+function matchesCommitmentFilter(
+  program: ProgramWithVenue,
+  filter: CommitmentFilter
+): boolean {
+  if (filter === "any") return true;
+
+  // Multi-day: spans multiple calendar days (camps, week-long programs)
+  if (filter === "multi_day") {
+    return isMultiDay(program);
+  }
+
+  const hours = sessionDurationHours(
+    program.schedule_start_time,
+    program.schedule_end_time
+  );
+
+  // If we can't determine duration, pass through to avoid over-filtering
+  if (hours === null) return true;
+
+  switch (filter) {
+    case "drop_in":  return hours <= 3;
+    case "half_day": return hours > 3 && hours <= 5.5;
+    case "full_day": return hours > 5.5;
+    default:         return true;
+  }
+}
+
 // ---- Data fetcher ----------------------------------------------------------
 
 async function fetchPrograms(
   portalSlug: string,
-  type: ProgramType | ""
+  type: ProgramType | "",
+  tag: ActivityTagKey | "",
+  environment: "indoor" | "outdoor" | "",
+  costFilter: CostFilter
 ): Promise<ProgramWithVenue[]> {
-  const params = new URLSearchParams({ portal: portalSlug, limit: "60", active: "true" });
+  const params = new URLSearchParams({ portal: portalSlug, limit: "100", active: "true" });
   if (type) params.set("type", type);
+  if (tag) params.set("tag", tag);
+  if (environment) params.set("environment", environment);
+
+  // Pass free/cost_max to the API to reduce payload size.
+  // Client-side filter handles the nuance; the API param is a coarse pre-filter.
+  const costOpt = COST_FILTER_OPTIONS.find((o) => o.id === costFilter);
+  if (costFilter === "free") {
+    params.set("cost_max", "0");
+  } else if (costOpt?.maxWeekly != null) {
+    // Use a generous multiplier since we normalize periods client-side —
+    // a "per_season" cost will be much higher than the weekly threshold.
+    params.set("cost_max", String(costOpt.maxWeekly * 20));
+  }
 
   const res = await fetch(`/api/programs?${params.toString()}`);
   if (!res.ok) return [];
@@ -58,297 +212,265 @@ async function fetchPrograms(
   return (json.programs ?? []) as ProgramWithVenue[];
 }
 
-// ---- Helpers ---------------------------------------------------------------
+// ---- Filter Sheet ----------------------------------------------------------
 
-function formatSessionDates(start: string | null, end: string | null): string {
-  if (!start) return "";
-  const fmt = (d: string) =>
-    new Date(d + "T00:00:00").toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  if (!end || end === start) return fmt(start);
-  return `${fmt(start)} – ${fmt(end)}`;
+interface FilterSheetProps {
+  isOpen: boolean;
+  onClose: () => void;
+  activeCostFilter: CostFilter;
+  onCostChange: (v: CostFilter) => void;
+  activeCommitment: CommitmentFilter;
+  onCommitmentChange: (v: CommitmentFilter) => void;
+  externalFreeActive: boolean;
+  onClear: () => void;
 }
 
-function formatRegistrationCloses(closes: string | null): string | null {
-  if (!closes) return null;
-  const date = new Date(closes + "T00:00:00");
-  const now = new Date();
-  const diffMs = date.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return null;
-  if (diffDays === 0) return "Closes today";
-  if (diffDays === 1) return "Closes tomorrow";
-  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  if (diffDays <= 7) return `Closes ${dayNames[date.getDay()]}`;
-  return `Closes ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
-}
+function FilterSheet({
+  isOpen,
+  onClose,
+  activeCostFilter,
+  onCostChange,
+  activeCommitment,
+  onCommitmentChange,
+  externalFreeActive,
+  onClear,
+}: FilterSheetProps) {
+  // Close on Escape
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [isOpen, onClose]);
 
-// ---- Program Card (inline) -------------------------------------------------
+  if (!isOpen) return null;
 
-interface ProgramCardItemProps {
-  program: ProgramWithVenue;
-  matchingKid: KidProfile | null;
-}
-
-const ProgramCardItem = memo(function ProgramCardItem({
-  program,
-  matchingKid,
-}: ProgramCardItemProps) {
-  const ageLabel = formatAgeRange(program.age_min, program.age_max);
-  const scheduleDays = formatScheduleDays(program.schedule_days);
-  const cost = formatCost(program.cost_amount, program.cost_period);
-  const sessionDates = formatSessionDates(program.session_start, program.session_end);
-  const isFree = program.cost_amount === null || program.cost_amount === 0;
-  const isUrgent = isRegistrationUrgent(program);
-  const closesLabel = formatRegistrationCloses(program.registration_closes);
-
-  // Build meta line: "Ages 8–14 · Mon–Fri 9am–3pm · $285/wk"
-  const metaParts: string[] = [];
-  if (ageLabel !== "All ages") metaParts.push(ageLabel);
-  if (scheduleDays) {
-    const startFmt = formatTime(program.schedule_start_time);
-    const endFmt = program.schedule_end_time ? formatTime(program.schedule_end_time) : null;
-    const timeStr =
-      startFmt !== "TBA" && endFmt && endFmt !== "TBA"
-        ? ` ${startFmt} – ${endFmt}`
-        : startFmt !== "TBA"
-        ? ` ${startFmt}`
-        : "";
-    metaParts.push(scheduleDays + timeStr);
-  }
-  metaParts.push(cost);
-  const metaLine = metaParts.join(" · ");
-
-  // Left border color
-  const accentColor = matchingKid ? matchingKid.color : SAGE;
-
-  // Registration status badge
-  const status: RegistrationStatus = program.registration_status;
+  const hasActive = (activeCostFilter !== "any" && !externalFreeActive) || activeCommitment !== "any";
 
   return (
-    <div
-      style={{
-        backgroundColor: CARD_BG,
-        borderRadius: 14,
-        borderLeft: `3px solid ${accentColor}`,
-        border: `1px solid ${BORDER}`,
-        borderLeftWidth: 4,
-        borderLeftColor: accentColor,
-        padding: "14px 16px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 6,
-      }}
-    >
-      {/* Title */}
+    <>
+      {/* Backdrop */}
       <div
+        onClick={onClose}
         style={{
-          fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)",
-          fontSize: 15,
-          fontWeight: 700,
-          color: TEXT,
-          lineHeight: 1.3,
+          position: "fixed",
+          inset: 0,
+          zIndex: 40,
+          backgroundColor: "rgba(0,0,0,0.35)",
+        }}
+        aria-hidden="true"
+      />
+      {/* Sheet */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Filter programs"
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          backgroundColor: CARD_BG,
+          borderTop: `1px solid ${BORDER}`,
+          borderRadius: "20px 20px 0 0",
+          maxHeight: "70vh",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
-        {program.name.replace(/\s*\([A-Z]{2,4}\d{4,6}\)\s*$/, "")}
-      </div>
+        {/* Drag handle */}
+        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: BORDER }} />
+        </div>
 
-      {/* Provider / venue */}
-      {(program.provider_name || program.venue?.name) && (
+        {/* Header */}
         <div
           style={{
-            fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
-            fontSize: 12,
-            color: MUTED,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "4px 20px 12px",
           }}
         >
-          {program.provider_name || program.venue?.name}
-          {program.venue?.neighborhood ? ` · ${program.venue.neighborhood}` : ""}
+          <span
+            style={{
+              fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)",
+              fontSize: 17,
+              fontWeight: 700,
+              color: TEXT,
+            }}
+          >
+            Filters
+          </span>
+          <button
+            onClick={onClose}
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              border: `1px solid ${BORDER}`,
+              backgroundColor: CARD_BG,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: MUTED,
+              fontSize: 14,
+            }}
+            aria-label="Close filters"
+          >
+            ✕
+          </button>
         </div>
-      )}
 
-      {/* Meta line */}
-      {metaLine && (
+        {/* Content */}
+        <div style={{ overflowY: "auto", padding: "0 20px 8px" }}>
+          {/* Cost */}
+          <div style={{ marginBottom: 20 }}>
+            <p
+              style={{
+                fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: MUTED,
+                marginBottom: 8,
+              }}
+            >
+              Cost
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {COST_FILTER_OPTIONS.map((opt) => {
+                // Suppress "Free" pill when external chip is active
+                if (opt.id === "free" && externalFreeActive) return null;
+                const isActive = activeCostFilter === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => onCostChange(opt.id)}
+                    aria-pressed={isActive}
+                    style={{
+                      borderRadius: 20,
+                      padding: "7px 14px",
+                      fontSize: 13,
+                      fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
+                      fontWeight: isActive ? 600 : 500,
+                      cursor: "pointer",
+                      border: isActive ? `1.5px solid ${SAGE}` : `1px solid ${BORDER}`,
+                      backgroundColor: isActive ? `${SAGE}14` : CARD_BG,
+                      color: isActive ? SAGE : MUTED,
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Commitment */}
+          <div style={{ marginBottom: 8 }}>
+            <p
+              style={{
+                fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: MUTED,
+                marginBottom: 8,
+              }}
+            >
+              Time commitment
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {COMMITMENT_FILTER_OPTIONS.map((opt) => {
+                const isActive = activeCommitment === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => onCommitmentChange(opt.id)}
+                    aria-pressed={isActive}
+                    title={opt.description}
+                    style={{
+                      borderRadius: 20,
+                      padding: "7px 14px",
+                      fontSize: 13,
+                      fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
+                      fontWeight: isActive ? 600 : 500,
+                      cursor: "pointer",
+                      border: isActive ? `1.5px solid ${AMBER}` : `1px solid ${BORDER}`,
+                      backgroundColor: isActive ? `${AMBER}14` : CARD_BG,
+                      color: isActive ? AMBER : MUTED,
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {opt.label}
+                    {opt.id !== "any" && (
+                      <span style={{ fontSize: 11, opacity: 0.7, marginLeft: 4 }}>
+                        {opt.description}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
         <div
           style={{
-            fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
-            fontSize: 12,
-            color: MUTED,
+            borderTop: `1px solid ${BORDER}`,
+            padding: "12px 20px",
+            display: "flex",
+            gap: 10,
           }}
         >
-          {metaLine}
-        </div>
-      )}
-
-      {/* Tags row */}
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
-        {/* Registration status badge */}
-        {status === "open" && (
-          <span
+          {hasActive && (
+            <button
+              onClick={() => { onClear(); }}
+              style={{
+                flex: 1,
+                padding: "11px 0",
+                borderRadius: 14,
+                border: `1px solid ${BORDER}`,
+                backgroundColor: CARD_BG,
+                fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
+                fontSize: 13,
+                fontWeight: 600,
+                color: MUTED,
+                cursor: "pointer",
+              }}
+            >
+              Clear
+            </button>
+          )}
+          <button
+            onClick={onClose}
             style={{
+              flex: 2,
+              padding: "11px 0",
+              borderRadius: 14,
+              border: "none",
+              backgroundColor: SAGE,
               fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.5px",
-              textTransform: "uppercase",
-              color: MOSS,
-              backgroundColor: `${MOSS}14`,
-              borderRadius: 8,
-              padding: "2px 8px",
-            }}
-          >
-            OPEN
-          </span>
-        )}
-
-        {status === "waitlist" && (
-          <span
-            style={{
-              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.5px",
-              textTransform: "uppercase",
-              color: MUTED,
-              backgroundColor: `${MUTED}1A`,
-              borderRadius: 8,
-              padding: "2px 8px",
-            }}
-          >
-            WAITLIST
-          </span>
-        )}
-
-        {status === "sold_out" && (
-          <span
-            style={{
-              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.5px",
-              textTransform: "uppercase",
-              color: MUTED,
-              backgroundColor: `${MUTED}1A`,
-              borderRadius: 8,
-              padding: "2px 8px",
-            }}
-          >
-            SOLD OUT
-          </span>
-        )}
-
-        {status === "upcoming" && (
-          <span
-            style={{
-              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.5px",
-              textTransform: "uppercase",
-              color: AMBER,
-              backgroundColor: `${AMBER}1A`,
-              border: `1px solid ${AMBER}30`,
-              borderRadius: 8,
-              padding: "2px 8px",
-            }}
-          >
-            COMING SOON
-          </span>
-        )}
-
-        {status === "walk_in" && (
-          <span
-            style={{
-              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.5px",
-              textTransform: "uppercase",
-              color: SAGE,
-              backgroundColor: `${SAGE}14`,
-              borderRadius: 8,
-              padding: "2px 8px",
-            }}
-          >
-            WALK-IN
-          </span>
-        )}
-
-        {/* Closing soon badge — shown when open + urgent */}
-        {status === "open" && isUrgent && closesLabel && (
-          <span
-            style={{
-              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
-              fontSize: 10,
+              fontSize: 13,
               fontWeight: 600,
-              color: AMBER,
-              backgroundColor: `${AMBER}1A`,
-              border: `1px solid ${AMBER}30`,
-              borderRadius: 10,
-              padding: "3px 8px",
+              color: "white",
+              cursor: "pointer",
             }}
           >
-            {closesLabel.toUpperCase()}
-          </span>
-        )}
-
-        {/* Free badge */}
-        {isFree && (
-          <span
-            style={{
-              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.5px",
-              textTransform: "uppercase",
-              color: "#3A7D44",
-              backgroundColor: "#3A7D4412",
-              borderRadius: 8,
-              padding: "2px 8px",
-            }}
-          >
-            FREE
-          </span>
-        )}
-
-        {/* Date range */}
-        {sessionDates && (
-          <span
-            style={{
-              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
-              fontSize: 11,
-              color: MUTED,
-            }}
-          >
-            {sessionDates}
-          </span>
-        )}
+            Apply
+          </button>
+        </div>
       </div>
-
-      {/* Registration link */}
-      {program.registration_url && (status === "open" || status === "walk_in") && (
-        <div style={{ marginTop: 2 }}>
-          <a
-            href={program.registration_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
-              fontSize: 12,
-              fontWeight: 600,
-              color: SAGE,
-              textDecoration: "none",
-            }}
-          >
-            Register →
-          </a>
-        </div>
-      )}
-    </div>
+    </>
   );
-});
+}
 
 // ---- Main component --------------------------------------------------------
 
@@ -356,11 +478,16 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
   portalSlug,
   activeKidIds = [],
   kids = [],
+  activeGenericFilters = [],
 }: ProgramsBrowserProps) {
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("all");
+  const [activeTag, setActiveTag] = useState<ActivityTagKey | "">("");
   const [matchingOnly, setMatchingOnly] = useState(false);
   const [searchQuery] = useState("");
   const [selectedProgram, setSelectedProgram] = useState<ProgramWithVenue | null>(null);
+  const [activeCostFilter, setActiveCostFilter] = useState<CostFilter>("any");
+  const [activeCommitment, setActiveCommitment] = useState<CommitmentFilter>("any");
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const deferredQuery = useDeferredValue(searchQuery);
 
   // Resolve selected kids
@@ -371,9 +498,26 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
   const activeType =
     CATEGORY_PILLS.find((p) => p.id === activeCategory)?.type ?? "";
 
+  // Derive environment filter from generic chips
+  const activeEnvironment: "indoor" | "outdoor" | "" =
+    activeGenericFilters.includes("indoor") ? "indoor" :
+    activeGenericFilters.includes("outdoor") ? "outdoor" :
+    "";
+
+  // Sync "Free" generic chip → cost filter
+  // When parent passes "free" in activeGenericFilters, override the cost filter.
+  const effectiveCostFilter: CostFilter =
+    activeGenericFilters.includes("free") ? "free" : activeCostFilter;
+
+  // Count of active sheet filters (cost + commitment), for the badge on the Filters button.
+  // Exclude effectiveCostFilter from external "free" chip (that's the chip's job, not the sheet's).
+  const activeFilterCount =
+    (activeCostFilter !== "any" && !activeGenericFilters.includes("free") ? 1 : 0) +
+    (activeCommitment !== "any" ? 1 : 0);
+
   const { data: programs, isLoading } = useQuery({
-    queryKey: ["family-programs", portalSlug, activeType],
-    queryFn: () => fetchPrograms(portalSlug, activeType),
+    queryKey: ["family-programs", portalSlug, activeType, activeTag, activeEnvironment, effectiveCostFilter],
+    queryFn: () => fetchPrograms(portalSlug, activeType, activeTag, activeEnvironment, effectiveCostFilter),
     staleTime: 2 * 60 * 1000,
   });
 
@@ -387,6 +531,16 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
           (p.provider_name ?? "").toLowerCase().includes(deferredQuery.toLowerCase())
       )
     : allResults;
+
+  // Cost filter (client-side — handles period normalization the API can't)
+  results = results.filter((p) => matchesCostFilter(p, effectiveCostFilter));
+
+  // Commitment/duration filter (client-side — depends on time fields)
+  if (activeCommitment !== "any") {
+    // For multi-day, only filter programs that span multiple days (have session data).
+    // For time-based filters, pass through programs with no time data.
+    results = results.filter((p) => matchesCommitmentFilter(p, activeCommitment));
+  }
 
   // Kid age filtering
   if (selectedKids.length > 0 && (matchingOnly || activeKidIds.length > 0)) {
@@ -414,9 +568,13 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
     );
   }
 
+  function handleTagClick(tagKey: ActivityTagKey) {
+    setActiveTag((prev) => (prev === tagKey ? "" : tagKey));
+  }
+
   return (
     <div style={{ paddingBottom: 24 }}>
-      {/* Sticky header */}
+      {/* Sticky header — 2 rows + Filters button */}
       <div
         style={{
           position: "sticky",
@@ -426,89 +584,164 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
           borderBottom: `1px solid ${BORDER}`,
         }}
       >
-        {/* Title row + toggle */}
+        {/* Row 1: Title + kid-match toggle + Filters button */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             padding: "14px 20px 10px",
+            gap: 8,
           }}
         >
-          <span
-            style={{
-              fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)",
-              fontSize: 28,
-              fontWeight: 800,
-              color: TEXT,
-            }}
-          >
-            Programs
-          </span>
+          <div style={{ flexShrink: 0 }}>
+            <span
+              style={{
+                display: "block",
+                fontFamily: "var(--font-plus-jakarta-sans, system-ui, sans-serif)",
+                fontSize: 28,
+                fontWeight: 800,
+                color: TEXT,
+                lineHeight: 1.15,
+              }}
+            >
+              Programs &amp; Camps
+            </span>
+            {!isLoading && (
+              <span
+                style={{
+                  display: "block",
+                  fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
+                  fontSize: 12,
+                  fontWeight: 400,
+                  color: MUTED,
+                  marginTop: 1,
+                }}
+              >
+                {matchCount} program{matchCount !== 1 ? "s" : ""} near you
+              </span>
+            )}
+          </div>
 
-          {/* Matching-only toggle */}
-          {selectedKids.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            {/* Kid-match toggle — prominent on/off when kids are selected */}
+            {selectedKids.length > 0 && (
+              <button
+                onClick={() => setMatchingOnly((v) => !v)}
+                aria-label={matchingOnly ? "Show all programs" : `Show matches for ${selectedKids.map((k) => k.nickname).join(", ")}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 10px",
+                  borderRadius: 20,
+                  border: `1.5px solid ${matchingOnly ? SAGE : BORDER}`,
+                  backgroundColor: matchingOnly ? `${SAGE}14` : CARD_BG,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+              >
+                <div
+                  style={{
+                    width: 28,
+                    height: 16,
+                    borderRadius: 8,
+                    backgroundColor: matchingOnly ? SAGE : BORDER,
+                    position: "relative",
+                    transition: "background-color 0.18s",
+                    flexShrink: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 2,
+                      left: matchingOnly ? 14 : 2,
+                      width: 12,
+                      height: 12,
+                      borderRadius: "50%",
+                      backgroundColor: "white",
+                      transition: "left 0.18s",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                    }}
+                  />
+                </div>
+                <span
+                  style={{
+                    fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
+                    fontSize: 11,
+                    fontWeight: matchingOnly ? 600 : 500,
+                    color: matchingOnly ? SAGE : MUTED,
+                    lineHeight: 1,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {selectedKids.length === 1
+                    ? `For ${selectedKids[0].nickname}`
+                    : "For my kids"}
+                </span>
+              </button>
+            )}
+
+            {/* Filters button — opens sheet for cost + commitment */}
             <button
-              onClick={() => setMatchingOnly((v) => !v)}
-              aria-label={matchingOnly ? "Show all programs" : "Show matching programs only"}
+              onClick={() => setFilterSheetOpen(true)}
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 6,
-                background: "none",
-                border: "none",
+                gap: 5,
+                padding: "6px 12px",
+                borderRadius: 20,
+                border: activeFilterCount > 0 ? `1.5px solid ${SAGE}` : `1px solid ${BORDER}`,
+                backgroundColor: activeFilterCount > 0 ? `${SAGE}14` : CARD_BG,
                 cursor: "pointer",
-                padding: 0,
+                fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
+                fontSize: 12,
+                fontWeight: activeFilterCount > 0 ? 600 : 500,
+                color: activeFilterCount > 0 ? SAGE : MUTED,
+                transition: "all 0.15s",
               }}
             >
-              <span
-                style={{
-                  fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
-                  fontSize: 11,
-                  color: MUTED,
-                  lineHeight: 1,
-                }}
-              >
-                Matching only
-              </span>
-              {/* Toggle track */}
-              <div
-                style={{
-                  width: 36,
-                  height: 20,
-                  borderRadius: 10,
-                  backgroundColor: matchingOnly ? SAGE : BORDER,
-                  position: "relative",
-                  transition: "background-color 0.18s",
-                  flexShrink: 0,
-                }}
-              >
-                {/* Toggle knob */}
-                <div
+              {/* Sliders icon */}
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                <line x1="2" y1="4" x2="14" y2="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="2" y1="12" x2="14" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <circle cx="5" cy="4" r="2" fill={activeFilterCount > 0 ? SAGE : MUTED} />
+                <circle cx="11" cy="8" r="2" fill={activeFilterCount > 0 ? SAGE : MUTED} />
+                <circle cx="7" cy="12" r="2" fill={activeFilterCount > 0 ? SAGE : MUTED} />
+              </svg>
+              Filters
+              {activeFilterCount > 0 && (
+                <span
                   style={{
-                    position: "absolute",
-                    top: 2,
-                    left: matchingOnly ? 18 : 2,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     width: 16,
                     height: 16,
                     borderRadius: "50%",
-                    backgroundColor: "white",
-                    transition: "left 0.18s",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
+                    backgroundColor: SAGE,
+                    color: "white",
+                    fontSize: 9,
+                    fontWeight: 700,
+                    lineHeight: 1,
                   }}
-                />
-              </div>
+                >
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
-          )}
+          </div>
         </div>
 
-        {/* Category filter pills */}
+        {/* Row 2: Category pills */}
         <div
           style={{
             display: "flex",
             gap: 8,
             overflowX: "auto",
-            padding: "0 20px 12px",
+            padding: "0 20px 10px",
             scrollbarWidth: "none",
           }}
         >
@@ -537,7 +770,66 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
             );
           })}
         </div>
+
+        {/* Row 3: Activity tag pills */}
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            overflowX: "auto",
+            padding: "0 20px 10px",
+            scrollbarWidth: "none",
+          }}
+        >
+          {FILTER_ACTIVITY_TAGS.map((tagKey) => {
+            const tag = ACTIVITY_TAGS[tagKey];
+            const isActive = activeTag === tagKey;
+            return (
+              <button
+                key={tagKey}
+                onClick={() => handleTagClick(tagKey)}
+                aria-pressed={isActive}
+                style={{
+                  flexShrink: 0,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  borderRadius: 20,
+                  padding: "4px 11px",
+                  fontSize: 12,
+                  fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "background-color 0.15s, color 0.15s, border-color 0.15s",
+                  border: isActive
+                    ? `1.5px solid ${tag.color}`
+                    : `1px solid ${BORDER}`,
+                  backgroundColor: isActive ? `${tag.color}14` : CARD_BG,
+                  color: isActive ? tag.color : MUTED,
+                }}
+              >
+                <span aria-hidden="true" style={{ fontSize: 12, lineHeight: 1 }}>{tag.icon}</span>
+                {tag.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Filter sheet — Cost + Commitment */}
+      <FilterSheet
+        isOpen={filterSheetOpen}
+        onClose={() => setFilterSheetOpen(false)}
+        activeCostFilter={effectiveCostFilter}
+        onCostChange={setActiveCostFilter}
+        activeCommitment={activeCommitment}
+        onCommitmentChange={setActiveCommitment}
+        externalFreeActive={activeGenericFilters.includes("free")}
+        onClear={() => {
+          setActiveCostFilter("any");
+          setActiveCommitment("any");
+        }}
+      />
 
       {/* Age filter row + match count */}
       {selectedKids.length > 0 && (
@@ -609,24 +901,12 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
           </>
         ) : results.length > 0 ? (
           results.map((program) => (
-            <div
+            <ProgramCard
               key={program.id}
-              style={{ cursor: "pointer" }}
+              program={program}
+              accentColor={getMatchingKid(program)?.color}
               onClick={() => setSelectedProgram(program)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setSelectedProgram(program);
-                }
-              }}
-            >
-              <ProgramCardItem
-                program={program}
-                matchingKid={getMatchingKid(program)}
-              />
-            </div>
+            />
           ))
         ) : (
           <div
@@ -644,9 +924,15 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
                 marginBottom: 8,
               }}
             >
-              {activeCategory === "all"
-                ? "No programs found"
-                : `No ${CATEGORY_PILLS.find((p) => p.id === activeCategory)?.label.toLowerCase() ?? activeCategory} programs found`}
+              {activeTag
+                ? `No ${ACTIVITY_TAGS[activeTag].label.toLowerCase()} programs found`
+                : activeCategory !== "all"
+                ? `No ${CATEGORY_PILLS.find((p) => p.id === activeCategory)?.label.toLowerCase() ?? activeCategory} programs found`
+                : effectiveCostFilter !== "any"
+                ? "No programs match this price filter"
+                : activeCommitment !== "any"
+                ? "No programs match this time commitment"
+                : "No programs found"}
             </p>
             <p
               style={{
@@ -657,25 +943,52 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
                 marginTop: 0,
               }}
             >
-              Try a different category or check back soon
+              {activeTag || effectiveCostFilter !== "any" || activeCommitment !== "any"
+                ? "Try adjusting or clearing your filters"
+                : "Try a different category or check back soon"}
             </p>
-            <a
-              href={`/${portalSlug}?view=find&categories=family,community`}
-              style={{
-                display: "inline-block",
-                marginTop: 16,
-                padding: "10px 24px",
-                backgroundColor: SAGE,
-                color: "white",
-                borderRadius: 12,
-                fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
-                fontWeight: 600,
-                fontSize: 14,
-                textDecoration: "none",
-              }}
-            >
-              Browse family events instead
-            </a>
+            {(activeTag || effectiveCostFilter !== "any" || activeCommitment !== "any") ? (
+              <button
+                onClick={() => {
+                  setActiveTag("");
+                  setActiveCostFilter("any");
+                  setActiveCommitment("any");
+                }}
+                style={{
+                  display: "inline-block",
+                  marginTop: 16,
+                  padding: "10px 24px",
+                  backgroundColor: SAGE,
+                  color: "white",
+                  borderRadius: 12,
+                  fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
+                  fontWeight: 600,
+                  fontSize: 14,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Clear filters
+              </button>
+            ) : (
+              <a
+                href={`/${portalSlug}?view=find&categories=family,community`}
+                style={{
+                  display: "inline-block",
+                  marginTop: 16,
+                  padding: "10px 24px",
+                  backgroundColor: SAGE,
+                  color: "white",
+                  borderRadius: 12,
+                  fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",
+                  fontWeight: 600,
+                  fontSize: 14,
+                  textDecoration: "none",
+                }}
+              >
+                Browse family events instead
+              </a>
+            )}
           </div>
         )}
       </div>

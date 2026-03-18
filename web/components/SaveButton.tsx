@@ -171,7 +171,7 @@ export default function SaveButton({
       className={`${sizeClasses[size]} rounded-xl transition-all active:scale-[0.98] ${
         isSaved
           ? "text-[var(--gold)] hover:text-[var(--coral)]"
-          : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]"
+          : "text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]"
       } ${className} ${showLabel ? "flex items-center gap-1.5" : ""}`}
       title={isSaved ? "Remove from saved" : "Save for later"}
       aria-label={isSaved ? "Remove from saved" : "Save for later"}

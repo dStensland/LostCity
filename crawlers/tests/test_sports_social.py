@@ -1,4 +1,8 @@
-from sources.sports_social import parse_detail_page, parse_event_links_from_html
+from sources.sports_social import (
+    _is_timed_duplicate_conflict,
+    parse_detail_page,
+    parse_event_links_from_html,
+)
 
 
 LISTING_HTML = """
@@ -102,3 +106,13 @@ def test_parse_detail_page_extracts_sports_social_event_fields():
         "image_url": "https://example.com/nfc.png",
         "cta_label": "Buy Tickets Now",
     }
+
+
+def test_timed_duplicate_conflict_detection_is_precise():
+    duplicate = Exception(
+        'duplicate key value violates unique constraint "idx_events_unique_source_venue_slot_norm_title_timed"'
+    )
+    unrelated = Exception("duplicate key value violates unique constraint \"other_index\"")
+
+    assert _is_timed_duplicate_conflict(duplicate) is True
+    assert _is_timed_duplicate_conflict(unrelated) is False

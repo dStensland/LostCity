@@ -1,8 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import type { DogEvent, DogVenue } from "@/lib/dog-data";
 import { DOG_CONTENT_COLORS, classifyDogContentType } from "@/lib/dog-art";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
 import DogTagChips from "./DogTagChips";
 
 /* ------------------------------------------------------------------ */
@@ -52,8 +51,8 @@ export function DogEventCard({
       {/* Image or fallback */}
       <div className="relative h-40 overflow-hidden rounded-t-2xl">
         {event.image_url ? (
-          <Image
-            src={getProxiedImageSrc(event.image_url)}
+          <SmartImage
+            src={event.image_url}
             alt={event.title}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -165,8 +164,8 @@ export function DogVenueCard({
       {/* Image or fallback */}
       <div className="relative h-40 overflow-hidden rounded-t-2xl">
         {venue.image_url ? (
-          <Image
-            src={getProxiedImageSrc(venue.image_url)}
+          <SmartImage
+            src={venue.image_url}
             alt={venue.name}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -250,8 +249,8 @@ export function DogVenueRow({
       {/* Thumbnail or color swatch */}
       {venue.image_url ? (
         <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
-          <Image
-            src={getProxiedImageSrc(venue.image_url)}
+          <SmartImage
+            src={venue.image_url}
             alt={venue.name}
             fill
             className="object-cover"

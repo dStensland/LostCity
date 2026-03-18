@@ -155,12 +155,16 @@ export function mapEventServerDataToViewData(
     end_date: e.end_date,
     start_time: e.start_time,
     end_time: e.end_time,
+    category: e.category ?? null,
+    is_free: e.is_free ?? false,
+    price_min: e.price_min ?? null,
     venue: e.venue
       ? {
           id: e.venue.id,
           name: e.venue.name,
           slug: e.venue.slug,
           city: e.venue.city,
+          neighborhood: e.venue.neighborhood ?? null,
           location_designator: e.venue.location_designator ?? undefined,
         }
       : null,
@@ -178,12 +182,16 @@ export function mapEventServerDataToViewData(
     end_date: e.end_date,
     start_time: e.start_time,
     end_time: e.end_time,
+    category: e.category ?? null,
+    is_free: e.is_free ?? false,
+    price_min: e.price_min ?? null,
     venue: e.venue
       ? {
           id: e.venue.id,
           name: e.venue.name,
           slug: e.venue.slug,
           city: e.venue.city,
+          neighborhood: e.venue.neighborhood ?? null,
           location_designator: e.venue.location_designator ?? undefined,
         }
       : null,
@@ -202,8 +210,9 @@ export function mapEventServerDataToViewData(
           food: nearbyDestinations.food ?? [],
           drinks: nearbyDestinations.drinks ?? [],
           nightlife: nearbyDestinations.nightlife ?? [],
+          caffeine: nearbyDestinations.caffeine ?? [],
           fun: nearbyDestinations.fun ?? [],
         }
-      : { food: [], drinks: [], nightlife: [], fun: [] },
+      : { food: [], drinks: [], nightlife: [], caffeine: [], fun: [] },
   };
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback, use } from "react";
+import { useState, useCallback, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -12,16 +12,19 @@ import {
   SignOut,
   Link as LinkIcon,
   CheckCircle,
+  ClockCounterClockwise,
+  Check,
+  X as XIcon,
 } from "@phosphor-icons/react";
 import { useGroup, useGroupSpots, useGroupActivity, useGroupHangs, useLeaveGroup } from "@/lib/hooks/useGroups";
 import { useAuth } from "@/lib/auth-context";
 import { ENABLE_GROUPS_V1 } from "@/lib/launch-flags";
 import { useAuthenticatedFetch } from "@/lib/hooks/useAuthenticatedFetch";
-import type { GroupActivity } from "@/lib/types/groups";
+import type { GroupActivity, GroupJoinRequest } from "@/lib/types/groups";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type TabId = "activity" | "spots" | "members";
+type TabId = "activity" | "spots" | "members" | "requests";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -54,14 +57,19 @@ function venueHref(slug: string | null, id: number): string {
 function TabBar({
   active,
   onChange,
+  showRequests,
+  pendingCount,
 }: {
   active: TabId;
   onChange: (t: TabId) => void;
+  showRequests?: boolean;
+  pendingCount?: number;
 }) {
-  const tabs: { id: TabId; label: string }[] = [
+  const tabs: { id: TabId; label: string; badge?: number }[] = [
     { id: "activity", label: "Activity" },
     { id: "spots", label: "Spots" },
     { id: "members", label: "Members" },
+    ...(showRequests ? [{ id: "requests" as const, label: "Requests", badge: pendingCount }] : []),
   ];
 
   return (
@@ -77,6 +85,11 @@ function TabBar({
           }`}
         >
           {tab.label}
+          {tab.badge != null && tab.badge > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-2xs font-bold tabular-nums">
+              {tab.badge}
+            </span>
+          )}
         </button>
       ))}
     </div>
@@ -142,7 +155,7 @@ function ActivityTab({ groupId }: { groupId: string }) {
               >
                 <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden bg-[var(--twilight)]">
                   {hang.profile.avatar_url ? (
-                    <Image
+                    <SmartImage
                       src={hang.profile.avatar_url}
                       alt={hang.profile.display_name ?? ""}
                       width={32}
@@ -283,7 +296,7 @@ function SpotsTab({ groupId }: { groupId: string }) {
               {/* Venue thumbnail */}
               <div className="flex-shrink-0 w-11 h-11 rounded-lg overflow-hidden bg-[var(--twilight)]">
                 {spot.venue.image_url ? (
-                  <Image
+                  <SmartImage
                     src={spot.venue.image_url}
                     alt={spot.venue.name}
                     width={44}
@@ -394,7 +407,7 @@ function MembersTab({
               {/* Avatar */}
               <div className="flex-shrink-0 w-9 h-9 rounded-full overflow-hidden bg-[var(--twilight)]">
                 {profile?.avatar_url ? (
-                  <Image
+                  <SmartImage
                     src={profile.avatar_url}
                     alt={displayName}
                     width={36}
@@ -456,6 +469,150 @@ function MembersTab({
   );
 }
 
+// ─── Requests Tab ────────────────────────────────────────────────────────────
+
+function RequestsTab({
+  groupId,
+  onCountChange,
+}: {
+  groupId: string;
+  onCountChange?: (count: number) => void;
+}) {
+  const { authFetch } = useAuthenticatedFetch();
+  const [requests, setRequests] = useState<GroupJoinRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const fetchRequests = useCallback(async () => {
+    const { data } = await authFetch<{ requests: GroupJoinRequest[] }>(
+      `/api/groups/${groupId}/requests`,
+      { showErrorToast: false }
+    );
+    if (data) {
+      setRequests(data.requests);
+      onCountChange?.(data.requests.length);
+    }
+    setIsLoading(false);
+  }, [groupId, authFetch, onCountChange]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchRequests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch on mount only
+  }, [groupId]);
+
+  const handleDecision = useCallback(
+    async (requestId: string, decision: "approved" | "denied") => {
+      setProcessingId(requestId);
+      const { error } = await authFetch(`/api/groups/${groupId}/requests/${requestId}`, {
+        method: "PATCH",
+        body: { status: decision },
+        showErrorToast: true,
+      });
+      if (!error) {
+        setRequests((prev) => prev.filter((r) => r.id !== requestId));
+        onCountChange?.(requests.length - 1);
+      }
+      setProcessingId(null);
+    },
+    [groupId, authFetch, onCountChange, requests.length]
+  );
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2.5">
+        {[1, 2].map((i) => (
+          <div
+            key={i}
+            className="h-16 rounded-xl bg-[var(--night)] border border-[var(--twilight)]/40 animate-pulse"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (requests.length === 0) {
+    return (
+      <div className="py-10 text-center">
+        <ClockCounterClockwise weight="duotone" className="w-8 h-8 mx-auto text-[var(--muted)] mb-2" />
+        <p className="text-sm text-[var(--soft)]">No pending requests.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="font-mono text-xs text-[var(--muted)] mb-3">
+        {requests.length} pending {requests.length === 1 ? "request" : "requests"}
+      </p>
+      <div className="rounded-xl overflow-hidden border border-[var(--twilight)]/40 bg-[var(--night)] divide-y divide-[var(--twilight)]/30">
+        {requests.map((req) => {
+          const profile = req.profile;
+          const displayName = profile?.display_name ?? profile?.username ?? "Unknown";
+          const isProcessing = processingId === req.id;
+
+          return (
+            <div key={req.id} className="flex items-center gap-3 px-3 py-2.5">
+              {/* Avatar */}
+              <div className="flex-shrink-0 w-9 h-9 rounded-full overflow-hidden bg-[var(--twilight)]">
+                {profile?.avatar_url ? (
+                  <SmartImage
+                    src={profile.avatar_url}
+                    alt={displayName}
+                    width={36}
+                    height={36}
+                    sizes="36px"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="w-full h-full flex items-center justify-center text-sm font-bold text-[var(--muted)]">
+                    {displayName.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+
+              {/* Name + message */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-[var(--cream)] truncate">
+                  {displayName}
+                </p>
+                {req.message && (
+                  <p className="text-xs text-[var(--soft)] truncate mt-0.5 italic">
+                    &ldquo;{req.message}&rdquo;
+                  </p>
+                )}
+                <p className="text-xs text-[var(--muted)] mt-0.5">
+                  {formatRelativeTime(req.created_at)}
+                </p>
+              </div>
+
+              {/* Approve / Deny buttons */}
+              <div className="flex-shrink-0 flex items-center gap-1.5">
+                <button
+                  onClick={() => handleDecision(req.id, "approved")}
+                  disabled={isProcessing}
+                  className="p-1.5 rounded-lg bg-[var(--neon-green)]/10 hover:bg-[var(--neon-green)]/20 text-[var(--neon-green)] transition-colors disabled:opacity-50"
+                  aria-label={`Approve ${displayName}`}
+                >
+                  <Check weight="bold" className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDecision(req.id, "denied")}
+                  disabled={isProcessing}
+                  className="p-1.5 rounded-lg hover:bg-[var(--coral)]/10 text-[var(--muted)] hover:text-[var(--coral)] transition-colors disabled:opacity-50"
+                  aria-label={`Deny ${displayName}`}
+                >
+                  <XIcon weight="bold" className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function GroupDetailPage({
@@ -467,6 +624,7 @@ export default function GroupDetailPage({
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>("activity");
   const [copied, setCopied] = useState(false);
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
 
   const { data, isLoading, error } = useGroup(groupId);
 
@@ -585,13 +743,21 @@ export default function GroupDetailPage({
         </div>
 
         {/* Tab bar */}
-        <TabBar active={activeTab} onChange={setActiveTab} />
+        <TabBar
+          active={activeTab}
+          onChange={setActiveTab}
+          showRequests={my_role === "admin" && group.join_policy === "request"}
+          pendingCount={pendingRequestCount}
+        />
 
         {/* Tab content */}
         {activeTab === "activity" && <ActivityTab groupId={groupId} />}
         {activeTab === "spots" && <SpotsTab groupId={groupId} />}
         {activeTab === "members" && (
           <MembersTab groupId={groupId} myRole={my_role} />
+        )}
+        {activeTab === "requests" && (
+          <RequestsTab groupId={groupId} onCountChange={setPendingRequestCount} />
         )}
       </div>
     </div>

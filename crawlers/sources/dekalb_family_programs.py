@@ -30,6 +30,7 @@ from sources._activecommunities_family_filter import (
 )
 from sources.dekalb_parks_rec import (
     ACTIVITY_SEARCH_URL,
+    GENERIC_VENUE,
     MAX_PAGES,
     REQUEST_DELAY,
     _classify,
@@ -46,6 +47,9 @@ logger = logging.getLogger(__name__)
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     events=True,
     programs=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
 )
 
 _BLOCKED_KEYWORDS = [
@@ -55,6 +59,112 @@ _BLOCKED_KEYWORDS = [
     "line dance",
     "pickleball",
 ]
+
+
+def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityEnvelope | None:
+    """Project touched DeKalb family venues into shared destination details."""
+    slug = str(venue_data.get("slug") or "").strip()
+    if not slug or slug == GENERIC_VENUE["slug"]:
+        return None
+
+    venue_type = str(venue_data.get("venue_type") or "").strip().lower()
+    envelope = TypedEntityEnvelope()
+
+    if venue_type in {"recreation", "community_center"}:
+        envelope.add(
+            "destination_details",
+            {
+                "venue_id": venue_id,
+                "destination_type": "community_recreation_center",
+                "commitment_tier": "halfday",
+                "primary_activity": "family recreation center visit",
+                "best_seasons": ["spring", "summer", "fall", "winter"],
+                "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+                "parking_type": "free_lot",
+                "best_time_of_day": "afternoon",
+                "family_suitability": "yes",
+                "reservation_required": False,
+                "permit_required": False,
+                "fee_note": "Drop-in access and classes vary by center; confirm current family programming and building hours through DeKalb Recreation.",
+                "source_url": ACTIVITY_SEARCH_URL,
+                "metadata": {
+                    "source_type": "family_destination_enrichment",
+                    "venue_type": venue_type,
+                    "county": "dekalb",
+                },
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "indoor-family-recreation-space",
+                "title": "Indoor family recreation space",
+                "feature_type": "amenity",
+                "description": "This DeKalb recreation center gives families an indoor recreation option with weather-proof community-center space and youth programming.",
+                "url": ACTIVITY_SEARCH_URL,
+                "price_note": "Drop-in access and building amenities vary by center.",
+                "is_free": False,
+                "sort_order": 10,
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "family-classes-and-seasonal-camps",
+                "title": "Family classes and seasonal camps",
+                "feature_type": "experience",
+                "description": "This DeKalb recreation center regularly hosts youth classes, family recreation programming, and seasonal camps.",
+                "url": ACTIVITY_SEARCH_URL,
+                "price_note": "Registration costs vary by program and season.",
+                "is_free": False,
+                "sort_order": 20,
+            },
+        )
+        return envelope
+
+    if venue_type == "park":
+        envelope.add(
+            "destination_details",
+            {
+                "venue_id": venue_id,
+                "destination_type": "park",
+                "commitment_tier": "halfday",
+                "primary_activity": "family park visit",
+                "best_seasons": ["spring", "summer", "fall"],
+                "weather_fit_tags": ["outdoor", "free-option", "family-daytrip"],
+                "parking_type": "free_lot",
+                "best_time_of_day": "morning",
+                "family_suitability": "yes",
+                "reservation_required": False,
+                "permit_required": False,
+                "fee_note": "Open park access is free; classes, camps, and facility reservations vary by site.",
+                "source_url": ACTIVITY_SEARCH_URL,
+                "metadata": {
+                    "source_type": "family_destination_enrichment",
+                    "venue_type": venue_type,
+                    "county": "dekalb",
+                },
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "free-outdoor-play-space",
+                "title": "Free outdoor play space",
+                "feature_type": "amenity",
+                "description": "This DeKalb park is a free family option for low-friction outdoor time, open-air play, and pairing with seasonal county programming.",
+                "url": ACTIVITY_SEARCH_URL,
+                "price_note": "Open park access is free.",
+                "is_free": True,
+                "sort_order": 10,
+            },
+        )
+        return envelope
+
+    return None
 
 
 def _flush_program_envelope(program_envelope: TypedEntityEnvelope) -> TypedEntityEnvelope:
@@ -206,7 +316,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 desc_html: str = item.get("desc") or ""
-                desc_text = BeautifulSoup(desc_html, "html.parser").get_text(" ", strip=True)
+                desc_soup = BeautifulSoup(desc_html, "html.parser")
+                desc_text = desc_soup.get_text(" ", strip=True)
+
+                # Extract inline image from description HTML if present.
+                # The ACTIVENet API does not expose a dedicated image field; the
+                # detail_url pages return a generic ActiveNet og:image, not a
+                # program-specific one. Inline <img> tags in desc_html are the
+                # only program-specific image source available from this API.
+                desc_image_url: Optional[str] = None
+                for img_tag in desc_soup.find_all("img", src=True):
+                    src = str(img_tag.get("src", "")).strip()
+                    if src and not src.startswith("data:"):
+                        desc_image_url = src
+                        break
                 if _should_skip_dedicated_source(name, desc_text):
                     continue
 
@@ -241,7 +364,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 location_label: str = item.get("location", {}).get("label") or ""
                 venue_key = location_label.lower().strip()
                 if venue_key not in venue_cache:
-                    venue_cache[venue_key] = get_or_create_venue(_resolve_venue_data(location_label))
+                    venue_data = _resolve_venue_data(location_label)
+                    venue_id = get_or_create_venue(venue_data)
+                    destination_envelope = _build_destination_envelope(venue_data, venue_id)
+                    if destination_envelope is not None:
+                        persist_typed_entity_envelope(destination_envelope)
+                    venue_cache[venue_key] = venue_id
                 venue_id = venue_cache[venue_key]
 
                 price_min, price_max, is_free = _extract_prices(desc_html)
@@ -274,7 +402,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "is_free": is_free,
                     "source_url": detail_url,
                     "ticket_url": detail_url,
-                    "image_url": None,
+                    "image_url": desc_image_url,
                     "raw_text": f"{name} | {location_label} | {item.get('ages', '')}",
                     "extraction_confidence": 0.88,
                     "is_recurring": bool(end_raw and start_raw and end_raw != start_raw),

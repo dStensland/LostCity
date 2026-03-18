@@ -25,20 +25,33 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
 
   try {
     const body = await request.json();
-    const { invite_code } = body;
+    const { invite_code, group_id } = body;
 
-    if (!invite_code || typeof invite_code !== "string" || invite_code.trim().length === 0) {
-      return validationError("invite_code is required");
+    // Either invite_code or group_id is required (group_id for public groups)
+    if (!invite_code && !group_id) {
+      return validationError("invite_code or group_id is required");
     }
 
-    const code = invite_code.trim();
+    if (invite_code && typeof invite_code !== "string") {
+      return validationError("invite_code must be a string");
+    }
 
-    // Look up group by invite code
-    const { data: group, error: groupError } = await serviceClient
+    if (group_id && typeof group_id !== "string") {
+      return validationError("group_id must be a string");
+    }
+
+    // Look up group by invite code or group_id
+    let groupQuery = serviceClient
       .from("groups")
-      .select("id, name, description, emoji, avatar_url, creator_id, invite_code, visibility, max_members, created_at, updated_at")
-      .eq("invite_code", code)
-      .maybeSingle();
+      .select("id, name, description, emoji, avatar_url, creator_id, invite_code, visibility, join_policy, max_members, created_at, updated_at");
+
+    if (invite_code) {
+      groupQuery = groupQuery.eq("invite_code", invite_code.trim());
+    } else {
+      groupQuery = groupQuery.eq("id", group_id);
+    }
+
+    const { data: group, error: groupError } = await groupQuery.maybeSingle();
 
     if (groupError) {
       logger.error("Group join lookup error", groupError, {
@@ -61,12 +74,18 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
       creator_id: string;
       invite_code: string;
       visibility: string;
+      join_policy: string;
       max_members: number;
       created_at: string;
       updated_at: string;
     };
 
     const groupRow = group as GroupRow;
+
+    // If joining by group_id (no invite code), group must be public
+    if (!invite_code && groupRow.visibility !== "public") {
+      return NextResponse.json({ error: "Invalid invite code" }, { status: 404 });
+    }
 
     // Check if user is already a member
     const { data: existing } = await serviceClient
@@ -101,7 +120,51 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
       return NextResponse.json({ error: "Group is full" }, { status: 422 });
     }
 
-    // Insert member
+    // Branch on join_policy for public groups joined by group_id (no invite code)
+    if (!invite_code && groupRow.join_policy === "request") {
+      // Check for existing pending request
+      const { data: existingRequest } = await serviceClient
+        .from("group_join_requests")
+        .select("id, status")
+        .eq("group_id", groupRow.id)
+        .eq("user_id", user.id)
+        .eq("status", "pending")
+        .maybeSingle();
+
+      if (existingRequest) {
+        return NextResponse.json({ status: "pending", message: "Request already submitted" });
+      }
+
+      // Insert join request
+      const { error: requestError } = await serviceClient
+        .from("group_join_requests")
+        .insert({
+          group_id: groupRow.id,
+          user_id: user.id,
+          message: body.message?.trim()?.slice(0, 280) ?? null,
+        } as never);
+
+      if (requestError) {
+        if (requestError.code === "23505") {
+          return NextResponse.json({ status: "pending", message: "Request already submitted" });
+        }
+        logger.error("Group join request insert error", requestError, {
+          userId: user.id,
+          groupId: groupRow.id,
+          component: "groups/join",
+        });
+        return NextResponse.json({ error: "Failed to submit request" }, { status: 500 });
+      }
+
+      return NextResponse.json({ status: "pending", message: "Join request submitted" }, { status: 201 });
+    }
+
+    // For invite-code joins or open policy: insert member directly
+    if (!invite_code && groupRow.join_policy === "invite") {
+      return NextResponse.json({ error: "This group requires an invite" }, { status: 403 });
+    }
+
+    // Insert member (open policy or invite code)
     const { error: insertError } = await serviceClient
       .from("group_members")
       .insert({

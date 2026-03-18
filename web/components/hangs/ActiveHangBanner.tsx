@@ -2,7 +2,7 @@
 
 import { memo, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { Users, EyeSlash, Globe, SignOut } from "@phosphor-icons/react";
 import { triggerHaptic } from "@/lib/haptics";
 import { usePortalSlug } from "@/lib/portal-context";
@@ -140,7 +140,7 @@ export const ActiveHangBanner = memo(function ActiveHangBanner({
       <Link href={venueHref} className="flex-shrink-0 relative" aria-label={`View ${hang.venue.name}`}>
         <div className="w-10 h-10 rounded-lg overflow-hidden relative">
           {hang.venue.image_url ? (
-            <Image
+            <SmartImage
               src={hang.venue.image_url}
               alt={hang.venue.name}
               width={40}

@@ -40,11 +40,19 @@ function buildProgramsQuery(data: unknown[] = []) {
   const query = {
     select: vi.fn(),
     eq: vi.fn(),
+    or: vi.fn(),
+    not: vi.fn(),
+    contains: vi.fn(),
+    in: vi.fn(),
     order: vi.fn(),
     range: vi.fn(),
   };
   query.select.mockReturnValue(query);
   query.eq.mockReturnValue(query);
+  query.or.mockReturnValue(query);
+  query.not.mockReturnValue(query);
+  query.contains.mockReturnValue(query);
+  query.in.mockReturnValue(query);
   query.order.mockReturnValue(query);
   query.range.mockResolvedValue({
     data,

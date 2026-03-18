@@ -14,9 +14,9 @@ import argparse
 from typing import Optional
 from collections import Counter
 from dotenv import load_dotenv
-from anthropic import Anthropic
 from db import get_client
 from config import get_config
+from llm_client import generate_text
 
 load_dotenv()
 
@@ -71,13 +71,13 @@ ORG_TYPES = {"institution", "nonprofit", "government", "city", "neighborhood"}
 # Keywords in venue name → venue_type
 NAME_TYPE_RULES = [
     # Bars/nightlife
-    (r'\b(Bar|Pub|Tavern|Lounge|Saloon|Taproom|Tap Room|Cantina|Taqueria)\b', 'bar'),
+    (r'\b(Bar|Pub|Tavern|Lounge|Saloon|Taproom|Tap Room|Cantina|Taqueria|Tiki|Cocktail Club|Cocktail Lounge)\b', 'bar'),
     (r'\b(Brewery|Brewing|Brew\s?Pub|Brewpub|Lager|Ale\s?House)\b', 'brewery'),
     (r'\b(Wine Bar|Wine Room|Winery|Vineyard)\b', 'bar'),
     (r'\b(Distillery)\b', 'bar'),
     (r'\b(Nightclub|Night Club|Dance Club)\b', 'nightclub'),
     # Food
-    (r'\b(Restaurant|Grill|Grille|Cafe|Café|Diner|Bistro|Eatery|Kitchen|BBQ|Pizza|Pizzeria|Burger|Taco|Sushi|Ramen|Pho)\b', 'restaurant'),
+    (r'\b(Restaurant|Grill|Grille|Cafe|Café|Diner|Bistro|Eatery|Kitchen|BBQ|Pizza|Pizzeria|Burger|Taco|Sushi|Ramen|Pho|Oyster House|Oyster Bar)\b', 'restaurant'),
     (r'\b(Coffee|Espresso|Roast|Roasters)\b', 'coffee_shop'),
     (r'\b(Bakery|Bakeshop|Doughnuts|Donut)\b', 'restaurant'),
     # Venues
@@ -87,10 +87,10 @@ NAME_TYPE_RULES = [
     (r'\b(Arena|Coliseum|Stadium|Amphitheater|Amphitheatre)\b', 'arena'),
     (r'\b(Cinema|Cinemas|Movie|Movies|Film|Cinemark|Regal|AMC)\b', 'cinema'),
     # Music
-    (r'\b(Blues Club|Music Hall|Music House|Concert Hall|Bandshell)\b', 'music_venue'),
+    (r'\b(Blues Club|Blues Bar|Jazz Club|Jazz Room|Jazz Bar|Music Hall|Music House|Concert Hall|Bandshell)\b', 'music_venue'),
     # Recreation
     (r'\b(Bowling|Arcade|Karting|Escape Room|Trampoline|Adventure Park|Axe Throwing)\b', 'recreation'),
-    (r'\b(Yoga|Fitness|Gym|CrossFit|Pilates)\b', 'fitness'),
+    (r'\b(Yoga|Fitness|Gym|CrossFit|Pilates|Dance Studio|Dance Academy|Dance Center)\b', 'fitness'),
     # Community
     (r'\b(Church|Chapel|Cathedral|Mosque|Synagogue|Temple)\b', 'church'),
     (r'\b(Library)\b', 'library'),
@@ -98,7 +98,7 @@ NAME_TYPE_RULES = [
     (r'\b(Park|Garden|Gardens|Nature Center|Botanical)\b', 'park'),
     # Education/Orgs
     (r'\b(University|College|School)\b', 'organization'),
-    (r'\b(Foundation|Alliance|Coalition|Association|Society|Council)\b', 'organization'),
+    (r'\b(Foundation|Alliance|Coalition|Association|Society|Council|Running Club|Run Club)\b', 'organization'),
 ]
 
 # Compile
@@ -183,9 +183,12 @@ Example:
 
 
 def classify_with_llm(venues: list[dict]) -> dict[int, str]:
-    """Classify a batch of venues using Claude Haiku."""
+    """Classify a batch of venues using the configured LLM provider."""
     cfg = get_config()
-    client = Anthropic(api_key=cfg.llm.anthropic_api_key)
+    provider = (cfg.llm.provider or "").strip().lower()
+    if provider in ("", "auto"):
+        provider = "openai" if cfg.llm.openai_api_key else "anthropic"
+    model_override = cfg.llm.openai_model if provider == "openai" else "claude-3-haiku-20240307"
 
     # Format venue list
     lines = []
@@ -203,17 +206,16 @@ def classify_with_llm(venues: list[dict]) -> dict[int, str]:
 
     venue_text = "\n".join(lines)
 
-    response = client.messages.create(
-        model="claude-3-haiku-20240307",
-        max_tokens=2048,
-        temperature=0,
-        system=CLASSIFY_PROMPT,
-        messages=[{"role": "user", "content": venue_text}],
+    response_text = generate_text(
+        CLASSIFY_PROMPT,
+        venue_text,
+        provider_override=provider,
+        model_override=model_override,
     )
 
     # Parse response
     results = {}
-    for line in response.content[0].text.strip().split("\n"):
+    for line in response_text.strip().split("\n"):
         line = line.strip()
         if ":" in line:
             parts = line.split(":", 1)

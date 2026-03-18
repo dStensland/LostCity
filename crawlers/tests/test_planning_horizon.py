@@ -277,7 +277,7 @@ class TestMaybeInferImportance:
         return mock_client
 
     def test_upgrades_to_major_for_high_capacity_venue(self):
-        event_data = {"venue_id": 10, "importance": "standard"}
+        event_data = {"venue_id": 10, "importance": "standard", "category": "music"}
         venue = {"id": 10, "capacity_tier": 5}
         mock_client = self._call(event_data, venue)
 
@@ -324,7 +324,7 @@ class TestMaybeInferImportance:
 
     def test_capacity_tier_exactly_4_triggers_upgrade(self):
         """Boundary: tier >= 4 should upgrade."""
-        event_data = {"venue_id": 10, "importance": "standard"}
+        event_data = {"venue_id": 10, "importance": "standard", "category": "music"}
         venue = {"id": 10, "capacity_tier": 4}
         mock_client = self._call(event_data, venue)
 

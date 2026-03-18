@@ -35,6 +35,8 @@ interface MobileFilterSheetProps {
   currentVibes?: string[];
   tagGroups?: readonly FilterGroup[];
   vibeGroups?: readonly FilterGroup[];
+  /** Hide the "When" date section (used in calendar mode) */
+  hideDate?: boolean;
   onToggleCategory: (category: string) => void;
   onSetDateFilter: (date: string) => void;
   onToggleFreeOnly: () => void;
@@ -55,6 +57,7 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
   currentVibes = [],
   tagGroups = [],
   vibeGroups = [],
+  hideDate = false,
   onToggleCategory,
   onSetDateFilter,
   onToggleFreeOnly,
@@ -200,7 +203,8 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
         {/* Scrollable content */}
         <div className="overflow-y-auto max-h-[calc(85vh-120px)]">
           <div className="px-4 pb-6 space-y-6">
-            {/* When Section */}
+            {/* When Section — hidden in calendar mode */}
+            {!hideDate && (
             <div>
               <h3 className="font-mono text-sm font-semibold text-[var(--cream)] mb-3">When</h3>
               <div className="grid grid-cols-2 gap-2">
@@ -264,6 +268,7 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
                 />
               </div>
             </div>
+            )}
 
             {/* Categories Section */}
             <div>

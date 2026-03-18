@@ -15,6 +15,7 @@ import { useMapLocation } from "@/lib/hooks/useMapLocation";
 import MapListDrawer from "@/components/map/MapListDrawer";
 import MapBottomSheet from "@/components/map/MapBottomSheet";
 import MapDatePills from "@/components/map/MapDatePills";
+import { MapErrorBoundary } from "@/components/map/MapErrorBoundary";
 
 type DisplayMode = "list" | "map" | "calendar";
 
@@ -55,6 +56,7 @@ export function EventsFinderFilters({
         </div>
         <FindFilterBar
           variant={displayMode === "map" ? "compact" : "full"}
+          hideDate={displayMode === "calendar"}
           portalId={portalId}
           portalExclusive={portalExclusive}
           portalSlug={portalSlug}
@@ -206,11 +208,37 @@ export default function EventsFinder({
               />
             </div>
             <div className="flex-1 min-w-0">
+              <MapErrorBoundary listHref={`/${portalSlug}?view=find&type=events`}>
+                <MapViewWrapper
+                  events={mapEvents}
+                  portalId={portalId}
+                  portalExclusive={portalExclusive}
+                  isFetching={mapEventsFetching}
+                  userLocation={loc.isNearbyMode ? loc.userLocation : undefined}
+                  viewRadius={loc.isNearbyMode ? 1 : undefined}
+                  centerPoint={loc.mapCenterPoint}
+                  fitAllMarkers={loc.shouldFitAll}
+                  onBoundsChange={handleBoundsChange}
+                  selectedItemId={selectedItemId}
+                  hoveredItemId={hoveredItemId}
+                  onItemSelect={handleItemSelect}
+                />
+              </MapErrorBoundary>
+            </div>
+          </div>
+
+          {/* Mobile: full-height map with bottom sheet */}
+          <div
+            className="md:hidden relative"
+            style={{ height: MAP_MOBILE_HEIGHT }}
+          >
+            <MapErrorBoundary listHref={`/${portalSlug}?view=find&type=events`}>
               <MapViewWrapper
                 events={mapEvents}
                 portalId={portalId}
                 portalExclusive={portalExclusive}
                 isFetching={mapEventsFetching}
+                showMobileSheet={false}
                 userLocation={loc.isNearbyMode ? loc.userLocation : undefined}
                 viewRadius={loc.isNearbyMode ? 1 : undefined}
                 centerPoint={loc.mapCenterPoint}
@@ -220,29 +248,7 @@ export default function EventsFinder({
                 hoveredItemId={hoveredItemId}
                 onItemSelect={handleItemSelect}
               />
-            </div>
-          </div>
-
-          {/* Mobile: full-height map with bottom sheet */}
-          <div
-            className="md:hidden relative"
-            style={{ height: MAP_MOBILE_HEIGHT }}
-          >
-            <MapViewWrapper
-              events={mapEvents}
-              portalId={portalId}
-              portalExclusive={portalExclusive}
-              isFetching={mapEventsFetching}
-              showMobileSheet={false}
-              userLocation={loc.isNearbyMode ? loc.userLocation : undefined}
-              viewRadius={loc.isNearbyMode ? 1 : undefined}
-              centerPoint={loc.mapCenterPoint}
-              fitAllMarkers={loc.shouldFitAll}
-              onBoundsChange={handleBoundsChange}
-              selectedItemId={selectedItemId}
-              hoveredItemId={hoveredItemId}
-              onItemSelect={handleItemSelect}
-            />
+            </MapErrorBoundary>
             <MapBottomSheet
               events={eventsInView}
               spots={spotsInView}
