@@ -69,7 +69,7 @@ ORG_VENUE_DATA = {
         "They organize community programming including free yoga in parks, cardio dance "
         "at MARTA stations, mural events, and neighborhood activations throughout Midtown."
     ),
-    "vibes": ["community", "outdoor", "free", "neighborhood"],
+    "vibes": ["family-friendly", "all-ages"],
 }
 
 # -----------------------------------------------------------------------
@@ -93,7 +93,7 @@ _KNOWN_VENUES: list[dict] = [
         "venue_type": "park",
         "spot_type": "park",
         "website": BASE_URL,
-        "vibes": ["outdoor", "free", "community"],
+        "vibes": ["family-friendly", "outdoor-seating"],
         "keywords": ["10th street park"],
     },
     {
@@ -109,7 +109,7 @@ _KNOWN_VENUES: list[dict] = [
         "venue_type": "community_center",
         "spot_type": "community_center",
         "website": "https://www.itsmarta.com",
-        "vibes": ["community", "free", "transit"],
+        "vibes": [],
         "keywords": ["marta - north avenue", "marta north avenue"],
     },
     {
@@ -125,7 +125,7 @@ _KNOWN_VENUES: list[dict] = [
         "venue_type": "theater",
         "spot_type": "theater",
         "website": "https://www.ferstcenter.org",
-        "vibes": ["performing-arts", "georgia-tech"],
+        "vibes": ["performing-arts", "live-music"],
         "keywords": ["ferst center", "ferst center for the arts"],
     },
     {
@@ -141,7 +141,7 @@ _KNOWN_VENUES: list[dict] = [
         "venue_type": "church",
         "spot_type": "community_center",
         "website": "https://www.allsaintsatlanta.org",
-        "vibes": ["community", "historic"],
+        "vibes": ["historic"],
         "keywords": ["all saints", "all saints' episcopal"],
     },
 ]
@@ -186,13 +186,22 @@ _TAG_CATEGORY_MAP: dict[str, tuple[str, Optional[str]]] = {
     "nightlife": ("nightlife", None),
     "food & dining": ("food_drink", None),
     "food and dining": ("food_drink", None),
+    "concerts & live music": ("music", None),
     "music": ("music", None),
     "film": ("film", None),
+    "theatre & shows": ("theater", None),
     "theater": ("theater", None),
     "wellness": ("wellness", None),
     "fitness": ("fitness", None),
+    "family-friendly": ("family", None),
     "family": ("family", None),
     "education": ("learning", None),
+    "technology & innovation": ("learning", "talk"),
+    "sustainability": ("community", None),
+    "parades & festivals": ("community", "festival"),
+    "special deals": ("food_drink", None),
+    "holidays": ("community", None),
+    "history": ("community", None),
 }
 
 
@@ -211,78 +220,83 @@ def _match_venue(venue_name: str) -> Optional[dict]:
     return None
 
 
-def _parse_date_time(date_str: str) -> tuple[Optional[str], Optional[str], Optional[str]]:
+def _parse_12h(t: str) -> Optional[str]:
+    """Parse a 12-hour time string like '6pm' or '10:30am' to 24h 'HH:MM'."""
+    t = t.strip().upper().replace(" ", "")
+    for fmt in ("%I:%M%p", "%I%p"):
+        try:
+            return datetime.strptime(t, fmt).strftime("%H:%M")
+        except ValueError:
+            pass
+    return None
+
+
+def _parse_evcard_date(dow: str, day: str, month: str) -> Optional[str]:
     """
-    Parse a date/time string from the Midtown Alliance calendar.
-
-    Observed formats:
-      - "March 22, 2026"
-      - "Saturday, March 22, 2026"
-      - "March 22, 2026 10:00 AM"
-      - "Saturday, March 22, 2026 10:00 AM - 11:00 AM"
-
-    Returns (start_date, start_time, end_time) in normalized form.
-    start_date: "YYYY-MM-DD" or None
-    start_time: "HH:MM" (24h) or None
-    end_time:   "HH:MM" (24h) or None
+    Parse date from evcard date-box parts: dow='Wed', day='18', month='Mar'.
+    Returns 'YYYY-MM-DD'. Infers year from current date — if parsed date is
+    more than 60 days in the past, assumes next year.
     """
-    if not date_str:
-        return None, None, None
+    try:
+        day_int = int(day)
+        month_dt = datetime.strptime(month.strip(), "%b")
+        month_int = month_dt.month
+    except (ValueError, TypeError):
+        return None
 
-    date_str = re.sub(r"\s+", " ", date_str.strip())
+    today = date.today()
+    year = today.year
+    try:
+        parsed = date(year, month_int, day_int)
+    except ValueError:
+        return None
 
-    # Strip leading day-of-week if present (e.g. "Saturday, March 22, 2026")
-    date_str = re.sub(
-        r"^(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s*",
-        "",
-        date_str,
-        flags=re.IGNORECASE,
-    )
+    # If date is >60 days in the past, assume next year
+    if (today - parsed).days > 60:
+        try:
+            parsed = date(year + 1, month_int, day_int)
+        except ValueError:
+            return None
 
-    # Extract time range if present: "10:00 AM - 11:00 AM" or "6pm - 7pm"
-    time_range_match = re.search(
-        r"(\d{1,2}(?::\d{2})?\s*[APap][Mm])\s*[-–]\s*(\d{1,2}(?::\d{2})?\s*[APap][Mm])",
-        date_str,
-    )
-    single_time_match = re.search(
-        r"(\d{1,2}(?::\d{2})?\s*[APap][Mm])",
-        date_str,
-    )
+    return parsed.isoformat()
+
+
+def _parse_time_venue(text: str) -> tuple[Optional[str], Optional[str], str]:
+    """
+    Parse .evcard-content-text which has format:
+      '6pm - 7pm / MARTA - North Avenue Station'
+      '8pm - 10pm / Atlanta Symphony Hall'
+      '12am - 11:55pm'
+      'Read More'
+
+    Returns (start_time, end_time, venue_text).
+    """
+    if not text:
+        return None, None, ""
+
+    # Split on ' / ' to separate time from venue
+    parts = text.split(" / ", 1)
+    time_part = parts[0].strip()
+    venue_text = parts[1].strip() if len(parts) > 1 else ""
 
     start_time: Optional[str] = None
     end_time: Optional[str] = None
 
-    def _parse_12h(t: str) -> Optional[str]:
-        t = t.strip().upper()
-        t = re.sub(r"\s+", "", t)
-        for fmt in ("%I:%M%p", "%I%p"):
-            try:
-                return datetime.strptime(t, fmt).strftime("%H:%M")
-            except ValueError:
-                pass
-        return None
-
+    # Match time range: "6pm - 7pm", "10:30am - 12:30pm"
+    time_range_match = re.match(
+        r"(\d{1,2}(?::\d{2})?\s*[APap][Mm])\s*[-–]\s*(\d{1,2}(?::\d{2})?\s*[APap][Mm])",
+        time_part,
+    )
     if time_range_match:
         start_time = _parse_12h(time_range_match.group(1))
         end_time = _parse_12h(time_range_match.group(2))
-    elif single_time_match:
-        start_time = _parse_12h(single_time_match.group(1))
+    else:
+        # Single time: "7:30pm"
+        single_match = re.match(r"(\d{1,2}(?::\d{2})?\s*[APap][Mm])", time_part)
+        if single_match:
+            start_time = _parse_12h(single_match.group(1))
 
-    # Strip time portion from date string before parsing the date
-    date_only = re.sub(
-        r"\s*\d{1,2}(?::\d{2})?\s*[APap][Mm].*$", "", date_str
-    ).strip().rstrip(",").strip()
-
-    start_date: Optional[str] = None
-    for fmt in ("%B %d, %Y", "%b %d, %Y", "%m/%d/%Y", "%Y-%m-%d"):
-        try:
-            dt = datetime.strptime(date_only, fmt)
-            start_date = dt.strftime("%Y-%m-%d")
-            break
-        except ValueError:
-            continue
-
-    return start_date, start_time, end_time
+    return start_time, end_time, venue_text
 
 
 def _extract_price(text: str) -> tuple[Optional[float], Optional[float], Optional[str], bool]:
@@ -370,127 +384,45 @@ def _parse_events_from_page(page) -> list[dict]:
     """
     Extract raw event data from the Midtown Alliance events calendar page.
 
-    Returns a list of dicts with raw strings (title, date_text, time_text,
-    venue_text, tags, description, source_url, image_url).
-    """
-    events: list[dict] = []
+    The site uses `a.evcard` cards with:
+      - `.evcard-content-headline` — event title
+      - `.evcard-content-subhead` — categories ("Community • Nightlife • Food & Dining")
+      - `.evcard-content-text`    — time and venue ("6pm - 7pm / MARTA - North Avenue Station")
+      - `.evcard-date-dow`        — day of week ("Wed")
+      - `.evcard-date-day`        — day number ("18")
+      - `.evcard-date-month`      — month abbreviation ("Mar")
+      - href                      — detail link ("/do/event-slug")
 
-    # The midtownatl.com events calendar renders event cards via JavaScript.
-    # We extract structured data from the DOM using page.evaluate().
+    Returns a list of dicts with parsed fields.
+    """
     try:
         raw_events = page.evaluate("""
             () => {
+                const cards = document.querySelectorAll('a.evcard');
                 const results = [];
-
-                // Midtown Alliance uses various event card layouts.
-                // Try multiple selector strategies to be resilient.
-
-                // Strategy 1: Structured event card containers
-                const cardSelectors = [
-                    'article[class*="event"]',
-                    'div[class*="event-item"]',
-                    'div[class*="event-card"]',
-                    'li[class*="event"]',
-                    '.events-list > *',
-                    '[data-event-id]',
-                ];
-
-                let cards = [];
-                for (const sel of cardSelectors) {
-                    cards = document.querySelectorAll(sel);
-                    if (cards.length > 0) break;
-                }
-
-                // Strategy 2: Fall back to any container with a date-like element
-                if (cards.length === 0) {
-                    // Look for containers that have both a heading and a time element
-                    const allContainers = document.querySelectorAll(
-                        'article, .card, [class*="listing"], [class*="item"]'
-                    );
-                    cards = Array.from(allContainers).filter(el => {
-                        return el.querySelector('h2, h3, h4, [class*="title"]') &&
-                               (el.querySelector('time, [class*="date"]') ||
-                                /\\d{1,2}[,\\s]+\\d{4}/.test(el.textContent));
-                    });
-                }
-
-                cards.forEach(card => {
+                for (const card of cards) {
                     try {
-                        // Title
-                        const titleEl = card.querySelector(
-                            'h2, h3, h4, [class*="title"], a[class*="title"]'
-                        );
-                        const title = titleEl ? titleEl.textContent.trim() : '';
-                        if (!title || title.length < 3) return;
-
-                        // Source URL
-                        const linkEl = card.querySelector('a[href]') ||
-                                       (titleEl && titleEl.closest('a')) ||
-                                       (titleEl && titleEl.querySelector('a'));
-                        let sourceUrl = linkEl ? linkEl.href : '';
-                        // Only keep internal links to the site
-                        if (sourceUrl && !sourceUrl.includes('midtownatl.com')) {
-                            sourceUrl = '';
-                        }
-
-                        // Date/time
-                        const timeEl = card.querySelector('time');
-                        const dateEl = card.querySelector(
-                            '[class*="date"], [class*="time"], [class*="when"]'
-                        );
-                        let dateText = timeEl
-                            ? (timeEl.getAttribute('datetime') || timeEl.textContent.trim())
-                            : (dateEl ? dateEl.textContent.trim() : '');
-
-                        // Venue
-                        const venueEl = card.querySelector(
-                            '[class*="venue"], [class*="location"], [class*="where"]'
-                        );
-                        let venueText = venueEl ? venueEl.textContent.trim() : '';
-
-                        // Some layouts show "time / venue" inline
-                        // e.g. "6pm - 7pm / MARTA - North Avenue Station"
-                        const cardText = card.innerText || card.textContent || '';
-                        const timeVenueMatch = cardText.match(
-                            /(\d{1,2}(?::\d{2})?\s*[aApP][mM]\s*[-–]\s*\d{1,2}(?::\d{2})?\s*[aApP][mM])\s*\/\s*(.+?)(?=\\n|$)/
-                        );
-                        let timeText = '';
-                        if (timeVenueMatch) {
-                            timeText = timeVenueMatch[1].trim();
-                            if (!venueText) venueText = timeVenueMatch[2].trim();
-                        }
-
-                        // Tags / category pills
-                        const tagEls = card.querySelectorAll(
-                            '[class*="tag"], [class*="category"], [class*="label"], [class*="badge"]'
-                        );
-                        const tags = Array.from(tagEls).map(el => el.textContent.trim()).filter(Boolean);
-
-                        // Description
-                        const descEl = card.querySelector(
-                            '[class*="desc"], [class*="excerpt"], p'
-                        );
-                        const description = descEl ? descEl.textContent.trim() : '';
-
-                        // Image
-                        const imgEl = card.querySelector('img[src]');
-                        const imageUrl = imgEl ? imgEl.src : '';
-
+                        const headline = (card.querySelector('.evcard-content-headline') || {}).textContent || '';
+                        const subhead = (card.querySelector('.evcard-content-subhead') || {}).textContent || '';
+                        const text = (card.querySelector('.evcard-content-text') || {}).textContent || '';
+                        const dow = (card.querySelector('.evcard-date-dow') || {}).textContent || '';
+                        const day = (card.querySelector('.evcard-date-day') || {}).textContent || '';
+                        const month = (card.querySelector('.evcard-date-month') || {}).textContent || '';
+                        const href = card.getAttribute('href') || '';
+                        const imgDiv = card.querySelector('.evcard-image-image');
+                        const bgStyle = imgDiv ? (imgDiv.getAttribute('style') || '') : '';
                         results.push({
-                            title,
-                            dateText: dateText.replace(/\\s+/g, ' ').trim(),
-                            timeText: timeText.replace(/\\s+/g, ' ').trim(),
-                            venueText: venueText.replace(/\\s+/g, ' ').trim(),
-                            tags,
-                            description: description.replace(/\\s+/g, ' ').trim(),
-                            sourceUrl,
-                            imageUrl,
+                            title: headline.trim(),
+                            subhead: subhead.trim(),
+                            text: text.trim(),
+                            dow: dow.trim(),
+                            day: day.trim(),
+                            month: month.trim(),
+                            href: href.trim(),
+                            bgStyle: bgStyle.trim(),
                         });
-                    } catch (e) {
-                        // Skip malformed cards
-                    }
-                });
-
+                    } catch (e) { /* skip malformed card */ }
+                }
                 return results;
             }
         """)
@@ -502,119 +434,7 @@ def _parse_events_from_page(page) -> list[dict]:
     except Exception as exc:
         logger.warning(f"Midtown Alliance: DOM extraction failed: {exc}")
 
-    # -----------------------------------------------------------------------
-    # Fallback: Parse from page body text
-    # -----------------------------------------------------------------------
-    try:
-        body_text = page.inner_text("body")
-        events = _parse_events_from_body_text(body_text)
-        logger.info(f"Midtown Alliance: extracted {len(events)} events via body text fallback")
-        return events
-    except Exception as exc:
-        logger.warning(f"Midtown Alliance: body text fallback failed: {exc}")
-
     return []
-
-
-def _parse_events_from_body_text(body_text: str) -> list[dict]:
-    """
-    Fallback parser: extract events from plain body text.
-    Looks for repeating blocks: title → date → venue → tags.
-    """
-    events: list[dict] = []
-    lines = [line.strip() for line in body_text.split("\n") if line.strip()]
-
-    _SKIP = {
-        "skip to content", "home", "about", "events", "development", "transportation",
-        "safety", "advocacy", "contact", "sign in", "search", "menu", "donate",
-        "view event calendar", "load more", "filter", "all events",
-    }
-
-    i = 0
-    now = date.today()
-
-    while i < len(lines):
-        line = lines[i]
-
-        if line.lower() in _SKIP or len(line) < 4:
-            i += 1
-            continue
-
-        # Look for a date line: "March 22, 2026" or "Saturday, March 22, 2026"
-        date_match = re.match(
-            r"(?:(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s*)?"
-            r"(January|February|March|April|May|June|July|August|September|October|November|December)"
-            r"\s+\d{1,2},\s+\d{4}",
-            line,
-            re.IGNORECASE,
-        )
-
-        if date_match:
-            # Heuristic: the event title is likely within 3 lines before or after the date
-            title_candidate = None
-            for offset in [-2, -1, 1, 2]:
-                idx = i + offset
-                if 0 <= idx < len(lines):
-                    candidate = lines[idx]
-                    if (
-                        candidate.lower() not in _SKIP
-                        and len(candidate) >= 4
-                        and not re.match(r"^\d{1,2}:\d{2}", candidate)
-                        and not re.match(
-                            r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)",
-                            candidate,
-                            re.IGNORECASE,
-                        )
-                    ):
-                        title_candidate = candidate
-                        break
-
-            if not title_candidate:
-                i += 1
-                continue
-
-            date_str = line
-            start_date, start_time, end_time = _parse_date_time(date_str)
-
-            if not start_date:
-                i += 1
-                continue
-
-            try:
-                parsed_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-                if parsed_date < now:
-                    i += 1
-                    continue
-            except ValueError:
-                i += 1
-                continue
-
-            # Collect tags from nearby lines
-            tags: list[str] = []
-            for look_offset in range(1, 5):
-                look_idx = i + look_offset
-                if look_idx >= len(lines):
-                    break
-                look_line = lines[look_idx]
-                if look_line in ("Midtown Alliance Event", "Sports & Recreation",
-                                 "Community", "Nightlife", "Food & Dining",
-                                 "Arts & Exhibitions", "Music", "Film", "Wellness"):
-                    tags.append(look_line)
-
-            events.append({
-                "title": title_candidate,
-                "dateText": date_str,
-                "timeText": "",
-                "venueText": "",
-                "tags": tags,
-                "description": "",
-                "sourceUrl": CALENDAR_URL,
-                "imageUrl": "",
-            })
-
-        i += 1
-
-    return events
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -738,14 +558,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if not title or len(title) < 3:
                         continue
 
-                    # Parse date/time from dateText + timeText
-                    date_text = raw.get("dateText", "")
-                    time_text = raw.get("timeText", "")
-                    combined_dt = f"{date_text} {time_text}".strip()
-                    start_date, start_time, end_time = _parse_date_time(combined_dt)
+                    # Strip "Midtown Alliance Event" suffix from titles
+                    title = re.sub(r"\s*Midtown Alliance Event\s*$", "", title).strip()
+                    if not title:
+                        continue
 
+                    # Parse date from evcard date-box parts
+                    start_date = _parse_evcard_date(
+                        raw.get("dow", ""),
+                        raw.get("day", ""),
+                        raw.get("month", ""),
+                    )
                     if not start_date:
-                        logger.debug(f"Midtown Alliance: skipping {title!r} — could not parse date from {combined_dt!r}")
+                        logger.debug(f"Midtown Alliance: skipping {title!r} — could not parse date")
                         continue
 
                     try:
@@ -755,8 +580,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     except ValueError:
                         continue
 
+                    # Parse time and venue from evcard-content-text
+                    text_field = raw.get("text", "")
+                    start_time, end_time, venue_text = _parse_time_venue(text_field)
+
                     # Determine venue
-                    venue_text = (raw.get("venueText") or "").strip()
                     matched_venue = _match_venue(venue_text)
 
                     if matched_venue:
@@ -772,30 +600,34 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         venue_id = org_venue_id
                         venue_name_for_hash = ORGANIZATION_NAME
 
-                    # Tags and category
-                    raw_tags: list[str] = [t for t in (raw.get("tags") or []) if t]
+                    # Categories from subhead ("Community • Nightlife • Food & Dining")
+                    subhead = raw.get("subhead", "")
+                    raw_tags = [t.strip() for t in subhead.split("•") if t.strip()]
                     is_midtown_alliance_event = any(
                         "midtown alliance" in t.lower() for t in raw_tags
                     )
 
-                    description = (raw.get("description") or "").strip()
-                    category, subcategory = _infer_category(raw_tags, title, description)
+                    category, subcategory = _infer_category(raw_tags, title, "")
                     tags = _build_tags(raw_tags, is_midtown_alliance_event, category, title.lower())
 
-                    # Price
-                    price_min, price_max, price_note, is_free = _extract_price(
-                        f"{title} {description}"
-                    )
-                    # Midtown Alliance community events are typically free
-                    if is_midtown_alliance_event and is_free is False and price_min is None:
+                    # Price — Midtown Alliance community events are typically free
+                    price_min, price_max, price_note, is_free = _extract_price(title)
+                    if is_midtown_alliance_event and not is_free and price_min is None:
                         is_free = True
                         price_min = 0.0
                         price_max = 0.0
                         price_note = "Free"
 
-                    # Source URL
-                    source_url = (raw.get("sourceUrl") or "").strip() or CALENDAR_URL
-                    image_url = (raw.get("imageUrl") or "").strip() or None
+                    # Source URL from href
+                    href = raw.get("href", "")
+                    source_url = f"{BASE_URL}{href}" if href and href.startswith("/") else CALENDAR_URL
+
+                    # Image from background style
+                    bg_style = raw.get("bgStyle", "")
+                    image_url = None
+                    bg_match = re.search(r'url\(["\']?([^"\')]+)["\']?\)', bg_style)
+                    if bg_match:
+                        image_url = bg_match.group(1)
 
                     # Deduplication
                     hash_key = f"{start_date}|{start_time}" if start_time else start_date
@@ -809,7 +641,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": description or None,
+                        "description": None,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,

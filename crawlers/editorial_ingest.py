@@ -111,27 +111,13 @@ EDITORIAL_SOURCES: dict[str, dict] = {
         "method": "rss",
         "display_name": "ATL Bucket List",
     },
-    "atlantadowntown_blog": {
-        # Central Atlanta Progress / ADID Downtown blog.
-        # Publishes holiday guides, small business spotlights, neighborhood
-        # feature posts, and seasonal content — all venue-rich and Downtown-focused.
-        # WordPress-based site: try standard /feed/ first; fall back to sitemap.
-        "feed_url": "https://www.atlantadowntown.com/downtown-blog/feed/",
-        "method": "rss",
-        "display_name": "Atlanta Downtown Blog",
-        # Only pick up articles that mention identifiable venue names — the blog
-        # covers a mix of civic news and neighborhood content. We rely on the
-        # standard venue-matching pipeline to filter relevance.
-        "url_filter": None,
-    },
-    "visit_roswell_blog": {
-        # Roswell CVB blog — dining spotlights, event roundups, Michelin coverage,
-        # new venue openings, and seasonal guides for the Canton Street corridor
-        # and broader Roswell area. Venue-rich editorial.
-        "feed_url": "https://www.visitroswellga.com/blog/rss.xml",
-        "method": "rss",
-        "display_name": "Visit Roswell Blog",
-    },
+    # TODO: atlantadowntown_blog — site returns 403 on all RSS/feed endpoints.
+    # Blog content exists at /downtown-blog/ but needs Playwright scraping or
+    # sitemap discovery. Defer until we add a page-scraping method.
+    #
+    # TODO: visit_roswell_blog — Craft CMS site with no RSS feeds enabled.
+    # Blog at /blog/ has 112+ posts but no feed endpoints. Needs sitemap
+    # or page-scraping method.
 }
 
 # Sitemaps use this namespace
