@@ -115,11 +115,18 @@ export function buildCountCategoryQuery(
 /**
  * Fetch all count data for the full (initial) load.
  * Returns pre-computed count rows and venue type counts.
+ *
+ * Fallback: if the pre-computed table is empty or missing (migration 583
+ * not yet applied, or refresh_feed_counts() hasn't been called), compute
+ * counts on-the-fly from live event queries.
  */
 export async function fetchFeedCounts(
   supabase: SupabaseClient,
   ctx: PipelineContext,
+  portalClient?: SupabaseClient,
 ): Promise<FeedCounts> {
+  const scopedClient = portalClient ?? supabase;
+
   const [precomputedResult, venueTypeResult] = await Promise.all([
     // Pre-computed category/tab counts (refreshed after each crawl run)
     supabase
@@ -127,6 +134,7 @@ export async function fetchFeedCounts(
       .select("window, dimension, value, cnt")
       .eq("portal_id", ctx.portalData.id) as unknown as Promise<{
       data: PrecomputedCountRow[] | null;
+      error: unknown;
     }>,
 
     // Venue type counts for Browse section "Places to Go" tiles
@@ -137,7 +145,36 @@ export async function fetchFeedCounts(
     }>,
   ]);
 
-  const precomputedRows = (precomputedResult.data || []) as PrecomputedCountRow[];
+  let precomputedRows = (precomputedResult.data || []) as PrecomputedCountRow[];
+
+  // Fallback: if precomputed table is empty/missing, compute from live queries
+  if (precomputedRows.length === 0) {
+    const [todayResult, weekResult, comingResult] = await Promise.all([
+      buildCountCategoryQuery(scopedClient, ctx, ctx.today, ctx.today),
+      buildCountCategoryQuery(scopedClient, ctx, ctx.tomorrow, ctx.weekAhead),
+      buildCountCategoryQuery(scopedClient, ctx, ctx.weekAhead, ctx.fourWeeksAhead),
+    ]);
+
+    type CountRow = { category_id: string | null };
+    const buildRows = (data: CountRow[] | null, window: string): PrecomputedCountRow[] => {
+      const counts: Record<string, number> = {};
+      for (const row of data || []) {
+        if (row.category_id) counts[row.category_id] = (counts[row.category_id] || 0) + 1;
+      }
+      return Object.entries(counts).map(([value, cnt]) => ({
+        window,
+        dimension: "category",
+        value,
+        cnt,
+      }));
+    };
+
+    precomputedRows = [
+      ...buildRows(todayResult.data as CountRow[] | null, "today"),
+      ...buildRows(weekResult.data as CountRow[] | null, "week"),
+      ...buildRows(comingResult.data as CountRow[] | null, "coming_up"),
+    ];
+  }
 
   const venueTypeCounts: Record<string, number> = {};
   for (const row of (venueTypeResult.data || []) as { venue_type: string; cnt: number }[]) {

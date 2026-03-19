@@ -323,7 +323,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Stage 2 (events) + Stage 3 (counts) + Stage 4A (enrichments) — all parallel
   const [pools, counts, phaseA] = await Promise.all([
     fetchEventPools(portalClient, ctx),
-    fetchFeedCounts(supabase, ctx),
+    fetchFeedCounts(supabase, ctx, portalClient),
     fetchPhaseAEnrichments(supabase, ctx),
   ]);
 
