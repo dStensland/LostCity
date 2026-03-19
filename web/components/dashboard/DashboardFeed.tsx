@@ -319,6 +319,7 @@ function EventCard({ event }: { event: Event }) {
               src={event.image_url}
               alt={event.title}
               fill
+              sizes="80px"
               className="object-cover"
             />
           </div>
@@ -397,6 +398,7 @@ function TrendingCard({ event }: { event: TrendingEvent }) {
             src={event.image_url}
             alt={event.title}
             fill
+            sizes="(max-width: 640px) 100vw, 50vw"
             className="object-cover"
           />
           {/* Trending badge */}

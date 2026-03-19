@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import type { ItineraryItem, LocalItineraryItem, ItineraryCrew } from "@/lib/itinerary-utils";
 import {
   getItemTitle,
@@ -9,7 +9,6 @@ import {
   formatWalkTime,
   formatWalkDistance,
 } from "@/lib/itinerary-utils";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
 
 interface ItineraryItemCardProps {
   item: ItineraryItem | LocalItineraryItem;
@@ -61,7 +60,6 @@ export default function ItineraryItemCard({
   const walkTime = formatWalkTime(item.walk_time_minutes);
   const walkDistance = formatWalkDistance(item.walk_distance_meters);
   const timeDisplay = formatItineraryTime(item.start_time);
-  const proxiedImage = imageUrl ? getProxiedImageSrc(imageUrl) : null;
   const stopCrew = crew ? getStopCrew(crew, item.id) : [];
 
   return (
@@ -100,10 +98,10 @@ export default function ItineraryItemCard({
         </div>
 
         {/* Image */}
-        {proxiedImage && !compact && (
+        {imageUrl && !compact && (
           <div className="w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-white/5">
-            <Image
-              src={typeof proxiedImage === "string" ? proxiedImage : ""}
+            <SmartImage
+              src={imageUrl}
               alt={title}
               width={56}
               height={56}

@@ -10,7 +10,7 @@ import { QueryProvider } from "@/lib/providers/QueryProvider";
 import { safeJsonLd } from "@/lib/formats";
 import { getSiteUrl } from "@/lib/site-url";
 import DarkHoursTheme from "@/components/DarkHoursTheme";
-import NavigationProgress from "@/components/NavigationProgress";
+import { NavigationProgress } from "@/components/ui/NavigationProgress";
 import SkipLink from "@/components/SkipLink";
 import ClientEffects from "@/components/ClientEffects";
 import ScrollReset from "@/components/ScrollReset";

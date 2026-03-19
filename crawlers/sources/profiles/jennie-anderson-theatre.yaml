@@ -1,0 +1,26 @@
+version: 1
+slug: jennie-anderson-theatre
+name: Jennie T. Anderson Theatre
+source_type: venue
+integration_method: html
+discovery:
+  enabled: true
+  type: html
+  urls:
+    - https://www.cobbcounty.gov/jennie-t-anderson-theatre
+  fetch:
+    render_js: false
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+data_goals:
+  - events
+  - images
+  - tickets
+notes: |
+  606-seat performing arts theater at Cobb Civic Center complex.
+  Operated by Cobb County Parks. Home to Georgia Players Guild.
+  Next.js + Drupal headless CMS — event data in __NEXT_DATA__ JSON.
+  Detail pages available via _next/data/{buildId}/ endpoints.
+  Address: 548 S Marietta Pkwy SE, Marietta, GA 30060.

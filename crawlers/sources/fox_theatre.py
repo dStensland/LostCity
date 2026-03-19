@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
@@ -173,6 +173,51 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
+            # Extract per-event ticket status from DOM badges before body text parsing.
+            # The listing page renders "SOLD OUT" and "On Sale [date]" badges alongside
+            # each event card. We capture them here keyed by lowercased title so the
+            # body-text parsing loop can apply them without touching skip_items.
+            ticket_status_map: dict[str, str] = {}
+            on_sale_date_map: dict[str, str] = {}
+            try:
+                raw_status_entries = page.evaluate("""
+                    () => {
+                        const results = [];
+                        // Fox Theatre event cards have a common ancestor containing the
+                        // title link and a status badge. Walk every card-like container.
+                        document.querySelectorAll('[class*="event"], [class*="show"], article, li').forEach(card => {
+                            const titleEl = card.querySelector('h2, h3, h4, [class*="title"], [class*="name"]');
+                            if (!titleEl) return;
+                            const title = titleEl.textContent.trim();
+                            if (!title || title.length < 3) return;
+                            const cardText = card.textContent || '';
+                            let status = null;
+                            let onSaleDate = null;
+                            if (/sold\\s*out/i.test(cardText)) {
+                                status = 'sold-out';
+                            } else {
+                                const onSaleMatch = cardText.match(/on\\s+sale\\s+([A-Za-z]+\\s+\\d{1,2}(?:,?\\s*\\d{4})?)/i);
+                                if (onSaleMatch) {
+                                    status = 'tickets-available';
+                                    onSaleDate = onSaleMatch[1].trim();
+                                }
+                            }
+                            if (status) {
+                                results.push({title: title.toLowerCase(), status, onSaleDate});
+                            }
+                        });
+                        return results;
+                    }
+                """)
+                for entry in (raw_status_entries or []):
+                    key = entry.get("title", "").lower()
+                    if key and entry.get("status"):
+                        ticket_status_map[key] = entry["status"]
+                    if key and entry.get("onSaleDate"):
+                        on_sale_date_map[key] = entry["onSaleDate"]
+            except Exception as _ts_exc:
+                logger.debug("Fox Theatre: ticket status DOM extraction failed: %s", _ts_exc)
+
             # Get page text
             body_text = page.inner_text("body")
             lines = [l.strip() for l in body_text.split("\n") if l.strip()]
@@ -292,6 +337,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if image_url:
                             series_hint["image_url"] = image_url
 
+                    # Look up ticket status from DOM extraction
+                    title_key = title.lower()
+                    dom_ticket_status = ticket_status_map.get(title_key)
+                    dom_on_sale_date = on_sale_date_map.get(title_key)
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
@@ -318,6 +368,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    if dom_ticket_status:
+                        event_record["ticket_status"] = dom_ticket_status
+                        event_record["ticket_status_checked_at"] = datetime.now(timezone.utc).isoformat()
+                    if dom_on_sale_date:
+                        event_record["on_sale_date"] = dom_on_sale_date
 
                     # Enrich from detail page
                     enrich_event_record(event_record, source_name="Fox Theatre")

@@ -139,6 +139,8 @@
   --cat-food_drink: #FDBA74;
   --cat-sports: #7DD3FC;
   --cat-fitness: #5EEAD4;
+  --cat-recreation: #86EFAC;
+  --cat-exercise: #5EEAD4;
   --cat-nightlife: #E879F9;
   --cat-family: #A78BFA;
   --cat-learning: #A8E6CF;
@@ -350,6 +352,8 @@
   [data-category="food_drink"] { --category-color: var(--cat-food_drink); }
   [data-category="sports"] { --category-color: var(--cat-sports); }
   [data-category="fitness"] { --category-color: var(--cat-fitness); }
+  [data-category="recreation"] { --category-color: var(--cat-recreation); }
+  [data-category="exercise"] { --category-color: var(--cat-exercise); }
   [data-category="nightlife"] { --category-color: var(--cat-nightlife); }
   [data-category="family"] { --category-color: var(--cat-family); }
   [data-category="learning"] { --category-color: var(--cat-learning); }
@@ -557,28 +561,6 @@
 
   .lazy-image-placeholder {
     background-color: var(--placeholder-color, var(--twilight));
-  }
-
-  .neon-back-btn {
-    min-width: 48px;
-    min-height: 48px;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(20, 20, 30, 0.8) 100%);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 107, 107, 0.3);
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-
-  .neon-back-btn:hover {
-    border-color: rgba(255, 107, 107, 0.6);
-    box-shadow: 0 0 20px rgba(255, 107, 107, 0.3), 0 0 40px rgba(255, 107, 107, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-
-  .neon-back-icon {
-    filter: drop-shadow(0 0 3px rgba(255, 107, 107, 0.5));
-  }
-
-  .neon-back-text {
-    text-shadow: 0 0 10px rgba(255, 107, 107, 0.3);
   }
 
   .hero-fallback-ambient {
@@ -1155,6 +1137,8 @@
   --cat-food: #EA580C;
   --cat-sports: #0284C7;
   --cat-fitness: #0D9488;
+  --cat-recreation: #16A34A;
+  --cat-exercise: #0D9488;
   --cat-nightlife: #C026D3;
   --cat-family: #7C3AED;
 
@@ -1384,12 +1368,16 @@ body {
   /* Performance optimizations for smooth scrolling */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent horizontal scroll on mobile — clip preserves sticky positioning */
+  overflow-x: clip;
 }
 
 /* Keep global scrolling deterministic; opt-in smooth scroll per component. */
 html {
   scroll-behavior: auto;
   background-color: #09090B;
+  /* Prevent horizontal scroll on mobile — clip instead of hidden to preserve sticky positioning */
+  overflow-x: clip;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1445,9 +1433,8 @@ body:has([data-vertical="hospital"])::after {
 .ambient-glow {
   position: fixed;
   top: -20%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 140%;
+  left: 0;
+  right: 0;
   height: 50%;
   background: radial-gradient(ellipse at center, rgba(226, 125, 138, 0.08) 0%, transparent 60%);
   pointer-events: none;
@@ -1944,6 +1931,8 @@ body:has([data-vertical="hospital"])::after {
 .cat-tag.food_drink, .cat-tag.food { color: var(--cat-food); }
 .cat-tag.sports { color: var(--cat-sports); }
 .cat-tag.fitness { color: var(--cat-fitness); }
+.cat-tag.recreation { color: var(--cat-recreation); }
+.cat-tag.exercise { color: var(--cat-exercise); }
 .cat-tag.nightlife { color: var(--cat-nightlife); }
 .cat-tag.family { color: var(--cat-family); }
 
@@ -3413,7 +3402,7 @@ textarea:focus-visible {
     var(--twilight) 70%
   );
   background-size: 300% 100%;
-  animation: skeleton-shimmer 2.5s ease-in-out infinite;
+  animation: skeleton-shimmer 1.5s linear infinite;
 }
 
 /* Light mode skeleton shimmer - for family/light theme portals */
@@ -3425,7 +3414,7 @@ textarea:focus-visible {
     rgba(0, 0, 0, 0.06) 70%
   );
   background-size: 300% 100%;
-  animation: skeleton-shimmer 2.5s ease-in-out infinite;
+  animation: skeleton-shimmer 1.5s linear infinite;
 }
 
 /* Skeleton base - for use with shimmer */
@@ -3442,7 +3431,7 @@ textarea:focus-visible {
     rgba(37, 37, 48, 0.3) 70%
   );
   background-size: 300% 100%;
-  animation: skeleton-shimmer 2.5s ease-in-out infinite;
+  animation: skeleton-shimmer 1.5s linear infinite;
 }
 
 /* ============================================
@@ -4563,6 +4552,8 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 .reflect-food { --reflection-color: rgba(253, 186, 116, 0.1); }
 .reflect-sports { --reflection-color: rgba(125, 211, 252, 0.1); }
 .reflect-fitness { --reflection-color: rgba(94, 234, 212, 0.1); }
+.reflect-recreation { --reflection-color: rgba(134, 239, 172, 0.1); }
+.reflect-exercise { --reflection-color: rgba(94, 234, 212, 0.1); }
 .reflect-nightlife { --reflection-color: rgba(232, 121, 249, 0.1); }
 .reflect-family { --reflection-color: rgba(167, 139, 250, 0.1); }
 
@@ -5218,7 +5209,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
     var(--twilight) 70%
   );
   background-size: 300% 100%;
-  animation: skeleton-shimmer 2.5s ease-in-out infinite;
+  animation: skeleton-shimmer 1.5s linear infinite;
 }
 
 /* Disable all micro-interactions for reduced motion */
@@ -6256,28 +6247,29 @@ body:has([data-vertical="hospital"]) .rain-overlay {
    ============================================ */
 
 .family-theme {
-  --family-orange: #FF5722;
-  --family-orange-light: #FF7043;
-  --family-green: #4CAF50;
+  /* Afternoon Field palette */
+  --family-orange: #C48B1D;
+  --family-orange-light: #D4A442;
+  --family-green: #5E7A5E;
   --family-purple: #9C27B0;
-  --family-blue: #2196F3;
+  --family-blue: #78B7D0;
   --family-pink: #E91E63;
-  --family-yellow: #FFC107;
-  --family-teal: #009688;
-  --family-cream: #FFF8E7;
-  --family-paper: #FFFDF5;
-  --family-ink: #1A1A1A;
-  --family-pencil: #5D4E37;
-  --family-faded: #9E9E9E;
+  --family-yellow: #C48B1D;
+  --family-teal: #5E7A5E;
+  --family-cream: #F0EDE4;
+  --family-paper: #FAFAF6;
+  --family-ink: #1E2820;
+  --family-pencil: #756E63;
+  --family-faded: #756E63;
 
-  --family-warm-cream: #FFF8F0;
-  --family-peach-main: #FBAB7E;
-  --family-peach-light: #FFCFA7;
-  --family-green-main: #059669;
-  --family-text-green: #4A7C59;
-  --family-brown: #8B7355;
-  --family-border-cream: #E8D5C4;
-  --family-cream-light: #F5EDE3;
+  --family-warm-cream: #F0EDE4;
+  --family-peach-main: #C48B1D;
+  --family-peach-light: #D4A442;
+  --family-green-main: #5E7A5E;
+  --family-text-green: #5E7A5E;
+  --family-brown: #756E63;
+  --family-border-cream: #E0DDD4;
+  --family-cream-light: #FAFAF6;
 }
 
 .family-theme [data-family-tone="orange"] { --family-accent: var(--family-orange); }
@@ -6293,19 +6285,19 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 }
 
 .family-font-display {
-  font-family: var(--font-baloo), var(--font-outfit), system-ui;
+  font-family: var(--font-plus-jakarta-sans), system-ui, sans-serif;
 }
 
-.family-border-ink-2 { border: 2px solid var(--family-ink); }
-.family-border-ink-3 { border: 3px solid var(--family-ink); }
-.family-shadow-xs { box-shadow: 2px 2px 0 var(--family-ink); }
-.family-shadow-sm { box-shadow: 3px 3px 0 var(--family-ink); }
-.family-shadow-md { box-shadow: 4px 4px 0 var(--family-ink); }
-.family-shadow-lg { box-shadow: 6px 6px 0 var(--family-ink); }
+.family-border-ink-2 { border: 1px solid var(--family-border-cream); }
+.family-border-ink-3 { border: 1px solid var(--family-border-cream); }
+.family-shadow-xs { box-shadow: 0 1px 2px rgba(30, 40, 32, 0.05); }
+.family-shadow-sm { box-shadow: 0 2px 4px rgba(30, 40, 32, 0.06); }
+.family-shadow-md { box-shadow: 0 4px 12px rgba(30, 40, 32, 0.08); }
+.family-shadow-lg { box-shadow: 0 8px 24px rgba(30, 40, 32, 0.1); }
 
 .family-ticket {
-  border: 3px solid var(--family-ink);
-  box-shadow: 4px 4px 0 var(--family-ink);
+  border: 1px solid var(--family-border-cream);
+  box-shadow: 0 2px 8px rgba(30, 40, 32, 0.06);
 }
 
 .family-hero {
@@ -6342,50 +6334,51 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 }
 
 .family-search-prompt {
-  border: 3px solid var(--family-ink);
-  box-shadow: 6px 6px 0 var(--family-ink);
+  border: 1px solid var(--family-border-cream);
+  box-shadow: 0 4px 12px rgba(30, 40, 32, 0.08);
   will-change: transform;
 }
 
 .family-cta {
-  background-color: var(--family-ink);
-  border: 3px solid var(--family-ink);
-  box-shadow: 6px 6px 0 var(--family-orange);
+  background-color: var(--family-green);
+  border: none;
+  box-shadow: 0 2px 8px rgba(94, 122, 94, 0.3);
 }
 
 .family-badge {
-  border: 2px solid var(--family-ink);
+  border: 1px solid var(--family-border-cream);
 }
 
 .family-header {
-  border-bottom: 3px solid var(--family-ink);
+  border-bottom: 1px solid var(--family-border-cream);
 }
 
 .family-header-shadow {
-  box-shadow: 0 4px 0 var(--family-ink);
+  box-shadow: 0 2px 8px rgba(30, 40, 32, 0.08);
 }
 
 .family-logo-badge {
-  background-color: var(--family-orange);
-  border: 3px solid var(--family-ink);
-  box-shadow: 3px 3px 0 var(--family-ink);
+  background-color: #5E7A5E;
+  border: none;
+  box-shadow: 0 2px 8px rgba(94, 122, 94, 0.3);
+  border-radius: 9999px;
 }
 
 .family-nav-wrap {
   background-color: var(--family-paper);
-  border: 2px solid var(--family-ink);
+  border: 1px solid var(--family-border-cream);
 }
 
 .family-header-pill {
   background-color: var(--family-paper);
-  border: 2px solid var(--family-ink);
-  box-shadow: 2px 2px 0 var(--family-ink);
+  border: 1px solid var(--family-border-cream);
+  box-shadow: 0 1px 3px rgba(30, 40, 32, 0.06);
 }
 
 .family-menu-panel {
   background-color: var(--family-paper);
-  border: 3px solid var(--family-ink);
-  box-shadow: 4px 4px 0 var(--family-ink);
+  border: 1px solid var(--family-border-cream);
+  box-shadow: 0 8px 24px rgba(30, 40, 32, 0.12);
 }
 
 .rotate-var-12 { --rotate: 12deg; }
@@ -6887,7 +6880,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
     rgba(22, 22, 22, 0.6) 70%
   );
   background-size: 300% 100%;
-  animation: skeleton-shimmer 2.5s ease-in-out infinite;
+  animation: skeleton-shimmer 1.5s linear infinite;
 }
 
 /* ============================================
@@ -6931,7 +6924,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
     rgba(22, 22, 22, 0.8) 70%
   );
   background-size: 300% 100%;
-  animation: skeleton-shimmer 2.5s ease-in-out infinite;
+  animation: skeleton-shimmer 1.5s linear infinite;
 }
 
 /* Detail hero image — brighter than mobile banner treatment */

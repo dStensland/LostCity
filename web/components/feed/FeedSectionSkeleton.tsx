@@ -1,10 +1,16 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { HorseIcon } from "@/components/ui/HorseSpinner";
 
 interface FeedSectionSkeletonProps {
   accentColor: string;
   minHeight?: number;
+  /** Minimum ms to show the skeleton even if data arrives faster (prevents flash) */
+  minDisplayMs?: number;
+  /** Ms after which to show a "taking longer than usual" message with retry */
+  timeoutMs?: number;
+  onRetry?: () => void;
 }
 
 function AtlantaSkylineSVG() {
@@ -158,7 +164,26 @@ function AtlantaSkylineSVG() {
 export default function FeedSectionSkeleton({
   accentColor,
   minHeight = 360,
+  minDisplayMs = 400,
+  timeoutMs = 12000,
+  onRetry,
 }: FeedSectionSkeletonProps) {
+  // Track whether the minimum display time has elapsed (controls readiness to
+  // swap out). This state is consumed by the *parent* via the exported hook.
+  const [, setMinElapsed] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    const minTimer = setTimeout(() => setMinElapsed(true), minDisplayMs);
+    const timeoutTimer = setTimeout(() => setTimedOut(true), timeoutMs);
+    return () => {
+      clearTimeout(minTimer);
+      clearTimeout(timeoutTimer);
+    };
+  }, [minDisplayMs, timeoutMs]);
+
+  const label = timedOut ? "Taking longer than usual..." : "Hold your horses";
+
   return (
     <div
       className="relative overflow-hidden rounded-xl"
@@ -191,18 +216,17 @@ export default function FeedSectionSkeleton({
         <AtlantaSkylineSVG />
       </div>
 
-      {/* "HOLD YOUR HORSES" + horse — centered, z-20, above the skyline */}
+      {/* Label + horse — centered, z-20, above the skyline */}
       <div className="absolute inset-x-0 bottom-4 z-20 flex flex-col items-center gap-2">
         <span
-          className="font-mono text-xs font-medium tracking-[0.25em] uppercase"
+          className="font-mono text-xs font-medium tracking-[0.25em] uppercase transition-all duration-500"
           style={{ color: accentColor, opacity: 0.8 }}
         >
-          Hold your horses
+          {label}
         </span>
 
-        {/* Horse with glow backdrop — always pops */}
+        {/* Horse with glow backdrop */}
         <div className="relative">
-          {/* Radial glow behind the horse */}
           <div
             className="absolute -inset-x-6 -inset-y-3 rounded-full blur-2xl"
             style={{ background: accentColor, opacity: 0.3 }}
@@ -215,9 +239,56 @@ export default function FeedSectionSkeleton({
             }}
           />
         </div>
+
+        {/* Retry button — only shown after timeout */}
+        {timedOut && onRetry && (
+          <button
+            onClick={onRetry}
+            className="mt-1 px-4 py-1.5 rounded-lg font-mono text-xs font-medium transition-colors"
+            style={{
+              color: accentColor,
+              border: `1px solid color-mix(in srgb, ${accentColor} 40%, transparent)`,
+              background: `color-mix(in srgb, ${accentColor} 8%, transparent)`,
+            }}
+          >
+            Retry
+          </button>
+        )}
       </div>
 
       <span className="sr-only">Loading...</span>
     </div>
   );
+}
+
+/**
+ * Hook for parent components to enforce a minimum skeleton display time.
+ *
+ * Usage:
+ *   const showSkeleton = useMinSkeletonDelay(isLoading, 400);
+ *   return showSkeleton ? <FeedSectionSkeleton /> : <Content />;
+ */
+export function useMinSkeletonDelay(isLoading: boolean, minMs = 400): boolean {
+  const [showSkeleton, setShowSkeleton] = useState(isLoading);
+  const loadStartRef = useRef<number>(isLoading ? Date.now() : 0);
+
+  useEffect(() => {
+    if (isLoading) {
+      // Loading started — record start time, show skeleton
+      loadStartRef.current = Date.now();
+      setShowSkeleton(true);
+    } else if (loadStartRef.current > 0) {
+      // Loading ended — wait for remaining minimum time before hiding
+      const elapsed = Date.now() - loadStartRef.current;
+      const remaining = minMs - elapsed;
+      if (remaining <= 0) {
+        setShowSkeleton(false);
+      } else {
+        const t = setTimeout(() => setShowSkeleton(false), remaining);
+        return () => clearTimeout(t);
+      }
+    }
+  }, [isLoading, minMs]);
+
+  return showSkeleton;
 }

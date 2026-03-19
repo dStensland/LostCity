@@ -74,6 +74,7 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
   const attribution = await resolvePortalAttributionForWrite(request, {
     endpoint: "/api/channels/subscriptions",
     body,
+    allowMissing: true,
     requireWhenHinted: true,
   });
   if (attribution.response) return attribution.response;

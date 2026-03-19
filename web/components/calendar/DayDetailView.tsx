@@ -262,7 +262,7 @@ function EventCard({
       {/* Image or icon */}
       <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-[var(--dusk)]">
         {event.image_url ? (
-          <Image src={event.image_url} alt="" fill className="object-cover" />
+          <Image src={event.image_url} alt="" fill sizes="48px" className="object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             {event.category ? (

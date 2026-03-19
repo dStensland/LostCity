@@ -12,22 +12,51 @@ function makeEvent(overrides: Partial<SceneRoutableEvent> = {}): SceneRoutableEv
 }
 
 describe("matchActivityType", () => {
-  it("classifies pickup and open-play sports as sports instead of generic fitness", () => {
+  it("classifies pickup and open-play sports via recreation category as sports", () => {
     expect(matchActivityType(makeEvent({
-      category: "fitness",
+      category: "recreation",
       tags: ["pickup", "pickleball"],
       title: "Friday Pickleball Open Play",
     }))).toBe("sports");
   });
 
-  it("uses title fallback for rec league style sports with sparse metadata", () => {
+  it("uses title fallback for rec league style sports when category is recreation", () => {
     expect(matchActivityType(makeEvent({
-      category: "fitness",
+      category: "recreation",
       title: "Wednesday Rec League Softball",
     }))).toBe("sports");
   });
 
-  it("keeps non-sports fitness events in fitness", () => {
+  it("keeps non-sports exercise events in fitness activity type", () => {
+    expect(matchActivityType(makeEvent({
+      category: "exercise",
+      tags: ["yoga"],
+      title: "Sunrise Yoga in the Park",
+    }))).toBe("fitness");
+  });
+
+  it("three-way routing: sports category event stays sports, recreation goes sports, exercise goes fitness", () => {
+    // sports category event with a sports genre → live_music wins only if music, sports stays sports
+    expect(matchActivityType(makeEvent({
+      category: "sports",
+      genres: ["watch-party"],
+      title: "Sunday Watch Party",
+    }))).toBe("sports");
+
+    // recreation category → sports activity type via matchCategories
+    expect(matchActivityType(makeEvent({
+      category: "recreation",
+      title: "Open Gym Basketball",
+    }))).toBe("sports");
+
+    // exercise category → fitness activity type via matchCategories
+    expect(matchActivityType(makeEvent({
+      category: "exercise",
+      title: "Morning Yoga Flow",
+    }))).toBe("fitness");
+  });
+
+  it("backward compat: fitness category event also matches fitness activity type", () => {
     expect(matchActivityType(makeEvent({
       category: "fitness",
       tags: ["yoga"],
@@ -39,7 +68,7 @@ describe("matchActivityType", () => {
 describe("isSceneEvent", () => {
   it("routes recurring pickup sports into the scene", () => {
     expect(isSceneEvent(makeEvent({
-      category: "fitness",
+      category: "recreation",
       tags: ["pickup", "pickleball"],
       title: "Friday Pickleball Open Play",
       series_id: "series-1",

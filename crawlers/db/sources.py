@@ -2,10 +2,12 @@
 Source queries, crawl log CRUD, and source scheduling.
 """
 
-import re
 import logging
+import re
 from datetime import datetime, timedelta
 from typing import Optional
+
+import psycopg2
 
 from db.client import (
     get_client,
@@ -14,6 +16,7 @@ from db.client import (
     _log_write_skip,
     _SOURCE_CACHE,
 )
+from config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -441,30 +444,61 @@ def refresh_available_filters() -> bool:
         _log_write_skip("rpc refresh_available_filters")
         return True
 
+    try:
+        _run_direct_sql("SELECT refresh_available_filters();")
+        return True
+    except Exception as e:
+        print(f"Error refreshing available filters via direct DB connection: {e}")
+
     client = get_client()
     try:
         client.rpc("refresh_available_filters").execute()
         return True
     except Exception as e:
-        print(f"Error refreshing available filters: {e}")
+        print(f"Error refreshing available filters via RPC: {e}")
         return False
 
 
-def refresh_search_suggestions(city: Optional[str] = None) -> bool:
+def refresh_search_suggestions(
+    city: Optional[str] = None,
+    since: Optional[datetime] = None,
+) -> bool:
     """Incrementally refresh the autocomplete corpus after crawl writes."""
     if not writes_enabled():
         suffix = f" city={city}" if city else ""
         _log_write_skip(f"rpc refresh_search_suggestions_incremental{suffix}")
         return True
 
+    try:
+        _run_direct_sql(
+            "SELECT refresh_search_suggestions_incremental(%s, %s);",
+            (city, since),
+        )
+        return True
+    except Exception as e:
+        print(f"Error refreshing search suggestions via direct DB connection: {e}")
+
     client = get_client()
     try:
         payload = {"p_city": city} if city else {}
+        if since is not None:
+            payload["p_since"] = since.isoformat()
         client.rpc("refresh_search_suggestions_incremental", payload).execute()
         return True
     except Exception as e:
-        print(f"Error refreshing search suggestions: {e}")
+        print(f"Error refreshing search suggestions via RPC: {e}")
         return False
+
+
+def _run_direct_sql(sql: str, params: Optional[tuple] = None) -> None:
+    """Run heavyweight maintenance SQL via direct Postgres, bypassing REST timeouts."""
+    database_url = get_config().database.active_database_url
+    if not database_url:
+        raise RuntimeError("No active DATABASE_URL configured for direct SQL execution")
+
+    with psycopg2.connect(database_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
 
 
 def update_source_health_tags(

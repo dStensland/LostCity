@@ -36,7 +36,8 @@ const EVENT_LIST_SELECT = `
   category_id, tags, genres,
   price_min, price_max,
   image_url, blurhash,
-  source_url, ticket_url,
+  source_url, ticket_url, ticket_status, ticket_status_checked_at,
+  importance, on_sale_date, presale_date, early_bird_deadline, sellout_risk,
   featured_blurb, series_id, venue_id, source_id,
   recurrence_rule, is_regular_ready,
   venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, location_designator, blurhash),
@@ -77,6 +78,8 @@ export interface SearchFilters {
   // Unlike `city` (which adds .in("venue_id", [...]) to the main query and can exceed
   // PostgREST URL limits for large cities), this only constrains batchFetchVenueIds.
   portal_city?: string;
+  // Importance tier filter — surfaces flagship/major events for planning horizon
+  importance?: string[];
 }
 
 // Rollup types for collapsed event groups
@@ -546,8 +549,10 @@ async function applySearchFilters(
   }
 
   // Apply category filter (using category_id)
-  if (filters.categories && filters.categories.length > 0) {
-    query = query.in("category_id", filters.categories);
+  // Filter out "all" — it's not a real category_id, just a UI sentinel
+  const realCategories = filters.categories?.filter((c) => c !== "all");
+  if (realCategories && realCategories.length > 0) {
+    query = query.in("category_id", realCategories);
   }
 
   // Apply tag filter (events with ANY of the selected tags)
@@ -591,12 +596,19 @@ async function applySearchFilters(
     query = query.or(`is_free.eq.true,price_min.lte.${filters.price_max}`);
   }
 
-  // Apply date filter (include ongoing multi-day events that overlap the range)
+  // Apply date filter
   if (filters.date_filter) {
     const { start, end } = getDateRange(filters.date_filter);
-    query = query.or(
-      `and(start_date.gte.${start},start_date.lte.${end}),and(end_date.gte.${start},start_date.lte.${end})`
-    );
+    // Short-term filters (today/tomorrow/weekend): only show events starting on those days
+    // Longer-range filters (week/month): include ongoing multi-day events that overlap
+    const isShortTerm = filters.date_filter === "now" || filters.date_filter === "today" || filters.date_filter === "tomorrow" || filters.date_filter === "weekend";
+    if (isShortTerm) {
+      query = query.gte("start_date", start).lte("start_date", end);
+    } else {
+      query = query.or(
+        `and(start_date.gte.${start},start_date.lte.${end}),and(end_date.gte.${start},start_date.lte.${end})`
+      );
+    }
 
     // For "now" filter, also require is_live to be true
     if (filters.date_filter === "now") {
@@ -684,6 +696,11 @@ async function applySearchFilters(
   // they can't be plotted on a map.
   if (filters.geo_bounds) {
     query = query.not("venue_id", "is", null);
+  }
+
+  // Apply importance tier filter (planning horizon)
+  if (filters.importance && filters.importance.length > 0) {
+    query = query.in("importance", filters.importance);
   }
 
   return { query, shouldReturnEmpty: false };

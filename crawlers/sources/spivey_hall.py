@@ -1,359 +1,295 @@
 """
 Crawler for Spivey Hall (spiveyhall.org).
 
-Spivey Hall is an acoustic concert hall at Clayton State University in Morrow, GA,
-known for exceptional acoustics and classical music performances. Site uses
-JavaScript rendering - requires Playwright.
+Acoustic concert hall at Clayton State University in Morrow, GA.
+Known for exceptional acoustics and classical/chamber music performances.
+
+Site runs WordPress + Event Organiser plugin with a FullCalendar AJAX JSON API.
+No Playwright needed — plain HTTP requests.
 """
 
 from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+import requests
+from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_event_by_hash,
+    get_or_create_venue,
+    insert_event,
+    remove_stale_source_events,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, normalize_time_format
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://spiveyhall.org"
-EVENTS_URL = f"{BASE_URL}/events"
-CALENDAR_URL = f"{BASE_URL}/calendar"
+# Event Organiser FullCalendar AJAX endpoint
+FULLCAL_API = f"{BASE_URL}/wp-admin/admin-ajax.php"
+REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"}
 
-# Spivey Hall venue
 VENUE_DATA = {
     "name": "Spivey Hall",
     "slug": "spivey-hall",
     "address": "2000 Clayton State Blvd",
-    "neighborhood": None,
+    "neighborhood": "Morrow",
     "city": "Morrow",
     "state": "GA",
     "zip": "30260",
-    "venue_type": "concert-hall",
+    "lat": 33.5413,
+    "lng": -84.3527,
+    "venue_type": "concert_hall",
+    "spot_type": "concert_hall",
     "website": BASE_URL,
+    "description": (
+        "World-class 392-seat acoustic concert hall at Clayton State University. "
+        "Known for exceptional acoustics and intimate performances of classical, "
+        "chamber, choral, and jazz music."
+    ),
+    "vibes": ["classical", "acoustic", "performing-arts", "intimate"],
+}
+
+# Event Organiser category slug → our category
+_CATEGORY_MAP = {
+    "piano-concert": ("music", "classical"),
+    "vocal": ("music", "classical"),
+    "organ": ("music", "classical"),
+    "choral": ("music", "choral"),
+    "chamber-music": ("music", "chamber"),
+    "string": ("music", "classical"),
+    "educational-program": ("learning", None),
+    "ypc": ("family", None),  # Young People's Concerts
 }
 
 
-def parse_date_text(date_text: str) -> Optional[tuple[str, str]]:
-    """
-    Parse date text from Spivey Hall format.
-    Examples: "February 15, 2026", "Feb 15, 2026", "2/15/2026"
-
-    Returns:
-        Tuple of (start_date, end_date) in YYYY-MM-DD format, or None if unparseable
-    """
+def _parse_iso_local(dt_str: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse ISO-ish datetime string like '2026-03-21T20:00:00' into (date, time)."""
+    if not dt_str:
+        return None, None
     try:
-        current_year = datetime.now().year
-
-        # Try "Month DD, YYYY" format
-        match = re.search(
-            r'([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})',
-            date_text
-        )
-
-        if match:
-            month_name, day, year = match.groups()
-            try:
-                # Try full month name first
-                start_dt = datetime.strptime(f"{month_name} {day} {year}", "%B %d %Y")
-            except ValueError:
-                # Try abbreviated month name
-                start_dt = datetime.strptime(f"{month_name} {day} {year}", "%b %d %Y")
-
-            start_date = start_dt.strftime("%Y-%m-%d")
-            return start_date, None
-
-        # Try MM/DD/YYYY format
-        match = re.search(r'(\d{1,2})/(\d{1,2})/(\d{4})', date_text)
-        if match:
-            month, day, year = match.groups()
-            start_dt = datetime.strptime(f"{month}/{day}/{year}", "%m/%d/%Y")
-            start_date = start_dt.strftime("%Y-%m-%d")
-            return start_date, None
-
-    except (ValueError, AttributeError) as e:
-        logger.debug(f"Could not parse date text '{date_text}': {e}")
-
-    return None
+        dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+        return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
+    except ValueError:
+        pass
+    # Fallback: date only
+    m = re.match(r"(\d{4}-\d{2}-\d{2})", dt_str)
+    if m:
+        return m.group(1), None
+    return None, None
 
 
-def parse_time_text(time_text: str) -> Optional[str]:
-    """
-    Parse time text from concert listings.
-    Examples: "8:00 PM", "7:30pm", "3:00 PM"
+def _infer_category(categories: list[str], title: str) -> tuple[str, Optional[str], list[str]]:
+    """Map Event Organiser categories to our taxonomy."""
+    tags = ["spivey-hall", "clayton-state", "morrow", "performing-arts"]
 
-    Returns:
-        Time in HH:MM format (24-hour), or None if unparseable
-    """
-    if not time_text:
-        return None
+    for cat_slug in categories:
+        if cat_slug in _CATEGORY_MAP:
+            category, subcategory = _CATEGORY_MAP[cat_slug]
+            tags.append(cat_slug.replace("-", "-"))
+            if cat_slug == "ypc":
+                tags.extend(["kids", "family-friendly", "educational"])
+            return category, subcategory, tags
 
-    return normalize_time_format(time_text)
-
-
-def extract_price_info(text: str) -> tuple[Optional[float], Optional[float], Optional[str], bool]:
-    """
-    Extract price information from text.
-
-    Returns:
-        Tuple of (price_min, price_max, price_note, is_free)
-    """
-    text_lower = text.lower()
-
-    # Check for free
-    if "free" in text_lower or "no admission" in text_lower or "free admission" in text_lower:
-        return 0, 0, "Free", True
-
-    # Find dollar amounts
-    amounts = re.findall(r'\$(\d+(?:\.\d{2})?)', text)
-
-    if not amounts:
-        return None, None, None, False
-
-    amounts = [float(a) for a in amounts]
-
-    return min(amounts), max(amounts), None, False
-
-
-def determine_subcategory(title: str, description: str = "") -> Optional[str]:
-    """Determine music subcategory based on title and description."""
-    text = f"{title} {description}".lower()
-
-    if any(word in text for word in ["symphony", "orchestra", "philharmonic", "chamber"]):
-        return "classical"
-    if any(word in text for word in ["jazz", "quartet", "trio"]):
-        return "jazz"
-    if any(word in text for word in ["choir", "choral", "chorus", "vocal"]):
-        return "choral"
-    if any(word in text for word in ["piano", "pianist", "guitar", "violin"]):
-        return "instrumental"
-
-    # Default to classical for Spivey Hall
-    return "classical"
-
-
-def extract_tags(title: str, description: str = "") -> list[str]:
-    """Extract relevant tags from event content."""
-    text = f"{title} {description}".lower()
-    tags = ["classical", "acoustic", "concert-hall", "morrow"]
-
-    if any(word in text for word in ["piano", "pianist"]):
-        tags.append("piano")
-    if any(word in text for word in ["orchestra", "symphony"]):
-        tags.append("orchestra")
-    if any(word in text for word in ["chamber", "quartet", "trio"]):
-        tags.append("chamber-music")
-    if any(word in text for word in ["jazz"]):
+    # Keyword fallback
+    title_lower = title.lower()
+    if any(w in title_lower for w in ("jazz", "quartet", "trio")):
         tags.append("jazz")
-    if any(word in text for word in ["choir", "choral", "vocal"]):
+        return "music", "jazz", tags
+    if any(w in title_lower for w in ("choir", "choral", "chorus")):
         tags.append("choral")
-    if any(word in text for word in ["guitar"]):
-        tags.append("guitar")
-    if any(word in text for word in ["organ", "organist"]):
-        tags.append("organ")
+        return "music", "choral", tags
 
-    return list(set(tags))
+    # Default: classical music (Spivey Hall's bread and butter)
+    tags.append("classical")
+    return "music", "classical", tags
+
+
+def _fetch_detail(event_url: str) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    """Fetch event detail page for description, price, and ticket URL."""
+    description = None
+    price_note = None
+    ticket_url = None
+    try:
+        resp = requests.get(event_url, timeout=15, headers=REQUEST_HEADERS)
+        if not resp.ok:
+            return None, None, None
+        soup = BeautifulSoup(resp.text, "html.parser")
+
+        # Description from first substantial paragraph
+        for p in soup.find_all("p"):
+            text = p.get_text(strip=True)
+            if len(text) > 80:
+                description = text[:500]
+                break
+
+        # Price from "Starting at $XX" pattern
+        body_text = soup.get_text()
+        price_match = re.search(r"(?:starting at|tickets?:?)\s*\$(\d+)", body_text, re.I)
+        if price_match:
+            price_note = f"Starting at ${price_match.group(1)}"
+
+        # Ticket URL from Salesforce link
+        ticket_link = soup.find("a", href=re.compile(r"salesforce-sites\.com/ticket"))
+        if ticket_link:
+            ticket_url = ticket_link["href"]
+    except Exception as e:
+        logger.debug("Failed to fetch detail %s: %s", event_url, e)
+
+    return description, price_note, ticket_url
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """
-    Crawl Spivey Hall events using Playwright.
-
-    The site uses WordPress with Event Organiser plugin that requires
-    JavaScript rendering to load event information.
-    """
+    """Crawl Spivey Hall events via Event Organiser FullCalendar AJAX API."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
+    seen_hashes: set[str] = set()
+    today = datetime.now()
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        venue_id = get_or_create_venue(VENUE_DATA)
 
-            # Get venue ID for Spivey Hall
-            venue_id = get_or_create_venue(VENUE_DATA)
+        # Fetch 6-month window from the FullCalendar API
+        start_date = today.strftime("%Y-%m-%d")
+        end_date = (today + timedelta(days=180)).strftime("%Y-%m-%d")
 
-            # Try events page first, fallback to calendar
-            for url in [EVENTS_URL, CALENDAR_URL]:
-                logger.info(f"Fetching Spivey Hall events: {url}")
+        logger.info("Fetching Spivey Hall events: %s → %s", start_date, end_date)
+        resp = requests.get(
+            FULLCAL_API,
+            params={
+                "action": "eventorganiser-fullcal",
+                "start": start_date,
+                "end": end_date,
+            },
+            timeout=30,
+            headers=REQUEST_HEADERS,
+        )
+        resp.raise_for_status()
+        events_data = resp.json()
 
-                try:
-                    page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                    page.wait_for_timeout(3000)
+        if not isinstance(events_data, list):
+            logger.warning("Unexpected API response type: %s", type(events_data))
+            return 0, 0, 0
 
-                    # Scroll to load content
-                    for _ in range(3):
-                        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                        page.wait_for_timeout(1000)
+        logger.info("Found %d events from FullCalendar API", len(events_data))
 
-                    # Extract images from page
-                    image_map = extract_images_from_page(page)
+        for event in events_data:
+            title = (event.get("title") or "").strip()
+            if not title or len(title) < 3:
+                continue
 
-                    # Look for event elements - try multiple selectors
-                    event_selectors = [
-                        '.event, .eo-event',  # Event Organiser plugin
-                        '[class*="event"]',
-                        'article',
-                        '.event-item',
-                        '.calendar-event',
-                    ]
+            # Skip past events (className includes eo-event-past)
+            class_names = event.get("className", [])
+            if "eo-event-past" in class_names:
+                continue
 
-                    event_elements = []
-                    for selector in event_selectors:
-                        elements = page.query_selector_all(selector)
-                        if elements:
-                            event_elements = elements
-                            logger.info(f"Found {len(elements)} events using selector: {selector}")
-                            break
+            start_date_str, start_time = _parse_iso_local(event.get("start", ""))
+            end_date_str, end_time = _parse_iso_local(event.get("end", ""))
 
-                    if not event_elements:
-                        logger.warning(f"No event elements found on {url}")
-                        continue
+            if not start_date_str:
+                continue
 
-                    for element in event_elements:
-                        try:
-                            # Extract title
-                            title_elem = element.query_selector('h1, h2, h3, h4, .event-title, [class*="title"]')
-                            if not title_elem:
-                                continue
-
-                            title = title_elem.inner_text().strip()
-
-                            if not title or len(title) < 3:
-                                continue
-
-                            # Skip navigation/header elements
-                            if title.lower() in ["events", "calendar", "upcoming events", "past events"]:
-                                continue
-
-                            # Extract description
-                            desc_elem = element.query_selector('p, .description, .event-description, [class*="description"], [class*="excerpt"]')
-                            description = desc_elem.inner_text().strip() if desc_elem else ""
-
-                            # Get all text from the element for date/time parsing
-                            element_text = element.inner_text()
-
-                            # Parse dates
-                            date_info = parse_date_text(element_text)
-                            if not date_info:
-                                logger.debug(f"Could not parse date for: {title}")
-                                continue
-
-                            start_date, end_date = date_info
-
-                            # Try to parse time
-                            start_time = parse_time_text(element_text)
-
-                            # Extract price info
-                            price_min, price_max, price_note, is_free = extract_price_info(element_text)
-
-                            # Get event URL if available
-                            link_elem = element.query_selector('a')
-                            event_url = link_elem.get_attribute('href') if link_elem else url
-                            if event_url and not event_url.startswith('http'):
-                                event_url = BASE_URL + event_url
-
-                            events_found += 1
-
-                            # Determine subcategory and tags
-                            subcategory = determine_subcategory(title, description)
-                            tags = extract_tags(title, description)
-
-                            # Generate content hash
-                            content_hash = generate_content_hash(
-                                title, "Spivey Hall", start_date
-                            )
-
-
-                            # Get image
-                            img_elem = element.query_selector('img')
-                            image_url = None
-                            if img_elem:
-                                image_url = img_elem.get_attribute('src') or img_elem.get_attribute('data-src')
-                                if image_url and not image_url.startswith('http'):
-                                    if image_url.startswith('//'):
-                                        image_url = 'https:' + image_url
-                                    else:
-                                        image_url = BASE_URL + image_url
-
-                            # Fallback to image map
-                            if not image_url and title in image_map:
-                                image_url = image_map[title]
-
-                            event_record = {
-                                "source_id": source_id,
-                                "venue_id": venue_id,
-                                "title": title,
-                                "description": description if description else None,
-                                "start_date": start_date,
-                                "start_time": start_time,
-                                "end_date": end_date,
-                                "end_time": None,
-                                "is_all_day": False,
-                                "category": "music",
-                                "subcategory": subcategory,
-                                "tags": tags,
-                                "price_min": price_min,
-                                "price_max": price_max,
-                                "price_note": price_note,
-                                "is_free": is_free,
-                                "source_url": event_url,
-                                "ticket_url": event_url,
-                                "image_url": image_url,
-                                "raw_text": f"{title} | {element_text[:200]}"[:500],
-                                "extraction_confidence": 0.80,
-                                "is_recurring": False,
-                                "recurrence_rule": None,
-                                "content_hash": content_hash,
-                            }
-
-                            existing = find_event_by_hash(content_hash)
-                            if existing:
-                                smart_update_existing_event(existing, event_record)
-                                events_updated += 1
-                                continue
-
-                            try:
-                                insert_event(event_record)
-                                events_new += 1
-                                logger.info(f"Added: {title} on {start_date}")
-                            except Exception as e:
-                                logger.error(f"Failed to insert: {title}: {e}")
-
-                        except Exception as e:
-                            logger.debug(f"Error processing event element: {e}")
-                            continue
-
-                    # If we found events, no need to try other URLs
-                    if events_found > 0:
-                        break
-
-                except Exception as e:
-                    logger.warning(f"Error fetching {url}: {e}")
+            # Skip past
+            try:
+                if datetime.strptime(start_date_str, "%Y-%m-%d").date() < today.date():
                     continue
+            except ValueError:
+                continue
 
-            browser.close()
+            is_all_day = event.get("allDay", False)
+
+            # Categories from the API
+            cat_slugs = event.get("category", []) or []
+            category, subcategory, tags = _infer_category(cat_slugs, title)
+
+            # Event detail URL
+            event_url = event.get("url", "")
+            if event_url and not event_url.startswith("http"):
+                event_url = BASE_URL + event_url
+
+            # Fetch detail page for description, price, ticket URL
+            description = None
+            price_note = None
+            ticket_url = None
+            if event_url:
+                description, price_note, ticket_url = _fetch_detail(event_url)
+
+            # Parse price
+            price_min = None
+            price_max = None
+            is_free = False
+            if price_note:
+                m = re.search(r"\$(\d+)", price_note)
+                if m:
+                    price_min = float(m.group(1))
+
+            events_found += 1
+
+            hash_key = f"{start_date_str}|{start_time}" if start_time else start_date_str
+            content_hash = generate_content_hash(title, "Spivey Hall", hash_key)
+            seen_hashes.add(content_hash)
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title,
+                "description": description or f"{title} at Spivey Hall",
+                "start_date": start_date_str,
+                "start_time": start_time if not is_all_day else None,
+                "end_date": end_date_str,
+                "end_time": end_time if not is_all_day else None,
+                "is_all_day": is_all_day,
+                "category": category,
+                "subcategory": subcategory,
+                "tags": sorted(set(tags)),
+                "price_min": price_min,
+                "price_max": price_max,
+                "price_note": price_note,
+                "is_free": is_free,
+                "source_url": event_url or BASE_URL,
+                "ticket_url": ticket_url or event_url,
+                "image_url": None,  # FullCalendar API doesn't include images
+                "raw_text": None,
+                "extraction_confidence": 0.92,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
+            try:
+                insert_event(event_record)
+                events_new += 1
+                logger.info("Added: %s (%s)", title, start_date_str)
+            except Exception as e:
+                logger.error("Failed to insert: %s: %s", title, e)
+
+        if seen_hashes:
+            stale_removed = remove_stale_source_events(source_id, seen_hashes)
+            if stale_removed:
+                logger.info("Removed %d stale Spivey Hall events", stale_removed)
 
         logger.info(
-            f"Spivey Hall crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            "Spivey Hall crawl complete: %d found, %d new, %d updated",
+            events_found,
+            events_new,
+            events_updated,
         )
 
-    except PlaywrightTimeout as e:
-        logger.error(f"Timeout fetching Spivey Hall: {e}")
-        raise
-    except Exception as e:
-        logger.error(f"Failed to crawl Spivey Hall: {e}")
+    except Exception as exc:
+        logger.error("Failed to crawl Spivey Hall: %s", exc)
         raise
 
     return events_found, events_new, events_updated

@@ -152,6 +152,16 @@ class TestLLMConfig:
             cfg = config.LLMConfig()
             assert cfg.anthropic_api_key == "sk-test-key"
 
+    def test_reads_provider_override(self):
+        """Should allow explicit auto provider selection."""
+        with patch.dict(os.environ, {"LLM_PROVIDER": "auto"}, clear=False):
+            import importlib
+            import config
+
+            importlib.reload(config)
+            cfg = config.LLMConfig()
+            assert cfg.provider == "auto"
+
 
 class TestCrawlerConfig:
     """Tests for CrawlerConfig."""

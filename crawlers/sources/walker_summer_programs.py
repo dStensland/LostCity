@@ -82,7 +82,7 @@ BONUS_WEEK_RE = re.compile(
     re.IGNORECASE,
 )
 TIME_RANGE_RE = re.compile(
-    r"(?P<start>(?:\d{1,2}(?::\d{2})?)\s*[ap]\.?\s*m\.?|All Day|FULL DAY)\s*(?:to|-)\s*"
+    r"(?P<start>(?:\d{1,2}(?::\d{2})?)\s*(?:[ap]\.?\s*m\.?)?|All Day|FULL DAY)\s*(?:to|-)\s*"
     r"(?P<end>(?:\d{1,2}(?::\d{2})?)\s*[ap]\.?\s*m\.?)?$",
     re.IGNORECASE,
 )
@@ -163,17 +163,52 @@ def _parse_time_value(value: str) -> Optional[str]:
     cleaned = _clean_text(value).lower().replace(".", "")
     if not cleaned:
         return None
-    match = re.match(r"(\d{1,2})(?::(\d{2}))?\s*([ap]m)", cleaned)
+    match = re.match(r"(\d{1,2})(?::(\d{2}))?\s*([ap]m)?", cleaned)
     if not match:
         return None
     hour = int(match.group(1))
     minute = int(match.group(2) or "00")
     ampm = match.group(3)
+    if not ampm:
+        return None
     if ampm == "pm" and hour != 12:
         hour += 12
     if ampm == "am" and hour == 12:
         hour = 0
     return f"{hour:02d}:{minute:02d}"
+
+
+def _infer_time_from_end(start_value: str, end_value: str) -> Optional[str]:
+    start_cleaned = _clean_text(start_value).lower().replace(".", "")
+    start_match = re.match(r"(\d{1,2})(?::(\d{2}))?$", start_cleaned)
+    if not start_match:
+        return None
+
+    end_time = _parse_time_value(end_value)
+    if not end_time:
+        return None
+    end_hour, end_minute = map(int, end_time.split(":"))
+    end_total = end_hour * 60 + end_minute
+
+    start_hour = int(start_match.group(1))
+    start_minute = int(start_match.group(2) or "00")
+
+    candidates: list[tuple[int, str]] = []
+    for meridiem in ("am", "pm"):
+        hour = start_hour
+        if meridiem == "pm" and hour != 12:
+            hour += 12
+        if meridiem == "am" and hour == 12:
+            hour = 0
+        total = hour * 60 + start_minute
+        duration = end_total - total
+        if 0 < duration <= 8 * 60:
+            candidates.append((duration, f"{hour:02d}:{start_minute:02d}"))
+
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: item[0])
+    return candidates[0][1]
 
 
 def _parse_time_range(text: str) -> tuple[Optional[str], Optional[str], bool]:
@@ -185,9 +220,15 @@ def _parse_time_range(text: str) -> tuple[Optional[str], Optional[str], bool]:
     match = TIME_RANGE_RE.search(cleaned)
     if not match:
         return None, None, False
+    start_value = match.group("start")
+    end_value = match.group("end") or ""
+    start_time = _parse_time_value(start_value)
+    end_time = _parse_time_value(end_value)
+    if start_time is None and end_value:
+        start_time = _infer_time_from_end(start_value, end_value)
     return (
-        _parse_time_value(match.group("start")),
-        _parse_time_value(match.group("end") or ""),
+        start_time,
+        end_time,
         False,
     )
 
@@ -362,10 +403,12 @@ def _parse_generic_header(
 
     title = _smart_title(match.group("title"))
     time_text = _clean_text(match.group("time") or "")
-    start_time, end_time, is_all_day = _parse_time_range(time_text)
-    age_min, age_max, age_tags = _parse_grade_range(match.group("grades"))
     detail_text = _extract_detail_text(detail_td)
     metadata = _extract_metadata(detail_td)
+    if not time_text:
+        time_text = metadata.get("camp hours", "")
+    start_time, end_time, is_all_day = _parse_time_range(time_text)
+    age_min, age_max, age_tags = _parse_grade_range(match.group("grades"))
 
     return {
         "header_key": _clean_text(header).lower(),

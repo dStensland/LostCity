@@ -4,7 +4,7 @@ import { getPortalBySlug } from "@/lib/portal";
 import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { isValidUUID } from "@/lib/api-utils";
-import { isSpotOpen, DESTINATION_CATEGORIES } from "@/lib/spots";
+import { DESTINATION_CATEGORIES } from "@/lib/spots";
 import { logger } from "@/lib/logger";
 import {
   applyManifestFederatedScopeToQuery,
@@ -23,7 +23,7 @@ type RouteContext = {
   params: Promise<{ slug: string }>;
 };
 
-const HAPPENING_NOW_CACHE_TTL_MS = 30 * 1000;
+const HAPPENING_NOW_CACHE_TTL_MS = 120 * 1000;
 const HAPPENING_NOW_CACHE_MAX_ENTRIES = 120;
 const HAPPENING_NOW_CACHE_NAMESPACE = "api:happening-now";
 
@@ -64,12 +64,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const currentHour = now.getHours();
   const currentMinute = now.getMinutes();
   const currentTimeStr = `${currentHour.toString().padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}:00`;
-  const cacheKey = `${slug}|${countOnly ? "count" : "events"}|${limit}|${today}`;
+  const cacheKey = `${slug}|${countOnly ? "count" : "events"}|${limit}|${today}|h${currentHour}`;
   const cachedPayload = await getCachedHappeningNowPayload(cacheKey);
   if (cachedPayload) {
     return NextResponse.json(cachedPayload, {
       headers: {
-        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+        "Cache-Control": "public, s-maxage=120, stale-while-revalidate=240",
       },
     });
   }
@@ -163,39 +163,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     if (countOnly) {
-      // Also count open spots for the banner
+      // Count currently-open destination spots using server-side RPC (avoids fetching 1500+ rows)
       const placeTypes = Object.keys(DESTINATION_CATEGORIES).flatMap(
         (key) => DESTINATION_CATEGORIES[key as keyof typeof DESTINATION_CATEGORIES]
       );
-      const typeFilters = placeTypes.map((t) => `venue_type.eq.${t}`).join(",");
 
-      type HoursData = Record<string, { open: string; close: string } | null>;
-      type SpotRow = { id: number; hours: HoursData | null };
+      const { data: openSpotData } = await supabase.rpc("count_open_spots", {
+        p_venue_types: placeTypes,
+        p_city: portalCity ?? null,
+      } as never) as unknown as { data: number | null };
 
-      let spotsOpenQuery = supabase
-        .from("venues")
-        .select("id, hours")
-        .eq("active", true)
-        .or(typeFilters);
-
-      if (portalCity) {
-        spotsOpenQuery = spotsOpenQuery.in("city", [portalCity]);
-      }
-
-      const { data: spots } = await spotsOpenQuery
-        .limit(1500) as { data: SpotRow[] | null };
-
-      // Count spots that are currently open (only those with known hours)
-      let openSpotCount = 0;
-      for (const spot of spots || []) {
-        if (!spot.hours) continue; // Skip spots with unknown hours
-        try {
-          const result = isSpotOpen(spot.hours, false);
-          if (result.isOpen) openSpotCount++;
-        } catch {
-          // If hours parsing fails, skip this spot
-        }
-      }
+      const openSpotCount = openSpotData ?? 0;
 
       const payload = {
         count: (count || 0) + openSpotCount,
@@ -262,7 +240,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       payload,
       {
         headers: {
-          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+          "Cache-Control": "public, s-maxage=120, stale-while-revalidate=240",
         },
       }
     );

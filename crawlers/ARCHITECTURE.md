@@ -98,7 +98,8 @@ Use the storage lane that matches the user-visible contract:
 - `exhibitions`: exhibition runs that deserve independent identity beyond event cards.
 - `destination_details`: reusable destination-intelligence extensions for drive
   time, commitment, conditions fit, and practical planning.
-- opportunity tables: deadline- or commitment-driven actionables.
+- concrete opportunity tables: deadline- or commitment-driven actionables such
+  as `open_calls` and `volunteer_opportunities`.
 - `venue_specials`: happy hours, recurring food/drink deals, operational promos.
 - `venues`: destination metadata, planning metadata, and map/discovery completeness.
 - destination-attached features: durable things you can do, see, or experience at
@@ -108,8 +109,9 @@ Healthy coverage therefore has two parallel outputs:
 
 - feed health: events/exhibits/series users can attend
 - destination health: places users can choose before, after, or instead of an event
-- typed-entity health: programs, exhibitions, destination details, opportunities, and destination
-  features represented in their correct storage lane instead of event-shaped fallbacks
+- typed-entity health: programs, exhibitions, destination details, concrete
+  opportunity families, and destination features represented in their correct
+  storage lane instead of event-shaped fallbacks
 
 Coverage work that ignores these boundaries creates noise, dedupe failures, and
 bad feed quality.
@@ -176,7 +178,7 @@ Typed entity outputs:
 - The crawler contract should increasingly classify extracted records into
   explicit typed payload lanes instead of assuming every row becomes an event.
 - Near-term target lanes: `events`, `programs`, `exhibitions`,
-  `destination_details`, opportunity tables, `venue_specials`, and
+  `destination_details`, concrete opportunity tables, `venue_specials`, and
   destination-attached feature/enrichment lanes.
 
 ## Source Profiles

@@ -79,7 +79,8 @@ async function fetchTimelinePage(
           let festivalQuery = supabase
             .from("festivals")
             .select("id, name, slug, website, location, neighborhood, categories, free, announced_start, announced_end, ticket_url, description, image_url, typical_month, typical_duration_days, festival_type, portal_id")
-            .not("announced_start", "is", null);
+            .not("announced_start", "is", null)
+            .not("festival_type", "in", "(conference,trade_show,professional_development,convention)");
 
           // Apply a default future range filter
           festivalQuery = festivalQuery.or(`announced_end.gte.${today},announced_end.is.null`);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -391,32 +391,28 @@ interface HolidayHeroProps {
 }
 
 export default function HolidayHero({ portalSlug, position = 1, eventCount: prefetchedCount }: HolidayHeroProps) {
-  const [fetchedCount, setFetchedCount] = useState<number | null>(null);
-
   // Get the holiday for this position, sorted by nearest event date
   const slugs = getActiveHeroSlugs();
   const targetSlug = slugs[position - 1] ?? null;
   const holiday = targetSlug ? getActiveHoliday(targetSlug) : null;
 
-  // Only fetch if no prefetched count was provided
   const hasPrefetched = prefetchedCount !== undefined;
-  useEffect(() => {
-    if (hasPrefetched || !holiday) return;
+  const holidayTag = holiday?.tag ?? null;
 
-    async function fetchCount() {
-      try {
-        const res = await fetch(`/api/events/tag-count?tag=${encodeURIComponent(holiday!.tag)}&portal=${encodeURIComponent(portalSlug)}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (typeof data.count === "number" && data.count > 0) {
-          setFetchedCount(data.count);
-        }
-      } catch {
-        // Silently fail — hero still renders without count
-      }
-    }
-    fetchCount();
-  }, [portalSlug, holiday, hasPrefetched]);
+  // Use React Query so multiple HolidayHero instances share one network request.
+  // The stable query key deduplicates concurrent fetches across the render tree.
+  const { data: fetchedCount = null } = useQuery({
+    queryKey: ["tag-count", portalSlug, holidayTag],
+    queryFn: async () => {
+      const res = await fetch(`/api/events/tag-count?tag=${encodeURIComponent(holidayTag!)}&portal=${encodeURIComponent(portalSlug)}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return typeof data.count === "number" && data.count > 0 ? data.count : null;
+    },
+    enabled: !hasPrefetched && !!holidayTag,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
   const eventCount = hasPrefetched ? (prefetchedCount ?? null) : fetchedCount;
 
@@ -440,14 +436,13 @@ export default function HolidayHero({ portalSlug, position = 1, eventCount: pref
     );
   }
 
-  // Standard cards: entire card is one link
+  // Standard cards: HolidayCard contains its own Link, so outer is a div
   return (
-    <Link
-      href={`/${portalSlug}?tags=${holiday.tag}&view=find`}
+    <div
       className="block relative rounded-2xl overflow-hidden group"
       style={{ background: holiday.gradient }}
     >
       <HolidayCard holiday={holiday} eventCount={eventCount} portalSlug={portalSlug} />
-    </Link>
+    </div>
   );
 }

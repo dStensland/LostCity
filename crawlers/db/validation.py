@@ -92,6 +92,26 @@ def sanitize_text(text: str) -> str:
     # Remove a lone leading '>' (markdown blockquote artifact)
     text = re.sub(r"^>\s*", "", text)
 
+    # Strip Meetup boilerplate sentences that add no value
+    text = re.sub(
+        r"\s*Check Meetup for RSVP requirements,? attendance limits,? and last-minute updates\.?\s*",
+        " ",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\s*Location details are provided on Meetup\.?\s*",
+        " ",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"^Meetup community event:\s*",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+
     text = re.sub(r"\s+([,.;:!?])", r"\1", text)
     text = re.sub(r"\(\s+", "(", text)
     text = re.sub(r"\s+\)", ")", text)
@@ -493,7 +513,6 @@ _CATEGORY_NORMALIZATION_MAP: dict[str, str] = {
     "arts": "art",
     "activism": "community",
     "cultural": "community",
-    "dance": "learning",
     "tours": "learning",
     "meetup": "community",
     "gaming": "community",
@@ -502,14 +521,17 @@ _CATEGORY_NORMALIZATION_MAP: dict[str, str] = {
     "eatertainment": "nightlife",
     "entertainment": "family",
     "food": "food_drink",
-    "yoga": "fitness",
+    "fitness": "exercise",  # legacy alias
+    "yoga": "exercise",
+    "gym": "exercise",
+    "workout": "exercise",
     "cooking": "learning",
     "class": "learning",
     "outdoor": "outdoors",
     "museums": "art",
     "shopping": "community",
     "education": "learning",
-    "sports_recreation": "sports",
+    "sports_recreation": "recreation",
     "health": "wellness",
     "programs": "family",
 }

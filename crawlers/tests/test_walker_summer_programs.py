@@ -34,6 +34,8 @@ WALKER_HTML = """
   </td></tr>
   <tr><th>June 1-5 - Fun and Games, 9 a.m. - 12 p.m. (Grades 1-5)</th></tr>
   <tr><td><p>Games description.</p><p><strong>Camp Leader:</strong> Julio Barrios</p></td></tr>
+  <tr><th>June 8-12 - Creative Engineering (Grades 4-8)</th></tr>
+  <tr><td><p>Creative engineering description.</p><p><strong>Camp hours:</strong> 1 - 4 p.m.</p></td></tr>
 </table>
 <h5>MIDDLE SCHOOL SUMMER CAMPS</h5>
 <table>
@@ -46,6 +48,7 @@ WALKER_HTML = """
 def test_parse_date_grade_and_time_helpers() -> None:
     assert _parse_date_range("Aug. 3-6", 2026) == ("2026-08-03", "2026-08-06")
     assert _parse_time_range("9 a.m. - 12 p.m.") == ("09:00", "12:00", False)
+    assert _parse_time_range("1 - 4 p.m.") == ("13:00", "16:00", False)
     assert _parse_time_range("FULL DAY") == (None, None, True)
     assert _parse_grade_range("Grades K-5") == (
         5,
@@ -58,7 +61,7 @@ def test_parse_tables_expands_multiweek_and_dedupes_generic_rows() -> None:
     rows = _parse_tables(BeautifulSoup(WALKER_HTML, "html.parser"))
 
     titles = [row["title"] for row in rows]
-    assert len(rows) == 7
+    assert len(rows) == 8
     assert (
         "Primary School Full Day Camp: Blast Off to Outer Space & Summer Fun" in titles
     )
@@ -66,6 +69,9 @@ def test_parse_tables_expands_multiweek_and_dedupes_generic_rows() -> None:
     assert "Primary School Full Day Camp: Magic and Science" in titles
     assert titles.count("Summer Explorers") == 2
     assert titles.count("Fun and Games") == 1
+    creative = next(row for row in rows if row["title"] == "Creative Engineering")
+    assert creative["start_time"] == "13:00"
+    assert creative["end_time"] == "16:00"
 
 
 def test_build_event_record_for_generic_walker_row() -> None:

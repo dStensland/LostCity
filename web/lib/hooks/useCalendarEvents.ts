@@ -70,7 +70,7 @@ export function useCalendarEvents(options: UseCalendarEventsOptions) {
   // Create stable query key from filter params (exclude date-related params)
   const filtersKey = useMemo(() => {
     const params = new URLSearchParams();
-    const filterKeys = ["categories", "neighborhoods", "price"];
+    const filterKeys = ["categories", "neighborhoods", "price", "free", "genres"];
     filterKeys.forEach((key) => {
       const value = searchParams.get(key);
       if (value) params.set(key, value);
@@ -88,10 +88,14 @@ export function useCalendarEvents(options: UseCalendarEventsOptions) {
     const categories = searchParams.get("categories");
     const neighborhoods = searchParams.get("neighborhoods");
     const price = searchParams.get("price");
+    const free = searchParams.get("free");
+    const genres = searchParams.get("genres");
 
     if (categories) params.set("categories", categories);
     if (neighborhoods) params.set("neighborhoods", neighborhoods);
     if (price) params.set("price", price);
+    if (free === "1" && !price) params.set("price", "free"); // Normalize free toggle
+    if (genres) params.set("genres", genres);
 
     // Portal params
     if (portalId && portalId !== "default") {

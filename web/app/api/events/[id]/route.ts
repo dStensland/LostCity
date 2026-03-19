@@ -104,9 +104,9 @@ async function fetchVenueEvents(
     .from("events")
     .select(`
       id, title, start_date, end_date, start_time, end_time,
-      series_id, image_url, category_id, is_free, price_min,
+      series_id, image_url, category, is_free, price_min,
       series:series!events_series_id_fkey(id, slug, title, series_type, image_url),
-      venue:venues(id, name, slug, city, location_designator, venue_type)
+      venue:venues(id, name, slug, city, neighborhood, location_designator, venue_type)
     `)
     .eq("venue_id", eventData.venue_id)
     .neq("id", eventId)
@@ -144,8 +144,8 @@ async function fetchNearbyEvents(
     let sameDateQuery = supabase
       .from("events")
       .select(`
-        id, title, start_date, start_time, end_time,
-        venue:venues!inner(id, name, slug, lat, lng, city, location_designator)
+        id, title, start_date, start_time, end_time, category, is_free, price_min,
+        venue:venues!inner(id, name, slug, lat, lng, city, neighborhood, location_designator)
       `)
       .eq("start_date", eventData.start_date)
       .neq("id", eventId)
@@ -201,8 +201,8 @@ async function fetchNearbyEvents(
     let fallbackQuery = supabase
       .from("events")
       .select(`
-        id, title, start_date, start_time, end_time,
-        venue:venues(id, name, slug, city, location_designator)
+        id, title, start_date, start_time, end_time, category, is_free, price_min,
+        venue:venues(id, name, slug, city, neighborhood, location_designator)
       `)
       .eq("start_date", eventData.start_date)
       .neq("id", eventId)
@@ -234,6 +234,7 @@ async function fetchNearbyDestinations(
     food: [],
     drinks: [],
     nightlife: [],
+    caffeine: [],
     fun: [],
   };
 
@@ -626,11 +627,10 @@ export async function GET(
   ];
   const relatedCounts = await fetchSocialProofCounts(Array.from(new Set(relatedEventIds)));
 
-  venueEvents = (venueEvents as { id: number; category_id?: string | null }[]).map((event) => {
+  venueEvents = (venueEvents as { id: number }[]).map((event) => {
     const counts = relatedCounts.get(event.id);
     return {
       ...event,
-      category: (event as { category_id?: string | null }).category_id || null,
       going_count: counts?.going || 0,
       interested_count: counts?.interested || 0,
       recommendation_count: counts?.recommendations || 0,

@@ -68,3 +68,42 @@ def test_destination_only_helper():
     assert source_has_event_feed_goal(["tickets", "events"]) is True
     assert source_is_destination_only(["tickets", "images", "venue_hours", "planning"]) is True
     assert source_is_destination_only(["tickets", "images", "events"]) is False
+
+
+def test_fernbank_profile_overrides_inferred_exhibits():
+    from source_goals import resolve_source_data_goals
+
+    goals, mode = resolve_source_data_goals(
+        "fernbank-science-center",
+        source_name="Fernbank Science Center",
+        venue_type="museum",
+    )
+
+    assert mode == "profile"
+    assert goals == ["events", "images", "venue_hours"]
+
+
+def test_show_led_bar_profiles_do_not_require_hours():
+    from source_goals import resolve_source_data_goals
+
+    goals, mode = resolve_source_data_goals(
+        "smiths-olde-bar",
+        source_name="Smith's Olde Bar",
+        venue_type="music_venue",
+    )
+
+    assert mode == "profile"
+    assert goals == ["events", "images", "specials", "tickets"]
+
+
+def test_atlanta_printmakers_profile_targets_exhibitions():
+    from source_goals import resolve_source_data_goals
+
+    goals, mode = resolve_source_data_goals(
+        "atlanta-printmakers-studio",
+        source_name="Atlanta Printmakers Studio",
+        venue_type="studio",
+    )
+
+    assert mode == "profile"
+    assert goals == ["exhibits", "images"]

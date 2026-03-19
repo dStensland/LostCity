@@ -1,4 +1,4 @@
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import Link from "next/link";
 import type { Portal } from "@/lib/portal-context";
 import {
@@ -18,7 +18,6 @@ import {
   type MarketplacePersona,
 } from "@/lib/marketplace-art";
 import { getLocalDateString } from "@/lib/formats";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
 import MarketplaceSection from "./MarketplaceSection";
 import MarketplaceTenantCard from "./MarketplaceTenantCard";
 import MarketplaceEventCard from "./MarketplaceEventCard";
@@ -225,7 +224,7 @@ export default async function MarketplacePortalExperience({
           ================================================================ */}
       <section className="relative -mx-4 mb-8 overflow-hidden rounded-b-3xl sm:rounded-b-[2rem]">
         <div className="relative h-[340px] sm:h-[400px] md:h-[460px]">
-          <Image
+          <SmartImage
             src={PCM_HERO_IMAGE}
             alt="Ponce City Market"
             fill
@@ -448,8 +447,8 @@ export default async function MarketplacePortalExperience({
                         >
                           <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg bg-[var(--mkt-cream)]">
                             {venue.image_url ? (
-                              <Image
-                                src={getProxiedImageSrc(venue.image_url)}
+                              <SmartImage
+                                src={venue.image_url}
                                 alt={venue.name}
                                 fill
                                 sizes="40px"

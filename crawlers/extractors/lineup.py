@@ -73,13 +73,54 @@ def _looks_like_multi_artist_comma_list(chunk: str) -> bool:
     return len(alpha_parts) >= 3
 
 
+def _looks_like_band_with_ampersand(text: str) -> bool:
+    """Detect band names containing '&' that should not be split.
+
+    Patterns: 'X & the Y', 'X & Y of Z', possessives, short names,
+    and single-word sides that already prevent splitting upstream.
+    """
+    if " & " not in text:
+        return False
+    # Check each '&' boundary — "A & the B & C" should still be kept whole
+    # if any segment after & starts with an article/possessive.
+    parts = text.split(" & ")
+    for part in parts[1:]:
+        words = part.strip().split()
+        if not words:
+            continue
+        first_word = words[0].lower()
+
+        # Article/indefinite article after & → single act
+        # e.g. "Tom Petty & the Heartbreakers", "Bob & a Band of Brothers"
+        if first_word in {"the", "his", "her", "its", "a", "an"}:
+            return True
+
+        # Second word is a connector → "Promise of the Real", "Sons of Anarchy"
+        if len(words) >= 2 and words[1].lower() in {"of", "from"}:
+            return True
+
+        # Possessive in the part → "Jack & Jill's Adventure"
+        if "'s " in part or "\u2019s " in part:
+            return True
+
+    # Short overall name (≤ 20 chars) — likely a single act; two separate
+    # artist names joined by & are almost always longer.
+    if len(text) <= 20:
+        return True
+
+    return False
+
+
 def _split_ampersand_coheadliners(chunk: str) -> list[str]:
     """Split 'Artist A & Artist B' into co-headliners when both sides are multi-word.
 
     Preserves band names like 'Simon & Garfunkel' or 'Mumford & Sons' where
-    at least one side is a single word.
+    at least one side is a single word, and 'X & the Y' patterns like
+    'Mel Bryant & the Mercy Makers' where the article signals a single act.
     """
     if " & " not in chunk:
+        return [chunk]
+    if _looks_like_band_with_ampersand(chunk):
         return [chunk]
     parts = [p.strip() for p in chunk.split(" & ")]
     # Only split if ALL parts are multi-word (2+ words each)

@@ -15,6 +15,7 @@ import type {
 import WeatherDiscoverySection from "./sections/WeatherDiscoverySection";
 import TrendingSection from "./sections/TrendingSection";
 import ComingUpSection from "./sections/ComingUpSection";
+import PlanningHorizonSection from "./sections/PlanningHorizonSection";
 import BrowseSection from "./sections/BrowseSection";
 import ConversionCard from "./ConversionCard";
 
@@ -40,6 +41,8 @@ export default function CityPulseSection({
         return <TrendingSection section={section} portalSlug={portalSlug} />;
       case "coming_up":
         return <ComingUpSection section={section} portalSlug={portalSlug} />;
+      case "planning_horizon":
+        return <PlanningHorizonSection section={section} portalSlug={portalSlug} />;
       case "the_scene":
       case "tonights_regulars":
         // Self-fetching — rendered directly in CityPulseShell, not through this generic renderer

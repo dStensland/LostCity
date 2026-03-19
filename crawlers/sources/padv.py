@@ -43,7 +43,7 @@ VENUE_DATA = {
     "name": "Partnership Against Domestic Violence",
     "slug": "padv",
     "address": "P.O. Box 170009",
-    "neighborhood": "East Atlanta",
+    "neighborhood": "East Atlanta Village",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30317",

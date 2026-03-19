@@ -133,6 +133,7 @@ function CollectionCard({ collection, featured }: { collection: Collection; feat
             src={collection.cover_image_url}
             alt={`Cover image for ${collection.title} collection`}
             fill
+            sizes="(max-width: 640px) 100vw, 50vw"
             className="object-cover group-hover:scale-105 transition-transform duration-300"
           />
         </div>

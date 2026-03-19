@@ -13,6 +13,7 @@ type FollowButtonProps = {
   targetProducerId?: string; // Legacy name (deprecated)
   initialIsFollowing?: boolean;
   size?: "sm" | "md" | "lg";
+  rounded?: "full" | "xl";
   className?: string;
 };
 
@@ -24,6 +25,7 @@ export default function FollowButton({
   targetProducerId,
   initialIsFollowing,
   size = "md",
+  rounded = "full",
   className = "",
 }: FollowButtonProps) {
   // Support both old and new prop names
@@ -147,9 +149,9 @@ export default function FollowButton({
   };
 
   const sizeClasses = {
-    sm: "px-3 py-1 text-xs",
-    md: "px-4 py-1.5 text-sm",
-    lg: "px-6 py-3 text-base",
+    sm: "px-3 py-2 text-xs min-h-[36px]",
+    md: "px-4 py-2 text-sm min-h-[40px]",
+    lg: "px-6 py-3 text-base min-h-[44px]",
   };
 
   const isDisabled = loading || actionLoading;
@@ -158,7 +160,7 @@ export default function FollowButton({
     <button
       onClick={handleClick}
       disabled={isDisabled}
-      className={`font-mono font-medium rounded-full transition-all duration-150 ${sizeClasses[size]} ${
+      className={`font-mono font-medium ${rounded === "xl" ? "rounded-xl" : "rounded-full"} transition-all duration-150 ${sizeClasses[size]} ${
         isFollowing
           ? "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--coral)] hover:text-[var(--void)]"
           : "bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)]"

@@ -4,6 +4,7 @@ import { Suspense, useState, useRef, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import PortalSpotsView from "@/components/PortalSpotsView";
 import MapViewWrapper from "@/components/MapViewWrapper";
+import { MapErrorBoundary } from "@/components/map/MapErrorBoundary";
 import { useMapSpots } from "@/lib/hooks/useMapSpots";
 import { useViewportFilter } from "@/lib/hooks/useViewportFilter";
 import { useMapLocation } from "@/lib/hooks/useMapLocation";
@@ -258,20 +259,22 @@ export default function SpotsFinder({
             <DestinationsMapFilterBar portalSlug={portalSlug} />
           </div>
           <div style={{ height: MAP_DESKTOP_HEIGHT }}>
-            <MapViewWrapper
-              portalId={portalId}
-              portalExclusive={portalExclusive}
-              spots={mapSpots}
-              isFetching={mapSpotsFetching}
-              userLocation={loc.isNearbyMode ? loc.userLocation : undefined}
-              viewRadius={loc.isNearbyMode ? 1 : undefined}
-              centerPoint={loc.mapCenterPoint}
-              fitAllMarkers={loc.shouldFitAll}
-              onBoundsChange={handleBoundsChange}
-              selectedItemId={selectedItemId}
-              hoveredItemId={hoveredItemId}
-              onItemSelect={handleItemSelect}
-            />
+            <MapErrorBoundary listHref={`/${portalSlug}?view=find&type=destinations`}>
+              <MapViewWrapper
+                portalId={portalId}
+                portalExclusive={portalExclusive}
+                spots={mapSpots}
+                isFetching={mapSpotsFetching}
+                userLocation={loc.isNearbyMode ? loc.userLocation : undefined}
+                viewRadius={loc.isNearbyMode ? 1 : undefined}
+                centerPoint={loc.mapCenterPoint}
+                fitAllMarkers={loc.shouldFitAll}
+                onBoundsChange={handleBoundsChange}
+                selectedItemId={selectedItemId}
+                hoveredItemId={hoveredItemId}
+                onItemSelect={handleItemSelect}
+              />
+            </MapErrorBoundary>
           </div>
         </div>
       )}

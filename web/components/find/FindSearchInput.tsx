@@ -154,25 +154,44 @@ export default function FindSearchInput({
   // Wrap handleKeyDown to add navigation on Enter for selected items
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && search.selectedIndex >= 0) {
+      if (e.key === "Enter") {
         e.preventDefault();
-        const item = search.allItems[search.selectedIndex];
-        if (item?.type === "suggestion") {
-          handleSelectSuggestion(item.result);
-          return;
+
+        // If an item is selected, navigate to it
+        if (search.selectedIndex >= 0) {
+          const item = search.allItems[search.selectedIndex];
+          if (item?.type === "suggestion") {
+            handleSelectSuggestion(item.result);
+            return;
+          }
+          if (item?.type === "quickAction") {
+            handleSelectQuickAction(item.action);
+            return;
+          }
+          if (item?.type === "recent") {
+            handleSelectRecent(item.text);
+            return;
+          }
         }
-        if (item?.type === "quickAction") {
-          handleSelectQuickAction(item.action);
-          return;
+
+        // No item selected — commit the search query to URL immediately
+        const trimmed = search.query.trim();
+        if (trimmed) {
+          clearTimeout(urlSyncRef.current);
+          skipUrlSyncRef.current = true;
+          addRecentSearch(trimmed);
+          const params = new URLSearchParams(searchParams?.toString() || "");
+          params.set("search", trimmed);
+          params.delete("page");
+          router.replace(`${pathname}?${params.toString()}`, { scroll: false });
         }
-        if (item?.type === "recent") {
-          handleSelectRecent(item.text);
-          return;
-        }
+        search.setShowDropdown(false);
+        inputRef.current?.blur();
+        return;
       }
       search.handleKeyDown(e);
     },
-    [search, handleSelectSuggestion, handleSelectQuickAction, handleSelectRecent]
+    [search, searchParams, pathname, router, handleSelectSuggestion, handleSelectQuickAction, handleSelectRecent]
   );
 
   // Handle trending search click

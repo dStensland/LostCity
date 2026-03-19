@@ -187,6 +187,27 @@ from db.destination_details import (
     upsert_venue_destination_details,
 )
 
+# ===== venue_specials.py =====
+from db.venue_specials import (
+    upsert_venue_special,
+)
+
+# ===== editorial_mentions.py =====
+from db.editorial_mentions import (
+    upsert_editorial_mention,
+)
+
+# ===== venue_occasions.py =====
+from db.venue_occasions import (
+    upsert_venue_occasion,
+)
+
+# ===== volunteer_opportunities.py =====
+from db.volunteer_opportunities import (
+    deactivate_stale_volunteer_opportunities,
+    upsert_volunteer_opportunity,
+)
+
 # ===== notifications.py =====
 from db.notifications import (
     _CANCEL_KEYWORDS,

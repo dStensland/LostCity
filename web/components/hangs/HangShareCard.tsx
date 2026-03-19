@@ -110,7 +110,7 @@ export const HangShareCard = memo(function HangShareCard({
             draggable={false}
           />
           <span className="text-2xs text-white/40 font-mono tracking-wider">
-            lostcity.app
+            lostcity.ai
           </span>
         </div>
       </div>

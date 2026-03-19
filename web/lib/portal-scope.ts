@@ -1,4 +1,5 @@
 import type { PortalManifest } from "@/lib/portal-manifest";
+import type { EntityFamily } from "@/lib/portal-taxonomy";
 
 type PortalScopedQuery<T> = {
   eq: (column: string, value: string) => T;
@@ -30,6 +31,7 @@ type PortalScopeOptions = {
 };
 
 type FederatedPortalScopeOptions = PortalScopeOptions & {
+  entityFamily?: EntityFamily;
   sourceIds?: number[];
   sourceColumn?: string;
 };
@@ -155,6 +157,7 @@ export function applyFederatedPortalScopeToQuery<T>(
 }
 
 type ManifestScopeOverrides = {
+  entityFamily?: EntityFamily;
   sourceIds?: number[];
   sourceColumn?: string;
   publicOnlyWhenNoPortal?: boolean;
@@ -167,6 +170,7 @@ export function getFederatedScopeOptionsFromManifest(
   return {
     portalId: manifest.portalId,
     portalExclusive: manifest.scope.portalExclusive,
+    entityFamily: overrides.entityFamily ?? "events",
     publicOnlyWhenNoPortal:
       overrides.publicOnlyWhenNoPortal ?? manifest.scope.publicOnlyWhenNoPortal,
     sourceIds: overrides.sourceIds ?? manifest.scope.sourceIds,
@@ -236,7 +240,7 @@ export function isVenueCityInScope(
   portalCity: string | null | undefined,
   options: CityFilterOptions = {}
 ): boolean {
-  const { allowMissingCity = true } = options;
+  const { allowMissingCity = false } = options;
 
   if (!portalCity) return true;
   if (!venueCity) return allowMissingCity;

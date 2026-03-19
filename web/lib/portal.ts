@@ -4,30 +4,18 @@ import type { Portal } from "@/lib/portal-context";
 import { getCachedDomain, setCachedDomain } from "@/lib/domain-cache";
 import { normalizePortalSlug, resolvePortalSlugAlias } from "@/lib/portal-aliases";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import {
+  normalizePortalVertical,
+  type PortalVertical,
+} from "@/lib/portal-taxonomy";
 import crypto from "crypto";
-
-export type PortalVertical =
-  | "city"
-  | "hotel"
-  | "film"
-  | "hospital"
-  | "community"
-  | "marketplace"
-  | "dog"
-  | "arts"
-  | "adventure"
-  | "family";
 
 /**
  * Get the portal vertical type (defaults to "city" if not set).
  * Server-safe version — can be used in server components and layouts.
  */
 export function getPortalVertical(portal: Portal): PortalVertical {
-  const configured = portal.settings?.vertical as string | undefined;
-  if (configured === "civic") {
-    return "community";
-  }
-  return (configured as PortalVertical) || "city";
+  return normalizePortalVertical(portal.settings?.vertical);
 }
 
 // Base columns that always exist in the portals table

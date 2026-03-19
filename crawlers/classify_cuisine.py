@@ -3,7 +3,7 @@ Cuisine and service style classification for venues.
 
 Two-phase approach matching the classify_venues.py pattern:
 1. Rules-based regex on venue name (fast, free)
-2. LLM batch classification for unmatched venues (Claude Haiku, temp=0)
+2. LLM batch classification for unmatched venues (configured provider, temp=0)
 
 Also classifies service_style using venue_type heuristics + LLM fallback.
 
@@ -20,9 +20,9 @@ import logging
 import argparse
 from typing import Optional
 from dotenv import load_dotenv
-from anthropic import Anthropic
 from db import get_client
 from config import get_config
+from llm_client import generate_text
 
 load_dotenv()
 
@@ -190,12 +190,15 @@ Example:
 
 
 def classify_with_llm(venues: list[dict]) -> dict[int, dict]:
-    """Classify a batch of venues using Claude Haiku.
+    """Classify a batch of venues using the configured LLM provider.
 
     Returns dict of {venue_id: {"cuisine": [...], "service_style": "..."}}
     """
     cfg = get_config()
-    client = Anthropic(api_key=cfg.llm.anthropic_api_key)
+    provider = (cfg.llm.provider or "").strip().lower()
+    if provider in ("", "auto"):
+        provider = "openai" if cfg.llm.openai_api_key else "anthropic"
+    model_override = cfg.llm.openai_model if provider == "openai" else "claude-3-haiku-20240307"
 
     lines = []
     for v in venues:
@@ -210,16 +213,15 @@ def classify_with_llm(venues: list[dict]) -> dict[int, dict]:
 
     venue_text = "\n".join(lines)
 
-    response = client.messages.create(
-        model="claude-3-haiku-20240307",
-        max_tokens=2048,
-        temperature=0,
-        system=CLASSIFY_PROMPT,
-        messages=[{"role": "user", "content": venue_text}],
+    response_text = generate_text(
+        CLASSIFY_PROMPT,
+        venue_text,
+        provider_override=provider,
+        model_override=model_override,
     )
 
     results = {}
-    for line in response.content[0].text.strip().split("\n"):
+    for line in response_text.strip().split("\n"):
         line = line.strip()
         if ":" not in line or "|" not in line:
             continue

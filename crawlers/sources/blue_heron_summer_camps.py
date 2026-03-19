@@ -26,10 +26,19 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
 SOURCE_URL = "https://bhnp.org/summer-camps/"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 REQUEST_HEADERS = {
     "User-Agent": (
@@ -339,6 +348,79 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     }
 
 
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "nature_preserve",
+            "commitment_tier": "halfday",
+            "primary_activity": "family nature preserve visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["outdoor", "nature-play", "family-daytrip", "heat-day"],
+            "parking_type": "free_lot",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "Blue Heron works best as a slower Buckhead outdoor stop for families who want trails, creek-side nature play, and camp-day familiarity rather than a highly programmed attraction."
+            ),
+            "accessibility_notes": (
+                "The preserve is easiest for families comfortable with uneven natural surfaces and shorter trail segments, not for families expecting fully paved park-style circulation."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Preserve access is destination-first outdoor space; camps and scheduled programs are priced separately.",
+            "source_url": "https://bhnp.org/",
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "park",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "wetlands-trails-and-creekside-nature-play",
+            "title": "Wetlands trails and creekside nature play",
+            "feature_type": "amenity",
+            "description": "Blue Heron combines preserve trails, water-adjacent exploration, and a more nature-first feel than a standard neighborhood park stop.",
+            "url": "https://bhnp.org/",
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "nature-camps-and-kid-discovery-programming",
+            "title": "Nature camps and kid discovery programming",
+            "feature_type": "amenity",
+            "description": "Its camp and kids-programming pattern makes Blue Heron stronger as a repeat family nature destination than a passive preserve-only stop.",
+            "url": SOURCE_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "buckhead-outdoor-reset-with-real-nature-feel",
+            "title": "Buckhead outdoor reset with real nature feel",
+            "feature_type": "amenity",
+            "description": "Blue Heron is strongest as a lower-intensity outdoor reset when families want actual nature texture without leaving the city core.",
+            "url": "https://bhnp.org/",
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    return envelope
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     source_id = source["id"]
     events_found = 0
@@ -354,6 +436,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         return 0, 0, 0
 
     venue_id = get_or_create_venue(VENUE_DATA)
+    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
     today = date.today().strftime("%Y-%m-%d")
 
     for row in rows:

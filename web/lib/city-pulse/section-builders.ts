@@ -31,6 +31,7 @@ import {
 import type { WeatherData } from "@/lib/weather-utils";
 import type { RecommendationReason } from "@/components/ReasonBadge";
 import { isOpenAt, type HoursData } from "@/lib/hours";
+import { getPlanningUrgency, ticketStatusFreshness } from "@/lib/types/planning-horizon";
 
 export {
   SCENE_ACTIVITY_TYPES,
@@ -1070,6 +1071,122 @@ export function buildExperiencesSection(
     accent_color: "var(--neon-green)",
     items,
     meta: { category_counts: categoryCounts, venue_event_counts: venueEventCounts },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Planning Horizon section (7+ days out, flagship + major events only)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a "On the Horizon" section for events more than 7 days away.
+ * Only includes flagship and major importance events.
+ * Requires minimum 3 items — returns null when insufficient data.
+ *
+ * This builder reads from the same events pool already fetched for the feed,
+ * so no extra DB round-trip is needed. The `importance` field is included in
+ * the events table but not currently in the EVENT_LIST_SELECT — if it isn't
+ * present, the filter degrades gracefully to an empty result (returns null).
+ */
+export function buildPlanningHorizonSection(
+  events: FeedEventData[],
+): CityPulseSection | null {
+  const now = new Date();
+  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const weekFromNowStr = weekFromNow.toISOString().split("T")[0];
+
+  const horizonEvents = events.filter((e) => {
+    const importance = (e as Record<string, unknown>).importance as string | undefined;
+    return (
+      (importance === "flagship" || importance === "major") &&
+      e.start_date >= weekFromNowStr
+    );
+  });
+
+  if (horizonEvents.length < 2) return null;
+
+  // Interleave flagship and major by date so arena concerts get carousel slots.
+  // Within the same date, flagship sorts first.
+  const sorted = [...horizonEvents].sort((a, b) => {
+    const dateCompare = a.start_date.localeCompare(b.start_date);
+    if (dateCompare !== 0) return dateCompare;
+    const aImportance = (a as Record<string, unknown>).importance as string | undefined;
+    const bImportance = (b as Record<string, unknown>).importance as string | undefined;
+    if (aImportance === "flagship" && bImportance !== "flagship") return -1;
+    if (bImportance === "flagship" && aImportance !== "flagship") return 1;
+    return 0;
+  });
+
+  // Deduplicate by normalized title. Handles:
+  // - Ticketmaster dupes: "Cardi B" + "Cardi B - Little Miss Drama Tour"
+  // - Multi-week festival themes: "Valkyries & Vikings — Georgia Renaissance Festival"
+  //   collapses to "georgia renaissance festival" via the em-dash strip
+  const seen = new Set<string>();
+  const deduped = sorted.filter((e) => {
+    const raw = e as Record<string, unknown>;
+    const key = e.title
+      .toLowerCase()
+      .replace(/[:,\-–—]\s*.*/g, "")  // Strip subtitles after : or - or —
+      .replace(/\s+/g, " ")
+      .trim();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    // Also dedup by series_id (different titles, same series)
+    const seriesId = raw.series_id as string | null;
+    if (seriesId) {
+      const seriesKey = `series:${seriesId}`;
+      if (seen.has(seriesKey)) return false;
+      seen.add(seriesKey);
+    }
+    // Also dedup by festival_id (sub-events of same festival)
+    const festivalId = raw.festival_id as string | null;
+    if (festivalId) {
+      const festKey = `festival:${festivalId}`;
+      if (seen.has(festKey)) return false;
+      seen.add(festKey);
+    }
+    return true;
+  });
+
+  // Flagships first, then majors, chronological within each tier.
+  // Dedup + curation keeps the list clean — no artificial per-month caps.
+  const flagships = deduped.filter(
+    (e) => (e as Record<string, unknown>).importance === "flagship",
+  );
+  const majors = deduped.filter(
+    (e) => (e as Record<string, unknown>).importance !== "flagship",
+  );
+  const capped = [...flagships, ...majors].slice(0, 40);
+
+  // Compute per-month counts for the month selector
+  const monthCounts: Record<string, number> = {};
+  for (const e of capped) {
+    const monthKey = e.start_date.slice(0, 7);
+    monthCounts[monthKey] = (monthCounts[monthKey] || 0) + 1;
+  }
+
+  // Enrich with urgency + freshness so the client doesn't need to recompute
+  const items: CityPulseItem[] = capped.map((e) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw = e as any;
+    const enriched = {
+      ...e,
+      urgency: getPlanningUrgency(raw),
+      ticket_freshness: ticketStatusFreshness(raw.ticket_status_checked_at),
+    };
+    return makeEventItem(enriched as FeedEventData);
+  });
+
+  return {
+    id: "planning-horizon",
+    type: "planning_horizon",
+    title: "On the Horizon",
+    subtitle: "Big events worth planning around",
+    priority: "secondary",
+    accent_color: "var(--gold)",
+    items,
+    layout: "carousel",
+    meta: { month_counts: monthCounts },
   };
 }
 

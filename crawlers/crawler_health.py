@@ -149,8 +149,10 @@ def classify_error(error_message: str) -> ErrorClassification:
 @contextmanager
 def get_db():
     """Get a database connection with automatic cleanup."""
-    conn = sqlite3.connect(HEALTH_DB_PATH)
+    conn = sqlite3.connect(HEALTH_DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA busy_timeout = 10000")
+    conn.execute("PRAGMA journal_mode = WAL")
     try:
         yield conn
     finally:
@@ -201,6 +203,43 @@ def init_health_db():
 
         conn.commit()
         logger.debug("Health database initialized")
+
+
+def cancel_stale_runs(
+    *,
+    max_age_minutes: int = 120,
+    reason: str = "Auto-cancelled stale local crawl run during maintenance.",
+) -> int:
+    """Mark stale local crawl runs as cancelled so health reports stop treating them as active."""
+    init_health_db()
+    cutoff = (datetime.utcnow() - timedelta(minutes=max_age_minutes)).isoformat()
+    now = datetime.utcnow().isoformat()
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE crawl_runs
+            SET status = 'cancelled',
+                completed_at = COALESCE(completed_at, ?),
+                error_message = ?,
+                error_type = 'cancelled',
+                is_transient = 1
+            WHERE status = 'running'
+              AND started_at < ?
+            """,
+            (now, reason[:500], cutoff),
+        )
+        cancelled = cursor.rowcount or 0
+        conn.commit()
+
+    if cancelled:
+        logger.warning(
+            "Cancelled %s stale local crawl run(s) older than %sm",
+            cancelled,
+            max_age_minutes,
+        )
+    return cancelled
 
 
 def record_crawl_start(source_slug: str) -> int:
@@ -547,6 +586,8 @@ def get_system_health_summary() -> dict:
                 COUNT(*) as total,
                 SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success,
                 SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+                SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END) as running,
+                SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
                 SUM(events_found) as events
             FROM crawl_runs
             WHERE started_at LIKE ?
@@ -582,6 +623,8 @@ def get_system_health_summary() -> dict:
             "total_crawls": total,
             "successful": success,
             "failed": today_stats["failed"] or 0,
+            "running": today_stats["running"] or 0,
+            "cancelled": today_stats["cancelled"] or 0,
             "success_rate": success / total if total > 0 else 0.0,
             "events_found": today_stats["events"] or 0,
             "error_breakdown": error_breakdown,
@@ -621,6 +664,8 @@ def print_health_report():
     print(f"  Total: {today['total_crawls']}")
     print(f"  Successful: {today['successful']} ({today['success_rate']:.1%})")
     print(f"  Failed: {today['failed']}")
+    print(f"  Running: {today['running']}")
+    print(f"  Cancelled: {today['cancelled']}")
     print(f"  Events Found: {today['events_found']}")
 
     if today["error_breakdown"]:

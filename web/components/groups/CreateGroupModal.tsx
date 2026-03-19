@@ -6,10 +6,11 @@ import { X } from "@phosphor-icons/react";
 import { useCreateGroup } from "@/lib/hooks/useGroups";
 import {
   GROUP_VISIBILITY_OPTIONS,
+  GROUP_JOIN_POLICY_OPTIONS,
   MAX_GROUP_NAME_LENGTH,
   MAX_GROUP_DESCRIPTION_LENGTH,
 } from "@/lib/types/groups";
-import type { GroupVisibility } from "@/lib/types/groups";
+import type { GroupVisibility, GroupJoinPolicy } from "@/lib/types/groups";
 
 interface CreateGroupModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export const CreateGroupModal = memo(function CreateGroupModal({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<GroupVisibility>("private");
+  const [joinPolicy, setJoinPolicy] = useState<GroupJoinPolicy>("invite");
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const createGroup = useCreateGroup();
@@ -50,6 +52,7 @@ export const CreateGroupModal = memo(function CreateGroupModal({
       setName("");
       setDescription("");
       setVisibility("private");
+      setJoinPolicy("invite");
       setSubmitError(null);
     }
   }, [isOpen]);
@@ -82,12 +85,13 @@ export const CreateGroupModal = memo(function CreateGroupModal({
         ...(description.trim() && { description: description.trim() }),
         ...(emoji && { emoji }),
         visibility,
+        ...(visibility === "public" && { join_policy: joinPolicy }),
       });
       onClose();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Failed to create group.");
     }
-  }, [name, description, emoji, visibility, createGroup, onClose]);
+  }, [name, description, emoji, visibility, joinPolicy, createGroup, onClose]);
 
   if (typeof document === "undefined" || !isVisible) return null;
 
@@ -196,13 +200,17 @@ export const CreateGroupModal = memo(function CreateGroupModal({
             <p className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1.5">
               Visibility
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {GROUP_VISIBILITY_OPTIONS.map((opt) => {
                 const isActive = visibility === opt.value;
                 return (
                   <button
                     key={opt.value}
-                    onClick={() => setVisibility(opt.value)}
+                    onClick={() => {
+                      setVisibility(opt.value);
+                      // Reset join_policy when switching away from public
+                      if (opt.value !== "public") setJoinPolicy("invite");
+                    }}
                     className={`min-h-[44px] flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-lg border font-mono text-xs font-medium transition-all text-left ${
                       isActive
                         ? "bg-[var(--vibe)]/15 border-[var(--vibe)]/60 text-[var(--vibe)]"
@@ -223,6 +231,41 @@ export const CreateGroupModal = memo(function CreateGroupModal({
               })}
             </div>
           </div>
+
+          {/* Join policy — only shown for public groups */}
+          {visibility === "public" && (
+            <div>
+              <p className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1.5">
+                Join Policy
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {GROUP_JOIN_POLICY_OPTIONS.map((opt) => {
+                  const isActive = joinPolicy === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => setJoinPolicy(opt.value)}
+                      className={`min-h-[44px] flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-lg border font-mono text-xs font-medium transition-all text-left ${
+                        isActive
+                          ? "bg-[var(--vibe)]/15 border-[var(--vibe)]/60 text-[var(--vibe)]"
+                          : "bg-[var(--dusk)] border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--soft)]"
+                      }`}
+                      aria-pressed={isActive}
+                    >
+                      <span>{opt.label}</span>
+                      <span
+                        className={`text-2xs normal-case tracking-normal font-normal ${
+                          isActive ? "text-[var(--vibe)]/70" : "text-[var(--muted)]"
+                        }`}
+                      >
+                        {opt.description}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Error */}
           {submitError && (

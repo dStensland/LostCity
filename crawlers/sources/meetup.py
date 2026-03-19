@@ -184,33 +184,24 @@ def _build_meetup_description(
     base = _clean_text(description)
     parts: list[str] = []
 
-    if base:
+    # Use the real description if available; skip if it's just Meetup boilerplate
+    if base and not re.search(
+        r"Details visible to members|This content is available only to members",
+        base,
+        re.IGNORECASE,
+    ):
         parts.append(base if base.endswith(".") else f"{base}.")
-    else:
-        parts.append(f"Meetup community event: {title}.")
 
-    if group_name:
-        parts.append(f"Organizer: {group_name}.")
-
-    if is_online:
-        parts.append("Format: Online event.")
-    elif location_text:
-        parts.append(f"Location: {location_text}.")
-    else:
-        parts.append("Location details are provided on Meetup.")
-
-    time_label = _format_time_label(start_time)
-    if time_label:
-        parts.append(f"Scheduled on {start_date} at {time_label}.")
-    else:
-        parts.append(f"Scheduled on {start_date}.")
+    if group_name and parts:
+        parts.append(f"Hosted by {group_name}.")
+    elif group_name:
+        parts.append(f"{group_name} event.")
 
     topic_list = [_clean_text(topic) for topic in topics if _clean_text(topic)]
     if topic_list:
         parts.append(f"Topics: {', '.join(topic_list[:5])}.")
 
-    parts.append("Check Meetup for RSVP requirements, attendance limits, and last-minute updates.")
-    return " ".join(parts)[:1800]
+    return " ".join(parts)[:1800] if parts else ""
 
 
 def crawl(source: dict) -> tuple[int, int, int]:

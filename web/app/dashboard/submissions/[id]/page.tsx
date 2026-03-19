@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { PlatformHeader } from "@/components/headers";
 import { useAuth } from "@/lib/auth-context";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
@@ -304,7 +304,7 @@ export default function SubmissionDetailPage() {
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {submission.image_urls.map((url) => (
-                    <Image
+                    <SmartImage
                       key={url}
                       src={url}
                       alt=""

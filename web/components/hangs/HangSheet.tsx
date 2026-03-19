@@ -391,7 +391,7 @@ export const HangSheet = memo(function HangSheet({
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value.slice(0, MAX_HANG_NOTE_LENGTH))}
-                  placeholder="What's the vibe?"
+                  placeholder="Talk about it"
                   rows={3}
                   className="w-full px-3 py-2.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors resize-none"
                 />

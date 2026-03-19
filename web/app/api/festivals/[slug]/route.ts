@@ -3,7 +3,31 @@ import { NextRequest } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import { filterByPortalCity } from "@/lib/portal-scope";
+
+type SessionRow = {
+  id: number;
+  title: string;
+  start_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  series_id: string | null;
+  venue: {
+    id: number;
+    name: string;
+    slug: string;
+    neighborhood: string | null;
+    city?: string | null;
+    nearest_marta_station?: string | null;
+    marta_walk_minutes?: number | null;
+    marta_lines?: string[] | null;
+    beltline_adjacent?: boolean | null;
+    beltline_segment?: string | null;
+    parking_type?: string[] | null;
+    parking_free?: boolean | null;
+    transit_score?: number | null;
+  } | null;
+};
 
 export async function GET(
   request: NextRequest,
@@ -14,7 +38,6 @@ export async function GET(
 
   const { slug } = await params;
   const searchParams = request.nextUrl.searchParams;
-  const portalExclusive = searchParams.get("portal_exclusive") === "true";
 
   if (!slug) {
     return Response.json({ error: "Invalid slug" }, { status: 400 });
@@ -28,7 +51,7 @@ export async function GET(
       { status: 400 }
     );
   }
-  const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
+  const portalCity = portalContext.filters.city;
 
   const { data: festivalData, error } = await supabase
     .from("festivals")
@@ -59,65 +82,52 @@ export async function GET(
     series_type: string;
   }[];
 
-  if (programs.length === 0) {
-    return Response.json({ festival: festivalData, programs: [] }, {
-      headers: {
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-      },
-    });
-  }
-
   const programIds = programs.map((p) => p.id);
   const today = getLocalDateString();
 
-  let eventsQuery = supabase
+  const eventSelect = `
+    id,
+    title,
+    start_date,
+    start_time,
+    end_time,
+    series_id,
+    venue:venues(id, name, slug, neighborhood, city, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score)
+  `;
+
+  // Fetch events via programs (series_id chain)
+  // NOTE: No portal scope — if the festival is visible, all its events should be too.
+  // Festival events often have NULL portal_id even when the festival is portal-attributed.
+  let programEvents: SessionRow[] = [];
+  if (programIds.length > 0) {
+    const { data } = await supabase
+      .from("events")
+      .select(eventSelect)
+      .in("series_id", programIds)
+      .gte("start_date", today)
+      .order("start_date", { ascending: true })
+      .order("start_time", { ascending: true });
+    programEvents = (data || []) as SessionRow[];
+  }
+
+  // Also fetch events linked directly via festival_id (not through series)
+  const { data: directEventsData } = await supabase
     .from("events")
-    .select(`
-      id,
-      title,
-      start_date,
-      start_time,
-      end_time,
-      series_id,
-      venue:venues(id, name, slug, neighborhood, city, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score)
-    `)
-    .in("series_id", programIds)
+    .select(eventSelect)
+    .eq("festival_id", festival.id)
+    .is("series_id", null)
     .gte("start_date", today)
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true });
+  const directEvents = (directEventsData || []) as SessionRow[];
 
-  eventsQuery = applyPortalScopeToQuery(eventsQuery, {
-    portalId: portalContext.portalId,
-    portalExclusive,
-    publicOnlyWhenNoPortal: true,
-  });
+  const rawSessions: SessionRow[] = [...programEvents];
 
-  const { data: eventsData } = await eventsQuery;
-
-  const rawSessions = (eventsData || []) as {
-    id: number;
-    title: string;
-    start_date: string;
-    start_time: string | null;
-    end_time: string | null;
-    series_id: string | null;
-    venue: {
-      id: number;
-      name: string;
-      slug: string;
-      neighborhood: string | null;
-      city?: string | null;
-      nearest_marta_station?: string | null;
-      marta_walk_minutes?: number | null;
-      marta_lines?: string[] | null;
-      beltline_adjacent?: boolean | null;
-      beltline_segment?: string | null;
-      parking_type?: string[] | null;
-      parking_free?: boolean | null;
-      transit_score?: number | null;
-    } | null;
-  }[];
+  // Filter by portal city if applicable
   const sessions = filterByPortalCity(rawSessions, portalCity, {
+    allowMissingCity: true,
+  });
+  const filteredDirectEvents = filterByPortalCity(directEvents, portalCity, {
     allowMissingCity: true,
   });
 
@@ -134,6 +144,19 @@ export async function GET(
     ...program,
     sessions: sessionsByProgram.get(program.id) || [],
   }));
+
+  // Add direct events as a synthetic "Events" program if they exist
+  if (filteredDirectEvents.length > 0) {
+    programsWithSessions.push({
+      id: `${festival.id}__direct`,
+      slug: festival.id as string,
+      title: "Events",
+      description: null,
+      image_url: null,
+      series_type: "festival_program",
+      sessions: filteredDirectEvents,
+    });
+  }
 
   return Response.json(
     {

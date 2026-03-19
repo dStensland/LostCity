@@ -146,6 +146,41 @@ def normalize_title(title: str) -> str:
     title = re.sub(r'\s*(screening|showing|presentation|special)\s*', '', title)
     # Remove "the" prefix
     title = re.sub(r'^the\s+', '', title)
+
+    # Strip trailing date suffixes so "Open Mic Night | Feb 25" and
+    # "Open Mic Night | Mar 4" collapse to the same series slug.
+    _MONTH_NAMES = (
+        r"jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?"
+        r"|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?"
+    )
+
+    # "Title | Feb 25"  /  "Title — Feb 25, 2026"  /  "Title - February 25th"
+    title = re.sub(
+        rf'\s*[|–—\-]\s*(?:{_MONTH_NAMES})\.?\s+\d{{1,2}}(?:st|nd|rd|th)?(?:\s*,?\s*\d{{4}})?\s*$',
+        '', title)
+
+    # "Title | 02/25"  /  "Title — 02/25/2026"  /  "Title - 02-25-26"
+    title = re.sub(
+        r'\s*[|–—\-]\s*\d{1,2}[/\-]\d{1,2}(?:[/\-]\d{2,4})?\s*$',
+        '', title)
+
+    # "Title (Feb 25)"  /  "Title (February 25, 2026)"  /  "Title (Feb 25th)"
+    title = re.sub(
+        rf'\s*\(\s*(?:{_MONTH_NAMES})\.?\s+\d{{1,2}}(?:st|nd|rd|th)?(?:\s*,?\s*\d{{4}})?\s*\)',
+        '', title)
+
+    # "Title (2/25)"  /  "Title (02/25/2026)"
+    title = re.sub(
+        r'\s*\(\s*\d{1,2}[/\-]\d{1,2}(?:[/\-]\d{2,4})?\s*\)',
+        '', title)
+
+    # "Trivia Tuesday February 25, 2026" — trailing month+day without delimiter.
+    # Only strip when both month and day are present to avoid eating "May Day
+    # Celebration" or "March for Justice".
+    title = re.sub(
+        rf'\s+(?:{_MONTH_NAMES})\.?\s+\d{{1,2}}(?:st|nd|rd|th)?(?:\s*,?\s*\d{{4}})?\s*$',
+        '', title)
+
     return title.strip()
 
 
@@ -155,16 +190,25 @@ def find_series_by_title(
     series_type: str,
     festival_id: Optional[str] = None,
     day_of_week: Optional[str] = None,
+    venue_id: Optional[int] = None,
 ) -> Optional[dict]:
     """Find an existing series by title and type.
 
     For recurring_show / class_series, also matches on day_of_week when
     provided so that "Team Trivia" on Wednesday is a separate series from
     "Team Trivia" on Sunday (different venues, different nights).
+
+    When venue_id is provided for class_series / recurring_show, the query
+    is further scoped to that venue so that "Yoga Basics" at two different
+    rec centers does not collapse into a single series record.
     """
     normalized = normalize_title(title)
     use_day = (
         day_of_week
+        and series_type in ("recurring_show", "class_series")
+    )
+    use_venue = (
+        venue_id is not None
         and series_type in ("recurring_show", "class_series")
     )
 
@@ -174,6 +218,8 @@ def find_series_by_title(
             q = q.eq("festival_id", festival_id)
         if use_day:
             q = q.eq("day_of_week", day_of_week.strip().lower())
+        if use_venue:
+            q = q.eq("venue_id", venue_id)
         return q
 
     # Try exact match first
@@ -194,6 +240,8 @@ def find_series_by_title(
         q = client.table("series").select("*").eq("series_type", series_type)
         if series_type == "festival_program" and festival_id:
             q = q.eq("festival_id", festival_id)
+        if use_venue:
+            q = q.eq("venue_id", venue_id)
         q = q.is_("day_of_week", "null")
         result = q.eq("title", title).execute()
         if result.data:
@@ -235,10 +283,19 @@ def create_series(client: Client, series_data: dict) -> dict:
     return result.data[0]
 
 
-def get_or_create_series(client: Client, series_hint: dict, category: str = None) -> Optional[str]:
+def get_or_create_series(
+    client: Client,
+    series_hint: dict,
+    category: str = None,
+    venue_id: Optional[int] = None,
+) -> Optional[str]:
     """
     Get an existing series or create a new one based on series hints.
     Returns series UUID if found/created, None otherwise.
+
+    venue_id is used to scope matching for class_series and recurring_show
+    types so that identically-named classes at different venues (e.g. "Yoga
+    Basics" at two rec centers) produce separate series records.
     """
     if not series_hint:
         return None
@@ -265,9 +322,13 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
         create_if_missing=True,
     )
 
-    # Check for existing series
-    # For recurring shows, include day_of_week so "Team Trivia" on Wednesday
-    # is a separate series from "Team Trivia" on Sunday.
+    # Prefer venue_id from the hint; fall back to the parameter.
+    hint_venue_id = series_hint.get("venue_id") or venue_id
+
+    # Check for existing series.
+    # For recurring shows / class series, scope by venue_id (when available)
+    # and day_of_week so that "Team Trivia" on Wednesday at Bar A is a
+    # separate series from "Team Trivia" on Sunday at Bar B.
     hint_day = series_hint.get("day_of_week")
     existing = find_series_by_title(
         client,
@@ -275,6 +336,7 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
         series_type,
         festival_id=festival_id,
         day_of_week=hint_day,
+        venue_id=hint_venue_id,
     )
     if existing:
         # Touch last_verified_at + backfill festival_id if missing
@@ -306,6 +368,10 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
     }
     if festival_id:
         series_data["festival_id"] = festival_id
+
+    # Persist venue_id on new class_series / recurring_show records
+    if hint_venue_id and series_type in ("class_series", "recurring_show"):
+        series_data["venue_id"] = hint_venue_id
 
     # Add film-specific fields
     if series_type == "film":

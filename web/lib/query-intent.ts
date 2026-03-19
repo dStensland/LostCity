@@ -75,7 +75,7 @@ const CATEGORY_KEYWORDS: { pattern: RegExp; category: string }[] = [
   { pattern: /\b(food|drink|tasting|brunch|dinner)\b/i, category: "food_drink" },
   { pattern: /\b(nightlife|club|dj|dance|party)\b/i, category: "nightlife" },
   { pattern: /\b(community|meetup|networking|social)\b/i, category: "community" },
-  { pattern: /\b(fitness|yoga|workout|run|class)\b/i, category: "fitness" },
+  { pattern: /\b(fitness|yoga|workout|run|class)\b/i, category: "exercise" },
   { pattern: /\b(family|kids|children|all ages)\b/i, category: "family" },
   { pattern: /\b(free|no cover|donation)\b/i, category: "free" },
 ];

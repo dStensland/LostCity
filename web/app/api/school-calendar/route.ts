@@ -5,9 +5,20 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-lim
 
 export const dynamic = "force-dynamic";
 
+// ISO date pattern: YYYY-MM-DD
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 // GET /api/school-calendar
 // Returns school calendar events (no-school days, breaks, holidays, etc.)
 // for Atlanta-area school systems.
+//
+// Query params:
+//   system  — comma-separated: aps,dekalb,cobb,gwinnett (or a single value)
+//   from    — ISO date (YYYY-MM-DD): lower bound on start_date
+//   to      — ISO date (YYYY-MM-DD): upper bound on start_date
+//   year    — school year string (e.g. "2025-26"); inferred from current date when omitted
+//   upcoming — "false" to include past events (default: only future events when no from/to)
+//   limit   — max results, capped at 200 (default 50)
 export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(
     request,
@@ -19,14 +30,15 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
   const systemParam = searchParams.get("system"); // comma-separated: aps,dekalb,cobb,gwinnett
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
   const yearParam = searchParams.get("year");
   const upcomingParam = searchParams.get("upcoming");
-  const upcomingOnly = upcomingParam !== "false"; // default true
-  const limit = Math.min(parseIntParam(searchParams.get("limit")) ?? 20, 100);
+  const limit = Math.min(parseIntParam(searchParams.get("limit")) ?? 50, 200);
 
   const VALID_SYSTEMS = new Set(["aps", "dekalb", "cobb", "gwinnett"]);
 
-  // Parse systems filter
+  // Parse systems filter (supports single value or comma-separated list)
   let systems: string[] | null = null;
   if (systemParam && isValidString(systemParam, 1, 200)) {
     systems = systemParam
@@ -36,8 +48,12 @@ export async function GET(request: NextRequest) {
     if (systems.length === 0) systems = null;
   }
 
+  // Validate ISO date params
+  const fromDate = fromParam && ISO_DATE_RE.test(fromParam) ? fromParam : null;
+  const toDate = toParam && ISO_DATE_RE.test(toParam) ? toParam : null;
+
   // Determine school year — default to current based on calendar year
-  // Atlanta school year runs Aug–May, so school year "2025-26" covers Aug 2025 – May 2026
+  // Atlanta school year runs Aug–May, so "2025-26" covers Aug 2025 – May 2026
   let schoolYear = yearParam && isValidString(yearParam, 4, 10) ? yearParam : null;
   if (!schoolYear) {
     const now = new Date();
@@ -64,8 +80,16 @@ export async function GET(request: NextRequest) {
       .order("start_date", { ascending: true })
       .limit(limit);
 
-    if (upcomingOnly) {
+    if (fromDate) {
+      // Explicit date range: events whose start_date falls within [from, to]
+      calendarQuery = calendarQuery.gte("start_date", fromDate);
+    } else if (upcomingParam !== "false") {
+      // Default: only future events when no explicit from date
       calendarQuery = calendarQuery.gte("start_date", today);
+    }
+
+    if (toDate) {
+      calendarQuery = calendarQuery.lte("start_date", toDate);
     }
 
     if (systems && systems.length > 0) {
@@ -87,8 +111,8 @@ export async function GET(request: NextRequest) {
       },
       {
         headers: {
-          // School calendars rarely change — cache generously
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+          // School calendars rarely change — cache aggressively
+          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=7200",
         },
       }
     );

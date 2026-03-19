@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
+import SmartImage from "@/components/SmartImage";
 
 type WeekendEvent = {
   id: number;
@@ -156,8 +155,8 @@ export default function FilmWeekendPlanner({ portalSlug }: FilmWeekendPlannerPro
                 >
                   <div className="relative h-16 w-11 shrink-0 overflow-hidden rounded-[3px] border border-[#3b4768] bg-[#0c1220]">
                     {event.image_url ? (
-                      <Image
-                        src={getProxiedImageSrc(event.image_url)}
+                      <SmartImage
+                        src={event.image_url}
                         alt={event.title}
                         fill
                         sizes="44px"

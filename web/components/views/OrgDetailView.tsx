@@ -114,8 +114,8 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
   const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
-    const controller = new AbortController();
     let cancelled = false;
+    let activeController: AbortController | null = null;
 
     async function fetchProducer() {
       setStatus("loading");
@@ -123,27 +123,42 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
       setImageLoaded(false);
       setImageError(false);
 
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const MAX_RETRIES = 2;
 
-      try {
-        const res = await fetch(`/api/organizations/by-slug/${slug}`, {
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-        if (!res.ok) {
-          throw new Error("Organizer not found");
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 500 * attempt));
+            if (cancelled) return;
+          }
+          activeController = new AbortController();
+          const timeoutId = setTimeout(() => activeController?.abort(), 10000);
+          const res = await fetch(`/api/organizations/by-slug/${slug}`, {
+            signal: activeController.signal,
+          });
+          clearTimeout(timeoutId);
+          if (cancelled) return;
+          if (!res.ok) {
+            if ((res.status === 503 || res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
+              continue;
+            }
+            throw new Error(res.status === 404 ? "Organizer not found" : `Failed to load organizer (${res.status})`);
+          }
+          const data = await res.json();
+          if (cancelled) return;
+          setProducer(data.organization);
+          setEvents(data.events || []);
+          setVolunteerOpportunities(data.volunteer_opportunities || []);
+          setStatus("ready");
+          return;
+        } catch (err) {
+          if (activeController?.signal.aborted) return;
+          if (cancelled) return;
+          if (attempt === MAX_RETRIES) {
+            setError(err instanceof Error ? err.message : "Failed to load organizer");
+            setStatus("error");
+          }
         }
-        const data = await res.json();
-        if (cancelled) return;
-        setProducer(data.organization);
-        setEvents(data.events || []);
-        setVolunteerOpportunities(data.volunteer_opportunities || []);
-        setStatus("ready");
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load organizer");
-        setStatus("error");
       }
     }
 
@@ -151,7 +166,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
 
     return () => {
       cancelled = true;
-      controller.abort();
+      activeController?.abort();
     };
   }, [slug]);
 

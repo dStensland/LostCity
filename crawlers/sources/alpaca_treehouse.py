@@ -26,7 +26,7 @@ VENUE_DATA = {
     "name": "Atlanta Alpaca Treehouse",
     "slug": "atlanta-alpaca-treehouse",
     "address": "2660 Forrest Ave SE",
-    "neighborhood": "East Atlanta",
+    "neighborhood": "East Atlanta Village",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30315",

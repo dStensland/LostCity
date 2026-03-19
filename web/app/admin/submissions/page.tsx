@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import type {
@@ -419,7 +419,7 @@ export default function AdminSubmissionsPage() {
                       {submission.image_urls && submission.image_urls.length > 0 && (
                         <div className="mb-4 flex gap-2">
                           {submission.image_urls.map((url, i) => (
-                            <Image
+                            <SmartImage
                               key={i}
                               src={url}
                               alt=""

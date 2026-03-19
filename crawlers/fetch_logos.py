@@ -10,6 +10,18 @@ from typing import Optional
 from db import get_client
 
 
+def _resolve_producer_table(client) -> str:
+    """Prefer the current producer table name, fall back for older schemas."""
+    for table_name in ("event_producers", "organizations"):
+        try:
+            client.table(table_name).select("id").limit(1).execute()
+            return table_name
+        except Exception as exc:
+            if "PGRST205" not in str(exc):
+                raise
+    raise RuntimeError("Neither event_producers nor organizations exists in schema cache")
+
+
 def fetch_logo_from_website(website_url: str) -> Optional[str]:
     """Try to extract logo URL from website."""
     try:
@@ -102,9 +114,10 @@ def fetch_instagram_avatar(instagram_handle: str) -> Optional[str]:
 def fetch_logos(overwrite: bool = False, producer_ids: list[str] = None, dry_run: bool = False):
     """Fetch logos for producers missing them."""
     client = get_client()
+    producer_table = _resolve_producer_table(client)
 
     # Build query
-    query = client.table("event_producers").select(
+    query = client.table(producer_table).select(
         "id, name, website, instagram, logo_url"
     ).eq("hidden", False)
 
@@ -153,7 +166,7 @@ def fetch_logos(overwrite: bool = False, producer_ids: list[str] = None, dry_run
 
             if not dry_run:
                 try:
-                    client.table("event_producers").update({
+                    client.table(producer_table).update({
                         "logo_url": logo_url
                     }).eq("id", producer["id"]).execute()
                     success += 1

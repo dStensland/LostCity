@@ -9,7 +9,6 @@ import { createCssVarClass } from "@/lib/css-utils";
 import FollowButton from "@/components/FollowButton";
 import RecommendButton from "@/components/RecommendButton";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
-import FlagButton from "@/components/FlagButton";
 import { EntityTagList } from "@/components/tags/EntityTagList";
 import type { Event } from "@/lib/supabase";
 import type { Metadata } from "next";
@@ -725,13 +724,6 @@ export default async function PortalOrganizerPage({ params }: Props) {
               <EntityTagList entityType="org" entityId={parseInt(organization.id, 10)} />
             </div>
 
-            <div className="pt-5 border-t border-[var(--twilight)]/30">
-              <FlagButton
-                entityType="organization"
-                entityId={parseInt(organization.id, 10)}
-                entityName={organization.name}
-              />
-            </div>
           </InfoCard>
 
           {/* Similar Organizations */}

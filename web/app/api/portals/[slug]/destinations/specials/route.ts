@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
-import { getPortalSourceAccess } from "@/lib/federation";
+import {
+  getPortalSourceAccess,
+  isEventCategoryAllowedForSourceAccess,
+} from "@/lib/federation";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { parseFloatParam, parseIntParam, validationError, isValidUUID } from "@/lib/api-utils";
 import { getLocalDateString } from "@/lib/formats";
@@ -436,11 +439,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const nextEventByVenue = new Map<number, EventRow>();
     for (const event of (eventsData || []) as EventRow[]) {
       if (!event.venue_id) continue;
-      if (event.source_id && federationAccess.categoryConstraints.has(event.source_id)) {
-        const allowed = federationAccess.categoryConstraints.get(event.source_id);
-        if (allowed !== null && allowed !== undefined && event.category_id && !allowed.includes(event.category_id)) {
-          continue;
-        }
+      if (
+        !isEventCategoryAllowedForSourceAccess(
+          federationAccess,
+          event.source_id,
+          event.category_id,
+        )
+      ) {
+        continue;
       }
       if (!nextEventByVenue.has(event.venue_id)) {
         nextEventByVenue.set(event.venue_id, event);

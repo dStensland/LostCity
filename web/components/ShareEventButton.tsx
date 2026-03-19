@@ -99,7 +99,7 @@ export default function ShareEventButton({
       aria-label="Share event"
       className={
         isIcon
-          ? `inline-flex items-center justify-center min-w-[48px] min-h-[48px] p-3 text-[var(--muted)] rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] hover:scale-110 transition-all disabled:opacity-50 active:scale-95 ${className}`
+          ? `inline-flex items-center justify-center w-10 h-10 text-[var(--muted)] rounded-xl border border-[var(--twilight)] hover:bg-[var(--dusk)] hover:text-[var(--cream)] hover:border-[var(--soft)] transition-all disabled:opacity-50 active:scale-95 ${className}`
           : `inline-flex items-center justify-center gap-2 px-4 py-2.5 text-[var(--muted)] text-sm font-medium rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors disabled:opacity-50 ${className}`
       }
     >

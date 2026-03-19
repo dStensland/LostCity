@@ -104,6 +104,7 @@ export function DetailHero({
                 src={imageUrl}
                 alt={title}
                 fill
+                sizes="(max-width: 640px) 100vw, 50vw"
                 className={`${isLowRes ? "object-contain" : "object-cover"} transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
                 onError={() => setImgError(true)}
                 onLoad={handleImageLoad}
@@ -155,6 +156,7 @@ export function DetailHero({
           src={imageUrl}
           alt={title}
           fill
+          sizes="(max-width: 640px) 100vw, 640px"
           className={`object-cover brightness-[0.85] contrast-[1.05] transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
           onError={() => setImgError(true)}
           onLoad={handleImageLoad}
@@ -192,7 +194,7 @@ function HeroOverlay({
 }) {
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 glass-wet detail-hero-overlay"
+      className="absolute bottom-0 left-0 right-0 detail-hero-overlay"
     >
       <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-14">
         <div className="flex flex-wrap items-center gap-2 mb-2">

@@ -34,8 +34,22 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
+from sources._activecommunities_family_filter import (
+    infer_activecommunities_schedule_time_range,
+    normalize_activecommunities_age,
+    parse_age_from_name,
+)
 
 logger = logging.getLogger(__name__)
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Constants
@@ -380,6 +394,24 @@ def _extract_prices(html: str) -> tuple[Optional[float], Optional[float], bool]:
     return 0.0, 0.0, True
 
 
+def _derive_schedule_fields(
+    *,
+    start_raw: Optional[str],
+    end_raw: Optional[str],
+    date_range_description: Optional[str],
+    desc_text: Optional[str],
+) -> tuple[Optional[str], Optional[str], bool]:
+    """Infer schedule times from ActiveCommunities date-range text."""
+    schedule_start_time, schedule_end_time = infer_activecommunities_schedule_time_range(
+        date_range_description=date_range_description,
+        desc_text=desc_text,
+    )
+    is_all_day = False if schedule_start_time else (True if not start_raw else False)
+    if not start_raw and end_raw:
+        is_all_day = True
+    return schedule_start_time, schedule_end_time, is_all_day
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Category / tag classification
 # ──────────────────────────────────────────────────────────────────────────────
@@ -503,6 +535,112 @@ def _resolve_venue_data(location_label: str) -> dict:
         if key in label_lower:
             return venue
     return GENERIC_VENUE
+
+
+def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityEnvelope | None:
+    """Project touched DeKalb civic venues into shared destination details."""
+    slug = str(venue_data.get("slug") or "").strip()
+    if not slug or slug == GENERIC_VENUE["slug"]:
+        return None
+
+    venue_type = str(venue_data.get("venue_type") or "").strip().lower()
+    envelope = TypedEntityEnvelope()
+
+    if venue_type in {"recreation", "community_center"}:
+        envelope.add(
+            "destination_details",
+            {
+                "venue_id": venue_id,
+                "destination_type": "community_recreation_center",
+                "commitment_tier": "halfday",
+                "primary_activity": "family recreation center visit",
+                "best_seasons": ["spring", "summer", "fall", "winter"],
+                "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+                "parking_type": "free_lot",
+                "best_time_of_day": "afternoon",
+                "family_suitability": "yes",
+                "reservation_required": False,
+                "permit_required": False,
+                "fee_note": "Drop-in access and classes vary by center; confirm current programming and facility hours through DeKalb Recreation.",
+                "source_url": ACTIVITY_SEARCH_URL,
+                "metadata": {
+                    "source_type": "family_destination_enrichment",
+                    "venue_type": venue_type,
+                    "county": "dekalb",
+                },
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "indoor-family-recreation-space",
+                "title": "Indoor family recreation space",
+                "feature_type": "amenity",
+                "description": "This DeKalb recreation center gives families an indoor recreation option with weather-proof community-center space and youth programming.",
+                "url": ACTIVITY_SEARCH_URL,
+                "price_note": "Drop-in access and building amenities vary by center.",
+                "is_free": False,
+                "sort_order": 10,
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "family-classes-and-seasonal-camps",
+                "title": "Family classes and seasonal camps",
+                "feature_type": "experience",
+                "description": "This DeKalb recreation center regularly hosts youth classes, family recreation programming, and seasonal camps.",
+                "url": ACTIVITY_SEARCH_URL,
+                "price_note": "Registration costs vary by program and season.",
+                "is_free": False,
+                "sort_order": 20,
+            },
+        )
+        return envelope
+
+    if venue_type == "park":
+        envelope.add(
+            "destination_details",
+            {
+                "venue_id": venue_id,
+                "destination_type": "park",
+                "commitment_tier": "halfday",
+                "primary_activity": "family park visit",
+                "best_seasons": ["spring", "summer", "fall"],
+                "weather_fit_tags": ["outdoor", "free-option", "family-daytrip"],
+                "parking_type": "free_lot",
+                "best_time_of_day": "morning",
+                "family_suitability": "yes",
+                "reservation_required": False,
+                "permit_required": False,
+                "fee_note": "Open park access is free; classes, camps, and facility reservations vary by site.",
+                "source_url": ACTIVITY_SEARCH_URL,
+                "metadata": {
+                    "source_type": "family_destination_enrichment",
+                    "venue_type": venue_type,
+                    "county": "dekalb",
+                },
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "free-outdoor-play-space",
+                "title": "Free outdoor play space",
+                "feature_type": "amenity",
+                "description": "This DeKalb park is a free family option for low-friction outdoor time, open-air play, and pairing with seasonal county programming.",
+                "url": ACTIVITY_SEARCH_URL,
+                "price_note": "Open park access is free.",
+                "is_free": True,
+                "sort_order": 10,
+            },
+        )
+        return envelope
+
+    return None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -724,11 +862,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     except ValueError:
                         pass
 
-                # Ages
-                age_min: Optional[int] = item.get("age_min_year")
-                age_max: Optional[int] = item.get("age_max_year")
-                if age_max is not None and age_max > 90:
-                    age_max = None  # Cap unrealistic max ("120" = "adults")
+                # Ages — ACTIVENet returns 0 (not None) when there is no age
+                # restriction.  normalize_activecommunities_age converts 0 and
+                # values >90 to None so we don't incorrectly filter or tag events.
+                age_min: Optional[int] = normalize_activecommunities_age(item.get("age_min_year"))
+                age_max: Optional[int] = normalize_activecommunities_age(item.get("age_max_year"))
+                # Fallback: extract age range from the program name when the
+                # API didn't supply structured age data.
+                if age_min is None and age_max is None:
+                    age_min, age_max = parse_age_from_name(name)
 
                 # Venue
                 location_label: str = item.get("location", {}).get("label") or ""
@@ -736,6 +878,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if venue_key not in venue_cache:
                     venue_data = _resolve_venue_data(location_label)
                     venue_id = get_or_create_venue(venue_data)
+                    destination_envelope = _build_destination_envelope(venue_data, venue_id)
+                    if destination_envelope is not None:
+                        persist_typed_entity_envelope(destination_envelope)
                     venue_cache[venue_key] = venue_id
                 venue_id = venue_cache[venue_key]
 
@@ -750,6 +895,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # Description
                 description: Optional[str] = desc_text[:1000] if desc_text else None
+                schedule_start_time, schedule_end_time, is_all_day = _derive_schedule_fields(
+                    start_raw=start_raw,
+                    end_raw=end_raw,
+                    date_range_description=item.get("date_range"),
+                    desc_text=desc_text,
+                )
 
                 # Content hash
                 activity_id = item.get("id")
@@ -765,10 +916,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "title": name,
                     "description": description,
                     "start_date": start_raw or today.strftime("%Y-%m-%d"),
-                    "start_time": None,
+                    "start_time": schedule_start_time,
                     "end_date": end_raw,
-                    "end_time": None,
-                    "is_all_day": True if not start_raw else False,
+                    "end_time": schedule_end_time,
+                    "is_all_day": is_all_day,
                     "category": category,
                     "subcategory": None,
                     "tags": tags,

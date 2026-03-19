@@ -126,7 +126,7 @@ const FilterChip = forwardRef<HTMLButtonElement, FilterChipProps>(
                 handleRemove(e as unknown as React.MouseEvent);
               }
             }}
-            className="flex items-center justify-center w-3.5 h-3.5 -mr-1 rounded-full hover:bg-black/20 transition-colors"
+            className="relative z-10 flex items-center justify-center w-5 h-5 -mr-1 rounded-full hover:bg-black/20 transition-colors cursor-pointer"
             aria-label={`Remove ${label} filter`}
           >
             <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

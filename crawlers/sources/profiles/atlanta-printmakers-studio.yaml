@@ -3,7 +3,8 @@ slug: atlanta-printmakers-studio
 name: "Atlanta Printmakers Studio"
 integration_method: llm_crawler
 data_goals:
-  - events
+  - exhibits
+  - images
 discovery:
   enabled: true
   type: html

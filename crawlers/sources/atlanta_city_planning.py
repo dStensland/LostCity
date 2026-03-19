@@ -81,7 +81,7 @@ _NPU_NEIGHBORHOODS: dict[str, str] = {
     "L": "West End",
     "M": "Inman Park",
     "N": "Virginia-Highland",
-    "O": "East Atlanta",
+    "O": "East Atlanta Village",
     "P": "Grant Park",
     "Q": "Mechanicsville",
     "R": "Peoplestown",

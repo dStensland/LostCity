@@ -46,17 +46,22 @@ export async function GET(
   }
 
   // Cast to avoid TypeScript 'never' type issue
-  const series = seriesData as { id: string; [key: string]: unknown };
+  const series = seriesData as { id: string; festival_id?: string | null; [key: string]: unknown };
 
   // Get today's date for filtering upcoming events
   const today = getLocalDateString();
 
+  // Festival program series: skip portal scope for events.
+  // Festival events often have NULL portal_id — if the series is visible, its events should be too.
+  const isFestivalProgram = !!series.festival_id;
+  const eventClient = isFestivalProgram ? supabase : portalClient;
+
   // Fetch upcoming events for this series with venue info
-  let eventsQuery = portalClient
+  let eventsQuery = eventClient
     .from("events")
     .select(`
       id, title, start_date, start_time, ticket_url,
-      venue:venues(id, name, slug, neighborhood, city)
+      venue:venues(id, name, slug, neighborhood, city, image_url, address, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score)
     `)
     .eq("series_id", series.id)
     .gte("start_date", today)
@@ -64,11 +69,13 @@ export async function GET(
     .order("start_time", { ascending: true })
     .limit(50);
 
-  eventsQuery = applyPortalScopeToQuery(eventsQuery, {
-    portalId: portalContext.portalId,
-    portalExclusive,
-    publicOnlyWhenNoPortal: true,
-  });
+  if (!isFestivalProgram) {
+    eventsQuery = applyPortalScopeToQuery(eventsQuery, {
+      portalId: portalContext.portalId,
+      portalExclusive,
+      publicOnlyWhenNoPortal: true,
+    });
+  }
 
   const { data: eventsData } = await eventsQuery;
 
@@ -85,6 +92,16 @@ export async function GET(
         slug: string;
         neighborhood: string | null;
         city?: string | null;
+        image_url?: string | null;
+        address?: string | null;
+        nearest_marta_station?: string | null;
+        marta_walk_minutes?: number | null;
+        marta_lines?: string[] | null;
+        beltline_adjacent?: boolean | null;
+        beltline_segment?: string | null;
+        parking_type?: string[] | null;
+        parking_free?: boolean | null;
+        transit_score?: number | null;
       } | null;
   };
 

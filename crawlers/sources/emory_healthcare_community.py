@@ -295,8 +295,8 @@ def map_category_to_lostcity(blackthorn_category: str, title: str = "", descript
         if any(word in combined_text for word in ["cooking", "nutrition", "food"]):
             return "class", "cooking"
         if any(word in combined_text for word in ["yoga", "fitness", "exercise", "wellness"]):
-            return "class", "fitness"
-        return "class", None
+            return "exercise", None
+        return "learning", None
 
     # Social/networking
     if "social" in category_lower or "networking" in category_lower:

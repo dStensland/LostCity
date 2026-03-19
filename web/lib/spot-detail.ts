@@ -3,6 +3,7 @@ import { getDistanceMiles } from "@/lib/geo";
 import { getLocalDateString } from "@/lib/formats";
 import { fetchSocialProofCounts } from "@/lib/social-proof";
 import { applyVenueGate } from "@/lib/feed-gate";
+import { ATTACHED_CHILD_DESTINATION_VENUE_TYPES } from "@/lib/destination-graph";
 import {
   getYonderDestinationIntelligence,
   type YonderDestinationIntelligence,
@@ -20,8 +21,9 @@ import {
 // Destination category mappings for venues (post-consolidation types)
 // ---------------------------------------------------------------------------
 
+// A venue can appear in multiple categories (e.g. a bar that serves food).
 const DESTINATION_CATEGORIES: Record<string, string[]> = {
-  food: ["restaurant", "food_hall", "cooking_school"],
+  food: ["restaurant", "food_hall", "cooking_school", "bar", "brewery", "sports_bar"],
   drinks: ["bar", "brewery", "distillery", "winery", "rooftop", "sports_bar"],
   nightlife: ["club"],
   caffeine: ["coffee_shop"],
@@ -58,6 +60,7 @@ type UpcomingEventRow = {
   ticket_url: string | null;
   series_id: string | null;
   image_url: string | null;
+  content_kind: string | null;
   series: {
     id: string;
     slug: string;
@@ -87,6 +90,7 @@ export type NearbyDestination = {
 type SpotRecord = {
   id: number;
   neighborhood?: string | null;
+  city?: string | null;
   lat?: number | null;
   lng?: number | null;
   [key: string]: unknown;
@@ -147,16 +151,57 @@ export type VenueOccasionRow = {
   source: string;
 };
 
+export type VenueExhibitionRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  opening_date: string | null;
+  closing_date: string | null;
+  exhibition_type: string | null;
+  admission_type: string | null;
+  source_url: string | null;
+};
+
+export type AttachedChildDestinationRow = {
+  id: number;
+  name: string;
+  slug: string | null;
+  venue_type: string | null;
+  image_url: string | null;
+  short_description: string | null;
+};
+
+export type WalkableNeighbor = {
+  id: number;
+  name: string;
+  slug: string;
+  walk_minutes: number;
+};
+
+export type LibraryPass = {
+  eligible: boolean;
+  program: string;
+  benefit: string;
+  passes_per_checkout: number | null;
+  notes: string | null;
+  url: string;
+};
+
 export type SpotDetailPayload = {
   spot: Record<string, unknown>;
   upcomingEvents: Array<Record<string, unknown>>;
   nearbyDestinations: Record<string, NearbyDestination[]>;
   highlights: Array<Record<string, unknown>>;
+  attachedChildDestinations: AttachedChildDestinationRow[];
+  // Compatibility alias for older consumers that still expect the previous field name.
   artifacts: Array<Record<string, unknown>>;
   features: VenueFeatureRow[];
   specials: VenueSpecialRow[];
   editorialMentions: EditorialMentionRow[];
   occasions: VenueOccasionRow[];
+  exhibitions: VenueExhibitionRow[];
+  walkableNeighbors: WalkableNeighbor[];
   yonderDestinationIntelligence: YonderDestinationIntelligence | null;
   yonderAccommodationInventorySource: YonderAccommodationInventorySource | null;
   yonderRuntimeInventorySnapshot: YonderRuntimeInventorySnapshot | null;
@@ -294,6 +339,7 @@ async function fetchNearbyDestinations(
       .from("venues")
       .select(selectFields)
       .eq("neighborhood", spot.neighborhood)
+      .eq("city", spot.city as string)
       .in("venue_type", allDestinationTypes)
       .eq("active", true)
       .neq("id", spot.id)
@@ -304,13 +350,22 @@ async function fetchNearbyDestinations(
     }
     spots = (data || null) as NearbyDestination[] | null;
   } else if (spot.lat && spot.lng) {
-    const { data, error } = await supabase
+    // Geo-bounded query: fetch venues within ~1.5mi bounding box instead of full table scan
+    const latDelta = 1.5 / 69; // ~1.5 miles in degrees latitude
+    const lngDelta = 1.5 / (69 * Math.cos((spot.lat * Math.PI) / 180));
+    let geoQuery = supabase
       .from("venues")
       .select(selectFields)
       .in("venue_type", allDestinationTypes)
       .eq("active", true)
       .neq("id", spot.id)
+      .gte("lat", spot.lat - latDelta)
+      .lte("lat", spot.lat + latDelta)
+      .gte("lng", spot.lng - lngDelta)
+      .lte("lng", spot.lng + lngDelta)
       .limit(50);
+    if (spot.city) geoQuery = geoQuery.eq("city", spot.city);
+    const { data, error } = await geoQuery;
     if (error) {
       console.error("[spot-detail] nearby geo query failed:", error.message);
       return nearbyDestinations;
@@ -336,16 +391,11 @@ async function fetchNearbyDestinations(
     }
 
     const venueType = dest.venue_type || "";
-    let category: string | null = null;
+    const destWithDistance = { ...dest, distance };
     for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
-      if (types.includes(venueType)) {
-        category = cat;
-        break;
+      if (types.includes(venueType) && nearbyDestinations[cat]) {
+        nearbyDestinations[cat].push(destWithDistance);
       }
-    }
-
-    if (category && nearbyDestinations[category]) {
-      nearbyDestinations[category].push({ ...dest, distance });
     }
   }
 
@@ -394,6 +444,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     .from("venues")
     .select("id, name, slug, venue_type, image_url, short_description")
     .eq("parent_venue_id", spot.id)
+    .in("venue_type", [...ATTACHED_CHILD_DESTINATION_VENUE_TYPES])
     .eq("active", true)
     .order("name", { ascending: true });
   const featuresPromise = supabase
@@ -410,9 +461,10 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     .order("sort_order", { ascending: true });
   const editorialMentionsPromise = supabase
     .from("editorial_mentions")
-    .select("id, source_key, article_url, article_title, mention_type, published_at, guide_name, snippet")
+    .select("id, source_key, article_url, article_title, mention_type, published_at, guide_name, snippet, relevance")
     .eq("venue_id", spot.id)
     .eq("is_active", true)
+    .eq("relevance", "primary")
     .order("published_at", { ascending: false })
     .limit(10);
   const occasionsPromise = supabase
@@ -422,6 +474,32 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     .gte("confidence", 0.5)
     .order("confidence", { ascending: false });
 
+  const exhibitionsPromise = supabase
+    .from("exhibitions")
+    .select("id, title, description, image_url, opening_date, closing_date, exhibition_type, admission_type, source_url")
+    .eq("venue_id", spot.id)
+    .eq("is_active", true)
+    .or(`closing_date.gte.${today},closing_date.is.null`)
+    .order("opening_date", { ascending: true })
+    .limit(20);
+
+  type WalkableRow = {
+    walk_minutes: number;
+    neighbor: { id: number; name: string; slug: string } | null;
+  };
+
+  const walkableNeighborCount =
+    typeof spot.walkable_neighbor_count === "number" ? spot.walkable_neighbor_count : 0;
+  const walkableNeighborsPromise =
+    walkableNeighborCount > 0
+      ? supabase
+          .from("walkable_neighbors" as never)
+          .select(`walk_minutes, neighbor:neighbor_id(id, name, slug)`)
+          .eq("venue_id", spot.id)
+          .order("walk_minutes", { ascending: true })
+          .limit(10)
+      : Promise.resolve({ data: [] as WalkableRow[] });
+
   const isCinema = (spotData as Record<string, unknown>).venue_type === "cinema";
 
   // Over-fetch to allow post-query slot dedupe and quality ranking.
@@ -430,7 +508,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
       .from("events")
       .select(`
         id, title, start_date, end_date, start_time, end_time, is_free, price_min, category_id, source_url, ticket_url,
-        series_id, image_url,
+        series_id, image_url, content_kind,
         series:series!events_series_id_fkey(id, slug, title, series_type, image_url)
       `)
       .eq("venue_id", spot.id)
@@ -480,6 +558,8 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     { data: specials },
     { data: editorialMentions },
     { data: occasions },
+    { data: exhibitions },
+    { data: walkableNeighborsRaw },
   ] = await Promise.all([
     upcomingCountsPromise,
     nearbyDestinationsPromise,
@@ -490,9 +570,18 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     specialsPromise,
     editorialMentionsPromise,
     occasionsPromise,
+    exhibitionsPromise,
+    walkableNeighborsPromise,
   ]);
 
-  const upcomingEventsWithCounts: Array<Record<string, unknown>> = dedupedRows.map((event) => {
+  // When exhibitions exist for this venue, exclude exhibit events from upcoming
+  // to avoid duplication with the "On View" section.
+  const exhibitionsList = (exhibitions as VenueExhibitionRow[] | null) || [];
+  const filteredRows = exhibitionsList.length > 0
+    ? dedupedRows.filter((event) => event.content_kind !== "exhibit")
+    : dedupedRows;
+
+  const upcomingEventsWithCounts: Array<Record<string, unknown>> = filteredRows.map((event) => {
     const counts = upcomingCounts.get(event.id);
     const artists = (artistsByEventId.get(event.id) || []).map((artist) => ({
       name: artist.name,
@@ -513,6 +602,17 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     };
   });
 
+  const walkableNeighbors: WalkableNeighbor[] = (
+    (walkableNeighborsRaw || []) as unknown as WalkableRow[]
+  )
+    .filter((row) => row.neighbor != null)
+    .map((row) => ({
+      id: row.neighbor!.id,
+      name: row.neighbor!.name,
+      slug: row.neighbor!.slug,
+      walk_minutes: row.walk_minutes,
+    }));
+
   return {
     spot: spotData as Record<string, unknown>,
     upcomingEvents: upcomingEventsWithCounts,
@@ -520,13 +620,31 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     highlights: dedupeVenueHighlights(
       (highlights as VenueHighlightRow[] | null) || []
     ) as unknown as Array<Record<string, unknown>>,
+    attachedChildDestinations:
+      (artifacts as AttachedChildDestinationRow[] | null) || [],
     artifacts: (artifacts || []) as Array<Record<string, unknown>>,
     features: (features as VenueFeatureRow[] | null) || [],
     specials: (specials as VenueSpecialRow[] | null) || [],
     editorialMentions: (editorialMentions as EditorialMentionRow[] | null) || [],
     occasions: (occasions as VenueOccasionRow[] | null) || [],
+    exhibitions: (exhibitions as VenueExhibitionRow[] | null) || [],
+    walkableNeighbors,
     yonderDestinationIntelligence,
     yonderAccommodationInventorySource,
     yonderRuntimeInventorySnapshot,
   };
+}
+
+/**
+ * Standalone helper to fetch nearby destinations for any venue.
+ * Used by the SSR event page to populate "Around Here" without duplicating query logic.
+ */
+export async function getNearbyDestinationsForVenue(venue: {
+  id: number;
+  neighborhood?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+}): Promise<Record<string, NearbyDestination[]>> {
+  const supabase = await createClient();
+  return fetchNearbyDestinations(supabase, venue as SpotRecord);
 }

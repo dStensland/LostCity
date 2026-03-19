@@ -1,5 +1,6 @@
-import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
-import { PortalHeader, DogHeader } from "@/components/headers";
+import { getCachedPortalBySlug, getCachedPortalByVerticalAndCity, getPortalVertical } from "@/lib/portal";
+import { headers } from "next/headers";
+import { PortalHeader, DogHeader, AdventureHeader, ATLittleHeader } from "@/components/headers";
 import { AmbientBackground } from "@/components/ambient";
 import FindView from "@/components/find/FindView";
 import CommunityHub from "@/components/community/CommunityHub";
@@ -14,6 +15,7 @@ import { isPCMDemoPortal } from "@/lib/marketplace-art";
 import { normalizeMarketplacePersona } from "@/lib/marketplace-art";
 import { MarketplaceTemplate } from "./_templates/marketplace";
 import { DogTemplate } from "./_templates/dog";
+import { FamilyFeed } from "@/components/family";
 import DogMapView from "./_components/dog/DogMapView";
 import DogSavedView from "./_components/dog/DogSavedView";
 import { isDogPortal, DOG_PORTAL_VAR_OVERRIDES, DOG_DETAIL_VIEW_CSS } from "@/lib/dog-art";
@@ -23,6 +25,11 @@ import {
   hasActiveFindFilters,
   hasAnyActiveFindFilters,
 } from "@/lib/find-filter-schema";
+import {
+  isFilmPortalVertical,
+  shouldDisableAmbientEffects,
+  toFeedSkeletonVertical,
+} from "@/lib/portal-taxonomy";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import HorseSpinner from "@/components/ui/HorseSpinner";
@@ -31,13 +38,35 @@ import type { Metadata } from "next";
 
 export const revalidate = 300;
 
+/** Suppresses ambient background effects for portals with their own visual language. */
+function AmbientSuppression() {
+  return (
+    <style>{`
+      body::before { opacity: 0 !important; }
+      body::after { opacity: 0 !important; }
+      .ambient-glow { opacity: 0 !important; }
+      .rain-overlay { display: none !important; }
+      .cursor-glow { display: none !important; }
+    `}</style>
+  );
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ portal: string }>;
 }): Promise<Metadata> {
   const { portal: slug } = await params;
-  const portal = await getCachedPortalBySlug(slug);
+  const headersList = await headers();
+  const subdomainVertical = headersList.get("x-lc-vertical");
+
+  let portal;
+  if (subdomainVertical) {
+    portal = await getCachedPortalByVerticalAndCity(subdomainVertical, slug);
+    if (!portal) portal = await getCachedPortalBySlug(slug);
+  } else {
+    portal = await getCachedPortalBySlug(slug);
+  }
   if (!portal) return {};
 
   const description =
@@ -62,7 +91,7 @@ export async function generateMetadata({
 }
 
 type ViewMode = "feed" | "find" | "community";
-type FindType = "events" | "classes" | "destinations" | "showtimes" | "regulars";
+type FindType = "events" | "classes" | "destinations" | "showtimes" | "whats_on" | "regulars";
 type FindDisplay = "list" | "map" | "calendar";
 
 type PortalSearchParams = {
@@ -121,8 +150,17 @@ export default async function PortalPage({ params, searchParams }: Props) {
   const { portal: slug } = await params;
   const searchParamsData = await searchParams;
 
-  // Get portal data - all portals must exist in database
-  const portal = await getCachedPortalBySlug(slug);
+  // Resolve portal: check for vertical subdomain header first (same as layout.tsx)
+  const headersList = await headers();
+  const subdomainVertical = headersList.get("x-lc-vertical");
+
+  let portal;
+  if (subdomainVertical) {
+    portal = await getCachedPortalByVerticalAndCity(subdomainVertical, slug);
+    if (!portal) portal = await getCachedPortalBySlug(slug);
+  } else {
+    portal = await getCachedPortalBySlug(slug);
+  }
 
   if (!portal) {
     notFound();
@@ -131,11 +169,11 @@ export default async function PortalPage({ params, searchParams }: Props) {
   // Check vertical type for hotel/specialty portals
   const vertical = getPortalVertical(portal);
   const isHotel = vertical === "hotel";
-  const isFilm = vertical === "film";
+  const isFilm = isFilmPortalVertical(vertical);
   const isMarketplace = vertical === "marketplace" || isPCMDemoPortal(portal.slug);
   const isCommunity = vertical === "community";
   const isDog = vertical === "dog" || isDogPortal(portal.slug);
-  const disableAmbientEffects = isFilm || isMarketplace || isDog || isCommunity;
+  const disableAmbientEffects = shouldDisableAmbientEffects(vertical);
 
   // Hotel portals always show the concierge experience (no view switching)
   if (isHotel) {
@@ -155,13 +193,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
     const marketplacePersona = normalizeMarketplacePersona(searchParamsData.persona);
     return (
       <div className="min-h-screen overflow-x-hidden bg-[var(--mkt-ivory)] text-[var(--mkt-charcoal)]">
-        <style>{`
-          body::before { opacity: 0 !important; }
-          body::after { opacity: 0 !important; }
-          .ambient-glow { opacity: 0 !important; }
-          .rain-overlay { display: none !important; }
-          .cursor-glow { display: none !important; }
-        `}</style>
+        <AmbientSuppression />
         <Suspense fallback={null}>
           <DetailViewRouter portalSlug={portal.slug}>
             <MarketplaceTemplate portal={portal} persona={marketplacePersona} />
@@ -176,15 +208,8 @@ export default async function PortalPage({ params, searchParams }: Props) {
     const dogView = searchParamsData.view;
     return (
       <div className="min-h-screen overflow-x-hidden" style={{ background: "#FFFBEB" }}>
-        <style>{`
-          body::before { opacity: 0 !important; }
-          body::after { opacity: 0 !important; }
-          .ambient-glow { opacity: 0 !important; }
-          .rain-overlay { display: none !important; }
-          .cursor-glow { display: none !important; }
-          .dog-portal-root { ${DOG_PORTAL_VAR_OVERRIDES} }
-          .dog-portal-root ${DOG_DETAIL_VIEW_CSS}
-        `}</style>
+        <AmbientSuppression />
+        <style>{`.dog-portal-root { ${DOG_PORTAL_VAR_OVERRIDES} }.dog-portal-root ${DOG_DETAIL_VIEW_CSS}`}</style>
         <div className="dog-portal-root">
           <Suspense fallback={null}>
             <DogHeader portalSlug={portal.slug} />
@@ -211,6 +236,45 @@ export default async function PortalPage({ params, searchParams }: Props) {
           {/* Bottom nav spacer for mobile (not needed on map view) */}
           {dogView !== "find" && <div className="sm:hidden h-20" />}
         </div>
+      </div>
+    );
+  }
+
+  // Family portal — bespoke header + feed, no generic PortalHeader/main wrapper
+  if (vertical === "family") {
+    const isExclusive = portal.portal_type === "business" && !portal.parent_portal_id;
+    return (
+      <div className="min-h-screen overflow-x-hidden">
+        <AmbientSuppression />
+        <Suspense fallback={null}>
+          <ATLittleHeader />
+        </Suspense>
+        <Suspense fallback={null}>
+          <DetailViewRouter portalSlug={portal.slug}>
+            <FamilyFeed
+              portalId={portal.id}
+              portalSlug={portal.slug}
+              portalExclusive={isExclusive}
+            />
+          </DetailViewRouter>
+        </Suspense>
+      </div>
+    );
+  }
+
+  // Adventure portal — bespoke header + feed, no generic PortalHeader/nav
+  if (vertical === "adventure") {
+    return (
+      <div className="min-h-screen overflow-x-hidden">
+        <AmbientSuppression />
+        <Suspense fallback={null}>
+          <AdventureHeader />
+        </Suspense>
+        <Suspense fallback={null}>
+          <DetailViewRouter portalSlug={portal.slug}>
+            <DefaultTemplate portal={portal} />
+          </DetailViewRouter>
+        </Suspense>
       </div>
     );
   }
@@ -244,10 +308,12 @@ export default async function PortalPage({ params, searchParams }: Props) {
   // Determine find type - support legacy view params
   // Note: "orgs" was moved to community view, redirect to events
   // Note: "spots" is a URL alias for the "destinations" findType
-  const VALID_FIND_TYPES = new Set<FindType>(["events", "classes", "destinations", "showtimes", "regulars"]);
+  const VALID_FIND_TYPES = new Set<FindType>(["events", "classes", "destinations", "showtimes", "whats_on", "regulars"]);
   let findType: FindType = "events";
   if (findTypeParam && findTypeParam !== "orgs" && findTypeParam !== "playbook") {
-    const mapped = findTypeParam === "spots" ? "destinations" : findTypeParam;
+    let mapped = findTypeParam === "spots" ? "destinations" : findTypeParam;
+    // Backward compat: ?type=showtimes now resolves to whats_on
+    if (mapped === "showtimes") mapped = "whats_on";
     findType = VALID_FIND_TYPES.has(mapped as FindType) ? (mapped as FindType) : "events";
   } else if (viewParam === "spots") {
     findType = "destinations";
@@ -266,6 +332,19 @@ export default async function PortalPage({ params, searchParams }: Props) {
     findDisplay = "map";
   } else if (viewParam === "calendar") {
     findDisplay = "calendar";
+  }
+
+  // Destinations tab defaults to list unless the URL explicitly pairs
+  // type=destinations (or view=spots) with display=map. This prevents the map
+  // from auto-loading when the user switches to this tab from another find type
+  // that had display=map, which risks exhausting browser WebGL contexts.
+  if (findType === "destinations") {
+    const destinationsTypeExplicit =
+      findTypeParam === "destinations" || viewParam === "spots";
+    const mapExplicit = findDisplayParam === "map";
+    if (!(destinationsTypeExplicit && mapExplicit)) {
+      findDisplay = "list";
+    }
   }
 
   // Check for active filters
@@ -299,15 +378,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(portalPageSchema) }}
       />
-      {disableAmbientEffects && (
-        <style>{`
-          body::before { opacity: 0 !important; }
-          body::after { opacity: 0 !important; }
-          .ambient-glow { opacity: 0 !important; }
-          .rain-overlay { display: none !important; }
-          .cursor-glow { display: none !important; }
-        `}</style>
-      )}
+      {disableAmbientEffects && <AmbientSuppression />}
       {!disableAmbientEffects && <AmbientBackground />}
       <PortalHeader
         portalSlug={portal.slug}
@@ -469,7 +540,7 @@ function FeedSkeleton({
 }: {
   vertical: ReturnType<typeof getPortalVertical>;
 }) {
-  const skeletonVertical = toSkeletonVertical(vertical);
+  const skeletonVertical = toFeedSkeletonVertical(vertical);
   if (vertical === "marketplace") {
     return (
       <div data-skeleton-route="feed-view" data-skeleton-vertical="marketplace" className="py-6 space-y-6">
@@ -516,7 +587,7 @@ function FeedSkeleton({
     );
   }
 
-  if (vertical === "film") {
+  if (isFilmPortalVertical(vertical)) {
     return (
       <div data-skeleton-route="feed-view" data-skeleton-vertical={skeletonVertical} className="py-6 space-y-6">
         <div className="h-56 rounded-3xl skeleton-shimmer" />
@@ -603,11 +674,4 @@ function DogMapSkeleton() {
       <div className="flex-1 skeleton-shimmer" />
     </div>
   );
-}
-
-function toSkeletonVertical(
-  vertical: ReturnType<typeof getPortalVertical>,
-): "city" | "hotel" | "film" | "marketplace" {
-  if (vertical === "hotel" || vertical === "film" || vertical === "marketplace") return vertical;
-  return "city";
 }

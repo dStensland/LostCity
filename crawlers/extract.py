@@ -31,8 +31,21 @@ RULES:
 10. detail_url should be the canonical event detail page when available (not the ticketing checkout link).
 11. If multiple performers are listed, include them in artists ordered with the headliner first.
 
-CATEGORIES (pick one):
-music, art, comedy, theater, film, sports, food_drink, nightlife, community, fitness, family, learning, dance, tours, meetup, words, religious, markets, wellness, gaming, outdoors, activism, other
+CATEGORIES (pick the most specific one):
+music, art, comedy, theater, film, sports, recreation, exercise, food_drink, nightlife, community, family, learning, dance, tours, words, religious, wellness, gaming, outdoors, unknown
+
+Note: "fitness" is accepted but maps to "exercise". Prefer the canonical terms below.
+
+Category guidance:
+- sports: spectator sports — watching games, attending matches, viewing events (baseball, basketball, football, soccer, hockey, MMA, racing, esports)
+- recreation: participation sports and recreational activities — leagues, pickup games, open play, fun runs, triathlons, pickleball, softball, cornhole, axe-throwing
+- exercise: structured movement/fitness — gym classes, yoga, tai chi, martial arts, aqua fitness, crossfit, pilates, running clubs (fitness-focused, not competitive)
+- community: ONLY for civic engagement — neighborhood meetings, volunteer drives, public hearings, nonprofit fundraisers, civic advocacy. NOT a catch-all for social events or anything that doesn't fit.
+- outdoors: hikes, trail walks, nature walks, paddling, bike rides, outdoor adventure groups
+- learning: classes, workshops, lectures, tech help, professional development, cooking schools
+- wellness: health fairs, meditation, therapy groups, hospital outreach, CPR classes
+- words: book clubs, poetry, author events, storytelling, literary events
+- unknown: Use this when the event doesn't clearly fit ANY category above. Better to mark unknown than guess wrong.
 
 SUBCATEGORIES for nightlife (use when applicable):
 - nightlife.dj: DJ sets, dance nights
@@ -63,6 +76,16 @@ If the event appears to be part of a series, populate the series_hint field:
 - For festival/conference programs: set series_title to the program/track name if shown
 - For films: include director, runtime_minutes, year, rating if available
  - For festival/conference programs: include festival_name if the parent festival is named
+
+CONTENT KIND DETECTION:
+Determine what type of content each listing represents:
+- "event": A time-bound happening (concert, workshop, meetup, screening, etc.)
+- "exhibition": An art show or gallery exhibition with opening/closing dates, typically weeks-months long
+- "program": A structured activity series with registration (swim lessons, summer camps, coding classes, etc.)
+
+Set content_kind accordingly. For exhibitions, populate exhibition_hint with medium, type, dates, and artists.
+For programs, populate program_hint with age range, session count, and registration info.
+Most listings will be "event" — only use "exhibition" or "program" when the content clearly indicates it.
 
 GENRES:
 For film, music, theater, and sports events, identify relevant genres:
@@ -113,6 +136,23 @@ Return valid JSON matching this schema:
         "frequency": string | null,
         "genres": string[] | null,
         "festival_name": string | null
+      } | null,
+      "content_kind": "event" | "exhibition" | "program" | null,
+      "exhibition_hint": {
+        "medium": string | null,
+        "exhibition_type": string | null,
+        "admission_type": string | null,
+        "opening_date": "YYYY-MM-DD" | null,
+        "closing_date": "YYYY-MM-DD" | null,
+        "artists": string[]
+      } | null,
+      "program_hint": {
+        "age_min": number | null,
+        "age_max": number | null,
+        "session_count": number | null,
+        "registration_url": string | null,
+        "capacity": number | null,
+        "skill_level": string | null
       } | null
     }
   ]
@@ -160,6 +200,26 @@ class VenueData(BaseModel):
     neighborhood: Optional[str] = None
 
 
+class ExhibitionHint(BaseModel):
+    """Hints for exhibition extraction."""
+    medium: Optional[str] = None  # painting, sculpture, photography, mixed-media, digital, installation, etc.
+    exhibition_type: Optional[str] = None  # solo, group, retrospective, pop-up, permanent
+    admission_type: Optional[str] = None  # free, ticketed, donation
+    opening_date: Optional[str] = None  # YYYY-MM-DD
+    closing_date: Optional[str] = None  # YYYY-MM-DD
+    artists: list[str] = []  # Artist names
+
+
+class ProgramHint(BaseModel):
+    """Hints for structured program/class extraction."""
+    age_min: Optional[int] = None
+    age_max: Optional[int] = None
+    session_count: Optional[int] = None  # Number of sessions in the program
+    registration_url: Optional[str] = None
+    capacity: Optional[int] = None
+    skill_level: Optional[str] = None  # beginner, intermediate, advanced, all-levels
+
+
 class SeriesHint(BaseModel):
     """Hints for identifying series membership."""
     series_type: Optional[str] = None  # film, recurring_show, class_series, festival_program, tour
@@ -198,6 +258,9 @@ class EventData(BaseModel):
     artists: list[str] = []
     genres: list[str] = []  # Genre tags for standalone events
     series_hint: Optional[SeriesHint] = None
+    content_kind: Optional[str] = None  # "event", "exhibition", "program" — lets caller route to correct insert path
+    exhibition_hint: Optional[ExhibitionHint] = None
+    program_hint: Optional[ProgramHint] = None
 
 
 class ExtractionResult(BaseModel):

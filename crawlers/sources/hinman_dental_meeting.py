@@ -43,6 +43,10 @@ VENUE_DATA = {
 }
 
 
+class NoCurrentCycleError(ValueError):
+    """The official site is reachable, but only a past Hinman cycle is posted."""
+
+
 def parse_source_pages(homepage_html: str, prereg_html: str, today: date | None = None) -> dict:
     """Extract the current Hinman cycle from official organizer pages."""
     today = today or datetime.now().date()
@@ -79,7 +83,7 @@ def parse_source_pages(homepage_html: str, prereg_html: str, today: date | None 
     start_date = date(year, 3, start_day)
     end_date = date(year, 3, end_day)
     if end_date < today:
-        raise ValueError("Hinman prereg page only exposes a past-dated cycle")
+        raise NoCurrentCycleError("Hinman prereg page only exposes a past-dated cycle")
 
     image_url = None
     og_image = prereg_soup.find("meta", attrs={"property": "og:image"})
@@ -134,7 +138,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
     )
     prereg_response.raise_for_status()
 
-    event = parse_source_pages(homepage_response.text, prereg_response.text)
+    try:
+        event = parse_source_pages(homepage_response.text, prereg_response.text)
+    except NoCurrentCycleError as exc:
+        stale_removed = remove_stale_source_events(source_id, current_hashes)
+        if stale_removed:
+            logger.info("Removed %s stale Hinman events after refresh", stale_removed)
+        logger.info("Hinman crawl complete: no current cycle published (%s)", exc)
+        return 0, 0, 0
     venue_id = get_or_create_venue(VENUE_DATA)
     content_hash = generate_content_hash(event["title"], VENUE_DATA["name"], event["start_date"])
     current_hashes.add(content_hash)

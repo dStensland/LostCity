@@ -86,13 +86,16 @@ crawlers/
 
 ```bash
 # Run a single crawler
-python main.py --source marys-bar
+python3 main.py --source marys-bar --dry-run
 
 # Run all active sources
-python main.py
+python3 main.py --dry-run
 
-# Run with verbose logging
-python main.py --source marys-bar --verbose
+# Run with debug logging
+LOG_LEVEL=DEBUG python3 main.py --source marys-bar --dry-run
+
+# Intentional production write run
+python3 main.py --allow-production-writes
 ```
 
 ## Key Database Operations (db.py)
@@ -234,7 +237,7 @@ Sources must exist in the `sources` database table with `is_active = true` to ru
 
 1. Create the file in `sources/`
 2. Register/activate in the sources table
-3. Run with `python main.py --source <slug>`
+3. Validate with `python3 main.py --source <slug> --dry-run`, then use `--allow-production-writes` only for an intentional write run
 
 ## Atlanta Focus Areas for Bars/Nightlife
 

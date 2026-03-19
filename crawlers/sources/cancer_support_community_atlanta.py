@@ -137,6 +137,75 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     return "wellness", None, ["cancer", "free"]
 
 
+def _extract_event_fields(lines: list[str], date_index: int) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    """Extract title, start_time, and description for a calendar row anchored at a date line."""
+    title = None
+    start_time = None
+    description = None
+
+    skip_keywords = [
+        "calendar", "view", "month", "week", "day",
+        "next", "previous", "today", "register",
+        "more info", "details", "location:",
+        "event requires", "presented by:", "optional equipment:",
+        "after you register", "you will receive",
+        "online", "virtual", "in person", "offsite", "all selected", "show all",
+        "csc atlanta", "register for a program",
+    ]
+    address_re = re.compile(
+        r"\d{3,5}\s+\w.*(?:road|rd|street|st|ave|avenue|blvd|drive|dr|way|suite|ste|ga\s+\d{5})",
+        re.IGNORECASE,
+    )
+
+    def is_title_candidate(text: str) -> bool:
+        if len(text) < 5 or len(text) > 150:
+            return False
+        if re.match(r"^\d{1,2}:\d{2}", text):
+            return False
+        if re.match(
+            r"^(January|February|March|April|May|June|July|August|September|October|November|December)",
+            text,
+        ):
+            return False
+        lower = text.lower()
+        if any(skip in lower for skip in skip_keywords):
+            return False
+        if address_re.search(text):
+            return False
+        return True
+
+    for offset in [-1, -2, -3]:
+        idx = date_index + offset
+        if 0 <= idx < len(lines):
+            check_line = lines[idx]
+            if not start_time:
+                time_result = parse_time(check_line)
+                if time_result:
+                    start_time = time_result
+                    continue
+            if not title and is_title_candidate(check_line):
+                title = check_line
+
+    for offset in [1, 2, 3, 4, 5, 6]:
+        idx = date_index + offset
+        if 0 <= idx < len(lines):
+            check_line = lines[idx]
+            if not start_time:
+                time_result = parse_time(check_line)
+                if time_result:
+                    start_time = time_result
+                    continue
+            if not title and is_title_candidate(check_line):
+                title = check_line
+                continue
+            if title and not description and 20 < len(check_line) < 300:
+                lower = check_line.lower()
+                if not any(skip in lower for skip in skip_keywords) and not address_re.search(check_line):
+                    description = check_line
+
+    return title, start_time, description
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Cancer Support Community Atlanta events using Playwright."""
     source_id = source["id"]
@@ -213,66 +282,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 date_str = parse_date(line)
 
                 if date_str:
-                    # Found a date - look for title and time in surrounding lines
-                    title = None
-                    start_time = None
-                    description = None
-
-                    # Gnosis calendar layout: title is BEFORE the date, details are AFTER
-                    # Two-pass: backward for title, forward for time + description
-                    _skip_keywords = [
-                        "calendar", "view", "month", "week", "day",
-                        "next", "previous", "today", "register",
-                        "more info", "details", "location:",
-                        "event requires", "presented by:", "optional equipment:",
-                        "after you register", "you will receive",
-                        "online",
-                    ]
-                    _address_re = re.compile(
-                        r"\d{3,5}\s+\w.*(?:road|rd|street|st|ave|avenue|blvd|drive|dr|way|suite|ste|ga\s+\d{5})",
-                        re.IGNORECASE,
-                    )
-
-                    def _is_title_candidate(text: str) -> bool:
-                        if len(text) < 5 or len(text) > 150:
-                            return False
-                        if re.match(r"^\d{1,2}:\d{2}", text):
-                            return False
-                        if re.match(r"^(January|February|March|April|May|June|July|August|September|October|November|December)", text):
-                            return False
-                        lower = text.lower()
-                        if any(skip in lower for skip in _skip_keywords):
-                            return False
-                        if _address_re.search(text):
-                            return False
-                        return True
-
-                    # Pass 1: look backward for title (Gnosis puts title before date)
-                    for offset in [-1, -2, -3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and _is_title_candidate(check_line):
-                                title = check_line
-
-                    # Pass 2: look forward for time and description
-                    for offset in [1, 2, 3, 4, 5, 6]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if title and not description and len(check_line) > 20 and len(check_line) < 300:
-                                if check_line != title and not any(skip in check_line.lower() for skip in _skip_keywords) and not _address_re.search(check_line):
-                                    description = check_line
+                    title, start_time, description = _extract_event_fields(lines, i)
 
                     # Must have a title
                     if not title or len(title) < 5:

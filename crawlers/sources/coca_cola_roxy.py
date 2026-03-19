@@ -9,7 +9,7 @@ Format: DAY (3-letter), DD, MON (3-letter), TITLE
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from playwright.sync_api import sync_playwright
 
@@ -18,6 +18,7 @@ from dedupe import generate_content_hash
 from description_fetcher import fetch_detail_html_playwright
 from pipeline.detail_enrich import enrich_from_detail
 from pipeline.models import DetailConfig
+from source_destination_sync import ensure_venue_destination_fields
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,10 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.cocacolaroxy.com"
 # Main page has the event listings, /events is just a landing page
 EVENTS_URL = BASE_URL
+PLANNING_NOTE = (
+    "Use the official show page for parking, entry timing, and bag/ticket policy before arrival. "
+    "Battery traffic can materially change arrival time on Braves and major-event nights."
+)
 
 VENUE_DATA = {
     "name": "Coca-Cola Roxy",
@@ -77,6 +82,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            ensure_venue_destination_fields(venue_id, planning_notes=PLANNING_NOTE)
 
             logger.info(f"Fetching Coca-Cola Roxy: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
@@ -306,6 +312,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             evt["price_note"] = fields["price_note"]
                         if fields.get("is_free"):
                             evt["is_free"] = True
+                        if fields.get("ticket_status") and not evt.get("ticket_status"):
+                            evt["ticket_status"] = fields["ticket_status"]
+                            evt["ticket_status_checked_at"] = datetime.now(timezone.utc).isoformat()
                     detail_fetches += 1
                     page.wait_for_timeout(1000)
 

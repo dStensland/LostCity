@@ -12,11 +12,20 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import get_or_create_venue
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.cdc.gov/museum"
 EXHIBITIONS_URL = f"{BASE_URL}/exhibitions_changing.htm"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
 
 VENUE_DATA = {
     "name": "David J. Sencer CDC Museum",
@@ -33,6 +42,65 @@ VENUE_DATA = {
     "website": "https://www.cdc.gov/museum",
     "vibes": ["science", "health", "education", "free"],
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "science_museum",
+            "commitment_tier": "hour",
+            "primary_activity": "family public-health museum visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip", "free-option"],
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "CDC Museum works best as a shorter free educational stop rather than a long family outing, especially for older kids with interest in science, health, or history."
+            ),
+            "accessibility_notes": (
+                "Its indoor museum layout makes it a low-friction visit physically, but the subject matter is better for curious school-age kids than for very young children."
+            ),
+            "family_suitability": "caution",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Admission is free; temporary exhibitions and security/entry procedures can affect visit planning.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "museum",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "free-public-health-exhibitions",
+            "title": "Free public health exhibitions",
+            "feature_type": "amenity",
+            "description": "The CDC Museum offers free exhibitions that can work well for curious older kids and school-age family learning outings.",
+            "url": EXHIBITIONS_URL,
+            "is_free": True,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "always-free-museum-admission",
+            "title": "Always-free museum admission",
+            "description": "Museum admission is free, which makes the CDC Museum a reliable no-ticket educational stop for older kids and school-age family outings.",
+            "price_note": "Museum admission is free.",
+            "is_free": True,
+            "source_url": BASE_URL,
+            "category": "admission",
+        },
+    )
+    return envelope
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -57,6 +125,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     try:
         # Ensure venue exists in database
         venue_id = get_or_create_venue(VENUE_DATA)
+        persist_typed_entity_envelope(_build_destination_envelope(venue_id))
         logger.info(f"CDC Museum venue created/verified (ID: {venue_id})")
 
         # Check if museum is open and has exhibitions

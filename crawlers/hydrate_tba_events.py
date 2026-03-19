@@ -41,6 +41,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from db import get_client
+from tba_policy import classify_tba_event
 
 logging.basicConfig(
     level=logging.INFO,
@@ -93,26 +94,17 @@ def enrich_single_event(event: dict) -> dict:
     from pipeline.detail_enrich import enrich_from_detail
     from pipeline.models import DetailConfig
 
+    actionable, _reason = classify_tba_event(event)
+    if not actionable:
+        return {}
+
     # Try source_url first, fall back to ticket_url
     detail_url = event.get("source_url") or event.get("ticket_url")
     if not detail_url or not detail_url.startswith("http"):
         return {}
 
-    # Skip known calendar/listing pages that won't have individual event data
-    skip_patterns = [
-        "/calendar/$",
-        "/events/$",
-        "/schedule/$",
-        "instagram.com",
-    ]
-    for pattern in skip_patterns:
-        if re.search(pattern, detail_url):
-            # Try ticket_url as fallback
-            fallback = event.get("ticket_url")
-            if fallback and fallback != detail_url and fallback.startswith("http"):
-                detail_url = fallback
-            else:
-                return {}
+    parsed = urlparse(detail_url)
+    domain = (parsed.netloc or "").lower().replace("www.", "")
 
     try:
         html, error = fetch_html(detail_url)
@@ -251,14 +243,39 @@ def hydrate_tba_events(
         Dict with stats: total, enriched, time_filled, desc_filled,
         image_filled, deduped, errors, no_change.
     """
-    events = fetch_tba_events(domain_filter=domain_filter, limit=limit)
-    logger.info(f"Found {len(events)} TBA events to process")
-
+    all_events = fetch_tba_events(domain_filter=domain_filter, limit=limit)
     stats: Counter = Counter()
-    if not events:
+    stats["total_found"] = len(all_events)
+    if not all_events:
         return dict(stats)
 
-    domain_groups = _group_by_domain(events)
+    actionable_events: list[dict] = []
+    non_actionable_reasons: Counter[str] = Counter()
+    for event in all_events:
+        actionable, reason = classify_tba_event(event)
+        if actionable:
+            actionable_events.append(event)
+        else:
+            stats["non_actionable"] += 1
+            non_actionable_reasons[reason or "non_actionable"] += 1
+
+    stats["total"] = len(actionable_events)
+    logger.info(
+        "Found %s TBA events total: %s actionable, %s intentional/structural skips",
+        len(all_events),
+        stats["total"],
+        stats.get("non_actionable", 0),
+    )
+    if non_actionable_reasons:
+        logger.info(
+            "Non-actionable TBA reasons: %s",
+            ", ".join(f"{reason}={count}" for reason, count in sorted(non_actionable_reasons.items())),
+        )
+
+    if not actionable_events:
+        return dict(stats)
+
+    domain_groups = _group_by_domain(actionable_events)
     logger.info(
         f"Processing {len(domain_groups)} domain(s) concurrently: "
         + ", ".join(f"{d}({len(g)})" for d, g in sorted(domain_groups.items()))
@@ -298,7 +315,6 @@ def hydrate_tba_events(
         else:
             stats["no_change"] += 1
 
-    stats["total"] = len(events)
     return dict(stats)
 
 
@@ -310,8 +326,15 @@ def run(args: argparse.Namespace) -> None:
         verbose=args.verbose,
     )
 
+    total_found = stats.get("total_found", 0)
     total = stats.get("total", 0)
     if not total:
+        if total_found:
+            print(
+                "No actionable TBA events found."
+                f" ({stats.get('non_actionable', 0)} intentional/structural date-only rows skipped.)"
+            )
+            return
         print("No TBA events found.")
         return
 
@@ -319,7 +342,9 @@ def run(args: argparse.Namespace) -> None:
     print(f"\n{'=' * 60}")
     print(f"  TBA Hydration {'APPLIED' if args.apply else 'DRY RUN'}")
     print(f"{'=' * 60}")
-    print(f"  Total processed:    {total}")
+    print(f"  Total found:        {total_found}")
+    print(f"  Actionable:         {total}")
+    print(f"  Non-actionable:     {stats.get('non_actionable', 0)}")
     print(f"  Enriched:           {stats.get('enriched', 0)}")
     print(f"    start_time found: {stats.get('time_filled', 0)}")
     print(f"    description:      {stats.get('desc_filled', 0)}")
@@ -331,7 +356,7 @@ def run(args: argparse.Namespace) -> None:
         print(f"  Errors:             {stats['errors']}")
 
     remaining = total - stats.get("time_filled", 0)
-    print(f"\n  Still TBA after enrichment: {remaining}")
+    print(f"\n  Still actionable TBA after enrichment: {remaining}")
     if not args.apply and stats.get("enriched"):
         print(f"\n  Run with --apply to write changes to DB")
 

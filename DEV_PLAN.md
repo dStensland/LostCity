@@ -143,15 +143,15 @@ We are no longer building demos. Every portal and product ships consumer-ready o
 
 **Unique entities:** Programs (structured activities with sessions, age ranges, registration links).
 
-**Current state:** Schema built (`programs` table, `age_min`/`age_max` on events, `school_calendar_events`). 28+ crawlers built (Cobb/Gwinnett/Atlanta/DeKalb parks & rec, YMCA 22 branches, Children's Museum, Puppetry Arts, swim schools, summer camps). Portal migration drafted. School calendar seeded (62 events, 4 districts).
+**Current state:** Schema built (`programs` table, `age_min`/`age_max` on events, `school_calendar_events`). 28+ crawlers built (Cobb/Gwinnett/Atlanta/DeKalb parks & rec, YMCA 22 branches, Children's Museum, Puppetry Arts, swim schools, summer camps). Hooky now has live `programs` inventory, in-feed school-calendar + registration-radar surfacing, and a live crew setup tab instead of placeholder shell states.
 
 **Design:** Warm amber (Outfit font, honey #C48B1D, sage #7D8B72, cream #F3EEE8). Tagline: "Play hooky."
 
 **Remaining work:**
 1. Source registration migrations for all 28+ crawlers.
-2. Web: feed template, programs API, age filter, school calendar integration.
-3. Per-kid profiles (COPPA safe).
-4. Consumer-quality cold-start test for a parent.
+2. Broaden Family feed depth beyond the current tabs so more of the portal feels program-native rather than event-adjacent.
+3. Browser-verify the parent cold-start path and signed-in crew personalization path end to end.
+4. Keep converting Family sources/backfills until Hooky inventory is comfortably dense across ages and seasons.
 
 **Reference:** `prds/035-hooky-family-portal.md`
 

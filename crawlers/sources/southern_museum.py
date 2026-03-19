@@ -11,10 +11,19 @@ from datetime import datetime, timedelta
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.southernmuseum.org"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 VENUE_DATA = {
     "name": "Southern Museum of Civil War and Locomotive History",
@@ -31,6 +40,66 @@ VENUE_DATA = {
     "website": BASE_URL,
     "description": "Museum featuring The General locomotive, Civil War history, and railroad heritage exhibits.",
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "history_museum",
+            "commitment_tier": "halfday",
+            "primary_activity": "train and history museum visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+            "parking_type": "free_lot",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "Southern Museum works best as a half-day Kennesaw family outing, especially for kids drawn to trains or hands-on history rather than a quick drop-in museum stop."
+            ),
+            "accessibility_notes": (
+                "Its indoor exhibit core makes it easier in bad weather than outdoor rail attractions, and the main draw around The General locomotive gives families a clear focal point."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "General admission applies, with special program pricing varying by event.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "history_museum",
+                "city": "kennesaw",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "the-general-locomotive-anchor",
+            "title": "The General locomotive anchor",
+            "feature_type": "amenity",
+            "description": "The museum's flagship locomotive gives families a clear focal attraction that makes the visit easier to pitch to train-interested kids.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "railroad-history-family-stop",
+            "title": "Railroad history family stop",
+            "feature_type": "amenity",
+            "description": "Southern Museum is one of the stronger metro family history stops for railroad-focused exhibits and hands-on heritage programming.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    return envelope
 
 
 def get_second_saturday(year: int, month: int) -> datetime:
@@ -235,6 +304,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     venue_id = get_or_create_venue(VENUE_DATA)
+    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     # Museum programs
     program_new, program_updated = create_museum_programs(source_id, venue_id)

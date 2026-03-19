@@ -13,11 +13,14 @@ import {
 import type {
   CreateGroupRequest,
   GroupVisibility,
+  GroupJoinPolicy,
   GroupWithMeta,
   MyGroupsResponse,
 } from "@/lib/types/groups";
 
-const VALID_VISIBILITIES: readonly GroupVisibility[] = ["private", "unlisted"];
+const VALID_JOIN_POLICIES: readonly GroupJoinPolicy[] = ["invite", "request", "open"];
+
+const VALID_VISIBILITIES: readonly GroupVisibility[] = ["private", "unlisted", "public"];
 
 /**
  * POST /api/groups
@@ -38,7 +41,10 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
 
   try {
     const body: CreateGroupRequest = await request.json();
-    const { name, description, emoji, visibility = "private" } = body;
+    const { name, description, emoji, visibility = "private", join_policy } = body;
+
+    // Derive effective join_policy: private/unlisted are always invite-only
+    const effectiveJoinPolicy = visibility === "public" ? (join_policy ?? "invite") : "invite";
 
     // Validation
     if (!isValidString(name, 2, MAX_GROUP_NAME_LENGTH)) {
@@ -58,7 +64,11 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
     }
 
     if (!isValidEnum(visibility, VALID_VISIBILITIES)) {
-      return validationError("visibility must be private or unlisted");
+      return validationError("visibility must be private, unlisted, or public");
+    }
+
+    if (!isValidEnum(effectiveJoinPolicy, VALID_JOIN_POLICIES)) {
+      return validationError("join_policy must be invite, request, or open");
     }
 
     // Enforce max groups per user
@@ -93,6 +103,7 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
         creator_id: user.id,
         invite_code: inviteCode,
         visibility,
+        join_policy: effectiveJoinPolicy,
         max_members: DEFAULT_MAX_MEMBERS,
       } as never)
       .select()
@@ -193,6 +204,7 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
       creator_id: string;
       invite_code: string;
       visibility: GroupVisibility;
+      join_policy: GroupJoinPolicy;
       max_members: number;
       created_at: string;
       updated_at: string;

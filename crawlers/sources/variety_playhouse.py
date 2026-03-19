@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
@@ -64,9 +64,11 @@ def build_event_record(
     source_url: str,
     image_url: str | None,
     raw_text: str,
+    ticket_status: str | None = None,
+    ticket_status_checked_at: str | None = None,
 ) -> dict:
     hash_key = f"{start_date}|{start_time}" if start_time else start_date
-    return {
+    record: dict = {
         "source_id": source_id,
         "venue_id": venue_id,
         "title": title,
@@ -92,6 +94,11 @@ def build_event_record(
         "recurrence_rule": None,
         "content_hash": generate_content_hash(title, "Variety Playhouse", hash_key),
     }
+    if ticket_status:
+        record["ticket_status"] = ticket_status
+    if ticket_status_checked_at:
+        record["ticket_status_checked_at"] = ticket_status_checked_at
+    return record
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -247,6 +254,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         description = f"With {opener}"
 
                     detail_url = detail_links.get(title) or CALENDAR_URL
+                    listing_ticket_status = "sold-out" if status == "sold_out" else None
                     event_record = build_event_record(
                         source_id=source_id,
                         venue_id=venue_id,
@@ -258,6 +266,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         source_url=detail_url,
                         image_url=image_map.get(title),
                         raw_text=f"{title} - {opener}" if opener else title,
+                        ticket_status=listing_ticket_status,
+                        ticket_status_checked_at=(
+                            datetime.now(timezone.utc).isoformat()
+                            if listing_ticket_status
+                            else None
+                        ),
                     )
 
                     existing = find_event_by_hash(content_hash)

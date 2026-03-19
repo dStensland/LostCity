@@ -170,7 +170,7 @@ const testVenues = [
 ];
 
 // Categories for events (kept for documentation/reference)
-const _categories = ["music", "art", "comedy", "theater", "film", "sports", "food_drink", "nightlife", "community", "fitness", "family"];
+const _categories = ["music", "art", "comedy", "theater", "film", "sports", "recreation", "food_drink", "nightlife", "community", "exercise", "family"];
 void _categories;
 
 // Test events - will be assigned venue IDs after venues are created
@@ -197,7 +197,7 @@ function generateTestEvents(venueIds: number[]) {
       description: "Start your day with free community yoga at Piedmont Park. All levels welcome!",
       start_date: getFutureDate(0),
       start_time: "09:00:00",
-      category: "fitness",
+      category: "exercise",
       subcategory: "yoga",
       tags: ["yoga", "free", "outdoor"],
       is_free: true,

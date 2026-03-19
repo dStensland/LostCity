@@ -28,15 +28,15 @@ We build a constellation of **first-party content pillar portals** (Citizen, Fam
 ### Crawlers
 ```bash
 cd crawlers
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 playwright install chromium
-python main.py              # run all crawlers
-python main.py --source the-earl  # run one source
-python main.py --list        # list sources
-python main.py --dry-run     # fetch without saving
-pytest                       # tests
+python3 main.py --dry-run              # validate all active crawlers without writes
+python3 main.py --source the-earl --dry-run  # validate one source without writes
+python3 main.py --list                 # list sources
+python3 main.py --allow-production-writes  # intentional production write run
+python3 -m pytest                      # tests
 ruff check .                 # lint
 black --check .              # formatting
 ```

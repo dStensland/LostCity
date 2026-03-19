@@ -1,0 +1,15 @@
+version: 1
+slug: fernbank-science-center
+name: Fernbank Science Center
+integration_method: html
+data_goals:
+  - events
+  - images
+  - venue_hours
+discovery:
+  enabled: true
+  type: html
+  urls:
+    - http://www.fernbank.edu/fsc.html
+detail:
+  enabled: true

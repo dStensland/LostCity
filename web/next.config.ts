@@ -61,6 +61,14 @@ const imageHosts = new Set([
   "cdn.evbuc.com",
   "s1.ticketm.net",
   "s1.ticketmaster.com",
+  "images.seatgeek.com",
+  "img.songkick.com",
+  "f4.bcbits.com",
+  // Music / streaming CDNs (Spotify artist/album art, etc.)
+  "i.scdn.co",
+  "mosaic.scdn.co",
+  // Meetup event images
+  "secure.meetupstatic.com",
   // Image CDNs
   "images.unsplash.com",
   "images.pexels.com",
@@ -82,6 +90,10 @@ const imageHosts = new Set([
   "14d14a1b70be1f7f7d4a-0863ae42a3340022d3e557e78745c047.ssl.cf5.rackcdn.com",
   "images.squarespace-cdn.com",
   "static1.squarespace.com",
+  "nbaf.org",
+  "www.nbaf.org",
+  "dogwood.org",
+  "www.dogwood.org",
   "www.foxtheatre.org",
   "www.dadsgaragetheatre.com",
   "alliancetheatre.org",

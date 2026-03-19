@@ -7,15 +7,17 @@ tours, and community gatherings. Site may use JavaScript rendering - using Playw
 
 from __future__ import annotations
 
-import re
 import logging
-from datetime import datetime
+import re
+from datetime import datetime, date
 from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
 logger = logging.getLogger(__name__)
@@ -35,6 +37,71 @@ BELTLINE_HQ = {
     "venue_type": "nonprofit",
     "website": BASE_URL,
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "park",
+            "commitment_tier": "halfday",
+            "primary_activity": "family trail and park visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["outdoor", "free-option", "family-daytrip"],
+            "best_time_of_day": "morning",
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "practical_notes": (
+                "The BeltLine's official visitor language centers trails, connected parks, public space, and family-friendly exploration across multiple neighborhoods."
+            ),
+            "fee_note": "Trail access, connected parks, and many public-space experiences are free; some classes, events, and rentals carry separate costs.",
+            "source_url": f"{BASE_URL}/visit/",
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": BELTLINE_HQ.get("venue_type"),
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "connected-trails-and-parks",
+            "title": "Connected trails and parks",
+            "feature_type": "amenity",
+            "description": "The BeltLine connects trails, parks, and public space across dozens of Atlanta neighborhoods, making it a flexible free family outing option.",
+            "url": f"{BASE_URL}/visit/",
+            "price_note": "Walking the trails and using connected public spaces is free.",
+            "is_free": True,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "free-public-art-and-explore-stops",
+            "title": "Free public art and explore stops",
+            "feature_type": "experience",
+            "description": "BeltLine trails pair outdoor movement with free public art, neighborhood stops, and easy exploration for mixed-age family outings.",
+            "url": f"{BASE_URL}/visit/",
+            "price_note": "Public art and trail exploration are free; nearby attractions vary.",
+            "is_free": True,
+            "sort_order": 20,
+        },
+    )
+    return envelope
 
 
 def determine_category(title: str, description: str = "") -> str:
@@ -162,6 +229,30 @@ def parse_time_from_text(text: str) -> Optional[str]:
     return None
 
 
+def _resolve_card_event_date(
+    month_abbr: str,
+    day_text: str,
+    *,
+    now: Optional[date] = None,
+) -> Optional[str]:
+    """Resolve a BeltLine month/day card into the next plausible ISO date."""
+    if not month_abbr or not day_text:
+        return None
+
+    today = now or datetime.now().date()
+    try:
+        month_num = datetime.strptime(month_abbr[:3].title(), "%b").month
+        day_num = int(day_text)
+        candidate = date(today.year, month_num, day_num)
+        if candidate < today:
+            candidate = date(today.year + 1, month_num, day_num)
+        if (candidate - today).days > 270:
+            return None
+        return candidate.strftime("%Y-%m-%d")
+    except (ValueError, TypeError):
+        return None
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """
     Crawl Atlanta BeltLine events using Playwright.
@@ -182,102 +273,88 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Get venue ID
             venue_id = get_or_create_venue(BELTLINE_HQ)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Atlanta BeltLine events: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(5000)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
-
             # Scroll to load all content
-            for _ in range(5):
+            for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page text
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            image_map = extract_images_from_page(page)
+            event_links = extract_event_links(page, BASE_URL)
 
-            # Parse line by line looking for events
-            i = 0
-            while i < len(lines):
-                line = lines[i]
+            link_nodes = page.query_selector_all("a[href*='/events/']")
+            logger.info("Found %s event links", len(link_nodes))
 
-                # Skip short lines and navigation
-                if (len(line) < 10 or
-                    line.lower() in ["home", "about", "contact", "donate", "events", "news", "visit", "plan"] or
-                    line.startswith("http")):
-                    i += 1
-                    continue
+            seen_hrefs: set[str] = set()
+            for link in link_nodes:
+                try:
+                    href = link.get_attribute("href")
+                    if not href or href in seen_hrefs or href.rstrip("/") == "/events":
+                        continue
+                    seen_hrefs.add(href)
 
-                # Check if this could be an event title
-                potential_title = line
-                description_parts = []
-                event_date = None
-                event_time = None
+                    text = link.inner_text().strip()
+                    lines = [line.strip() for line in text.split("\n") if line.strip()]
+                    if len(lines) < 4:
+                        continue
 
-                # Look ahead for date and description
-                for j in range(1, min(10, len(lines) - i)):
-                    next_line = lines[i + j]
+                    month_abbr = lines[0][:3].upper()
+                    day_text = lines[1]
 
-                    # Try to parse date
+                    title = None
+                    time_text = None
+                    for line in lines[2:]:
+                        if re.search(r"\d{1,2}:\d{2}(AM|PM)", line, re.IGNORECASE):
+                            time_text = line
+                            continue
+                        if line.isupper() or len(line) < 10:
+                            continue
+                        if line in {"IN-PERSON", "VIRTUAL"}:
+                            continue
+                        if not title:
+                            title = line
+                            break
+
+                    if not title:
+                        continue
+
+                    event_date = _resolve_card_event_date(month_abbr, day_text)
                     if not event_date:
-                        event_date = parse_date_from_text(next_line)
+                        continue
 
-                    # Try to parse time
-                    if not event_time:
-                        event_time = parse_time_from_text(next_line)
+                    start_time = parse_time_from_text(time_text or "")
+                    source_url = f"{BASE_URL}{href}" if href.startswith("/") else href
+                    if not source_url.startswith("http"):
+                        source_url = find_event_url(title, event_links, EVENTS_URL) or EVENTS_URL
 
-                    # Collect potential description text
-                    if len(next_line) > 30 and not parse_date_from_text(next_line):
-                        description_parts.append(next_line)
-
-                    # Stop if we've found enough or hit a new section
-                    if event_date and len(description_parts) >= 2:
-                        break
-
-                if event_date:
                     events_found += 1
+                    category = determine_category(f"{title} {text}")
+                    tags = extract_tags(title, text)
+                    is_free = is_free_event(title, text)
+                    content_hash = generate_content_hash(title, "Atlanta BeltLine", event_date)
 
-                    title = potential_title
-                    description = " ".join(description_parts[:3]) if description_parts else ""
-
-                    category = determine_category(title, description)
-                    tags = extract_tags(title, description)
-                    is_free = is_free_event(title, description)
-
-                    content_hash = generate_content_hash(
-                        title, "Atlanta BeltLine", event_date
-                    )
-
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    # Only use a real detail URL — listing page gives nothing useful
-                    is_detail_url = (
-                        event_url
-                        and event_url != EVENTS_URL
-                        and event_url != BASE_URL
-                        and "/events/" in event_url
-                        and len(event_url) > len(EVENTS_URL) + 2
-                    )
+                    card_image = None
+                    try:
+                        img_el = link.query_selector("img")
+                        if img_el:
+                            card_image = img_el.get_attribute("src") or img_el.get_attribute("data-src")
+                            if card_image and card_image.startswith("/"):
+                                card_image = f"{BASE_URL}{card_image}"
+                    except Exception:
+                        card_image = None
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": description[:500] if description else None,
+                        "description": None,
                         "start_date": event_date,
-                        "start_time": event_time,
+                        "start_time": start_time,
                         "end_date": None,
                         "end_time": None,
                         "is_all_day": False,
@@ -288,37 +365,33 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "price_max": None,
                         "price_note": None,
                         "is_free": is_free,
-                        "source_url": event_url or EVENTS_URL,
-                        "ticket_url": event_url if is_detail_url else None,
-                        "image_url": None,
-                        "raw_text": f"{title} | {event_date} | {description[:200]}"[:500],
-                        "extraction_confidence": 0.80,
+                        "source_url": source_url,
+                        "ticket_url": None,
+                        "image_url": card_image or image_map.get(title),
+                        "raw_text": text[:500],
+                        "extraction_confidence": 0.85,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
 
-                    # Enrich from detail page: fills description (og:description / JSON-LD),
-                    # image_url (og:image), price. Only fires when a real detail URL exists
-                    # and fields are missing.
-                    if is_detail_url:
-                        enrich_event_record(event_record, source_name="Atlanta BeltLine")
+                    enrich_event_record(event_record, source_name="Atlanta BeltLine")
 
                     existing = find_event_by_hash(content_hash)
                     if existing:
                         smart_update_existing_event(existing, event_record)
                         events_updated += 1
-                        i += 1
                         continue
 
                     try:
                         insert_event(event_record)
                         events_new += 1
-                        logger.info(f"Added: {title} on {event_date}")
+                        logger.info("Added: %s on %s", title, event_date)
                     except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
+                        logger.error("Failed to insert: %s: %s", title, e)
+                except Exception as exc:
+                    logger.debug("Failed to parse BeltLine card: %s", exc)
+                    continue
 
             browser.close()
 

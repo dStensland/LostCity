@@ -1,6 +1,5 @@
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import Link from "next/link";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
 
 interface MarketplaceEventCardProps {
   id: number;
@@ -58,8 +57,8 @@ export default function MarketplaceEventCard({
       {/* Image */}
       <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-[var(--mkt-cream)]">
         {imageUrl ? (
-          <Image
-            src={getProxiedImageSrc(imageUrl)}
+          <SmartImage
+            src={imageUrl}
             alt={title}
             fill
             sizes="80px"

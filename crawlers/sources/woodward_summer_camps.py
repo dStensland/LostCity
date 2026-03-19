@@ -88,6 +88,7 @@ WEEK_HEADER_RE = re.compile(
     re.IGNORECASE,
 )
 GRADES_RE = re.compile(r"([PKK]|\d+)\s+to\s+([PKK]|\d+)", re.IGNORECASE)
+FULL_DAY_WINDOW = ("07:30", "16:00")
 
 
 def _clean_text(value: Optional[str]) -> str:
@@ -200,6 +201,8 @@ def _parse_csv_rows(week_heading: str, csv_text: str, source_url: str) -> list[d
         director = _clean_text(normalized_record.get("Director"))
         if not title or title.startswith("Week "):
             continue
+        lowered_title = title.lower()
+        is_full_day = "full day" in lowered_title
         age_min, age_max = _parse_grade_range(grades)
         rows.append(
             {
@@ -212,9 +215,9 @@ def _parse_csv_rows(week_heading: str, csv_text: str, source_url: str) -> list[d
                 "ticket_url": REGISTER_URL,
                 "start_date": start_date,
                 "end_date": end_date,
-                "start_time": "08:30" if "full day" in title.lower() else None,
-                "end_time": "16:00" if "full day" in title.lower() else None,
-                "is_all_day": "full day" in title.lower(),
+                "start_time": FULL_DAY_WINDOW[0] if is_full_day else None,
+                "end_time": FULL_DAY_WINDOW[1] if is_full_day else None,
+                "is_all_day": is_full_day,
                 "age_min": age_min,
                 "age_max": age_max,
                 "price_min": None,

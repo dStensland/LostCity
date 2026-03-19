@@ -745,6 +745,24 @@ def main() -> int:
             cross_source.append("--dry-run")
         best_effort_steps.append(("Canonicalize cross-source duplicates", cross_source))
 
+        # Fuzzy cross-source dedup (catches near-duplicates missed by exact canonicalization)
+        fuzzy_dedup = [
+            py,
+            str(ROOT / "post_crawl_dedup.py"),
+            "--write",
+            "--days",
+            "30",
+        ]
+        if args.dry_run:
+            fuzzy_dedup = [
+                py,
+                str(ROOT / "post_crawl_dedup.py"),
+                "--dry-run",
+                "--days",
+                "30",
+            ]
+        best_effort_steps.append(("Fuzzy cross-source dedup", fuzzy_dedup))
+
     required_failures = 0
     best_effort_failures = 0
     stop_required_pipeline = False
@@ -813,6 +831,45 @@ def main() -> int:
     except Exception as exc:
         print(f"[WARN] Venue specials refresh failed: {exc}")
         best_effort_failures += 1
+
+    # --- Refresh pre-computed feed counts (feed_category_counts table) ---
+    # Calls refresh_feed_counts(portal_id) for every active portal so the
+    # city-pulse feed endpoint can read pre-aggregated counts instead of
+    # issuing 3 heavy category-scan queries per cold load.
+    if not args.dry_run:
+        try:
+            from db import get_client
+
+            client = get_client()
+            print("\n== Refresh feed category counts ==")
+            portal_rows = (
+                client.table("portals")
+                .select("id,slug")
+                .eq("status", "active")
+                .execute()
+                .data
+                or []
+            )
+            refreshed = 0
+            for portal in portal_rows:
+                pid = portal.get("id")
+                pslug = portal.get("slug", pid)
+                if not pid:
+                    continue
+                try:
+                    client.rpc("refresh_feed_counts", {"p_portal_id": pid}).execute()
+                    print(f"  [OK] portal={pslug}")
+                    refreshed += 1
+                except Exception as exc_inner:
+                    print(f"  [WARN] portal={pslug}: {exc_inner}")
+                    best_effort_failures += 1
+            print(f"[OK] Refreshed feed counts for {refreshed}/{len(portal_rows)} portals.")
+        except Exception as exc:
+            print(f"[WARN] Feed counts refresh failed: {exc}")
+            best_effort_failures += 1
+    else:
+        print("\n== Refresh feed category counts ==")
+        print("[SKIP] dry-run — skipping refresh_feed_counts RPC calls")
 
     launch_check = [
         py,

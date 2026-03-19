@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sources.atlanta_contemporary import (
+    _build_destination_envelope,
     build_exhibition_lane_record,
     build_exhibition_title,
     normalize_ongoing_exhibit_dates,
@@ -66,3 +67,19 @@ class TestBuildExhibitionLaneRecord:
         assert record["closing_date"] == "2026-05-17"
         assert record["metadata"]["display_start_date"] == "2026-03-09"
         assert artists == [{"artist_name": "Artist One"}]
+
+
+class TestBuildDestinationEnvelope:
+    def test_builds_family_destination_shape(self):
+        envelope = _build_destination_envelope(233)
+
+        assert envelope.destination_details[0]["destination_type"] == "art_museum"
+        assert envelope.destination_details[0]["commitment_tier"] == "hour"
+        assert envelope.destination_details[0]["family_suitability"] == "caution"
+        assert {feature["slug"] for feature in envelope.venue_features} == {
+            "free-contemporary-art-center",
+            "west-midtown-cultural-pairing-stop",
+        }
+        assert {special["slug"] for special in envelope.venue_specials} == {
+            "always-free-gallery-admission",
+        }

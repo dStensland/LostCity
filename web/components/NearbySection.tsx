@@ -6,8 +6,8 @@ import { CategoryIcons, CATEGORY_COLORS } from "@/components/CollapsibleSection"
 import CategoryIcon from "@/components/CategoryIcon";
 import { OpenStatusBadge } from "@/components/HoursSection";
 import { formatCloseTime, type HoursData } from "@/lib/hours";
-import VenueEventsByDay from "@/components/VenueEventsByDay";
-import { formatTimeSplit, formatCompactCount } from "@/lib/formats";
+import VenueEventsByDay, { VenueEventCard } from "@/components/VenueEventsByDay";
+import { SectionHeader } from "@/components/detail/SectionHeader";
 
 // Unified NearbySpot type accommodating both VenueDetailView (rich) and EventDetailView (lean)
 export type NearbySpot = {
@@ -33,7 +33,11 @@ export type RelatedEvent = {
   start_date: string;
   end_date?: string | null;
   start_time: string | null;
-  venue?: { id: number; name: string; slug: string } | null;
+  end_time?: string | null;
+  category?: string | null;
+  is_free?: boolean;
+  price_min?: number | null;
+  venue?: { id: number; name: string; slug: string; city?: string; neighborhood?: string | null; location_designator?: string } | null;
   going_count?: number;
   interested_count?: number;
   recommendation_count?: number;
@@ -141,13 +145,8 @@ export default function NearbySection({
 
   return (
     <div className="mt-8">
-      {/* Header — VenueDetailView's simpler pattern */}
-      <div className="mb-5 relative">
-        <h2 className="font-mono text-lg font-bold uppercase tracking-wider text-coral-strong">
-          <span className="text-blur-soft">Happening Around Here</span>
-        </h2>
-        <div className="absolute inset-0 pointer-events-none coral-sweep" />
-      </div>
+      {/* Header */}
+      <SectionHeader title="Around Here" />
 
       {/* Category Tab Bar */}
       {showTabBar && (
@@ -227,7 +226,8 @@ function NearbySpotCard({ spot, onClick }: { spot: NearbySpot; onClick: () => vo
   return (
     <button
       onClick={onClick}
-      className="group p-3 border border-[var(--twilight)] rounded-lg transition-colors hover:border-[var(--coral)]/50 bg-[var(--dusk)] text-left w-full"
+      className="block w-full text-left find-row-card border border-[var(--twilight)]/75 rounded-xl px-3 py-2.5 overflow-hidden group transition-colors hover:border-[var(--coral)]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]"
+      style={{ background: "linear-gradient(180deg, color-mix(in srgb, var(--night) 82%, transparent), color-mix(in srgb, var(--dusk) 64%, transparent))" }}
     >
       <div className="flex items-start gap-2.5">
         {/* Thumbnail or Category Icon */}
@@ -339,107 +339,21 @@ function EventsTabContent({
       {hasNearbyEvents && (
         <div>
           <h3 className="text-xs font-mono uppercase tracking-wider text-[var(--muted)] mb-2">
-            Nearby tonight
+            Nearby
           </h3>
           <div className="space-y-2">
             {nearbyEvents.map((event) => (
-              <NearbyEventCard
+              <VenueEventCard
                 key={event.id}
                 event={event}
                 onClick={() => onEventClick?.(event.id)}
+                compact={true}
+                subtitle={event.venue?.name}
               />
             ))}
           </div>
         </div>
       )}
     </div>
-  );
-}
-
-function NearbyEventCard({
-  event,
-  onClick,
-}: {
-  event: RelatedEvent;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="block w-full p-3 border border-[var(--twilight)] rounded-lg transition-colors group hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-            {event.title}
-          </h3>
-          <p className="text-xs text-[var(--muted)] mt-0.5">
-            {event.venue?.name || "Venue TBA"}
-            {event.start_time &&
-              ` · ${formatTimeSplit(event.start_time).time}${formatTimeSplit(event.start_time).period}`}
-          </p>
-          {((event.going_count ?? 0) > 0 ||
-            (event.interested_count ?? 0) > 0 ||
-            (event.recommendation_count ?? 0) > 0) && (
-            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-              {(event.going_count ?? 0) > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  {formatCompactCount(event.going_count ?? 0)} going
-                </span>
-              )}
-              {(event.interested_count ?? 0) > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-xs font-medium text-[var(--gold)]">
-                  {formatCompactCount(event.interested_count ?? 0)} maybe
-                </span>
-              )}
-              {(event.recommendation_count ?? 0) > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-xs font-medium text-[var(--lavender)]">
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-                    />
-                  </svg>
-                  {formatCompactCount(event.recommendation_count ?? 0)} rec&apos;d
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-        <svg
-          className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0 mt-0.5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 5l7 7-7 7"
-          />
-        </svg>
-      </div>
-    </button>
   );
 }

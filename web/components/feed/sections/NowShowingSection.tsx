@@ -110,7 +110,7 @@ export default function NowShowingSection({ portalSlug }: NowShowingSectionProps
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch("/api/showtimes?mode=by-theater&include_chains=true&meta=true", {
+    fetch(`/api/showtimes?mode=by-theater&include_chains=true&meta=true&portal=${portalSlug}`, {
       signal: controller.signal,
     })
       .then((res) => {
@@ -366,6 +366,7 @@ function TheaterCard({
                 alt=""
                 className="absolute inset-0 w-full h-full object-cover"
                 loading="lazy"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
               />
             </div>
           ))}

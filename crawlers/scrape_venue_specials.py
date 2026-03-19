@@ -39,6 +39,7 @@ import math
 import logging
 import argparse
 import xml.etree.ElementTree as ET
+import html as html_lib
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -52,6 +53,7 @@ from dotenv import load_dotenv
 load_dotenv(env_path)
 
 sys.path.insert(0, str(Path(__file__).parent))
+from config import get_config
 from db import get_client, insert_event
 from llm_client import generate_text
 from hours_utils import prepare_hours_update, should_update_hours
@@ -442,8 +444,49 @@ def _extract_price_note(text: str) -> Optional[str]:
             return match.group(0).strip(" .")
     if re.search(r"\bhappy hour\b", cleaned, re.I):
         compact = re.sub(r".*?\bhappy hour\b[:!\s-]*", "", cleaned, count=1, flags=re.I).strip(" .")
-        return compact[:160] if compact else None
+        if compact:
+            if (
+                "$" not in compact
+                and not re.search(
+                    r"\b(half|off|bogo|draft|beer|wine|cocktail|mimosa|well|appetizer|oyster|"
+                    r"taco|margarita|domestic|pitcher|flight|special)\b",
+                    compact,
+                    re.I,
+                )
+            ):
+                return None
+            return compact[:160]
+        return None
     return None
+
+
+def _looks_like_special_header(line: str) -> bool:
+    cleaned = line.strip()
+    if not cleaned or len(cleaned.split()) > 4:
+        return False
+    if not _SPECIAL_TRIGGER_RE.search(cleaned):
+        return False
+    lowered = cleaned.lower()
+    return (
+        lowered.endswith("menu")
+        or lowered in {"happy hour", "brunch", "bottomless brunch"}
+    )
+
+
+def _looks_like_schedule_fragment(line: str) -> bool:
+    cleaned = line.strip()
+    if not cleaned:
+        return False
+    if _DAY_OR_RANGE_ONLY_RE.match(cleaned):
+        return True
+    if _infer_days_from_text(cleaned):
+        return True
+    if _infer_time_from_text(cleaned)[0]:
+        return True
+    if re.search(r"\$\d", cleaned):
+        return True
+    lowered = cleaned.lower()
+    return lowered.endswith("menu") and len(cleaned.split()) <= 3
 
 
 def _candidate_special_text(lines: list[str], idx: int) -> Optional[str]:
@@ -467,6 +510,16 @@ def _candidate_special_text(lines: list[str], idx: int) -> Optional[str]:
                     following = lines[following_idx].strip()
                     if following and (re.search(r"\$\d", following) or _SPECIAL_TRIGGER_RE.search(following)):
                         parts.append(following)
+                break
+    elif _looks_like_special_header(line):
+        for next_idx in range(idx + 1, min(idx + 4, len(lines))):
+            nxt = lines[next_idx].strip()
+            if not nxt:
+                continue
+            if not _looks_like_schedule_fragment(nxt):
+                break
+            parts.append(nxt)
+            if _infer_days_from_text(" | ".join(parts)):
                 break
 
     candidate = " | ".join(part for part in parts if part)
@@ -518,13 +571,7 @@ def _fallback_extract_specials(text: str) -> list[dict]:
             continue
 
         lowered = candidate.lower()
-        special_type = "event_night" if any(
-            phrase in lowered
-            for phrase in (
-                "happy hour", "brunch", "taco", "wing", "oyster", "wine",
-                "margarita", "industry night", "ladies night", "bogo",
-            )
-        ) else "daily_special"
+        special_type = _infer_special_type(lowered)
 
         price_note = _extract_price_note(candidate)
         key = (title.lower(), tuple(days), time_start, price_note)
@@ -611,6 +658,24 @@ def _fallback_extract_data(combined: str) -> dict:
     if payload["hours"]:
         payload["_hours_source"] = "website"
     return payload
+
+
+def _supplement_with_fallback(data: dict, combined: str) -> tuple[dict, list[str]]:
+    """Fill missing high-value fields from heuristic extraction when LLM is sparse."""
+    fallback = _fallback_extract_data(combined)
+    supplemented: list[str] = []
+
+    if not data.get("specials") and fallback.get("specials"):
+        data["specials"] = fallback["specials"]
+        supplemented.append("specials")
+
+    if not data.get("hours") and fallback.get("hours"):
+        data["hours"] = fallback["hours"]
+        if fallback.get("_hours_source"):
+            data["_hours_source"] = fallback["_hours_source"]
+        supplemented.append("hours")
+
+    return data, supplemented
 
 
 def parse_bio_hours(text: str) -> Optional[dict]:
@@ -912,24 +977,20 @@ RULES:
    INDUSTRY & SOCIAL NIGHTS: Industry night, ladies' night, military/first responder discounts.
 
    DO NOT extract as specials: trivia, karaoke, open mic, live music, DJ nights, comedy,
-   drag shows, bingo, game nights, run clubs, or other programmed events. These are EVENTS,
-   not specials.
+   drag shows, bingo, game nights, run clubs, or other programmed entertainment. Those
+   are EVENT-LIKE NIGHTS and should only use type: "event_night" if they appear with a
+   clear recurring schedule.
 
-   FOOD/DRINK THEMED NIGHTS ARE EVENTS: Taco Tuesday, Wing Wednesday, Oyster Night,
-   Burger Night, Steak Night, Fish Fry Friday, Pizza Night, Sushi Night, Crawfish Boil,
-   BBQ Night, Hot Dog Night, Pasta Night — these are recurring EVENTS with an identity,
-   not just pricing deals. Use type: "event_night" for these.
+   FOOD/DRINK THEMED RECURRING DEALS STAY AS SPECIALS: Taco Tuesday, Wing Wednesday,
+   Oyster Night, Burger Night, Steak Night, Fish Fry Friday, Pizza Night, Sushi Night,
+   Crawfish Boil, BBQ Night, Hot Dog Night, Pasta Night, Margarita Monday, Wine Wednesday,
+   ladies night pricing, industry night pricing, and happy hours should remain destination
+   specials, not event_night.
 
-   HAPPY HOURS with a specific recurring schedule are events. Use type: "event_night".
-
-   NAMED BRUNCHES (Jazz Brunch, Bottomless Brunch, Weekend Brunch) are events.
-   Use type: "event_night".
-
-   LADIES NIGHT, WINE NIGHT/WEDNESDAY, MARGARITA MONDAY, INDUSTRY NIGHT — these are
-   social events. Use type: "event_night".
-
-   Keep type: "daily_special" ONLY for pure pricing deals without a "night" identity
-   (e.g., "$2 off all drafts" with no themed name).
+   HAPPY HOURS should use type: "happy_hour".
+   BRUNCH offers should use type: "brunch".
+   FOOD/DRINK weekly deals with a named identity should usually use type: "recurring_deal".
+   Keep type: "daily_special" for broader or less distinctive recurring pricing.
 
    DO NOT extract holiday hours, holiday specials, or one-off seasonal events.
 
@@ -960,13 +1021,12 @@ RULES:
    BAD: "$3 tacos every Tuesday" (repeats everything)
 
 8. TYPE MAPPING:
-   - Food/drink themed nights (Taco Tuesday, Wing Wednesday, etc.) → event_night
-   - Happy hours with recurring schedule → event_night
-   - Named brunches (Jazz Brunch, Bottomless Brunch) → event_night
-   - Ladies night, wine night, industry night → event_night
-   - Pure pricing deals without themed identity → daily_special
+   - Happy hour offers → happy_hour
+   - Weekend brunch / bottomless brunch / brunch pricing → brunch
+   - Food/drink themed weekly deals (Taco Tuesday, Wing Wednesday, Wine Wednesday, etc.) → recurring_deal
+   - Pure pricing deals without a distinct identity → daily_special
    - Pop-ups, guest chefs, seasonal menus → seasonal_menu
-   - Other recurring deals without event identity → recurring_deal
+   - Entertainment/programmed recurring nights (trivia, karaoke, open mic, DJ night, comedy, drag, bingo, run club) → event_night
 
 7. For hours: extract operating hours for each day of the week.
 8. For menu: find links to their menu page (food menu, drink menu, etc.).
@@ -978,7 +1038,7 @@ RULES:
 14. If information is unclear or not found, use null (or [] for arrays).
 15. Times should be 24-hour format "HH:MM".
 16. Days should be lowercase 3-letter abbreviations: "mon", "tue", "wed", "thu", "fri", "sat", "sun".
-17. special.type must be one of: happy_hour, daily_special, recurring_deal, brunch, seasonal_menu
+17. special.type must be one of: happy_hour, daily_special, recurring_deal, brunch, seasonal_menu, event_night
 18. Do NOT extract holiday_hours or holiday_specials. They are not useful.
 19. For cuisine: classify the venue's cuisine type(s). Use 1-3 tags from: mexican, vietnamese, japanese, chinese, thai, indian, korean, pizza, bbq, mediterranean, ethiopian, southern, seafood, french, italian, gastropub, vegan, bakery, deli, brunch_breakfast, steakhouse, chicken_wings, burgers, ice_cream_dessert, coffee, american, new_american, caribbean, cuban, peruvian, brazilian, african, middle_eastern, turkish, german, british, hawaiian, cajun_creole, tex_mex, fusion. Only set for food-serving venues.
 22. For service_style: one of "quick_service", "casual_dine_in", "full_service", "tasting_menu", "bar_food", "coffee_dessert". Infer from menu format, pricing, and self-description.
@@ -1112,6 +1172,67 @@ def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
+def _decode_embedded_json_string(value: str) -> str:
+    try:
+        return json.loads(f'"{value}"')
+    except Exception:
+        return html_lib.unescape(value)
+
+
+def _extract_popmenu_embedded_text(html: str) -> list[str]:
+    """Extract special-like menu lines from Popmenu embedded JSON blobs."""
+    if not html or "MenuItem:" not in html or "Menu:" not in html:
+        return []
+
+    menu_matches = re.findall(
+        r'"Menu:(\d+)":\{"__typename":"Menu","id":\d+,"name":"((?:[^"\\\\]|\\\\.)+)"',
+        html,
+    )
+    section_matches = re.findall(
+        r'"MenuSection:(\d+)":\{"__typename":"MenuSection","id":\d+,"name":"((?:[^"\\\\]|\\\\.)+)"',
+        html,
+    )
+    item_matches = re.findall(
+        r'"MenuItem:(\d+)":\{"__typename":"MenuItem".*?"name":"((?:[^"\\\\]|\\\\.)+)".*?"menu":\{"__ref":"Menu:(\d+)"\}.*?"section":\{"__ref":"MenuSection:(\d+)"\}',
+        html,
+        re.S,
+    )
+
+    menus = {menu_id: _decode_embedded_json_string(name) for menu_id, name in menu_matches}
+    sections = {section_id: _decode_embedded_json_string(name) for section_id, name in section_matches}
+    if not menus:
+        return []
+
+    items_by_menu: dict[str, list[tuple[str, str]]] = {}
+    for _item_id, item_name, menu_id, section_id in item_matches:
+        item_label = _decode_embedded_json_string(item_name)
+        section_label = sections.get(section_id, "")
+        items_by_menu.setdefault(menu_id, []).append((section_label, item_label))
+
+    lines: list[str] = []
+    for menu_id, menu_name in menus.items():
+        menu_items = items_by_menu.get(menu_id, [])
+        section_names = [section for section, _ in menu_items if section]
+        item_names = [item for _, item in menu_items if item]
+        joined_signal = " | ".join([menu_name] + section_names)
+        if not (
+            _SPECIAL_TRIGGER_RE.search(joined_signal)
+            or _infer_days_from_text(joined_signal)
+        ):
+            continue
+
+        parts = [menu_name]
+        if section_names:
+            unique_sections = list(dict.fromkeys(section_names))
+            parts.extend(unique_sections[:2])
+        if item_names:
+            unique_items = list(dict.fromkeys(item_names))
+            parts.append(", ".join(unique_items[:4]))
+        lines.append(" | ".join(part for part in parts if part))
+
+    return lines
+
+
 def fetch_page(url: str, timeout: int = 10, use_playwright: bool = True) -> Optional[str]:
     """Fetch a URL and return HTML. Falls back to Playwright on 403."""
     global _playwright_fallback_count
@@ -1140,6 +1261,7 @@ def fetch_page(url: str, timeout: int = 10, use_playwright: bool = True) -> Opti
 
 def extract_page_content(html: str, max_chars: int = 12000) -> str:
     """Extract meaningful text from HTML, stripping scripts/styles/nav."""
+    popmenu_lines = _extract_popmenu_embedded_text(html)
     soup = BeautifulSoup(html, "html.parser")
 
     # Remove non-content elements
@@ -1151,6 +1273,9 @@ def extract_page_content(html: str, max_chars: int = 12000) -> str:
     # Collapse multiple newlines
     lines = [line.strip() for line in text.split("\n") if line.strip()]
     text = "\n".join(lines)
+
+    if popmenu_lines:
+        text = text + "\n" + "\n".join(popmenu_lines)
 
     return text[:max_chars]
 
@@ -1476,9 +1601,9 @@ _EVENT_CONTENT_RE = re.compile(
     r"run club|jazz jam|game night|pub quiz|vinyl night)\b", re.I
 )
 
-# Content patterns for food/drink themed nights — these are recurring events,
-# not just price deals. "Taco Tuesday: $3 tacos" is an event with a price, not a special.
-_FOOD_NIGHT_RE = re.compile(
+# Content patterns for recurring food/drink deal language that should remain
+# destination specials even when they have a named weekly identity.
+_DEAL_CONTENT_RE = re.compile(
     r"\b(taco|wing|oyster|burger|steak|fish fry|pizza|sushi|pasta|crawfish|bbq|hot dog|"
     r"happy hour|brunch|ladies night|wine night|wine wednesday|margarita|industry night)\b", re.I
 )
@@ -1516,6 +1641,42 @@ _SPECIAL_TYPE_GENRES = {
 _ISO_TO_PYTHON_WEEKDAY = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6}
 _ISO_DAY_NAMES = {1: "monday", 2: "tuesday", 3: "wednesday", 4: "thursday",
                   5: "friday", 6: "saturday", 7: "sunday"}
+
+
+def _infer_special_type(text: str) -> str:
+    """Infer the destination-special type from the extracted text."""
+    lowered = text.lower()
+    if "happy hour" in lowered:
+        return "happy_hour"
+    if "brunch" in lowered:
+        return "brunch"
+    if any(
+        phrase in lowered
+        for phrase in (
+            "taco", "wing", "oyster", "wine", "margarita", "industry night",
+            "ladies night", "bogo", "half off", "half-price",
+        )
+    ):
+        return "recurring_deal"
+    return "daily_special"
+
+
+def _coerce_special_type(s: dict) -> str:
+    """Normalize extracted types so food/drink deals stay in venue_specials."""
+    raw_type = (s.get("type") or "daily_special").strip()
+    title = (s.get("title") or "").strip()
+    desc = (s.get("description") or "").strip()
+    combined_text = f"{title} {desc}".strip()
+
+    if raw_type in _HOLIDAY_TYPES:
+        return raw_type
+    if raw_type == "event_night":
+        if _EVENT_CONTENT_RE.search(combined_text):
+            return raw_type
+        return _infer_special_type(combined_text or title or desc)
+    if raw_type in {"happy_hour", "daily_special", "recurring_deal", "brunch", "seasonal_menu"}:
+        return raw_type
+    return _infer_special_type(combined_text or title or desc)
 
 
 def _fixup_common_fields(s: dict) -> dict:
@@ -1571,7 +1732,7 @@ def validate_specials(specials: list[dict]) -> list[dict]:
     """Filter and fix up extracted specials. Returns only valid food/drink deals."""
     validated = []
     for s in specials:
-        stype = s.get("type", "daily_special")
+        stype = _coerce_special_type(s)
 
         # Event and holiday types are handled separately
         if stype in _EVENT_TYPES or stype in _HOLIDAY_TYPES:
@@ -1585,9 +1746,6 @@ def validate_specials(specials: list[dict]) -> list[dict]:
         combined_text = f"{title} {desc}"
         # Entertainment events without price → events
         if _EVENT_CONTENT_RE.search(combined_text) and not price:
-            continue
-        # Food/drink themed nights → events (even with price)
-        if _FOOD_NIGHT_RE.search(combined_text):
             continue
 
         s = _fixup_common_fields(s)
@@ -1612,12 +1770,12 @@ def validate_specials(specials: list[dict]) -> list[dict]:
 def extract_event_items(specials: list[dict]) -> list[dict]:
     """Extract event-like items from raw LLM output.
 
-    Routes entertainment events (trivia, karaoke, etc.) AND food/drink themed
-    nights (Taco Tuesday, Happy Hour, etc.) to insert_event() instead of venue_specials.
+    Routes entertainment/programmed recurring nights to insert_event() instead
+    of venue_specials. Food/drink recurring deals remain destination specials.
     """
     events = []
     for s in specials:
-        stype = s.get("type", "daily_special")
+        stype = _coerce_special_type(s)
         title = (s.get("title") or "").strip()
         desc = (s.get("description") or "").strip()
         price = (s.get("price_note") or "").strip()
@@ -1627,10 +1785,8 @@ def extract_event_items(specials: list[dict]) -> list[dict]:
         is_event_type = stype in _EVENT_TYPES
         # Entertainment events: trivia, karaoke, etc. (no price = not a drink deal)
         is_entertainment = bool(_EVENT_CONTENT_RE.search(combined_text)) and not price
-        # Food/drink themed nights: route WITH or WITHOUT price — "$3 Taco Tuesday" is still an event
-        is_food_drink_night = bool(_FOOD_NIGHT_RE.search(combined_text))
 
-        if not is_event_type and not is_entertainment and not is_food_drink_night:
+        if not is_event_type and not is_entertainment:
             continue
 
         s = _fixup_common_fields(s)
@@ -1640,12 +1796,6 @@ def extract_event_items(specials: list[dict]) -> list[dict]:
             continue
         if not s["days"]:
             continue
-
-        # Fold price into description since events don't have price_note column
-        if price and is_food_drink_night:
-            existing_desc = s.get("description") or ""
-            if price not in existing_desc:
-                s["description"] = f"{price}. {existing_desc}" if existing_desc else price
 
         # Determine category from content
         category = "nightlife"  # default for event nights
@@ -2095,20 +2245,42 @@ def scrape_venue(venue: dict, use_playwright: bool = True, include_social_bios: 
     extraction_mode = "llm"
 
     # LLM extraction
-    try:
-        raw = generate_text(EXTRACTION_PROMPT, combined, provider_override="anthropic", model_override="claude-sonnet-4-20250514")
+    cfg = get_config()
+    primary_provider = (cfg.llm.provider or "").strip() or None
+    provider_attempts: list[tuple[Optional[str], Optional[str]]] = [
+        (primary_provider, None),
+    ]
+    if cfg.llm.openai_api_key and primary_provider != "openai":
+        provider_attempts.append(("openai", cfg.llm.openai_model))
+    if cfg.llm.anthropic_api_key and primary_provider != "anthropic":
+        provider_attempts.append(("anthropic", cfg.llm.model))
 
-        # Strip markdown code fences if present
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
-        if raw.endswith("```"):
-            raw = raw[:-3]
-        raw = raw.strip()
+    for provider_override, model_override in provider_attempts:
+        try:
+            raw = generate_text(
+                EXTRACTION_PROMPT,
+                combined,
+                provider_override=provider_override,
+                model_override=model_override,
+            )
 
-        data = json.loads(raw)
-    except (json.JSONDecodeError, Exception) as e:
-        logger.info(f"  LLM extraction failed: {e}")
+            # Strip markdown code fences if present
+            raw = raw.strip()
+            if raw.startswith("```"):
+                raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+            if raw.endswith("```"):
+                raw = raw[:-3]
+            raw = raw.strip()
+
+            data = json.loads(raw)
+            provider_label = provider_override or primary_provider or "auto"
+            logger.info(f"  LLM extraction provider: {provider_label}")
+            break
+        except (json.JSONDecodeError, Exception) as e:
+            provider_label = provider_override or primary_provider or "auto"
+            logger.info(f"  LLM extraction failed via {provider_label}: {e}")
+
+    if data is None:
         data = _fallback_extract_data(combined)
         extraction_mode = "heuristic"
 
@@ -2117,6 +2289,10 @@ def scrape_venue(venue: dict, use_playwright: bool = True, include_social_bios: 
             f"  Fallback extraction: {len(data.get('specials', []))} specials"
             + (" + hours" if data.get("hours") else "")
         )
+    else:
+        data, supplemented = _supplement_with_fallback(data, combined)
+        if supplemented:
+            logger.info(f"  Heuristic supplementation added: {', '.join(supplemented)}")
 
     data = merge_meta_and_validate(data, meta, venue)
 

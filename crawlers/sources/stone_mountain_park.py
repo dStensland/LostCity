@@ -57,11 +57,21 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
+
 BASE_URL = "https://stonemountainpark.com"
 EVENTS_LISTING_URL = f"{BASE_URL}/activities/events/"
+ATTRACTIONS_URL = f"{BASE_URL}/activities/attractions/"
 
 # ── Venue record ──────────────────────────────────────────────────────────────
 VENUE_DATA = {
@@ -95,6 +105,122 @@ VENUE_DATA = {
         "sunday": {"open": "05:00", "close": "24:00"},
     },
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "regional_park",
+            "commitment_tier": "fullday",
+            "primary_activity": "family outdoor destination visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["outdoor", "family-daytrip", "weekend-trip"],
+            "parking_type": "paid_lot",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "Stone Mountain works best as an earlier-start full-day family outing, because the park's "
+                "footprint is large and attraction schedules, parking, and festival access vary by season. "
+                "Families should treat it as a paced day with rest stops and activity picks, not as a single continuous walk."
+            ),
+            "accessibility_notes": (
+                "The attraction cluster offers the lowest-friction family entry points, while trail and mountain "
+                "terrain vary more by route and activity. That makes shade, sit-down breaks, and choosing shorter loops more important here than at compact city destinations."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Park entry and attractions pricing vary by date and festival; it remains one of metro Atlanta's biggest family day-trip destinations.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "park",
+                "city": "stone mountain",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "summit-skyride-and-mountain-attractions",
+            "title": "Summit Skyride and mountain attractions",
+            "feature_type": "attraction",
+            "description": "Stone Mountain Park combines its natural landmark with family attractions like the Summit Skyride and other seasonal adventure offerings.",
+            "url": ATTRACTIONS_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "seasonal-family-festivals-and-holiday-programming",
+            "title": "Seasonal family festivals and holiday programming",
+            "feature_type": "amenity",
+            "description": "Pumpkin Festival, Christmas, Yellow Daisy Festival, and other seasonal events make Stone Mountain a repeat family destination across the year.",
+            "url": EVENTS_LISTING_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "geyser-splash-pad-and-water-play",
+            "title": "Geyser splash pad and water play",
+            "feature_type": "amenity",
+            "description": "Stone Mountain Park's official attractions page includes Geyser Splash Pad, giving families a real hot-weather water-play stop inside the larger park visit.",
+            "url": ATTRACTIONS_URL,
+            "price_note": "Splash-pad access follows park attraction schedules and ticketing.",
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "choose-your-range-with-rest-breaks",
+            "title": "Choose your range with rest breaks",
+            "feature_type": "amenity",
+            "description": "Stone Mountain works best when families choose a few anchor attractions and pace the day around shade, snacks, and rest instead of trying to cover the whole park in one push.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 35,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "dinotorium-and-dinosaur-explore",
+            "title": "Dinotorium and Dinosaur Explore",
+            "feature_type": "attraction",
+            "description": "Stone Mountain Park's official family attractions include Dinotorium and Dinosaur Explore, which make the park stronger for kid-focused visits beyond scenic time outdoors.",
+            "url": ATTRACTIONS_URL,
+            "is_free": False,
+            "sort_order": 40,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "scenic-railroad-and-lower-walk-family-loop",
+            "title": "Scenic Railroad and lower-walk family loop",
+            "feature_type": "experience",
+            "description": "Stone Mountain Park's attraction mix includes lower-walk options like the Scenic Railroad, which helps families build a fuller day without relying only on long-distance walking.",
+            "url": ATTRACTIONS_URL,
+            "is_free": False,
+            "sort_order": 50,
+        },
+    )
+    return envelope
 
 # ── Date parsing helpers ──────────────────────────────────────────────────────
 # Matches "3/7/2026 — 4/26/2026" or "5/22/2026 — 5/25/2026"
@@ -721,6 +847,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
+        persist_typed_entity_envelope(_build_destination_envelope(venue_id))
     except Exception as e:
         logger.error(f"Stone Mountain Park: could not get/create venue: {e}")
         raise

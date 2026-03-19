@@ -192,7 +192,7 @@ def check_image_url(url: str) -> tuple[bool, str]:
         return False, "empty"
 
     headers = {
-        "User-Agent": "LostCityBot/1.0 (https://lostcity.app; contact@lostcity.app)",
+        "User-Agent": "LostCityBot/1.0 (https://lostcity.ai; contact@lostcity.ai)",
         "Accept": "image/*,*/*;q=0.8",
     }
 

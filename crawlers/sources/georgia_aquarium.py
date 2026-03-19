@@ -21,12 +21,22 @@ from playwright.sync_api import sync_playwright
 
 from db import get_client, get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record, parse_date_range
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.georgiaaquarium.org"
 EVENTS_URL = f"{BASE_URL}/event-calendar/"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
 
 VENUE_DATA = {
     "name": "Georgia Aquarium",
@@ -67,6 +77,109 @@ MONTHS = {
     "may": 5, "june": 6, "july": 7, "august": 8,
     "september": 9, "october": 10, "november": 11, "december": 12,
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "aquarium",
+            "commitment_tier": "halfday",
+            "primary_activity": "family aquarium visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+            "parking_type": "garage",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "Georgia Aquarium works best with a timed-entry mindset and an indoor half-day plan, "
+                "especially on weekends and school-break days when downtown family demand is highest. "
+                "It is also one of the easier big-ticket outings for bathroom breaks, air-conditioning, and mid-visit resets."
+            ),
+            "accessibility_notes": (
+                "The aquarium's indoor galleries make it one of the easier downtown destinations for strollers "
+                "and weather-proof family outings compared with longer outdoor attractions, with less walking friction "
+                "than most zoo- or garden-scale family destinations."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "General admission and specialty experiences vary by date and package; it remains one of the city's strongest indoor family anchors.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "aquarium",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "weather-proof-marine-galleries",
+            "title": "Weather-proof marine galleries",
+            "feature_type": "amenity",
+            "description": "Large indoor galleries make Georgia Aquarium a reliable weather-flex family option when outdoor plans fall apart.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "stroller-friendly-downtown-anchor",
+            "title": "Stroller-friendly downtown anchor",
+            "feature_type": "amenity",
+            "description": "The aquarium's indoor circulation and central location make it easier to pair with a downtown family plan than attractions that require more exposed walking.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "easy-bathroom-and-cool-down-resets",
+            "title": "Easy bathroom and cool-down resets",
+            "feature_type": "amenity",
+            "description": "Georgia Aquarium is one of the lower-friction family outings for indoor bathroom breaks, air-conditioning, and quick resets without leaving the attraction.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "children-2-and-under-free",
+            "title": "Children 2 and under free",
+            "description": "Children age 2 and under receive free admission, which lowers the barrier for families using the aquarium as a major downtown indoor anchor with very young kids.",
+            "price_note": "Children 2 and under are free.",
+            "is_free": True,
+            "source_url": BASE_URL,
+            "category": "admission",
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "community-access-discount-admission",
+            "title": "Community Access discount admission",
+            "description": "Georgia Aquarium offers a recurring lower-cost access path through its community admission program, which makes a high-ticket anchor more reachable for eligible families.",
+            "price_note": "Discount admission available through the aquarium's Community Access program.",
+            "is_free": False,
+            "source_url": BASE_URL,
+            "category": "admission",
+        },
+    )
+    return envelope
 
 
 def parse_date_line(line: str) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -192,6 +305,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             # Enrich venue with og:image and og:description from homepage on first pass
             try:

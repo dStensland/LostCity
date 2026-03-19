@@ -170,6 +170,7 @@ export default async function CollectionPage({ params }: Props) {
                 src={collection.cover_image_url}
                 alt={`Cover image for ${collection.title} collection`}
                 fill
+                sizes="100vw"
                 className="object-cover"
               />
             </div>
@@ -243,7 +244,7 @@ function CollectionEventCard({ item }: { item: CollectionItem }) {
       {/* Image or Category Icon */}
       <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-[var(--twilight)] flex items-center justify-center relative">
         {event.image_url ? (
-          <Image src={event.image_url} alt={`${event.title} event image`} fill className="object-cover" />
+          <Image src={event.image_url} alt={`${event.title} event image`} fill sizes="64px" className="object-cover" />
         ) : (
           <CategoryIcon type={event.category || "other"} size={24} />
         )}

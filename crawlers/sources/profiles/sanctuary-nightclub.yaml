@@ -1,0 +1,11 @@
+version: 1
+slug: sanctuary-nightclub
+name: Sanctuary Nightclub
+integration_method: python
+defaults: {}
+discovery:
+  enabled: false
+detail:
+  enabled: false
+data_goals:
+- events

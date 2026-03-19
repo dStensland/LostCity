@@ -80,9 +80,10 @@ export const HangShareFlow = memo(function HangShareFlow({
     }
   };
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://lostcity.ai";
   const venueUrl = hang.venue.slug
-    ? `https://lostcity.app/${portalSlug}/spots/${hang.venue.slug}`
-    : `https://lostcity.app/${portalSlug}`;
+    ? `${siteUrl}/${portalSlug}/spots/${hang.venue.slug}`
+    : `${siteUrl}/${portalSlug}`;
 
   const handleShare = useCallback(async () => {
     triggerHaptic("success");

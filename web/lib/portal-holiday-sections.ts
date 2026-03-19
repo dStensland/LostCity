@@ -204,27 +204,6 @@ export function buildPortalHolidaySections(
   }
 
   if (
-    (currentMonth === 2 && currentDay >= 18) ||
-    (currentMonth === 3 && currentDay <= 19)
-  ) {
-    holidaySections.push(
-      createHolidaySection(currentYear, {
-        idPrefix: "ramadan",
-        title: "Ramadan",
-        slug: "ramadan",
-        description: "Iftars, community meals & reflection",
-        tag: "ramadan",
-        dateFilter: "next_30_days",
-        displayOrder: -9,
-        style: {
-          accent_color: "#c5a028",
-          icon: "crescent-moon",
-        },
-      }),
-    );
-  }
-
-  if (
     (currentMonth === 2 && currentDay >= 28) ||
     (currentMonth === 3 && currentDay <= 5)
   ) {

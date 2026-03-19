@@ -11,8 +11,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import Image from "next/image";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
+import SmartImage from "@/components/SmartImage";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import CategoryIcon from "@/components/CategoryIcon";
 import type { AddItineraryItemInput } from "@/lib/itinerary-utils";
@@ -451,7 +450,6 @@ export default function AddStopPanel({
             )}
 
             {!suggestionsLoading && filteredSuggestions.map((s) => {
-              const imgSrc = s.image_url ? getProxiedImageSrc(s.image_url) : null;
               return (
                 <button
                   key={`${s.type}-${s.id}`}
@@ -462,9 +460,9 @@ export default function AddStopPanel({
                     className="shrink-0 w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center"
                     style={{ background: "rgba(255, 255, 255, 0.04)", border: "1px solid rgba(255, 255, 255, 0.06)" }}
                   >
-                    {imgSrc ? (
-                      <Image
-                        src={typeof imgSrc === "string" ? imgSrc : ""}
+                    {s.image_url ? (
+                      <SmartImage
+                        src={s.image_url}
                         alt={s.title}
                         width={36}
                         height={36}

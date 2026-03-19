@@ -87,3 +87,44 @@ def test_should_skip_non_transient_after_many_failures(monkeypatch, tmp_path):
 
     assert should_skip is True
     assert reason == "consecutive_failures=6"
+
+
+def test_cancel_stale_runs_marks_old_running_rows_cancelled(monkeypatch, tmp_path):
+    import crawler_health as ch
+
+    monkeypatch.setattr(ch, "HEALTH_DB_PATH", str(tmp_path / "crawler_health.db"))
+    ch.init_health_db()
+
+    with ch.get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO crawl_runs (source_slug, started_at, status)
+            VALUES (?, ?, 'running')
+            """,
+            ("stale-source", (datetime.utcnow() - timedelta(hours=3)).isoformat()),
+        )
+        cursor.execute(
+            """
+            INSERT INTO crawl_runs (source_slug, started_at, status)
+            VALUES (?, ?, 'running')
+            """,
+            ("fresh-source", datetime.utcnow().isoformat()),
+        )
+        conn.commit()
+
+    cancelled = ch.cancel_stale_runs(max_age_minutes=120)
+
+    assert cancelled == 1
+    with ch.get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT source_slug, status, error_type FROM crawl_runs ORDER BY source_slug"
+        )
+        rows = cursor.fetchall()
+
+    assert rows[0]["source_slug"] == "fresh-source"
+    assert rows[0]["status"] == "running"
+    assert rows[1]["source_slug"] == "stale-source"
+    assert rows[1]["status"] == "cancelled"
+    assert rows[1]["error_type"] == "cancelled"

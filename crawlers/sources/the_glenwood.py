@@ -16,7 +16,7 @@ VENUE_DATA = {
     "name": "The Glenwood",
     "slug": "the-glenwood",
     "address": "1263 Glenwood Ave SE",
-    "neighborhood": "East Atlanta",
+    "neighborhood": "East Atlanta Village",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30316",

@@ -1,0 +1,24 @@
+version: 1
+slug: 404-day
+name: 404 Day
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://404day.com/events
+  fetch:
+    render_js: false
+detail:
+  enabled: false
+data_goals:
+- events
+- images
+- tickets
+notes: >
+  Atlanta's annual free outdoor music and culture festival at Piedmont Park,
+  held every April 4th (April 4 = "404"). Free admission, sponsored by
+  Coca-Cola, MARTA, and others. 2026 is the 15th annual event. The site
+  also lists a separate ticketed hip-hop concert night at Stankonia Studios.
+  Uses schema.org JSON-LD for authoritative event metadata.

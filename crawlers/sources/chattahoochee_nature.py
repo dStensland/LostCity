@@ -63,6 +63,8 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +114,105 @@ _VENUE_DATA = {
         "sunday": {"open": "12:00", "close": "17:00"},
     },
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "nature_center",
+            "commitment_tier": "halfday",
+            "primary_activity": "family nature center visit",
+            "best_seasons": ["spring", "summer", "fall"],
+            "weather_fit_tags": ["outdoor", "indoor-option", "family-daytrip"],
+            "best_time_of_day": "morning",
+            "parking_type": "free_lot",
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "practical_notes": (
+                "127-acre nature sanctuary on the Chattahoochee River with wildlife exhibits, canoe trips, guided hikes, summer camps, and a discovery center. "
+                "It works well as an easy nature-day option when families want both trails and an indoor fallback. "
+                "The best family version is to choose a shorter trail range and use the indoor exhibits as part of the day, not only the backup plan."
+            ),
+            "accessibility_notes": (
+                "The discovery-center and exhibit layer give families a lower-friction entry point, while trails and river-oriented experiences vary more by terrain and activity. "
+                "That makes it easier than a pure trail destination to adapt the visit around stamina, shade, or weather shifts."
+            ),
+            "fee_note": "General-admission access, camps, and specialty programs can carry separate pricing.",
+            "source_url": _BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": _VENUE_DATA.get("venue_type"),
+                "city": "roswell",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "river-trails-and-canoe-trips",
+            "title": "River trails and canoe trips",
+            "feature_type": "experience",
+            "description": "Chattahoochee Nature Center combines trails along the river with family-friendly canoe and guided nature experiences.",
+            "url": _BASE_URL,
+            "price_note": "Some guided experiences and canoe programs require separate registration.",
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "wildlife-exhibits-and-discovery-center",
+            "title": "Wildlife exhibits and discovery center",
+            "feature_type": "amenity",
+            "description": "Wildlife exhibits and an indoor discovery component make the center useful for family nature outings even when a full outdoor trek is not the goal.",
+            "url": _BASE_URL,
+            "price_note": "Included programming and exhibit access vary by admission and event schedule.",
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "short-trail-range-with-indoor-backup",
+            "title": "Short trail range with indoor backup",
+            "feature_type": "amenity",
+            "description": "Chattahoochee Nature Center is strongest when families can keep the trail piece shorter and use the discovery-center layer for shade, bathrooms, and easier resets.",
+            "url": _BASE_URL,
+            "is_free": False,
+            "sort_order": 25,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "easy-trails-plus-indoor-fallback",
+            "title": "Easy trails plus indoor fallback",
+            "feature_type": "amenity",
+            "description": "Chattahoochee Nature Center gives families a practical mix of lighter trails and indoor discovery space, which lowers the risk of a nature outing falling apart on weather or energy.",
+            "url": _BASE_URL,
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    return envelope
 
 # ---------------------------------------------------------------------------
 # Title skip patterns — administrative notices, not public events
@@ -693,6 +794,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     # Ensure venue record exists
     try:
         venue_id = get_or_create_venue(_VENUE_DATA)
+        persist_typed_entity_envelope(_build_destination_envelope(venue_id))
     except Exception as exc:
         logger.error("[cnc] Failed to create/find venue: %s", exc)
         return 0, 0, 0

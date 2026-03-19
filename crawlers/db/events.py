@@ -65,8 +65,14 @@ from planning_capabilities import (
 )
 from utils import is_likely_non_event_image
 from closed_venues import CLOSED_VENUE_SLUGS
+from tba_policy import classify_tba_event
 
 logger = logging.getLogger(__name__)
+
+_RECOVERABLE_EVENT_DUPLICATE_INDEXES = (
+    "idx_events_unique_source_venue_slot_norm_title_timed",
+    "idx_events_unique_source_venue_slot_norm_title_notimed",
+)
 
 _AGGREGATOR_SOURCE_PREFIXES = (
     "ticketmaster",
@@ -568,7 +574,12 @@ def _step_enrich_music(event_data: dict, ctx: InsertContext) -> dict:
     if event_data.get("category") != "music":
         return event_data
 
-    _music_title_for_enrich = event_data.get("title", "")
+    # Use pre-parsed headliner name if available (from _step_parse_artists),
+    # otherwise fall back to the raw title for extraction.
+    if ctx.parsed_artists:
+        _music_title_for_enrich = ctx.parsed_artists[0].get("name") or event_data.get("title", "")
+    else:
+        _music_title_for_enrich = event_data.get("title", "")
     _music_image_for_enrich = event_data.get("image_url")
     _music_genres_for_enrich = ctx.genres
     try:
@@ -671,13 +682,19 @@ def _step_resolve_series(event_data: dict, ctx: InsertContext) -> dict:
         series_hint = {
             "series_type": "class_series",
             "series_title": event_data.get("title"),
+            "venue_id": event_data.get("venue_id"),
         }
 
     if not series_hint and event_data.get("is_recurring"):
         series_hint = {
             "series_type": "recurring_show",
             "series_title": event_data.get("title"),
+            "venue_id": event_data.get("venue_id"),
         }
+
+    # Include venue_id for venue-scoped series matching (class_series, recurring_show)
+    if event_data.get("venue_id") and series_hint:
+        series_hint.setdefault("venue_id", event_data["venue_id"])
 
     ctx.series_hint = series_hint
     return event_data
@@ -817,6 +834,9 @@ def _step_set_flags(event_data: dict, ctx: InsertContext) -> dict:
 
     if event_data.get("price_min") is not None and event_data["price_min"] > 0:
         event_data["is_free"] = False
+    elif event_data.get("is_free") is False and event_data.get("price_min") is None:
+        # is_free=False with no price data is semantically "unknown" — normalize to None
+        event_data["is_free"] = None
 
     return event_data
 
@@ -828,9 +848,14 @@ def _step_show_signals(event_data: dict, ctx: InsertContext) -> dict:
     )
     if events_support_show_signal_columns():
         event_data.update(derive_show_signals(event_data))
+        # Stamp the check time whenever ticket_status is present so the
+        # planning horizon urgency signals stay current.
+        if event_data.get("ticket_status"):
+            event_data["ticket_status_checked_at"] = datetime.utcnow().isoformat()
     else:
         for field in signal_fields:
             event_data.pop(field, None)
+        event_data.pop("ticket_status_checked_at", None)
     return event_data
 
 
@@ -896,7 +921,8 @@ def _step_finalize(event_data: dict, ctx: InsertContext) -> dict:
         if genres and not series_hint.get("genres"):
             series_hint["genres"] = genres
         series_id = get_or_create_series(
-            ctx.client, series_hint, event_data.get("category")
+            ctx.client, series_hint, event_data.get("category"),
+            venue_id=series_hint.get("venue_id"),
         )
         if series_id:
             event_data["series_id"] = series_id
@@ -975,8 +1001,8 @@ INSERT_PIPELINE = [
     _step_resolve_venue,
     _step_normalize_image,
     _step_enrich_film,
-    _step_enrich_music,
     _step_parse_artists,
+    _step_enrich_music,
     _step_infer_category,
     _step_resolve_series,
     _step_infer_genres,
@@ -1016,6 +1042,100 @@ def _write_event_extraction(client, event_id: int, extraction_data: dict) -> Non
         client.table("event_extractions").upsert(payload, on_conflict="event_id").execute()
     except Exception as e:
         logger.debug("Failed to write event_extractions for event %s: %s", event_id, e)
+
+
+# ---------------------------------------------------------------------------
+# Importance inference
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Importance inference: determines which events earn "major" tier
+# ---------------------------------------------------------------------------
+# An event earns "major" (= worth planning ahead for) if ANY of:
+#   1. Part of a festival (has festival_id or series→festival_id)
+#   2. Arena concert/show: capacity_tier 5, music or theater category
+#   3. Amphitheater headliner: capacity_tier 4, music category
+#   4. Has sellout_risk in (medium, high)
+#
+# EXCLUDED regardless of venue size:
+#   - Regular-season sports (category=sports)
+#   - Tours, fitness, community, unknown categories
+#   - Classes (is_class=true)
+#   - Admin/billing noise (title patterns)
+#   - Tier 3 and below venues (Tabernacle, Masquerade, Eastern, etc.)
+
+_IMPORTANCE_ELIGIBLE_CATEGORIES_TIER5 = frozenset({"music", "theater", "comedy", "art", "food_drink", "family"})
+_IMPORTANCE_ELIGIBLE_CATEGORIES_TIER4 = frozenset({"music"})
+
+_IMPORTANCE_SKIP_TITLE_RES = [
+    re.compile(r"^tours?:", re.IGNORECASE),
+    re.compile(r"\btour\b.*\bpark\b", re.IGNORECASE),
+    re.compile(r"\bopen gym\b", re.IGNORECASE),
+    re.compile(r"\bworkout day\b", re.IGNORECASE),
+    re.compile(r"\bselect.a.seat\b", re.IGNORECASE),
+    re.compile(r"\bsymposium\b", re.IGNORECASE),
+    re.compile(r"\bconference\b", re.IGNORECASE),
+    re.compile(r"\btraining event\b", re.IGNORECASE),
+    re.compile(r"\bmember open\b", re.IGNORECASE),
+    re.compile(r"\bsuite season\b", re.IGNORECASE),
+    re.compile(r"\bsth deposit\b", re.IGNORECASE),
+    re.compile(r"^event for calendar\b", re.IGNORECASE),
+]
+
+
+def _maybe_infer_importance(event_id: int, event_data: dict) -> None:
+    """Auto-set importance='major' for events worth planning ahead for.
+
+    Criteria: arena/amphitheater concerts, festival programs, or sellout risk.
+    Regular-season sports, tours, classes, and tier-3-and-below venues are excluded.
+    Never downgrades.
+    """
+    if not writes_enabled():
+        return
+
+    current_importance = event_data.get("importance", "standard")
+    if current_importance in ("flagship", "major"):
+        return  # Already elevated, don't touch
+
+    # Quick-reject: classes and title noise
+    if event_data.get("is_class"):
+        return
+    title = event_data.get("title", "")
+    if any(p.search(title) for p in _IMPORTANCE_SKIP_TITLE_RES):
+        return
+
+    category = event_data.get("category", "")
+    should_upgrade = False
+
+    # Path 1: sellout risk
+    if event_data.get("sellout_risk") in ("medium", "high"):
+        should_upgrade = True
+
+    # Path 2: venue capacity — tier 5 (arenas/stadiums) or tier 4 (amphitheaters)
+    if not should_upgrade:
+        venue_id = event_data.get("venue_id")
+        if venue_id:
+            venue = get_venue_by_id_cached(int(venue_id))
+            capacity_tier = venue.get("capacity_tier") if venue else None
+
+            if capacity_tier and capacity_tier >= 5 and category in _IMPORTANCE_ELIGIBLE_CATEGORIES_TIER5:
+                should_upgrade = True
+            elif capacity_tier and capacity_tier >= 4 and category in _IMPORTANCE_ELIGIBLE_CATEGORIES_TIER4:
+                should_upgrade = True
+
+    if should_upgrade:
+        try:
+            client = get_client()
+            client.table("events").update({"importance": "major"}).eq(
+                "id", event_id
+            ).eq("importance", "standard").execute()
+            logger.info(
+                "Auto-inferred importance='major' for event %s (category=%s)",
+                event_id,
+                category,
+            )
+        except Exception as e:
+            logger.debug("importance inference failed for event %s: %s", event_id, e)
 
 
 # ---------------------------------------------------------------------------
@@ -1073,8 +1193,27 @@ def insert_event(
     if has_event_extractions_table():
         extraction_data = _pop_extraction_columns(event_data)
 
-    result = _insert_event_record(client, event_data)
-    event_id = result.data[0]["id"]
+    try:
+        result = _insert_event_record(client, event_data)
+        event_id = result.data[0]["id"]
+    except Exception as exc:
+        if not _is_recoverable_event_duplicate(exc):
+            raise
+        existing = find_existing_event_for_insert(event_data)
+        if not existing:
+            raise
+        if ctx.parsed_artists and not event_data.get("_parsed_artists"):
+            event_data["_parsed_artists"] = ctx.parsed_artists
+        smart_update_existing_event(existing, event_data)
+        if images_for_insert:
+            upsert_event_images(existing["id"], images_for_insert)
+        if links_for_insert:
+            upsert_event_links(existing["id"], links_for_insert)
+        logger.info(
+            "Recovered duplicate event insert as smart update: %s",
+            (event_data.get("title") or "untitled")[:80],
+        )
+        return existing["id"]
 
     # Write extraction data to the separate table
     if extraction_data:
@@ -1084,7 +1223,7 @@ def insert_event(
 
     if ctx.parsed_artists:
         try:
-            upsert_event_artists(event_id, ctx.parsed_artists)
+            upsert_event_artists(event_id, ctx.parsed_artists, pre_parsed=True)
         except Exception as e:
             logger.debug(f"Auto event_artists failed for event {event_id}: {e}")
 
@@ -1100,6 +1239,8 @@ def insert_event(
         except Exception as e:
             logger.debug(f"Auto event_links failed for event {event_id}: {e}")
 
+    _maybe_infer_importance(event_id, event_data)
+
     return event_id
 
 
@@ -1107,6 +1248,13 @@ def insert_event(
 def _insert_event_record(client, event_data: dict):
     """Insert event row with retries for transient socket/network errors."""
     return client.table("events").insert(event_data).execute()
+
+
+def _is_recoverable_event_duplicate(exc: Exception) -> bool:
+    text = str(exc or "")
+    if "duplicate key value violates unique constraint" not in text:
+        return False
+    return any(index_name in text for index_name in _RECOVERABLE_EVENT_DUPLICATE_INDEXES)
 
 
 def update_event(event_id: int, event_data: dict) -> None:
@@ -1221,6 +1369,42 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
         updates["ticket_url"] = incoming["ticket_url"]
     if _should_promote_incoming_url(existing.get("source_url"), incoming.get("source_url")):
         updates["source_url"] = incoming["source_url"]
+
+    # Planning horizon fields — only set if incoming has value AND existing is empty
+    for field in (
+        "on_sale_date",
+        "presale_date",
+        "early_bird_deadline",
+        "announce_date",
+        "registration_opens",
+        "registration_closes",
+        "registration_url",
+        "sellout_risk",
+    ):
+        if incoming.get(field) and not existing.get(field):
+            updates[field] = incoming[field]
+
+    # importance: only upgrade, never downgrade (flagship > major > standard)
+    _IMPORTANCE_RANK = {"flagship": 3, "major": 2, "standard": 1}
+    incoming_importance = incoming.get("importance", "standard")
+    existing_importance = existing.get("importance", "standard")
+    if _IMPORTANCE_RANK.get(incoming_importance, 0) > _IMPORTANCE_RANK.get(existing_importance, 0):
+        updates["importance"] = incoming_importance
+
+    # ticket_status: update when incoming has a value (show signals ran)
+    incoming_ticket_status = incoming.get("ticket_status")
+    if incoming_ticket_status and incoming_ticket_status != existing.get("ticket_status"):
+        updates["ticket_status"] = incoming_ticket_status
+
+    # ticket_status_checked_at: always take the most recent
+    incoming_checked = incoming.get("ticket_status_checked_at")
+    existing_checked = existing.get("ticket_status_checked_at")
+    if incoming_checked:
+        if not existing_checked or incoming_checked > existing_checked:
+            updates["ticket_status_checked_at"] = incoming_checked
+    elif incoming_ticket_status:
+        # ticket_status was set but checked_at wasn't stamped upstream — stamp it now
+        updates["ticket_status_checked_at"] = datetime.utcnow().isoformat()
 
     if not existing.get("portal_id"):
         incoming_portal_id = incoming.get("portal_id")
@@ -1414,6 +1598,8 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
                     )
         except Exception as e:
             logger.debug(f"Artist backfill on update failed for event {event_id}: {e}")
+
+    _maybe_infer_importance(event_id, {**existing, **updates})
 
     return bool(updates)
 
@@ -2048,24 +2234,39 @@ def update_event_extraction_metadata(
 def deactivate_tba_events() -> int:
     """
     Report future events that still have no start_time after enrichment.
-    Returns number of TBA events found.
+    Returns the number of actionable TBA events still remaining.
     """
     client = get_client()
     today = datetime.now().strftime("%Y-%m-%d")
 
     result = (
         client.table("events")
-        .select("id", count="exact")
+        .select("id,title,source_url,ticket_url", count="exact")
         .gte("start_date", today)
         .is_("start_time", "null")
         .eq("is_all_day", False)
         .execute()
     )
 
-    tba_count = result.count or 0
-    if tba_count > 0:
+    rows = result.data or []
+    actionable_count = 0
+    non_actionable_count = 0
+    for row in rows:
+        actionable, _reason = classify_tba_event(row)
+        if actionable:
+            actionable_count += 1
+        else:
+            non_actionable_count += 1
+
+    if actionable_count > 0:
         logger.info(
-            f"Found {tba_count} TBA events (missing start_time) — hidden from feeds via API filter"
+            "Found %s actionable TBA events (missing start_time) — hidden from feeds via API filter",
+            actionable_count,
+        )
+    if non_actionable_count > 0:
+        logger.info(
+            "Excluded %s intentional/structural date-only rows from actionable TBA count",
+            non_actionable_count,
         )
 
-    return tba_count
+    return actionable_count

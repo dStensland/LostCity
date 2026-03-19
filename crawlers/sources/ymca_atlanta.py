@@ -61,6 +61,8 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +81,13 @@ REQUEST_HEADERS = {
 
 # Polite delay between requests (seconds)
 REQUEST_DELAY = 1.5
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 # ---------------------------------------------------------------------------
 # Branch registry — Atlanta metro branches only.
@@ -353,6 +362,70 @@ _GENERIC_VENUE: dict = {
     "website": BASE_URL,
     "vibes": ["family-friendly", "all-ages"],
 }
+
+
+def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
+    venue_name = str(venue_data.get("name") or "YMCA of Metro Atlanta").strip()
+    city = str(venue_data.get("city") or "Atlanta").strip().lower()
+    is_generic = venue_data.get("slug") == _GENERIC_VENUE["slug"]
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "community_center",
+            "commitment_tier": "halfday",
+            "primary_activity": "family YMCA branch visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "outdoor-indoor-mix", "family-daytrip"],
+            "parking_type": "free_lot",
+            "best_time_of_day": "morning",
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "practical_notes": (
+                f"{venue_name} works best when the family plan is built around a specific class, camp, swim block, or community program rather than treating the YMCA as a casual attraction stop."
+            ),
+            "accessibility_notes": (
+                "YMCA branches tend to be lower-friction indoor/outdoor community campuses, but the value of the visit depends more on the scheduled activity mix than on broad destination wandering."
+            ),
+            "fee_note": "Many branch amenities and programs depend on membership, registration, or specific public event access.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "community_center",
+                "city": city,
+                "site_pattern": "ymca_branch" if not is_generic else "ymca_generic",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "family-community-program-campus",
+            "title": "Family community program campus",
+            "feature_type": "amenity",
+            "description": f"{venue_name} is best understood as a family program campus for camps, classes, fitness, and community activities rather than a single-format destination.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "planned-ymca-day-not-drop-in-attraction",
+            "title": "Planned YMCA day, not drop-in attraction",
+            "feature_type": "amenity",
+            "description": "YMCA family value is strongest when the visit is anchored by a known class, swim, camp, or community event instead of open-ended wandering.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    return envelope
 
 
 # ---------------------------------------------------------------------------
@@ -777,6 +850,7 @@ def _process_event_page(
     for venue_data in venues_to_emit:
         try:
             venue_id = get_or_create_venue(venue_data)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id, venue_data))
         except Exception as exc:
             logger.error(
                 "Failed to get/create venue '%s' for '%s': %s",

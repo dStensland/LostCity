@@ -1,0 +1,22 @@
+version: 1
+slug: cobb-parks-family-map
+name: Cobb Parks Family Map
+integration_method: python
+defaults:
+  category: family
+  tags:
+  - parks
+  - playgrounds
+  - water-play
+  - cobb-county
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.cobbcounty.gov/parks/find-park
+detail:
+  enabled: true
+data_goals:
+- destinations
+- destination_details
+- venue_features

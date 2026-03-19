@@ -5,14 +5,20 @@ interface QuickActionLinkProps {
   icon: ReactNode;
   label: string;
   external?: boolean;
+  /** Column layout: icon above label, for sidebar grid */
+  compact?: boolean;
 }
 
-export function QuickActionLink({ href, icon, label, external = true }: QuickActionLinkProps) {
+export function QuickActionLink({ href, icon, label, external = true, compact = false }: QuickActionLinkProps) {
   return (
     <a
       href={href}
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] bg-white/5 backdrop-blur-sm border border-white/10 text-[var(--soft)] hover:bg-white/10 hover:text-[var(--cream)] rounded-full text-sm transition-colors focus-ring"
+      className={
+        compact
+          ? "flex flex-col items-center justify-center gap-1 py-2 min-h-[44px] text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/30 rounded-lg text-xs font-mono transition-colors focus-ring"
+          : "inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--soft)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] rounded-full text-sm transition-colors focus-ring"
+      }
     >
       {icon}
       {label}

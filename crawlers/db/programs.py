@@ -22,8 +22,12 @@ from db.client import (
     _next_temp_id,
     _log_write_skip,
 )
+from db.sources import get_source_info
 
 logger = logging.getLogger(__name__)
+
+_SEEN_PROGRAM_HASHES: dict[str, str] = {}
+_SEEN_PROGRAM_IDENTITIES: dict[tuple[Optional[int], int, str, Optional[str]], str] = {}
 
 # ---------------------------------------------------------------------------
 # Program type inference
@@ -159,6 +163,20 @@ def _generate_program_slug(
     return slug[:80]
 
 
+def _generate_disambiguated_program_slug(
+    base_slug: str,
+    content_hash: str,
+    attempt: int,
+) -> str:
+    """Generate a collision-safe slug variant without exceeding 80 chars."""
+    suffix_lengths = (8, 12, 16, 24, 32)
+    suffix = content_hash[: suffix_lengths[min(attempt, len(suffix_lengths) - 1)]]
+    ordinal_suffix = f"-{attempt + 2}" if attempt >= len(suffix_lengths) else ""
+    reserved = len(suffix) + len(ordinal_suffix) + 1
+    trimmed_base = base_slug[: max(1, 80 - reserved)].rstrip("-")
+    return f"{trimmed_base}-{suffix}{ordinal_suffix}".strip("-")
+
+
 # ---------------------------------------------------------------------------
 # Content hash for dedup
 # ---------------------------------------------------------------------------
@@ -168,6 +186,45 @@ def generate_program_hash(name: str, venue_id: int, session_start: Optional[str]
     """MD5 hash on (name, venue_id, session_start) for dedup."""
     key = f"{name.strip().lower()}|{venue_id}|{session_start or ''}"
     return hashlib.md5(key.encode()).hexdigest()
+
+
+def _program_identity_key(
+    *,
+    source_id: Optional[int],
+    venue_id: int,
+    name: str,
+    session_start: Optional[str],
+) -> tuple[Optional[int], int, str, Optional[str]]:
+    return (source_id, venue_id, name, session_start)
+
+
+def _cache_program_identity(program_id: str, *, content_hash: str, source_id: Optional[int], venue_id: int, name: str, session_start: Optional[str]) -> None:
+    _SEEN_PROGRAM_HASHES[content_hash] = program_id
+    _SEEN_PROGRAM_IDENTITIES[
+        _program_identity_key(
+            source_id=source_id,
+            venue_id=venue_id,
+            name=name,
+            session_start=session_start,
+        )
+    ] = program_id
+
+
+def reset_program_identity_cache() -> None:
+    _SEEN_PROGRAM_HASHES.clear()
+    _SEEN_PROGRAM_IDENTITIES.clear()
+
+
+def _normalize_program_portal_id(program_data: dict) -> None:
+    """Force program portal attribution to follow the owning source when known."""
+    source_id = program_data.get("source_id")
+    if not source_id:
+        return
+
+    source_info = get_source_info(source_id)
+    owner_portal_id = source_info.get("owner_portal_id") if source_info else None
+    if owner_portal_id and program_data.get("portal_id") != owner_portal_id:
+        program_data["portal_id"] = owner_portal_id
 
 
 # ---------------------------------------------------------------------------
@@ -185,6 +242,31 @@ def find_program_by_hash(content_hash: str) -> Optional[dict]:
         .limit(1)
         .execute()
     )
+    if result.data:
+        return result.data[0]
+    return None
+
+
+def find_program_by_identity(
+    *,
+    name: str,
+    venue_id: int,
+    session_start: Optional[str],
+    source_id: Optional[int] = None,
+) -> Optional[dict]:
+    """Fallback lookup when legacy rows are missing metadata.content_hash."""
+    client = get_client()
+    query = (
+        client.table("programs")
+        .select("id, name, venue_id, session_start, updated_at")
+        .eq("name", name)
+        .eq("venue_id", venue_id)
+        .eq("session_start", session_start)
+        .limit(1)
+    )
+    if source_id is not None:
+        query = query.eq("source_id", source_id)
+    result = query.execute()
     if result.data:
         return result.data[0]
     return None
@@ -217,6 +299,8 @@ def insert_program(program_data: dict) -> Optional[str]:
 
     Pipeline: validate → generate slug → dedupe → insert.
     """
+    _normalize_program_portal_id(program_data)
+
     name = program_data.get("name", "").strip()
     if not name:
         logger.warning("Skipping program with empty name")
@@ -234,13 +318,43 @@ def insert_program(program_data: dict) -> Optional[str]:
 
     # Generate content hash for dedup
     session_start = program_data.get("session_start")
+    source_id = program_data.get("source_id")
     content_hash = generate_program_hash(name, venue_id, session_start)
+    metadata = dict(program_data.get("metadata") or {})
+    metadata["content_hash"] = content_hash
+    program_data["metadata"] = metadata
+    identity_key = _program_identity_key(
+        source_id=source_id,
+        venue_id=venue_id,
+        name=name,
+        session_start=session_start,
+    )
+
+    cached_program_id = _SEEN_PROGRAM_HASHES.get(content_hash) or _SEEN_PROGRAM_IDENTITIES.get(identity_key)
+    if cached_program_id:
+        update_program(cached_program_id, program_data)
+        return cached_program_id
 
     # Dedup check
     existing = find_program_by_hash(content_hash)
+    if not existing:
+        existing = find_program_by_identity(
+            name=name,
+            venue_id=venue_id,
+            session_start=session_start,
+            source_id=source_id,
+        )
     if existing:
         logger.debug("Program %r already exists (id=%s), updating", name, existing["id"])
         update_program(existing["id"], program_data)
+        _cache_program_identity(
+            existing["id"],
+            content_hash=content_hash,
+            source_id=source_id,
+            venue_id=venue_id,
+            name=name,
+            session_start=session_start,
+        )
         return existing["id"]
 
     # Generate slug if not provided
@@ -248,11 +362,6 @@ def insert_program(program_data: dict) -> Optional[str]:
         venue_name = program_data.pop("_venue_name", "") or "venue"
         season = program_data.get("season")
         program_data["slug"] = _generate_program_slug(venue_name, name, season)
-
-    # Store content hash in metadata
-    metadata = program_data.get("metadata") or {}
-    metadata["content_hash"] = content_hash
-    program_data["metadata"] = metadata
 
     # Filter to only valid columns
     filtered = {k: v for k, v in program_data.items() if k in _PROGRAM_COLUMNS}
@@ -269,26 +378,42 @@ def insert_program(program_data: dict) -> Optional[str]:
         _log_write_skip(f"insert programs name={name[:60]}")
         return _next_temp_id()
 
-    try:
-        result = _insert_program_record(get_client(), filtered)
-        program_id = result.data[0]["id"]
-        logger.debug("Inserted program %r (id=%s)", name, program_id)
-        return program_id
-    except Exception as exc:
-        # Handle unique constraint on slug — append hash suffix
-        error_str = str(exc).lower()
-        if "programs_slug_key" in error_str or "unique" in error_str:
-            filtered["slug"] = f"{filtered['slug']}-{content_hash[:6]}"
-            try:
-                result = _insert_program_record(get_client(), filtered)
-                program_id = result.data[0]["id"]
-                logger.debug("Inserted program %r with disambiguated slug (id=%s)", name, program_id)
-                return program_id
-            except Exception as exc2:
-                logger.error("Failed to insert program %r even with slug fix: %s", name, exc2)
-                return None
-        logger.error("Failed to insert program %r: %s", name, exc)
-        return None
+    client = get_client()
+    base_slug = filtered["slug"]
+    max_slug_attempts = 6
+    for attempt in range(max_slug_attempts):
+        if attempt > 0:
+            filtered["slug"] = _generate_disambiguated_program_slug(base_slug, content_hash, attempt - 1)
+        try:
+            result = _insert_program_record(client, filtered)
+            program_id = result.data[0]["id"]
+            if attempt == 0:
+                logger.debug("Inserted program %r (id=%s)", name, program_id)
+            else:
+                logger.debug(
+                    "Inserted program %r with disambiguated slug (id=%s, attempt=%s)",
+                    name,
+                    program_id,
+                    attempt + 1,
+                )
+            _cache_program_identity(
+                program_id,
+                content_hash=content_hash,
+                source_id=source_id,
+                venue_id=venue_id,
+                name=name,
+                session_start=session_start,
+            )
+            return program_id
+        except Exception as exc:
+            error_str = str(exc).lower()
+            if "programs_slug_key" in error_str or "unique" in error_str:
+                continue
+            logger.error("Failed to insert program %r: %s", name, exc)
+            return None
+
+    logger.error("Failed to insert program %r after %d slug attempts", name, max_slug_attempts)
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -301,6 +426,8 @@ def update_program(program_id: str, updates: dict) -> None:
     if not writes_enabled():
         _log_write_skip(f"update programs id={program_id}")
         return
+
+    _normalize_program_portal_id(updates)
 
     # Filter to valid columns, excluding immutable fields
     filtered = {

@@ -212,11 +212,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     content_hash = generate_content_hash(title, "True Colors Theatre", start_date)
 
 
-                    # Build series hint for show runs
+                    # Build series hint for show runs (theater runs, not recurring hangs)
                     series_hint = None
                     if end_date and end_date != start_date:
                         series_hint = {
-                            "series_type": "recurring_show",
+                            "series_type": "other",
                             "series_title": title,
                         }
                         if description:
@@ -246,7 +246,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "image_url": image_url,
                         "raw_text": f"{title}",
                         "extraction_confidence": 0.88,
-                        "is_recurring": True if end_date and end_date != start_date else False,
+                        "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }

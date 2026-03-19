@@ -143,10 +143,9 @@ def determine_category_and_tags(event_node: dict) -> tuple[str, Optional[str], l
     elif any(word in title_lower for word in ["family", "kids", "children"]):
         tags.append("family-friendly")
 
-    # Fitness
+    # Exercise/fitness
     elif any(word in title_lower for word in ["fitness", "yoga", "fit4mom", "workout"]):
-        category = "sports"
-        subcategory = "fitness"
+        category = "exercise"
         tags.append("fitness")
 
     # Holidays

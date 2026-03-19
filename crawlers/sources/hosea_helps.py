@@ -29,7 +29,7 @@ HOSEA_HELPS_HQ = {
     "name": "Hosea Helps",
     "slug": "hosea-helps",
     "address": "3430 Frazier Cir SE",
-    "neighborhood": "East Atlanta",
+    "neighborhood": "East Atlanta Village",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30354",

@@ -30,6 +30,8 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +60,10 @@ DURATION_RE = re.compile(r"(\d+)\s+Days?", re.IGNORECASE)
 ADDRESS_RE = re.compile(
     r"(?P<address>[^,]+),?\s+(?P<city>[A-Za-z .'-]+),\s*GA\s+(?P<zip>\d{5})"
 )
+TIME_RANGE_RE = re.compile(
+    r"(?P<start>\d{1,2}(?::\d{2})?(?:\s*[ap]m)?)\s*(?:-|to)\s*(?P<end>\d{1,2}(?::\d{2})?\s*[ap]m)",
+    re.IGNORECASE,
+)
 
 BASE_TAGS = [
     "kids",
@@ -67,6 +73,13 @@ BASE_TAGS = [
     "seasonal",
     "rsvp-required",
 ]
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 
 def _clean_text(value: Optional[str]) -> str:
@@ -137,6 +150,51 @@ def _parse_duration_days(text: str) -> Optional[int]:
         return None
 
 
+def _normalize_time_value(raw: str, fallback_ampm: Optional[str] = None) -> Optional[str]:
+    cleaned = _clean_text(raw).lower().replace(".", "")
+    match = re.match(r"(\d{1,2})(?::(\d{2}))?\s*([ap]m)?", cleaned)
+    if not match:
+        return None
+
+    hour = int(match.group(1))
+    minute = int(match.group(2) or "00")
+    ampm = match.group(3) or (fallback_ampm.lower() if fallback_ampm else None)
+    if not ampm:
+        return None
+    if match.group(3) is None and fallback_ampm and fallback_ampm.lower() == "pm" and hour < 12:
+        ampm = "am"
+    if ampm == "pm" and hour != 12:
+        hour += 12
+    if ampm == "am" and hour == 12:
+        hour = 0
+    return f"{hour:02d}:{minute:02d}"
+
+
+def _parse_schedule_time_range(text: str) -> tuple[Optional[str], Optional[str]]:
+    combined = _clean_text(text)
+    if not combined:
+        return None, None
+
+    explicit_patterns = (
+        r"full\s*day[^.]*?(?P<start>\d{1,2}(?::\d{2})?\s*[ap]m)\s*(?:-|to)\s*(?P<end>\d{1,2}(?::\d{2})?\s*[ap]m)",
+        r"monday\s*-\s*friday[^.]*?(?P<start>\d{1,2}(?::\d{2})?\s*[ap]m)\s*(?:-|to)\s*(?P<end>\d{1,2}(?::\d{2})?\s*[ap]m)",
+        r"our week is[^.]*?(?P<start>\d{1,2}(?::\d{2})?\s*[ap]m)\s*(?:-|to)\s*(?P<end>\d{1,2}(?::\d{2})?\s*[ap]m)",
+    )
+    for pattern in explicit_patterns:
+        match = re.search(pattern, combined, re.IGNORECASE)
+        if match:
+            end_ampm = re.search(r"([ap]m)", match.group("end"), re.IGNORECASE)
+            fallback_ampm = end_ampm.group(1) if end_ampm else None
+            return _normalize_time_value(match.group("start"), fallback_ampm), _normalize_time_value(match.group("end"))
+
+    match = TIME_RANGE_RE.search(combined)
+    if not match:
+        return None, None
+    end_ampm = re.search(r"([ap]m)", match.group("end"), re.IGNORECASE)
+    fallback_ampm = end_ampm.group(1) if end_ampm else None
+    return _normalize_time_value(match.group("start"), fallback_ampm), _normalize_time_value(match.group("end"))
+
+
 def _get_soup(url: str, session: requests.Session) -> Optional[BeautifulSoup]:
     try:
         response = session.get(url, timeout=20)
@@ -181,6 +239,69 @@ def _build_venue_data(name: str, raw_address: str, anchor_name: Optional[str]) -
         "website": (f"{LOCATIONS_URL}#{anchor_name}" if anchor_name else LOCATIONS_URL),
         "vibes": ["family-friendly", "educational"],
     }
+
+
+def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
+    venue_name = _clean_text(venue_data.get("name"))
+    city = _clean_text(venue_data.get("city") or "Atlanta")
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "community_center",
+            "commitment_tier": "halfday",
+            "primary_activity": "family STEM camp site visit",
+            "best_seasons": ["summer"],
+            "weather_fit_tags": ["indoor", "outdoor-indoor-mix", "family-daytrip"],
+            "parking_type": "free_lot",
+            "best_time_of_day": "morning",
+            "family_suitability": "yes",
+            "reservation_required": True,
+            "permit_required": False,
+            "practical_notes": (
+                f"{venue_name} works primarily as a Club SciKidz family camp site, so it is most useful when the family plan is anchored by a registered STEM camp session rather than casual drop-in use."
+            ),
+            "accessibility_notes": (
+                "These sites are better understood as structured camp-day locations than as general wandering destinations, which means arrival, pickup, and the specific registered program shape matter more than broad on-site exploration."
+            ),
+            "fee_note": "Camp registration is required; sessions and pricing vary by program and week.",
+            "source_url": venue_data.get("website") or LOCATIONS_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "community_center",
+                "city": city.lower(),
+                "site_pattern": "club_scikidz",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "registered-stem-camp-site",
+            "title": "Registered STEM camp site",
+            "feature_type": "amenity",
+            "description": f"{venue_name} serves as a scheduled Club SciKidz STEM camp location rather than a generic drop-in family destination.",
+            "url": venue_data.get("website") or LOCATIONS_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "planned-camp-day-not-casual-stop",
+            "title": "Planned camp day, not casual stop",
+            "feature_type": "amenity",
+            "description": "These locations are strongest when the family day is built around a scheduled camp session, with arrival, pickup, and weekly program logistics doing most of the work.",
+            "url": venue_data.get("website") or LOCATIONS_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    return envelope
 
 
 def _parse_locations_page(soup: BeautifulSoup) -> tuple[dict[str, dict], set[str]]:
@@ -259,6 +380,14 @@ def _parse_session_link_text(text: str) -> tuple[Optional[str], Optional[str]]:
     return start_date, _clean_text(match.group("location"))
 
 
+def _extract_og_image(soup: BeautifulSoup) -> Optional[str]:
+    """Extract og:image from a parsed page."""
+    tag = soup.find("meta", property="og:image")
+    if tag and tag.get("content"):
+        return tag["content"].strip() or None
+    return None
+
+
 def _parse_camp_page(soup: BeautifulSoup, camp_url: str) -> Optional[dict]:
     title_node = soup.select_one("h1")
     age_node = next(
@@ -297,6 +426,7 @@ def _parse_camp_page(soup: BeautifulSoup, camp_url: str) -> Optional[dict]:
     price_min, price_max = _parse_price_range(price_note or "")
 
     description = _extract_camp_description(entry_content)
+    schedule_start_time, schedule_end_time = _parse_schedule_time_range(entry_content.get_text(" ", strip=True))
 
     category_links = [
         _clean_text(a.get_text(" ", strip=True))
@@ -342,10 +472,13 @@ def _parse_camp_page(soup: BeautifulSoup, camp_url: str) -> Optional[dict]:
         "price_max": price_max,
         "price_note": price_note,
         "duration_days": duration_days,
+        "schedule_start_time": schedule_start_time,
+        "schedule_end_time": schedule_end_time,
         "description": description,
         "categories": category_links,
         "camp_url": camp_url,
         "sessions": sessions,
+        "image_url": _extract_og_image(soup),
     }
 
 
@@ -396,6 +529,19 @@ def _build_event_record(
     title = f"{camp['title']} at {venue_name}"
     hash_key = session.get("session_id") or session["start_date"]
     content_hash = generate_content_hash(title, venue_name, hash_key)
+    schedule_start_time = camp.get("schedule_start_time")
+    schedule_end_time = camp.get("schedule_end_time")
+    if not schedule_start_time or not schedule_end_time:
+        inferred_start_time, inferred_end_time = _parse_schedule_time_range(
+            " ".join(
+                part for part in [
+                    camp.get("description") or "",
+                    camp.get("price_note") or "",
+                ] if part
+            )
+        )
+        schedule_start_time = schedule_start_time or inferred_start_time
+        schedule_end_time = schedule_end_time or inferred_end_time
 
     record = {
         "source_id": source_id,
@@ -403,10 +549,10 @@ def _build_event_record(
         "title": title,
         "description": camp.get("description"),
         "start_date": session["start_date"],
-        "start_time": None,
+        "start_time": schedule_start_time,
         "end_date": session.get("end_date"),
-        "end_time": None,
-        "is_all_day": True,
+        "end_time": schedule_end_time,
+        "is_all_day": False if schedule_start_time or schedule_end_time else True,
         "category": "programs",
         "subcategory": "camp",
         "tags": _build_tags(camp),
@@ -416,7 +562,7 @@ def _build_event_record(
         "is_free": False,
         "source_url": camp["camp_url"],
         "ticket_url": session["registration_url"],
-        "image_url": None,
+        "image_url": camp.get("image_url"),
         "raw_text": " | ".join(
             part
             for part in [
@@ -457,7 +603,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     venue_ids: dict[str, int] = {}
     for key, venue_data in venue_map.items():
-        venue_ids[key] = get_or_create_venue(venue_data)
+        venue_id = get_or_create_venue(venue_data)
+        persist_typed_entity_envelope(_build_destination_envelope(venue_id, venue_data))
+        venue_ids[key] = venue_id
 
     events_found = 0
     events_new = 0

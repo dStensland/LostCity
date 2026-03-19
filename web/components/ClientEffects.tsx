@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { coercePortalVertical, shouldSuppressGlobalEffects } from "@/lib/portal-taxonomy";
 
 const RainEffect = dynamic(() => import("@/components/RainEffect"), { ssr: false });
 const CursorGlow = dynamic(() => import("@/components/CursorGlow"), { ssr: false });
@@ -12,8 +13,8 @@ export default function ClientEffects() {
   useEffect(() => {
     const bodyVertical = document.body.dataset.vertical;
     const routeVertical = document.querySelector<HTMLElement>("[data-vertical]")?.dataset.vertical;
-    const vertical = bodyVertical || routeVertical;
-    if (vertical === "film" || vertical === "hotel" || vertical === "hospital") return;
+    const vertical = coercePortalVertical(bodyVertical || routeVertical);
+    if (vertical && shouldSuppressGlobalEffects(vertical)) return;
 
     // Skip effects if user prefers reduced motion
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

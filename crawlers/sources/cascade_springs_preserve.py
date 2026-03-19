@@ -19,8 +19,16 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import get_client, get_or_create_venue
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 HOMEPAGE = (
     "https://www.atlantatrails.com/hiking-trails/cascade-springs-nature-preserve/"
@@ -28,7 +36,7 @@ HOMEPAGE = (
 
 VENUE_DATA = {
     "name": "Cascade Springs Nature Preserve",
-    "slug": "cascade-springs-preserve",
+    "slug": "cascade-springs-nature-preserve",
     "address": "2852 Cascade Rd SW",
     "neighborhood": "Southwest Atlanta",
     "city": "Atlanta",
@@ -65,6 +73,68 @@ VENUE_DATA = {
         "from downtown Atlanta."
     ),
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "nature_preserve",
+            "commitment_tier": "halfday",
+            "primary_activity": "family nature preserve walk",
+            "best_seasons": ["spring", "summer", "fall"],
+            "weather_fit_tags": ["outdoor", "free-option", "family-daytrip"],
+            "parking_type": "free_lot",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "Cascade Springs works best for families who want a free Southwest Atlanta nature reset with real trails and historical interest, not a playground-style park day."
+            ),
+            "accessibility_notes": (
+                "Trail terrain and the preserve setting make this a better fit for families comfortable with uneven outdoor walking than for stroller-forward outings."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Open preserve access is free.",
+            "source_url": HOMEPAGE,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "park",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "waterfall-and-forest-trails",
+            "title": "Waterfall and forest trails",
+            "feature_type": "amenity",
+            "description": "Cascade Springs gives families a rare in-city forest preserve with waterfall views, wooded trails, and a much more immersive nature feel than a neighborhood park.",
+            "url": HOMEPAGE,
+            "price_note": "Open preserve access is free.",
+            "is_free": True,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "free-southwest-atlanta-nature-reset",
+            "title": "Free Southwest Atlanta nature reset",
+            "feature_type": "experience",
+            "description": "This is one of the stronger free nature-reset options inside the city for families who want trails and history instead of a built playground outing.",
+            "url": HOMEPAGE,
+            "price_note": "Open preserve access is free.",
+            "is_free": True,
+            "sort_order": 20,
+        },
+    )
+    return envelope
 
 
 def _extract_og_meta(html: str) -> tuple[Optional[str], Optional[str]]:
@@ -111,6 +181,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.warning("Cascade Springs Nature Preserve: og: enrichment failed: %s", exc)
 
     venue_id = get_or_create_venue(venue_data)
+    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     update: dict = {}
     if venue_data.get("image_url"):

@@ -2,7 +2,7 @@
 
 import { memo, useRef, useState, useCallback, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import {
   CalendarPlus,
   Fire,
@@ -167,7 +167,7 @@ const FriendPlanCard = memo(function FriendPlanCard({
       {/* Creator avatar */}
       <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden bg-[var(--twilight)]">
         {creator?.avatar_url ? (
-          <Image
+          <SmartImage
             src={creator.avatar_url}
             alt={name}
             width={32}
@@ -319,7 +319,7 @@ const FriendHangRow = memo(function FriendHangRow({ item }: { item: FriendHang }
       <Link href={profileHref} className="flex-shrink-0">
         <div className="w-6 h-6 rounded-full overflow-hidden bg-[var(--twilight)] relative">
           {profile.avatar_url ? (
-            <Image src={profile.avatar_url} alt={name} width={24} height={24} sizes="24px" className="w-full h-full object-cover" />
+            <SmartImage src={profile.avatar_url} alt={name} width={24} height={24} sizes="24px" className="w-full h-full object-cover" />
           ) : (
             <span className="absolute inset-0 flex items-center justify-center text-2xs font-bold text-[var(--muted)]">
               {name.charAt(0).toUpperCase()}
@@ -362,7 +362,7 @@ const HotVenueCard = memo(function HotVenueCard({ venue }: { venue: HotVenue }) 
     >
       <div className="relative h-24 bg-[var(--twilight)] overflow-hidden">
         {venue.venue_image_url ? (
-          <Image src={venue.venue_image_url} alt={venue.venue_name} fill sizes="160px" className="object-cover" />
+          <SmartImage src={venue.venue_image_url} alt={venue.venue_name} fill sizes="160px" className="object-cover" />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <MapPin weight="duotone" className="w-8 h-8 text-[var(--muted)]" />

@@ -112,6 +112,7 @@ describe("manifest scope adapter", () => {
     expect(options).toEqual({
       portalId: "portal-123",
       portalExclusive: true,
+      entityFamily: "events",
       publicOnlyWhenNoPortal: true,
       sourceIds: [5, 7],
       sourceColumn: "source_id",
@@ -137,6 +138,25 @@ describe("manifest scope adapter", () => {
     );
 
     expect(query.ops).toEqual(["or:portal_id.eq.portal-123,source_id.in.(5,7)"]);
+  });
+
+  it("allows manifest callers to declare a non-event entity family explicitly", () => {
+    const options = getFederatedScopeOptionsFromManifest(
+      {
+        portalId: "portal-123",
+        scope: {
+          portalExclusive: false,
+          allowFederatedSources: true,
+          sourceIds: [9],
+          sourceColumn: "source_id",
+          publicOnlyWhenNoPortal: true,
+          enforceCityFilter: "always",
+        },
+      },
+      { entityFamily: "exhibitions" }
+    );
+
+    expect(options.entityFamily).toBe("exhibitions");
   });
 });
 

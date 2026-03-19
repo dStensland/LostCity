@@ -139,6 +139,7 @@ OCCASION_RULES: dict[str, dict] = {
     },
     "brunch": {
         # Inferred from weekend hours opening before noon — see _is_brunch()
+        "venue_type_match": ["restaurant", "bar", "hotel", "cafe", "coffee_shop", "brewery", "food_hall"],
         "confidence": 0.6,
     },
     "family_friendly": {
@@ -334,6 +335,9 @@ def infer_occasions(venue: dict, min_confidence: float = 0.5) -> list[dict]:
                 signals_fired += 1
 
         elif occasion == "brunch":
+            type_matches = rule.get("venue_type_match", [])
+            if type_matches and venue_type not in type_matches:
+                continue
             if _is_brunch(venue):
                 signals_fired += 1
 

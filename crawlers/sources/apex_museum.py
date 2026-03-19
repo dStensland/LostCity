@@ -27,12 +27,22 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 from date_utils import normalize_iso_date
 from db import get_client, get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.apexmuseum.org"
 # APEX Museum Eventbrite search results page
 EVENTBRITE_SEARCH_URL = "https://www.eventbrite.com/d/ga--atlanta/apex-museum/"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
 
 VENUE_DATA = {
     "name": "APEX Museum",
@@ -65,6 +75,95 @@ VENUE_DATA = {
         "sweet-auburn",
     ],
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "history_museum",
+            "commitment_tier": "hour",
+            "primary_activity": "black history museum visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+            "parking_type": "street",
+            "best_time_of_day": "afternoon",
+            "practical_notes": (
+                "APEX Museum works best as a compact Sweet Auburn cultural stop rather than a full-day outing, "
+                "and is easiest to pair with a neighborhood walk or another downtown-family destination. It is strongest "
+                "when a family wants a meaningful shorter cultural stop instead of a giant museum day."
+            ),
+            "accessibility_notes": (
+                "Its indoor footprint keeps the visit lower-friction for families than larger museum campuses, "
+                "though the surrounding neighborhood plan may still require some city walking. That makes it better as a stackable stop than as the only activity in the day."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Admission is modestly priced, with free entry for very young children.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "history_museum",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "sweet-auburn-black-history-anchor",
+            "title": "Sweet Auburn Black history anchor",
+            "feature_type": "amenity",
+            "description": "APEX gives families a compact, place-based Black history stop in one of Atlanta's most important historic neighborhoods.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "compact-history-museum-stop",
+            "title": "Compact history museum stop",
+            "feature_type": "amenity",
+            "description": "The museum's smaller footprint makes it easier to fit into a shorter family culture outing than a larger all-campus museum day.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "stackable-sweet-auburn-cultural-stop",
+            "title": "Stackable Sweet Auburn cultural stop",
+            "feature_type": "amenity",
+            "description": "APEX works especially well as a shorter family culture stop that can be paired with a Sweet Auburn walk or another downtown destination.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "children-under-4-free-admission",
+            "title": "Children under 4 free admission",
+            "description": "APEX keeps the visit materially easier for families with very young kids by offering free admission for children under 4.",
+            "price_note": "Children under 4 are free.",
+            "is_free": True,
+            "source_url": BASE_URL,
+            "category": "admission",
+        },
+    )
+    return envelope
 
 
 def determine_category(title: str, description: str = "") -> tuple[str, Optional[str], list[str]]:
@@ -310,6 +409,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             # Enrich venue with og:image and og:description from APEX homepage on first pass
             try:

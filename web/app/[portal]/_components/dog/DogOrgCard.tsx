@@ -1,7 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import type { DogOrg } from "@/lib/dog-data";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
 
 interface Props {
   org: DogOrg;
@@ -16,8 +15,8 @@ export default function DogOrgCard({ org, portalSlug }: Props) {
     >
       {org.logo_url ? (
         <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
-          <Image
-            src={getProxiedImageSrc(org.logo_url)}
+          <SmartImage
+            src={org.logo_url}
             alt={org.name}
             fill
             className="object-cover"

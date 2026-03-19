@@ -15,7 +15,10 @@ import type {
   GroupMemberRole,
 } from "@/lib/types/groups";
 
-const VALID_VISIBILITIES: readonly GroupVisibility[] = ["private", "unlisted"];
+import type { GroupJoinPolicy } from "@/lib/types/groups";
+
+const VALID_VISIBILITIES: readonly GroupVisibility[] = ["private", "unlisted", "public"];
+const VALID_JOIN_POLICIES: readonly GroupJoinPolicy[] = ["invite", "request", "open"];
 
 type RouteParams = { id: string };
 
@@ -189,7 +192,7 @@ export const PATCH = withAuthAndParams<RouteParams>(async (request, { user, serv
     }
 
     const body: UpdateGroupRequest = await request.json();
-    const { name, description, emoji, avatar_url, visibility } = body;
+    const { name, description, emoji, avatar_url, visibility, join_policy } = body;
 
     // Validate provided fields
     if (name !== undefined) {
@@ -211,7 +214,11 @@ export const PATCH = withAuthAndParams<RouteParams>(async (request, { user, serv
     }
 
     if (visibility !== undefined && !isValidEnum(visibility, VALID_VISIBILITIES)) {
-      return validationError("visibility must be private or unlisted");
+      return validationError("visibility must be private, unlisted, or public");
+    }
+
+    if (join_policy !== undefined && !isValidEnum(join_policy, VALID_JOIN_POLICIES)) {
+      return validationError("join_policy must be invite, request, or open");
     }
 
     // Build update payload from provided fields only
@@ -220,7 +227,29 @@ export const PATCH = withAuthAndParams<RouteParams>(async (request, { user, serv
     if (description !== undefined) updates.description = description?.trim() ?? null;
     if (emoji !== undefined) updates.emoji = emoji;
     if (avatar_url !== undefined) updates.avatar_url = avatar_url;
-    if (visibility !== undefined) updates.visibility = visibility;
+    if (visibility !== undefined) {
+      updates.visibility = visibility;
+      // If downgrading from public to private/unlisted, force join_policy to invite
+      if (visibility !== "public") {
+        updates.join_policy = "invite";
+      }
+    }
+    if (join_policy !== undefined) {
+      // Only allow non-invite policies for public groups
+      if (join_policy !== "invite" && visibility !== "public") {
+        // Need to check current visibility if not being changed
+        const { data: currentGroup } = await serviceClient
+          .from("groups")
+          .select("visibility")
+          .eq("id", groupId)
+          .single();
+        const currentVis = (currentGroup as { visibility: string } | null)?.visibility;
+        if (currentVis !== "public") {
+          return validationError("join_policy can only be request or open for public groups");
+        }
+      }
+      updates.join_policy = join_policy;
+    }
 
     if (Object.keys(updates).length === 0) {
       return validationError("Provide at least one field to update");
@@ -240,6 +269,15 @@ export const PATCH = withAuthAndParams<RouteParams>(async (request, { user, serv
         component: "groups/[id]",
       });
       return NextResponse.json({ error: "Failed to update group" }, { status: 500 });
+    }
+
+    // If visibility was downgraded from public, auto-deny pending requests
+    if (visibility !== undefined && visibility !== "public") {
+      await serviceClient
+        .from("group_join_requests")
+        .update({ status: "denied", decided_by: user.id, decided_at: new Date().toISOString() } as never)
+        .eq("group_id", groupId)
+        .eq("status", "pending");
     }
 
     return NextResponse.json({ group: updated });

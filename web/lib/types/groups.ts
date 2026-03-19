@@ -1,7 +1,9 @@
 // Groups (Crews) — PRD-036
 // Types for private friend groups with shared hangs and venue lists
 
-export type GroupVisibility = "private" | "unlisted";
+export type GroupVisibility = "private" | "unlisted" | "public";
+export type GroupJoinPolicy = "invite" | "request" | "open";
+export type JoinRequestStatus = "pending" | "approved" | "denied";
 export type GroupMemberRole = "admin" | "member";
 
 export interface Group {
@@ -13,6 +15,7 @@ export interface Group {
   creator_id: string;
   invite_code: string;
   visibility: GroupVisibility;
+  join_policy: GroupJoinPolicy;
   max_members: number;
   created_at: string;
   updated_at: string;
@@ -83,12 +86,30 @@ export interface GroupActivity {
   note?: string | null;
 }
 
+export interface GroupJoinRequest {
+  id: string;
+  group_id: string;
+  user_id: string;
+  message: string | null;
+  status: JoinRequestStatus;
+  decided_by: string | null;
+  created_at: string;
+  decided_at: string | null;
+  profile?: {
+    id: string;
+    display_name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+  };
+}
+
 // Request types
 export interface CreateGroupRequest {
   name: string;
   description?: string;
   emoji?: string;
   visibility?: GroupVisibility;
+  join_policy?: GroupJoinPolicy;
 }
 
 export interface UpdateGroupRequest {
@@ -97,6 +118,7 @@ export interface UpdateGroupRequest {
   emoji?: string;
   avatar_url?: string;
   visibility?: GroupVisibility;
+  join_policy?: GroupJoinPolicy;
 }
 
 export interface AddGroupSpotRequest {
@@ -165,6 +187,30 @@ export const GROUP_VISIBILITY_OPTIONS = [
     label: "Unlisted",
     description: "Visible on member profiles",
     icon: "eye-off",
+  },
+  {
+    value: "public" as const,
+    label: "Public",
+    description: "Anyone can find and see this group",
+    icon: "globe",
+  },
+] as const;
+
+export const GROUP_JOIN_POLICY_OPTIONS = [
+  {
+    value: "invite" as const,
+    label: "Invite Only",
+    description: "Members join via invite link",
+  },
+  {
+    value: "request" as const,
+    label: "Request to Join",
+    description: "Users request, admins approve",
+  },
+  {
+    value: "open" as const,
+    label: "Open",
+    description: "Anyone can join instantly",
   },
 ] as const;
 

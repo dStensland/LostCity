@@ -1,0 +1,31 @@
+version: 1
+slug: midtown-alliance
+name: Midtown Alliance
+organization_name: Midtown Alliance
+source_type: organization
+integration_method: playwright
+city: Atlanta
+state: GA
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.midtownatl.com/events
+  fetch:
+    render_js: true
+    wait_until: networkidle
+    timeout_ms: 45000
+detail:
+  enabled: false
+data_goals:
+- events
+- images
+notes: >
+  Midtown Alliance is the Business Improvement District for Midtown Atlanta.
+  The site blocks automated HTTP requests (returns 403) — requires Playwright.
+  Events tagged "Midtown Alliance Event" are original BID programming (yoga in
+  parks, cardio dance at MARTA stations, community paint days, mural events).
+  Other calendar entries are aggregated from nearby venues and will be deduped
+  downstream. Recurring programming includes weekly Yoga Flow at 10th Street Park
+  and Cardio Dance at MARTA North Avenue Station.

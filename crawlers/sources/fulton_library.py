@@ -17,6 +17,8 @@ from bs4 import BeautifulSoup
 from utils import slugify
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +85,80 @@ FAMILY_AUDIENCE_KEYWORDS = {
     "families",
     "all ages",
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
+
+
+def _build_branch_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
+    """Project a Fulton library branch into shared Family-friendly destination details."""
+    envelope = TypedEntityEnvelope()
+    branch_name = str(venue_data.get("name") or "Fulton County library branch").strip()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "library_branch",
+            "commitment_tier": "hour",
+            "primary_activity": "free indoor family library visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "free-option"],
+            "practical_notes": (
+                f"{branch_name} is a free indoor family destination with books, browsing, and library programming. "
+                "Check the official branch listing for current hours and program timing."
+            ),
+            "accessibility_notes": (
+                "Library branches are generally easier low-friction indoor stops for families who need predictable bathrooms, seating, and a calmer weather-proof outing."
+            ),
+            "best_time_of_day": "any",
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Free public library access.",
+            "source_url": "https://www.fulcolibrary.org/locations/",
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "library",
+                "branch_name": branch_name,
+            },
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "free-indoor-family-stop",
+            "title": "Free indoor family stop",
+            "feature_type": "amenity",
+            "description": f"{branch_name} is a free indoor place for browsing, reading, and easy family time out of the weather.",
+            "url": "https://www.fulcolibrary.org/locations/",
+            "price_note": "Free public library access.",
+            "is_free": True,
+            "sort_order": 5,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "storytime-and-family-programs",
+            "title": "Storytime and family programs",
+            "feature_type": "experience",
+            "description": f"{branch_name} regularly hosts free storytimes, reading events, and family-friendly branch programming.",
+            "url": "https://fulcolibrary.bibliocommons.com/v2/events",
+            "price_note": "Most branch programs are free; confirm event details on the official calendar.",
+            "is_free": True,
+            "sort_order": 15,
+        },
+    )
+
+    return envelope
 
 
 def audience_tags_and_category(
@@ -395,6 +471,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         }
 
                     venue_id = get_or_create_venue(venue_data)
+                    persist_result = persist_typed_entity_envelope(
+                        _build_branch_destination_envelope(venue_id, venue_data)
+                    )
+                    if persist_result.skipped:
+                        logger.warning(
+                            "Fulton Library: skipped typed destination writes for %s: %s",
+                            venue_data["name"],
+                            persist_result.skipped,
+                        )
 
                     # Build event URL
                     event_url = f"https://fulcolibrary.bibliocommons.com/events/{event_id}"

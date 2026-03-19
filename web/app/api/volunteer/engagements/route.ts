@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
   const attribution = await resolvePortalAttributionForWrite(request, {
     endpoint: "/api/volunteer/engagements",
     body,
+    allowMissing: true,
     requireWhenHinted: true,
   });
 

@@ -53,6 +53,8 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +92,122 @@ _VENUE_DATA = {
     "website": _BASE_URL,
     "vibes": ["family-friendly", "outdoor", "all-ages", "educational", "historic"],
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    """Project Autrey Mill into shared Family-friendly destination richness lanes."""
+    envelope = TypedEntityEnvelope()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "nature_preserve",
+            "commitment_tier": "halfday",
+            "primary_activity": "nature preserve and heritage farm visit",
+            "best_seasons": ["spring", "summer", "fall"],
+            "weather_fit_tags": ["outdoor", "indoor-option", "family-daytrip", "free-option"],
+            "practical_notes": (
+                "46-acre preserve with trails, animals, pollinator gardens, historic buildings, and a visitor center/farm museum. "
+                "Trails are open daily and the preserve is free to visit, with donations appreciated."
+            ),
+            "accessibility_notes": (
+                "Visitor center and farm museum provide an indoor option, while trails and outdoor heritage areas vary by terrain. "
+                "Confirm current accessibility details with the preserve before visiting."
+            ),
+            "parking_type": "free_lot",
+            "best_time_of_day": "morning",
+            "family_suitability": "yes",
+            "dog_friendly": False,
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Free to visit; donations appreciated. Group visits of 10+ should reserve ahead.",
+            "source_url": _BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "acreage": 46,
+                "trail_miles": 1.25,
+                "trails_hours": "daily 8 AM to 9 PM",
+                "visitor_center_hours": "Tuesday-Saturday 10 AM-4 PM; Sunday 12 PM-4 PM",
+                "has_farm_museum": True,
+                "has_animals": True,
+                "has_pollinator_gardens": True,
+            },
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "woodland-trails-and-ravines",
+            "title": "Woodland trails and ravines",
+            "feature_type": "amenity",
+            "description": (
+                "About 1.25 miles of trails through forest and ravine terrain make Autrey Mill a practical family nature-walk destination."
+            ),
+            "url": _BASE_URL,
+            "is_free": True,
+            "sort_order": 10,
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "visitor-center-and-farm-museum",
+            "title": "Visitor Center and Farm Museum",
+            "feature_type": "attraction",
+            "description": (
+                "Indoor visitor-center and farm-museum spaces add a weather-proof education layer to family visits."
+            ),
+            "url": _BASE_URL,
+            "is_free": True,
+            "sort_order": 20,
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "heritage-buildings-and-farm-history",
+            "title": "Heritage buildings and farm history",
+            "feature_type": "experience",
+            "description": (
+                "Historic buildings and heritage interpretation make the preserve more than a trail stop."
+            ),
+            "url": _BASE_URL,
+            "is_free": True,
+            "sort_order": 30,
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "animals-and-pollinator-gardens",
+            "title": "Animals and pollinator gardens",
+            "feature_type": "attraction",
+            "description": (
+                "Animals and pollinator gardens add kid-friendly discovery points beyond the event calendar."
+            ),
+            "url": _BASE_URL,
+            "is_free": True,
+            "sort_order": 40,
+        },
+    )
+
+    return envelope
 
 # Default tags applied to every Autrey Mill event
 _DEFAULT_TAGS: list[str] = ["outdoor", "nature", "family-friendly", "educational"]
@@ -1417,6 +1535,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
     # Ensure venue exists
     try:
         venue_id = get_or_create_venue(_VENUE_DATA)
+        persist_result = persist_typed_entity_envelope(
+            _build_destination_envelope(venue_id)
+        )
+        if persist_result.skipped:
+            logger.warning(
+                "[autrey-mill] skipped typed destination writes: %s",
+                persist_result.skipped,
+            )
     except Exception as exc:
         logger.error("[autrey-mill] Failed to create/find venue: %s", exc)
         return 0, 0, 0

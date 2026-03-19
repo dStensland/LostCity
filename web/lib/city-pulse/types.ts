@@ -156,6 +156,7 @@ export type CityPulseSectionType =
   | "new_from_spots"
   | "trending"
   | "coming_up"
+  | "planning_horizon"
   | "experiences"
   | "browse"
   | "todays_specials"
@@ -367,6 +368,7 @@ export type FeedBlockId =
   | "experiences"
   | "community"
   | "cinema"
+  | "horizon"
   | "browse";
 
 /** Legacy IDs from v1 layouts — used for migration detection only */
@@ -394,6 +396,7 @@ export const DEFAULT_FEED_ORDER: FeedBlockId[] = [
   "recurring",
   "hangs",
   "cinema",
+  "horizon",
   "browse",
 ];
 

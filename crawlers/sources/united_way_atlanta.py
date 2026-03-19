@@ -25,9 +25,12 @@ from db import (
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
+    upsert_volunteer_opportunity,
+    deactivate_stale_volunteer_opportunities,
 )
 from dedupe import generate_content_hash
 from db.client import get_client, writes_enabled
+from entity_lanes import SourceEntityCapabilities
 from utils import slugify
 
 logger = logging.getLogger(__name__)
@@ -63,6 +66,11 @@ UNITED_WAY_ATLANTA = {
     "venue_type": "nonprofit",
     "website": "https://www.unitedwayatlanta.org",
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    volunteer_opportunities=True,
+)
 
 
 def determine_category(title: str, description: str = "") -> str:
@@ -521,44 +529,7 @@ def _upsert_structured_opportunity(
         "is_active": True,
     }
 
-    client = get_client()
-    existing_rows = (
-        client.table("volunteer_opportunities")
-        .select("id")
-        .eq("slug", opportunity_slug)
-        .limit(1)
-        .execute()
-        .data
-        or []
-    )
-    existing = existing_rows[0] if existing_rows else None
-    if existing:
-        if writes_enabled():
-            client.table("volunteer_opportunities").update(payload).eq("id", existing["id"]).execute()
-        return True
-
-    if writes_enabled():
-        client.table("volunteer_opportunities").insert(payload).execute()
-    return True
-
-
-def _deactivate_stale_structured_opportunities(source_id: int, active_slugs: set[str]) -> int:
-    client = get_client()
-    rows = (
-        client.table("volunteer_opportunities")
-        .select("id,slug")
-        .eq("source_id", source_id)
-        .eq("is_active", True)
-        .execute()
-        .data
-        or []
-    )
-    stale_ids = [row["id"] for row in rows if row["slug"] not in active_slugs]
-    if not stale_ids or not writes_enabled():
-        return len(stale_ids)
-
-    client.table("volunteer_opportunities").update({"is_active": False}).in_("id", stale_ids).execute()
-    return len(stale_ids)
+    return bool(upsert_volunteer_opportunity(payload))
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -677,7 +648,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     stale_deleted = remove_stale_source_events(source_id, current_hashes)
     if stale_deleted:
         logger.info("Removed %s stale United Way events after refresh", stale_deleted)
-    stale_structured = _deactivate_stale_structured_opportunities(source_id, structured_active_slugs)
+    stale_structured = deactivate_stale_volunteer_opportunities(source_id, structured_active_slugs)
     if stale_structured:
         logger.info("Deactivated %s stale United Way structured opportunities after refresh", stale_structured)
 

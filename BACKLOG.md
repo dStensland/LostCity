@@ -280,7 +280,17 @@ Lightweight casual events visible to friends and optionally friends-of-friends. 
 
 Dependencies: auth (done), friends system (done), activity feed (done).
 
-### 3.5 Social Layer Polish
+### 3.5 Planning Horizon Notifications
+Builds on the planning horizon data layer (migrations 548-549, `importance`, `on_sale_date`, `ticket_status_checked_at`, etc.).
+
+- [ ] "New event announced at [venue you follow]" — triggered by `announce_date` or new event at followed venue
+- [ ] "Tickets on sale Friday for [saved event]" — triggered by `on_sale_date` approaching
+- [ ] "Early bird ends Sunday" — triggered by `early_bird_deadline` within 3 days
+- [ ] "[Event you saved] is selling fast" — triggered by `ticket_status` changing to `low-tickets`
+
+Dependencies: notification preferences table, push notification service (web push or email), notification delivery queue.
+
+### 3.6 Social Layer Polish
 Infrastructure is built (profiles, follows, friends, activities, blocks, RLS policies) but discovery UX needs buildout.
 
 - [ ] Influencer/curator profiles — tastemaker discovery surface

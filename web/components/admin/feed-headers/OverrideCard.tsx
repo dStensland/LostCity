@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import type { FeedHeaderRow } from "@/lib/city-pulse/types";
 import { getOverrideType, headerToFormData } from "@/lib/admin/feed-header-utils";
 import ImagePicker from "./ImagePicker";
@@ -119,7 +119,7 @@ export default function OverrideCard({
         {/* Image thumb */}
         {header.hero_image_url && (
           <div className="relative w-8 h-5 rounded overflow-hidden shrink-0">
-            <Image
+            <SmartImage
               src={header.hero_image_url}
               alt=""
               fill

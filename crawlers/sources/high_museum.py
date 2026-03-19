@@ -19,9 +19,20 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, insert_exhibition
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record, parse_date_range
 
 logger = logging.getLogger(__name__)
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    exhibitions=True,
+    venue_features=True,
+    venue_specials=True,
+)
 
 BASE_URL = "https://high.org"
 EVENTS_URL = f"{BASE_URL}/events/"
@@ -58,6 +69,109 @@ VENUE_DATA = {
     # free second Sunday of each month.
     "vibes": ["world-class", "cultural", "art", "family-friendly", "midtown"],
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "art_museum",
+            "commitment_tier": "halfday",
+            "primary_activity": "family art museum visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+            "parking_type": "garage",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "The High works especially well as a weather-proof Midtown family outing when timed around "
+                "kid-focused programming or free Second Sunday admission. It is also one of the easier museum outings "
+                "for bathroom breaks and mid-visit resets without losing the shape of the day."
+            ),
+            "accessibility_notes": (
+                "Indoor galleries, elevators, and structured museum circulation make the High one of the "
+                "lower-friction culture stops for strollers and multigenerational visits, with less walking burden "
+                "than a larger campus destination."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "General admission applies most days; free Second Sundays and family programming windows make it one of the strongest in-city museum options for kids.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "museum",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "family-art-making-and-kids-programs",
+            "title": "Family art-making and kids programs",
+            "feature_type": "amenity",
+            "description": "The High runs family art-making, youth programs, and kid-friendly gallery activities alongside its major exhibitions.",
+            "url": EVENTS_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "weather-proof-midtown-family-culture-stop",
+            "title": "Weather-proof Midtown family culture stop",
+            "feature_type": "amenity",
+            "description": "The High is one of the city's strongest indoor family culture anchors when weather, heat, or energy levels make an outdoor plan harder to sustain.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "easy-museum-breaks-and-resets",
+            "title": "Easy museum breaks and resets",
+            "feature_type": "amenity",
+            "description": "The High is one of the easier culture outings for families who need bathroom breaks, elevator access, and short reset moments without abandoning the plan.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "free-second-sunday-admission",
+            "title": "Free Second Sunday admission",
+            "description": "General admission is free on the second Sunday of each month, making the High one of the strongest recurring free-family museum options in the city.",
+            "price_note": "Free second Sunday each month.",
+            "is_free": True,
+            "source_url": BASE_URL,
+            "category": "admission",
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "children-5-and-under-free",
+            "title": "Children 5 and under free",
+            "description": "Children age 5 and under receive free admission, which lowers the cost of treating the High as a family museum day even outside the free monthly window.",
+            "price_note": "Children 5 and under are free.",
+            "is_free": True,
+            "source_url": BASE_URL,
+            "category": "admission",
+        },
+    )
+    return envelope
 
 # Known event type categories — matched as exact lines only, not substrings
 EVENT_TYPES = {
@@ -660,6 +774,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 logger.debug("High Museum: could not extract og meta from homepage: %s", _meta_exc)
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             # ----------------------------------------------------------------
             # 1. Events page — crawl all paginated pages

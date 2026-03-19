@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { useRouter } from "next/navigation";
 import { MapPin, CalendarDots, Users, CaretRight } from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth-context";
@@ -108,7 +108,7 @@ function StopCard({ item, index }: { item: PlanItem; index: number }) {
         <div className="flex gap-3 p-3 rounded-xl bg-[var(--night)] border border-[var(--twilight)]/40">
           {image && (
             <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-[var(--twilight)] relative">
-              <Image src={image} alt={name} fill sizes="64px" className="object-cover" />
+              <SmartImage src={image} alt={name} fill sizes="64px" className="object-cover" />
             </div>
           )}
           <div className="flex-1 min-w-0">
@@ -179,7 +179,7 @@ export default function SharedPlanView({
       {/* Hero */}
       {heroImage && (
         <div className="relative h-48 sm:h-64 w-full overflow-hidden">
-          <Image
+          <SmartImage
             src={heroImage}
             alt={plan.title}
             fill
@@ -212,7 +212,7 @@ export default function SharedPlanView({
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-full overflow-hidden bg-[var(--twilight)]">
                 {plan.creator.avatar_url ? (
-                  <Image
+                  <SmartImage
                     src={plan.creator.avatar_url}
                     alt={creatorName}
                     width={24}
@@ -255,7 +255,7 @@ export default function SharedPlanView({
                     title={p.user.display_name || p.user.username}
                   >
                     {p.user.avatar_url ? (
-                      <Image
+                      <SmartImage
                         src={p.user.avatar_url}
                         alt=""
                         width={28}
@@ -319,7 +319,7 @@ export default function SharedPlanView({
                     className="flex-shrink-0 w-36 snap-start rounded-xl overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/40"
                   >
                     <div className="relative h-24">
-                      <Image
+                      <SmartImage
                         src={item.venue!.image_url!}
                         alt={item.venue!.name}
                         fill

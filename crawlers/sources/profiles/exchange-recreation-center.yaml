@@ -1,0 +1,23 @@
+version: 1
+slug: exchange-recreation-center
+name: Exchange Recreation Center
+integration_method: html
+defaults:
+  category: family
+  tags:
+  - recreation
+  - playground
+  - trails
+  - dekalb
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://www.dekalbcountyga.gov/parks/exchange-recreation
+detail:
+  enabled: true
+  use_open_graph: true
+data_goals:
+- destinations
+- destination_details
+- venue_features

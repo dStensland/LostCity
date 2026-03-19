@@ -14,6 +14,26 @@ CREATE TABLE sources (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Portal federation contract (migration-backed canonical objects)
+-- The executable source of truth for these objects currently lives in:
+--   - database/migrations/035_source_federation.sql
+--   - database/migrations/508_entity_family_federation.sql
+--
+-- Key live semantics:
+--   - sources.owner_portal_id UUID REFERENCES portals(id)
+--   - source_sharing_rules.share_scope / allowed_categories govern event access
+--   - source_sharing_rules.shared_entity_families governs non-event sharing
+--   - source_subscriptions.subscription_scope / subscribed_categories govern event subscriptions
+--   - source_subscriptions.subscribed_entity_families governs non-event subscriptions
+--   - portal_source_access materializes event/category access
+--   - portal_source_entity_access materializes non-event entity-family access
+--   - generic `opportunities` is not a supported shared entity family; use
+--     concrete families like `open_calls` or `volunteer_opportunities`
+
+-- Enum: venue_environment
+-- Used by venues.indoor_outdoor to classify where activity primarily happens.
+CREATE TYPE venue_environment AS ENUM ('indoor', 'outdoor', 'both');
+
 -- Venues table: normalized venue information
 CREATE TABLE venues (
   id SERIAL PRIMARY KEY,
@@ -27,6 +47,7 @@ CREATE TABLE venues (
   lat DECIMAL(10, 8),
   lng DECIMAL(11, 8),
   venue_type TEXT,
+  indoor_outdoor venue_environment, -- 'indoor' | 'outdoor' | 'both' | NULL (unknown)
   location_designator TEXT NOT NULL DEFAULT 'standard',
   website TEXT,
   menu_url TEXT,
@@ -47,6 +68,7 @@ CREATE TABLE venues (
   ),
   aliases TEXT[],
   last_verified_at TIMESTAMPTZ,
+  library_pass JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -99,7 +121,7 @@ CREATE TABLE events (
   age_policy TEXT,
   age_min INT,
   age_max INT,
-  ticket_status TEXT,
+  ticket_status TEXT CHECK (ticket_status IS NULL OR ticket_status IN ('cancelled', 'sold-out', 'low-tickets', 'free', 'tickets-available')),
   reentry_policy TEXT,
   set_times_mentioned BOOLEAN DEFAULT false,
   is_free BOOLEAN DEFAULT false,
@@ -204,6 +226,7 @@ CREATE UNIQUE INDEX idx_event_links_event_type_url ON event_links(event_id, type
 CREATE INDEX idx_crawl_logs_source_id ON crawl_logs(source_id);
 CREATE INDEX idx_crawl_logs_started_at ON crawl_logs(started_at);
 CREATE INDEX idx_venues_city_id_for_spots ON venues(city, id);
+CREATE INDEX IF NOT EXISTS idx_venues_library_pass_eligible ON venues ((library_pass->>'eligible')) WHERE library_pass IS NOT NULL;
 
 -- Aggregate upcoming event counts by venue for spots/find discovery.
 CREATE OR REPLACE FUNCTION get_spot_event_counts(
@@ -670,6 +693,7 @@ CREATE INDEX IF NOT EXISTS idx_programs_program_type ON programs(program_type, s
 CREATE INDEX IF NOT EXISTS idx_programs_registration_status ON programs(registration_status, status);
 CREATE INDEX IF NOT EXISTS idx_programs_age_range ON programs(age_min, age_max) WHERE age_min IS NOT NULL OR age_max IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_programs_season ON programs(season, status) WHERE season IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_programs_tags ON programs USING GIN(tags) WHERE tags IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_programs_status ON programs(status, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_programs_content_hash ON programs ((metadata->>'content_hash')) WHERE metadata ? 'content_hash';
 
@@ -1559,6 +1583,7 @@ CREATE TABLE IF NOT EXISTS editorial_mentions (
   article_url TEXT NOT NULL,
   article_title TEXT NOT NULL,
   mention_type TEXT NOT NULL DEFAULT 'feature',
+  relevance TEXT NOT NULL DEFAULT 'primary',
   published_at TIMESTAMPTZ,
   guide_name TEXT,
   snippet TEXT,
@@ -1591,6 +1616,9 @@ CREATE TABLE IF NOT EXISTS editorial_mentions (
       'feature'
     )
   ),
+  CONSTRAINT editorial_mentions_relevance_check CHECK (
+    relevance IN ('primary', 'incidental')
+  ),
   CONSTRAINT editorial_mentions_snippet_length CHECK (
     snippet IS NULL OR length(snippet) <= 500
   )
@@ -1606,6 +1634,10 @@ CREATE INDEX IF NOT EXISTS idx_editorial_mentions_published
 
 CREATE INDEX IF NOT EXISTS idx_editorial_mentions_source
   ON editorial_mentions(source_key);
+
+CREATE INDEX IF NOT EXISTS idx_editorial_mentions_relevance
+  ON editorial_mentions(venue_id, is_active, relevance)
+  WHERE relevance = 'primary';
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_editorial_mentions_article_venue
   ON editorial_mentions(article_url, venue_id);
@@ -1661,3 +1693,148 @@ CREATE INDEX IF NOT EXISTS idx_venue_occasions_venue
   ON venue_occasions(venue_id);
 
 ALTER TABLE venue_occasions ENABLE ROW LEVEL SECURITY;
+
+-- -------------------------------------------------------
+-- Kid profiles (family portal)
+-- -------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS kid_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  nickname TEXT NOT NULL,
+  age INTEGER NOT NULL CHECK (age >= 0 AND age <= 18),
+  color TEXT NOT NULL DEFAULT '#4A7DB5',
+  emoji TEXT,
+  school_system TEXT CHECK (school_system IN ('aps', 'dekalb', 'cobb', 'gwinnett')),
+  interests TEXT[] DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_kid_profiles_user_nickname
+  ON kid_profiles(user_id, nickname);
+
+CREATE INDEX IF NOT EXISTS idx_kid_profiles_user
+  ON kid_profiles(user_id);
+
+ALTER TABLE kid_profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage their own kid profiles"
+  ON kid_profiles FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE TRIGGER kid_profiles_updated_at
+  BEFORE UPDATE ON kid_profiles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- -------------------------------------------------------
+-- Available filters (feed/category UI support)
+-- -------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS available_filters (
+  id SERIAL PRIMARY KEY,
+  filter_type TEXT NOT NULL,
+  filter_value TEXT NOT NULL,
+  display_label TEXT NOT NULL,
+  parent_value TEXT,
+  event_count INTEGER DEFAULT 0,
+  display_order INTEGER DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(filter_type, filter_value, parent_value)
+);
+
+CREATE INDEX IF NOT EXISTS idx_available_filters_type
+  ON available_filters(filter_type);
+
+CREATE INDEX IF NOT EXISTS idx_available_filters_type_parent
+  ON available_filters(filter_type, parent_value);
+
+CREATE OR REPLACE FUNCTION refresh_available_filters()
+RETURNS void AS $$
+DECLARE
+  today DATE := CURRENT_DATE;
+BEGIN
+  DELETE FROM available_filters
+  WHERE TRUE;
+
+  INSERT INTO available_filters (filter_type, filter_value, display_label, event_count, display_order)
+  SELECT
+    'category',
+    e.category_id,
+    COALESCE(c.name, INITCAP(REPLACE(e.category_id, '_', ' '))),
+    COUNT(*),
+    COALESCE(c.display_order, 999)
+  FROM events e
+  LEFT JOIN categories c ON c.id = e.category_id
+  WHERE e.start_date >= today
+    AND e.canonical_event_id IS NULL
+    AND e.category_id IS NOT NULL
+  GROUP BY e.category_id, c.name, c.display_order
+  ORDER BY COUNT(*) DESC;
+
+  INSERT INTO available_filters (filter_type, filter_value, display_label, parent_value, event_count, display_order)
+  SELECT
+    'genre',
+    g.genre,
+    COALESCE(td.label, INITCAP(REPLACE(g.genre, '-', ' '))),
+    g.category_id,
+    g.cnt,
+    COALESCE(td.display_order, 999)
+  FROM (
+    SELECT
+      unnest(e.genres) AS genre,
+      e.category_id,
+      COUNT(*) AS cnt
+    FROM events e
+    WHERE e.start_date >= today
+      AND e.canonical_event_id IS NULL
+      AND e.genres IS NOT NULL
+      AND array_length(e.genres, 1) > 0
+      AND e.category_id IS NOT NULL
+    GROUP BY unnest(e.genres), e.category_id
+    HAVING COUNT(*) >= 2
+  ) g
+  LEFT JOIN taxonomy_definitions td ON td.id = g.genre AND td.taxonomy_type = 'genre'
+  ORDER BY g.cnt DESC;
+
+  INSERT INTO available_filters (filter_type, filter_value, display_label, event_count, display_order)
+  SELECT
+    'tag',
+    t.tag,
+    INITCAP(REPLACE(t.tag, '-', ' ')),
+    t.cnt,
+    0
+  FROM (
+    SELECT unnest(e.tags) AS tag, COUNT(*) AS cnt
+    FROM events e
+    WHERE e.start_date >= today
+      AND e.canonical_event_id IS NULL
+      AND e.tags IS NOT NULL
+      AND array_length(e.tags, 1) > 0
+    GROUP BY unnest(e.tags)
+    HAVING COUNT(*) >= 2
+  ) t
+  ORDER BY t.cnt DESC;
+
+  INSERT INTO available_filters (filter_type, filter_value, display_label, event_count, display_order)
+  SELECT
+    'vibe',
+    vibe_val,
+    COALESCE(td.label, INITCAP(REPLACE(vibe_val, '-', ' '))),
+    COUNT(*),
+    COALESCE(td.display_order, 999)
+  FROM venues v,
+    LATERAL unnest(v.vibes) AS vibe_val
+  LEFT JOIN taxonomy_definitions td ON td.id = vibe_val AND td.taxonomy_type = 'venue_vibe'
+  WHERE v.active = true
+    AND v.vibes IS NOT NULL
+    AND array_length(v.vibes, 1) > 0
+  GROUP BY vibe_val, td.label, td.display_order
+  ORDER BY COUNT(*) DESC;
+
+  UPDATE available_filters
+  SET updated_at = NOW()
+  WHERE TRUE;
+END;
+$$ LANGUAGE plpgsql;

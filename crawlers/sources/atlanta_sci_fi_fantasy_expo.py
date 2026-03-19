@@ -47,6 +47,10 @@ VENUE_DATA = {
 }
 
 
+class NoCurrentCycleError(ValueError):
+    """The official site is reachable, but only a past Atlanta Sci-Fi Expo cycle is posted."""
+
+
 def _extract_ticket_url(soup: BeautifulSoup) -> str | None:
     for anchor in soup.find_all("a", href=True):
         text = re.sub(r"\s+", " ", anchor.get_text(" ", strip=True)).lower()
@@ -92,7 +96,7 @@ def parse_source_pages(
     start_date = date(year, 3, start_day)
     end_date = date(year, 3, end_day)
     if end_date < today:
-        raise ValueError("Atlanta Sci-Fi & Fantasy Expo homepage only exposes a past-dated cycle")
+        raise NoCurrentCycleError("Atlanta Sci-Fi & Fantasy Expo homepage only exposes a past-dated cycle")
 
     if "Northlake Mall" not in page_text and "Northlake Mall" not in schedule_text:
         raise ValueError("Atlanta Sci-Fi & Fantasy Expo pages did not expose the official venue")
@@ -165,7 +169,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
         ticket_response.raise_for_status()
         ticket_html = ticket_response.text
 
-    event = parse_source_pages(homepage_response.text, schedule_response.text, ticket_html)
+    try:
+        event = parse_source_pages(homepage_response.text, schedule_response.text, ticket_html)
+    except NoCurrentCycleError as exc:
+        stale_removed = remove_stale_source_events(source_id, current_hashes)
+        if stale_removed:
+            logger.info("Removed %s stale Atlanta Sci-Fi & Fantasy Expo events after refresh", stale_removed)
+        logger.info("Atlanta Sci-Fi & Fantasy Expo crawl complete: no current cycle published (%s)", exc)
+        return 0, 0, 0
     venue_id = get_or_create_venue(VENUE_DATA)
     content_hash = generate_content_hash(event["title"], VENUE_DATA["name"], event["start_date"])
     current_hashes.add(content_hash)

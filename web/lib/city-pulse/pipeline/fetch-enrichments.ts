@@ -1,0 +1,247 @@
+/**
+ * Pipeline stage 4: Enrichment queries.
+ *
+ * Fires in two sub-phases:
+ *
+ *  Phase A (parallel with event pools):
+ *    - Weather venues
+ *    - Venue specials
+ *    - CMS curated sections
+ *    - Feed headers
+ *    - User profile (for display_name in header)
+ *    - User signals (prefs, follows, friends)
+ *
+ *  Phase B (depends on Phase A + event IDs):
+ *    - Social proof counts
+ *    - Friend RSVPs + profiles
+ *    - New-from-followed-spots events
+ *
+ * Phase A runs inside the same big Promise.all as fetchEventPools and
+ * fetchFeedCounts. Phase B runs in a second Promise.all after event IDs
+ * are known.
+ */
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { FeedEventData } from "@/components/EventCard";
+import type { Spot } from "@/lib/spots-constants";
+import type { PipelineContext } from "./resolve-portal";
+import type { RawPortalSection } from "@/lib/city-pulse/curated-sections";
+import type { FeedHeaderRow, FriendGoingInfo } from "@/lib/city-pulse/types";
+import type { UserSignals } from "@/lib/city-pulse/types";
+import { getWeatherVenueFilter } from "@/lib/city-pulse/weather-mapping";
+import { getSpecialStatus } from "@/lib/city-pulse/specials";
+import type { SpecialRow } from "@/lib/city-pulse/specials";
+import { loadUserSignals } from "@/lib/city-pulse/user-signals";
+import { fetchSocialProofCounts } from "@/lib/social-proof";
+import { buildFriendsGoingMap } from "@/lib/city-pulse/counts";
+import { fetchNewFromSpots } from "./fetch-events";
+import type { CityPulseSpecialItem } from "@/lib/city-pulse/types";
+import type { WeatherData } from "@/lib/weather-utils";
+
+// ---------------------------------------------------------------------------
+// Shared venue SELECT
+// ---------------------------------------------------------------------------
+
+export const VENUE_SELECT = `
+  id, name, slug, address, neighborhood, city, venue_type,
+  venue_types, lat, lng, image_url, short_description,
+  vibes, genres, price_level, hours_display,
+  hours, featured, active,
+  location_designator
+`;
+
+// ---------------------------------------------------------------------------
+// Phase A: parallel enrichments (no event ID dependency)
+// ---------------------------------------------------------------------------
+
+export type PhaseAEnrichments = {
+  weatherVenues: Spot[];
+  weatherFilter: ReturnType<typeof getWeatherVenueFilter> | null;
+  activeSpecials: CityPulseSpecialItem["special"][];
+  rawCuratedSections: RawPortalSection[];
+  headerCandidates: FeedHeaderRow[];
+  userProfile: { display_name: string | null; username: string | null } | null;
+  userSignals: UserSignals | null;
+};
+
+/**
+ * Fetch all Phase A enrichments in a single Promise.all.
+ * Should be called inside the same outer Promise.all as fetchEventPools/fetchFeedCounts.
+ */
+export async function fetchPhaseAEnrichments(
+  supabase: SupabaseClient,
+  ctx: PipelineContext,
+): Promise<PhaseAEnrichments> {
+  const weatherFilter = ctx.feedContext.weather
+    ? getWeatherVenueFilter(ctx.feedContext.weather as WeatherData)
+    : null;
+
+  // Build weather venue query
+  const weatherVenuePromise: Promise<{ data: unknown[] | null }> = weatherFilter
+    ? (() => {
+        const typesList = weatherFilter.venue_types.join(",");
+        const vibesList = weatherFilter.vibes.join(",");
+        let q = supabase
+          .from("venues")
+          .select(VENUE_SELECT)
+          .eq("active", true)
+          .or(`venue_type.in.(${typesList}),vibes.ov.{${vibesList}}`);
+        if (ctx.geoCenter) {
+          const radiusKm = ctx.portalFilters.geo_radius_km ?? 25;
+          const degOffset = radiusKm / 111;
+          q = q
+            .gte("lat", ctx.geoCenter[0] - degOffset)
+            .lte("lat", ctx.geoCenter[0] + degOffset)
+            .gte("lng", ctx.geoCenter[1] - degOffset)
+            .lte("lng", ctx.geoCenter[1] + degOffset);
+        } else if (ctx.portalCity) {
+          q = q.ilike("city", `%${ctx.portalCity}%`);
+        }
+        return q.limit(20) as unknown as Promise<{ data: unknown[] | null }>;
+      })()
+    : Promise.resolve({ data: [] });
+
+  // Specials query
+  const specialsPromise = (() => {
+    let q = supabase
+      .from("venue_specials")
+      .select(`
+        id, venue_id, title, type, description,
+        days_of_week, time_start, time_end,
+        start_date, end_date, price_note,
+        venue:venues!inner(id, name, slug, neighborhood, venue_type, image_url, city)
+      `)
+      .eq("is_active", true)
+      .eq("venue.active", true);
+    if (ctx.portalCity) {
+      q = q.ilike("venue.city", `%${ctx.portalCity}%`);
+    }
+    return q.limit(50);
+  })();
+
+  const [
+    weatherVenuesResult,
+    specialsResult,
+    curatedResult,
+    headersResult,
+    profileResult,
+    userSignals,
+  ] = await Promise.all([
+    weatherVenuePromise,
+    specialsPromise,
+    // Curated portal sections
+    supabase
+      .from("portal_sections")
+      .select(`
+        id, title, slug, description, section_type, block_type,
+        layout, items_per_row, max_items, auto_filter, block_content,
+        display_order, is_visible,
+        schedule_start, schedule_end, show_on_days,
+        show_after_time, show_before_time, style,
+        portal_section_items(id, entity_type, entity_id, display_order)
+      `)
+      .eq("portal_id", ctx.portalData.id)
+      .eq("is_visible", true)
+      .order("display_order", { ascending: true }),
+    // Feed header CMS configs
+    supabase
+      .from("portal_feed_headers")
+      .select("*")
+      .eq("portal_id", ctx.portalData.id)
+      .eq("is_active", true)
+      .order("priority", { ascending: true }),
+    // User profile for header template vars
+    ctx.userId
+      ? supabase
+          .from("profiles")
+          .select("display_name, username")
+          .eq("id", ctx.userId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    // User personalization signals
+    loadUserSignals(supabase, ctx.userId, ctx.portalData.id),
+  ]);
+
+  // Process specials: compute live status and filter to active/soon
+  const rawSpecials = (specialsResult.data || []) as unknown as Array<
+    SpecialRow & {
+      venue: Pick<Spot, "id" | "name" | "slug" | "neighborhood" | "venue_type" | "image_url">;
+    }
+  >;
+
+  const activeSpecials: CityPulseSpecialItem["special"][] = [];
+  for (const s of rawSpecials) {
+    const status = getSpecialStatus(s, ctx.now, ctx.today);
+    if (status.state === "active_now" || status.state === "starting_soon") {
+      activeSpecials.push({
+        id: s.id,
+        venue: s.venue,
+        title: s.title,
+        type: s.type,
+        state: status.state,
+        starts_in_minutes: status.startsInMinutes,
+        remaining_minutes: status.remainingMinutes,
+        price_note: s.price_note,
+        description: s.description,
+      });
+    }
+  }
+
+  // Sort: active_now first, then starting_soon by time
+  activeSpecials.sort((a, b) => {
+    if (a.state === "active_now" && b.state !== "active_now") return -1;
+    if (a.state !== "active_now" && b.state === "active_now") return 1;
+    return (a.starts_in_minutes ?? 999) - (b.starts_in_minutes ?? 999);
+  });
+
+  return {
+    weatherVenues: (weatherVenuesResult.data || []) as Spot[],
+    weatherFilter,
+    activeSpecials,
+    rawCuratedSections: (curatedResult.data || []) as unknown as RawPortalSection[],
+    headerCandidates: (headersResult.data || []) as FeedHeaderRow[],
+    userProfile: profileResult.data as {
+      display_name: string | null;
+      username: string | null;
+    } | null,
+    userSignals,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Phase B: social proof + friend RSVPs + new from spots
+// ---------------------------------------------------------------------------
+
+export type PhaseBEnrichments = {
+  socialCounts: Map<number, { going: number; interested: number }>;
+  friendsGoingMap: Record<number, FriendGoingInfo[]>;
+  newFromSpots: FeedEventData[];
+};
+
+/**
+ * Fetch Phase B enrichments in parallel. Requires event IDs from Phase A
+ * event pools and userSignals from Phase A enrichments.
+ */
+export async function fetchPhaseBEnrichments(
+  supabase: SupabaseClient,
+  portalClient: SupabaseClient,
+  ctx: PipelineContext,
+  allEventIds: number[],
+  userSignals: UserSignals | null,
+): Promise<PhaseBEnrichments> {
+  const [socialCounts, friendsGoingMap, newFromSpots] = await Promise.all([
+    fetchSocialProofCounts(allEventIds),
+    buildFriendsGoingMap(
+      supabase,
+      allEventIds,
+      userSignals?.friendIds ?? [],
+    ),
+    fetchNewFromSpots(
+      portalClient,
+      ctx,
+      userSignals?.followedVenueIds ?? [],
+    ),
+  ]);
+
+  return { socialCounts, friendsGoingMap, newFromSpots };
+}

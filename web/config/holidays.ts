@@ -113,22 +113,6 @@ export const HOLIDAYS: HolidayConfig[] = [
     iconGlowRing: true,
   },
   {
-    slug: "ramadan",
-    tag: "ramadan",
-    title: "Ramadan",
-    subtitle: "Iftars, community meals & reflection across Atlanta",
-    gradient: "linear-gradient(135deg, #0a0e2a 0%, #0f1a3d 30%, #1a1540 60%, #0a0e2a 100%)",
-    accentColor: "#c5a028",
-    glowColor: "#c5a028",
-    icon: "/images/ramadan-crescent.svg",
-    showFrom: [2, 18],
-    showUntil: [3, 19],
-    eventDate: [2026, 2, 18], // TODO: Update for 2027 — Islamic calendar
-    countdownOverride: "RAMADAN MUBARAK",
-    iconBgGlow: true,
-    iconGlowRing: true,
-  },
-  {
     slug: "holi",
     tag: "holi",
     title: "Holi",

@@ -18,6 +18,8 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from sources._rec1_base import (
     _get_checkout_key,
     _get_groups_for_tab,
@@ -36,6 +38,13 @@ TARGET_GROUP = "Aquatics Fitness"
 WEEKS_AHEAD = 8
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 DAY_INDEX = {
     "mo": 0,
@@ -97,6 +106,49 @@ VENUE_DATA_BY_LOCATION = {
         "description": "Gwinnett County aquatic center hosting public aquatics fitness classes.",
     },
 }
+
+
+def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "aquatic_center",
+            "commitment_tier": "halfday",
+            "primary_activity": "family aquatic center visit",
+            "best_seasons": ["spring", "summer"],
+            "weather_fit_tags": ["indoor-option", "heat-day", "family-daytrip"],
+            "parking_type": "free_lot",
+            "best_time_of_day": "afternoon",
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Public swim access and classes vary by site; confirm current pool hours and registration windows through Gwinnett Parks.",
+            "source_url": CATALOG_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": venue_data.get("venue_type"),
+                "county": "gwinnett",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "public-pool-and-aquatics-programs",
+            "title": "Public pool and aquatics programs",
+            "feature_type": "amenity",
+            "description": f"{venue_data['name']} is one of Gwinnett's aquatic facilities with public swim and family aquatics programming.",
+            "url": CATALOG_URL,
+            "price_note": "Public access and registration vary by program and season.",
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    return envelope
 
 
 def parse_days_value(raw_value: str) -> list[int]:
@@ -206,6 +258,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
     current_hashes: set[str] = set()
+    enriched_venue_ids: set[int] = set()
     today = datetime.now().date()
 
     checkout_key = _get_checkout_key(TENANT_SLUG)
@@ -239,6 +292,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
             continue
 
         venue_id = get_or_create_venue(parsed["venue_data"])
+        if venue_id not in enriched_venue_ids:
+            persist_typed_entity_envelope(
+                _build_destination_envelope(parsed["venue_data"], venue_id)
+            )
+            enriched_venue_ids.add(venue_id)
 
         for event_date, weekday in parsed["occurrences"]:
             events_found += 1

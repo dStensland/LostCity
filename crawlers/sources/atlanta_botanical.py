@@ -37,8 +37,18 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
 
 BASE_URL = "https://atlantabg.org"
 API_URL = f"{BASE_URL}/wp-json/tribe/events/v1/events"
@@ -136,6 +146,110 @@ _VENUE_GAINESVILLE: dict = {
         "sunday": {"open": "09:00", "close": "19:00"},
     },
 }
+
+
+def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
+    venue_name = str(venue_data.get("name") or "Atlanta Botanical Garden").strip()
+    city = str(venue_data.get("city") or "").lower()
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "botanical_garden",
+            "commitment_tier": "halfday",
+            "primary_activity": "family garden visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["outdoor", "outdoor-indoor-mix", "family-daytrip"],
+            "parking_type": "paid_lot" if city == "atlanta" else "free_lot",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                f"{venue_name} works best with a timed-entry mindset during peak exhibitions and family seasons, "
+                "and the garden's paved circulation makes it easier to combine kid-focused stops with a longer wander. "
+                "It is easiest before midday heat, especially when families want outdoor beauty without committing to a rough-terrain day."
+            ),
+            "accessibility_notes": (
+                "Paved garden paths and indoor conservatory/exhibition spaces make the garden more stroller-friendly "
+                "and weather-flexible than a purely outdoor attraction, giving families better shade and reset options than a trail-only plan."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Timed-entry and event pricing vary by season; family programs and children's programming run throughout the year.",
+            "source_url": venue_data.get("website") or BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "garden",
+                "city": venue_data.get("city"),
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "childrens-garden-and-kids-programming",
+            "title": "Children's garden and kids programming",
+            "feature_type": "amenity",
+            "description": f"{venue_name} is one of the city's strongest family nature destinations, with children's programming, camps, and family garden experiences across the year.",
+            "url": API_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "paved-garden-paths-and-stroller-friendly-circulation",
+            "title": "Paved garden paths and stroller-friendly circulation",
+            "feature_type": "amenity",
+            "description": f"{venue_name} supports lower-friction family movement with paved garden circulation, making it easier to handle strollers and slower-paced kid outings.",
+            "url": venue_data.get("website") or BASE_URL,
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "indoor-conservatories-and-weather-flex-space",
+            "title": "Indoor conservatories and weather-flex space",
+            "feature_type": "amenity",
+            "description": f"{venue_name} includes indoor conservatory and exhibition-style spaces, which helps families keep a garden visit viable when weather or energy shifts during the day.",
+            "url": venue_data.get("website") or BASE_URL,
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "shade-and-conservatory-reset-flex",
+            "title": "Shade and conservatory reset flex",
+            "feature_type": "amenity",
+            "description": "The garden works better than many outdoor family destinations in heat because shaded paths and conservatory spaces give families a built-in reset option.",
+            "url": venue_data.get("website") or BASE_URL,
+            "is_free": False,
+            "sort_order": 40,
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "children-under-3-free-daytime-admission",
+            "title": "Children under 3 free daytime admission",
+            "description": f"{venue_name} offers free daytime admission for children under 3, which makes it materially easier to treat the garden as a family outing with very young kids.",
+            "price_note": "Children under 3 are free for daytime garden admission.",
+            "is_free": True,
+            "source_url": "https://atlantabg.org/tickets",
+            "category": "admission",
+        },
+    )
+    return envelope
 
 
 def _strip_html(html: str) -> str:
@@ -404,6 +518,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
         # Pre-create both venues once
         midtown_venue_id = get_or_create_venue(_VENUE_MIDTOWN)
         gainesville_venue_id = get_or_create_venue(_VENUE_GAINESVILLE)
+        persist_typed_entity_envelope(_build_destination_envelope(midtown_venue_id, _VENUE_MIDTOWN))
+        persist_typed_entity_envelope(_build_destination_envelope(gainesville_venue_id, _VENUE_GAINESVILLE))
 
         # Enrich venue records with og:image from their homepages
         for venue_id_local, venue_url in [

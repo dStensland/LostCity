@@ -1,0 +1,18 @@
+version: 1
+slug: relapse-theatre
+name: Relapse Theatre
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://therelapsetheater-com.seatengine.com/events
+  fetch:
+    render_js: true
+detail:
+  enabled: false
+data_goals:
+- events
+- tickets
+- images

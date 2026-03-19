@@ -35,8 +35,17 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 BASE_URL = "https://puppet.org"
 PROGRAMS_URLS = [
@@ -87,6 +96,81 @@ VENUE_DATA = {
         "sunday": {"open": "12:00", "close": "17:00"},
     },
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "puppetry_museum",
+            "commitment_tier": "halfday",
+            "primary_activity": "family puppetry museum and show visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+            "parking_type": "paid_lot",
+            "best_time_of_day": "afternoon",
+            "practical_notes": (
+                "The Center works especially well as a half-day indoor family outing because museum galleries, "
+                "hands-on activities, and performances can be stacked into one visit without requiring a huge walking day."
+            ),
+            "accessibility_notes": (
+                "Indoor museum-and-theater circulation makes the Center easier for strollers and lower-energy family outings "
+                "than destinations built around long exterior walking."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Performance tickets and museum admission vary by show and package; it remains one of the city's strongest indoor family culture destinations.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "theater",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "jim-henson-collection-and-museum-galleries",
+            "title": "Jim Henson Collection and museum galleries",
+            "feature_type": "attraction",
+            "description": "The Center for Puppetry Arts pairs performances with museum galleries, including the Jim Henson Collection, making it more than a single-show destination.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "family-puppet-performances-and-workshops",
+            "title": "Family puppet performances and workshops",
+            "feature_type": "amenity",
+            "description": "Shows, workshops, and hands-on puppet-making give families multiple reasons to stay beyond the performance itself.",
+            "url": PROGRAMS_URLS[0],
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "indoor-half-day-family-stack",
+            "title": "Indoor half-day family stack",
+            "feature_type": "experience",
+            "description": "The Center combines museum galleries, performances, and hands-on activities in one indoor stop, which makes it unusually practical for a fuller family outing without lots of transit between stops.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    return envelope
 
 
 # ---------------------------------------------------------------------------
@@ -428,6 +512,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
+        persist_typed_entity_envelope(_build_destination_envelope(venue_id))
         logger.info("Center for Puppetry Arts venue ensured (ID: %s)", venue_id)
 
         # Enrich venue with og:image from the homepage
@@ -506,8 +591,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 tags = _base_tags(title, age_min, age_max)
 
-                # Determine category: camps → programs, regular shows → family
-                category = "programs" if _is_camp_title(title) else "family"
+                # Determine category: camps → programs, puppet shows → theater
+                category = "programs" if _is_camp_title(title) else "theater"
                 subcategory = "camp" if _is_camp_title(title) else "puppetry"
 
                 # Series hint — group all performances of the same show together

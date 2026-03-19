@@ -39,11 +39,20 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.southernbellefarm.com"
 WP_API_POSTS = f"{BASE_URL}/wp-json/wp/v2/posts"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 # ── Season page URLs ──────────────────────────────────────────────────────────
 SEASON_URLS = {
@@ -941,6 +950,79 @@ def scrape_blog_special_events(
     return events_found, events_new, events_updated
 
 
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "farm",
+            "commitment_tier": "halfday",
+            "primary_activity": "seasonal family farm visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["outdoor", "seasonal", "family-daytrip", "heat-day"],
+            "parking_type": "free_lot",
+            "best_time_of_day": "morning",
+            "practical_notes": (
+                "Southern Belle Farm works best as a planned seasonal outing where families pick a crop, festival, or holiday window instead of treating it like a quick drop-in stop."
+            ),
+            "accessibility_notes": (
+                "The farm is easiest for families prepared for outdoor walking, weather exposure, and uneven ground across fields, festival areas, and seasonal queues."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Seasonal admission and activity pricing varies by crop season, festival, and special event; parking is free.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "outdoor_venue",
+                "city": "mcdonough",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "u-pick-fruit-and-flower-seasons",
+            "title": "U-pick fruit and flower seasons",
+            "feature_type": "amenity",
+            "description": "Southern Belle's spring and summer seasons are strongest when families want a hands-on pick-your-own farm outing rather than a passive stop.",
+            "url": f"{BASE_URL}/spring/",
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "fall-festival-corn-maze-and-pumpkin-patch",
+            "title": "Fall festival, corn maze, and pumpkin patch",
+            "feature_type": "amenity",
+            "description": "Its fall season turns Southern Belle into a full seasonal family outing with a corn maze, pumpkins, and all-ages farm attractions.",
+            "url": f"{BASE_URL}/fall/",
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "seasonal-farm-fun-and-holiday-return-trips",
+            "title": "Seasonal farm fun and holiday return trips",
+            "feature_type": "amenity",
+            "description": "Southern Belle is a repeat family destination because the experience changes across berries, peaches, fall attractions, and Christmas programming.",
+            "url": BASE_URL,
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+    return envelope
+
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 
@@ -977,6 +1059,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
+        persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
         # 1. Scrape all 4 seasonal landing pages
         for season in ("spring", "summer", "fall", "christmas"):

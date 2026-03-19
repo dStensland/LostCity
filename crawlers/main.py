@@ -19,6 +19,7 @@ import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
+from datetime import datetime, timedelta
 from importlib import import_module
 from typing import Optional
 from urllib.parse import urljoin, urlparse, urlunparse
@@ -48,12 +49,14 @@ from db import (
 )
 from config import set_database_target, get_config
 from crawl_context import set_crawl_context, CrawlContext
+from crawl_lock import hold_crawl_run_lock, CrawlRunLockError
 from utils import setup_logging
 from fetch_logos import fetch_logos
 from crawler_health import (
     record_crawl_start as health_record_start,
     record_crawl_success as health_record_success,
     record_crawl_failure as health_record_failure,
+    cancel_stale_runs,
     get_recommended_workers,
     get_recommended_delay,
     should_skip_crawl,
@@ -324,6 +327,7 @@ SOURCE_OVERRIDES = {
     "the-maker-station": "sources.maker_station",
     "chattahoochee-food-works": "sources.the_works",
     "wild-heaven-beer-avondale": "sources.wild_heaven_beer",
+    "woodstock-arts-theatre": "sources.woodstock_arts_theatre",
     # Support portal slug-to-filename mismatches
     "good-samaritan-health-center": "sources.good_samaritan_health",
     "red-cross-cpr-atlanta": "sources.red_cross_cpr",
@@ -352,6 +356,9 @@ SOURCE_OVERRIDES = {
     "porsche-experience-center-atlanta": "sources.porsche_experience_center",
     "atlanta-alpaca-treehouse": "sources.alpaca_treehouse",
     "trader-vics-atlanta": "sources.trader_vics",
+    # 404 Day/Weekend — filename uses "four04" to avoid starting with a digit
+    "404-day": "sources.four04_day",
+    "404-weekend": "sources.four04_weekend",
 }
 
 
@@ -984,6 +991,8 @@ def run_post_crawl_tasks(
     run_launch_maintenance: bool = True,
     maintenance_city: str = "Atlanta",
     maintenance_portal: Optional[str] = "atlanta",
+    skip_tba_hydration: bool = False,
+    tba_hydration_limit: Optional[int] = None,
 ) -> None:
     """Run all post-crawl pipeline tasks (filters, logos, cleanup, festivals, etc.)."""
     if not writes_enabled():
@@ -1002,7 +1011,10 @@ def run_post_crawl_tasks(
         logger.warning("Failed to refresh available filters")
 
     logger.info("Refreshing search suggestions...")
-    if refresh_search_suggestions(maintenance_city):
+    if refresh_search_suggestions(
+        maintenance_city,
+        since=datetime.utcnow() - timedelta(days=3),
+    ):
         logger.info("Search suggestions refreshed successfully")
     else:
         logger.warning("Failed to refresh search suggestions")
@@ -1131,20 +1143,26 @@ def run_post_crawl_tasks(
         logger.warning(f"Artist backfill failed: {e}")
 
     # 3. Hydrate TBA events — enrich from source/ticket URLs before reporting
-    logger.info("Hydrating TBA events (enriching from source URLs)...")
-    try:
-        from hydrate_tba_events import hydrate_tba_events
-        tba_stats = hydrate_tba_events(apply=True)
-        tba_total = tba_stats.get("total", 0)
-        if tba_total > 0:
-            logger.info(
-                f"TBA hydration: {tba_stats.get('time_filled', 0)} times found, "
-                f"{tba_stats.get('enriched', 0)} enriched, "
-                f"{tba_stats.get('deduped', 0)} deduped "
-                f"out of {tba_total} TBA events"
-            )
-    except Exception as e:
-        logger.warning(f"TBA hydration failed: {e}")
+    if skip_tba_hydration:
+        logger.info("Skipping TBA hydration by request.")
+    else:
+        logger.info(
+            "Hydrating TBA events (enriching from source URLs)%s...",
+            f" [limit={tba_hydration_limit}]" if tba_hydration_limit else "",
+        )
+        try:
+            from hydrate_tba_events import hydrate_tba_events
+            tba_stats = hydrate_tba_events(apply=True, limit=tba_hydration_limit)
+            tba_total = tba_stats.get("total", 0)
+            if tba_total > 0:
+                logger.info(
+                    f"TBA hydration: {tba_stats.get('time_filled', 0)} times found, "
+                    f"{tba_stats.get('enriched', 0)} enriched, "
+                    f"{tba_stats.get('deduped', 0)} deduped "
+                    f"out of {tba_total} TBA events"
+                )
+        except Exception as e:
+            logger.warning(f"TBA hydration failed: {e}")
 
     # 3b. Report remaining TBA events
     logger.info("Counting remaining TBA events...")
@@ -1210,6 +1228,11 @@ def should_run_full_post_crawl_for_source(args) -> bool:
     return bool(getattr(args, "full_post_crawl", False))
 
 
+def should_run_post_crawl_for_batch(args) -> bool:
+    """Return whether batch/all-source runs should trigger heavy post-crawl work."""
+    return not bool(getattr(args, "skip_launch_maintenance", False))
+
+
 def run_all_sources(
     parallel: bool = True,
     max_workers: int = MAX_WORKERS,
@@ -1217,6 +1240,8 @@ def run_all_sources(
     run_launch_maintenance: bool = True,
     maintenance_city: str = "Atlanta",
     maintenance_portal: Optional[str] = "atlanta",
+    skip_tba_hydration: bool = False,
+    tba_hydration_limit: Optional[int] = None,
 ) -> dict[str, bool]:
     """
     Run crawlers for all active sources.
@@ -1306,6 +1331,8 @@ def run_all_sources(
         run_launch_maintenance=run_launch_maintenance,
         maintenance_city=maintenance_city,
         maintenance_portal=maintenance_portal,
+        skip_tba_hydration=skip_tba_hydration,
+        tba_hydration_limit=tba_hydration_limit,
     )
 
     return results
@@ -1472,10 +1499,12 @@ def run_smart_crawl(args) -> dict[str, bool]:
     logger.info(f"Smart crawl complete: {success} succeeded, {failed} failed")
 
     run_post_crawl_tasks(
-        run_global_tasks=not args.skip_launch_maintenance,
-        run_launch_maintenance=not args.skip_launch_maintenance,
+        run_global_tasks=should_run_post_crawl_for_batch(args),
+        run_launch_maintenance=should_run_post_crawl_for_batch(args),
         maintenance_city=args.launch_maintenance_city,
         maintenance_portal=args.launch_maintenance_portal,
+        skip_tba_hydration=args.skip_tba_hydration,
+        tba_hydration_limit=args.tba_hydration_limit,
     )
     return results
 
@@ -1509,10 +1538,12 @@ def run_cadence_crawl(args) -> dict[str, bool]:
     logger.info(f"Cadence crawl complete: {success} succeeded, {failed} failed")
 
     run_post_crawl_tasks(
-        run_global_tasks=not args.skip_launch_maintenance,
-        run_launch_maintenance=not args.skip_launch_maintenance,
+        run_global_tasks=should_run_post_crawl_for_batch(args),
+        run_launch_maintenance=should_run_post_crawl_for_batch(args),
         maintenance_city=args.launch_maintenance_city,
         maintenance_portal=args.launch_maintenance_portal,
+        skip_tba_hydration=args.skip_tba_hydration,
+        tba_hydration_limit=args.tba_hydration_limit,
     )
     return results
 
@@ -1592,6 +1623,11 @@ def main():
         action="store_true",
         dest="allow_production_writes",
         help="Required to perform write operations against production DB target"
+    )
+    parser.add_argument(
+        "--skip-run-lock",
+        action="store_true",
+        help="Bypass the local single-run lock for write-enabled production crawls.",
     )
     parser.add_argument(
         "--sequential",
@@ -1707,6 +1743,25 @@ def main():
         ),
     )
     parser.add_argument(
+        "--post-crawl-global-only",
+        action="store_true",
+        help=(
+            "Run only the global post-crawl tasks (cleanup, healing, festivals, "
+            "TBA hydration, analytics, report) and exit. Does not run launch maintenance."
+        ),
+    )
+    parser.add_argument(
+        "--skip-tba-hydration",
+        action="store_true",
+        help="Skip the TBA hydration step during post-crawl work.",
+    )
+    parser.add_argument(
+        "--tba-hydration-limit",
+        type=int,
+        default=None,
+        help="Max TBA events to hydrate during post-crawl work.",
+    )
+    parser.add_argument(
         "--launch-maintenance-city",
         default="Atlanta",
         help="City passed to post-crawl launch maintenance. Default: Atlanta.",
@@ -1777,6 +1832,9 @@ def main():
         cfg.database.active_target,
         "enabled" if should_write else "disabled",
     )
+
+    if should_write:
+        cancel_stale_runs(max_age_minutes=120)
 
     # Set city/state crawl context so geographic filters are parameterized.
     # When running Atlanta (the default), this is a no-op. For new markets,
@@ -1867,70 +1925,95 @@ def main():
         print(f"Crawler modules: {len(modules)} available")
         return 0
 
-    # Venue specials scraper
-    if args.specials:
-        from scrape_venue_specials import get_venues, scrape_venue, _close_browser
-        logger.info(
-            f"Specials mode: scraping {args.specials_venue_type} venues "
-            f"(limit={args.specials_limit})"
-        )
-        venues = get_venues(
-            venue_type=args.specials_venue_type,
-            limit=args.specials_limit,
-        )
-        logger.info(f"Found {len(venues)} venues to scrape")
-        scraped = 0
-        for i, venue in enumerate(venues, 1):
-            name = venue["name"][:45]
-            logger.info(f"[{i}/{len(venues)}] {name}")
-            try:
-                scrape_venue(venue, dry_run=args.dry_run)
-                scraped += 1
-            except Exception as e:
-                logger.error(f"  Failed: {e}")
-        try:
-            _close_browser()
-        except Exception:
-            pass
-        logger.info(f"Specials scraper done: {scraped}/{len(venues)} venues processed")
-        return 0
+    lock_enabled = (
+        should_write
+        and cfg.database.active_target == "production"
+        and not args.skip_run_lock
+    )
+    try:
+        with hold_crawl_run_lock(enabled=lock_enabled, db_target=cfg.database.active_target):
+            # Venue specials scraper
+            if args.specials:
+                from scrape_venue_specials import get_venues, scrape_venue, _close_browser
+                logger.info(
+                    f"Specials mode: scraping {args.specials_venue_type} venues "
+                    f"(limit={args.specials_limit})"
+                )
+                venues = get_venues(
+                    venue_type=args.specials_venue_type,
+                    limit=args.specials_limit,
+                )
+                logger.info(f"Found {len(venues)} venues to scrape")
+                scraped = 0
+                for i, venue in enumerate(venues, 1):
+                    name = venue["name"][:45]
+                    logger.info(f"[{i}/{len(venues)}] {name}")
+                    try:
+                        scrape_venue(venue, dry_run=args.dry_run)
+                        scraped += 1
+                    except Exception as e:
+                        logger.error(f"  Failed: {e}")
+                try:
+                    _close_browser()
+                except Exception:
+                    pass
+                logger.info(f"Specials scraper done: {scraped}/{len(venues)} venues processed")
+                return 0
 
-    # Single source
-    if args.source:
-        success = run_source(args.source, skip_circuit_breaker=args.force)
-        if success and should_write:
-            run_full_post_crawl = should_run_full_post_crawl_for_source(args)
-            run_post_crawl_tasks(
-                run_global_tasks=run_full_post_crawl,
-                run_launch_maintenance=run_full_post_crawl,
+            # Single source
+            if args.source:
+                success = run_source(args.source, skip_circuit_breaker=args.force)
+                if success and should_write:
+                    run_full_post_crawl = should_run_full_post_crawl_for_source(args)
+                    run_post_crawl_tasks(
+                        run_global_tasks=run_full_post_crawl,
+                        run_launch_maintenance=run_full_post_crawl,
+                        maintenance_city=args.launch_maintenance_city,
+                        maintenance_portal=args.launch_maintenance_portal,
+                        skip_tba_hydration=args.skip_tba_hydration,
+                        tba_hydration_limit=args.tba_hydration_limit,
+                    )
+                return 0 if success else 1
+
+            if args.post_crawl_global_only:
+                run_post_crawl_tasks(
+                    run_global_tasks=True,
+                    run_launch_maintenance=False,
+                    maintenance_city=args.launch_maintenance_city,
+                    maintenance_portal=args.launch_maintenance_portal,
+                    skip_tba_hydration=args.skip_tba_hydration,
+                    tba_hydration_limit=args.tba_hydration_limit,
+                )
+                return 0
+
+            # Smart mode: only crawl sources due based on cadence
+            if args.smart:
+                results = run_smart_crawl(args)
+                failed = sum(1 for v in results.values() if not v)
+                return 1 if failed > 0 else 0
+
+            # Cadence mode: run all sources with specific frequency
+            if args.cadence:
+                results = run_cadence_crawl(args)
+                failed = sum(1 for v in results.values() if not v)
+                return 1 if failed > 0 else 0
+
+            # All sources (default — existing behavior unchanged)
+            results = run_all_sources(
+                parallel=not args.sequential,
+                max_workers=args.workers,
+                adaptive=not args.no_adaptive,
+                run_launch_maintenance=should_run_post_crawl_for_batch(args),
                 maintenance_city=args.launch_maintenance_city,
                 maintenance_portal=args.launch_maintenance_portal,
+                skip_tba_hydration=args.skip_tba_hydration,
+                tba_hydration_limit=args.tba_hydration_limit,
             )
-        return 0 if success else 1
-
-    # Smart mode: only crawl sources due based on cadence
-    if args.smart:
-        results = run_smart_crawl(args)
-        failed = sum(1 for v in results.values() if not v)
-        return 1 if failed > 0 else 0
-
-    # Cadence mode: run all sources with specific frequency
-    if args.cadence:
-        results = run_cadence_crawl(args)
-        failed = sum(1 for v in results.values() if not v)
-        return 1 if failed > 0 else 0
-
-    # All sources (default — existing behavior unchanged)
-    results = run_all_sources(
-        parallel=not args.sequential,
-        max_workers=args.workers,
-        adaptive=not args.no_adaptive,
-        run_launch_maintenance=not args.skip_launch_maintenance,
-        maintenance_city=args.launch_maintenance_city,
-        maintenance_portal=args.launch_maintenance_portal,
-    )
-    failed = sum(1 for v in results.values() if not v)
-    return 1 if failed > 0 else 0
+            failed = sum(1 for v in results.values() if not v)
+            return 1 if failed > 0 else 0
+    except CrawlRunLockError as exc:
+        logger.error(str(exc))
+        return 1
 
 
 if __name__ == "__main__":

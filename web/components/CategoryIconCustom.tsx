@@ -13,6 +13,8 @@ export const CATEGORY_CONFIG = {
   food_drink: { label: "Food & Drink", color: "#FDBA74" },
   sports: { label: "Sports", color: "#7DD3FC" },
   fitness: { label: "Fitness", color: "#5EEAD4" },
+  recreation: { label: "Recreation", color: "#7DD3FC" },
+  exercise: { label: "Exercise", color: "#5EEAD4" },
   nightlife: { label: "Nightlife", color: "#E879F9" },
   family: { label: "Family", color: "#A78BFA" },
   learning: { label: "Learning", color: "#A8E6CF" },
@@ -539,6 +541,16 @@ export const iconPaths: Record<string, ReactNode> = {
       <circle cx="19" cy="6" r="1" fill="currentColor" opacity={0.4} />
     </>
   ),
+  // Recreation — same as sports (flame burst)
+  recreation: (
+    <>
+      <path d="M12 2c-2 3-4 5-4 8a4 4 0 008 0c0-3-2-5-4-8z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 6c-1 2-2 3-2 5a2 2 0 004 0c0-2-1-3-2-5z" fill="currentColor" opacity={0.4} />
+      <path d="M8 16l-3 5M16 16l3 5M12 14v7" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="5" cy="6" r="1" fill="currentColor" opacity={0.4} />
+      <circle cx="19" cy="6" r="1" fill="currentColor" opacity={0.4} />
+    </>
+  ),
 
   // Arena - Stadium outline
   arena: (
@@ -550,6 +562,14 @@ export const iconPaths: Record<string, ReactNode> = {
 
   // Fitness - Dumbbell (minimal)
   fitness: (
+    <>
+      <path d="M7 8v8M17 8v8M7 12h10" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
+      <rect x="3" y="9" width="4" height="6" rx="1" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <rect x="17" y="9" width="4" height="6" rx="1" strokeWidth={1.5} fill="none" stroke="currentColor" />
+    </>
+  ),
+  // Exercise — same as fitness (dumbbell)
+  exercise: (
     <>
       <path d="M7 8v8M17 8v8M7 12h10" strokeWidth={2} strokeLinecap="round" stroke="currentColor" />
       <rect x="3" y="9" width="4" height="6" rx="1" strokeWidth={1.5} fill="none" stroke="currentColor" />

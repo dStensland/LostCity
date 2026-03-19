@@ -48,10 +48,11 @@ import InterestChannelsSection from "./sections/InterestChannelsSection";
 import { HangFeedSection } from "./sections/HangFeedSection";
 
 import NowShowingSection from "./sections/NowShowingSection";
-import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
+import PlanningHorizonSection from "./sections/PlanningHorizonSection";
+import FeedSectionSkeleton, { useMinSkeletonDelay } from "@/components/feed/FeedSectionSkeleton";
 
 import YonderRegionalEscapesSection from "./sections/YonderRegionalEscapesSection";
-import YonderArtifactQuestsSection from "./sections/YonderArtifactQuestsSection";
+import YonderDestinationNodeQuestsSection from "./sections/YonderDestinationNodeQuestsSection";
 import ActiveContestSection from "./sections/ActiveContestSection";
 import HolidayHero from "./HolidayHero";
 import FeedTimeMachine from "./FeedTimeMachine";
@@ -93,6 +94,7 @@ const SECTION_HEIGHT_ESTIMATES: Record<string, number> = {
 
 /** Map FeedBlockId → CityPulseSectionType for layout application */
 const BLOCK_TO_SECTION: Record<string, CityPulseSectionType> = {
+  horizon: "planning_horizon",
   browse: "browse",
 };
 
@@ -250,10 +252,11 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
   }, [feedLayout]);
 
   // Split sections: lineup (timeline) vs non-timeline
-  const { lineupSections, orderedSections } = useMemo(() => {
+  const { lineupSections, planningHorizonSection, orderedSections } = useMemo(() => {
     const lineup = sections.filter(
       (s) => TIMELINE_SECTION_TYPES.has(s.type),
     );
+    const horizon = sections.find((s) => s.type === "planning_horizon") ?? null;
 
     // Build ordered non-timeline sections, applying user layout
     const sectionMap = new Map(sections.map((s) => [s.type, s]));
@@ -279,7 +282,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
       .map((type) => sectionMap.get(type))
       .filter(Boolean) as typeof sections;
 
-    return { lineupSections: lineup, orderedSections: ordered };
+    return { lineupSections: lineup, planningHorizonSection: horizon, orderedSections: ordered };
   }, [sections, feedLayout]);
 
   // Theme vars from context
@@ -333,17 +336,6 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
           </div>
         );
 
-      // festivals + community blocks removed — covered by CityBriefing
-      // (Coming Up = festivals, Today in Atlanta = local news)
-      case "festivals":
-        return null;
-      case "community":
-        return null;
-
-      // experiences block removed — destinations now in browse section
-      case "experiences":
-        return null;
-
       case "cinema":
         return (
           <div
@@ -368,7 +360,9 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
     }
   };
 
-  const lineupLoading = isLoading && lineupSections.length === 0;
+  const lineupDataLoading = !lineupSections.length && isLoading;
+  // Enforce minimum skeleton display time to prevent jarring flash-in/out
+  const lineupLoading = useMinSkeletonDelay(lineupDataLoading, 400);
   const hasAnyTabEvents = tabCounts && (tabCounts.today > 0 || tabCounts.this_week > 0 || tabCounts.coming_up > 0);
 
   // After initial load failure with no data at all, show error
@@ -440,7 +434,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         style={{ minHeight: lineupLoading ? 400 : undefined }}
       >
         {lineupLoading ? (
-          <FeedSectionSkeleton accentColor="var(--coral)" minHeight={400} />
+          <FeedSectionSkeleton accentColor="var(--coral)" minHeight={400} onRetry={refresh} />
         ) : lineupSections.length > 0 || hasAnyTabEvents ? (
           <div>
             <LineupSection
@@ -475,7 +469,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
             dayOfWeek={context.day_of_week ?? null}
             timeSlot={context.time_slot ?? null}
           />
-          <YonderArtifactQuestsSection portalSlug={portalSlug} />
+          <YonderDestinationNodeQuestsSection portalSlug={portalSlug} />
         </>
       )}
 
@@ -484,6 +478,25 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         if (hiddenBlockSet.has(blockId)) return null;
         return renderMiddleSection(blockId);
       })}
+
+      {/* Planning Horizon — big future events with urgency signals */}
+      {planningHorizonSection && !hiddenBlockSet.has("horizon") && (
+        <div
+          id="city-pulse-horizon"
+          data-feed-anchor="true"
+          data-index-label="On the Horizon"
+          data-block-id="horizon"
+          className="mt-8 scroll-mt-28"
+        >
+          <div className="h-px bg-[var(--twilight)]" />
+          <div className="pt-6">
+            <PlanningHorizonSection
+              section={planningHorizonSection}
+              portalSlug={portalSlug}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Browse — Places to Go + Things to Do (always last) */}
       {!hiddenBlockSet.has("browse") && (

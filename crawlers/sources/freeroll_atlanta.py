@@ -22,7 +22,7 @@ SCHEDULE_URL = f"{BASE_URL}/schedule-2/"
 # day_of_week: 0=Monday, 6=Sunday
 WEEKLY_SCHEDULE = [
     (6, "Urban Pie", "14:00", "2012A Hosea L Williams Dr NE, Atlanta, GA 30317", "Kirkwood"),
-    (6, "The Pub at EAV", "19:00", "469 Flat Shoals Ave SE, Atlanta, GA 30316", "East Atlanta"),
+    (6, "The Pub at EAV", "19:00", "469 Flat Shoals Ave SE, Atlanta, GA 30316", "East Atlanta Village"),
     (0, "Moe's and Joe's", "19:00", "1033 North Highland Ave NE, Atlanta, GA 30306", "Virginia-Highland"),
     (1, "Sweet Auburn BBQ", "18:00", "656 North Highland Ave NE, Atlanta, GA 30306", "Poncey-Highland"),
     (2, "Neighbor's Pub", "18:00", "752 North Highland Ave NE, Atlanta, GA 30306", "Virginia-Highland"),
@@ -50,7 +50,7 @@ VENUE_DATA = {
         "name": "The Pub at EAV",
         "slug": "the-pub-at-eav",
         "address": "469 Flat Shoals Ave SE",
-        "neighborhood": "East Atlanta",
+        "neighborhood": "East Atlanta Village",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",

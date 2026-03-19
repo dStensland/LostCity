@@ -38,8 +38,17 @@ from db import (
     update_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 BASE_URL = "https://www.treesatlanta.org"
 EVENTS_URL = f"{BASE_URL}/get-involved/events/"
@@ -86,7 +95,7 @@ LOCATION_NEIGHBORHOODS = {
     "lenox park": "Buckhead",
     "chastain": "Buckhead",
     "buckhead": "Buckhead",
-    "east atlanta": "East Atlanta",
+    "east atlanta": "East Atlanta Village",
     "reynoldstown": "Reynoldstown",
     "cabbagetown": "Cabbagetown",
     "mechanicsville": "Mechanicsville",
@@ -171,6 +180,18 @@ def build_location_venue(location_name: str) -> dict:
     # Clean up location name: remove parenthetical suffixes like "(ATL)"
     clean_name = re.sub(r"\s*\(ATL\)\s*", "", location_name).strip()
 
+    if clean_name.lower() == "kirkwood":
+        return {
+            "name": "Kirkwood",
+            "slug": "kirkwood",
+            "city": "Atlanta",
+            "state": "GA",
+            "neighborhood": "Kirkwood",
+            "venue_type": "park",
+            "spot_type": "park",
+            "website": BASE_URL,
+        }
+
     slug = "trees-atl-" + re.sub(r"[^a-z0-9]+", "-", clean_name.lower()).strip("-")
 
     # Infer neighborhood
@@ -191,6 +212,84 @@ def build_location_venue(location_name: str) -> dict:
         "spot_type": "park",
         "website": BASE_URL,
     }
+
+
+def _build_destination_envelope(venue_id: int, venue_dict: dict) -> TypedEntityEnvelope:
+    venue_name = str(venue_dict.get("name") or "Trees Atlanta green space").strip()
+    neighborhood = str(venue_dict.get("neighborhood") or "").strip()
+    is_kirkwood = str(venue_dict.get("slug") or "").strip().lower() == "kirkwood"
+    primary_activity = (
+        "neighborhood park and community green-space reset"
+        if is_kirkwood
+        else "neighborhood outdoor reset"
+    )
+    practical_notes = (
+        "Kirkwood works best as a free neighborhood park stop with enough room for a short family reset, a walk, or a low-pressure outdoor meetup before or after another neighborhood errand."
+        if is_kirkwood
+        else f"{venue_name} works best as a short free neighborhood outdoor reset or volunteer-nature stop, especially when paired with a nearby errand, walk, or community event."
+    )
+    accessibility_notes = (
+        "Kirkwood is better treated as a simple neighborhood green-space and meetup stop than a full destination campus, so families should expect basic outdoor utility rather than built attraction infrastructure."
+        if is_kirkwood
+        else "These Trees Atlanta locations are better treated as lightweight green-space stops than fully built family park campuses, so stroller comfort and amenities vary by site."
+    )
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "park",
+            "commitment_tier": "hour",
+            "primary_activity": primary_activity,
+            "best_seasons": ["spring", "summer", "fall"],
+            "weather_fit_tags": ["outdoor", "free-option", "family-daytrip"],
+            "parking_type": "street",
+            "best_time_of_day": "morning",
+            "practical_notes": practical_notes,
+            "accessibility_notes": accessibility_notes,
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Open green-space access is free; specific volunteer or educational programs may require registration.",
+            "source_url": EVENTS_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "source_slug": "trees-atlanta",
+                "venue_type": venue_dict.get("venue_type"),
+                "city": str(venue_dict.get("city") or "Atlanta").lower(),
+                "neighborhood": neighborhood.lower() if neighborhood else None,
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "free-neighborhood-green-space",
+            "title": "Free neighborhood green space",
+            "feature_type": "amenity",
+            "description": f"{venue_name} gives families a lightweight free outdoor green-space option connected to Trees Atlanta's neighborhood canopy and stewardship work.",
+            "url": EVENTS_URL,
+            "price_note": "Open green-space access is free.",
+            "is_free": True,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "community-tree-canopy-and-outdoor-learning",
+            "title": "Community tree canopy and outdoor learning",
+            "feature_type": "experience",
+            "description": f"{venue_name} is part of Trees Atlanta's community nature and canopy programming, making it more useful as a neighborhood outdoor-learning stop than as a destination attraction.",
+            "url": EVENTS_URL,
+            "price_note": "Many Trees Atlanta volunteer and outdoor-learning events are free.",
+            "is_free": True,
+            "sort_order": 20,
+        },
+    )
+    return envelope
 
 
 def determine_category(title: str, description: str = "") -> str:
@@ -467,7 +566,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     venue_dict = build_location_venue(location_str)
                     slug = venue_dict["slug"]
                     if slug not in venue_cache:
-                        venue_cache[slug] = get_or_create_venue(venue_dict)
+                        venue_id = get_or_create_venue(venue_dict)
+                        persist_typed_entity_envelope(_build_destination_envelope(venue_id, venue_dict))
+                        venue_cache[slug] = venue_id
                     venue_id = venue_cache[slug]
                     venue_name_for_hash = venue_dict["name"]
 

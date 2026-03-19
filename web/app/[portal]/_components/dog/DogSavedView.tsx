@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
 import { getLocalDateString, formatTime } from "@/lib/formats";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
 import { classifyDogContentType, DOG_CONTENT_COLORS } from "@/lib/dog-art";
 import DogEmptyState from "./DogEmptyState";
 
@@ -353,8 +352,8 @@ function SavedEventRow({
         {/* Thumbnail */}
         {event.image_url ? (
           <div className="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
-            <Image
-              src={getProxiedImageSrc(event.image_url)}
+            <SmartImage
+              src={event.image_url}
               alt={event.title}
               fill
               className="object-cover"
@@ -437,8 +436,8 @@ function SavedVenueRow({
         {/* Thumbnail */}
         {venue.image_url ? (
           <div className="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
-            <Image
-              src={getProxiedImageSrc(venue.image_url)}
+            <SmartImage
+              src={venue.image_url}
               alt={venue.name}
               fill
               className="object-cover"

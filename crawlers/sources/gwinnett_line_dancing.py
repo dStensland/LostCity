@@ -19,6 +19,8 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from sources._rec1_base import (
     _get_checkout_key,
     _get_groups_for_tab,
@@ -29,6 +31,13 @@ from sources._rec1_base import (
 )
 
 logger = logging.getLogger(__name__)
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 TENANT_SLUG = "gwinnett-county-parks-recreation"
 CATALOG_URL = f"https://secure.rec1.com/GA/{TENANT_SLUG}/catalog"
@@ -101,6 +110,68 @@ VENUE_DATA_BY_LOCATION = {
         "description": "Gwinnett County activity building hosting public adult line dancing classes.",
     },
 }
+
+
+def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "community_recreation_center",
+            "commitment_tier": "halfday",
+            "primary_activity": "community center class or recreation visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "indoor-option", "rainy-day", "heat-day", "family-daytrip"],
+            "parking_type": "free_lot",
+            "best_time_of_day": "afternoon",
+            "practical_notes": (
+                f"{venue_data['name']} works best for families as a planned activity-building or community-center stop tied to a class, rec program, or other scheduled visit rather than as a roamable attraction."
+            ),
+            "accessibility_notes": (
+                "Indoor community-center circulation makes these Gwinnett rec venues lower-friction options for weather-flex family plans, especially when paired with a registered activity."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Classes, drop-in recreation, and building access vary by program; check the county catalog for current details.",
+            "source_url": CATALOG_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": venue_data["venue_type"],
+                "county": "gwinnett",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "indoor-family-recreation-space",
+            "title": "Indoor family recreation space",
+            "feature_type": "amenity",
+            "description": f"{venue_data['name']} gives families a weather-flex indoor recreation option inside Gwinnett's public rec system.",
+            "url": CATALOG_URL,
+            "price_note": "Drop-in access and specific amenities vary by center.",
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "planned-class-and-activity-building",
+            "title": "Planned class and activity building",
+            "feature_type": "experience",
+            "description": f"{venue_data['name']} is strongest as a planned rec-building stop for classes, community programs, and other scheduled county activities.",
+            "url": CATALOG_URL,
+            "price_note": "Program pricing varies by activity.",
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    return envelope
 
 
 def _is_adult_age_value(value: str) -> bool:
@@ -225,7 +296,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     current_hashes: set[str] = set()
     seen_session_ids: set[int] = set()
-    venue_ids = {data["slug"]: get_or_create_venue(data) for data in VENUE_DATA_BY_LOCATION.values()}
+    venue_ids = {}
+    for data in VENUE_DATA_BY_LOCATION.values():
+        venue_id = get_or_create_venue(data)
+        persist_typed_entity_envelope(_build_destination_envelope(venue_id, data))
+        venue_ids[data["slug"]] = venue_id
     today = datetime.now().date()
 
     checkout_key = _get_checkout_key(TENANT_SLUG)

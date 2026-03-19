@@ -63,6 +63,9 @@ _PARTICIPANT_DESCRIPTOR_RE = re.compile(
 _PARTICIPANT_BOILERPLATE_RE = re.compile(
     r"(open mic|comedy night|home game|parking|ticket package|item voucher|voucher|presented by|"
     r"premium seating|"
+    r"nightclub\s+(?:mon|tue|wed|thu|fri|sat|sun)\w*|"
+    r"(?:mon|tue|wed|thu|fri|sat|sun)\w*\s+night\s+party|"
+    r"(?:running|book|wine|supper)\s+club|"
     r"ladies\s+night|industry\s+night|bottle\s+service|vip\s+night|"
     r"day\s+party|pool\s+party|brunch\s+party|after\s*party|happy\s+hour|"
     r"\bkaraoke\b|\btrivia\b|\bbingo\b|\bpoker\s+night\b|\bbowling\b|\bcurling\b|"
@@ -155,40 +158,6 @@ def parse_lineup_from_title(title: str) -> list[dict]:
     )
     from artist_images import extract_artist_from_title, _ARTIST_BLOCKLIST
 
-    def _normalize(value: Optional[str]) -> str:
-        return re.sub(
-            r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", (value or "").lower())
-        ).strip()
-
-    def _title_has_descriptors(value: str) -> bool:
-        return bool(
-            re.search(
-                r"(?:\bwith\b|\bw/\b|\bfeat\.?\b|\bfeaturing\b|"
-                r"\bvs\.?\b|\bversus\b|:|\btour\b|\bnight\b|\bopen mic\b)",
-                value,
-                flags=re.IGNORECASE,
-            )
-        )
-
-    def _looks_like_boilerplate(value: str) -> bool:
-        return bool(
-            re.search(
-                r"(open mic|comedy night|home game|"
-                r"parking|ticket package|presented by|"
-                r"nightclub\s+(?:mon|tue|wed|thu|fri|sat|sun)\w*|"
-                r"(?:mon|tue|wed|thu|fri|sat|sun)\w*\s+night\s+party|"
-                r"(?:running|book|wine|supper)\s+club|"
-                r"ladies\s+night|industry\s+night|bottle\s+service|vip\s+night|"
-                r"day\s+party|pool\s+party|brunch\s+party|after\s*party|happy\s+hour|"
-                r"\bkaraoke\b|\btrivia\b|\bbingo\b|\bpoker\s+night\b|"
-                r"\bbowling\b|\bcurling\b|"
-                r"\bimprov\w*\b|sketch\s+show|"
-                r"comedy\s+(?:workshop|showcase)|stand-?up\s+showcase)",
-                value,
-                flags=re.IGNORECASE,
-            )
-        )
-
     def _extract_colon_headliner(value: str) -> Optional[str]:
         if ":" not in value:
             return None
@@ -220,7 +189,7 @@ def parse_lineup_from_title(title: str) -> list[dict]:
         candidate = " ".join(candidate.split()).strip(" -\u2013\u2014")
         if not candidate:
             return None
-        if _looks_like_boilerplate(candidate):
+        if _looks_like_participant_boilerplate(candidate):
             return None
         if re.search(
             r"\b(session|party|brunch|jam|worship|eucharist|trivia|karaoke|open mic)\b",
@@ -245,11 +214,11 @@ def parse_lineup_from_title(title: str) -> list[dict]:
         headliner = extract_artist_from_title(cleaned_title)
         if (
             headliner
-            and _normalize(headliner)
-            and _normalize(headliner) != _normalize(only_name)
+            and _normalize_participant_text(headliner)
+            and _normalize_participant_text(headliner) != _normalize_participant_text(only_name)
         ):
             parsed_entries = [{"name": headliner, "role": "headliner"}]
-        elif _normalize(only_name) == _normalize(cleaned_title):
+        elif _normalize_participant_text(only_name) == _normalize_participant_text(cleaned_title):
             colon_headliner = _extract_colon_headliner(cleaned_title)
             if colon_headliner:
                 parsed_entries = [{"name": colon_headliner, "role": "headliner"}]
@@ -268,8 +237,8 @@ def parse_lineup_from_title(title: str) -> list[dict]:
         return []
 
     filtered_entries: list[dict] = []
-    normalized_title = _normalize(title)
-    has_title_descriptors = _title_has_descriptors(title)
+    normalized_title = _normalize_participant_text(title)
+    has_title_descriptors = _title_has_participant_descriptors(title)
 
     for entry in parsed_entries:
         name = str(entry.get("name") or "").strip()
@@ -292,13 +261,13 @@ def parse_lineup_from_title(title: str) -> list[dict]:
             r"\bkaraoke\b|\btrivia\b|\bbingo\b|\bimprov\w*\b", name, re.IGNORECASE
         ):
             continue
-        normalized_name = _normalize(name)
+        normalized_name = _normalize_participant_text(name)
         is_title_mirror = bool(
             normalized_title and normalized_name and normalized_name == normalized_title
         )
         if is_title_mirror and (len(parsed_entries) > 1 or has_title_descriptors):
             continue
-        if _looks_like_boilerplate(name) and (is_title_mirror or has_title_descriptors):
+        if _looks_like_participant_boilerplate(name) and (is_title_mirror or has_title_descriptors):
             continue
         filtered_entries.append({"name": name, "role": entry.get("role")})
 
@@ -307,7 +276,7 @@ def parse_lineup_from_title(title: str) -> list[dict]:
         if (
             fallback
             and fallback.lower() not in _ARTIST_BLOCKLIST
-            and not _looks_like_boilerplate(fallback)
+            and not _looks_like_participant_boilerplate(fallback)
         ):
             filtered_entries = [{"name": fallback, "role": "headliner"}]
         else:
@@ -347,6 +316,7 @@ def sanitize_event_artists(
     event_title: Optional[str],
     event_category: Optional[str],
     artists: list,
+    pre_parsed: bool = False,
 ) -> list[dict]:
     """Normalize and de-junk participant rows before inserting into event_artists."""
     title = event_title or ""
@@ -468,7 +438,7 @@ def sanitize_event_artists(
                 }
             )
 
-    if category in {"music", "comedy", "nightlife"} and len(filtered) == 1:
+    if not pre_parsed and category in {"music", "comedy", "nightlife"} and len(filtered) == 1:
         only_name_norm = _normalize_participant_text(filtered[0].get("name"))
         if only_name_norm and only_name_norm == title_norm:
             reparsed = parse_lineup_from_title(title)
@@ -484,17 +454,23 @@ def sanitize_event_artists(
                     if str(item.get("name") or "").strip()
                 ]
 
-    if not filtered and category in {"music", "comedy", "nightlife"}:
+    if not pre_parsed and not filtered and category in {"music", "comedy", "nightlife"}:
         filtered = parse_lineup_from_title(title)
 
     if not filtered:
         return []
 
     if category in {"music", "comedy", "nightlife"}:
+        from extractors.lineup import _looks_like_band_with_ampersand
+
         expanded: list[dict] = []
         for row in filtered:
             name = row["name"]
             if " & " in name:
+                # "X & the Y" is almost always a single band
+                if _looks_like_band_with_ampersand(name):
+                    expanded.append(row)
+                    continue
                 parts = [p.strip() for p in name.split(" & ")]
                 if all(len(p.split()) >= 2 for p in parts) and all(parts):
                     from artists import slugify_artist, get_artist_by_slug
@@ -559,7 +535,7 @@ def sanitize_event_artists(
 
 
 def upsert_event_artists(
-    event_id: int, artists: list, link_canonical: bool = True
+    event_id: int, artists: list, link_canonical: bool = True, pre_parsed: bool = False,
 ) -> None:
     """Replace event artists for an event, preserving billing order."""
     if not artists:
@@ -579,7 +555,7 @@ def upsert_event_artists(
     event_title = event_row.get("title")
     event_category = event_row.get("category_id")
 
-    cleaned = sanitize_event_artists(event_title, event_category, artists)
+    cleaned = sanitize_event_artists(event_title, event_category, artists, pre_parsed=pre_parsed)
 
     client.table("event_artists").delete().eq("event_id", event_id).execute()
 
@@ -606,4 +582,4 @@ def upsert_event_artists(
 
             resolve_and_link_event_artists(event_id, category=event_category)
         except Exception as e:
-            logger.debug(f"Artist resolution failed for event {event_id}: {e}")
+            logger.warning(f"Artist resolution failed for event {event_id}: {e}")

@@ -1,0 +1,23 @@
+version: 1
+slug: atlanta-parks-family-map
+name: Atlanta Parks Family Map
+integration_method: python
+defaults:
+  category: family
+  tags:
+  - parks
+  - playgrounds
+  - splash-pads
+  - atlanta-dpr
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantaga.gov/government/departments/department-parks-recreation/office-of-parks/list-of-playgrounds
+  - https://www.atlantaga.gov/government/departments/department-parks-recreation/office-of-parks/splash-pads
+detail:
+  enabled: false
+data_goals:
+- destinations
+- destination_details
+- venue_features

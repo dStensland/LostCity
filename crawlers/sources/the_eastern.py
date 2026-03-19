@@ -9,13 +9,16 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from description_fetcher import fetch_detail_html_playwright
+from pipeline.detail_enrich import enrich_from_detail
+from pipeline.models import DetailConfig
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
 logger = logging.getLogger(__name__)
@@ -131,6 +134,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
 
             i = 0
+            new_events: list[dict] = []
             while i < len(lines):
                 line = lines[i]
 
@@ -190,13 +194,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     hash_key = f"{start_date}|{start_time}" if start_time else start_date
                     content_hash = generate_content_hash(title, "The Eastern", hash_key)
 
-
-                    # Get specific event URL
-
-
                     event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
 
                     event_record = {
                         "source_id": source_id,
@@ -232,16 +230,45 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         i += 1
                         continue
 
-                    try:
-                        enrich_event_record(event_record, "The Eastern")
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
+                    new_events.append(event_record)
 
                 i += 1
 
+            # Fetch detail pages for new events (capped at 20) to extract
+            # ticket_status, price_min/max from AXS JSON-LD.
+            detail_page = context.new_page()
+            detail_fetches = 0
+            detail_config = DetailConfig()
+            for evt in new_events:
+                title = evt["title"]
+                detail_url = evt.get("source_url")
+                if detail_url and detail_url != EVENTS_URL and detail_fetches < 20:
+                    html = fetch_detail_html_playwright(detail_page, detail_url)
+                    if html:
+                        fields = enrich_from_detail(html, detail_url, "The Eastern", detail_config)
+                        if fields.get("ticket_status") and not evt.get("ticket_status"):
+                            evt["ticket_status"] = fields["ticket_status"]
+                            evt["ticket_status_checked_at"] = datetime.now(timezone.utc).isoformat()
+                        if fields.get("price_min") is not None and evt.get("price_min") is None:
+                            evt["price_min"] = fields["price_min"]
+                        if fields.get("price_max") is not None and evt.get("price_max") is None:
+                            evt["price_max"] = fields["price_max"]
+                        if fields.get("description") and not evt.get("description"):
+                            evt["description"] = fields["description"]
+                        if fields.get("image_url") and not evt.get("image_url"):
+                            evt["image_url"] = fields["image_url"]
+                    detail_fetches += 1
+                    page.wait_for_timeout(1000)
+
+                try:
+                    enrich_event_record(evt, "The Eastern")
+                    insert_event(evt)
+                    events_new += 1
+                    logger.info(f"Added: {title} on {evt['start_date']}")
+                except Exception as e:
+                    logger.error(f"Failed to insert: {title}: {e}")
+
+            detail_page.close()
             browser.close()
 
         logger.info(

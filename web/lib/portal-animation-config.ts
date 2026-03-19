@@ -19,6 +19,9 @@
  * - Adding a new vertical: add an entry to VERTICAL_STYLE_CONFIG below.
  */
 
+import { coercePortalVertical } from "@/lib/portal-taxonomy";
+import type { PortalVertical } from "@/lib/portal-taxonomy";
+
 /** Suppress grain/rain/glow/cursor effects for the body. */
 const DISABLE_ATMOSPHERE = `
   body::before { opacity: 0 !important; }
@@ -61,7 +64,7 @@ type VerticalStyleConfig = {
  * "hospital" covers the Emory demo slug (resolved in layout before this call).
  * "marketplace" covers both vertical === "marketplace" and PCM demo slug.
  */
-const VERTICAL_STYLE_CONFIG: Record<string, VerticalStyleConfig> = {
+const VERTICAL_STYLE_CONFIG: Record<PortalVertical, VerticalStyleConfig> = {
   /**
    * Hospital vertical (including Emory demo).
    * Full atmosphere + animation disable; body background override.
@@ -174,7 +177,14 @@ const VERTICAL_STYLE_CONFIG: Record<string, VerticalStyleConfig> = {
    */
   city: { css: null },
   hotel: { css: null },
-  adventure: { css: null },
+  family: { css: null },
+  adventure: {
+    css: `
+  html, body { background-color: #F5F2ED !important; }
+  ${DISABLE_ATMOSPHERE}
+  ${disableAnimations("adventure")}`,
+  },
+  sports: { css: null },
 };
 
 /**
@@ -185,8 +195,9 @@ const VERTICAL_STYLE_CONFIG: Record<string, VerticalStyleConfig> = {
  * "hospital", PCM demo → "marketplace") before calling this function, so the
  * vertical string passed here is always the canonical vertical key.
  */
-export function getVerticalStyles(vertical: string): string | null {
-  const config = VERTICAL_STYLE_CONFIG[vertical];
-  if (!config) return null;
+export function getVerticalStyles(vertical: string | null | undefined): string | null {
+  const resolvedVertical = coercePortalVertical(vertical);
+  if (!resolvedVertical) return null;
+  const config = VERTICAL_STYLE_CONFIG[resolvedVertical];
   return config.css;
 }

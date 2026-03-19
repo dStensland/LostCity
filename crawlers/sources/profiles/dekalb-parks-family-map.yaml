@@ -1,0 +1,29 @@
+version: 1
+slug: dekalb-parks-family-map
+name: DeKalb Parks Family Map
+integration_method: python
+defaults:
+  category: family
+  tags:
+  - parks
+  - playgrounds
+  - water-play
+  - dekalb-county
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.dekalbcountyga.gov/parks/chambleedoraville
+  - https://www.dekalbcountyga.gov/parks/clarkstonscottdale
+  - https://www.dekalbcountyga.gov/parks/decatur
+  - https://www.dekalbcountyga.gov/parks/ellenwood
+  - https://www.dekalbcountyga.gov/parks/lithoniaredan
+  - https://www.dekalbcountyga.gov/parks/stone-mountain
+  - https://www.dekalbcountyga.gov/parks/aquatics
+detail:
+  enabled: true
+data_goals:
+- destinations
+- destination_details
+- venue_features
+

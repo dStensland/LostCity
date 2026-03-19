@@ -49,6 +49,8 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +136,122 @@ _VENUE_DATA = {
         "nature",
     ],
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    programs=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    """Project GEHC into shared Family-friendly destination richness lanes."""
+    envelope = TypedEntityEnvelope()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "nature_center",
+            "commitment_tier": "halfday",
+            "primary_activity": "nature and heritage exploration",
+            "best_seasons": ["spring", "summer", "fall"],
+            "weather_fit_tags": ["outdoor", "indoor-option", "family-daytrip"],
+            "practical_notes": (
+                "102-acre nature and heritage campus with walking trails, indoor exhibits, "
+                "historic-house interpretation, and picnic-friendly family utility."
+            ),
+            "accessibility_notes": (
+                "Family destination with indoor education spaces plus outdoor trail and campus "
+                "circulation. Confirm specific trail and historic-building accessibility on the official site."
+            ),
+            "parking_type": "free_lot",
+            "best_time_of_day": "morning",
+            "family_suitability": "yes",
+            "dog_friendly": False,
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Campus access varies by activity; confirm current exhibit, ropes-course, and program pricing on the official site.",
+            "source_url": _VENUE_DATA["website"],
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "campus_size_acres": 102,
+                "walking_trails_miles": 5,
+                "has_indoor_exhibits": True,
+                "has_historic_interpretation": True,
+                "has_picnic_area": True,
+            },
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "walking-trails-and-greenways",
+            "title": "Walking trails and greenways",
+            "feature_type": "amenity",
+            "description": (
+                "Roughly five miles of walking trails across the campus, giving families an easy nature loop option "
+                "beyond scheduled programs."
+            ),
+            "url": _VENUE_DATA["website"],
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "historic-chesser-williams-house",
+            "title": "Historic Chesser-Williams House",
+            "feature_type": "attraction",
+            "description": (
+                "Historic-house interpretation on campus adds a heritage and local-history layer to family visits."
+            ),
+            "url": _VENUE_DATA["website"],
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "indoor-environmental-exhibits",
+            "title": "Indoor environmental exhibits",
+            "feature_type": "experience",
+            "description": (
+                "Indoor environmental and heritage exhibits make GEHC a useful family destination even when the weather turns."
+            ),
+            "url": _VENUE_DATA["website"],
+            "is_free": False,
+            "sort_order": 30,
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "wooded-picnic-pavilion",
+            "title": "Wooded picnic pavilion",
+            "feature_type": "amenity",
+            "description": (
+                "Picnic-friendly campus utility that makes the venue more usable for half-day family plans."
+            ),
+            "url": _VENUE_DATA["website"],
+            "is_free": False,
+            "sort_order": 40,
+        },
+    )
+
+    return envelope
 
 # ---------------------------------------------------------------------------
 # Age range parsing
@@ -856,17 +974,22 @@ def _get_session_details(
     return data.get("details", {}).get("info")
 
 
-def _get_session_description(
+def _get_session_description_and_image(
     http_session: requests.Session,
     checkout_key: str,
     csrf_key: str,
     csrf_token: str,
     session_id: int,
-) -> Optional[str]:
+) -> tuple[Optional[str], Optional[str]]:
     """
-    GET HTML description from activityRegistration endpoint.
+    GET HTML description and image from activityRegistration endpoint.
 
-    Returns plain-text description stripped of HTML, or None.
+    Returns (plain-text description, image_url) — either may be None.
+
+    The activityRegistration HTML contains:
+      - A description div (rec1-catalog-item-description)
+      - An <img> tag pointing to data.rec1.com/customer_images/... when a
+        program image has been uploaded by the park.
     """
     url = f"{_CATALOG_BASE}/activityRegistration/{checkout_key}/{session_id}"
     headers = {
@@ -884,15 +1007,24 @@ def _get_session_description(
         logger.debug(
             "[ehc] Description fetch failed for session %s: %s", session_id, exc
         )
-        return None
+        return None, None
 
     soup = BeautifulSoup(html_text, "html.parser")
+
+    # Extract image — rec1 stores program photos at data.rec1.com/customer_images/
+    image_url: Optional[str] = None
+    for img in soup.find_all("img", src=True):
+        src = str(img.get("src", ""))
+        if "rec1.com" in src and "customer_images" in src:
+            image_url = src.strip()
+            break
+
     desc_div = soup.find("div", class_="rec1-catalog-item-description")
     if desc_div:
-        return _strip_html(str(desc_div), max_len=800)
+        return _strip_html(str(desc_div), max_len=800), image_url
 
     # Fallback: strip all HTML from the response
-    return _strip_html(html_text, max_len=800) or None
+    return _strip_html(html_text, max_len=800) or None, image_url
 
 
 # ---------------------------------------------------------------------------
@@ -927,6 +1059,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
     # Ensure venue record exists
     try:
         venue_id = get_or_create_venue(_VENUE_DATA)
+        persist_result = persist_typed_entity_envelope(
+            _build_destination_envelope(venue_id)
+        )
+        if persist_result.skipped:
+            logger.warning(
+                "[ehc] skipped typed destination writes: %s",
+                persist_result.skipped,
+            )
     except Exception as exc:
         logger.error("[ehc] Failed to create/find venue: %s", exc)
         return 0, 0, 0
@@ -1081,9 +1221,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if pm is not None:
                             price_min, price_max, is_free = pm, px, ifr
 
-                # ---- Fetch description ----------------------------------------
+                # ---- Fetch description and image ------------------------------
                 time.sleep(_REQUEST_DELAY)
-                description = _get_session_description(
+                description, session_image_url = _get_session_description_and_image(
                     http_session, checkout_key, csrf_key, csrf_token, session_id
                 )
 
@@ -1141,7 +1281,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "price_note": None,
                     "source_url": source_url,
                     "ticket_url": source_url,
-                    "image_url": None,
+                    "image_url": session_image_url,
                     "raw_text": title,
                     "extraction_confidence": 0.90,
                     "is_recurring": series_hint is not None,

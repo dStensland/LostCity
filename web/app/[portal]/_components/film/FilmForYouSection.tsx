@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { ArrowRight, SignIn, Heart } from "@phosphor-icons/react";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
 
 type RecommendationReason = {
   type: string;
@@ -152,8 +151,8 @@ export default function FilmForYouSection({ portalSlug }: FilmForYouSectionProps
             className="group relative h-64 w-44 shrink-0 snap-start overflow-hidden rounded-2xl border border-[#2f3a56] bg-[#0c1322]"
           >
             {event.image_url ? (
-              <Image
-                src={getProxiedImageSrc(event.image_url)}
+              <SmartImage
+                src={event.image_url}
                 alt={event.title}
                 fill
                 unoptimized

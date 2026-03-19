@@ -21,6 +21,8 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from sources.dekalb_parks_rec import _extract_prices, _fetch_page, _init_session
 
 logger = logging.getLogger(__name__)
@@ -32,6 +34,13 @@ MAX_PAGES = 10
 WEEKS_AHEAD = 8
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 DAY_INDEX = {
     "monday": 0,
@@ -77,6 +86,49 @@ VENUE_DATA = {
         "description": "DeKalb County community center hosting public aquatic fitness classes.",
     }
 }
+
+
+def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "aquatic_center",
+            "commitment_tier": "halfday",
+            "primary_activity": "family aquatic center visit",
+            "best_seasons": ["spring", "summer"],
+            "weather_fit_tags": ["indoor-option", "heat-day", "family-daytrip"],
+            "parking_type": "free_lot",
+            "best_time_of_day": "afternoon",
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Public swim access and classes vary by site; confirm current pool hours and registration windows through DeKalb County Recreation.",
+            "source_url": ACTIVITY_SEARCH_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": venue_data.get("venue_type"),
+                "county": "dekalb",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "public-pool-and-aquatics-programs",
+            "title": "Public pool and aquatics programs",
+            "feature_type": "amenity",
+            "description": f"{venue_data['name']} is one of DeKalb's aquatic facilities with public swim and family aquatics programming.",
+            "url": ACTIVITY_SEARCH_URL,
+            "price_note": "Public access and registration vary by program and season.",
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    return envelope
 
 
 def _to_24_hour(raw_value: str) -> str:
@@ -205,6 +257,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
     current_hashes: set[str] = set()
+    enriched_venue_ids: set[int] = set()
     today = date.today()
 
     session, csrf = _init_session()
@@ -234,6 +287,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 continue
 
             venue_id = get_or_create_venue(parsed["venue_data"])
+            if venue_id not in enriched_venue_ids:
+                persist_typed_entity_envelope(
+                    _build_destination_envelope(parsed["venue_data"], venue_id)
+                )
+                enriched_venue_ids.add(venue_id)
             for event_date, weekday in parsed["occurrences"]:
                 events_found += 1
                 start_date = event_date.strftime("%Y-%m-%d")

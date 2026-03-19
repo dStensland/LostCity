@@ -121,9 +121,11 @@ def infer_tags(
         tags.add("date-night")
     if category == "theater":
         tags.add("date-night")
+    if category == "dance":
+        tags.add("date-night")
     if category == "film":
         tags.add("date-night")
-    if category in ("sports", "fitness"):
+    if category in ("sports", "recreation", "exercise", "fitness"):
         tags.add("high-energy")
     if category == "nightlife":
         tags.add("21+")
@@ -678,7 +680,7 @@ def infer_tags(
         "dinner",
         "supper club",
     ]
-    if any(term in text for term in date_night_terms):
+    if any(term in title for term in date_night_terms):
         tags.add("date-night")
 
     # Educational indicators
@@ -702,6 +704,11 @@ def infer_tags(
     for genre in genres or event.get("genres") or []:
         for gt in GENRE_TO_TAGS.get(genre, []):
             tags.add(gt)
+
+    # Resolve conflicting age tags: all-ages wins
+    if "all-ages" in tags:
+        tags.discard("21+")
+        tags.discard("18+")
 
     # Filter to only valid tags
     valid_tags = [t for t in tags if t in ALL_TAGS]
@@ -1057,7 +1064,7 @@ def infer_is_support_group(
 # ── Kids activity recategorization ─────────────────────────────────
 
 # Categories where a kids/children signal should override to "family"
-_KIDS_RECATEGORIZE_FROM = {"art", "learning", "fitness", "community", "food"}
+_KIDS_RECATEGORIZE_FROM = {"art", "learning", "fitness", "exercise", "recreation", "community", "food"}
 
 _KIDS_TITLE_KEYWORDS = [
     "for kids", "for children", "for toddlers", "for preschool",
@@ -1241,6 +1248,13 @@ def infer_genres(
         ("fitness", "race"): "run",
         ("fitness", "athletics"): "run",
         ("fitness", "cardio"): "run",
+        # exercise/recreation aliases (new category names)
+        ("exercise", "running"): "run",
+        ("exercise", "race"): "run",
+        ("exercise", "athletics"): "run",
+        ("exercise", "cardio"): "run",
+        ("recreation", "running"): "run",
+        ("recreation", "race"): "run",
     }
     for raw_tag in event.get("tags") or []:
         if not isinstance(raw_tag, str):
@@ -1321,6 +1335,7 @@ def infer_genres(
             (["cover band", "tribute"], "cover"),
             (["open mic", "open-mic", "openmic"], "open-mic"),
             (["singer-songwriter", "singer/songwriter"], "singer-songwriter"),
+            (["brunch", "jazz brunch", "gospel brunch", "sunday brunch"], "brunch"),
         ]
         for keywords, genre in music_patterns:
             if any(kw in text for kw in keywords):
@@ -1403,6 +1418,47 @@ def infer_genres(
             if any(kw in text for kw in keywords):
                 genres.add(genre)
 
+    elif category == "dance":
+        dance_patterns: list[tuple[list[str], str]] = [
+            (
+                ["ballet", "nutcracker", "pointe", "barre", "pas de", "grand jeté",
+                 "classical ballet", "ballet company", "ballet theatre", "ballet theater"],
+                "ballet",
+            ),
+            (
+                ["contemporary", "modern dance", "modern ballet", "postmodern",
+                 "contemporary dance", "contemporary ballet"],
+                "contemporary",
+            ),
+            (
+                ["afro", "afrocentric", "african dance", "afro-haitian", "west african"],
+                "afrocentric",
+            ),
+            (
+                ["hip-hop", "hip hop", "street dance", "breaking", "breakdance"],
+                "hip-hop",
+            ),
+            (
+                ["flamenco", "tango", "salsa", "bachata", "cumbia", "latin dance"],
+                "latin",
+            ),
+            (
+                ["ballroom", "waltz", "foxtrot", "cha cha", "swing dance", "east coast swing",
+                 "west coast swing"],
+                "ballroom",
+            ),
+            (
+                ["social dance", "social dancing", "partner dance"],
+                "social-dance",
+            ),
+        ]
+        for keywords, genre in dance_patterns:
+            if any(kw in text for kw in keywords):
+                genres.add(genre)
+        # If no specific genre matched, default to ballet (canonical performing dance)
+        if not genres:
+            genres.add("ballet")
+
     elif category == "sports":
         sports_patterns: list[tuple[list[str], str]] = [
             (["braves", "baseball", "mlb", "softball", "batting"], "baseball"),
@@ -1429,7 +1485,7 @@ def infer_genres(
             if any(kw in text for kw in keywords):
                 genres.add(genre)
 
-    elif category == "fitness":
+    elif category in ("exercise", "fitness"):
         fitness_patterns: list[tuple[list[str], str]] = [
             (["yoga", "vinyasa", "hot yoga", "yin", "asana", "namaste"], "yoga"),
             (
@@ -1463,6 +1519,29 @@ def infer_genres(
             (["climbing", "bouldering", "belay", "top rope", "send"], "climbing"),
         ]
         for keywords, genre in fitness_patterns:
+            if any(kw in text for kw in keywords):
+                genres.add(genre)
+
+    elif category == "recreation":
+        recreation_patterns: list[tuple[list[str], str]] = [
+            (["pickleball"], "pickleball"),
+            (["cornhole", "corn hole"], "cornhole"),
+            (["axe throwing", "axe-throwing", "hatchet"], "axe-throwing"),
+            (["softball"], "softball"),
+            (["volleyball", "pick-up volleyball", "pickup volleyball"], "volleyball"),
+            (["swim", "lap swim", "open water", "aqua", "pool"], "swimming"),
+            (["marathon", "full marathon"], "marathon"),
+            (["triathlon", "tri "], "triathlon"),
+            (["cycling", "bike ride", "group ride", "criterium"], "cycling"),
+            (["crossfit", "wod", "hiit", "bootcamp", "functional"], "crossfit"),
+            (["running", "run club", "fun run", "5k", "10k", "road race"], "running"),
+            (["open play", "open gym", "drop-in", "drop in"], "open-play"),
+            (["pickup", "pick-up", "pick up"], "pickup"),
+            (["rec league", "recreational league", "league play"], "league"),
+            (["adaptive", "para sport", "wheelchair sport"], "adaptive-sports"),
+            (["batting cage", "batting cages"], "batting-cage"),
+        ]
+        for keywords, genre in recreation_patterns:
             if any(kw in text for kw in keywords):
                 genres.add(genre)
 
@@ -1664,6 +1743,7 @@ def infer_genres(
             ),
             (["line dancing", "line dance", "two-step", "two step", "honky tonk", "country night", "boot scoot"], "line-dancing"),
             (["burlesque", "cabaret", "variety show", "vaudeville"], "burlesque"),
+            (["brunch", "bottomless brunch", "boozy brunch", "drag brunch", "jazz brunch", "sunday brunch"], "brunch"),
             (["wine night", "wine down", "wine bar"], "wine-night"),
             (
                 ["speakeasy", "cocktail party", "mixology", "craft cocktail"],
@@ -1898,7 +1978,7 @@ def infer_genres(
                 "foodie",
             ),
             (["camping", "campfire", "campground", "glamping", "overnight"], "camping"),
-            (["tennis", "pickleball", "volleyball", "basketball", "soccer"], "fitness"),
+            (["tennis", "pickleball", "volleyball", "basketball", "soccer"], "recreation"),
             (["dance", "salsa", "bachata", "swing", "two-step", "heels"], "dance"),
             (["photo walk", "photography", "camera", "shoot"], "photography"),
             (["language exchange", "spanish", "french", "conversation"], "language"),

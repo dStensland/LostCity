@@ -44,21 +44,36 @@ THEATER_GENRES = {
     "spoken-word", "burlesque", "puppet", "shakespeare",
 }
 
-SPORTS_GENRES = {
-    "baseball", "basketball", "football", "soccer", "hockey", "mma",
-    "racing", "golf", "tennis", "running", "esports", "roller-derby",
-    # Extended
-    "softball", "volleyball", "lacrosse", "rugby", "cricket", "field-hockey",
-    "boxing", "wrestling", "kickboxing", "motorsports", "nascar",
-    "monster-truck", "dirt-track", "track", "gymnastics", "swimming",
-    "diving", "figure-skating", "marathon", "triathlon", "cycling",
-    "crossfit", "poker", "pickleball", "cornhole", "axe-throwing",
+DANCE_GENRES = {
+    "ballet", "contemporary", "modern-dance", "afrocentric", "hip-hop",
+    "flamenco", "latin", "ballroom", "swing", "social-dance",
 }
 
-FITNESS_GENRES = {
+SPORTS_GENRES = {
+    # Spectator sports
+    "baseball", "basketball", "football", "soccer", "hockey", "mma",
+    "racing", "golf", "tennis", "esports", "roller-derby",
+    "lacrosse", "rugby", "cricket", "field-hockey",
+    "boxing", "wrestling", "kickboxing", "motorsports", "nascar",
+    "monster-truck", "dirt-track", "track", "gymnastics", "figure-skating",
+    "poker",
+}
+
+RECREATION_GENRES = {
+    # Participation / recreational sports
+    "pickleball", "cornhole", "axe-throwing", "softball", "volleyball",
+    "swimming", "diving", "marathon", "triathlon", "cycling", "crossfit",
+    "running", "open-play", "pickup", "league", "adaptive-sports",
+    "batting-cage", "public-play",
+}
+
+EXERCISE_GENRES = {
     "yoga", "run", "cycling", "dance", "hike", "crossfit",
     "martial-arts", "pilates", "swimming", "climbing",
 }
+
+# Legacy alias — keep FITNESS_GENRES pointing to the same set
+FITNESS_GENRES = EXERCISE_GENRES
 
 FOOD_DRINK_GENRES = {
     "southern", "mexican", "italian", "asian", "brunch", "wine", "beer",
@@ -114,8 +129,8 @@ WELLNESS_GENRES = {
 
 MEETUP_GENRES = {
     "hiking", "book-club", "social", "camping", "foodie",
-    "photography", "language", "dance", "fitness", "networking",
-    "singles", "outdoors",
+    "photography", "language", "dance", "fitness", "exercise", "recreation",
+    "networking", "singles", "outdoors",
 }
 
 GAMING_GENRES = {
@@ -125,8 +140,9 @@ GAMING_GENRES = {
 
 # Union of all valid genres
 VALID_GENRES: set[str] = (
-    MUSIC_GENRES | FILM_GENRES | COMEDY_GENRES | THEATER_GENRES |
-    SPORTS_GENRES | FITNESS_GENRES | FOOD_DRINK_GENRES | ART_GENRES |
+    MUSIC_GENRES | FILM_GENRES | COMEDY_GENRES | THEATER_GENRES | DANCE_GENRES |
+    SPORTS_GENRES | RECREATION_GENRES | EXERCISE_GENRES |
+    FOOD_DRINK_GENRES | ART_GENRES |
     NIGHTLIFE_GENRES | LEARNING_GENRES | COMMUNITY_GENRES | FAMILY_GENRES |
     OUTDOOR_GENRES | WORDS_GENRES | WELLNESS_GENRES | MEETUP_GENRES |
     GAMING_GENRES
@@ -138,8 +154,11 @@ GENRES_BY_CATEGORY: dict[str, set[str]] = {
     "film": FILM_GENRES,
     "comedy": COMEDY_GENRES,
     "theater": THEATER_GENRES,
+    "dance": DANCE_GENRES,
     "sports": SPORTS_GENRES,
-    "fitness": FITNESS_GENRES,
+    "recreation": RECREATION_GENRES,
+    "exercise": EXERCISE_GENRES,
+    "fitness": EXERCISE_GENRES,  # legacy alias
     "food_drink": FOOD_DRINK_GENRES,
     "art": ART_GENRES,
     "nightlife": NIGHTLIFE_GENRES,

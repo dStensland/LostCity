@@ -15,6 +15,7 @@ Sources:
 - What Now Atlanta (sitemap index — monthly sub-sitemaps)
 - Axios Atlanta (RSS via tag feed)
 - ATL Bucket List (RSS — venue-rich listicles)
+- Atlanta Downtown Blog (RSS — CAP/ADID neighborhood content, small biz spotlights, holiday guides)
 
 Phase 1: Discover articles via RSS/sitemap/sitemap-index
 Phase 2: Fetch each article page, extract body text, match venue names
@@ -110,6 +111,13 @@ EDITORIAL_SOURCES: dict[str, dict] = {
         "method": "rss",
         "display_name": "ATL Bucket List",
     },
+    # TODO: atlantadowntown_blog — site returns 403 on all RSS/feed endpoints.
+    # Blog content exists at /downtown-blog/ but needs Playwright scraping or
+    # sitemap discovery. Defer until we add a page-scraping method.
+    #
+    # TODO: visit_roswell_blog — Craft CMS site with no RSS feeds enabled.
+    # Blog at /blog/ has 112+ posts but no feed endpoints. Needs sitemap
+    # or page-scraping method.
 }
 
 # Sitemaps use this namespace
@@ -231,6 +239,7 @@ class VenueCache:
         self._name_map: dict[str, int] = {}
         self._alias_map: dict[str, int] = {}
         self._norm_map: dict[str, int] = {}
+        self._type_map: dict[int, str] = {}  # venue_id → venue_type
         self._loaded = False
 
     def _normalise(self, name: str) -> str:
@@ -249,7 +258,7 @@ class VenueCache:
         client = get_client()
         result = (
             client.table("venues")
-            .select("id, name, aliases")
+            .select("id, name, aliases, venue_type")
             .eq("city", "Atlanta")
             .eq("active", True)
             .execute()
@@ -260,6 +269,7 @@ class VenueCache:
             vid = row["id"]
             name = row["name"] or ""
             aliases = row.get("aliases") or []
+            venue_type = row.get("venue_type") or ""
 
             if len(name) < _MIN_NAME_CHARS:
                 continue
@@ -270,6 +280,8 @@ class VenueCache:
 
             self._name_map[lname] = vid
             self._norm_map[self._normalise(name)] = vid
+            if venue_type:
+                self._type_map[vid] = venue_type
 
             for alias in aliases:
                 if alias and len(alias) >= _MIN_NAME_CHARS:
@@ -280,11 +292,18 @@ class VenueCache:
 
         self._loaded = True
         logger.info(
-            "Venue cache loaded: %d names, %d aliases, %d normalised forms",
+            "Venue cache loaded: %d names, %d aliases, %d normalised forms, %d with venue_type",
             len(self._name_map),
             len(self._alias_map),
             len(self._norm_map),
+            len(self._type_map),
         )
+
+    def get_venue_type(self, venue_id: int) -> Optional[str]:
+        """Return the venue_type for a cached venue, or None."""
+        if not self._loaded:
+            self.load()
+        return self._type_map.get(venue_id)
 
     def match_in_text(self, text: str, restrict_to_title: bool = False) -> list[int]:
         """Return venue IDs found in text."""
@@ -317,18 +336,114 @@ class VenueCache:
 _venue_cache = VenueCache()
 
 
-def match_venues(title: str, body_text: str) -> list[int]:
-    """Return list of venue IDs matched in the article title and body."""
-    matched: set[int] = set()
+def match_venues(title: str, body_text: str) -> tuple[set[int], set[int]]:
+    """Return (title_matched_ids, body_only_ids).
 
-    # Title match: allow single-word names (most precise context)
-    matched.update(_venue_cache.match_in_text(title, restrict_to_title=True))
+    Title-matched venues are almost certainly subjects of the article.
+    Body-only-matched venues may be incidental mentions.
+    """
+    title_ids = set(_venue_cache.match_in_text(title, restrict_to_title=True))
 
-    # Body match: require multi-word names to reduce false positives
+    body_ids: set[int] = set()
     if body_text:
-        matched.update(_venue_cache.match_in_text(body_text, restrict_to_title=False))
+        body_ids = set(_venue_cache.match_in_text(body_text, restrict_to_title=False))
 
-    return sorted(matched)
+    body_only_ids = body_ids - title_ids
+    return title_ids, body_only_ids
+
+
+# ---------------------------------------------------------------------------
+# Relevance classification (primary vs incidental)
+# ---------------------------------------------------------------------------
+
+# Guide topic keyword → venue types that are coherent with that topic.
+# If a venue's type is NOT in the set, it's likely an incidental mention.
+_GUIDE_TOPIC_VENUE_TYPES: dict[str, set[str]] = {
+    "hotel": {"hotel"},
+    "restaurant": {"restaurant", "food_hall", "cafe"},
+    "bar": {"bar", "sports_bar", "nightclub", "brewery", "distillery", "winery", "rooftop", "restaurant"},
+    "cocktail": {"bar", "sports_bar", "nightclub", "restaurant", "rooftop", "hotel"},
+    "coffee": {"coffee_shop", "cafe", "bakery", "restaurant"},
+    "brewery": {"brewery", "bar", "restaurant"},
+    "pizza": {"restaurant", "food_hall"},
+    "bakery": {"restaurant", "bakery", "cafe", "coffee_shop"},
+    "brunch": {"restaurant", "bar", "hotel", "cafe", "coffee_shop"},
+    "taco": {"restaurant", "food_hall"},
+    "burger": {"restaurant", "food_hall", "bar", "sports_bar"},
+    "sushi": {"restaurant"},
+    "ramen": {"restaurant"},
+    "bbq": {"restaurant"},
+    "steakhouse": {"restaurant"},
+    "wine": {"bar", "restaurant", "winery"},
+    "club": {"nightclub", "bar"},
+    "museum": {"museum", "gallery"},
+    "gallery": {"gallery", "museum"},
+    "park": {"park", "garden"},
+    "theater": {"venue", "event_space"},
+    "patio": {"restaurant", "bar", "brewery", "rooftop", "sports_bar"},
+    "rooftop": {"rooftop", "bar", "restaurant", "hotel"},
+    "distiller": {"distillery", "bar"},
+    "winer": {"winery", "bar", "restaurant"},
+    "food hall": {"food_hall", "restaurant"},
+    "ice cream": {"restaurant", "cafe", "food_hall"},
+    "doughnut": {"restaurant", "bakery", "cafe", "coffee_shop"},
+    "donut": {"restaurant", "bakery", "cafe", "coffee_shop"},
+}
+
+
+def _guide_compatible_with_venue(guide_name: Optional[str], venue_type: Optional[str]) -> bool:
+    """Check if a venue type is compatible with the guide topic.
+
+    Returns True if compatible or if there's insufficient signal to determine.
+    Returns False only when there's a clear mismatch (museum in a hotel guide).
+    """
+    if not guide_name or not venue_type:
+        return True  # No signal → assume compatible
+
+    guide_lower = guide_name.lower()
+    for topic, compatible_types in _GUIDE_TOPIC_VENUE_TYPES.items():
+        if topic in guide_lower:
+            return venue_type in compatible_types
+
+    # No topic keyword matched → can't determine incompatibility
+    return True
+
+
+def determine_relevance(
+    venue_id: int,
+    title_matched: bool,
+    mention_type: str,
+    guide_name: Optional[str],
+) -> str:
+    """Determine if a venue mention is 'primary' or 'incidental'.
+
+    Primary = venue is a subject of the article.
+    Incidental = venue is casually mentioned (e.g., "near the High Museum").
+
+    Signals:
+    1. Title-match: venue appears in the article title → almost always primary.
+    2. Category coherence: venue type aligns with guide topic → primary.
+       Mismatch (museum in a hotel guide) → incidental.
+    3. Mention type: reviews/openings/closings are about specific venues → primary.
+    """
+    # Reviews, openings, closings are inherently about the venue
+    if mention_type in ("review", "opening", "closing"):
+        return "primary"
+
+    # Title-matched venues are almost always subjects
+    if title_matched:
+        return "primary"
+
+    # For best_of/guide_inclusion: check category coherence
+    if mention_type in ("best_of", "guide_inclusion") and guide_name:
+        venue_type = _venue_cache.get_venue_type(venue_id)
+        if not _guide_compatible_with_venue(guide_name, venue_type):
+            return "incidental"
+
+    # Body-only matches are incidental unless it's a guide/list article
+    if mention_type in ("best_of", "guide_inclusion"):
+        return "primary"
+    return "incidental"
 
 
 # ---------------------------------------------------------------------------
@@ -939,15 +1054,33 @@ def ingest_source(
         mention_type, guide_name = classify_mention(title, url, source_key)
 
         # Match venues in title + full body text
-        matched_venue_ids = match_venues(title, body_text or snippet or "")
+        title_matched_ids, body_only_ids = match_venues(
+            title, body_text or snippet or ""
+        )
+        all_matched_ids = title_matched_ids | body_only_ids
 
-        if matched_venue_ids:
+        if all_matched_ids:
+            # Compute relevance for each matched venue
+            venue_relevance: dict[int, str] = {}
+            for vid in all_matched_ids:
+                venue_relevance[vid] = determine_relevance(
+                    vid,
+                    title_matched=(vid in title_matched_ids),
+                    mention_type=mention_type,
+                    guide_name=guide_name,
+                )
+
+            n_primary = sum(1 for r in venue_relevance.values() if r == "primary")
+            n_incidental = len(venue_relevance) - n_primary
+
             logger.info(
-                '"%s" → %d venue(s)',
+                '"%s" → %d venue(s) (%d primary, %d incidental)',
                 title[:80],
-                len(matched_venue_ids),
+                len(all_matched_ids),
+                n_primary,
+                n_incidental,
             )
-            venues_matched_total += len(matched_venue_ids)
+            venues_matched_total += len(all_matched_ids)
 
             # If reprocessing, delete the old unmatched row (venue_id IS NULL)
             if reprocess and url in existing_urls and writes_enabled():
@@ -958,11 +1091,12 @@ def ingest_source(
                 except Exception:
                     pass  # Best effort — may not exist
 
-            # Create one mention row per matched venue
-            for vid in matched_venue_ids:
+            # Create one mention row per matched venue with relevance
+            for vid in all_matched_ids:
                 mention = _build_mention_payload(
                     source_key, url, title, mention_type,
-                    guide_name, published_at, snippet, venue_id=vid,
+                    guide_name, published_at, snippet,
+                    venue_id=vid, relevance=venue_relevance[vid],
                 )
                 if upsert_mention(mention):
                     mentions_upserted += 1
@@ -988,12 +1122,14 @@ def _build_mention_payload(
     published_at: Optional[datetime],
     snippet: Optional[str],
     venue_id: Optional[int],
+    relevance: str = "primary",
 ) -> dict:
     payload: dict = {
         "source_key": source_key,
         "article_url": url,
         "article_title": title,
         "mention_type": mention_type,
+        "relevance": relevance,
         "is_active": True,
     }
     if venue_id is not None:

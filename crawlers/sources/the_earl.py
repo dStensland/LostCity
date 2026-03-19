@@ -17,11 +17,17 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from source_destination_sync import ensure_venue_destination_fields
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://badearl.com"
 WEEKS_AHEAD = 6
+PLANNING_NOTE = (
+    "Use The EARL site for nightly doors, ticketing, and room details before heading over. "
+    "The venue is a compact East Atlanta club attached to a bar and kitchen, so arriving early "
+    "is the easiest way to handle dinner, parking, and a strong spot in the room."
+)
 
 VENUE_DATA = {
     "name": "The EARL",
@@ -75,6 +81,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     venue_id = get_or_create_venue(VENUE_DATA)
     logger.info(f"The EARL venue record ensured (ID: {venue_id})")
+    ensure_venue_destination_fields(venue_id, planning_notes=PLANNING_NOTE)
 
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 

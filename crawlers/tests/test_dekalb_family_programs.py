@@ -14,6 +14,22 @@ def test_build_program_record_projects_event_into_program_lane() -> None:
             "source_url": "https://example.com/programs/1",
             "tags": ["arts", "camp", "family-friendly"],
         },
+        item={
+            "id": 18779,
+            "number": "18875",
+            "activity_online_start_time": "",
+            "date_range": "June 8, 2026 to June 12, 2026",
+            "date_range_description": "",
+            "total_open": 20,
+            "already_enrolled": 6,
+            "urgent_message": {"status_description": ""},
+            "location": {"label": "Mason Mill Recreation Center"},
+            "ages": "At least 6 but less than 10",
+        },
+        desc_text=(
+            "Open registration for camp begins February 3rd. "
+            "Camp runs weekdays. Activity Times: Mon. & Wed 4 :00 p.m. to 5:00 pm."
+        ),
         venue_name="Mason Mill Recreation Center",
         source_id=55,
         portal_id="portal-123",
@@ -29,5 +45,11 @@ def test_build_program_record_projects_event_into_program_lane() -> None:
     assert record["season"] == "spring"
     assert record["cost_amount"] == 125
     assert record["cost_period"] == "per_week"
+    assert record["schedule_days"] == [1, 2, 3, 4, 5]
+    assert record["schedule_start_time"] == "16:00:00"
+    assert record["schedule_end_time"] == "17:00:00"
+    assert record["registration_opens"] == "2026-02-03"
+    assert record["registration_status"] == "open"
+    assert record["metadata"]["activity_id"] == 18779
     assert record["portal_id"] == "portal-123"
     assert record["_venue_name"] == "Mason Mill Recreation Center"

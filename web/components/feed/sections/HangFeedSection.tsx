@@ -2,7 +2,7 @@
 
 import { memo, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { MapPin } from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -58,7 +58,7 @@ const FriendHangRow = memo(function FriendHangRow({
       <Link href={profileHref} className="flex-shrink-0" aria-label={`View ${name}'s profile`}>
         <div className="w-6 h-6 rounded-full overflow-hidden bg-[var(--twilight)] relative">
           {profile.avatar_url ? (
-            <Image
+            <SmartImage
               src={profile.avatar_url}
               alt={name}
               width={24}
@@ -119,7 +119,7 @@ const HotVenueCard = memo(function HotVenueCard({ venue }: { venue: HotVenue }) 
       {/* Image */}
       <div className="relative h-24 bg-[var(--twilight)] overflow-hidden">
         {venue.venue_image_url ? (
-          <Image
+          <SmartImage
             src={venue.venue_image_url}
             alt={venue.venue_name}
             fill

@@ -1,6 +1,6 @@
 from datetime import date
 
-from sources.groomd import parse_registration_page
+from sources.groomd import NoCurrentCycleError, parse_registration_page
 
 
 def test_parse_registration_page_extracts_current_cycle() -> None:
@@ -32,7 +32,7 @@ def test_parse_registration_page_rejects_past_cycle() -> None:
 
     try:
         parse_registration_page(text, today=date(2026, 3, 16))
-    except ValueError as exc:
+    except NoCurrentCycleError as exc:
         assert "past-dated cycle" in str(exc)
     else:
         raise AssertionError("Expected past-only GROOM'D cycle to be rejected")

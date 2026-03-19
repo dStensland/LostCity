@@ -150,21 +150,38 @@ def insert_exhibition(exhibition_data: dict, artists: Optional[list] = None) -> 
 
 
 def _upsert_exhibition_artists(exhibition_id: str, artists: list) -> None:
-    """Insert artist associations for an exhibition."""
+    """Insert artist associations for an exhibition.
+
+    Attempts to resolve each artist to the canonical ``artists`` table via
+    ``get_or_create_and_enrich`` with ``discipline="visual_artist"``.  When
+    resolution succeeds the row gains an ``artist_id`` FK that powers the
+    Arts portal's living-CV feature.  If resolution fails for any artist the
+    row is still written without ``artist_id`` — resilience over completeness.
+    """
     if not artists or not writes_enabled():
         return
+
+    from artists import get_or_create_and_enrich  # local import to avoid circular dep
 
     payload = []
     for artist in artists:
         name = (artist.get("artist_name") or "").strip()
         if not name:
             continue
-        payload.append({
+        row: dict = {
             "exhibition_id": exhibition_id,
             "artist_name": name,
             "artist_url": artist.get("artist_url"),
             "role": artist.get("role", "artist"),
-        })
+        }
+        try:
+            canonical = get_or_create_and_enrich(name, discipline="visual_artist")
+            row["artist_id"] = canonical["id"]
+        except Exception as resolve_err:
+            logger.debug(
+                "Could not resolve artist %r to canonical record: %s", name, resolve_err
+            )
+        payload.append(row)
 
     if not payload:
         return
@@ -175,7 +192,7 @@ def _upsert_exhibition_artists(exhibition_id: str, artists: list) -> None:
             payload, on_conflict="exhibition_id,artist_name"
         ).execute()
     except Exception as e:
-        logger.debug("Failed to upsert exhibition_artists for %s: %s", exhibition_id, e)
+        logger.warning("Failed to upsert exhibition_artists for %s: %s", exhibition_id, e)
 
 
 # ---------------------------------------------------------------------------

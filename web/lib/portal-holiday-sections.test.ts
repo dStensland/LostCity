@@ -34,13 +34,12 @@ describe("portal-holiday-sections", () => {
     ]);
   });
 
-  it("returns March seasonal sections with Ramadan, Women's History Month, and St. Patrick's Day", () => {
+  it("returns March seasonal sections with Women's History Month and St. Patrick's Day", () => {
     const sections = buildPortalHolidaySections(
       new Date("2026-03-12T12:00:00Z"),
     );
 
     expect(sections.map((section) => section.slug)).toEqual([
-      "ramadan",
       "womens-history-month",
       "st-patricks-day",
     ]);

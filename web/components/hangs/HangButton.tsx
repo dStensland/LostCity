@@ -24,6 +24,8 @@ interface HangButtonProps {
   } | null;
   /** Compact mode for icon-only use in cards */
   compact?: boolean;
+  /** Border radius variant */
+  rounded?: "lg" | "xl";
   className?: string;
   /** Override: explicitly set hang state (auto-detected from useMyHangs if omitted) */
   isHanging?: boolean;
@@ -34,6 +36,7 @@ export const HangButton = memo(function HangButton({
   venue,
   event,
   compact = false,
+  rounded = "lg",
   className,
   isHanging: isHangingProp,
   onHangCreated,
@@ -127,7 +130,7 @@ export const HangButton = memo(function HangButton({
         onClick={handleClick}
         aria-label={isHanging ? `Hanging at ${venue.name}` : `Check in at ${venue.name}`}
         className={[
-          "flex items-center gap-2 rounded-lg px-3 py-2 font-mono text-sm transition-all",
+          `flex items-center justify-center gap-2 ${rounded === "xl" ? "rounded-xl" : "rounded-lg"} px-3 py-2 font-mono text-sm transition-all`,
           isHanging
             ? "bg-[var(--neon-green)]/20 border border-[var(--neon-green)]/50 text-[var(--neon-green)]"
             : "bg-[var(--neon-green)]/10 border border-[var(--neon-green)]/30 text-[var(--neon-green)] hover:bg-[var(--neon-green)]/20",
@@ -145,7 +148,7 @@ export const HangButton = memo(function HangButton({
         ) : (
           <MapPin size={14} weight="regular" className="flex-shrink-0" />
         )}
-        <span>{isHanging ? "Hanging" : "I'm Here"}</span>
+        <span>{isHanging ? "Hanging" : "Start Hang"}</span>
       </button>
 
       <HangSheet

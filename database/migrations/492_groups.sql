@@ -14,7 +14,8 @@ CREATE TABLE groups (
   avatar_url    TEXT,
   creator_id    UUID NOT NULL REFERENCES profiles(id),
   invite_code   TEXT NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(8), 'hex'),
-  visibility    TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'unlisted')),
+  visibility    TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'unlisted', 'public')),
+  join_policy   TEXT NOT NULL DEFAULT 'invite' CHECK (join_policy IN ('invite', 'request', 'open')),
   max_members   INT NOT NULL DEFAULT 50 CHECK (max_members BETWEEN 2 AND 100),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -22,6 +23,7 @@ CREATE TABLE groups (
 
 CREATE INDEX idx_groups_creator ON groups (creator_id);
 CREATE INDEX idx_groups_invite_code ON groups (invite_code);
+CREATE INDEX idx_groups_public ON groups (visibility) WHERE visibility = 'public';
 
 -- ============================================================
 -- 2. Group members junction table
@@ -54,7 +56,29 @@ CREATE INDEX idx_group_spots_group ON group_spots (group_id);
 CREATE INDEX idx_group_spots_venue ON group_spots (venue_id);
 
 -- ============================================================
--- 4. Add group_id to hangs
+-- 4. Group join requests (for public groups with request policy)
+-- ============================================================
+CREATE TABLE group_join_requests (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id    UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  user_id     UUID NOT NULL REFERENCES profiles(id),
+  message     TEXT CHECK (char_length(message) <= 280),
+  status      TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'denied')),
+  decided_by  UUID REFERENCES profiles(id),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  decided_at  TIMESTAMPTZ
+);
+
+CREATE UNIQUE INDEX idx_group_join_requests_pending
+  ON group_join_requests (group_id, user_id)
+  WHERE status = 'pending';
+
+CREATE INDEX idx_group_join_requests_group_pending
+  ON group_join_requests (group_id, status)
+  WHERE status = 'pending';
+
+-- ============================================================
+-- 5. Add group_id to hangs
 -- ============================================================
 ALTER TABLE hangs ADD COLUMN group_id UUID REFERENCES groups(id) ON DELETE SET NULL;
 
@@ -160,11 +184,17 @@ CREATE TRIGGER groups_updated_at
 ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_spots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_join_requests ENABLE ROW LEVEL SECURITY;
 
--- Groups: members can read
+-- Groups: members can read their groups
 CREATE POLICY groups_select_member ON groups FOR SELECT
   TO authenticated
   USING (id IN (SELECT group_id FROM group_members WHERE user_id = auth.uid()));
+
+-- Groups: public groups are visible to all authenticated users
+CREATE POLICY groups_select_public ON groups FOR SELECT
+  TO authenticated
+  USING (visibility = 'public');
 
 -- Groups: authenticated users can create
 CREATE POLICY groups_insert_creator ON groups FOR INSERT
@@ -234,6 +264,31 @@ CREATE POLICY group_spots_delete ON group_spots FOR DELETE
 
 -- Service role bypass
 CREATE POLICY group_spots_service ON group_spots FOR ALL
+  TO service_role
+  USING (true) WITH CHECK (true);
+
+-- Join requests: user can see their own requests
+CREATE POLICY group_join_requests_select_own ON group_join_requests FOR SELECT
+  TO authenticated
+  USING (user_id = auth.uid());
+
+-- Join requests: group admins can see requests for their groups
+CREATE POLICY group_join_requests_select_admin ON group_join_requests FOR SELECT
+  TO authenticated
+  USING (group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = auth.uid() AND gm.role = 'admin'));
+
+-- Join requests: authenticated users can create
+CREATE POLICY group_join_requests_insert ON group_join_requests FOR INSERT
+  TO authenticated
+  WITH CHECK (user_id = auth.uid());
+
+-- Join requests: admins can update (approve/deny)
+CREATE POLICY group_join_requests_update_admin ON group_join_requests FOR UPDATE
+  TO authenticated
+  USING (group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = auth.uid() AND gm.role = 'admin'));
+
+-- Service role bypass
+CREATE POLICY group_join_requests_service ON group_join_requests FOR ALL
   TO service_role
   USING (true) WITH CHECK (true);
 

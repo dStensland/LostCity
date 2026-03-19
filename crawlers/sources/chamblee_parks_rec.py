@@ -11,6 +11,9 @@ coverage focused on camps, youth athletics, and kid/family enrichment programs.
 
 from __future__ import annotations
 
+from db import get_or_create_venue
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 from sources._myrec_base import crawl_myrec, is_family_relevant_session
 
 BASE_URL = "https://chambleega.myrec.com"
@@ -29,6 +32,76 @@ VENUE_DATA = {
     "website": "https://www.chambleega.com/157/Parks-Recreation",
     "vibes": ["family-friendly", "educational"],
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "community_recreation_center",
+            "commitment_tier": "halfday",
+            "primary_activity": "family recreation center visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+            "parking_type": "free_lot",
+            "best_time_of_day": "afternoon",
+            "practical_notes": (
+                "Chamblee Parks and Recreation works best as a weather-proof family activity base for classes, camps, and shorter recreation blocks rather than as a full destination day."
+            ),
+            "accessibility_notes": (
+                "Indoor recreation-center space makes it lower-friction for strollers, bathroom access, and quick resets than a park-only plan."
+            ),
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Drop-in access and classes vary by center; check Chamblee Parks and Recreation for current family programming and building hours.",
+            "source_url": ACTIVITIES_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": VENUE_DATA.get("venue_type"),
+                "city": "chamblee",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "indoor-family-recreation-space",
+            "title": "Indoor family recreation space",
+            "feature_type": "amenity",
+            "description": "Chamblee Parks and Recreation gives families an indoor recreation option with weather-proof community-center space and youth programming.",
+            "url": ACTIVITIES_URL,
+            "price_note": "Drop-in access and building amenities vary by center.",
+            "is_free": False,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "family-classes-and-seasonal-camps",
+            "title": "Family classes and seasonal camps",
+            "feature_type": "experience",
+            "description": "Chamblee Parks and Recreation regularly hosts youth classes, family recreation programming, and seasonal camps through its public catalog.",
+            "url": ACTIVITIES_URL,
+            "price_note": "Registration costs vary by program and season.",
+            "is_free": False,
+            "sort_order": 20,
+        },
+    )
+    return envelope
 
 
 def _include_session(
@@ -57,4 +130,6 @@ MYREC_CONFIG = {
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
+    venue_id = get_or_create_venue(VENUE_DATA)
+    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
     return crawl_myrec(source, MYREC_CONFIG)

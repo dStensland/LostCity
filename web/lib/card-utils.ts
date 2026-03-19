@@ -17,6 +17,8 @@ export function getReflectionClass(category: string | null): string {
     food: "reflect-food",
     sports: "reflect-sports",
     fitness: "reflect-fitness",
+    recreation: "reflect-recreation",
+    exercise: "reflect-exercise",
     nightlife: "reflect-nightlife",
     family: "reflect-family",
   };

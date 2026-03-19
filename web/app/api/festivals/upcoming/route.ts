@@ -3,7 +3,10 @@ import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { apiResponse, escapeSQLPattern } from "@/lib/api-utils";
 import { startOfDay, addDays, isSaturday, isSunday, nextSaturday, nextSunday, format } from "date-fns";
-import { getPortalSourceAccess } from "@/lib/federation";
+import {
+  getPortalSourceAccess,
+  isEventCategoryAllowedForSourceAccess,
+} from "@/lib/federation";
 import { applyFeedGate } from "@/lib/feed-gate";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyFederatedPortalScopeToQuery } from "@/lib/portal-scope";
@@ -160,8 +163,6 @@ export async function GET(request: Request) {
         }
 
         const allowedSourceIds: number[] | null = sourceAccess?.sourceIds ?? null;
-        const categoryConstraints: Map<number, string[] | null> | null =
-          sourceAccess?.categoryConstraints ?? null;
 
         let standaloneTentpoles: StandaloneTentpole[] = [];
 
@@ -206,13 +207,13 @@ export async function GET(request: Request) {
             logger.error("Festivals upcoming tentpoles API error:", { error: tentpoleError.message });
           } else {
             const rawTentpoles = (tentpoleData || []) as StandaloneTentpole[];
-            standaloneTentpoles = rawTentpoles.filter((event) => {
-              if (!categoryConstraints || event.source_id == null) return true;
-              if (!categoryConstraints.has(event.source_id)) return true;
-              const allowed = categoryConstraints.get(event.source_id);
-              if (allowed == null) return true;
-              return !!event.category && allowed.includes(event.category);
-            });
+            standaloneTentpoles = rawTentpoles.filter((event) =>
+              isEventCategoryAllowedForSourceAccess(
+                sourceAccess,
+                event.source_id,
+                event.category,
+              )
+            );
           }
         }
 

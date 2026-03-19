@@ -6,13 +6,15 @@ import PortalThemeClient from "@/components/PortalThemeClient";
 import CannyWidget from "@/components/CannyWidget";
 import PortalFooter from "@/components/PortalFooter";
 import { PortalTracker } from "./_components/PortalTracker";
-import { Cormorant_Garamond, Inter } from "next/font/google";
+import { NavigationProgress } from "@/components/ui/NavigationProgress";
+import { Cormorant_Garamond, DM_Sans, Inter, Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import { Suspense } from "react";
 import { isPCMDemoPortal } from "@/lib/marketplace-art";
 import { applyPreset } from "@/lib/apply-preset";
 import type { PortalBranding } from "@/lib/portal-context";
 import { getVerticalStyles } from "@/lib/portal-animation-config";
 import { buildPortalOrigin } from "@/lib/site-url";
+import { shouldDisableAmbientEffects } from "@/lib/portal-taxonomy";
 
 import type { Metadata } from "next";
 import { headers } from "next/headers";
@@ -29,6 +31,32 @@ const cormorantGaramond = Cormorant_Garamond({
 const inter = Inter({
   weight: ["400", "500", "600"],
   variable: "--font-body",
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+});
+
+// Family vertical fonts — Plus Jakarta Sans (display) + DM Sans (body) for Lost Youth portal
+const plusJakartaSans = Plus_Jakarta_Sans({
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-plus-jakarta-sans",
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+});
+
+const dmSans = DM_Sans({
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+});
+
+// Adventure vertical fonts — Space Grotesk for Lost Track portal
+const spaceGrotesk = Space_Grotesk({
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
   display: "swap",
   preload: false,
@@ -63,13 +91,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: `${portal.name} Events | Lost City`,
-    description: portal.tagline || `Find your people in ${portal.name}. ${portal.portal_type === "city" ? "Shows, sounds, scenes, and the good stuff." : ""}`,
+    description: portal.tagline || `Find your thing and do it in ${portal.name}. ${portal.portal_type === "city" ? "Shows, sounds, scenes, and the good stuff." : ""}`,
     alternates: {
       canonical: `${origin}/${pathSlug}`,
     },
     openGraph: {
       title: `${portal.name} | Lost City`,
-      description: portal.tagline || `Find your people in ${portal.name}`,
+      description: portal.tagline || `Find your thing and do it in ${portal.name}`,
       images: branding.og_image_url ? [{ url: branding.og_image_url as string }] : [],
     },
     icons: branding.favicon_url ? { icon: branding.favicon_url as string } : undefined,
@@ -109,6 +137,8 @@ export default async function PortalLayout({ children, params }: Props) {
   // resolved here so getVerticalStyles receives the canonical vertical key.
   const vertical = getPortalVertical(portal);
   const isHotel = vertical === "hotel";
+  const isFamily = vertical === "family";
+  const isAdventure = vertical === "adventure";
   const resolvedBranding = applyPreset((portal.branding || {}) as PortalBranding);
   const isLightTheme = resolvedBranding.theme_mode === "light";
   const isMarketplace = vertical === "marketplace" || isPCMDemoPortal(portal.slug);
@@ -121,6 +151,7 @@ export default async function PortalLayout({ children, params }: Props) {
     : vertical;
 
   const verticalStyles = getVerticalStyles(effectiveVertical);
+  const suppressPortalStyleAtmosphere = shouldDisableAmbientEffects(vertical);
 
   return (
     <PortalProvider portal={portal}>
@@ -129,9 +160,15 @@ export default async function PortalLayout({ children, params }: Props) {
       {verticalStyles && <style>{verticalStyles}</style>}
       <div
         data-vertical={vertical}
+        data-atmosphere={suppressPortalStyleAtmosphere ? "disabled" : "default"}
         data-theme={isLightTheme ? "light" : undefined}
-        className={isHotel ? `${cormorantGaramond.variable} ${inter.variable}` : ""}
+        className={[
+          isHotel ? `${cormorantGaramond.variable} ${inter.variable}` : "",
+          isFamily ? `${plusJakartaSans.variable} ${dmSans.variable}` : "",
+          isAdventure ? spaceGrotesk.variable : "",
+        ].filter(Boolean).join(" ")}
       >
+        <NavigationProgress />
         <Suspense fallback={null}>
           <PortalTracker portalSlug={portal.slug} />
         </Suspense>

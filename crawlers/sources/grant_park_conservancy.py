@@ -16,10 +16,19 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://grantpark.org"
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 VENUE_DATA = {
     "name": "Grant Park",
@@ -40,6 +49,100 @@ VENUE_DATA = {
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 }
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "park",
+            "commitment_tier": "halfday",
+            "primary_activity": "family park visit",
+            "best_seasons": ["spring", "summer", "fall"],
+            "weather_fit_tags": ["outdoor", "free-option", "family-daytrip"],
+            "practical_notes": (
+                "Grant Park's large historic footprint works well for playground time, open-lawn hangouts, "
+                "and stroller-friendly family loops without requiring a ticketed attraction. It works best as a "
+                "flexible free park stop where families can linger, reset, and move between play and picnic time."
+            ),
+            "accessibility_notes": (
+                "Open lawns and path-style circulation are the easiest way to use the park with strollers or "
+                "mobility needs; trail and festival surfaces vary by weather and setup. Shade and lawn space make it easier "
+                "to stretch the visit without turning it into a high-friction outing."
+            ),
+            "best_time_of_day": "morning",
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Open park access is free; events and festivals vary by season.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "acreage": 80,
+                "city": "atlanta",
+            },
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "playgrounds-and-open-green-space",
+            "title": "Playgrounds and open green space",
+            "feature_type": "amenity",
+            "description": "Grant Park combines playground access with broad open green space, making it a reliable free family park option in the city core.",
+            "url": BASE_URL,
+            "is_free": True,
+            "sort_order": 10,
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "walking-trails-and-family-park-loops",
+            "title": "Walking trails and family park loops",
+            "feature_type": "experience",
+            "description": "Walking trails and a large historic-park footprint make Grant Park useful for stroller loops, casual outdoor time, and pairing with nearby family outings.",
+            "url": BASE_URL,
+            "is_free": True,
+            "sort_order": 20,
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "picnic-lawns-and-family-spread-out-space",
+            "title": "Picnic lawns and family spread-out space",
+            "feature_type": "amenity",
+            "description": "Grant Park's broad lawns and flexible open space make it useful for blankets, snack breaks, and low-cost family hang time between playground laps.",
+            "url": BASE_URL,
+            "is_free": True,
+            "sort_order": 30,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "flexible-free-park-reset-stop",
+            "title": "Flexible free park reset stop",
+            "feature_type": "amenity",
+            "description": "Grant Park is especially useful when families want a free city-core outdoor stop with room for snacks, shade, and looser pacing between bigger destinations.",
+            "url": BASE_URL,
+            "is_free": True,
+            "sort_order": 40,
+        },
+    )
+
+    return envelope
 
 
 def get_second_saturday(year: int, month: int) -> datetime:
@@ -180,6 +283,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     venue_id = get_or_create_venue(VENUE_DATA)
+    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     # Create recurring volunteer workdays
     workday_new, workday_updated = create_volunteer_workdays(source_id, venue_id)

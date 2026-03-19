@@ -1,30 +1,45 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import Image from "next/image";
+import { useWeather } from "@/lib/hooks/useWeather";
+import { matchesEnvironmentFilter, isRainyWeather, isSunnyWeather } from "@/lib/family-constants";
+import type { GenericFilter } from "./KidFilterChips";
 import {
-  BellSimple,
-  Lightning,
-  Tag,
-  CalendarCheck,
-  Clock,
-} from "@phosphor-icons/react";
-import {
-  SCHOOL_SYSTEM_LABELS,
-  SCHOOL_EVENT_TYPE_LABELS,
   type SchoolCalendarEvent,
   type ProgramWithVenue,
-  formatAgeRange,
-  formatCost,
 } from "@/lib/types/programs";
 import type { EventWithLocation } from "@/lib/search";
-import { RegistrationBadge } from "./RegistrationBadge";
+import type { FamilyDestination } from "./FamilyDestinationCard";
+
+// ---- Sections ---------------------------------------------------------------
+import { GreetingHeadline, WeatherPill } from "./sections/GreetingBanner";
+import { FeaturedHero } from "./sections/FeaturedHero";
+import { HeadsUpSection } from "./sections/HeadsUpSection";
+import { RegistrationRadarSection } from "./sections/RegistrationRadarSection";
+import { PlacesToGoSection } from "./sections/PlacesToGoSection";
+import { ExploreByTypeSection } from "./sections/ExploreByTypeSection";
+import { RainyDayBanner, GetOutsideBanner } from "./sections/WeatherBanners";
+import { AfterSchoolPicksSection } from "./sections/AfterSchoolPicksSection";
+import { WeekendSection } from "./sections/WeekendSection";
+
+// ---- Types ---------------------------------------------------------------
 
 interface TodayViewProps {
   portalId: string;
   portalSlug: string;
+  activeKidIds?: string[];
+  kids?: import("@/lib/types/kid-profiles").KidProfile[];
+  activeGenericFilters?: GenericFilter[];
+  desktopLayout?: boolean;
+}
+
+// ---- Weekend helpers -------------------------------------------------------
+
+/** Returns true when weekend content should be shown more prominently (Thu–Sun). */
+function isWeekendProminent(): boolean {
+  const day = new Date().getDay(); // 0=Sun, 1=Mon, ..., 4=Thu, 5=Fri, 6=Sat
+  return day === 0 || day >= 4; // Thu, Fri, Sat, Sun
 }
 
 // ---- Data fetchers -------------------------------------------------------
@@ -36,9 +51,7 @@ async function fetchSchoolCalendar(): Promise<SchoolCalendarEvent[]> {
   return (json.events ?? []) as SchoolCalendarEvent[];
 }
 
-async function fetchRegistrationRadar(
-  portalSlug: string
-): Promise<{
+async function fetchRegistrationRadar(portalSlug: string): Promise<{
   opening_soon: ProgramWithVenue[];
   closing_soon: ProgramWithVenue[];
   filling_fast: ProgramWithVenue[];
@@ -46,17 +59,17 @@ async function fetchRegistrationRadar(
   const res = await fetch(
     `/api/programs/registration-radar?portal=${encodeURIComponent(portalSlug)}`
   );
-  if (!res.ok)
-    return { opening_soon: [], closing_soon: [], filling_fast: [] };
+  if (!res.ok) return { opening_soon: [], closing_soon: [], filling_fast: [] };
   return res.json();
 }
 
-async function fetchTodayEvents(portalId: string): Promise<EventWithLocation[]> {
+async function fetchTodayEvents(portalSlug: string): Promise<EventWithLocation[]> {
+  // No tags filter — the portal's federated sources are family-relevant by definition.
+  // Adding tags:"family-friendly" double-filters and empties the feed on low-data days.
   const params = new URLSearchParams({
     date: "today",
-    tags: "family-friendly",
-    portal_id: portalId,
-    limit: "8",
+    portal: portalSlug,
+    limit: "20",
     useCursor: "true",
   });
   const res = await fetch(`/api/events?${params.toString()}`);
@@ -65,175 +78,39 @@ async function fetchTodayEvents(portalId: string): Promise<EventWithLocation[]> 
   return (json.events ?? []) as EventWithLocation[];
 }
 
-// ---- Sub-components ------------------------------------------------------
-
-function SectionHeader({
-  icon,
-  title,
-}: {
-  icon: React.ReactNode;
-  title: string;
-}) {
-  return (
-    <div className="flex items-center gap-2 mb-3">
-      <span style={{ color: "var(--coral)" }}>{icon}</span>
-      <h2
-        className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]"
-        style={{ fontFamily: "var(--font-mono, ui-monospace, monospace)" }}
-      >
-        {title}
-      </h2>
-    </div>
-  );
+async function fetchFamilyDestinations(
+  portalSlug: string,
+  environment?: "indoor" | "outdoor"
+): Promise<FamilyDestination[]> {
+  const params = new URLSearchParams({ portal: portalSlug, limit: "8", sort: "popular" });
+  if (environment) params.set("environment", environment);
+  const res = await fetch(`/api/family/destinations?${params.toString()}`);
+  if (!res.ok) return [];
+  const json = await res.json();
+  return (json.destinations ?? []) as FamilyDestination[];
 }
 
-function EmptyState({ message }: { message: string }) {
-  return (
-    <p className="text-sm text-[var(--muted)] py-3">{message}</p>
-  );
-}
+// ---- Main component -------------------------------------------------------
 
-// School calendar alert row
-function CalendarAlert({ event }: { event: SchoolCalendarEvent }) {
-  const startDate = new Date(event.start_date + "T00:00:00");
-  const endDate = new Date(event.end_date + "T00:00:00");
-  const isSingleDay = event.start_date === event.end_date;
-
-  const dateLabel = isSingleDay
-    ? startDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
-    : `${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
-
-  const typeLabel = SCHOOL_EVENT_TYPE_LABELS[event.event_type];
-  const systemLabel = SCHOOL_SYSTEM_LABELS[event.school_system];
-
-  return (
-    <div
-      className="flex items-start gap-3 py-2.5 border-b last:border-b-0"
-      style={{ borderColor: "var(--twilight, #E8E4DF)" }}
-    >
-      <div
-        className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5"
-        style={{ backgroundColor: "color-mix(in srgb, var(--coral) 10%, white)" }}
-      >
-        <CalendarCheck size={16} weight="duotone" style={{ color: "var(--coral)" }} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[var(--cream)] leading-snug">{event.name}</p>
-        <p className="text-xs text-[var(--muted)] mt-0.5">
-          {typeLabel} · {systemLabel} · {dateLabel}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// Registration radar row
-function RadarRow({
-  program,
-  urgencyLabel,
-  urgencyColor,
-}: {
-  program: ProgramWithVenue;
-  urgencyLabel: string;
-  urgencyColor: string;
-}) {
-  return (
-    <div
-      className="flex items-start gap-3 py-2.5 border-b last:border-b-0"
-      style={{ borderColor: "var(--twilight, #E8E4DF)" }}
-    >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-[var(--cream)] truncate">{program.name}</span>
-          <RegistrationBadge status={program.registration_status} />
-        </div>
-        <div className="flex items-center gap-2 flex-wrap mt-0.5">
-          {program.provider_name && (
-            <span className="text-xs text-[var(--muted)]">{program.provider_name}</span>
-          )}
-          <span className="text-xs text-[var(--muted)]">
-            {formatAgeRange(program.age_min, program.age_max)}
-          </span>
-          <span className="text-xs text-[var(--muted)]">
-            {formatCost(program.cost_amount, program.cost_period)}
-          </span>
-        </div>
-        <p className="text-xs mt-0.5" style={{ color: urgencyColor }}>
-          {urgencyLabel}
-        </p>
-      </div>
-      {program.registration_url && (
-        <a
-          href={program.registration_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-shrink-0 text-xs font-medium text-[var(--coral)] hover:opacity-80 transition-opacity mt-0.5"
-        >
-          Register →
-        </a>
-      )}
-    </div>
-  );
-}
-
-// Today event card — compact horizontal layout
-function TodayEventCard({
-  event,
+export const TodayView = memo(function TodayView({
+  portalId,
   portalSlug,
-}: {
-  event: EventWithLocation;
-  portalSlug: string;
-}) {
-  const hasImage = !!event.image_url;
+  activeKidIds = [],
+  kids = [],
+  activeGenericFilters = [],
+  desktopLayout = false,
+}: TodayViewProps) {
+  // Derive active kids for future age-based filtering
+  const _selectedKids = activeKidIds.length > 0
+    ? kids.filter((k) => activeKidIds.includes(k.id))
+    : [];
+  void _selectedKids;
 
-  return (
-    <Link
-      href={`/${portalSlug}?event=${event.id}`}
-      className="flex items-start gap-3 py-2.5 border-b last:border-b-0 hover:bg-[var(--night)] rounded-lg px-1 -mx-1 transition-colors"
-      style={{ borderColor: "var(--twilight, #E8E4DF)" }}
-    >
-      {hasImage && (
-        <div className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden">
-          <Image
-            src={event.image_url!}
-            alt={event.title}
-            width={56}
-            height={56}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[var(--cream)] leading-snug line-clamp-2">
-          {event.title}
-        </p>
-        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-          {event.start_time && (
-            <span className="flex items-center gap-1 text-xs text-[var(--muted)]">
-              <Clock size={11} />
-              {event.start_time}
-            </span>
-          )}
-          {event.venue?.name && (
-            <span className="text-xs text-[var(--muted)] truncate">{event.venue.name}</span>
-          )}
-          {event.is_free && (
-            <span className="text-xs font-medium text-emerald-700">Free</span>
-          )}
-        </div>
-      </div>
-    </Link>
-  );
-}
+  // Resolve active environment filter (at most one of indoor/outdoor active at a time)
+  const indoorActive = activeGenericFilters.includes("indoor");
+  const outdoorActive = activeGenericFilters.includes("outdoor");
 
-// ---- Main component ------------------------------------------------------
-
-export const TodayView = memo(function TodayView({ portalId, portalSlug }: TodayViewProps) {
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
+  const weather = useWeather();
 
   const { data: calendarData, isLoading: loadingCalendar } = useQuery({
     queryKey: ["family-school-calendar"],
@@ -249,165 +126,195 @@ export const TodayView = memo(function TodayView({ portalId, portalSlug }: Today
 
   const { data: todayEvents, isLoading: loadingToday } = useQuery({
     queryKey: ["family-today-events", portalId],
-    queryFn: () => fetchTodayEvents(portalId),
+    queryFn: () => fetchTodayEvents(portalSlug),
     staleTime: 60 * 1000,
   });
 
-  // Flatten radar results — closing soon is most urgent, then filling fast, then opening soon
-  const urgentPrograms: Array<{
-    program: ProgramWithVenue;
-    urgencyLabel: string;
-    urgencyColor: string;
-  }> = [];
+  // Derive environment preference from weather — undefined while loading means "no filter yet"
+  const destinationEnvironment: "indoor" | "outdoor" | undefined = (() => {
+    if (weather.loading || !weather.condition) return undefined;
+    if (isRainyWeather(weather.condition)) return "indoor";
+    if (isSunnyWeather(weather.condition, weather.temp)) return "outdoor";
+    return undefined;
+  })();
 
-  if (radarData) {
-    radarData.closing_soon.forEach((p) =>
-      urgentPrograms.push({
-        program: p,
-        urgencyLabel: "Registration closes soon",
-        urgencyColor: "var(--coral)",
-      })
-    );
-    radarData.filling_fast.forEach((p) =>
-      urgentPrograms.push({
-        program: p,
-        urgencyLabel: "Waitlist — act fast",
-        urgencyColor: "#D97706",
-      })
-    );
-    radarData.opening_soon.forEach((p) =>
-      urgentPrograms.push({
-        program: p,
-        urgencyLabel: "Registration opens soon",
-        urgencyColor: "#059669",
-      })
+  // Fetch destinations immediately with no filter (queryKey starts as [..., undefined]).
+  // Once weather resolves and destinationEnvironment changes, React Query refetches with
+  // the environment filter applied — no blocking waterfall.
+  const { data: familyDestinations, isLoading: loadingDestinations } = useQuery({
+    queryKey: ["family-destinations", portalSlug, destinationEnvironment],
+    queryFn: () => fetchFamilyDestinations(portalSlug, destinationEnvironment),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Apply indoor/outdoor filter to today's events based on active generic filter chips.
+  // We derive the environment from venue_type (already in EventWithLocation).
+  const filteredTodayEvents = useMemo(() => {
+    if (!todayEvents) return [];
+    if (indoorActive) {
+      return todayEvents.filter((e) => matchesEnvironmentFilter(e.venue?.venue_type, "indoor"));
+    }
+    if (outdoorActive) {
+      return todayEvents.filter((e) => matchesEnvironmentFilter(e.venue?.venue_type, "outdoor"));
+    }
+    return todayEvents;
+  }, [todayEvents, indoorActive, outdoorActive]);
+
+  // Derive featured event from the first today event — no separate API call needed.
+  const safeFeaturedEvent = useMemo(() => {
+    const first = filteredTodayEvents[0] ?? null;
+    if (!first) return null;
+    if (/\badult/i.test(first.title)) return null;
+    return first;
+  }, [filteredTodayEvents]);
+
+  const todayEventCount = loadingToday ? null : filteredTodayEvents.length;
+
+  // Determine whether weekend content should be prominently placed (Thu–Sun).
+  const weekendProminent = isWeekendProminent();
+
+  // Determine whether to show the weather-aware banner.
+  // Show only when weather is loaded, no explicit indoor/outdoor chip is active (the chip
+  // already does the filtering), and conditions warrant a suggestion.
+  const showRainyBanner =
+    !weather.loading &&
+    !!weather.condition &&
+    !indoorActive &&
+    !outdoorActive &&
+    isRainyWeather(weather.condition);
+
+  const showSunnyBanner =
+    !weather.loading &&
+    !!weather.condition &&
+    !indoorActive &&
+    !outdoorActive &&
+    !showRainyBanner &&
+    isSunnyWeather(weather.condition, weather.temp);
+
+  const weatherContext = showRainyBanner ? "rainy" : showSunnyBanner ? "sunny" : null;
+
+  // ---- Desktop layout ------------------------------------------------------
+  if (desktopLayout) {
+    return (
+      <div className="flex flex-col gap-6 px-5">
+        {/* Top row: greeting + weather pill */}
+        <div className="flex items-start justify-between pt-2">
+          <GreetingHeadline todayEventCount={todayEventCount} />
+          {!weather.loading && weather.condition && (
+            <WeatherPill temp={weather.temp} condition={weather.condition} emoji={weather.emoji} />
+          )}
+        </div>
+
+        {/* Featured hero */}
+        <FeaturedHero
+          event={safeFeaturedEvent}
+          isLoading={loadingToday}
+          portalSlug={portalSlug}
+        />
+
+        {/* Two-column grid */}
+        <div className="grid gap-6" style={{ gridTemplateColumns: "1fr 340px" }}>
+          {/* Left column: Events */}
+          <div className="flex flex-col gap-6">
+            {/* Weather-aware banner */}
+            {showRainyBanner && (
+              <RainyDayBanner portalSlug={portalSlug} condition={weather.condition} />
+            )}
+            {showSunnyBanner && (
+              <GetOutsideBanner portalSlug={portalSlug} condition={weather.condition} temp={weather.temp} />
+            )}
+            <AfterSchoolPicksSection
+              events={filteredTodayEvents}
+              isLoading={loadingToday}
+              portalSlug={portalSlug}
+            />
+          </div>
+          {/* Right column: Heads Up + Registration */}
+          <div className="flex flex-col gap-6">
+            <HeadsUpSection calendarData={calendarData} isLoading={loadingCalendar} />
+            <RegistrationRadarSection radarData={radarData} isLoading={loadingRadar} />
+          </div>
+        </div>
+
+        {/* Full-width bottom: Places to Go + Explore by Type + Weekend */}
+        <div className="pb-6 flex flex-col gap-6">
+          <PlacesToGoSection
+            destinations={familyDestinations}
+            isLoading={loadingDestinations}
+            portalSlug={portalSlug}
+            weatherContext={weatherContext}
+          />
+          <ExploreByTypeSection portalSlug={portalSlug} />
+          <WeekendSection portalSlug={portalSlug} prominent={weekendProminent} />
+        </div>
+      </div>
     );
   }
 
-  const hasCalendarAlerts = (calendarData?.length ?? 0) > 0;
-  const hasRadarItems = urgentPrograms.length > 0;
-  const hasTodayEvents = (todayEvents?.length ?? 0) > 0;
-
+  // ---- Mobile layout -------------------------------------------------------
   return (
-    <div className="px-4 py-5 space-y-6 max-w-2xl mx-auto">
-      {/* Snapshot card */}
-      <div
-        className="rounded-xl p-4 border"
-        style={{
-          backgroundColor: "color-mix(in srgb, var(--coral) 6%, white)",
-          borderColor: "color-mix(in srgb, var(--coral) 20%, white)",
-        }}
-      >
-        <div className="flex items-start gap-3">
-          <Lightning size={20} weight="fill" style={{ color: "var(--coral)", flexShrink: 0, marginTop: 2 }} />
-          <div>
-            <p
-              className="text-sm font-semibold text-[var(--cream)]"
-              style={{ fontFamily: "var(--font-outfit, system-ui, sans-serif)" }}
-            >
-              {today}
-            </p>
-            {loadingToday ? (
-              <p className="text-xs text-[var(--muted)] mt-0.5">Loading...</p>
-            ) : (
-              <p className="text-xs text-[var(--muted)] mt-0.5">
-                {hasTodayEvents
-                  ? `${todayEvents!.length} family-friendly ${todayEvents!.length === 1 ? "activity" : "activities"} happening today`
-                  : "No events found for today — check the Weekend tab"}
-              </p>
-            )}
+    <div className="flex flex-col gap-5 pb-8 max-w-2xl mx-auto" style={{ overflowX: "hidden" }}>
+      {/* Greeting + Weather */}
+      <div className="px-4 pt-2">
+        {!weather.loading && weather.condition && (
+          <div className="flex items-center justify-between mb-2">
+            <WeatherPill temp={weather.temp} condition={weather.condition} emoji={weather.emoji} />
           </div>
-        </div>
+        )}
+        <GreetingHeadline todayEventCount={todayEventCount} />
       </div>
 
-      {/* Heads Up — school calendar alerts */}
-      <section>
-        <SectionHeader
-          icon={<BellSimple size={14} weight="bold" />}
-          title="Heads Up"
+      <div className="flex flex-col gap-6 px-4">
+        {/* Featured hero */}
+        <FeaturedHero
+          event={safeFeaturedEvent}
+          isLoading={loadingToday}
+          portalSlug={portalSlug}
         />
-        {loadingCalendar ? (
-          <div className="space-y-2">
-            {[1, 2].map((i) => (
-              <div key={i} className="h-12 rounded-lg skeleton-shimmer-light" />
-            ))}
-          </div>
-        ) : hasCalendarAlerts ? (
-          <div
-            className="bg-white rounded-xl border overflow-hidden"
-            style={{ borderColor: "var(--twilight, #E8E4DF)" }}
-          >
-            {calendarData!.map((event) => (
-              <CalendarAlert key={event.id} event={event} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState message="No school calendar alerts coming up." />
-        )}
-      </section>
 
-      {/* Registration Radar */}
-      <section>
-        <SectionHeader
-          icon={<Tag size={14} weight="bold" />}
-          title="Registration Radar"
+        {/* Heads Up */}
+        <HeadsUpSection calendarData={calendarData} isLoading={loadingCalendar} />
+
+        {/* Places to Go — destination carousel (weather-aware, mobile edge bleed) */}
+        <PlacesToGoSection
+          destinations={familyDestinations}
+          isLoading={loadingDestinations}
+          portalSlug={portalSlug}
+          weatherContext={weatherContext}
+          mobileEdgeBleed
         />
-        {loadingRadar ? (
-          <div className="space-y-2">
-            {[1, 2].map((i) => (
-              <div key={i} className="h-14 rounded-lg skeleton-shimmer-light" />
-            ))}
-          </div>
-        ) : hasRadarItems ? (
-          <div
-            className="bg-white rounded-xl border overflow-hidden divide-y"
-            style={{ borderColor: "var(--twilight, #E8E4DF)" }}
-          >
-            {urgentPrograms.slice(0, 5).map(({ program, urgencyLabel, urgencyColor }) => (
-              <RadarRow
-                key={program.id}
-                program={program}
-                urgencyLabel={urgencyLabel}
-                urgencyColor={urgencyColor}
-              />
-            ))}
-          </div>
-        ) : (
-          <EmptyState message="Nothing urgent right now — check the Programs tab for what's coming." />
-        )}
-      </section>
 
-      {/* After School / Today */}
-      {(hasTodayEvents || loadingToday) && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <SectionHeader
-              icon={<Lightning size={14} weight="bold" />}
-              title="Happening Today"
-            />
-            <Link
-              href={`/${portalSlug}?view=find&type=events&date=today`}
-              className="text-xs font-medium text-[var(--coral)] hover:opacity-80 transition-opacity"
-              style={{ fontFamily: "var(--font-mono, ui-monospace, monospace)" }}
-            >
-              See all →
-            </Link>
-          </div>
-          {loadingToday ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-16 rounded-lg skeleton-shimmer-light" />
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl border overflow-hidden px-3" style={{ borderColor: "var(--twilight, #E8E4DF)" }}>
-              {todayEvents!.slice(0, 6).map((event) => (
-                <TodayEventCard key={event.id} event={event} portalSlug={portalSlug} />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+        {/* Explore by Type — category grid */}
+        <ExploreByTypeSection portalSlug={portalSlug} />
+
+        {/* Weather-aware banner */}
+        {showRainyBanner && (
+          <RainyDayBanner portalSlug={portalSlug} condition={weather.condition} />
+        )}
+        {showSunnyBanner && (
+          <GetOutsideBanner portalSlug={portalSlug} condition={weather.condition} temp={weather.temp} />
+        )}
+
+        {/* Weekend section (prominent = before today picks, e.g. Thu-Sun) */}
+        {weekendProminent && (
+          <WeekendSection portalSlug={portalSlug} prominent={true} />
+        )}
+
+        {/* After School Picks */}
+        <AfterSchoolPicksSection
+          events={filteredTodayEvents}
+          isLoading={loadingToday}
+          portalSlug={portalSlug}
+        />
+
+        {/* Registration Radar */}
+        <RegistrationRadarSection radarData={radarData} isLoading={loadingRadar} />
+
+        {/* Weekend section (non-prominent = plan-ahead, below today content, Mon-Wed) */}
+        {!weekendProminent && (
+          <WeekendSection portalSlug={portalSlug} prominent={false} />
+        )}
+      </div>
     </div>
   );
 });

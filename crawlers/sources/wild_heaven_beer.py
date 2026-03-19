@@ -25,10 +25,10 @@ EVENTS_URL = f"{BASE_URL}/avondale/events"
 
 VENUE_DATA = {
     "name": "Wild Heaven Beer",
-    "slug": "wild-heaven-beer-avondale",
-    "address": "135 Maple St",
+    "slug": "wild-heaven-beer",
+    "address": "135B Clairemont Ave",
     "neighborhood": "Avondale Estates",
-    "city": "Decatur",
+    "city": "Avondale Estates",
     "state": "GA",
     "zip": "30030",
     "venue_type": "brewery",

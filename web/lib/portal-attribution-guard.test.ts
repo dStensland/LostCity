@@ -29,7 +29,7 @@ describe("resolvePortalAttributionForWrite", () => {
     expect(result.portalId).toBe("portal-123");
   });
 
-  it("allows missing attribution when no hints are present", async () => {
+  it("requires attribution by default when no hints are present", async () => {
     vi.mocked(resolvePortalId).mockResolvedValue(null);
     vi.mocked(extractPortalSlugFromReferer).mockReturnValue(null);
 
@@ -43,7 +43,7 @@ describe("resolvePortalAttributionForWrite", () => {
       requireWhenHinted: true,
     });
 
-    expect(result.response).toBeNull();
+    expect(result.response?.status).toBe(400);
     expect(result.portalId).toBeNull();
   });
 
@@ -62,5 +62,24 @@ describe("resolvePortalAttributionForWrite", () => {
 
     expect(result.portalId).toBeNull();
     expect(result.response?.status).toBe(400);
+  });
+
+  it("allows missing attribution only when the route explicitly opts out", async () => {
+    vi.mocked(resolvePortalId).mockResolvedValue(null);
+    vi.mocked(extractPortalSlugFromReferer).mockReturnValue(null);
+
+    const request = new NextRequest("http://localhost:3000/api/rsvp", {
+      method: "POST",
+    });
+
+    const result = await resolvePortalAttributionForWrite(request, {
+      endpoint: "/api/rsvp",
+      body: { event_id: 10, status: "going" },
+      allowMissing: true,
+      requireWhenHinted: true,
+    });
+
+    expect(result.response).toBeNull();
+    expect(result.portalId).toBeNull();
   });
 });

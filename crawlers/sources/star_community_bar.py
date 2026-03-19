@@ -35,6 +35,7 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, find_existing_event_for_insert, smart_update_existing_event
 from dedupe import generate_content_hash
+from source_destination_sync import refresh_venue_specials_from_website
 from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
@@ -255,6 +256,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     venue_id = get_or_create_venue(VENUE_DATA)
     logger.info(f"Star Community Bar venue record ensured (ID: {venue_id})")
+    refresh_venue_specials_from_website(venue_id)
 
     try:
         response = requests.get(SHOWS_URL, headers=HEADERS, timeout=30)

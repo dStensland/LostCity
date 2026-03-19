@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPortalSourceAccess } from "@/lib/federation";
+import { isEntityFamily } from "@/lib/portal-taxonomy";
 import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
@@ -16,6 +17,9 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   const supabase = await createClient();
   const { slug } = await params;
+  const { searchParams } = new URL(request.url);
+  const entityFamilyParam = searchParams.get("entity_family");
+  const entityFamily = isEntityFamily(entityFamilyParam) ? entityFamilyParam : "events";
 
   // Get portal by slug
   const { data: portalData, error: portalError } = await supabase
@@ -36,7 +40,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   }
 
   // Get accessible sources for this portal
-  const sourceAccess = await getPortalSourceAccess(portal.id);
+  const sourceAccess = await getPortalSourceAccess(portal.id, { entityFamily });
 
   return NextResponse.json({
     portal: {
@@ -44,6 +48,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       slug: portal.slug,
       name: portal.name,
     },
+    entity_family: sourceAccess.entityFamily,
     sources: sourceAccess.accessDetails,
     sourceCount: sourceAccess.sourceIds.length,
   });

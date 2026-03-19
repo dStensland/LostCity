@@ -6,6 +6,7 @@ import { createCssVarClassForLength } from "@/lib/css-utils";
 import { useParams } from "next/navigation";
 import { usePortalOptional } from "@/lib/portal-context";
 import { resolveSkeletonVertical } from "@/lib/skeleton-contract";
+import { isFilmPortalVertical } from "@/lib/portal-taxonomy";
 
 /**
  * Loading skeleton for portal happening-now pages.
@@ -20,7 +21,7 @@ export default function PortalHappeningNowLoading() {
 
   if (vertical === "hotel") {
     return (
-      <div data-skeleton-route="happening-now" data-skeleton-vertical="hotel" className="min-h-screen bg-[var(--hotel-ivory)]">
+      <div data-skeleton-route="happening-now" data-skeleton-vertical={vertical} className="min-h-screen bg-[var(--hotel-ivory)]">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <Skeleton className="h-8 w-56 rounded mb-3" />
           <Skeleton className="h-4 w-72 rounded mb-6" delay="0.05s" />
@@ -37,7 +38,7 @@ export default function PortalHappeningNowLoading() {
 
   if (vertical === "hospital") {
     return (
-      <div data-skeleton-route="happening-now" data-skeleton-vertical="hospital" className="min-h-screen bg-[#f2f5fa]">
+      <div data-skeleton-route="happening-now" data-skeleton-vertical={vertical} className="min-h-screen bg-[#f2f5fa]">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <Skeleton className="h-8 w-56 rounded mb-3" />
           <Skeleton className="h-4 w-72 rounded mb-6" delay="0.05s" />
@@ -52,9 +53,9 @@ export default function PortalHappeningNowLoading() {
     );
   }
 
-  if (vertical === "film") {
+  if (isFilmPortalVertical(vertical)) {
     return (
-      <div data-skeleton-route="happening-now" data-skeleton-vertical="film" className="min-h-screen bg-[#070a12]">
+      <div data-skeleton-route="happening-now" data-skeleton-vertical={vertical} className="min-h-screen bg-[#070a12]">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <Skeleton className="h-8 w-56 rounded mb-3" />
           <Skeleton className="h-4 w-72 rounded mb-6" delay="0.05s" />

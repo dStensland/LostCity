@@ -79,13 +79,15 @@ VENUE_MAP = {
     "jennie t. anderson theatre": {
         "name": "Jennie T. Anderson Theatre",
         "slug": "jennie-anderson-theatre",
-        "address": "850 Kennesaw Due West Rd NW",
+        "address": "548 S Marietta Pkwy SE",
         "neighborhood": "Marietta",
         "city": "Marietta",
         "state": "GA",
-        "zip": "30152",
+        "zip": "30060",
+        "lat": 33.9433,
+        "lng": -84.5360,
         "venue_type": "theater",
-        "website": "https://www.cobbk12.org",
+        "website": "https://www.cobbcounty.gov/jennie-t-anderson-theatre",
     },
 }
 

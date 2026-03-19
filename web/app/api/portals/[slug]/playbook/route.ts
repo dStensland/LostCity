@@ -358,9 +358,10 @@ export async function GET(request: NextRequest, { params }: Props) {
   const buildFestivalsQuery = () => {
     return supabase
       .from("festivals")
-      .select("id, name, slug, start_date, end_date, image_url, description")
+      .select("id, name, slug, start_date, end_date, image_url, description, festival_type")
       .lte("start_date", getLocalDateString(addDays(new Date(targetDate + "T00:00:00"), 7)))
       .gte("end_date", targetDate)
+      .not("festival_type", "in", "(conference,trade_show,professional_development,convention)")
       .limit(10);
   };
 

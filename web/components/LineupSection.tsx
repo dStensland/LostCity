@@ -4,6 +4,7 @@ import { useState } from "react";
 import ArtistChip from "@/components/ArtistChip";
 import type { EventArtist } from "@/lib/artists-utils";
 import { getLineupLabels } from "@/lib/artists-utils";
+import { SectionHeader } from "@/components/detail/SectionHeader";
 
 interface LineupSectionProps {
   artists: EventArtist[];
@@ -78,12 +79,7 @@ export default function LineupSection({
 
   return (
     <section>
-      <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] mb-4 flex items-center gap-2">
-        {resolvedTitle}
-        <span className="font-normal">
-          ({artists.length})
-        </span>
-      </h2>
+      <SectionHeader title={resolvedTitle} count={artists.length} variant="divider" className="mb-1" />
 
       {isTiered ? (
         <>

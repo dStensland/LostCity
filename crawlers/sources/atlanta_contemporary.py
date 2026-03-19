@@ -66,8 +66,85 @@ VENUE_DATA = {
 
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     events=True,
+    destinations=True,
+    destination_details=True,
     exhibitions=True,
+    venue_features=True,
+    venue_specials=True,
 )
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "art_museum",
+            "commitment_tier": "hour",
+            "primary_activity": "free contemporary art visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+            "parking_type": "street",
+            "best_time_of_day": "afternoon",
+            "practical_notes": (
+                "Atlanta Contemporary works best as a free West Midtown culture stop for school-age families, especially when paired with another nearby outing rather than treated as an all-day museum plan."
+            ),
+            "accessibility_notes": (
+                "Indoor galleries keep walking friction fairly low once families arrive, but the visit is a better fit for older kids and adults than for toddler-first museum expectations."
+            ),
+            "family_suitability": "caution",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "General gallery access is free; check the center for any ticketed openings, talks, or workshops.",
+            "source_url": BASE_URL,
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "museum",
+                "city": "atlanta",
+            },
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "free-contemporary-art-center",
+            "title": "Free contemporary art center",
+            "feature_type": "amenity",
+            "description": "Atlanta Contemporary is one of the strongest free contemporary art stops in the city, useful for school-age families with arts interest.",
+            "url": BASE_URL,
+            "is_free": True,
+            "sort_order": 10,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "west-midtown-cultural-pairing-stop",
+            "title": "West Midtown cultural pairing stop",
+            "feature_type": "experience",
+            "description": "The center works best as a compact West Midtown culture stop paired with another nearby destination rather than as a full standalone family day.",
+            "url": EVENTS_URL,
+            "is_free": True,
+            "sort_order": 20,
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "always-free-gallery-admission",
+            "title": "Always-free gallery admission",
+            "description": "General gallery admission is free, which makes Atlanta Contemporary one of the easiest recurring no-ticket culture stops for older kids and family add-on outings.",
+            "price_note": "General admission is free.",
+            "is_free": True,
+            "source_url": BASE_URL,
+            "category": "admission",
+        },
+    )
+    return envelope
 
 
 def parse_date_time(date_time_str: str) -> tuple[Optional[str], Optional[str]]:
@@ -416,6 +493,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Get venue ID
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Atlanta Contemporary events: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=60000)

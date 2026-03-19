@@ -430,7 +430,7 @@ def fetch_events(page: int = 0, size: int = 200) -> dict:
 
     # Get events for the next 3 months
     start_date = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-    end_date = (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    end_date = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     params = {
         "apikey": API_KEY,
@@ -613,6 +613,22 @@ def parse_event(event_data: dict) -> Optional[dict]:
         if ticket_url:
             links.append({"type": "ticket", "url": ticket_url})
 
+        # Sales / on-sale date extraction
+        _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+        sales = event_data.get("sales", {})
+        public_sale = sales.get("public", {})
+        on_sale_date = None
+        presale_date = None
+        if public_sale.get("startDateTime"):
+            candidate = public_sale["startDateTime"][:10]  # YYYY-MM-DD
+            on_sale_date = candidate if _DATE_RE.match(candidate) else None
+        presales = sales.get("presales", [])
+        if presales and isinstance(presales[0], dict) and presales[0].get("startDateTime"):
+            candidate = presales[0]["startDateTime"][:10]  # YYYY-MM-DD
+            presale_date = candidate if _DATE_RE.match(candidate) else None
+
+        ticket_status_checked_at = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
         return {
             "title": title,
             "description": description,
@@ -634,6 +650,9 @@ def parse_event(event_data: dict) -> Optional[dict]:
             "venue": venue_data,
             "ticketmaster_id": event_data.get("id"),
             "_parsed_artists": parsed_artists,
+            "on_sale_date": on_sale_date,
+            "presale_date": presale_date,
+            "ticket_status_checked_at": ticket_status_checked_at,
         }
 
     except Exception as e:
@@ -756,6 +775,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                     "_parsed_artists": parsed.get("_parsed_artists") or [],
+                    "on_sale_date": parsed.get("on_sale_date"),
+                    "presale_date": parsed.get("presale_date"),
+                    "ticket_status_checked_at": parsed.get("ticket_status_checked_at"),
                 }
 
                 existing = find_existing_event_for_insert(event_record)

@@ -233,6 +233,83 @@ def pct(numerator: int, denominator: int) -> float:
     return round((numerator / denominator) * 100, 1)
 
 
+def summarize_crawl_freshness(
+    logs_24h: list[dict[str, Any]],
+    source_name_map: dict[int, str],
+) -> dict[str, Any]:
+    attempt_status_counts = Counter((row.get("status") or "unknown") for row in logs_24h)
+    attempt_error_count = int(attempt_status_counts.get("error", 0))
+    attempt_completed_count = int(attempt_status_counts.get("success", 0)) + attempt_error_count
+    attempt_error_rate_pct = (
+        round((attempt_error_count / attempt_completed_count) * 100, 1)
+        if attempt_completed_count
+        else 0.0
+    )
+
+    latest_by_source: dict[int, dict[str, Any]] = {}
+    error_attempt_counts = Counter()
+    for row in logs_24h:
+        source_id = row.get("source_id")
+        if source_id is None:
+            continue
+        try:
+            source_id_int = int(source_id)
+        except (TypeError, ValueError):
+            continue
+        if source_id_int <= 0:
+            continue
+
+        status = str(row.get("status") or "unknown").lower()
+        if status == "error":
+            error_attempt_counts[source_id_int] += 1
+
+        started_at = str(row.get("started_at") or "")
+        current = latest_by_source.get(source_id_int)
+        if current is None or started_at > str(current.get("started_at") or ""):
+            latest_by_source[source_id_int] = row
+
+    final_status_counts = Counter(
+        (row.get("status") or "unknown") for row in latest_by_source.values()
+    )
+    final_error_count = int(final_status_counts.get("error", 0))
+    final_completed_count = int(final_status_counts.get("success", 0)) + final_error_count
+    final_error_rate_pct = (
+        round((final_error_count / final_completed_count) * 100, 1)
+        if final_completed_count
+        else 0.0
+    )
+
+    unresolved_rows = []
+    recovered_rows = []
+    for source_id, attempts in error_attempt_counts.items():
+        latest = latest_by_source.get(source_id)
+        latest_status = str((latest or {}).get("status") or "unknown").lower()
+        payload = {
+            "source_id": source_id,
+            "source": source_name_map.get(source_id, str(source_id)),
+            "errors": attempts,
+        }
+        if latest_status == "error":
+            unresolved_rows.append(payload)
+        elif latest_status == "success":
+            recovered_rows.append(payload)
+
+    unresolved_rows.sort(key=lambda row: (-row["errors"], row["source"]))
+    recovered_rows.sort(key=lambda row: (-row["errors"], row["source"]))
+
+    return {
+        "attempt_status_counts": dict(attempt_status_counts),
+        "attempt_error_rate_pct": attempt_error_rate_pct,
+        "final_status_counts": dict(final_status_counts),
+        "error_rate_pct": final_error_rate_pct,
+        "unique_sources_last_24h": len(latest_by_source),
+        "unresolved_sources_last_24h": len(unresolved_rows),
+        "recovered_sources_last_24h": len(recovered_rows),
+        "top_error_sources_last_24h": unresolved_rows[:5],
+        "recovered_error_sources_last_24h": recovered_rows[:10],
+    }
+
+
 def normalized_venue_type(row: dict[str, Any]) -> str:
     return str(row.get("venue_type") or "").strip().lower()
 
@@ -1144,36 +1221,28 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
             if int(row.get("source_id") or 0) in source_id_set
         ]
     logs_7d_count = len(logs_7d_rows)
-    status_counts = Counter((row.get("status") or "unknown") for row in logs_24h)
     events_found_24h = sum(int(row.get("events_found") or 0) for row in logs_24h)
     events_new_24h = sum(int(row.get("events_new") or 0) for row in logs_24h)
     events_updated_24h = sum(int(row.get("events_updated") or 0) for row in logs_24h)
-    unique_sources_24h = len({row.get("source_id") for row in logs_24h if row.get("source_id") is not None})
-    error_count_24h = int(status_counts.get("error", 0))
-    completed_count_24h = int(status_counts.get("success", 0)) + int(status_counts.get("error", 0))
-    error_rate_pct_24h = round((error_count_24h / completed_count_24h) * 100, 1) if completed_count_24h else 0.0
-
-    error_source_counts = Counter(
-        int(row.get("source_id"))
-        for row in logs_24h
-        if (row.get("status") or "").lower() == "error" and row.get("source_id") is not None
-    )
-    top_error_source_ids = [sid for sid, _ in error_source_counts.most_common(5)]
     source_name_map: dict[int, str] = {}
-    if top_error_source_ids:
+    source_ids_with_errors = sorted(
+        {
+            int(row.get("source_id"))
+            for row in logs_24h
+            if (row.get("status") or "").lower() == "error" and row.get("source_id") is not None
+        }
+    )
+    if source_ids_with_errors:
         source_rows = (
             client.table("sources")
             .select("id,slug,name")
-            .in_("id", top_error_source_ids)
+            .in_("id", source_ids_with_errors)
             .execute()
             .data
             or []
         )
         source_name_map = {int(r["id"]): (r.get("slug") or r.get("name") or str(r["id"])) for r in source_rows}
-    top_error_sources = [
-        {"source_id": sid, "source": source_name_map.get(sid, str(sid)), "errors": count}
-        for sid, count in error_source_counts.most_common(5)
-    ]
+    crawl_freshness = summarize_crawl_freshness(logs_24h, source_name_map)
 
     # Closed venue leakage.
     closed_venue_rows = [
@@ -1375,13 +1444,18 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
         "crawl_freshness": {
             "logs_last_24h": len(logs_24h),
             "logs_last_7d": logs_7d_count,
-            "unique_sources_last_24h": unique_sources_24h,
-            "status_last_24h": dict(status_counts),
-            "error_rate_pct": error_rate_pct_24h,
+            "unique_sources_last_24h": crawl_freshness["unique_sources_last_24h"],
+            "status_last_24h": crawl_freshness["final_status_counts"],
+            "attempt_status_last_24h": crawl_freshness["attempt_status_counts"],
+            "error_rate_pct": crawl_freshness["error_rate_pct"],
+            "attempt_error_rate_pct": crawl_freshness["attempt_error_rate_pct"],
+            "unresolved_sources_last_24h": crawl_freshness["unresolved_sources_last_24h"],
+            "recovered_sources_last_24h": crawl_freshness["recovered_sources_last_24h"],
             "events_found_last_24h": events_found_24h,
             "events_new_last_24h": events_new_24h,
             "events_updated_last_24h": events_updated_24h,
-            "top_error_sources_last_24h": top_error_sources,
+            "top_error_sources_last_24h": crawl_freshness["top_error_sources_last_24h"],
+            "recovered_error_sources_last_24h": crawl_freshness["recovered_error_sources_last_24h"],
         },
         "indie_showtimes": indie_showtimes,
     }
@@ -1497,11 +1571,25 @@ def evaluate_launch_gate(metrics: dict[str, Any], *, gate_profile: str) -> dict[
                 "is unavailable."
             ),
         )
-    add_check(
+    crawl_error_rate = float(deep_get(metrics, "crawl_freshness.error_rate_pct", 0.0))
+    attempt_error_rate = float(
+        deep_get(metrics, "crawl_freshness.attempt_error_rate_pct", 0.0)
+    )
+    recovered_sources = int(
+        deep_get(metrics, "crawl_freshness.recovered_sources_last_24h", 0)
+    )
+    unresolved_sources = int(
+        deep_get(metrics, "crawl_freshness.unresolved_sources_last_24h", 0)
+    )
+    add_check_with_threshold(
         "crawl.error_rate_24h",
         "24h crawl error rate %",
-        float(deep_get(metrics, "crawl_freshness.error_rate_pct", 0.0)),
-        "crawl_error_rate_pct",
+        crawl_error_rate,
+        thresholds["crawl_error_rate_pct"],
+        context=(
+            f"final latest-status by source; attempt error rate {attempt_error_rate:.1f}%, "
+            f"recovered {recovered_sources}, unresolved {unresolved_sources}"
+        ),
     )
     add_check(
         "genres.future_coverage",
@@ -1855,13 +1943,22 @@ def render_findings_markdown(metrics: dict[str, Any], gate: dict[str, Any], regr
         lines.extend(_markdown_table(["Date", "Venue", "Rows", "Sources", "Source Slugs", "Normalized Title"], cluster_rows))
     lines.append("")
 
-    lines.append("## Crawl Error Sources (24h)")
+    lines.append("## Unresolved Crawl Error Sources (24h)")
     error_rows = deep_get(metrics, "crawl_freshness.top_error_sources_last_24h", [])
     if not error_rows:
-        lines.append("- No sources with crawl errors in the last 24h.")
+        lines.append("- No sources remained failed after their latest attempt in the last 24h.")
     else:
         table_rows = [[r["source"], str(r["errors"]), str(r["source_id"])] for r in error_rows]
         lines.extend(_markdown_table(["Source", "Errors", "Source ID"], table_rows))
+    lines.append("")
+
+    recovered_rows = deep_get(metrics, "crawl_freshness.recovered_error_sources_last_24h", [])
+    lines.append("## Recovered Crawl Error Sources (24h)")
+    if not recovered_rows:
+        lines.append("- No sources recovered from crawl errors in the last 24h.")
+    else:
+        table_rows = [[r["source"], str(r["errors"]), str(r["source_id"])] for r in recovered_rows]
+        lines.extend(_markdown_table(["Source", "Recovered Errors", "Source ID"], table_rows))
     lines.append("")
 
     lines.append("## Time Quality")
@@ -2189,15 +2286,26 @@ def render_markdown(metrics: dict[str, Any]) -> str:
 
     crawl = metrics["crawl_freshness"]
     lines.append("## Crawl Freshness (Last 24h)")
-    lines.append(f"- Runs: **{crawl['logs_last_24h']:,}** across **{crawl['unique_sources_last_24h']:,}** sources")
-    lines.append(f"- Status counts: `{crawl['status_last_24h']}`")
+    lines.append(f"- Attempts: **{crawl['logs_last_24h']:,}** across **{crawl['unique_sources_last_24h']:,}** sources")
+    lines.append(f"- Final source outcomes: `{crawl['status_last_24h']}`")
+    lines.append(f"- Attempt status counts: `{crawl.get('attempt_status_last_24h', {})}`")
+    lines.append(
+        f"- Final unresolved error rate: **{crawl['error_rate_pct']:.1f}%** "
+        f"(attempt rate **{crawl.get('attempt_error_rate_pct', 0.0):.1f}%**, "
+        f"recovered sources {crawl.get('recovered_sources_last_24h', 0)}, "
+        f"unresolved {crawl.get('unresolved_sources_last_24h', 0)})"
+    )
     lines.append(
         f"- Throughput: found **{crawl['events_found_last_24h']:,}**, new **{crawl['events_new_last_24h']:,}**, "
         f"updated **{crawl['events_updated_last_24h']:,}**"
     )
     if crawl["top_error_sources_last_24h"]:
-        lines.append("- Top erroring sources:")
+        lines.append("- Sources still unresolved after latest attempt:")
         for row in crawl["top_error_sources_last_24h"]:
+            lines.append(f"  - `{row['source']}` ({row['errors']})")
+    if crawl.get("recovered_error_sources_last_24h"):
+        lines.append("- Sources that recovered after transient errors:")
+        for row in crawl["recovered_error_sources_last_24h"][:5]:
             lines.append(f"  - `{row['source']}` ({row['errors']})")
 
     lines.append("")

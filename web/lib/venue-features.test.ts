@@ -21,7 +21,7 @@ const baseFeature: VenueFeature = {
 };
 
 describe("filterVenueFeaturesForPortal", () => {
-  it("keeps atlanta-owned feature packs intact outside hooky", () => {
+  it("keeps atlanta-owned feature packs intact outside atlanta-families", () => {
     const features = [
       baseFeature,
       {
@@ -40,7 +40,7 @@ describe("filterVenueFeaturesForPortal", () => {
     expect(result).toHaveLength(2);
   });
 
-  it("drops obviously non-outing operational rows for hooky", () => {
+  it("drops obviously non-outing operational rows for atlanta-families", () => {
     const features = [
       baseFeature,
       {
@@ -52,7 +52,7 @@ describe("filterVenueFeaturesForPortal", () => {
     ];
 
     const result = filterVenueFeaturesForPortal(features, {
-      portalSlug: "hooky",
+      portalSlug: "atlanta-families",
       venueSlug: "chattahoochee-nature-center",
     });
 
@@ -78,7 +78,7 @@ describe("filterVenueFeaturesForPortal", () => {
     ];
 
     const result = filterVenueFeaturesForPortal(features, {
-      portalSlug: "hooky",
+      portalSlug: "atlanta-families",
       venueSlug: "chattahoochee-nature-center",
     });
 

@@ -53,6 +53,14 @@ HEADERS = {
 }
 
 
+def _is_timed_duplicate_conflict(exc: Exception) -> bool:
+    text = str(exc)
+    return (
+        "duplicate key value violates unique constraint" in text
+        and "idx_events_unique_source_venue_slot_norm_title_timed" in text
+    )
+
+
 def _parse_time_to_24h(value: Optional[str]) -> Optional[str]:
     if not value:
         return None
@@ -276,9 +284,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
             events_updated += 1
             continue
 
-        insert_event(event_record)
-        events_new += 1
-        logger.info("Added Sports & Social event: %s", item["title"])
+        try:
+            insert_event(event_record)
+            events_new += 1
+            logger.info("Added Sports & Social event: %s", item["title"])
+        except Exception as exc:
+            if not _is_timed_duplicate_conflict(exc):
+                raise
+            existing = find_existing_event_for_insert(event_record)
+            if not existing:
+                raise
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+            logger.info(
+                "Resolved Sports & Social duplicate as update: %s",
+                item["title"],
+            )
 
     remove_stale_source_events(source_id, current_hashes)
     logger.info(

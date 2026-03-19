@@ -16,6 +16,7 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from source_destination_sync import refresh_venue_specials_from_website
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +136,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
+        refresh_venue_specials_from_website(venue_id)
 
         # Try events page
         response = requests.get(EVENTS_URL, headers=HEADERS, timeout=30)

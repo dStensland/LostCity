@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { FeedEventData } from "@/components/EventCard";
 import type { CityPulseEventItem } from "./types";
 import { INTEREST_MAP, getInterestQueryConfig, getServerChipCount } from "./interests";
+import { SPECTATOR_SPORTS_GENRES } from "./sports-signals";
 
 function makeEvent(
   overrides: Partial<FeedEventData> = {},
@@ -29,19 +30,39 @@ function makeEvent(
 }
 
 describe("sports interest chip", () => {
-  it("matches participatory sports even when they are categorized as fitness", () => {
+  it("matches spectator sports genres (watch party, viewing party, pro sports)", () => {
     const sportsChip = INTEREST_MAP.get("sports");
 
     expect(sportsChip?.match(
       makeEvent({
-        category: "fitness",
-        tags: ["pickup", "pickleball"],
-        title: "Friday Pickleball Open Play",
+        category: "sports",
+        genres: ["watch-party"],
+        title: "Sunday Watch Party at the Bar",
+      }),
+    )).toBe(true);
+
+    expect(sportsChip?.match(
+      makeEvent({
+        category: "nightlife",
+        genres: ["viewing-party"],
+        title: "NFL Viewing Party",
       }),
     )).toBe(true);
   });
 
-  it("uses an or-filter query so sports pulls pickup and watch-party coverage", () => {
+  it("does not match participatory sports (pickup/pickleball belong to recreation chip)", () => {
+    const sportsChip = INTEREST_MAP.get("sports");
+
+    expect(sportsChip?.match(
+      makeEvent({
+        category: "recreation",
+        tags: ["pickup", "pickleball"],
+        title: "Friday Pickleball Open Play",
+      }),
+    )).toBe(false);
+  });
+
+  it("uses an or-filter query so sports pulls spectator genre coverage", () => {
     const query = getInterestQueryConfig("sports");
 
     expect(query).toMatchObject({ type: "or_filter" });
@@ -50,16 +71,69 @@ describe("sports interest chip", () => {
     }
 
     expect(query.filter).toContain("tags.ov.{");
-    expect(query.filter).toContain("pickup");
+    // Spectator genres are present
     expect(query.filter).toContain("watch-party");
+    expect(query.filter).toContain("viewing-party");
+    // pickup is a recreation signal, not in the sports or-filter
+    expect(SPECTATOR_SPORTS_GENRES).not.toContain("pickup");
   });
 
-  it("sums sports signal counts from tags and genres", () => {
+  it("sums sports signal counts from spectator genres only", () => {
     expect(getServerChipCount("sports", {
-      "tag:pickup": 2,
       "tag:watch-party": 3,
-      "genre:pickleball": 4,
-    })).toBe(9);
+      "genre:viewing-party": 4,
+      "genre:football": 5,
+    })).toBe(12);
+  });
+});
+
+describe("recreation interest chip", () => {
+  it("matches pickup and pickleball tags via recreation signal genres", () => {
+    const recreationChip = INTEREST_MAP.get("recreation");
+
+    expect(recreationChip?.match(
+      makeEvent({
+        category: "recreation",
+        tags: ["pickup", "pickleball"],
+        title: "Friday Pickleball Open Play",
+      }),
+    )).toBe(true);
+  });
+
+  it("matches open-gym via recreation signal genres", () => {
+    const recreationChip = INTEREST_MAP.get("recreation");
+
+    expect(recreationChip?.match(
+      makeEvent({
+        category: "sports",
+        tags: ["open-gym", "basketball"],
+        title: "Rec Center Open Gym",
+      }),
+    )).toBe(true);
+  });
+});
+
+describe("exercise interest chip", () => {
+  it("matches event with category exercise", () => {
+    const exerciseChip = INTEREST_MAP.get("exercise");
+
+    expect(exerciseChip?.match(
+      makeEvent({
+        category: "exercise",
+        title: "Morning Yoga Flow",
+      }),
+    )).toBe(true);
+  });
+
+  it("backward compat: category fitness also matches exercise chip", () => {
+    const exerciseChip = INTEREST_MAP.get("exercise");
+
+    expect(exerciseChip?.match(
+      makeEvent({
+        category: "fitness",
+        title: "Sunrise Yoga in the Park",
+      }),
+    )).toBe(true);
   });
 });
 

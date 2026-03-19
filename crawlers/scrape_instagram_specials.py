@@ -77,7 +77,8 @@ BOILERPLATE_PATTERNS = [
 # Valid event categories (from our taxonomy)
 VALID_CATEGORIES = {
     "music", "comedy", "art", "theater", "film", "food_drink",
-    "nightlife", "community", "fitness", "family", "sports", "other",
+    "nightlife", "community", "fitness", "exercise", "recreation",
+    "family", "sports", "other",
 }
 
 # Shared Playwright browser

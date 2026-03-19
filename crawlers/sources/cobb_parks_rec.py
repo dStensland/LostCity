@@ -46,9 +46,18 @@ from __future__ import annotations
 
 import logging
 
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from sources._rec1_base import TenantConfig, VenueInfo, crawl_tenant
 
 logger = logging.getLogger(__name__)
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    programs=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
 
 # ---------------------------------------------------------------------------
 # Default venue: Cobb County Parks & Recreation headquarters
@@ -64,7 +73,7 @@ _DEFAULT_VENUE = VenueInfo(
     zip_code="30008",
     lat=33.9304,
     lng=-84.5718,
-    venue_type="recreation",
+    venue_type="organization",
 )
 
 # ---------------------------------------------------------------------------
@@ -310,6 +319,173 @@ _SKIP_GROUP_KEYWORDS = [
     "tennis - adult classes",
 ]
 
+_AQUATIC_CENTER_SLUGS = {
+    "cobb-aquatic-center",
+}
+
+_COMMUNITY_CENTER_SLUGS = {
+    "north-cobb-recreation-center",
+    "smyrna-recreation-center",
+    "east-cobb-recreation-center",
+    "south-cobb-recreation-center",
+    "mableton-recreation-center",
+    "powder-springs-recreation-center",
+    "acworth-recreation-center",
+    "lost-mountain-recreation-center",
+    "highland-recreation-center-cobb",
+}
+
+_PARK_SLUGS = {
+    "jim-r-miller-park",
+}
+
+
+def _build_destination_envelope(venue_info: VenueInfo, venue_id: int) -> TypedEntityEnvelope | None:
+    """Project Cobb parks and rec venues into shared Family destination details."""
+    envelope = TypedEntityEnvelope()
+
+    if venue_info.slug in _AQUATIC_CENTER_SLUGS:
+        envelope.add(
+            "destination_details",
+            {
+                "venue_id": venue_id,
+                "destination_type": "aquatic_center",
+                "commitment_tier": "halfday",
+                "primary_activity": "family aquatic center visit",
+                "best_seasons": ["spring", "summer"],
+                "weather_fit_tags": ["indoor-option", "heat-day", "family-daytrip"],
+                "parking_type": "free_lot",
+                "best_time_of_day": "afternoon",
+                "practical_notes": (
+                    f"{venue_info.name} works best as a planned swim or lesson stop where families confirm open-swim windows and pool schedules before treating it like a casual drop-in outing."
+                ),
+                "accessibility_notes": (
+                    "Aquatic centers are generally easier for families who want a contained heat-day option, but locker-room flow, swim-readiness, and pool rules matter more than at a standard park visit."
+                ),
+                "family_suitability": "yes",
+                "reservation_required": False,
+                "permit_required": False,
+                "fee_note": "Public swim access and classes vary by site; confirm current pool hours and registration windows through Cobb Parks.",
+                "source_url": "https://secure.rec1.com/GA/cobb-county-ga/catalog",
+                "metadata": {
+                    "source_type": "family_destination_enrichment",
+                    "venue_type": venue_info.venue_type,
+                    "county": "cobb",
+                },
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "public-pool-and-aquatics-programs",
+                "title": "Public pool and aquatics programs",
+                "feature_type": "amenity",
+                "description": f"{venue_info.name} is one of Cobb's aquatic facilities with public swim and family aquatics programming.",
+                "url": "https://secure.rec1.com/GA/cobb-county-ga/catalog",
+                "price_note": "Public access and registration vary by program and season.",
+                "is_free": False,
+                "sort_order": 10,
+            },
+        )
+        return envelope
+
+    if venue_info.slug in _COMMUNITY_CENTER_SLUGS:
+        envelope.add(
+            "destination_details",
+            {
+                "venue_id": venue_id,
+                "destination_type": "community_recreation_center",
+                "commitment_tier": "halfday",
+                "primary_activity": "family recreation center visit",
+                "best_seasons": ["spring", "summer", "fall", "winter"],
+                "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+                "parking_type": "free_lot",
+                "best_time_of_day": "afternoon",
+                "family_suitability": "yes",
+                "reservation_required": False,
+                "permit_required": False,
+                "fee_note": "Drop-in access and classes vary by center; check Cobb Parks for current family programming and building hours.",
+                "source_url": "https://secure.rec1.com/GA/cobb-county-ga/catalog",
+                "metadata": {
+                    "source_type": "family_destination_enrichment",
+                    "venue_type": venue_info.venue_type,
+                    "county": "cobb",
+                },
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "indoor-family-recreation-space",
+                "title": "Indoor family recreation space",
+                "feature_type": "amenity",
+                "description": f"{venue_info.name} gives families an indoor recreation option with weather-proof community-center space and youth programming through Cobb Parks.",
+                "url": "https://secure.rec1.com/GA/cobb-county-ga/catalog",
+                "price_note": "Drop-in access and building amenities vary by center.",
+                "is_free": False,
+                "sort_order": 10,
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "family-classes-and-seasonal-camps",
+                "title": "Family classes and seasonal camps",
+                "feature_type": "experience",
+                "description": f"{venue_info.name} regularly hosts youth classes, family recreation programming, and seasonal camps through Cobb Parks.",
+                "url": "https://secure.rec1.com/GA/cobb-county-ga/catalog",
+                "price_note": "Registration costs vary by program and season.",
+                "is_free": False,
+                "sort_order": 20,
+            },
+        )
+        return envelope
+
+    if venue_info.slug in _PARK_SLUGS:
+        envelope.add(
+            "destination_details",
+            {
+                "venue_id": venue_id,
+                "destination_type": "park",
+                "commitment_tier": "halfday",
+                "primary_activity": "family park visit",
+                "best_seasons": ["spring", "summer", "fall"],
+                "weather_fit_tags": ["outdoor", "free-option", "family-daytrip"],
+                "parking_type": "free_lot",
+                "best_time_of_day": "morning",
+                "family_suitability": "yes",
+                "reservation_required": False,
+                "permit_required": False,
+                "fee_note": "Open park access is free; ticketed classes, camps, and rentals vary by site.",
+                "source_url": "https://secure.rec1.com/GA/cobb-county-ga/catalog",
+                "metadata": {
+                    "source_type": "family_destination_enrichment",
+                    "venue_type": venue_info.venue_type,
+                    "county": "cobb",
+                },
+            },
+        )
+        envelope.add(
+            "venue_features",
+            {
+                "venue_id": venue_id,
+                "slug": "free-outdoor-play-space",
+                "title": "Free outdoor play space",
+                "feature_type": "amenity",
+                "description": f"{venue_info.name} is a free Cobb park option for low-friction family outdoor time, open-air play, and pairing with seasonal county programming.",
+                "url": "https://secure.rec1.com/GA/cobb-county-ga/catalog",
+                "price_note": "Open park access is free.",
+                "is_free": True,
+                "sort_order": 10,
+            },
+        )
+        return envelope
+
+    return None
+
 # ---------------------------------------------------------------------------
 # Tenant config
 # ---------------------------------------------------------------------------
@@ -322,6 +498,7 @@ COBB_TENANT = TenantConfig(
     known_venues=_KNOWN_VENUES,
     crawl_tab_ids=_CRAWL_TAB_IDS,
     skip_group_keywords=_SKIP_GROUP_KEYWORDS,
+    venue_enrichment_builder=_build_destination_envelope,
 )
 
 # ---------------------------------------------------------------------------

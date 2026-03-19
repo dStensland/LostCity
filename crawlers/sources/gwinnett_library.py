@@ -16,6 +16,8 @@ from playwright.sync_api import sync_playwright
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +170,77 @@ DEFAULT_VENUE = {
     "state": "GA",
     "venue_type": "library",
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+)
+
+
+def _build_branch_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
+    """Project a Gwinnett library branch into shared Family-friendly destination details."""
+    envelope = TypedEntityEnvelope()
+    branch_name = str(venue_data.get("name") or "Gwinnett library branch").strip()
+
+    envelope.add(
+        "destination_details",
+        {
+            "venue_id": venue_id,
+            "destination_type": "library_branch",
+            "commitment_tier": "hour",
+            "primary_activity": "free indoor family library visit",
+            "best_seasons": ["spring", "summer", "fall", "winter"],
+            "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "free-option"],
+            "practical_notes": (
+                f"{branch_name} is a free indoor family destination with books, browsing, and branch programming. "
+                "Check the official branch listing for current hours and service details."
+            ),
+            "best_time_of_day": "any",
+            "family_suitability": "yes",
+            "reservation_required": False,
+            "permit_required": False,
+            "fee_note": "Free public library access.",
+            "source_url": "https://www.gwinnettpl.org/locations/",
+            "metadata": {
+                "source_type": "family_destination_enrichment",
+                "venue_type": "library",
+                "branch_name": branch_name,
+            },
+        },
+    )
+
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "free-indoor-family-stop",
+            "title": "Free indoor family stop",
+            "feature_type": "amenity",
+            "description": f"{branch_name} is a free indoor place for browsing, reading, and easy family time out of the weather.",
+            "url": "https://www.gwinnettpl.org/locations/",
+            "price_note": "Free public library access.",
+            "is_free": True,
+            "sort_order": 5,
+        },
+    )
+    envelope.add(
+        "venue_features",
+        {
+            "venue_id": venue_id,
+            "slug": "storytime-and-family-programs",
+            "title": "Storytime and family programs",
+            "feature_type": "experience",
+            "description": f"{branch_name} regularly hosts free storytimes, reading events, and family-friendly branch programming.",
+            "url": EVENTS_URL,
+            "price_note": "Most branch programs are free; confirm event details on the official calendar.",
+            "is_free": True,
+            "sort_order": 15,
+        },
+    )
+
+    return envelope
 
 
 def find_branch_venue(location_text: str) -> dict:
@@ -400,6 +473,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Get location from the line after date/time
                     venue_data = find_branch_venue(location_line)
                     venue_id = get_or_create_venue(venue_data)
+                    persist_result = persist_typed_entity_envelope(
+                        _build_branch_destination_envelope(venue_id, venue_data)
+                    )
+                    if persist_result.skipped:
+                        logger.warning(
+                            "Gwinnett Library: skipped typed destination writes for %s: %s",
+                            venue_data["name"],
+                            persist_result.skipped,
+                        )
 
                     href = event_urls.get(title, "")
 

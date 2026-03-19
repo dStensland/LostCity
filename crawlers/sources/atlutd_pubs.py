@@ -85,7 +85,7 @@ VENUE_OVERRIDES = {
         "name": "El Tesoro",
         "slug": "el-tesoro",
         "address": "1374 Arkwright Pl SE",
-        "neighborhood": "East Atlanta",
+        "neighborhood": "East Atlanta Village",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30317",

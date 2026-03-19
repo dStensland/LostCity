@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { coercePortalVertical, shouldSuppressGlobalEffects } from "@/lib/portal-taxonomy";
 
 /**
  * Rain overlay effect that creates an atmospheric rainy night feel.
@@ -27,15 +28,13 @@ export default function RainEffect() {
       const body = document.body;
       const explicitVertical = body.dataset.vertical;
       const inferredVertical = document.querySelector<HTMLElement>("[data-vertical]")?.dataset.vertical;
-      const vertical = explicitVertical || inferredVertical;
+      const vertical = coercePortalVertical(explicitVertical || inferredVertical);
       const forthBg = body.dataset.forthBg;
       const forthExperience = body.dataset.forthExperience === "true";
       const hasForthExperience = Boolean(document.querySelector("[data-forth-experience='true']"));
       const isHospitalPath = pathname.startsWith("/emory-demo") || pathname.includes("/hospitals");
       const shouldSuppress =
-        vertical === "film" ||
-        vertical === "hotel" ||
-        vertical === "hospital" ||
+        (vertical ? shouldSuppressGlobalEffects(vertical) : false) ||
         forthBg === "off" ||
         forthExperience ||
         hasForthExperience ||

@@ -49,6 +49,12 @@ export async function GET(request: Request) {
     const dateParam = searchParams.get("date") || "";
     const dateSpecific = /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
 
+    // Support explicit date range params (start_date + end_date) for break planner etc.
+    // These take precedence over the single `date` param when both are provided.
+    const dateRangeStart = searchParams.get("start_date") ?? undefined;
+    const dateRangeEnd = searchParams.get("end_date") ?? undefined;
+    const dateRangeActive = !!(dateRangeStart && dateRangeEnd);
+
     // Parse map bounds for viewport filtering
     const useMapBounds = searchParams.get("map_bounds") === "true";
     const swLat = searchParams.get("sw_lat");
@@ -68,6 +74,9 @@ export async function GET(request: Request) {
     }
 
     const genres = searchParams.get("genres")?.split(",").filter(Boolean) || [];
+    const VALID_IMPORTANCE = new Set(["flagship", "major", "standard"]);
+    const importanceRaw = searchParams.get("importance")?.split(",").filter(Boolean) || undefined;
+    const importance = importanceRaw?.filter((i) => VALID_IMPORTANCE.has(i));
 
     const filters: SearchFilters = {
       search: searchParams.get("search") || undefined,
@@ -78,9 +87,9 @@ export async function GET(request: Request) {
       neighborhoods: searchParams.get("neighborhoods")?.split(",").filter(Boolean) || undefined,
       is_free: isFree,
       price_max: priceMax,
-      date_filter: (!dateParam || dateSpecific) ? undefined : (dateParam as SearchFilters["date_filter"]),
-      date_range_start: dateSpecific,
-      date_range_end: dateSpecific,
+      date_filter: dateRangeActive ? undefined : ((!dateParam || dateSpecific) ? undefined : (dateParam as SearchFilters["date_filter"])),
+      date_range_start: dateRangeActive ? dateRangeStart : dateSpecific,
+      date_range_end: dateRangeActive ? dateRangeEnd : dateSpecific,
       venue_id: venueId || undefined,
       mood: (searchParams.get("mood") as MoodId) || undefined,
       portal_id: portalId,
@@ -91,6 +100,7 @@ export async function GET(request: Request) {
       // the portal's city without adding .in("venue_id", [...]) to the main query
       // (which exceeds PostgREST URL limits for cities with 2500+ venues).
       portal_city: portalCity,
+      importance: importance && importance.length > 0 ? importance : undefined,
     };
 
     const pageSize = safeParseInt(searchParams.get("pageSize"), 20, 1, 500);

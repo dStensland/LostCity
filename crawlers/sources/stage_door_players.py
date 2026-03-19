@@ -1,9 +1,10 @@
 """
 Crawler for Stage Door Theatre (stagedoortheatrega.org).
-Community theater in Dunwoody.
+Community theater in Dunwoody at the Dunwoody Cultural Arts Center.
 
-Note: Domain changed from stagedoorplayers.net to stagedoortheatrega.org
-Site structure: Shows at /individual-tickets/ with OvationTix links.
+Site structure: Season schedule at /season-51-subscriptions/ with all 4 mainstage shows.
+Individual show pages at /<show-slug>/ with OvationTix ticket links.
+Domain moved from stagedoorplayers.net to stagedoortheatrega.org in 2024-25.
 """
 
 from __future__ import annotations
@@ -17,12 +18,11 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_event_links, find_event_url, extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://stagedoortheatrega.org"
-TICKETS_URL = f"{BASE_URL}/individual-tickets/"
+SEASON_URL = f"{BASE_URL}/season-51-subscriptions/"
 
 VENUE_DATA = {
     "name": "Stage Door Theatre",
@@ -39,58 +39,60 @@ VENUE_DATA = {
     "website": BASE_URL,
 }
 
-SKIP_PATTERNS = [
-    r"^(home|about|contact|donate|support|subscribe|tickets?|buy|cart|menu)$",
-    r"^(login|sign in|register|account)$",
-    r"^(facebook|twitter|instagram|youtube)$",
-    r"^(privacy|terms|policy|copyright)$",
-    r"^(season|subscription|calendar|past)$",
-    r"^\d+$",
-    r"^[a-z]{1,3}$",
-]
+SKIP_TITLES = {
+    "become a season subscriber",
+    "4 show package",
+    "3 show package",
+    "mainstage season",
+    "quick links",
+    "support",
+    "contact us",
+    "past productions",
+    "spotlight series",
+}
+
+# Known OvationTix production IDs for each show (found on individual show pages)
+# Keyed by normalized title fragment
+TICKET_URL_MAP = {
+    "steel magnolias": "https://ci.ovationtix.com/36385/production/1245923",
+    "bad dates": "https://ci.ovationtix.com/36385/production/1245922",
+    "christmas carol": "https://ci.ovationtix.com/36385/production/1245921",
+    "cottage": "https://ci.ovationtix.com/36385/production/1245920",
+}
 
 
-def is_valid_title(title: str) -> bool:
-    """Check if a string looks like a valid show title."""
+def is_valid_show_title(title: str) -> bool:
+    """Check if the heading text is an actual show title."""
     if not title or len(title) < 3 or len(title) > 200:
         return False
-    title_lower = title.lower().strip()
-    for pattern in SKIP_PATTERNS:
-        if re.match(pattern, title_lower, re.IGNORECASE):
-            return False
+    if title.lower().strip() in SKIP_TITLES:
+        return False
+    # Skip lines that are just packaging/pricing
+    if re.match(r"^\$\d+", title):
+        return False
+    if re.match(r"^\d+\s*(show|package)", title, re.IGNORECASE):
+        return False
     return True
 
 
 def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
-    """Parse date range like 'December 6-21, 2025'."""
+    """Parse date ranges like 'April 4-19, 2026' or 'February 7-22, 2026'."""
     if not date_text:
         return None, None
 
     date_text = date_text.strip()
 
-    # Pattern: "Month Day-Day, Year"
-    same_month_match = re.search(
-        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-–—]\s*(\d{1,2}),?\s*(\d{4})",
-        date_text,
-        re.IGNORECASE
-    )
-    if same_month_match:
-        month, start_day, end_day, year = same_month_match.groups()
-        try:
-            start_dt = datetime.strptime(f"{month} {start_day} {year}", "%B %d %Y")
-            end_dt = datetime.strptime(f"{month} {end_day} {year}", "%B %d %Y")
-            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
     # Pattern: "Month Day - Month Day, Year"
-    range_match = re.search(
-        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-–—]\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s*(\d{4})",
+    cross_month = re.search(
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)"
+        r"\s+(\d{1,2})\s*[-–—]\s*"
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)"
+        r"\s+(\d{1,2}),?\s*(\d{4})",
         date_text,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
-    if range_match:
-        start_month, start_day, end_month, end_day, year = range_match.groups()
+    if cross_month:
+        start_month, start_day, end_month, end_day, year = cross_month.groups()
         try:
             start_dt = datetime.strptime(f"{start_month} {start_day} {year}", "%B %d %Y")
             end_dt = datetime.strptime(f"{end_month} {end_day} {year}", "%B %d %Y")
@@ -98,14 +100,31 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
         except ValueError:
             pass
 
-    # Single date
-    single_match = re.search(
-        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s*(\d{4})",
+    # Pattern: "Month Day-Day, Year"
+    same_month = re.search(
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)"
+        r"\s+(\d{1,2})\s*[-–—]\s*(\d{1,2}),?\s*(\d{4})",
         date_text,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
-    if single_match:
-        month, day, year = single_match.groups()
+    if same_month:
+        month, start_day, end_day, year = same_month.groups()
+        try:
+            start_dt = datetime.strptime(f"{month} {start_day} {year}", "%B %d %Y")
+            end_dt = datetime.strptime(f"{month} {end_day} {year}", "%B %d %Y")
+            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Single date
+    single = re.search(
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)"
+        r"\s+(\d{1,2}),?\s*(\d{4})",
+        date_text,
+        re.IGNORECASE,
+    )
+    if single:
+        month, day, year = single.groups()
         try:
             dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
             return dt.strftime("%Y-%m-%d"), dt.strftime("%Y-%m-%d")
@@ -115,8 +134,17 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
     return None, None
 
 
+def find_ticket_url(title: str) -> str:
+    """Look up a known OvationTix URL by title fragment."""
+    title_lower = title.lower()
+    for key, url in TICKET_URL_MAP.items():
+        if key in title_lower:
+            return url
+    return f"{BASE_URL}/individual-tickets/"
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Stage Door Theatre shows."""
+    """Crawl Stage Door Theatre full season from subscription page."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -133,147 +161,159 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
-            # Try tickets page first, then main page
-            for url in [TICKETS_URL, BASE_URL]:
-                logger.info(f"Fetching Stage Door Theatre: {url}")
-                try:
-                    page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                    page.wait_for_timeout(4000)
-                    break
-                except Exception:
-                    continue
+            logger.info(f"Fetching Stage Door Theatre season: {SEASON_URL}")
+            page.goto(SEASON_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3000)
 
-            # Scroll to load content
-            for _ in range(3):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            # Extract image map for event images
-            image_map = extract_images_from_page(page)
-
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
-
-            # Get page content
+            # The season page lists shows in <strong> or heading elements followed by paragraphs
+            # Extract all paragraphs and headings to find show blocks
             body_text = page.inner_text("body")
 
-            # Find OvationTix links which indicate show pages
-            ticket_links = page.query_selector_all('a[href*="ovationtix.com"]')
+            # Parse show blocks from the season text
+            # Each show has: TITLE (bold/heading), By Author, Director, Date Range, Description
+            # We'll use the structured headings approach
+            show_headings = page.query_selector_all("strong, h3, h4, h5")
 
-            for link in ticket_links:
+            processed_titles: set[str] = set()
+
+            for heading in show_headings:
                 try:
-                    # Get the surrounding context for title
-                    parent = link.evaluate_handle("el => el.closest('article, section, div')")
-                    if parent:
-                        parent_text = parent.as_element().inner_text()
+                    raw_title = heading.inner_text().strip()
+                    if not raw_title or not is_valid_show_title(raw_title):
+                        continue
 
-                        # Look for title (usually in heading)
-                        title = None
-                        heading = link.evaluate_handle("el => el.closest('article, section, div')?.querySelector('h1, h2, h3, h4')")
-                        if heading:
-                            title_el = heading.as_element()
-                            if title_el:
-                                title = title_el.inner_text().strip()
+                    # Normalize title (Stage Door uses ALL CAPS for show titles)
+                    title = raw_title.title() if raw_title.isupper() else raw_title
 
-                        if not title or not is_valid_title(title):
-                            # Try to extract from link text or nearby text
-                            link_text = link.inner_text().strip()
-                            if link_text and is_valid_title(link_text):
-                                title = link_text
+                    # De-duplicate within this crawl run
+                    title_key = title.lower().strip()
+                    if title_key in processed_titles:
+                        continue
 
-                        if not title:
+                    # Get surrounding context for dates
+                    parent_text = heading.evaluate(
+                        "el => el.closest('div, section, article, p')?.innerText || ''"
+                    )
+                    if not parent_text:
+                        # Walk up the DOM to get enclosing block context
+                        parent_text = heading.evaluate(
+                            "el => el.parentElement?.parentElement?.innerText || ''"
+                        )
+
+                    # Stage Door date format: "October 4-19, 2025"
+                    start_date, end_date = parse_date_range(parent_text)
+
+                    # If no date in parent, check body text near this title
+                    if not start_date:
+                        # Find the title in body text and look at next 200 chars
+                        idx = body_text.find(raw_title)
+                        if idx >= 0:
+                            start_date, end_date = parse_date_range(body_text[idx : idx + 300])
+
+                    if not start_date:
+                        logger.debug(f"No dates found for: {title}")
+                        continue
+
+                    # Skip past shows
+                    check_date = end_date or start_date
+                    try:
+                        if datetime.strptime(check_date, "%Y-%m-%d").date() < datetime.now().date():
+                            logger.debug(f"Skipping past show: {title}")
                             continue
+                    except ValueError:
+                        pass
 
-                        # Get dates from parent context
-                        start_date, end_date = parse_date_range(parent_text)
-
-                        if not start_date:
-                            continue
-
-                        # Skip past shows
-                        check_date = end_date or start_date
-                        try:
-                            if datetime.strptime(check_date, "%Y-%m-%d").date() < datetime.now().date():
-                                continue
-                        except ValueError:
-                            pass
-
-                        ticket_url = link.get_attribute("href")
-
-                        events_found += 1
-
-                        content_hash = generate_content_hash(title, "Stage Door Theatre", start_date)
-
-
-                        # Get specific event URL
-                        event_url = find_event_url(title, event_links, TICKETS_URL)
-
-                        # Find image by title match
-                        event_image = None
-                        title_lower = title.lower()
-                        for img_alt, img_url in image_map.items():
-                            if img_alt.lower() == title_lower or title_lower in img_alt.lower() or img_alt.lower() in title_lower:
-                                event_image = img_url
-                                break
-
-                        # Build series hint for show runs
-                        description = f"{title} at Stage Door Theatre"
-                        series_hint = None
-                        if end_date and end_date != start_date:
-                            series_hint = {
-                                "series_type": "recurring_show",
-                                "series_title": title,
-                                "description": description,
+                    # Extract description from context
+                    description = None
+                    # Find description in surrounding paragraphs
+                    desc_text = heading.evaluate(
+                        """el => {
+                            let next = el.parentElement?.nextElementSibling;
+                            for (let i = 0; i < 3 && next; i++) {
+                                const text = next.innerText?.trim();
+                                if (text && text.length > 50 && !text.match(/^\$|^[A-Z]\\s*[A-Z]/)) {
+                                    return text;
+                                }
+                                next = next.nextElementSibling;
                             }
+                            return null;
+                        }"""
+                    )
+                    if desc_text and len(desc_text) > 50:
+                        description = desc_text[:500]
 
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": title,
-                            "description": description,
-                            "start_date": start_date,
-                            "start_time": "20:00",
-                            "end_date": end_date,
-                            "end_time": None,
-                            "is_all_day": False,
-                            "category": "theater",
-                            "subcategory": "play",
-                            "tags": ["stage-door", "theater", "dunwoody", "community-theater"],
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": False,
-                            "source_url": event_url,
-                            "ticket_url": ticket_url,
-                            "image_url": event_image,
-                            "raw_text": f"{title}",
-                            "extraction_confidence": 0.82,
-                            "is_recurring": True if end_date and end_date != start_date else False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
+                    # Determine show type
+                    title_lower = title.lower()
+                    subcategory = "play"
+                    if any(w in title_lower for w in ["musical", "carol", "working"]):
+                        subcategory = "musical"
+                    elif "comedy" in title_lower or "dates" in title_lower:
+                        subcategory = "comedy"
+
+                    ticket_url = find_ticket_url(title)
+                    content_hash = generate_content_hash(title, "Stage Door Theatre", start_date)
+
+                    series_hint = None
+                    if end_date and end_date != start_date:
+                        series_hint = {
+                            "series_type": "recurring_show",
+                            "series_title": title,
                         }
+                        if description:
+                            series_hint["description"] = description
 
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": title,
+                        "description": description or f"{title} at Stage Door Theatre",
+                        "start_date": start_date,
+                        "start_time": "19:30",  # Thu-Sat 7:30pm per site
+                        "end_date": end_date,
+                        "end_time": None,
+                        "is_all_day": False,
+                        "category": "theater",
+                        "subcategory": subcategory,
+                        "tags": ["stage-door-theatre", "theater", "dunwoody", "community-theater"],
+                        "price_min": 20,  # $20 student minimum from site
+                        "price_max": 32,  # $32 adult from site
+                        "price_note": "Adult $32, Senior $28, Student $20, Child $15",
+                        "is_free": False,
+                        "source_url": SEASON_URL,
+                        "ticket_url": ticket_url,
+                        "image_url": None,
+                        "raw_text": raw_title,
+                        "extraction_confidence": 0.90,
+                        "is_recurring": True if end_date and end_date != start_date else False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
 
-                        try:
-                            insert_event(event_record, series_hint=series_hint)
-                            events_new += 1
-                            logger.info(f"Added: {title} ({start_date} to {end_date})")
-                        except Exception as e:
-                            logger.error(f"Failed to insert: {title}: {e}")
+                    events_found += 1
+                    processed_titles.add(title_key)
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        continue
+
+                    try:
+                        insert_event(event_record, series_hint=series_hint)
+                        events_new += 1
+                        logger.info(f"Added: {title} ({start_date} to {end_date})")
+                    except Exception as e:
+                        logger.error(f"Failed to insert {title}: {e}")
 
                 except Exception as e:
-                    logger.debug(f"Error processing link: {e}")
+                    logger.warning(f"Error processing heading: {e}")
                     continue
 
             browser.close()
 
         logger.info(
-            f"Stage Door Theatre crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            f"Stage Door Theatre crawl complete: {events_found} found, "
+            f"{events_new} new, {events_updated} updated"
         )
 
     except Exception as e:

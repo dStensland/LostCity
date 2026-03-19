@@ -1,8 +1,8 @@
 "use client";
 
 import Image, { type ImageProps } from "next/image";
-import { useState, useCallback, useMemo, type ReactNode } from "react";
-import { getProxiedImageSrc } from "@/lib/image-proxy";
+import React, { useState, useCallback, useMemo, type ReactNode } from "react";
+import { getProxiedImageSrc, isKnownImageHost } from "@/lib/image-proxy";
 
 import { decode } from "blurhash";
 
@@ -22,6 +22,25 @@ function shouldDisableOptimizerForHost(src: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Passthrough loader — returns the URL as-is, skipping Next.js hostname validation.
+ * Used for external images from hosts not in next.config.ts remotePatterns.
+ */
+const passthroughLoader = ({ src }: { src: string }) => src;
+
+/**
+ * Check if a resolved image src is an external URL that would fail
+ * Next.js remotePatterns validation. The proxy should catch unknown hosts,
+ * but this is a safety net for images that slip through (e.g., hosts in
+ * KNOWN_IMAGE_HOSTS but not in next.config.ts, or direct <Image> usage).
+ */
+function isUnknownExternalUrl(src: ImageProps["src"]): boolean {
+  if (typeof src !== "string") return false;
+  if (src.startsWith("/") || src.startsWith("data:") || src.startsWith("blob:")) return false;
+  if (!src.startsWith("http://") && !src.startsWith("https://")) return false;
+  return !isKnownImageHost(src);
 }
 
 /** Module-level cache: same blurhash string always produces the same data URL */
@@ -75,7 +94,39 @@ function DefaultFallback({ fill, className }: { fill?: boolean; className?: stri
   );
 }
 
-export default function SmartImage(props: SmartImageProps) {
+/**
+ * Error boundary that catches next/image render throws (e.g., unconfigured hostname).
+ * On error, re-renders using a passthrough loader to bypass hostname validation.
+ * The image still loads — just without Next.js optimization.
+ */
+class ImageErrorBoundary extends React.Component<
+  { children: ReactNode; fallbackProps: SmartImageProps & { resolvedSrc: ImageProps["src"]; unoptimized: boolean; blurDataURL?: string } },
+  { usePassthrough: boolean }
+> {
+  state = { usePassthrough: false };
+
+  static getDerivedStateFromError() {
+    return { usePassthrough: true };
+  }
+
+  render() {
+    if (this.state.usePassthrough) {
+      const { resolvedSrc, unoptimized, blurDataURL, fallback, blurhash: _bh, src: _src, ...rest } = this.props.fallbackProps;
+      return (
+        <Image
+          src={resolvedSrc}
+          loader={passthroughLoader}
+          unoptimized
+          {...(blurDataURL ? { placeholder: "blur" as const, blurDataURL } : {})}
+          {...rest}
+        />
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function SmartImageInner(props: SmartImageProps) {
   const { src, alt = "", blurhash, unoptimized: unoptimizedProp, fallback, ...rest } = props;
   const [failed, setFailed] = useState(false);
 
@@ -88,10 +139,12 @@ export default function SmartImage(props: SmartImageProps) {
     typeof resolvedSrc === "string" && resolvedSrc.startsWith("/api/image-proxy?url=");
   const needsUnoptimizedHost =
     typeof resolvedSrc === "string" && shouldDisableOptimizerForHost(resolvedSrc);
+  // Unknown external hosts bypass Next.js optimizer to avoid hostname validation crash
+  const needsPassthrough = isUnknownExternalUrl(resolvedSrc);
   const unoptimized =
     unoptimizedProp !== undefined
       ? unoptimizedProp
-      : needsUnoptimizedProxy || needsUnoptimizedHost;
+      : needsUnoptimizedProxy || needsUnoptimizedHost || needsPassthrough;
 
   // Decode blurhash to data URL if provided
   const blurDataURL = useMemo(() => {
@@ -110,6 +163,9 @@ export default function SmartImage(props: SmartImageProps) {
     return <DefaultFallback fill={rest.fill} className={rest.className} />;
   }
 
+  // For unknown external hosts, use passthrough loader to skip hostname validation entirely
+  const loaderProps = needsPassthrough ? { loader: passthroughLoader } : {};
+
   // Use blur placeholder if we have a blurhash
   if (blurDataURL) {
     return (
@@ -120,10 +176,52 @@ export default function SmartImage(props: SmartImageProps) {
         placeholder="blur"
         blurDataURL={blurDataURL}
         onError={handleError}
+        {...loaderProps}
         {...rest}
       />
     );
   }
 
-  return <Image src={resolvedSrc} alt={alt} unoptimized={unoptimized} onError={handleError} {...rest} />;
+  return (
+    <Image
+      src={resolvedSrc}
+      alt={alt}
+      unoptimized={unoptimized}
+      onError={handleError}
+      {...loaderProps}
+      {...rest}
+    />
+  );
+}
+
+/**
+ * SmartImage — resilient image component wrapping next/image.
+ *
+ * Three layers of protection against unconfigured hostname crashes:
+ * 1. Proxy: unknown hosts are routed through /api/image-proxy (local URL, always allowed)
+ * 2. Passthrough loader: external URLs from unknown hosts skip hostname validation
+ * 3. Error boundary: if next/image still throws, re-renders with passthrough loader
+ *
+ * Images always render — worst case is no Next.js optimization, never a page crash.
+ */
+export default function SmartImage(props: SmartImageProps) {
+  const { src, alt = "", blurhash, unoptimized: unoptimizedProp, ...rest } = props;
+  const resolvedSrc = getProxiedImageSrc(src);
+  const needsUnoptimizedProxy =
+    typeof resolvedSrc === "string" && resolvedSrc.startsWith("/api/image-proxy?url=");
+  const needsUnoptimizedHost =
+    typeof resolvedSrc === "string" && shouldDisableOptimizerForHost(resolvedSrc);
+  const needsPassthrough = isUnknownExternalUrl(resolvedSrc);
+  const unoptimized =
+    unoptimizedProp !== undefined
+      ? unoptimizedProp
+      : needsUnoptimizedProxy || needsUnoptimizedHost || needsPassthrough;
+
+  return (
+    <ImageErrorBoundary
+      fallbackProps={{ ...props, resolvedSrc, unoptimized, alt }}
+    >
+      <SmartImageInner {...props} />
+    </ImageErrorBoundary>
+  );
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@/components/SmartImage";
 import { Clock, FilmSlate, MapPin } from "@phosphor-icons/react";
 import { buildFilmCapsule } from "@/lib/film-capsule";
 
@@ -382,7 +382,7 @@ export default function FilmShowtimeBoard({
                   <div className="flex gap-3">
                     <div className="relative h-20 w-14 overflow-hidden rounded-[3px] border border-[#3b4768] bg-[#0c1220]">
                       {film.image_url ? (
-                        <Image
+                        <SmartImage
                           src={film.image_url}
                           alt={film.title}
                           fill

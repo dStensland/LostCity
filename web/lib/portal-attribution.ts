@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger";
 type ResolvePortalAttributionOptions = {
   endpoint: string;
   body?: unknown;
+  allowMissing?: boolean;
   required?: boolean;
   requireWhenHinted?: boolean;
 };
@@ -48,6 +49,7 @@ export async function resolvePortalAttributionForWrite(
   const {
     endpoint,
     body,
+    allowMissing = false,
     required = false,
     requireWhenHinted = true,
   } = options;
@@ -58,11 +60,12 @@ export async function resolvePortalAttributionForWrite(
   }
 
   const hasHint = hasRequestPortalHint(request, body);
-  const shouldRequire = required || (requireWhenHinted && hasHint);
+  const shouldRequire = required || !allowMissing || (requireWhenHinted && hasHint);
 
   if (shouldRequire) {
     logger.warn("Portal attribution missing on write request", {
       endpoint,
+      allowMissing,
       hasHint,
       method: request.method,
       pathname: new URL(request.url).pathname,
@@ -82,6 +85,7 @@ export async function resolvePortalAttributionForWrite(
 
   logger.warn("Portal attribution omitted on write request", {
     endpoint,
+    allowMissing,
     hasHint,
     method: request.method,
     pathname: new URL(request.url).pathname,
