@@ -17,6 +17,7 @@ def test_build_branch_destination_envelope_projects_library_branch_details() -> 
     assert envelope.destination_details[0]["destination_type"] == "library_branch"
     assert envelope.destination_details[0]["commitment_tier"] == "hour"
     assert envelope.destination_details[0]["family_suitability"] == "yes"
+    assert envelope.destination_details[0]["accessibility_notes"]
     assert envelope.destination_details[0]["fee_note"] == "Free public library access."
     assert envelope.destination_details[0]["metadata"]["branch_name"] == "Decatur Library"
     assert [feature["slug"] for feature in envelope.venue_features] == [

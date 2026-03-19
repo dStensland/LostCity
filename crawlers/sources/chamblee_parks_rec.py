@@ -53,7 +53,14 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "primary_activity": "family recreation center visit",
             "best_seasons": ["spring", "summer", "fall", "winter"],
             "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
+            "parking_type": "free_lot",
             "best_time_of_day": "afternoon",
+            "practical_notes": (
+                "Chamblee Parks and Recreation works best as a weather-proof family activity base for classes, camps, and shorter recreation blocks rather than as a full destination day."
+            ),
+            "accessibility_notes": (
+                "Indoor recreation-center space makes it lower-friction for strollers, bathroom access, and quick resets than a park-only plan."
+            ),
             "family_suitability": "yes",
             "reservation_required": False,
             "permit_required": False,

@@ -456,6 +456,82 @@ def build_report(target: str, portal_slug: str) -> dict:
                 (portal_id, portal_id, list(FAMILY_VENUE_TYPES)),
             )
 
+            practical_gap_candidates = _fetch_all(
+                cur,
+                """
+                with family_activity as (
+                  select
+                    e.venue_id,
+                    count(*)::int as family_events,
+                    0::int as family_programs
+                  from portal_source_access psa
+                  join events e on e.source_id = psa.source_id
+                  where psa.portal_id = %s
+                    and e.venue_id is not null
+                    and coalesce(e.is_active, true) = true
+                    and e.start_date >= current_date
+                  group by e.venue_id
+                  union all
+                  select
+                    p.venue_id,
+                    0::int as family_events,
+                    count(*)::int as family_programs
+                  from programs p
+                  where p.portal_id = %s
+                    and p.venue_id is not null
+                    and p.status = 'active'
+                  group by p.venue_id
+                ),
+                destination_presence as (
+                  select
+                    d.venue_id,
+                    bool_or(d.parking_type is not null) as has_parking_type,
+                    bool_or(d.best_time_of_day is not null) as has_best_time_of_day,
+                    bool_or(d.accessibility_notes is not null and btrim(d.accessibility_notes) <> '') as has_accessibility_notes,
+                    bool_or(d.practical_notes is not null and btrim(d.practical_notes) <> '') as has_practical_notes,
+                    min(coalesce(d.destination_type, 'unknown')) as destination_type
+                  from venue_destination_details d
+                  group by d.venue_id
+                )
+                select
+                  v.id as venue_id,
+                  v.name,
+                  v.slug,
+                  coalesce(v.venue_type, 'unknown') as venue_type,
+                  dp.destination_type,
+                  sum(a.family_events)::int as family_events,
+                  sum(a.family_programs)::int as family_programs,
+                  dp.has_parking_type,
+                  dp.has_accessibility_notes,
+                  dp.has_practical_notes,
+                  dp.has_best_time_of_day
+                from family_activity a
+                join venues v on v.id = a.venue_id
+                join destination_presence dp on dp.venue_id = v.id
+                where v.venue_type = any(%s)
+                group by
+                  v.id,
+                  v.name,
+                  v.slug,
+                  v.venue_type,
+                  dp.destination_type,
+                  dp.has_parking_type,
+                  dp.has_accessibility_notes,
+                  dp.has_practical_notes,
+                  dp.has_best_time_of_day
+                having not dp.has_parking_type
+                   or not dp.has_best_time_of_day
+                   or not dp.has_accessibility_notes
+                   or not dp.has_practical_notes
+                order by
+                  sum(a.family_programs) desc,
+                  sum(a.family_events) desc,
+                  v.name asc
+                limit 25
+                """,
+                (portal_id, portal_id, list(FAMILY_VENUE_TYPES)),
+            )
+
             source_gap_candidates = _fetch_all(
                 cur,
                 """
@@ -512,6 +588,64 @@ def build_report(target: str, portal_slug: str) -> dict:
                 group by fr.source_slug, fr.source_name
                 having count(*) >= 10
                 order by family_rows desc, fr.source_slug asc
+                limit 25
+                """,
+                (portal_id, portal_id, list(FAMILY_VENUE_TYPES)),
+            )
+
+            special_value_candidates = _fetch_all(
+                cur,
+                """
+                with family_activity as (
+                  select
+                    s.slug as source_slug,
+                    e.venue_id,
+                    count(*)::int as family_events,
+                    0::int as family_programs
+                  from portal_source_access psa
+                  join events e on e.source_id = psa.source_id
+                  join sources s on s.id = e.source_id
+                  where psa.portal_id = %s
+                    and e.venue_id is not null
+                    and coalesce(e.is_active, true) = true
+                    and e.start_date >= current_date
+                  group by s.slug, e.venue_id
+                  union all
+                  select
+                    s.slug as source_slug,
+                    p.venue_id,
+                    0::int as family_events,
+                    count(*)::int as family_programs
+                  from programs p
+                  join sources s on s.id = p.source_id
+                  where p.portal_id = %s
+                    and p.venue_id is not null
+                    and p.status = 'active'
+                  group by s.slug, p.venue_id
+                )
+                select
+                  v.id as venue_id,
+                  v.name,
+                  v.slug,
+                  coalesce(v.venue_type, 'unknown') as venue_type,
+                  min(a.source_slug) as source_slug,
+                  sum(a.family_events)::int as family_events,
+                  sum(a.family_programs)::int as family_programs
+                from family_activity a
+                join venues v on v.id = a.venue_id
+                join venue_destination_details d on d.venue_id = v.id
+                where v.venue_type = any(%s)
+                  and not exists (
+                    select 1
+                    from venue_specials s
+                    where s.venue_id = v.id
+                      and s.is_active = true
+                  )
+                group by v.id, v.name, v.slug, v.venue_type
+                order by
+                  sum(a.family_programs) desc,
+                  sum(a.family_events) desc,
+                  v.name asc
                 limit 25
                 """,
                 (portal_id, portal_id, list(FAMILY_VENUE_TYPES)),
@@ -604,7 +738,9 @@ def build_report(target: str, portal_slug: str) -> dict:
         "feature_wedges": feature_wedges,
         "specials_summary": specials,
         "gap_candidates": gap_candidates,
+        "practical_gap_candidates": practical_gap_candidates,
         "source_gap_candidates": source_gap_candidates,
+        "special_value_candidates": special_value_candidates,
         "broad_map_systems": broad_map_systems,
     }
 
@@ -700,6 +836,16 @@ def main() -> int:
             f"features={row['has_features']}, specials={row['has_specials']}"
         )
 
+    print("top practical gap candidates:")
+    for row in report.get("practical_gap_candidates", [])[:10]:
+        print(
+            f"  - {row['name']} ({row['destination_type']}): "
+            f"parking={row['has_parking_type']}, "
+            f"accessibility={row['has_accessibility_notes']}, "
+            f"practical={row['has_practical_notes']}, "
+            f"best_time={row['has_best_time_of_day']}"
+        )
+
     print("top source gap candidates:")
     for row in report["source_gap_candidates"][:10]:
         print(
@@ -707,6 +853,13 @@ def main() -> int:
             f"{row['venue_count']} venues, "
             f"details={row['venues_with_destination_details']}, "
             f"features={row['venues_with_features']}"
+        )
+
+    print("top specials candidates:")
+    for row in report.get("special_value_candidates", [])[:10]:
+        print(
+            f"  - {row['name']} ({row['source_slug']}): "
+            f"{row['family_programs']} programs, {row['family_events']} events"
         )
 
     print("broad map systems:")

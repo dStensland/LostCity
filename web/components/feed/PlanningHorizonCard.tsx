@@ -126,9 +126,9 @@ function TicketCTA({ event }: { event: PlanningHorizonCardProps["event"] }) {
         <button
           type="button"
           onClick={openExternal}
-          className="block w-full min-h-[44px] flex items-center justify-center text-center rounded-lg font-mono text-xs font-medium bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)] hover:bg-[var(--dusk)] hover:border-[var(--soft)]/30 transition-colors cursor-pointer"
+          className="block w-full min-h-[44px] flex items-center justify-center text-center rounded-lg font-mono text-xs font-medium bg-transparent text-[var(--soft)] border border-[var(--soft)]/30 hover:text-[var(--cream)] hover:border-[var(--soft)]/50 transition-colors cursor-pointer"
         >
-          {stale ? "Check Venue Site" : "Learn More"}
+          {stale ? "Get Tickets" : "See Details"}
         </button>
       </div>
     );
@@ -186,7 +186,9 @@ export const PlanningHorizonCard = memo(function PlanningHorizonCard({
 
   return (
     <Link
-      href={`/${portalSlug}/events/${event.id}`}
+      href={event.festival_id
+        ? `/${portalSlug}?festival=${event.festival_id}`
+        : `/${portalSlug}/events/${event.id}`}
       className="group flex-shrink-0 w-[310px] snap-start rounded-card overflow-hidden bg-[var(--night)] shadow-card-sm hover-lift border border-[var(--twilight)]/40 flex flex-col"
     >
       {/* ── Image zone ────────────────────────────────────────────── */}

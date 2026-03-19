@@ -22,6 +22,8 @@ def test_build_destination_envelope_for_cobb_aquatic_center() -> None:
     assert envelope is not None
     assert envelope.destination_details[0]["venue_id"] == 1301
     assert envelope.destination_details[0]["destination_type"] == "aquatic_center"
+    assert envelope.destination_details[0]["practical_notes"]
+    assert envelope.destination_details[0]["accessibility_notes"]
     assert envelope.venue_features[0]["slug"] == "public-pool-and-aquatics-programs"
 
 

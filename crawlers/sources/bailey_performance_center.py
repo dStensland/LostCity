@@ -398,10 +398,69 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Category / tags
             category, subcategory, tags = _categorize(name, raw_desc or "", ovation_venue_name or "")
 
-            # Price — OvationTix doesn't expose price in the production summary
-            # Many KSU events are free (student performances)
-            is_free = any(w in name.lower() for w in ["free", "open to the public"])
-            price_note = "Check website for pricing" if not is_free else None
+            # Price — OvationTix doesn't expose price in the production summary API.
+            # Determine free status from name + description heuristics:
+            #   - "free" / "no charge" / "no cost" / "complimentary" anywhere in name or description
+            #   - Student recitals, ensemble concerts, and departmental lectures at KSU are free
+            #   - Gallery receptions, capstone exhibitions, and lectures are free
+            #   - Named ArtsKSU Presents productions are ticketed (sold events)
+            name_lower = name.lower()
+            desc_lower = (raw_desc or "").lower()
+            combined_lower = f"{name_lower} {desc_lower}"
+
+            FREE_KEYWORDS = ["free", "no charge", "no cost", "complimentary", "open to the public"]
+            # Patterns in the production name that indicate a ticketed (paid) event
+            TICKETED_NAME_PATTERNS = [
+                "artsksu presents",
+                "she loves me",          # mainstage musical = ticketed
+                "king lear",              # mainstage theater = ticketed
+                "ex nihilo",             # mainstage dance = ticketed
+                "opera theater",         # mainstage opera production = ticketed
+            ]
+            FREE_NAME_PATTERNS = [
+                "recital",
+                "collage concert",
+                "faculty recital",
+                "faculty chamber",
+                "faculty presents",      # e.g. "Voice Faculty Presents"
+                "honors voice",
+                "student composition",
+                "student dance concert",
+                "cooke scholarship",
+                "ensemble",
+                "university band",
+                "university choir",
+                "jazz combo",
+                "jazz vocal",
+                "percussion ensemble",
+                "chamber ensemble",
+                "wind ensemble",
+                "philharmonic",
+                "opening reception",
+                "capstone exhibition",
+                "faculty research",
+                "lecture",
+                "panel discussion",
+                "artist in residence",
+                "film festival",
+                "owl film",
+                "tellers",               # KSU storytelling — free
+                "process & collaboration",
+                "paper weaving workshop",
+                "eastern hand papermaking",
+            ]
+
+            is_ticketed = any(pat in name_lower for pat in TICKETED_NAME_PATTERNS)
+            is_free_by_name = any(pat in name_lower for pat in FREE_NAME_PATTERNS)
+            is_free_by_keyword = any(kw in combined_lower for kw in FREE_KEYWORDS)
+            is_free = (is_free_by_name or is_free_by_keyword) and not is_ticketed
+
+            if is_free:
+                price_note = None
+            elif is_ticketed:
+                price_note = "Check website for pricing"
+            else:
+                price_note = "Check website for pricing"
 
             content_hash = generate_content_hash(
                 name,

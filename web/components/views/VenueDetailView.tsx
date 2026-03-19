@@ -28,6 +28,8 @@ import {
   ArrowLeft,
   ShareNetwork,
 } from "@phosphor-icons/react";
+import SmartImage from "@/components/SmartImage";
+import { formatDateRange } from "@/lib/types/exhibitions";
 import { SectionHeader } from "@/components/detail/SectionHeader";
 import { QuickActionLink } from "@/components/detail/QuickActionLink";
 import { CollapsibleSection } from "@/components/detail/CollapsibleSection";
@@ -167,9 +169,22 @@ type NearbyDestinations = {
   fun: NearbyDestination[];
 };
 
+type VenueExhibition = {
+  id: string;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  opening_date: string | null;
+  closing_date: string | null;
+  exhibition_type: string | null;
+  admission_type: string | null;
+  source_url: string | null;
+};
+
 export type SpotApiResponse = {
   spot: SpotData;
   upcomingEvents: UpcomingEvent[];
+  exhibitions: VenueExhibition[];
   nearbyDestinations: NearbyDestinations | null;
   highlights: unknown[];
   features: unknown[];
@@ -230,6 +245,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
     () => data?.attachedChildDestinations ?? data?.artifacts ?? [],
     [data]
   );
+  const exhibitions = useMemo(() => data?.exhibitions ?? [], [data]);
   const walkableNeighbors = useMemo(() => data?.walkableNeighbors ?? [], [data]);
   const vibes = vibesOverride ?? spot?.vibes ?? null;
 
@@ -532,6 +548,48 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
           <CollapsibleVenueTags venueId={spot.id} />
         </div>
       </div>
+
+      {/* ── ON VIEW (EXHIBITIONS) ─────────────────────────── */}
+      {exhibitions.length > 0 && (
+        <div>
+          <SectionHeader title="On View" count={exhibitions.length} variant="divider" />
+          <div className="space-y-3 mt-3">
+            {exhibitions.map((ex) => {
+              const daysLeft = ex.closing_date
+                ? Math.ceil((new Date(ex.closing_date + "T00:00:00").getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                : null;
+              return (
+                <a
+                  key={ex.id}
+                  href={ex.source_url || undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex gap-3 p-3 rounded-xl border border-[var(--twilight)]/40 hover:border-[var(--soft)]/30 transition-colors find-row-card-bg"
+                >
+                  {ex.image_url && (
+                    <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden">
+                      <SmartImage src={ex.image_url} alt="" fill className="object-cover" sizes="80px" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-semibold text-[var(--cream)] leading-snug line-clamp-2 group-hover:opacity-80 transition-opacity">
+                      {ex.title}
+                    </h4>
+                    <p className="mt-1 font-mono text-xs text-[var(--soft)]">
+                      {formatDateRange(ex.opening_date, ex.closing_date)}
+                    </p>
+                    {daysLeft !== null && daysLeft > 0 && daysLeft <= 14 && (
+                      <span className="inline-block mt-1.5 px-2 py-0.5 font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--coral)]/15 text-[var(--coral)] rounded">
+                        {daysLeft <= 1 ? "Last day" : `${daysLeft}d left`}
+                      </span>
+                    )}
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── 3. UPCOMING EVENTS ─────────────────────────────── */}
       {upcomingEvents.length > 0 && (

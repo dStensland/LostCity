@@ -35,6 +35,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     destinations=True,
     destination_details=True,
     venue_features=True,
+    venue_specials=True,
 )
 
 VENUE_DATA = {
@@ -150,6 +151,32 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "url": BASE_URL,
             "is_free": False,
             "sort_order": 30,
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "children-2-and-under-free",
+            "title": "Children 2 and under free",
+            "description": "Children age 2 and under receive free admission, which lowers the barrier for families using the aquarium as a major downtown indoor anchor with very young kids.",
+            "price_note": "Children 2 and under are free.",
+            "is_free": True,
+            "source_url": BASE_URL,
+            "category": "admission",
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "community-access-discount-admission",
+            "title": "Community Access discount admission",
+            "description": "Georgia Aquarium offers a recurring lower-cost access path through its community admission program, which makes a high-ticket anchor more reachable for eligible families.",
+            "price_note": "Discount admission available through the aquarium's Community Access program.",
+            "is_free": False,
+            "source_url": BASE_URL,
+            "category": "admission",
         },
     )
     return envelope

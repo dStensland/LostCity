@@ -292,6 +292,7 @@ VALID_CATEGORIES = {
     "film",
     "comedy",
     "theater",
+    "dance",
     "art",
     "sports",
     "food_drink",

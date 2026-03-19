@@ -513,7 +513,6 @@ _CATEGORY_NORMALIZATION_MAP: dict[str, str] = {
     "arts": "art",
     "activism": "community",
     "cultural": "community",
-    "dance": "learning",
     "tours": "learning",
     "meetup": "community",
     "gaming": "community",

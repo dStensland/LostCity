@@ -46,13 +46,18 @@ export async function GET(
   }
 
   // Cast to avoid TypeScript 'never' type issue
-  const series = seriesData as { id: string; [key: string]: unknown };
+  const series = seriesData as { id: string; festival_id?: string | null; [key: string]: unknown };
 
   // Get today's date for filtering upcoming events
   const today = getLocalDateString();
 
+  // Festival program series: skip portal scope for events.
+  // Festival events often have NULL portal_id — if the series is visible, its events should be too.
+  const isFestivalProgram = !!series.festival_id;
+  const eventClient = isFestivalProgram ? supabase : portalClient;
+
   // Fetch upcoming events for this series with venue info
-  let eventsQuery = portalClient
+  let eventsQuery = eventClient
     .from("events")
     .select(`
       id, title, start_date, start_time, ticket_url,
@@ -64,11 +69,13 @@ export async function GET(
     .order("start_time", { ascending: true })
     .limit(50);
 
-  eventsQuery = applyPortalScopeToQuery(eventsQuery, {
-    portalId: portalContext.portalId,
-    portalExclusive,
-    publicOnlyWhenNoPortal: true,
-  });
+  if (!isFestivalProgram) {
+    eventsQuery = applyPortalScopeToQuery(eventsQuery, {
+      portalId: portalContext.portalId,
+      portalExclusive,
+      publicOnlyWhenNoPortal: true,
+    });
+  }
 
   const { data: eventsData } = await eventsQuery;
 

@@ -650,6 +650,12 @@ def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityE
                 "weather_fit_tags": ["indoor-option", "heat-day", "family-daytrip"],
                 "parking_type": "free_lot",
                 "best_time_of_day": "afternoon",
+                "practical_notes": (
+                    f"{venue_name} works best as a hot-day family reset or aquatics outing with a shorter pool-and-program shape rather than as a broad all-day destination."
+                ),
+                "accessibility_notes": (
+                    "Aquatic-center visits are easier to pace than larger outdoor family plans because bathrooms, cool-down space, and shorter loops are typically closer at hand."
+                ),
                 "family_suitability": "yes",
                 "reservation_required": False,
                 "permit_required": False,
@@ -690,6 +696,12 @@ def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityE
                 "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
                 "parking_type": "free_lot",
                 "best_time_of_day": "afternoon",
+                "practical_notes": (
+                    f"{venue_name} works best as a weather-proof family recreation base for classes, camps, and shorter after-school or weekend activity blocks."
+                ),
+                "accessibility_notes": (
+                    "Indoor community-center space makes family pacing easier than park-only plans, with simpler stroller handling, bathroom access, and quick resets."
+                ),
                 "family_suitability": "yes",
                 "reservation_required": False,
                 "permit_required": False,
@@ -744,6 +756,12 @@ def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityE
                 "weather_fit_tags": ["outdoor", "free-option", "family-daytrip"],
                 "parking_type": "free_lot",
                 "best_time_of_day": "morning",
+                "practical_notes": (
+                    "This Atlanta park is best as a flexible free family stop for morning play, looser outdoor time, or pairing with a city class, camp, or nearby errand."
+                ),
+                "accessibility_notes": (
+                    "Open park pacing makes it easier to shorten or stretch the visit, but shade, stroller smoothness, and bathroom convenience vary more by site than at city recreation centers."
+                ),
                 "family_suitability": "yes",
                 "reservation_required": False,
                 "permit_required": False,

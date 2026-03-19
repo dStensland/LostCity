@@ -73,6 +73,12 @@ def _build_destination_envelope(venue_info: VenueInfo, venue_id: int) -> TypedEn
                 "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
                 "parking_type": "free_lot",
                 "best_time_of_day": "afternoon",
+                "practical_notes": (
+                    f"{venue_info.name} works best as a weather-proof family recreation base for classes, camps, or a shorter afternoon activity block rather than as a destination that requires an all-day commitment."
+                ),
+                "accessibility_notes": (
+                    "Indoor community-center space keeps the visit lower-friction for strollers, bathroom access, and quick resets than Milton's outdoor-only family options."
+                ),
                 "family_suitability": "yes",
                 "reservation_required": False,
                 "permit_required": False,
@@ -127,6 +133,12 @@ def _build_destination_envelope(venue_info: VenueInfo, venue_id: int) -> TypedEn
                 "weather_fit_tags": ["outdoor", "free-option", "family-daytrip"],
                 "parking_type": "free_lot",
                 "best_time_of_day": "morning",
+                "practical_notes": (
+                    f"{venue_info.name} works best as a free outdoor family stop for morning play, lower-pressure wandering, or pairing with a seasonal program instead of as a tightly scheduled attraction."
+                ),
+                "accessibility_notes": (
+                    "Outdoor park use gives families more pacing flexibility, but stroller comfort, shade, and bathroom convenience vary more by site than at indoor recreation facilities."
+                ),
                 "family_suitability": "yes",
                 "reservation_required": False,
                 "permit_required": False,

@@ -82,6 +82,12 @@ def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityE
                 "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "family-daytrip"],
                 "parking_type": "free_lot",
                 "best_time_of_day": "afternoon",
+                "practical_notes": (
+                    "This DeKalb recreation center works best as a weather-proof family activity base, especially on afternoons when families want a class, gym, or community-center stop without committing to a long outing."
+                ),
+                "accessibility_notes": (
+                    "Indoor community-center space keeps the visit lower-friction than park-only plans, with easier stroller handling, bathroom access, and shorter reset loops for mixed-age family outings."
+                ),
                 "family_suitability": "yes",
                 "reservation_required": False,
                 "permit_required": False,
@@ -136,6 +142,12 @@ def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityE
                 "weather_fit_tags": ["outdoor", "free-option", "family-daytrip"],
                 "parking_type": "free_lot",
                 "best_time_of_day": "morning",
+                "practical_notes": (
+                    "This DeKalb park is best used as a flexible free outdoor family stop, especially for morning play, low-pressure wandering, or pairing with a structured class or camp pickup."
+                ),
+                "accessibility_notes": (
+                    "Open park space is easier for looser family pacing than a formal attraction, but comfort, shade, and stroller smoothness vary more by site than at the county's indoor recreation centers."
+                ),
                 "family_suitability": "yes",
                 "reservation_required": False,
                 "permit_required": False,

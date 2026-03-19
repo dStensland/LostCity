@@ -358,7 +358,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "end_date": None,
                 "end_time": None,
                 "is_all_day": False,
-                "category": "theater",
+                "category": "dance",
                 "subcategory": "ballet",
                 "tags": tags,
                 "price_min": perf.get("price_min"),

@@ -44,6 +44,11 @@ THEATER_GENRES = {
     "spoken-word", "burlesque", "puppet", "shakespeare",
 }
 
+DANCE_GENRES = {
+    "ballet", "contemporary", "modern-dance", "afrocentric", "hip-hop",
+    "flamenco", "latin", "ballroom", "swing", "social-dance",
+}
+
 SPORTS_GENRES = {
     # Spectator sports
     "baseball", "basketball", "football", "soccer", "hockey", "mma",
@@ -135,7 +140,7 @@ GAMING_GENRES = {
 
 # Union of all valid genres
 VALID_GENRES: set[str] = (
-    MUSIC_GENRES | FILM_GENRES | COMEDY_GENRES | THEATER_GENRES |
+    MUSIC_GENRES | FILM_GENRES | COMEDY_GENRES | THEATER_GENRES | DANCE_GENRES |
     SPORTS_GENRES | RECREATION_GENRES | EXERCISE_GENRES |
     FOOD_DRINK_GENRES | ART_GENRES |
     NIGHTLIFE_GENRES | LEARNING_GENRES | COMMUNITY_GENRES | FAMILY_GENRES |
@@ -149,6 +154,7 @@ GENRES_BY_CATEGORY: dict[str, set[str]] = {
     "film": FILM_GENRES,
     "comedy": COMEDY_GENRES,
     "theater": THEATER_GENRES,
+    "dance": DANCE_GENRES,
     "sports": SPORTS_GENRES,
     "recreation": RECREATION_GENRES,
     "exercise": EXERCISE_GENRES,

@@ -13,3 +13,7 @@ def test_build_destination_envelope_for_georgia_aquarium() -> None:
         "stroller-friendly-downtown-anchor",
         "easy-bathroom-and-cool-down-resets",
     }
+    assert {special["slug"] for special in envelope.venue_specials} == {
+        "children-2-and-under-free",
+        "community-access-discount-admission",
+    }

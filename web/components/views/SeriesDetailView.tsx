@@ -101,6 +101,8 @@ interface SeriesDetailViewProps {
 
 function formatTime(timeStr: string | null): string {
   if (!timeStr) return "";
+  // Treat midnight placeholder as unknown time
+  if (timeStr === "00:00:00" || timeStr === "00:00") return "";
   const [hours, minutes] = timeStr.split(":");
   const hour = parseInt(hours);
   const ampm = hour >= 12 ? "PM" : "AM";
@@ -247,20 +249,19 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
           alt={series.title}
           category={isFilm ? "film" : "other"}
         />
-      ) : (
-        <div className="aspect-[16/10] bg-gradient-to-b from-[var(--dusk)] to-[var(--night)] flex items-center justify-center">
-          {isFilm ? (
-            <FilmSlate size={48} weight="light" className="text-accent opacity-30" aria-hidden="true" />
-          ) : (
-            <Repeat size={48} weight="light" className="text-accent opacity-30" aria-hidden="true" />
-          )}
+      ) : isFilm ? (
+        <div className="aspect-[2/3] max-h-[260px] bg-gradient-to-b from-[var(--dusk)] to-[var(--night)] flex items-center justify-center">
+          <FilmSlate size={48} weight="light" className="text-accent opacity-30" aria-hidden="true" />
         </div>
+      ) : (
+        /* Non-film series without images: skip the large hero, start with identity */
+        null
       )}
 
       {/* Identity */}
       <div className="px-5 pt-4 pb-3 space-y-2">
         {/* Type badge */}
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-mono font-semibold uppercase tracking-widest bg-accent-20 text-accent">
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-semibold uppercase tracking-[0.14em] bg-accent-20 text-accent">
           {typeLabel}
         </span>
 
@@ -398,11 +399,11 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
   const visibleEvents = expandedDates ? allEvents : allEvents.slice(0, DATES_COLLAPSED);
 
   const contentBody = (
-    <div className={`px-4 lg:px-8 py-6 ${accentClass?.className ?? ""}`}>
+    <div className={`px-4 lg:px-8 py-6 min-h-[calc(100dvh-4rem)] max-w-3xl ${accentClass?.className ?? ""}`}>
       {/* About */}
       {series.description && (
         <>
-          <SectionHeader title="About" variant="inline" />
+          <SectionHeader title="About" />
           <div className="text-sm text-[var(--soft)] leading-relaxed whitespace-pre-wrap pb-2">
             <LinkifyText text={series.description} />
           </div>
@@ -528,7 +529,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
   const mobileBottomBar = nextTicketUrl ? (
     <DetailStickyBar
       primaryAction={{
-        label: isFilm ? "Get Tickets" : "Get Tickets",
+        label: isFilm ? "Get Showtimes" : "Get Tickets",
         href: nextTicketUrl,
         icon: <Ticket size={16} weight="light" />,
       }}

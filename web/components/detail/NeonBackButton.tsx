@@ -18,7 +18,7 @@ export default function NeonBackButton({ onClose, floating = true }: NeonBackBut
     <button
       onClick={onClose}
       aria-label="Go back"
-      className={`group flex items-center gap-2 px-3.5 py-2 rounded-full font-mono text-xs font-semibold tracking-wider uppercase transition-all duration-300 bg-[var(--night)] border border-[var(--twilight)] shadow-card-sm hover:border-[var(--soft)] hover:shadow-card-md focus-ring ${
+      className={`group flex items-center gap-2 px-3.5 min-h-[44px] rounded-full font-mono text-xs font-semibold tracking-wider uppercase transition-all duration-300 bg-[var(--night)] border border-[var(--twilight)] shadow-card-sm hover:border-[var(--soft)] hover:shadow-card-md focus-ring ${
         floating ? "absolute top-3 left-3 z-10" : "mb-4"
       }`}
     >

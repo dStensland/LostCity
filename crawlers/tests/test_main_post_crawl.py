@@ -78,7 +78,7 @@ def test_full_post_crawl_refreshes_filters_and_search(monkeypatch):
     monkeypatch.setattr(
         main,
         "refresh_search_suggestions",
-        lambda city: calls.append(f"search:{city}") or True,
+        lambda city, since=None: calls.append(f"search:{city}") or True,
     )
     monkeypatch.setattr(
         main,
@@ -166,7 +166,7 @@ def test_post_crawl_can_skip_tba_hydration(monkeypatch):
 
     monkeypatch.setattr(main, "writes_enabled", lambda: True)
     monkeypatch.setattr(main, "refresh_available_filters", lambda: True)
-    monkeypatch.setattr(main, "refresh_search_suggestions", lambda city: True)
+    monkeypatch.setattr(main, "refresh_search_suggestions", lambda city, since=None: True)
     monkeypatch.setattr(main, "fetch_logos", lambda: {"success": 0, "failed": 0, "skipped": 0})
     monkeypatch.setattr(main, "get_system_health_summary", lambda: {"sources": {"healthy": 0, "degraded": 0, "unhealthy": 0}})
     monkeypatch.setattr(main, "run_full_cleanup", lambda **_: {})

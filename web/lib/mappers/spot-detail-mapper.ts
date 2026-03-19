@@ -23,6 +23,7 @@ export function mapSpotDetailToViewData(detail: SpotDetailPayload): SpotApiRespo
     specials: detail.specials as SpotApiResponse["specials"],
     editorialMentions: detail.editorialMentions as SpotApiResponse["editorialMentions"],
     occasions: detail.occasions as SpotApiResponse["occasions"],
+    exhibitions: detail.exhibitions as SpotApiResponse["exhibitions"],
     attachedChildDestinations: detail.attachedChildDestinations as SpotApiResponse["attachedChildDestinations"],
     artifacts: detail.artifacts as SpotApiResponse["artifacts"],
     walkableNeighbors: detail.walkableNeighbors as SpotApiResponse["walkableNeighbors"],

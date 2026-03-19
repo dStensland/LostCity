@@ -176,13 +176,50 @@ def _extract_og_image(soup: BeautifulSoup) -> Optional[str]:
 
 
 def _extract_description(soup: BeautifulSoup) -> Optional[str]:
-    """Get the main body text of a production page."""
+    """Get the main body text of a production page.
+
+    CCO's WordPress theme uses a custom Elementor layout with a div.site-content
+    container rather than standard article/entry-content. The full opera synopsis
+    lives there, preceded by a "Make a reservation" paragraph that we strip.
+    """
+    # Primary: div.site-content contains the full event write-up
+    site_content = soup.find(class_="site-content")
+    if site_content:
+        text = site_content.get_text(separator=" ", strip=True)
+        if text:
+            # Strip "Make a reservation at Petite Violette..." boilerplate
+            text = re.sub(
+                r"Make a reservation at Petite Violette Restaurant by going to\s+\S+\s*",
+                "",
+                text,
+            ).strip()
+            # Strip any leftover URLs
+            text = re.sub(r"https?://\S+", "", text).strip()
+            # Strip WordPress social share widget tail noise
+            # "Share this: Share on X ... Like Loading..." always appears at end
+            text = re.split(r"\s*Share this:\s*Share on", text)[0].strip()
+            if len(text) > 40:
+                return text[:600].strip()
+
+    # Fallback: standard WP article/entry-content
     body = soup.find("article") or soup.find(class_="entry-content")
-    if not body:
-        return None
-    text = body.get_text(separator=" ", strip=True)
-    # Truncate to a reasonable description length
-    return text[:600].strip() or None
+    if body:
+        text = body.get_text(separator=" ", strip=True)
+        if len(text) > 40:
+            return text[:600].strip()
+
+    # Last resort: meta name="description" — may be truncated but better than nothing
+    meta_desc = soup.find("meta", attrs={"name": "description"})
+    if meta_desc:
+        content = meta_desc.get("content", "").strip()
+        # Strip truncation ellipsis and reservation boilerplate
+        content = re.sub(r"Make a reservation at Petite Violette.*", "", content).strip()
+        content = re.sub(r"https?://\S+", "", content).strip()
+        content = content.rstrip("…").strip()
+        if len(content) > 40:
+            return content[:600]
+
+    return None
 
 
 def _infer_year(month: int, day: int, season_year: Optional[int] = None) -> int:

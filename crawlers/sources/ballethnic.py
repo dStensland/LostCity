@@ -301,11 +301,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
         event_website = api_event.get("website", "")
         ticket_url = event_website if event_website and event_website != BASE_URL else source_url
 
-        # Image URL
+        # Image URL — Ballethnic doesn't set WordPress featured images, but embeds
+        # flyer images directly in the event description HTML as <img> tags.
         image = api_event.get("image")
         image_url = None
         if image and isinstance(image, dict):
             image_url = image.get("url")
+        if not image_url:
+            # Fall back to first embedded image in the raw description HTML
+            raw_html = api_event.get("description", "") or ""
+            img_match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', raw_html)
+            if img_match:
+                image_url = img_match.group(1)
 
         # Price
         cost_str = api_event.get("cost", "")
@@ -373,7 +380,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             "end_date": end_date,
             "end_time": end_time,
             "is_all_day": api_event.get("all_day", False),
-            "category": "theater",
+            "category": "dance",
             "subcategory": subcategory,
             "tags": tags,
             "price_min": price_min,

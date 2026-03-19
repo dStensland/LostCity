@@ -19,6 +19,7 @@ import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
+from datetime import datetime, timedelta
 from importlib import import_module
 from typing import Optional
 from urllib.parse import urljoin, urlparse, urlunparse
@@ -1010,7 +1011,10 @@ def run_post_crawl_tasks(
         logger.warning("Failed to refresh available filters")
 
     logger.info("Refreshing search suggestions...")
-    if refresh_search_suggestions(maintenance_city):
+    if refresh_search_suggestions(
+        maintenance_city,
+        since=datetime.utcnow() - timedelta(days=3),
+    ):
         logger.info("Search suggestions refreshed successfully")
     else:
         logger.warning("Failed to refresh search suggestions")

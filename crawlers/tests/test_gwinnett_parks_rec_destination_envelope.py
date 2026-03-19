@@ -23,6 +23,8 @@ def test_build_destination_envelope_for_rec_center() -> None:
     assert envelope.destination_details[0]["venue_id"] == 901
     assert envelope.destination_details[0]["destination_type"] == "community_recreation_center"
     assert envelope.destination_details[0]["family_suitability"] == "yes"
+    assert envelope.destination_details[0]["practical_notes"]
+    assert envelope.destination_details[0]["accessibility_notes"]
     assert {feature["slug"] for feature in envelope.venue_features} == {
         "indoor-family-recreation-space",
         "family-classes-and-seasonal-camps",
@@ -50,4 +52,6 @@ def test_build_destination_envelope_for_park() -> None:
     assert envelope.destination_details[0]["venue_id"] == 902
     assert envelope.destination_details[0]["destination_type"] == "park"
     assert envelope.destination_details[0]["parking_type"] == "free_lot"
+    assert envelope.destination_details[0]["practical_notes"]
+    assert envelope.destination_details[0]["accessibility_notes"]
     assert envelope.venue_features[0]["slug"] == "free-outdoor-play-space"

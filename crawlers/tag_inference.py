@@ -121,6 +121,8 @@ def infer_tags(
         tags.add("date-night")
     if category == "theater":
         tags.add("date-night")
+    if category == "dance":
+        tags.add("date-night")
     if category == "film":
         tags.add("date-night")
     if category in ("sports", "recreation", "exercise", "fitness"):
@@ -1415,6 +1417,47 @@ def infer_genres(
         for keywords, genre in theater_patterns:
             if any(kw in text for kw in keywords):
                 genres.add(genre)
+
+    elif category == "dance":
+        dance_patterns: list[tuple[list[str], str]] = [
+            (
+                ["ballet", "nutcracker", "pointe", "barre", "pas de", "grand jeté",
+                 "classical ballet", "ballet company", "ballet theatre", "ballet theater"],
+                "ballet",
+            ),
+            (
+                ["contemporary", "modern dance", "modern ballet", "postmodern",
+                 "contemporary dance", "contemporary ballet"],
+                "contemporary",
+            ),
+            (
+                ["afro", "afrocentric", "african dance", "afro-haitian", "west african"],
+                "afrocentric",
+            ),
+            (
+                ["hip-hop", "hip hop", "street dance", "breaking", "breakdance"],
+                "hip-hop",
+            ),
+            (
+                ["flamenco", "tango", "salsa", "bachata", "cumbia", "latin dance"],
+                "latin",
+            ),
+            (
+                ["ballroom", "waltz", "foxtrot", "cha cha", "swing dance", "east coast swing",
+                 "west coast swing"],
+                "ballroom",
+            ),
+            (
+                ["social dance", "social dancing", "partner dance"],
+                "social-dance",
+            ),
+        ]
+        for keywords, genre in dance_patterns:
+            if any(kw in text for kw in keywords):
+                genres.add(genre)
+        # If no specific genre matched, default to ballet (canonical performing dance)
+        if not genres:
+            genres.add("ballet")
 
     elif category == "sports":
         sports_patterns: list[tuple[list[str], str]] = [

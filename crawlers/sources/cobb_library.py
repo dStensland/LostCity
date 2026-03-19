@@ -194,9 +194,13 @@ def _build_branch_destination_envelope(venue_id: int, venue_data: dict) -> Typed
             "primary_activity": "free indoor family library visit",
             "best_seasons": ["spring", "summer", "fall", "winter"],
             "weather_fit_tags": ["indoor", "rainy-day", "heat-day", "free-option"],
+            "parking_type": "free_lot",
             "practical_notes": (
                 f"{branch_name} is a free indoor family destination with books, browsing, and library programming. "
                 "Check the official branch listing for current hours and event timing."
+            ),
+            "accessibility_notes": (
+                "Cobb library branches are generally easier low-friction indoor stops for families who need predictable bathrooms, seating, and a calmer weather-proof outing."
             ),
             "best_time_of_day": "any",
             "family_suitability": "yes",

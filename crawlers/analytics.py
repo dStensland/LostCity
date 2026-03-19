@@ -16,6 +16,14 @@ from db import get_client
 logger = logging.getLogger(__name__)
 
 
+def _table_exists(client, table_name: str) -> bool:
+    try:
+        client.table(table_name).select("id").limit(1).execute()
+        return True
+    except Exception as exc:
+        return "PGRST205" not in str(exc)
+
+
 def record_daily_snapshot():
     """
     Record a daily snapshot of event counts by category.
@@ -41,6 +49,10 @@ def record_daily_snapshot():
         "events_by_category": category_counts,
         "snapshot_type": "daily",
     }
+
+    if not _table_exists(client, "analytics_snapshots"):
+        logger.info("Skipping analytics snapshot save: analytics_snapshots table is unavailable")
+        return snapshot_data
 
     try:
         # Check if we already have a snapshot for today
@@ -71,6 +83,10 @@ def get_category_trends(days: int = 30) -> dict:
     """Get category count trends over the past N days."""
     client = get_client()
     cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+    if not _table_exists(client, "analytics_snapshots"):
+        logger.info("Skipping category trends: analytics_snapshots table is unavailable")
+        return {}
 
     try:
         result = client.table("analytics_snapshots").select(

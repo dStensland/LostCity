@@ -440,8 +440,10 @@ def determine_relevance(
         if not _guide_compatible_with_venue(guide_name, venue_type):
             return "incidental"
 
-    # Default: primary (body-matched feature with no counter-signal)
-    return "primary"
+    # Body-only matches are incidental unless it's a guide/list article
+    if mention_type in ("best_of", "guide_inclusion"):
+        return "primary"
+    return "incidental"
 
 
 # ---------------------------------------------------------------------------

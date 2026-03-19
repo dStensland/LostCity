@@ -13,3 +13,7 @@ def test_build_destination_envelope_for_childrens_museum() -> None:
         "downtown-younger-kid-weather-proof-anchor",
         "bathroom-and-attention-span-reset-friendly",
     }
+    assert {special["slug"] for special in envelope.venue_specials} == {
+        "children-under-1-free-admission",
+        "museums-for-all-discount-admission",
+    }

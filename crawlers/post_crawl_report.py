@@ -34,12 +34,12 @@ def get_event_stats_by_category() -> dict:
     today = datetime.now().strftime("%Y-%m-%d")
 
     result = client.table("events").select(
-        "category"
+        "category_id"
     ).gte("start_date", today).execute()
 
     counts = {}
     for event in result.data or []:
-        cat = event.get("category") or "uncategorized"
+        cat = event.get("category_id") or "uncategorized"
         counts[cat] = counts.get(cat, 0) + 1
 
     return dict(sorted(counts.items(), key=lambda x: -x[1]))

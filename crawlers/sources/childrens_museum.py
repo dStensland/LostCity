@@ -38,6 +38,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     destinations=True,
     destination_details=True,
     venue_features=True,
+    venue_specials=True,
 )
 
 VENUE_DATA = {
@@ -143,6 +144,32 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "url": BASE_URL,
             "is_free": False,
             "sort_order": 30,
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "children-under-1-free-admission",
+            "title": "Children under 1 free admission",
+            "description": "Children under age 1 receive free admission, which makes the museum materially easier to justify for families with babies and mixed-age sibling outings.",
+            "price_note": "Children under 1 are free.",
+            "is_free": True,
+            "source_url": BASE_URL,
+            "category": "admission",
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "museums-for-all-discount-admission",
+            "title": "Museums for All discount admission",
+            "description": "The museum participates in Museums for All, which gives eligible families a lower-cost way to use it as a recurring downtown play-and-learning stop.",
+            "price_note": "Discount admission available through Museums for All / SNAP access program.",
+            "is_free": False,
+            "source_url": BASE_URL,
+            "category": "admission",
         },
     )
     return envelope

@@ -92,7 +92,7 @@ def test_normalize_category_maps_programs_to_family():
     assert normalize_category("meetup") == "community"
     assert normalize_category("gaming") == "community"
     assert normalize_category("markets") == "community"
-    assert normalize_category("dance") == "learning"
+    assert normalize_category("dance") == "dance"
     assert normalize_category("tours") == "learning"
 
 

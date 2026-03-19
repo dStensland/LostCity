@@ -14,3 +14,6 @@ def test_build_destination_envelope_for_fernbank() -> None:
         "museum-plus-outdoor-nature-flex",
         "indoor-bathroom-core-with-outdoor-bonus",
     }
+    assert {special["slug"] for special in envelope.venue_specials} == {
+        "children-2-and-under-free",
+    }

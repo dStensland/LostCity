@@ -1128,9 +1128,9 @@ This is the current autonomous burn-down queue from the live production audit. I
 
 ### Batch E: Specials and cheap/free recurring value
 
-- current production state is still thin relative to total destination coverage, but it is now a real layer:
-  - `active_specials=7`
-  - `free_or_low_cost_specials=7`
+- current production state is now a meaningful layer:
+  - `active_specials=12`
+  - `free_or_low_cost_specials=12`
 - targets:
   - family museum free windows
   - recurring low-cost admission offers
@@ -1138,15 +1138,16 @@ This is the current autonomous burn-down queue from the live production audit. I
 
 ### Current production floor after this queue setup
 
-- `venue_count=606`
-- `target_type_count=142`
-- `with_destination_details=142`
-- `with_features=142`
-- `with_specials=6`
+- `venue_count=592`
+- `target_type_count=148`
+- `with_destination_details=148`
+- `with_features=148`
+- `with_specials=8`
 - detail coverage still worth improving:
-  - `with_parking_type=80`
-  - `with_accessibility_notes=67`
-  - `with_practical_notes=116`
+  - `with_parking_type=87`
+  - `with_accessibility_notes=133`
+  - `with_practical_notes=146`
+  - `with_best_time_of_day=147`
 
 ### Latest execution notes
 
@@ -1177,6 +1178,14 @@ This is the current autonomous burn-down queue from the live production audit. I
 - the live production Family audit is now clean on target-type destination coverage:
   - `gap_candidates=[]`
   - every current Family-linked target-type venue row has both `venue_destination_details` and active `venue_features`
+- the Family audit is now hardened for autonomous execution:
+  - `audit_family_destination_content.py` now emits `practical_gap_candidates`
+  - it also emits `special_value_candidates`
+  - that means the next queue can target missing practical fields and value-layer gaps directly instead of relying on manual ad hoc readbacks
+- the practical-depth residuals are now concrete rather than fuzzy:
+  - `club-scikidz-atlanta` and the branch-library layer now improved materially through builder-level bulk apply
+  - the remaining library residuals are now mostly parking-type completeness, not accessibility or destination-identity gaps
+  - `cobb-aquatic-center` is now one of the clearest single-venue practical-depth cleanups
 - the free/cheap-value layer is now a meaningful graph instead of a single exception:
   - `high-museum-of-art` carries `free-second-sunday-admission` and `children-5-and-under-free`
   - `atlanta-contemporary` now carries `always-free-gallery-admission`
@@ -1185,10 +1194,14 @@ This is the current autonomous burn-down queue from the live production audit. I
   - `michael-c-carlos-museum` now carries `sunday-funday-free-admission`
   - `atlanta-botanical-garden` and `atlanta-botanical-garden-gainesville` now carry `children-under-3-free-daytime-admission`
   - `apex-museum` now carries `children-under-4-free-admission`
+  - `childrens-museum-atlanta` now carries `children-under-1-free-admission` and `museums-for-all-discount-admission`
+  - `georgia-aquarium` now carries `children-2-and-under-free` and `community-access-discount-admission`
+  - `fernbank-museum` now carries `children-2-and-under-free`
 - the next real gaps are now depth gaps, not coverage gaps:
   - more Family specials and cheap/free recurring value
   - more parking / accessibility / practical-note depth across the long tail
   - stronger water-play / playground / outing-shape specificity where current rows are still generic
+  - keep using the live audit as the source of truth, because Family-linked counts move with the active source/event/program window rather than staying static
 
 This queue is now the default execution order unless a stronger production gap appears.
 
@@ -1198,7 +1211,7 @@ This is the current default execution order for continued Family destination wor
 
 #### Batch F: Family admission-value expansion
 
-Goal: turn the current specials layer from `7` useful offers into a real family-planning filter.
+Goal: turn the current specials layer from `10` useful offers into a real family-planning filter.
 
 Priority targets:
 - `childrens-museum-atlanta`
@@ -1224,8 +1237,9 @@ Priority fields:
 - `accessibility_notes`
 
 Priority target clusters:
-- libraries with only minimal utility framing
-- rec centers with generic family framing but weak practical notes
+- library branches still missing parking/accessibility completeness
+- rec centers and aquatic centers with destination identity but thinner practical fields
+- host-site community-center patterns like `club-scikidz-atlanta` where the destination contract is present but still missing a few operational fields
 - smaller museum / culture stops that still read like descriptions instead of planning advice
 
 Acceptance criteria:

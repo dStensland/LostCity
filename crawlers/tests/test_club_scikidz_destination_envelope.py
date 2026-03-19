@@ -13,6 +13,7 @@ def test_build_destination_envelope_for_club_scikidz_site() -> None:
 
     assert envelope.destination_details[0]["venue_id"] == 2601
     assert envelope.destination_details[0]["destination_type"] == "community_center"
+    assert envelope.destination_details[0]["parking_type"] == "free_lot"
     assert envelope.destination_details[0]["reservation_required"] is True
     assert "registered stem camp site" in envelope.venue_features[0]["title"].lower()
     assert {feature["slug"] for feature in envelope.venue_features} == {

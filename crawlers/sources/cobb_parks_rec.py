@@ -356,6 +356,12 @@ def _build_destination_envelope(venue_info: VenueInfo, venue_id: int) -> TypedEn
                 "weather_fit_tags": ["indoor-option", "heat-day", "family-daytrip"],
                 "parking_type": "free_lot",
                 "best_time_of_day": "afternoon",
+                "practical_notes": (
+                    f"{venue_info.name} works best as a planned swim or lesson stop where families confirm open-swim windows and pool schedules before treating it like a casual drop-in outing."
+                ),
+                "accessibility_notes": (
+                    "Aquatic centers are generally easier for families who want a contained heat-day option, but locker-room flow, swim-readiness, and pool rules matter more than at a standard park visit."
+                ),
                 "family_suitability": "yes",
                 "reservation_required": False,
                 "permit_required": False,

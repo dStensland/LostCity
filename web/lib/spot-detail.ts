@@ -60,6 +60,7 @@ type UpcomingEventRow = {
   ticket_url: string | null;
   series_id: string | null;
   image_url: string | null;
+  content_kind: string | null;
   series: {
     id: string;
     slug: string;
@@ -150,6 +151,18 @@ export type VenueOccasionRow = {
   source: string;
 };
 
+export type VenueExhibitionRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  opening_date: string | null;
+  closing_date: string | null;
+  exhibition_type: string | null;
+  admission_type: string | null;
+  source_url: string | null;
+};
+
 export type AttachedChildDestinationRow = {
   id: number;
   name: string;
@@ -187,6 +200,7 @@ export type SpotDetailPayload = {
   specials: VenueSpecialRow[];
   editorialMentions: EditorialMentionRow[];
   occasions: VenueOccasionRow[];
+  exhibitions: VenueExhibitionRow[];
   walkableNeighbors: WalkableNeighbor[];
   yonderDestinationIntelligence: YonderDestinationIntelligence | null;
   yonderAccommodationInventorySource: YonderAccommodationInventorySource | null;
@@ -460,6 +474,15 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     .gte("confidence", 0.5)
     .order("confidence", { ascending: false });
 
+  const exhibitionsPromise = supabase
+    .from("exhibitions")
+    .select("id, title, description, image_url, opening_date, closing_date, exhibition_type, admission_type, source_url")
+    .eq("venue_id", spot.id)
+    .eq("is_active", true)
+    .or(`closing_date.gte.${today},closing_date.is.null`)
+    .order("opening_date", { ascending: true })
+    .limit(20);
+
   type WalkableRow = {
     walk_minutes: number;
     neighbor: { id: number; name: string; slug: string } | null;
@@ -485,7 +508,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
       .from("events")
       .select(`
         id, title, start_date, end_date, start_time, end_time, is_free, price_min, category_id, source_url, ticket_url,
-        series_id, image_url,
+        series_id, image_url, content_kind,
         series:series!events_series_id_fkey(id, slug, title, series_type, image_url)
       `)
       .eq("venue_id", spot.id)
@@ -535,6 +558,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     { data: specials },
     { data: editorialMentions },
     { data: occasions },
+    { data: exhibitions },
     { data: walkableNeighborsRaw },
   ] = await Promise.all([
     upcomingCountsPromise,
@@ -546,10 +570,18 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     specialsPromise,
     editorialMentionsPromise,
     occasionsPromise,
+    exhibitionsPromise,
     walkableNeighborsPromise,
   ]);
 
-  const upcomingEventsWithCounts: Array<Record<string, unknown>> = dedupedRows.map((event) => {
+  // When exhibitions exist for this venue, exclude exhibit events from upcoming
+  // to avoid duplication with the "On View" section.
+  const exhibitionsList = (exhibitions as VenueExhibitionRow[] | null) || [];
+  const filteredRows = exhibitionsList.length > 0
+    ? dedupedRows.filter((event) => event.content_kind !== "exhibit")
+    : dedupedRows;
+
+  const upcomingEventsWithCounts: Array<Record<string, unknown>> = filteredRows.map((event) => {
     const counts = upcomingCounts.get(event.id);
     const artists = (artistsByEventId.get(event.id) || []).map((artist) => ({
       name: artist.name,
@@ -595,6 +627,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     specials: (specials as VenueSpecialRow[] | null) || [],
     editorialMentions: (editorialMentions as EditorialMentionRow[] | null) || [],
     occasions: (occasions as VenueOccasionRow[] | null) || [],
+    exhibitions: (exhibitions as VenueExhibitionRow[] | null) || [],
     walkableNeighbors,
     yonderDestinationIntelligence,
     yonderAccommodationInventorySource,

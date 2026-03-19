@@ -254,6 +254,7 @@ def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityE
             "primary_activity": "family STEM camp site visit",
             "best_seasons": ["summer"],
             "weather_fit_tags": ["indoor", "outdoor-indoor-mix", "family-daytrip"],
+            "parking_type": "free_lot",
             "best_time_of_day": "morning",
             "family_suitability": "yes",
             "reservation_required": True,

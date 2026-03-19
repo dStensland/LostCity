@@ -123,7 +123,7 @@ const STAGE_ACCENT_COLORS = [
   "#00D9A0",
   "#A78BFA",
   "#00D4E8",
-  "#FF6B7A",
+  "#E855A0",
 ];
 
 // Maps experience_tags slugs → display label + Phosphor icon element
@@ -147,6 +147,8 @@ function getTagMeta(tag: string): { label: string; icon: React.ReactNode } {
 
 function formatSessionTime(time: string | null): string {
   if (!time) return "TBA";
+  // Treat midnight placeholder as unknown time
+  if (time === "00:00:00" || time === "00:00") return "TBA";
   const { time: t, period } = formatTimeSplit(time, false);
   return period ? `${t} ${period}` : t;
 }
@@ -237,7 +239,7 @@ export default function FestivalDetailView({
   if (status === "loading") {
     const skeletonSidebar = (
       <div role="status" aria-label="Loading festival details">
-        <Skeleton className="h-[200px] w-full" />
+        <Skeleton className="h-[240px] w-full" />
         <div className="px-5 pt-4 pb-3 space-y-2">
           <Skeleton className="h-5 w-28 rounded" delay="0.06s" />
           <Skeleton className="h-7 w-[75%] rounded" delay="0.1s" />
@@ -322,37 +324,44 @@ export default function FestivalDetailView({
     ? formatDayDuration(summary.startDate, summary.endDate ?? null)
     : null;
 
-  // Stats pills: programs as "stages", sessions as "sets", duration
+  // Stats pills: programs as "stages", duration
   const statPills: string[] = [];
   if (summary?.programCount) statPills.push(`${summary.programCount} Stage${summary.programCount !== 1 ? "s" : ""}`);
-  if (summary?.sessionCount) statPills.push(`${summary.sessionCount}+ Artists`);
   if (durationLabel) statPills.push(durationLabel);
+
+  // Hero image fallback chain: festival image → first program image → null (renders gradient)
+  const heroImageUrl = festival.image_url
+    ?? programs.find((p) => p.image_url)?.image_url
+    ?? null;
 
   // ── SIDEBAR ─────────────────────────────────────────────────────────
 
   const sidebarContent = (
     <div className={`flex flex-col h-full ${accentClass?.className ?? ""}`}>
       {/* Hero image */}
-      <div className="relative h-[200px] w-full flex-shrink-0 bg-[var(--night)]">
-        {festival.image_url ? (
+      <div className="relative h-[240px] w-full flex-shrink-0 bg-[var(--night)]">
+        {heroImageUrl ? (
           <SmartImage
-            src={festival.image_url}
+            src={heroImageUrl}
             alt={festival.name}
             fill
+            priority
             className="object-cover"
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[var(--dusk)] to-[var(--night)]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--dusk)] to-[var(--night)] flex items-center justify-center">
+            <CalendarBlank size={48} weight="light" style={{ color: "var(--accent-color)", opacity: 0.25 }} aria-hidden="true" />
+          </div>
         )}
         {/* Bottom gradient overlay */}
-        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#0F0F14] via-[#0F0F14]/60 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[var(--night)] via-[var(--night)]/60 to-transparent" />
         {/* Festival type badge */}
         <div className="absolute bottom-3 left-3">
           <span
             className="inline-flex items-center px-2 py-0.5 rounded font-mono text-2xs font-bold tracking-[0.12em] uppercase"
             style={{
-              color: "#FFD93D",
-              background: "rgba(255,217,61,0.25)",
+              color: "var(--accent-color)",
+              background: "color-mix(in srgb, var(--accent-color) 25%, transparent)",
             }}
           >
             {festivalTypeLabel.toUpperCase()}
@@ -369,9 +378,10 @@ export default function FestivalDetailView({
           {showOpenPageLink && (
             <Link
               href={`/${portalSlug}/festivals/${festival.slug}`}
-              className="flex-shrink-0 inline-flex items-center gap-1 text-2xs font-mono uppercase tracking-widest px-2 py-1 rounded border border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--twilight)] transition-colors focus-ring mt-0.5"
+              className="flex-shrink-0 inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded border border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--twilight)] transition-colors focus-ring mt-0.5"
+              aria-label="Open festival page"
             >
-              <ArrowSquareOut size={10} weight="light" aria-hidden="true" />
+              <ArrowSquareOut size={14} weight="light" aria-hidden="true" />
             </Link>
           )}
         </div>
@@ -381,7 +391,7 @@ export default function FestivalDetailView({
           <CalendarBlank
             size={14}
             weight="fill"
-            style={{ color: "#FFD93D" }}
+            style={{ color: "var(--accent-color)" }}
             aria-hidden="true"
           />
           <span className="text-sm text-[var(--cream)]">
@@ -422,8 +432,8 @@ export default function FestivalDetailView({
                     style={
                       isPrimary
                         ? {
-                            color: "#FFD93D",
-                            background: "rgba(255,217,61,0.15)",
+                            color: "var(--accent-color)",
+                            background: "color-mix(in srgb, var(--accent-color) 15%, transparent)",
                           }
                         : {
                             color: "var(--soft)",
@@ -433,7 +443,7 @@ export default function FestivalDetailView({
                     }
                   >
                     {icon && (
-                      <span style={isPrimary ? { color: "#FFD93D" } : { color: "var(--muted)" }}>
+                      <span style={isPrimary ? { color: "var(--accent-color)" } : { color: "var(--muted)" }}>
                         {icon}
                       </span>
                     )}
@@ -473,9 +483,9 @@ export default function FestivalDetailView({
                 href={festival.ticket_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 h-10 rounded-lg text-sm font-medium transition-all focus-ring hover:brightness-110"
+                className="w-full flex items-center justify-center gap-2 min-h-[44px] rounded-lg text-sm font-medium transition-all focus-ring hover:brightness-110"
                 style={{
-                  background: "#FFD93D",
+                  background: "var(--accent-color)",
                   color: "#09090B",
                 }}
               >
@@ -488,9 +498,13 @@ export default function FestivalDetailView({
                 href={festival.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-1.5 text-xs text-[var(--muted)] hover:text-[var(--soft)] transition-colors focus-ring py-1.5"
+                className={`w-full flex items-center justify-center gap-2 transition-colors focus-ring ${
+                  festival.ticket_url
+                    ? "min-h-[44px] text-sm text-[var(--soft)] hover:text-[var(--cream)]"
+                    : "min-h-[44px] rounded-lg border border-[var(--twilight)] text-sm font-medium text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--soft)]"
+                }`}
               >
-                <Globe size={13} weight="light" aria-hidden="true" />
+                <Globe size={15} weight={festival.ticket_url ? "light" : "bold"} aria-hidden="true" />
                 Visit Website
               </a>
             )}
@@ -543,7 +557,7 @@ export default function FestivalDetailView({
   // ── CONTENT ─────────────────────────────────────────────────────────
 
   const contentBody = (
-    <div className={`px-6 lg:px-8 py-6 space-y-6 ${accentClass?.className ?? ""}`}>
+    <div className={`px-6 lg:px-8 py-6 space-y-6 max-w-3xl ${accentClass?.className ?? ""}`}>
       {/* About */}
       {festival.description && (
         <div>
@@ -584,7 +598,7 @@ export default function FestivalDetailView({
                   className="flex-shrink-0 flex flex-col items-center px-4 py-2 rounded-lg transition-colors focus-ring"
                   style={
                     isActive
-                      ? { background: "#FFD93D" }
+                      ? { background: "var(--accent-color)" }
                       : {
                           background: "var(--dusk)",
                           border: "1px solid var(--twilight)",
@@ -593,13 +607,13 @@ export default function FestivalDetailView({
                 >
                   <span
                     className="font-mono text-2xs font-bold tracking-[0.06em] uppercase"
-                    style={{ color: isActive ? "#09090B" : "var(--muted)" }}
+                    style={{ color: isActive ? "var(--void)" : "var(--muted)" }}
                   >
                     {format(parseISO(date), "EEE")}
                   </span>
                   <span
                     className="text-sm font-bold"
-                    style={{ color: isActive ? "#09090B" : "var(--soft)" }}
+                    style={{ color: isActive ? "var(--void)" : "var(--soft)" }}
                   >
                     {format(parseISO(date), "MMM d")}
                   </span>
@@ -615,17 +629,20 @@ export default function FestivalDetailView({
             {dayPrograms.map((program, programIndex) => {
               const stageColor = STAGE_ACCENT_COLORS[programIndex % STAGE_ACCENT_COLORS.length];
 
-              // Detect headliner: last session by start_time within this program/day
+              // Detect headliner: last session with a known start_time
               const sorted = [...program.sessions].sort((a, b) =>
                 (a.start_time ?? "").localeCompare(b.start_time ?? "")
               );
-              const headlinerId = sorted.length > 0 ? sorted[sorted.length - 1].id : null;
+              const timedSessions = sorted.filter(
+                (s) => s.start_time && s.start_time !== "00:00:00" && s.start_time !== "00:00"
+              );
+              const headlinerId = timedSessions.length > 1 ? timedSessions[timedSessions.length - 1].id : null;
 
               return (
                 <div
                   key={program.id}
                   className="rounded-xl border border-[var(--twilight)] overflow-hidden"
-                  style={{ background: "#0F0F14" }}
+                  style={{ background: "var(--night)" }}
                 >
                   {/* Stage header */}
                   <div
@@ -642,12 +659,14 @@ export default function FestivalDetailView({
                     <h3 className="text-sm font-bold text-[var(--cream)] flex-1 min-w-0 truncate">
                       {program.title}
                     </h3>
-                    <span
-                      className="font-mono text-xs ml-3 flex-shrink-0"
-                      style={{ color: "var(--muted)" }}
-                    >
-                      {program.sessions.length} set{program.sessions.length !== 1 ? "s" : ""}
-                    </span>
+                    {program.sessions.length > 0 && (
+                      <span
+                        className="font-mono text-xs ml-3 flex-shrink-0"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        {program.sessions.length} set{program.sessions.length !== 1 ? "s" : ""}
+                      </span>
+                    )}
                   </div>
 
                   {/* Session rows */}
@@ -743,10 +762,10 @@ export default function FestivalDetailView({
                   </div>
 
                   {/* View program link */}
-                  <div className="px-4 py-2 border-t border-[var(--twilight)]/20">
+                  <div className="px-4 border-t border-[var(--twilight)]/20">
                     <button
                       onClick={() => handleProgramClick(program.slug)}
-                      className="text-xs font-mono text-[var(--muted)] hover:text-[var(--soft)] transition-colors flex items-center gap-1 focus-ring"
+                      className="min-h-[44px] text-xs font-mono text-[var(--muted)] hover:text-[var(--soft)] transition-colors flex items-center gap-1 focus-ring"
                     >
                       View full program
                       <CaretRight size={11} weight="bold" />
@@ -781,6 +800,8 @@ export default function FestivalDetailView({
       }}
       primaryColor={FESTIVAL_ACCENT}
       containerClassName="max-w-3xl"
+      scrollThreshold={0}
+      className="lg:hidden"
     />
   ) : undefined;
 

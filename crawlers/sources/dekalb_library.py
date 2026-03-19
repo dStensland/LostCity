@@ -269,6 +269,9 @@ def _build_branch_destination_envelope(venue_id: int, venue_data: dict) -> Typed
                 f"{branch_name} is a free indoor family destination with books, browsing, and branch programming. "
                 "Check the official branch listing for current hours and service details."
             ),
+            "accessibility_notes": (
+                "Library branches are generally easier low-friction indoor stops for families who need predictable bathrooms, seating, and a calmer weather-proof outing."
+            ),
             "best_time_of_day": "any",
             "family_suitability": "yes",
             "reservation_required": False,

@@ -372,6 +372,12 @@ def _build_destination_envelope(venue_info: VenueInfo, venue_id: int) -> TypedEn
                 "weather_fit_tags": ["indoor", "indoor-option", "rainy-day", "heat-day", "family-daytrip"],
                 "parking_type": "free_lot",
                 "best_time_of_day": "afternoon",
+                "practical_notes": (
+                    f"{venue_info.name} works best as a weather-proof family activity base for classes, camps, and shorter recreation blocks rather than as a full destination day."
+                ),
+                "accessibility_notes": (
+                    "Indoor recreation-center space makes family pacing easier than park-only plans, with simpler stroller handling, bathroom access, and quick resets."
+                ),
                 "family_suitability": "yes",
                 "reservation_required": False,
                 "permit_required": False,
@@ -426,6 +432,12 @@ def _build_destination_envelope(venue_info: VenueInfo, venue_id: int) -> TypedEn
                 "weather_fit_tags": ["outdoor", "family-daytrip", "free-option"],
                 "parking_type": "free_lot",
                 "best_time_of_day": "morning",
+                "practical_notes": (
+                    f"{venue_info.name} is best as a flexible free family park stop for morning play, open-air downtime, or pairing with Gwinnett classes and camp programming."
+                ),
+                "accessibility_notes": (
+                    "Open park pacing gives families flexibility, but stroller smoothness, shade, and bathroom convenience vary more by site than at Gwinnett's indoor recreation centers."
+                ),
                 "family_suitability": "yes",
                 "reservation_required": False,
                 "permit_required": False,

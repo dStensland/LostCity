@@ -57,7 +57,7 @@ export async function GET(request: Request) {
         registration_opens, registration_closes, registration_url,
         ticket_status, ticket_status_checked_at, sellout_risk,
         ticket_url, price_min, price_max, is_free,
-        festival_id,
+        series_id, festival_id,
         venue:venues(id, name, slug, neighborhood, city)
       `,
       )
@@ -96,9 +96,27 @@ export async function GET(request: Request) {
       { allowMissingCity: false },
     );
 
+    // Deduplicate by series_id and festival_id — show only the first event per series/festival
+    // to prevent festival sub-events (e.g. 8 "404 Day Weekend" events) from flooding the feed
+    const seenSeries = new Set<string>();
+    const seenFestivals = new Set<string>();
+    const deduped = cityFiltered.filter((e) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ev = e as any;
+      if (ev.series_id) {
+        if (seenSeries.has(ev.series_id)) return false;
+        seenSeries.add(ev.series_id);
+      }
+      if (ev.festival_id) {
+        if (seenFestivals.has(ev.festival_id)) return false;
+        seenFestivals.add(ev.festival_id);
+      }
+      return true;
+    });
+
     // Enrich with urgency and freshness computed server-side, map category_id → category
     const events: Array<PlanningHorizonEvent & { urgency: ReturnType<typeof getPlanningUrgency>; ticket_freshness: string | null }> =
-      cityFiltered.slice(0, 20).map((e) => {
+      deduped.slice(0, 20).map((e) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const ev = e as any;
         return {
