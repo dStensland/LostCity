@@ -12,6 +12,7 @@ import { getPortalSourceAccess } from "@/lib/federation";
 import { applyFeedGate } from "@/lib/feed-gate";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const AROUND_ME_CACHE_TTL_MS = 30 * 1000;
 const AROUND_ME_CACHE_MAX_ENTRIES = 180;

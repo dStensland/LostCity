@@ -12,6 +12,9 @@ import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { buildStableSearchCacheKey } from "@/lib/search-cache-key";
 import { createServerTimingRecorder } from "@/lib/server-timing";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+
 type SearchRoutePayload =
   | {
       results: [];

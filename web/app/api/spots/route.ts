@@ -23,6 +23,7 @@ import {
 } from "@/lib/spots-request-plan";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /** Expand post-consolidation venue types to also include legacy DB aliases */
 function expandVenueTypes(types: string[]): string[] {

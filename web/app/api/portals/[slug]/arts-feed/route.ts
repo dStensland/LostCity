@@ -5,6 +5,9 @@ import { getLocalDateString } from "@/lib/formats";
 import { addDays } from "date-fns";
 import { getPortalSourceAccess } from "@/lib/federation";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+
 /**
  * GET /api/portals/[slug]/arts-feed
  *
@@ -55,37 +58,51 @@ export async function GET(
   const sourceIds = sourceAccess.sourceIds;
 
   if (sourceIds.length === 0) {
-    return NextResponse.json({ events: [] });
+    return NextResponse.json({ events: [], exhibitions: [] });
   }
 
-  // 3. Query events from subscribed sources
+  // 3. Query events and exhibitions in parallel
   const today = getLocalDateString();
   const thirtyDaysOut = getLocalDateString(addDays(new Date(), 30));
 
-  const { data: events, error: eventsError } = await supabase
-    .from("events")
-    .select(
-      `id, title, start_date, start_time, end_date, end_time,
-       is_all_day, is_free, price_min, price_max,
-       image_url, blurhash, description, tags,
-       ticket_url, source_url,
-       categories:category_id (id),
-       venues:venue_id (id, name, neighborhood, slug, image_url, blurhash)`,
-    )
-    .in("source_id", sourceIds)
-    .gte("start_date", today)
-    .lte("start_date", thirtyDaysOut)
-    .order("start_date", { ascending: true })
-    .order("start_time", { ascending: true, nullsFirst: false })
-    .limit(200);
+  const [eventsResult, exhibitionsResult] = await Promise.all([
+    supabase
+      .from("events")
+      .select(
+        `id, title, start_date, start_time, end_date, end_time,
+         is_all_day, is_free, price_min, price_max,
+         image_url, blurhash, description, tags,
+         ticket_url, source_url,
+         categories:category_id (id),
+         venues:venue_id (id, name, neighborhood, slug, image_url, blurhash)`,
+      )
+      .in("source_id", sourceIds)
+      .gte("start_date", today)
+      .lte("start_date", thirtyDaysOut)
+      .order("start_date", { ascending: true })
+      .order("start_time", { ascending: true, nullsFirst: false })
+      .limit(200),
+    supabase
+      .from("exhibitions")
+      .select(
+        `id, title, description, image_url, opening_date, closing_date,
+         exhibition_type, admission_type, source_url, tags,
+         venue:venue_id (id, name, neighborhood, slug, image_url, blurhash)`,
+      )
+      .eq("is_active", true)
+      .or(`closing_date.gte.${today},closing_date.is.null`)
+      .in("source_id", sourceIds)
+      .order("opening_date", { ascending: true })
+      .limit(100),
+  ]);
 
-  if (eventsError) {
-    console.error("[arts-feed] query error:", eventsError.message);
-    return NextResponse.json({ events: [] });
+  if (eventsResult.error) {
+    console.error("[arts-feed] events query error:", eventsResult.error.message);
+    return NextResponse.json({ events: [], exhibitions: [] });
   }
 
-  // 4. Reshape venue from join to expected format
-  const shaped = (events ?? []).map((e) => {
+  // 4. Reshape event venue from join to expected format
+  const shaped = (eventsResult.data ?? []).map((e) => {
     const raw = e as Record<string, unknown>;
     return {
       ...raw,
@@ -99,8 +116,10 @@ export async function GET(
     };
   });
 
+  const exhibitions = exhibitionsResult.data ?? [];
+
   return NextResponse.json(
-    { events: shaped },
+    { events: shaped, exhibitions },
     {
       headers: {
         "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",

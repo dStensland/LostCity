@@ -9,6 +9,9 @@ import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classifica
 import { createClient } from "@/lib/supabase/server";
 import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+
 // Helper to safely parse integers with validation
 function safeParseInt(value: string | null, defaultValue: number, min = 1, max = 1000): number {
   if (!value) return defaultValue;
@@ -36,9 +39,6 @@ export async function GET(request: Request) {
     const venueId = venueParam ? safeParseInt(venueParam, 0, 0, 999999) : undefined;
 
     const portalExclusive = searchParams.get("portal_exclusive") === "true";
-    const includeExhibits = ["1", "true"].includes(
-      (searchParams.get("include_exhibits") || "").toLowerCase()
-    );
 
     // Resolve portal context to get portal_id and city filter
     const supabase = await createClient();
@@ -117,7 +117,7 @@ export async function GET(request: Request) {
 
       // Enrich with social proof counts
       const events = (await enrichEventsWithSocialProof(rawEvents)).filter(
-        (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event)
+        (event) => !isSuppressedFromGeneralEventFeed(event)
       );
 
       return apiResponse(
@@ -139,7 +139,7 @@ export async function GET(request: Request) {
 
       // Enrich with social proof counts
       const events = (await enrichEventsWithSocialProof(rawEvents)).filter(
-        (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event)
+        (event) => !isSuppressedFromGeneralEventFeed(event)
       );
 
       // Also generate a cursor from the last event for gradual migration

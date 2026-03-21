@@ -2,7 +2,7 @@
  * GET /api/portals/[slug]/playbook
  *
  * Unified "What's On" feed — returns a flat, time-sorted list of mixed
- * content types (events, specials, exhibits) grouped into time blocks.
+ * content types (events, specials) grouped into time blocks.
  * Reuses query infrastructure from the City Pulse API.
  */
 
@@ -31,6 +31,8 @@ import { applyFeedGate } from "@/lib/feed-gate";
 import { getTimeSlot } from "@/lib/city-pulse/time-slots";
 import type { TimeSlot } from "@/lib/city-pulse/types";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 export const revalidate = 120;
 
 // ---------------------------------------------------------------------------
@@ -40,7 +42,7 @@ export const revalidate = 120;
 type Props = { params: Promise<{ slug: string }> };
 
 type PlaybookItem = {
-  item_type: "event" | "special" | "exhibit" | "festival";
+  item_type: "event" | "special" | "festival";
   id: number;
   title: string;
   subtitle: string;
@@ -319,7 +321,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   const endDate = getLocalDateString(addDays(new Date(targetDate + "T00:00:00"), 0));
 
-  // Events for the target date (including exhibits)
+  // Events for the target date
   const buildEventsQuery = () => {
     let q = portalClient
       .from("events")
@@ -406,7 +408,6 @@ export async function GET(request: NextRequest, { params }: Props) {
     (eventsResult.data || []) as EventRow[],
   ) as EventRow[];
 
-  // Classify events: regular events vs exhibits
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   const playItems: PlaybookItem[] = [];
@@ -414,14 +415,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   for (const event of rawEvents) {
     if (!event.venue) continue;
 
-    const isExhibit =
-      event.content_kind === "exhibit" ||
-      (event.is_all_day &&
-        !event.start_time &&
-        event.end_date &&
-        event.end_date !== event.start_date);
-
-    const itemType = isExhibit ? "exhibit" as const : "event" as const;
+    const itemType = "event" as const;
 
     // Determine if active now
     let isActiveNow = false;
@@ -582,7 +576,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     if (item.is_active_now && targetDate === today) {
       block = "happening_now";
     } else {
-      block = getTimeBlockLabel(item.start_time, item.item_type === "exhibit" || item.item_type === "festival");
+      block = getTimeBlockLabel(item.start_time, item.item_type === "festival");
     }
     const existing = blockMap.get(block) || [];
     existing.push(item);
@@ -612,7 +606,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   // -----------------------------------------------------------------------
 
   const eventIds = filtered
-    .filter((i) => i.item_type === "event" || i.item_type === "exhibit")
+    .filter((i) => i.item_type === "event")
     .map((i) => i.id);
 
   if (eventIds.length > 0) {
@@ -620,7 +614,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     // Attach to items (consumers can use this for sorting/display)
     for (const block of timeBlocks) {
       for (const item of block.items) {
-        if (item.item_type === "event" || item.item_type === "exhibit") {
+        if (item.item_type === "event") {
           const counts = socialCounts.get(item.id);
           if (counts) {
             (item as PlaybookItem & { going_count?: number }).going_count = counts.going;

@@ -45,6 +45,9 @@ import {
 import { fetchSocialProofCounts } from "@/lib/social-proof";
 import { format, startOfDay, addDays } from "date-fns";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+
 type FeedSectionId =
   | "tonight_for_you"
   | "this_week_fits_your_taste"
@@ -146,9 +149,6 @@ export async function GET(request: Request) {
     const freeOnly = searchParams.get("free") === "1";
     const cursor = searchParams.get("cursor");
     const personalized = searchParams.get("personalized") !== "0"; // Default true
-    const includeExhibits = ["1", "true"].includes(
-      (searchParams.get("include_exhibits") || "").toLowerCase(),
-    );
 
     const user = await getUser();
     if (!user) {
@@ -906,9 +906,7 @@ export async function GET(request: Request) {
       events = filterByPortalContentScope(events, contentFilters);
     }
 
-    events = events.filter(
-      (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event),
-    );
+    events = events.filter((event) => !isSuppressedFromGeneralEventFeed(event));
     events = events.filter((event) => !isSceneEvent(event));
 
     let followedChannelCount = 0;
@@ -1139,7 +1137,7 @@ export async function GET(request: Request) {
       const filteredTrendingEventsData = (hideAdultContent
         ? trendingEventsData.filter((event) => event.is_adult !== true)
         : trendingEventsData).filter(
-        (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event),
+        (event) => !isSuppressedFromGeneralEventFeed(event),
       );
       const routableTrendingEventsData = filteredTrendingEventsData.filter(
         (event) => !isSceneEvent(event),

@@ -12,6 +12,7 @@ type RouteContext = {
 };
 
 export const revalidate = 300; // 5-minute ISR cache
+export const maxDuration = 30;
 
 // GET /api/portals/[slug]/filter-counts — lightweight filter counts from available_filters
 export async function GET(request: NextRequest, context: RouteContext) {

@@ -13,6 +13,8 @@ import { filterByPortalCity } from "@/lib/portal-scope";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
+export const maxDuration = 30;
+
 function safeParseInt(value: string | null, defaultValue: number, min = 1, max = 1000): number {
   if (!value) return defaultValue;
   const parsed = parseInt(value, 10);

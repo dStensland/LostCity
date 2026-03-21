@@ -7,6 +7,7 @@ import { getPortalSourceAccess } from "@/lib/federation";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 // Atlanta center (Ponce City Market area)
 const ATL_CENTER_LAT = 33.772;

@@ -8,6 +8,7 @@ import { applyPortalScopeToQuery } from "@/lib/portal-scope";
 import { applyFeedGate } from "@/lib/feed-gate";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/family/destinations

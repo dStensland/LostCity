@@ -5,6 +5,7 @@ import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 import { logger } from "@/lib/logger";
 
 export const revalidate = 600; // Cache for 10 minutes
+export const maxDuration = 30;
 
 export async function GET(request: Request) {
   // Rate limit: read endpoint
