@@ -24,6 +24,12 @@ from db import (
 )
 from dedupe import generate_content_hash
 from extractors.structured import extract_jsonld_event_fields, extract_open_graph_fields
+from aggregator_utils import (
+    clean_aggregator_title,
+    detect_recurring_from_title,
+    override_category_from_title,
+    build_series_hint_from_recurring,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -455,6 +461,7 @@ def parse_event(event_data: dict) -> Optional[dict]:
         # Basic info — normalize before any further use so the cleaned title
         # flows into both the stored record and the content hash.
         title = _normalize_tm_title(event_data.get("name", "").strip())
+        title = clean_aggregator_title(title)
         if not title:
             return None
         if _should_skip_event_title(title):
@@ -503,6 +510,7 @@ def parse_event(event_data: dict) -> Optional[dict]:
             segment=segment,
             classification_names=classification_names,
         )
+        category = override_category_from_title(title, category)
         genres, genre = _extract_genres(classifications)
 
         title = _normalize_sports_matchup_title(title)
@@ -629,6 +637,9 @@ def parse_event(event_data: dict) -> Optional[dict]:
 
         ticket_status_checked_at = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
+        # Detect recurring events from title
+        title_is_recurring, title_frequency, title_day = detect_recurring_from_title(title)
+
         return {
             "title": title,
             "description": description,
@@ -653,6 +664,9 @@ def parse_event(event_data: dict) -> Optional[dict]:
             "on_sale_date": on_sale_date,
             "presale_date": presale_date,
             "ticket_status_checked_at": ticket_status_checked_at,
+            "_is_recurring": title_is_recurring,
+            "_recurring_frequency": title_frequency,
+            "_recurring_day": title_day,
         }
 
     except Exception as e:
@@ -771,7 +785,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "links": parsed.get("links") or [],
                     "raw_text": None,
                     "extraction_confidence": 0.95,  # High confidence from structured API
-                    "is_recurring": False,
+                    "is_recurring": parsed.get("_is_recurring", False),
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                     "_parsed_artists": parsed.get("_parsed_artists") or [],
@@ -780,6 +794,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "ticket_status_checked_at": parsed.get("ticket_status_checked_at"),
                 }
 
+                series_hint = build_series_hint_from_recurring(
+                    parsed["title"],
+                    parsed.get("_is_recurring", False),
+                    parsed.get("_recurring_frequency"),
+                    parsed.get("_recurring_day"),
+                )
+
                 existing = find_existing_event_for_insert(event_record)
                 if existing:
                     smart_update_existing_event(existing, event_record)
@@ -787,7 +808,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 try:
-                    insert_event(event_record)
+                    insert_event(event_record, series_hint=series_hint)
                     events_new += 1
                     logger.debug(f"Added: {parsed['title']}")
                 except Exception as e:

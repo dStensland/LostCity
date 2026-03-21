@@ -2008,6 +2008,23 @@ def infer_genres(
             if any(kw in text for kw in keywords):
                 genres.add(genre)
 
+    # --- Cross-category title signals (block wrong venue genre inheritance) ---
+    # When category-specific patterns miss (e.g. karaoke event miscategorized as
+    # "music"), these catch unambiguous activity keywords and set the genre before
+    # venue inheritance can fill in something wrong.
+    if not genres:
+        _cross_category_signals: list[tuple[list[str], str]] = [
+            (["karaoke", "sing-along", "singalong", "noraebang"], "karaoke"),
+            (["trivia", "pub quiz", "quiz night"], "trivia"),
+            (["drag show", "drag brunch", "drag bingo"], "drag"),
+            (["bingo night", "music bingo"], "bingo"),
+            (["open mic", "open-mic", "openmic"], "open-mic"),
+        ]
+        for keywords, genre in _cross_category_signals:
+            if any(kw in text for kw in keywords):
+                genres.add(genre)
+                break
+
     # --- Inherit venue genres (if event is at a jazz bar, it's likely jazz-related) ---
     # Scoped to the event's category to prevent cross-domain bleed (e.g. a doom metal
     # show at 529 should not inherit `comedy`/`trivia`/`stand-up` just because 529
@@ -2021,7 +2038,10 @@ def infer_genres(
                 scoped = [g for g in normalized_venue if g in allowed]
                 genres.update(scoped)
             else:
-                genres.update(normalized_venue)
+                # No defined genre set for this category — don't blindly
+                # inherit all venue genres (a multi-purpose venue like a
+                # bar/restaurant could have jazz, dj, trivia, karaoke, etc.)
+                pass
 
     # --- Fallback: infer from venue vibes/type when no genres found ---
     if not genres and (venue_vibes or venue_type):

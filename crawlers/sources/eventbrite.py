@@ -19,6 +19,12 @@ from bs4 import BeautifulSoup
 from config import get_config
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from aggregator_utils import (
+    clean_aggregator_title,
+    detect_recurring_from_title,
+    override_category_from_title,
+    build_series_hint_from_recurring,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -403,6 +409,7 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
     try:
         # Extract basic info
         title = event_data.get("name", {}).get("text", "").strip()
+        title = clean_aggregator_title(title)
         if not title:
             return None
 
@@ -452,6 +459,7 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
         category_data = event_data.get("category") or {}
         category_name = category_data.get("name") if category_data else None
         category, genres = get_category(category_name)
+        category = override_category_from_title(title, category)
 
         # Check if free
         is_free = event_data.get("is_free", False)
@@ -498,6 +506,19 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
             format_name=format_name,
         )
 
+        # Detect recurring events
+        eb_is_series = bool(event_data.get("is_series"))
+        eb_series_id = event_data.get("series_id")
+        title_is_recurring, title_frequency, title_day = detect_recurring_from_title(title)
+
+        is_recurring = eb_is_series or bool(eb_series_id) or title_is_recurring
+        frequency = title_frequency
+        day_of_week = title_day
+
+        series_hint = build_series_hint_from_recurring(
+            title, is_recurring, frequency, day_of_week
+        )
+
         event_record = {
             "source_id": source_id,
             "venue_id": venue_id,
@@ -521,10 +542,11 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
             "image_url": image_url,
             "raw_text": None,
             "extraction_confidence": 0.95,
-            "is_recurring": False,
+            "is_recurring": is_recurring,
             "recurrence_rule": None,
             "content_hash": content_hash,
         }
+        event_record["_series_hint"] = series_hint
 
         existing = find_event_by_hash(content_hash)
         if existing:
@@ -541,6 +563,7 @@ def parse_event_for_pipeline(event_data: dict) -> dict | None:
     """Parse Eventbrite API event data into pipeline-compatible dict (no DB ops)."""
     try:
         title = event_data.get("name", {}).get("text", "").strip()
+        title = clean_aggregator_title(title)
         if not title:
             return None
 
@@ -577,6 +600,7 @@ def parse_event_for_pipeline(event_data: dict) -> dict | None:
         category_data = event_data.get("category") or {}
         category_name = category_data.get("name") if category_data else None
         category, genres = get_category(category_name)
+        category = override_category_from_title(title, category)
 
         # Image
         logo = event_data.get("logo") or {}
@@ -667,7 +691,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Insert
             try:
-                insert_event(result)
+                insert_event(result, series_hint=result.pop("_series_hint", None))
                 events_new += 1
                 logger.debug(f"Added: {result['title'][:50]}... on {result['start_date']}")
             except Exception as e:
