@@ -78,8 +78,11 @@ export function middleware(request: NextRequest) {
         ? "http"
         : "https";
       const port = host.includes(":") ? `:${host.split(":")[1]}` : "";
-      const rest = pathname.slice(firstSegment.length + 1) || `/${redirect.city}`; // /helpatl/events/123 → /events/123
-      const newUrl = `${protocol}://${redirect.vertical}.${baseDomain}${port}${rest === "/" ? `/${redirect.city}` : `/${redirect.city}${rest}`}${request.nextUrl.search}`;
+      // rest is the sub-path after the legacy slug (e.g., /helpatl/events/123 → /events/123)
+      // When accessing /helpatl with no trailing path, rest is "" — we just redirect to /{city}
+      const rest = pathname.slice(firstSegment.length + 1); // "" | "/" | "/events/123"
+      const subpath = rest && rest !== "/" ? rest : ""; // normalize empty and bare slash to ""
+      const newUrl = `${protocol}://${redirect.vertical}.${baseDomain}${port}/${redirect.city}${subpath}${request.nextUrl.search}`;
       return NextResponse.redirect(newUrl, 302);
     }
   }

@@ -68,6 +68,12 @@ interface NetworkFeedSectionProps {
   defaultCategory?: string;
   /** Limit feed to local or parent source pools when needed. */
   sourceScope?: "all" | "local" | "parent";
+  /**
+   * When true, only show articles whose title or summary contains civic-relevant
+   * keywords. Used on civic portals to prevent restaurant reviews and sports
+   * scores from appearing in the civic updates feed.
+   */
+  civicKeywordFilter?: boolean;
 }
 
 // ── Category config ─────────────────────────────────────────────────
@@ -281,6 +287,48 @@ export function NetworkPostCard({
   );
 }
 
+// ── Civic keyword filtering ──────────────────────────────────────────
+
+/**
+ * Keywords that signal civic relevance. An article passes if its title or
+ * summary contains at least one of these terms (case-insensitive).
+ */
+const CIVIC_INCLUDE_KEYWORDS = [
+  "government", "council", "vote", "voting", "housing", "transit", "school",
+  "zoning", "ordinance", "community", "volunteer", "nonprofit", "election",
+  "policy", "legislation", "budget", "infrastructure", "public safety",
+  "neighborhood", "development", "rezoning", "marta", "aps", "commission",
+  "mayor", "alderman", "city hall", "county", "board", "hearing", "meeting",
+  "public comment", "grant", "affordable", "homeless", "shelter", "nonprofit",
+  "civic", "municipal", "accountability", "transparency",
+];
+
+/**
+ * Keywords that signal non-civic content. An article fails if its title
+ * contains any of these terms, regardless of include keywords.
+ */
+const CIVIC_EXCLUDE_TITLE_KEYWORDS = [
+  "restaurant", "dining", "brunch", "menu", "chef", "food review",
+  "bar opens", "new bar", "cocktail", "brewery opens", "wine", "happy hour",
+  "hawks", "falcons", "braves", "atlanta united", "college football",
+  "concert", "festival", "nightlife", "nightclub",
+];
+
+function isCivicRelevant(post: NetworkPost): boolean {
+  const titleLower = post.title.toLowerCase();
+  const summaryLower = (post.summary ?? "").toLowerCase();
+
+  // Hard reject on exclusion keywords in the title
+  if (CIVIC_EXCLUDE_TITLE_KEYWORDS.some((kw) => titleLower.includes(kw))) {
+    return false;
+  }
+
+  // Accept if title or summary contains a civic keyword
+  return CIVIC_INCLUDE_KEYWORDS.some(
+    (kw) => titleLower.includes(kw) || summaryLower.includes(kw),
+  );
+}
+
 // ── Main section ────────────────────────────────────────────────────
 
 export default function NetworkFeedSection({
@@ -292,6 +340,7 @@ export default function NetworkFeedSection({
   visibleCategories,
   defaultCategory = "all",
   sourceScope = "all",
+  civicKeywordFilter = false,
 }: NetworkFeedSectionProps) {
   const sectionAccent = accentColorProp || "var(--neon-cyan)";
 
@@ -362,7 +411,12 @@ export default function NetworkFeedSection({
       .finally(() => setIsFetching(false));
   };
 
-  const posts = postsProp ?? fetchedPosts;
+  const rawPosts = postsProp ?? fetchedPosts;
+  // Apply civic keyword filter when requested — prevents restaurant reviews
+  // and sports scores from appearing in civic portal news sections.
+  const posts = civicKeywordFilter && rawPosts
+    ? rawPosts.filter(isCivicRelevant)
+    : rawPosts;
   const isLoading = isLoadingProp ?? isFetching;
 
   if (!isLoading && (!posts || posts.length === 0)) return null;

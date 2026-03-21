@@ -233,10 +233,6 @@ export default function CommitmentOpportunitiesCard({
               Ranked using your volunteer fit profile.
             </div>
           )}
-          <div className="rounded-lg border border-[var(--twilight)]/70 bg-[var(--night)]/60 px-3 py-2 text-xs text-[var(--muted)]">
-            This is the long-term role layer, not a dated event list.
-          </div>
-
           {visible.map((opportunity) => {
             const timeHorizonLabel = formatTimeHorizon(opportunity.time_horizon);
 

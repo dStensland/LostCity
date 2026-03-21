@@ -331,6 +331,7 @@ export default function CivicFeedShell({ portalSlug }: CivicFeedShellProps) {
                   visibleCategories={HELPATL_POLICY_CATEGORIES}
                   defaultCategory="civic"
                   sourceScope="local"
+                  civicKeywordFilter
                 />
               </LazySection>
             </div>
@@ -353,6 +354,7 @@ export default function CivicFeedShell({ portalSlug }: CivicFeedShellProps) {
                 accentColor="var(--action-primary)"
                 sectionTitle="Civic Updates"
                 visibleCategories={CIVIC_NEWS_CATEGORIES}
+                civicKeywordFilter
               />
             </LazySection>
           </div>

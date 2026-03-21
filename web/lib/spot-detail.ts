@@ -574,12 +574,8 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     walkableNeighborsPromise,
   ]);
 
-  // When exhibitions exist for this venue, exclude exhibit events from upcoming
-  // to avoid duplication with the "On View" section.
-  const exhibitionsList = (exhibitions as VenueExhibitionRow[] | null) || [];
-  const filteredRows = exhibitionsList.length > 0
-    ? dedupedRows.filter((event) => event.content_kind !== "exhibit")
-    : dedupedRows;
+  // Filter out exhibition-type events — they're already shown in the "On View" section
+  const filteredRows = dedupedRows.filter(e => e.content_kind !== 'exhibit');
 
   const upcomingEventsWithCounts: Array<Record<string, unknown>> = filteredRows.map((event) => {
     const counts = upcomingCounts.get(event.id);

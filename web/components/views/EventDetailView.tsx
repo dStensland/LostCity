@@ -560,7 +560,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
             href={event.ticket_url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--coral)] text-[var(--void)] text-base font-semibold rounded-lg hover:bg-[var(--rose)] transition-all shadow-[0_0_20px_rgba(255,107,122,0.3)] hover:shadow-[0_0_30px_rgba(255,107,122,0.5)] ${
+            className={`w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--action-primary)] text-[var(--void)] text-base font-semibold rounded-lg hover:opacity-90 transition-all shadow-[0_0_20px_rgba(var(--portal-primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--portal-primary-rgb),0.5)] ${
               isLive ? "animate-pulse-glow" : ""
             }`}
           >
@@ -576,7 +576,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
             href={event.source_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--coral)] text-[var(--void)] text-base font-semibold rounded-lg hover:bg-[var(--rose)] transition-all shadow-[0_0_20px_rgba(255,107,122,0.3)] hover:shadow-[0_0_30px_rgba(255,107,122,0.5)]"
+            className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--action-primary)] text-[var(--void)] text-base font-semibold rounded-lg hover:opacity-90 transition-all shadow-[0_0_20px_rgba(var(--portal-primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--portal-primary-rgb),0.5)]"
           >
             {sourceLooksTicketed || !event.is_free ? (
               <Ticket size={20} weight="bold" />
@@ -773,14 +773,17 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
       )}
 
       {/* ── 6. AROUND HERE (matching venue detail pattern) ──── */}
-      <NearbySection
-        nearbySpots={nearbySpots}
-        venueEvents={venueEvents}
-        nearbyEvents={nearbyEvents}
-        venueName={event.venue?.name}
-        onSpotClick={handleSpotClick}
-        onEventClick={handleEventClick}
-      />
+      {/* Hidden on civic portals: nearby restaurants/bars are irrelevant to civic events */}
+      {portal.settings?.vertical !== "community" && (
+        <NearbySection
+          nearbySpots={nearbySpots}
+          venueEvents={venueEvents}
+          nearbyEvents={nearbyEvents}
+          venueName={event.venue?.name}
+          onSpotClick={handleSpotClick}
+          onEventClick={handleEventClick}
+        />
+      )}
     </div>
   );
 

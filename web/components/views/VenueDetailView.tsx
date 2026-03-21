@@ -20,10 +20,13 @@ import { usePortal } from "@/lib/portal-context";
 import { ATTACHED_CHILD_DESTINATION_SECTION_TITLE } from "@/lib/destination-graph";
 import {
   CaretRight,
+  Clock,
   Globe,
+  House,
   InstagramLogo,
   Phone,
   Tag,
+  Ticket,
   ArrowCounterClockwise,
   ArrowLeft,
   ShareNetwork,
@@ -46,6 +49,10 @@ import { DestinationDetailSections } from "@/components/adventure/DestinationDet
 import { LibraryPassCallout, type LibraryPassData } from "@/components/family/LibraryPassCallout";
 import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
 import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
+import { isFeatureHeavyType, type VenueFeature } from "@/lib/venue-features";
+import { type VenueSpecial } from "@/lib/specials-utils";
+import VenueFeaturesSection from "@/components/detail/VenueFeaturesSection";
+import VenueSpecialsSection from "@/components/detail/VenueSpecialsSection";
 import dynamic from "next/dynamic";
 
 const DogTagModal = dynamic(
@@ -92,6 +99,10 @@ type SpotData = {
   lat: number | null;
   lng: number | null;
   library_pass: LibraryPassData | null;
+  typical_price_min: number | null;
+  typical_price_max: number | null;
+  typical_duration_minutes: number | null;
+  indoor_outdoor: string | null;
 };
 
 type UpcomingEvent = {
@@ -382,6 +393,11 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
           {priceDisplay && (
             <><Dot /> <span className="text-[var(--muted)]">{priceDisplay}</span></>
           )}
+          {spot.typical_price_min != null && (
+            <><Dot /> <span className="text-[var(--muted)]">
+              ${spot.typical_price_min}{spot.typical_price_max && spot.typical_price_max !== spot.typical_price_min ? `\u2013${spot.typical_price_max}` : ""}
+            </span></>
+          )}
         </p>
       </div>
 
@@ -521,151 +537,365 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
   );
 
   // ── CONTENT ZONE ────────────────────────────────────────────────────────
-  const contentZone = (
-    <div className="px-4 lg:px-8 py-4 space-y-8">
-      {/* ── 1. TAGS (Occasions) ────────────────────────────── */}
-      {occasions.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {occasions.map((o) => (
-            <Badge key={o.occasion} variant="accent" accentColor="var(--gold)" size="sm">
-              {OCCASION_LABELS[o.occasion] || o.occasion.replace(/_/g, " ")}
-            </Badge>
-          ))}
-        </div>
-      )}
 
-      {/* ── 2. ABOUT + COMMUNITY TAGS ─────────────────────── */}
+  // Cast typed data from API response
+  const typedFeatures = (data?.features ?? []) as unknown as VenueFeature[];
+  const typedSpecials = (data?.specials ?? []) as unknown as VenueSpecial[];
+  const typedHighlights = (data?.highlights ?? []) as unknown as { id: number; highlight_type: string; title: string; description: string | null; image_url: string | null }[];
+
+  // Step 3: Separate true exhibitions (have closing_date) from programs
+  const trueExhibitions = useMemo(
+    () => exhibitions.filter((ex) => ex.closing_date != null),
+    [exhibitions]
+  );
+
+  // Step 9: Filter nonsensical occasions for museum-type venues
+  const MUSEUM_EXCLUDED_OCCASIONS = new Set(["brunch", "late_night", "quick_bite", "dancing", "pre_game"]);
+  const isMuseumType = ["museum", "gallery", "historic_site", "garden"].includes(spot.spot_type || "");
+  const filteredOccasions = isMuseumType
+    ? occasions.filter((o) => !MUSEUM_EXCLUDED_OCCASIONS.has(o.occasion))
+    : occasions;
+
+  // Step 7: Use reordered layout for feature-heavy venue types
+  const useFeatureLayout = isFeatureHeavyType(spot.spot_type);
+
+  // Step 4: Plan Your Visit — only render if there's visit planning data
+  const hasVisitPlanningData = spot.typical_price_min != null || spot.typical_duration_minutes != null || spot.indoor_outdoor || typedSpecials.length > 0 || spot.library_pass?.eligible;
+
+  const HIGHLIGHT_TYPE_LABELS: Record<string, string> = {
+    viewpoint: "Viewpoint",
+    architecture: "Architecture",
+    photo_spot: "Photo Spot",
+    signature: "Signature",
+    hidden_gem: "Hidden Gem",
+  };
+
+  const INDOOR_OUTDOOR_LABELS: Record<string, string> = {
+    indoor: "Indoor",
+    outdoor: "Outdoor",
+    both: "Indoor & Outdoor",
+  };
+
+  // ── Exhibition cards renderer ───────────────────────────────────────────
+  const renderExhibitions = (exList: VenueExhibition[]) => (
+    <div>
+      <SectionHeader title="On View" count={exList.length} variant="divider" />
+      <div className="space-y-3 mt-3">
+        {exList.map((ex) => {
+          const daysLeft = ex.closing_date
+            ? Math.ceil((new Date(ex.closing_date + "T00:00:00").getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+            : null;
+          return (
+            <a
+              key={ex.id}
+              href={ex.source_url || undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex gap-3 p-3 rounded-xl border border-[var(--twilight)]/40 hover:border-[var(--soft)]/30 transition-colors find-row-card-bg"
+            >
+              {ex.image_url && (
+                <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden">
+                  <SmartImage src={ex.image_url} alt="" fill className="object-cover" sizes="80px" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-semibold text-[var(--cream)] leading-snug line-clamp-2 group-hover:opacity-80 transition-opacity">
+                  {ex.title}
+                </h4>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="font-mono text-xs text-[var(--soft)]">
+                    {formatDateRange(ex.opening_date, ex.closing_date)}
+                  </p>
+                  {ex.admission_type && ex.admission_type !== "included" && (
+                    <Badge variant="accent" accentColor="var(--gold)" size="sm">
+                      {ex.admission_type === "free" ? "Free" : ex.admission_type === "ticketed" ? "Ticketed" : ex.admission_type.replace(/_/g, " ")}
+                    </Badge>
+                  )}
+                </div>
+                {daysLeft !== null && daysLeft > 0 && daysLeft <= 30 && (
+                  <span className={`inline-block mt-1.5 px-2 py-0.5 font-mono text-2xs font-bold uppercase tracking-wider rounded ${daysLeft <= 7 ? "bg-[var(--coral)]/15 text-[var(--coral)]" : "bg-[var(--gold)]/15 text-[var(--gold)]"}`}>
+                    {daysLeft <= 1 ? "Last day" : `${daysLeft}d left`}
+                  </span>
+                )}
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  // ── Plan Your Visit section ────────────────────────────────────────────
+  const renderPlanYourVisit = () => {
+    if (!hasVisitPlanningData) return null;
+    return (
       <div>
-        {spot.description && (
-          <>
-            <SectionHeader title="About" variant="divider" />
-            <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
-              <LinkifyText text={spot.description} />
-            </p>
-          </>
-        )}
-        <div className={spot.description ? "mt-4" : ""}>
-          <CollapsibleVenueTags venueId={spot.id} />
+        <SectionHeader title="Plan Your Visit" variant="divider" />
+        <div className="mt-3 rounded-xl border border-[var(--twilight)]/40 bg-[var(--night)] overflow-hidden">
+          {/* Metadata grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-[var(--twilight)]/20">
+            {spot.typical_price_min != null && (
+              <div className="bg-[var(--night)] p-4 flex items-start gap-3">
+                <Ticket size={18} weight="light" className="text-[var(--soft)] mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">Admission</p>
+                  <p className="text-sm font-medium text-[var(--cream)] mt-0.5">
+                    ${spot.typical_price_min}{spot.typical_price_max && spot.typical_price_max !== spot.typical_price_min ? `\u2013$${spot.typical_price_max}` : ""}
+                  </p>
+                </div>
+              </div>
+            )}
+            {spot.typical_duration_minutes != null && (
+              <div className="bg-[var(--night)] p-4 flex items-start gap-3">
+                <Clock size={18} weight="light" className="text-[var(--soft)] mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">Duration</p>
+                  <p className="text-sm font-medium text-[var(--cream)] mt-0.5">
+                    {spot.typical_duration_minutes >= 60
+                      ? `About ${Math.round(spot.typical_duration_minutes / 60)} hr${Math.round(spot.typical_duration_minutes / 60) > 1 ? "s" : ""}`
+                      : `${spot.typical_duration_minutes} min`}
+                  </p>
+                </div>
+              </div>
+            )}
+            {spot.indoor_outdoor && (
+              <div className="bg-[var(--night)] p-4 flex items-start gap-3">
+                <House size={18} weight="light" className="text-[var(--soft)] mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">Setting</p>
+                  <p className="text-sm font-medium text-[var(--cream)] mt-0.5">
+                    {INDOOR_OUTDOOR_LABELS[spot.indoor_outdoor] || spot.indoor_outdoor}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Specials inside plan your visit */}
+          {typedSpecials.length > 0 && (
+            <div className="border-t border-[var(--twilight)]/40">
+              <VenueSpecialsSection specials={typedSpecials} />
+            </div>
+          )}
+
+          {/* Library pass */}
+          {spot.library_pass?.eligible && (
+            <div className="border-t border-[var(--twilight)]/40 p-4">
+              <LibraryPassCallout libraryPass={spot.library_pass} />
+            </div>
+          )}
         </div>
       </div>
+    );
+  };
 
-      {/* ── ON VIEW (EXHIBITIONS) ─────────────────────────── */}
-      {exhibitions.length > 0 && (
-        <div>
-          <SectionHeader title="On View" count={exhibitions.length} variant="divider" />
-          <div className="space-y-3 mt-3">
-            {exhibitions.map((ex) => {
-              const daysLeft = ex.closing_date
-                ? Math.ceil((new Date(ex.closing_date + "T00:00:00").getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-                : null;
-              return (
-                <a
-                  key={ex.id}
-                  href={ex.source_url || undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex gap-3 p-3 rounded-xl border border-[var(--twilight)]/40 hover:border-[var(--soft)]/30 transition-colors find-row-card-bg"
-                >
-                  {ex.image_url && (
-                    <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden">
-                      <SmartImage src={ex.image_url} alt="" fill className="object-cover" sizes="80px" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-semibold text-[var(--cream)] leading-snug line-clamp-2 group-hover:opacity-80 transition-opacity">
-                      {ex.title}
-                    </h4>
-                    <p className="mt-1 font-mono text-xs text-[var(--soft)]">
-                      {formatDateRange(ex.opening_date, ex.closing_date)}
-                    </p>
-                    {daysLeft !== null && daysLeft > 0 && daysLeft <= 14 && (
-                      <span className="inline-block mt-1.5 px-2 py-0.5 font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--coral)]/15 text-[var(--coral)] rounded">
-                        {daysLeft <= 1 ? "Last day" : `${daysLeft}d left`}
-                      </span>
-                    )}
-                  </div>
-                </a>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── 3. UPCOMING EVENTS ─────────────────────────────── */}
-      {upcomingEvents.length > 0 && (
-        <div>
-          <VenueShowtimes
-            events={upcomingEvents as ShowtimeEvent[]}
-            portalSlug={portalSlug}
-            venueType={spot.spot_type}
-            title="Upcoming Events"
-            onEventClick={handleEventClick}
-            bare
-          />
-        </div>
-      )}
-
-      {/* ── LIBRARY PASS (family portal only) ─────────────── */}
-      {portal?.settings?.vertical === "family" && spot.library_pass?.eligible && (
-        <LibraryPassCallout libraryPass={spot.library_pass} />
-      )}
-
-      {/* ── ADVENTURE DESTINATION DETAILS ─────────────────── */}
-      {portal?.settings?.vertical === "adventure" && spot.slug && (
-        <DestinationDetailSections
-          venueSlug={spot.slug}
-          portalSlug={portalSlug}
-        />
-      )}
-
-      {/* ── CHILD DESTINATIONS ─────────────────────────────── */}
-      {attachedChildDestinations.length > 0 && (
-        <div>
-          <SectionHeader
-            title={ATTACHED_CHILD_DESTINATION_SECTION_TITLE}
-            count={attachedChildDestinations.length}
-            variant="divider"
-          />
-          <div className="space-y-2">
-            {attachedChildDestinations.map((artifact) => (
-              <button
-                key={artifact.id}
-                onClick={() => artifact.slug && handleSpotClick(artifact.slug)}
-                className="block w-full text-left p-3 min-h-[44px] border border-[var(--twilight)]/40 rounded-lg bg-[var(--night)] hover:border-[var(--coral)]/50 transition-colors group focus-ring"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    <span className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
-                      {artifact.name}
-                    </span>
-                    {artifact.short_description && (
-                      <p className="text-sm text-[var(--soft)] mt-0.5 line-clamp-1">
-                        {artifact.short_description}
-                      </p>
-                    )}
-                  </div>
-                  <CaretRight size={16} weight="bold" aria-hidden="true" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" />
+  // ── Highlights renderer ────────────────────────────────────────────────
+  const renderHighlights = () => {
+    if (typedHighlights.length === 0) return null;
+    return (
+      <div>
+        <SectionHeader title="Don't Miss" variant="divider" />
+        <div className="space-y-3 mt-3">
+          {typedHighlights.map((h) => (
+            <div
+              key={h.id}
+              className="flex items-start gap-3 p-4 rounded-xl border border-[var(--twilight)]/40 bg-[var(--night)] border-l-2 border-l-[var(--gold)]"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-semibold text-[var(--cream)] leading-snug">
+                    {h.title}
+                  </h4>
+                  <Badge variant="accent" accentColor="var(--gold)" size="sm">
+                    {HIGHLIGHT_TYPE_LABELS[h.highlight_type] || h.highlight_type.replace(/_/g, " ")}
+                  </Badge>
                 </div>
-              </button>
-            ))}
-          </div>
+                {h.description && (
+                  <p className="text-sm text-[var(--soft)] mt-1.5 leading-relaxed">
+                    {h.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
+    );
+  };
 
-      {/* ── 4. ACCOLADES ───────────────────────────────────── */}
-      {editorialMentions.length > 0 && (
-        <AccoladesSection mentions={editorialMentions} />
+  // ── About + Community Tags ──────────────────────────────────────────────
+  const renderAbout = () => (
+    <div>
+      {spot.description && (
+        <>
+          <SectionHeader title="About" variant="divider" />
+          <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
+            <LinkifyText text={spot.description} />
+          </p>
+        </>
       )}
+      <div className={spot.description ? "mt-4" : ""}>
+        <CollapsibleVenueTags venueId={spot.id} />
+      </div>
+    </div>
+  );
 
-      {/* ── 5. NEARBY ──────────────────────────────────────── */}
-      {nearbyDestinations && (
-        <NearbySection
-          nearbySpots={nearbyDestinations}
-          onSpotClick={handleSpotClick}
+  // ── Occasions tags ──────────────────────────────────────────────────────
+  const renderOccasions = () => {
+    if (filteredOccasions.length === 0) return null;
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        {filteredOccasions.map((o) => (
+          <Badge key={o.occasion} variant="accent" accentColor="var(--gold)" size="sm">
+            {OCCASION_LABELS[o.occasion] || o.occasion.replace(/_/g, " ")}
+          </Badge>
+        ))}
+      </div>
+    );
+  };
+
+  // ── Upcoming Events ─────────────────────────────────────────────────────
+  const renderUpcomingEvents = () => {
+    if (upcomingEvents.length === 0) return null;
+    return (
+      <div>
+        <VenueShowtimes
+          events={upcomingEvents as ShowtimeEvent[]}
+          portalSlug={portalSlug}
+          venueType={spot.spot_type}
+          title="Upcoming Events"
+          onEventClick={handleEventClick}
+          bare
         />
+      </div>
+    );
+  };
+
+  // ── Child destinations ──────────────────────────────────────────────────
+  const renderChildDestinations = () => {
+    if (attachedChildDestinations.length === 0) return null;
+    return (
+      <div>
+        <SectionHeader
+          title={ATTACHED_CHILD_DESTINATION_SECTION_TITLE}
+          count={attachedChildDestinations.length}
+          variant="divider"
+        />
+        <div className="space-y-2">
+          {attachedChildDestinations.map((artifact) => (
+            <button
+              key={artifact.id}
+              onClick={() => artifact.slug && handleSpotClick(artifact.slug)}
+              className="block w-full text-left p-3 min-h-[44px] border border-[var(--twilight)]/40 rounded-lg bg-[var(--night)] hover:border-[var(--coral)]/50 transition-colors group focus-ring"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <span className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
+                    {artifact.name}
+                  </span>
+                  {artifact.short_description && (
+                    <p className="text-sm text-[var(--soft)] mt-0.5 line-clamp-1">
+                      {artifact.short_description}
+                    </p>
+                  )}
+                </div>
+                <CaretRight size={16} weight="bold" aria-hidden="true" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" />
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const contentZone = (
+    <div className="px-4 lg:px-8 py-4 space-y-8">
+      {useFeatureLayout ? (
+        <>
+          {/* ── Feature-heavy layout (museums, galleries, parks, historic sites) ── */}
+          {/* 1. On View (exhibitions) */}
+          {trueExhibitions.length > 0 && renderExhibitions(trueExhibitions)}
+
+          {/* 2. Plan Your Visit */}
+          {renderPlanYourVisit()}
+
+          {/* 3. Upcoming Events */}
+          {renderUpcomingEvents()}
+
+          {/* 4. What's Here (features) */}
+          {typedFeatures.length > 0 && (
+            <VenueFeaturesSection features={typedFeatures} venueType={spot.spot_type} />
+          )}
+
+          {/* 5. Don't Miss (highlights) */}
+          {renderHighlights()}
+
+          {/* 6. About + Community Tags */}
+          {renderAbout()}
+
+          {/* 7. Occasions */}
+          {renderOccasions()}
+
+          {/* 8. In the Press */}
+          {editorialMentions.length > 0 && (
+            <AccoladesSection mentions={editorialMentions} />
+          )}
+
+          {/* 9. Child Destinations */}
+          {renderChildDestinations()}
+
+          {/* 10. Nearby */}
+          {nearbyDestinations && (
+            <NearbySection nearbySpots={nearbyDestinations} onSpotClick={handleSpotClick} />
+          )}
+        </>
+      ) : (
+        <>
+          {/* ── Standard layout (bars, restaurants, venues, etc.) ── */}
+          {/* 1. Occasions */}
+          {renderOccasions()}
+
+          {/* 2. About + Community Tags */}
+          {renderAbout()}
+
+          {/* 3. On View (exhibitions) */}
+          {exhibitions.length > 0 && renderExhibitions(exhibitions)}
+
+          {/* 4. Upcoming Events */}
+          {renderUpcomingEvents()}
+
+          {/* 5. Plan Your Visit (specials, library pass, etc.) */}
+          {renderPlanYourVisit()}
+
+          {/* 6. What's Here (features) */}
+          {typedFeatures.length > 0 && (
+            <VenueFeaturesSection features={typedFeatures} venueType={spot.spot_type} />
+          )}
+
+          {/* 7. Don't Miss (highlights) */}
+          {renderHighlights()}
+
+          {/* 8. Adventure Destination Details */}
+          {portal?.settings?.vertical === "adventure" && spot.slug && (
+            <DestinationDetailSections venueSlug={spot.slug} portalSlug={portalSlug} />
+          )}
+
+          {/* 9. Child Destinations */}
+          {renderChildDestinations()}
+
+          {/* 10. In the Press */}
+          {editorialMentions.length > 0 && (
+            <AccoladesSection mentions={editorialMentions} />
+          )}
+
+          {/* 11. Nearby */}
+          {nearbyDestinations && (
+            <NearbySection nearbySpots={nearbyDestinations} onSpotClick={handleSpotClick} />
+          )}
+        </>
       )}
 
-      {/* Dog-Friendly Nearby */}
+      {/* Dog-Friendly Nearby (both layouts) */}
       {isDog && spot.neighborhood && (
         <DogNearbySection
           neighborhood={spot.neighborhood}
@@ -673,13 +903,15 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
           onSpotClick={handleSpotClick}
         />
       )}
-
     </div>
   );
 
   // ── TOP BAR ─────────────────────────────────────────────────────────────
   const topBar = (
-    <div className="flex items-center justify-end px-4 lg:px-6 py-3">
+    <div className="flex items-center justify-between px-4 lg:px-6 py-3">
+      <div className="[&>button]:mb-0">
+        <NeonBackButton onClose={onClose} floating={false} />
+      </div>
       <div className="flex items-center gap-1">
         <SaveButton venueId={spot.id} size="sm" />
         <button

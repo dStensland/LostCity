@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import SubmitVenueModal from "@/components/SubmitVenueModal";
+import { useAuth } from "@/lib/auth-context";
 
 interface AddNewChooserProps {
   portalSlug: string;
@@ -52,6 +53,7 @@ const OPTIONS: { key: Option; label: string; icon: React.ReactNode }[] = [
 
 export default function AddNewChooser({ portalSlug }: AddNewChooserProps) {
   const router = useRouter();
+  const { profile } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isVenueModalOpen, setIsVenueModalOpen] = useState(false);
   const [navigatingTo, setNavigatingTo] = useState<Option | null>(null);
@@ -106,6 +108,9 @@ export default function AddNewChooser({ portalSlug }: AddNewChooserProps) {
   const closeModal = () => {
     setIsVenueModalOpen(false);
   };
+
+  // Only show to admin users — this is an editorial/moderation tool, not a public feature
+  if (!profile?.is_admin) return null;
 
   return (
     <>

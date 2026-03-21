@@ -17,12 +17,12 @@ import {
   ArrowRight,
   Lifebuoy,
 } from "@phosphor-icons/react";
-import type { CityPulseSection } from "@/lib/city-pulse/types";
+import type { CityPulseSection, CityPulseEventItem } from "@/lib/city-pulse/types";
 import { isHelpAtlSupportDirectoryEnabled } from "@/lib/helpatl-support";
 
 interface CivicHeroProps {
   portalSlug: string;
-  /** Event counts from timeline tabs */
+  /** Event counts from timeline tabs — NOT used for the hero pill (all-portal, not civic-scoped) */
   tabCounts?: { today: number; this_week: number; coming_up: number } | null;
   /** Weather from feed context */
   weather?: { temperature_f: number; condition: string; icon: string } | null;
@@ -30,7 +30,7 @@ interface CivicHeroProps {
   cityName?: string;
   /** Number of interest channels/groups available */
   groupCount?: number;
-  /** Lineup sections for deriving next-event urgency pill */
+  /** Lineup sections for deriving next-event urgency pill and civic event count */
   lineupSections?: CityPulseSection[];
 }
 
@@ -40,6 +40,23 @@ function getFormattedDate(): string {
     month: "long",
     day: "numeric",
   }).toUpperCase();
+}
+
+/**
+ * Count unique events in the portal-scoped lineup sections.
+ * These sections come directly from the CityPulse feed scoped to this portal,
+ * so the count reflects civic events only — not all Atlanta events.
+ */
+function countPortalScopedEvents(sections: CityPulseSection[]): number {
+  const seenIds = new Set<number>();
+  for (const section of sections) {
+    for (const item of section.items) {
+      if (item.item_type !== "event") continue;
+      const ev = (item as CityPulseEventItem).event;
+      seenIds.add(ev.id);
+    }
+  }
+  return seenIds.size;
 }
 
 /** Derive the next upcoming event label from lineup sections (e.g. "Next: Thu 6pm") */
@@ -83,7 +100,12 @@ export default function CivicHero({
   lineupSections,
 }: CivicHeroProps) {
   const dateStr = getFormattedDate();
-  const weekCount = tabCounts?.this_week ?? 0;
+  // Use the portal-scoped lineup section count, not tabCounts.this_week which
+  // reflects all Atlanta events (music, nightlife, etc.), not just civic events.
+  const weekCount = useMemo(
+    () => (lineupSections?.length ? countPortalScopedEvents(lineupSections) : 0),
+    [lineupSections],
+  );
   const showSupport = isHelpAtlSupportDirectoryEnabled(portalSlug);
 
   // Derive urgency pill: next upcoming event
@@ -166,7 +188,7 @@ export default function CivicHero({
           {/* Meetings pill — amber, always visible when we have data */}
           {weekCount > 0 && (
             <Link
-              href={`/${portalSlug}?view=find`}
+              href={`/${portalSlug}?view=happening`}
               className="civic-pill inline-flex items-center gap-2 rounded-xl border-[1.5px] border-amber-300 bg-amber-50 px-4 min-h-11 text-sm transition-colors hover:bg-amber-100"
             >
               <CalendarDots weight="duotone" className="w-4 h-4 text-amber-600 shrink-0" />

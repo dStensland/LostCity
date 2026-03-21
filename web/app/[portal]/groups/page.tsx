@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { PortalHeader } from "@/components/headers";
-import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
+import { getCachedPortalBySlug, getCachedPortalByVerticalAndCity, getPortalVertical } from "@/lib/portal";
 import PortalGroupsClient from "@/components/channels/PortalGroupsClient";
 import { CivicTabBar } from "@/components/civic/CivicTabBar";
 import { Suspense } from "react";
@@ -12,9 +13,20 @@ type Props = {
   params: Promise<{ portal: string }>;
 };
 
+/** Resolve portal using subdomain vertical header when present, falling back to slug lookup. */
+async function resolveGroupsPortal(slug: string) {
+  const headersList = await headers();
+  const subdomainVertical = headersList.get("x-lc-vertical");
+  if (subdomainVertical) {
+    const portal = await getCachedPortalByVerticalAndCity(subdomainVertical, slug);
+    if (portal) return portal;
+  }
+  return getCachedPortalBySlug(slug);
+}
+
 export async function generateMetadata({ params }: Props) {
   const { portal: slug } = await params;
-  const portal = await getCachedPortalBySlug(slug);
+  const portal = await resolveGroupsPortal(slug);
 
   if (!portal) {
     return {
@@ -33,9 +45,11 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default async function PortalGroupsPage({ params }: Props) {
-  const { portal: portalSlug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const { portal: pathSlug } = await params;
+  const portal = await resolveGroupsPortal(pathSlug);
   if (!portal) notFound();
+  // Use the canonical portal slug (e.g. "helpatl") for child components, not the URL path segment.
+  const portalSlug = portal.slug;
 
   const presentation = getInterestChannelPresentation(portal);
   const channelsLabel = presentation.channelsLabel;
