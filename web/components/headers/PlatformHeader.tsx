@@ -10,7 +10,7 @@ import SavedEventsButton from "../SavedEventsButton";
 /**
  * PlatformHeader — used on portal-agnostic pages (profile, settings, calendar,
  * saved, notifications, etc.). Shows LC branding without portal-specific nav
- * tabs. Search opens the cross-portal SearchOverlay (no portalSlug passed).
+ * tabs. Mobile search opens MobileSearchOverlay via HeaderSearchButton.
  */
 export default function PlatformHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
