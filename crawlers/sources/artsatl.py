@@ -3,6 +3,9 @@ Crawler for ArtsATL Calendar (artsatl.org/calendar).
 Atlanta's leading arts journalism site with a comprehensive community calendar.
 Uses The Events Calendar (Tribe) WordPress plugin with JSON-LD structured data.
 """
+# DEACTIVATED: Editorial aggregator — violates original-source-only policy.
+# See CRAWLER_STRATEGY.md "Source Rule: Original Sources Over Curators".
+# Events from this source should come from the original venue crawlers instead.
 
 from __future__ import annotations
 

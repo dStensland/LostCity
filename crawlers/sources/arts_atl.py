@@ -3,6 +3,9 @@ Crawler for ArtsATL (artsatl.org) - comprehensive arts calendar and coverage.
 Major arts events aggregator for Atlanta theater, dance, music, visual arts.
 Uses The Events Calendar (Modern Tribe) plugin with JSON-LD structured data.
 """
+# DEACTIVATED: Editorial aggregator — violates original-source-only policy.
+# See CRAWLER_STRATEGY.md "Source Rule: Original Sources Over Curators".
+# Events from this source should come from the original venue crawlers instead.
 
 import json
 import logging

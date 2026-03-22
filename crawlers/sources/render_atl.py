@@ -41,14 +41,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
     now = datetime.now()
     year = now.year
 
-    # RenderATL 2026 moved to August (confirmed via renderatl.com)
-    if year == 2026:
-        start_date = datetime(2026, 8, 12)
-        end_date = datetime(2026, 8, 14)
-    else:
-        # Default: mid-August (historically June, shifted to August starting 2026)
-        start_date = datetime(year, 8, 12)
-        end_date = datetime(year, 8, 14)
+    # RenderATL moved to August starting 2026 (confirmed via renderatl.com)
+    start_date = datetime(year, 8, 12)
+    end_date = datetime(year, 8, 14)
 
     # If past, use next year
     if end_date < now:

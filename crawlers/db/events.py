@@ -36,7 +36,6 @@ from db.validation import (
 from db.venues import get_venue_by_id_cached
 from crawl_context import get_crawl_context
 from db.sources import get_source_info, get_festival_source_hint, infer_program_title
-from db.enrichment import _queue_event_blurhash
 from db.series_linking import _force_update_series_day
 from db.artists import (
     parse_lineup_from_title,
@@ -315,6 +314,7 @@ class InsertContext:
     parsed_film_title: str = None
     music_info: object = None
     parsed_artists: list = None
+    event_id: Optional[int] = None
 
 
 # ---------------------------------------------------------------------------
@@ -987,6 +987,34 @@ def _step_finalize(event_data: dict, ctx: InsertContext) -> dict:
     return event_data
 
 
+def _step_enqueue_enrichment(event_data: dict, ctx: InsertContext) -> dict:
+    """Enqueue async enrichment tasks for external API calls.
+
+    This step is a no-op during the synchronous pipeline run (ctx.event_id is
+    None at that point). insert_event() sets ctx.event_id after the DB insert
+    and calls this function again so that tasks are enqueued with a real ID.
+    """
+    from db.enrichment_queue import enqueue_task
+
+    event_id = ctx.event_id
+    if not event_id:
+        return event_data
+
+    client = get_client()
+    category = event_data.get("category") or event_data.get("category_id")
+
+    if category == "film":
+        enqueue_task(client, "event", str(event_id), "enrich_film", priority=3)
+
+    if category == "music":
+        enqueue_task(client, "event", str(event_id), "enrich_music", priority=3)
+
+    if event_data.get("image_url"):
+        enqueue_task(client, "event", str(event_id), "blurhash", priority=8)
+
+    return event_data
+
+
 # ---------------------------------------------------------------------------
 # Insert pipeline definition
 # ---------------------------------------------------------------------------
@@ -1000,9 +1028,7 @@ INSERT_PIPELINE = [
     _step_resolve_source,
     _step_resolve_venue,
     _step_normalize_image,
-    _step_enrich_film,
     _step_parse_artists,
-    _step_enrich_music,
     _step_infer_category,
     _step_resolve_series,
     _step_infer_genres,
@@ -1013,6 +1039,7 @@ INSERT_PIPELINE = [
     _step_field_metadata,
     _step_data_quality,
     _step_finalize,
+    _step_enqueue_enrichment,
 ]
 
 
@@ -1219,7 +1246,11 @@ def insert_event(
     if extraction_data:
         _write_event_extraction(client, event_id, extraction_data)
 
-    _queue_event_blurhash(event_id, event_data.get("image_url"))
+    # Enqueue async enrichment tasks (film metadata, music metadata, blurhash).
+    # The pipeline step was a no-op during the pre-insert run; now that we have
+    # the real event_id we call it directly with the id set on ctx.
+    ctx.event_id = event_id
+    _step_enqueue_enrichment(event_data, ctx)
 
     if ctx.parsed_artists:
         try:

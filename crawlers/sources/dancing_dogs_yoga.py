@@ -1,9 +1,11 @@
 """
 Crawler for Dancing Dogs Yoga (dancingdogsyoga.com).
 
-The workshops landing page uses a Squarespace calendar block, so we use
-Playwright only to collect the visible event detail URLs. Each event detail page
-then exposes stable event metadata directly in HTML / JSON-LD.
+The workshops landing page (atlanta-yoga-workshops) uses a Squarespace
+calendar block that renders entirely via JavaScript — no event links appear
+in the static HTML response. Playwright is required to collect event detail
+URLs from the rendered DOM. Each detail page is then fetched with requests and
+parsed for stable event metadata via HTML / JSON-LD.
 """
 
 from __future__ import annotations

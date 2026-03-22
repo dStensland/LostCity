@@ -106,13 +106,22 @@ def _derive_tags(age_min: int, age_max: int) -> list[str]:
 
 
 def _parse_session_dates(match: re.Match[str]) -> tuple[str, str]:
-    year = 2026
+    today = date.today()
+    year = today.year
     start_month = match.group("start_month")
     end_month = match.group("end_month") or start_month
     start_dt = datetime.strptime(
         f"{start_month} {match.group('start_day')} {year}",
         "%B %d %Y",
     )
+    # If the parsed session is entirely in the past, roll forward one year
+    # (handles end-of-year page scrapes where next summer's dates appear)
+    if start_dt.date() < today:
+        year += 1
+        start_dt = datetime.strptime(
+            f"{start_month} {match.group('start_day')} {year}",
+            "%B %d %Y",
+        )
     end_dt = datetime.strptime(
         f"{end_month} {match.group('end_day')} {year}",
         "%B %d %Y",

@@ -27,7 +27,6 @@ from datetime import datetime, date
 
 import requests
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
@@ -128,8 +127,8 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
 
 def try_simple_requests_first(url: str) -> Optional[BeautifulSoup]:
     """
-    Try fetching with simple requests first (faster than Playwright).
-    Returns BeautifulSoup object if successful, None if needs Playwright.
+    Fetch page with requests.
+    Returns BeautifulSoup object if successful, None otherwise.
     """
     try:
         headers = {
@@ -146,16 +145,13 @@ def try_simple_requests_first(url: str) -> Optional[BeautifulSoup]:
 
         return None
     except Exception as e:
-        logger.debug(f"Simple request failed, will use Playwright: {e}")
+        logger.debug(f"Request failed: {e}")
         return None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
     """
     Crawl Goodwill of North Georgia events.
-
-    First tries simple requests, falls back to Playwright if the page
-    requires JavaScript rendering.
     """
     source_id = source["id"]
     events_found = 0
@@ -184,29 +180,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if soup:
                 successful_url = url
                 break
-
-        # If simple request didn't work, use Playwright
-        if not soup:
-            logger.info(f"Fetching with Playwright: {EVENTS_URL}")
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                context = browser.new_context(
-                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                    viewport={"width": 1920, "height": 1080},
-                )
-                page = context.new_page()
-                page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(3000)
-
-                # Scroll to load any lazy-loaded content
-                for _ in range(3):
-                    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                    page.wait_for_timeout(1000)
-
-                html_content = page.content()
-                soup = BeautifulSoup(html_content, "html.parser")
-                successful_url = EVENTS_URL
-                browser.close()
 
         if not soup:
             logger.warning("Could not fetch page content")
@@ -401,9 +374,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
             f"{events_new} new, {events_updated} updated"
         )
 
-    except PlaywrightTimeout as e:
-        logger.error(f"Timeout fetching Goodwill events: {e}")
-        raise
     except Exception as e:
         logger.error(f"Failed to crawl Goodwill of North Georgia: {e}")
         raise

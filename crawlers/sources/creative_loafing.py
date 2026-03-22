@@ -8,6 +8,9 @@ Page structure (as of 2026):
 - Must use ?when=This+Week or similar filter to get current events
 - Default page shows old events sorted by some other criteria
 """
+# DEACTIVATED: Editorial aggregator — violates original-source-only policy.
+# See CRAWLER_STRATEGY.md "Source Rule: Original Sources Over Curators".
+# Events from this source should come from the original venue crawlers instead.
 
 from __future__ import annotations
 
