@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getVolunteerThisWeekItems,
   isVolunteerCommunityEvent,
-} from "./VolunteerThisWeekCard";
+} from "@/lib/civic-volunteer-utils";
 import type { CityPulseSection } from "@/lib/city-pulse/types";
 
 function isoDate(daysFromToday: number): string {

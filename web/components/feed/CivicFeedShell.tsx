@@ -30,7 +30,7 @@ import { ThisWeekSection } from "./civic/ThisWeekSection";
 import { WaysToHelpSection } from "./civic/WaysToHelpSection";
 import { CivicNewsSection } from "./civic/CivicNewsSection";
 import { ChannelsStrip } from "./civic/ChannelsStrip";
-import { getVolunteerThisWeekItems } from "./civic/VolunteerThisWeekCard";
+import { getVolunteerThisWeekItems } from "@/lib/civic-volunteer-utils";
 
 // Section types included in the civic timeline — includes "trending" because
 // civic events often land there instead of time-based slots.
