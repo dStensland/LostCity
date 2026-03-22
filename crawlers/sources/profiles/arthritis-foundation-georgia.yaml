@@ -1,0 +1,28 @@
+version: 2
+slug: arthritis-foundation-georgia
+name: Arthritis Foundation Georgia
+city: atlanta
+fetch:
+  method: static
+  urls:
+  - https://www.arthritis.org/georgia/events
+parse:
+  method: llm
+entity_lanes:
+- events
+venue:
+  name: Arthritis Foundation Georgia
+  slug: arthritis-foundation-georgia
+  address: 1355 Peachtree St NE, Suite 600
+  neighborhood: Midtown
+  city: Atlanta
+  state: GA
+  zip: '30309'
+  lat: 33.797
+  lng: -84.384
+  venue_type: organization
+  spot_type: organization
+defaults:
+  category: null
+  tags:
+  - arthritis-foundation-georgia

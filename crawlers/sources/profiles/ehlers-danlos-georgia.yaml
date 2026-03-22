@@ -1,0 +1,28 @@
+version: 2
+slug: ehlers-danlos-georgia
+name: Ehlers-Danlos Society Georgia Network
+city: atlanta
+fetch:
+  method: static
+  urls:
+  - https://www.ehlers-danlos.com/events
+parse:
+  method: llm
+entity_lanes:
+- events
+venue:
+  name: Ehlers-Danlos Society Georgia Network
+  slug: ehlers-danlos-georgia
+  address: Atlanta, GA
+  neighborhood: North Atlanta
+  city: Atlanta
+  state: GA
+  zip: '30308'
+  lat: 33.868
+  lng: -84.338
+  venue_type: organization
+  spot_type: organization
+defaults:
+  category: null
+  tags:
+  - ehlers-danlos-georgia

@@ -1,0 +1,28 @@
+version: 2
+slug: gcdhh
+name: Georgia Center for the Deaf and Hard of Hearing
+city: decatur
+fetch:
+  method: static
+  urls:
+  - https://www.gcdhh.org
+parse:
+  method: llm
+entity_lanes:
+- events
+venue:
+  name: Georgia Center for the Deaf and Hard of Hearing
+  slug: georgia-center-deaf-hard-of-hearing
+  address: 4151 Memorial Dr, Suite 103-B
+  neighborhood: Decatur
+  city: Decatur
+  state: GA
+  zip: '30032'
+  lat: 33.762
+  lng: -84.252
+  venue_type: organization
+  spot_type: organization
+defaults:
+  category: null
+  tags:
+  - georgia-center-deaf-hard-of-hearing

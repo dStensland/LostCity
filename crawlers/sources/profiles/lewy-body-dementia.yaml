@@ -1,0 +1,28 @@
+version: 2
+slug: lewy-body-dementia
+name: Lewy Body Dementia Association
+city: lilburn
+fetch:
+  method: static
+  urls:
+  - https://www.lbda.org/events
+parse:
+  method: llm
+entity_lanes:
+- events
+venue:
+  name: Lewy Body Dementia Association
+  slug: lewy-body-dementia-association
+  address: 912 Killian Hill Rd SW, Suite 202C
+  neighborhood: Lilburn
+  city: Lilburn
+  state: GA
+  zip: '30047'
+  lat: 33.89
+  lng: -84.143
+  venue_type: organization
+  spot_type: organization
+defaults:
+  category: null
+  tags:
+  - lewy-body-dementia-association

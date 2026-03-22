@@ -1,0 +1,28 @@
+version: 2
+slug: donate-life-georgia
+name: Donate Life Georgia
+city: norcross
+fetch:
+  method: static
+  urls:
+  - https://www.donatelifegeorgia.org/events
+parse:
+  method: llm
+entity_lanes:
+- events
+venue:
+  name: Donate Life Georgia
+  slug: donate-life-georgia
+  address: 2875 Northwoods Pkwy
+  neighborhood: Norcross
+  city: Norcross
+  state: GA
+  zip: '30071'
+  lat: 33.936
+  lng: -84.196
+  venue_type: organization
+  spot_type: organization
+defaults:
+  category: null
+  tags:
+  - donate-life-georgia

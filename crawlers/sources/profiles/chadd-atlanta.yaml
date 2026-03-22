@@ -1,0 +1,28 @@
+version: 2
+slug: chadd-atlanta
+name: CHADD Atlanta Area Chapter
+city: atlanta
+fetch:
+  method: static
+  urls:
+  - https://chadd.org/events
+parse:
+  method: llm
+entity_lanes:
+- events
+venue:
+  name: CHADD Atlanta Area Chapter
+  slug: chadd-atlanta
+  address: Atlanta, GA
+  neighborhood: Midtown
+  city: Atlanta
+  state: GA
+  zip: '30308'
+  lat: 33.7834
+  lng: -84.3831
+  venue_type: organization
+  spot_type: organization
+defaults:
+  category: null
+  tags:
+  - chadd-atlanta
