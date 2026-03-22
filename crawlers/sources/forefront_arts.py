@@ -25,7 +25,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-import aiohttp
+import requests
 from bs4 import BeautifulSoup
 
 from db import (
@@ -149,14 +149,14 @@ EVENT_PAGES = [
 # ── HTTP helpers ──────────────────────────────────────────────────────────────
 
 
-async def _fetch_html(session: aiohttp.ClientSession, url: str) -> Optional[str]:
+def _fetch_html(session: requests.Session, url: str) -> Optional[str]:
     """Fetch a page, return HTML string or None on error."""
     try:
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=20)) as resp:
-            if resp.status == 200:
-                return await resp.text()
-            logger.warning(f"Forefront Arts: HTTP {resp.status} for {url}")
-            return None
+        resp = session.get(url, timeout=20)
+        if resp.status_code == 200:
+            return resp.text
+        logger.warning(f"Forefront Arts: HTTP {resp.status_code} for {url}")
+        return None
     except Exception as exc:
         logger.error(f"Forefront Arts: fetch failed for {url}: {exc}")
         return None
@@ -1124,7 +1124,7 @@ def _is_future(date_str: str) -> bool:
 # ── Main crawl ────────────────────────────────────────────────────────────────
 
 
-async def crawl(source: dict) -> tuple[int, int, int]:
+def crawl(source: dict) -> tuple[int, int, int]:
     """
     Crawl Forefront Arts for public performances and program sessions.
 
@@ -1140,7 +1140,6 @@ async def crawl(source: dict) -> tuple[int, int, int]:
     # Convenience: Dresden Park for spring camp
     dresden_id = venue_ids.get("dresden-park-community-center")
 
-    connector = aiohttp.TCPConnector(limit=4)
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -1149,10 +1148,11 @@ async def crawl(source: dict) -> tuple[int, int, int]:
         )
     }
 
-    async with aiohttp.ClientSession(connector=connector, headers=headers) as session:
+    with requests.Session() as session:
+        session.headers.update(headers)
 
         # ── 1. Tickets page — public shows with fixed dates ──────────────────
-        html = await _fetch_html(session, f"{BASE_URL}/tickets")
+        html = _fetch_html(session, f"{BASE_URL}/tickets")
         if html:
             lines = _parse_content(html)
             show_events = _parse_tickets_page(lines, source_id, venue_ids)
@@ -1176,7 +1176,7 @@ async def crawl(source: dict) -> tuple[int, int, int]:
 
         # ── 2. Location pages — MainStage shows listed per location ──────────
         for loc in LOCATION_PAGES:
-            html = await _fetch_html(session, f"{BASE_URL}/{loc['slug']}")
+            html = _fetch_html(session, f"{BASE_URL}/{loc['slug']}")
             if not html:
                 continue
             lines = _parse_content(html)
@@ -1203,7 +1203,7 @@ async def crawl(source: dict) -> tuple[int, int, int]:
                         )
 
         # ── 3. Spring Weekend Camp — public performances ──────────────────────
-        html = await _fetch_html(session, f"{BASE_URL}/springweekendcamp")
+        html = _fetch_html(session, f"{BASE_URL}/springweekendcamp")
         if html and dresden_id:
             lines = _parse_content(html)
             camp_events = _parse_spring_camp(lines, source_id, dresden_id)
@@ -1226,7 +1226,7 @@ async def crawl(source: dict) -> tuple[int, int, int]:
                         )
 
         # ── 4. Summer Show — performance dates per cast ───────────────────────
-        html = await _fetch_html(session, f"{BASE_URL}/summershow")
+        html = _fetch_html(session, f"{BASE_URL}/summershow")
         if html:
             lines = _parse_content(html)
             summer_events = _parse_summer_show(lines, source_id, venue_ids)
@@ -1249,7 +1249,7 @@ async def crawl(source: dict) -> tuple[int, int, int]:
                         )
 
         # ── 5. Mini Musicals — class sessions with family performances ────────
-        html = await _fetch_html(session, f"{BASE_URL}/minimusicals")
+        html = _fetch_html(session, f"{BASE_URL}/minimusicals")
         if html:
             lines = _parse_content(html)
             mini_events = _parse_mini_musicals(lines, source_id, venue_ids)
