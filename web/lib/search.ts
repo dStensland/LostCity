@@ -300,13 +300,16 @@ async function batchFetchVenueIds(filters: {
     // Pre-fetch event IDs matching title/description to avoid ilike in the
     // main query chain (which causes PostgreSQL planner timeouts when combined
     // with multiple .or() filters and joins).
+    // Use or(start_date >= today, end_date >= today) so recurring events
+    // with a past start_date but future end_date (e.g. weekly series) are included.
     queries.push(
       (async () => {
+        const today = getLocalDateString();
         const { data } = await supabase
           .from("events")
           .select("id")
           .or(`title.ilike.%${escapedTerm}%,description.ilike.%${escapedTerm}%`)
-          .gte("start_date", getLocalDateString())
+          .or(`start_date.gte.${today},end_date.gte.${today}`)
           .limit(500);
         return (data || []).map((e: { id: number }) => e.id);
       })()

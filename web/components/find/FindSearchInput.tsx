@@ -64,11 +64,16 @@ export default function FindSearchInput({
   const [browseMode, setBrowseMode] = useState(false);
   const pathname = `/${portalSlug}`;
 
+  // Seed query from URL on mount so the debounced URL-sync effect doesn't
+  // overwrite a pre-existing ?search= param before the URL→query sync runs.
+  const initialQuery = searchParams?.get("search") || "";
+
   const search = useInstantSearch({
     portalSlug,
     portalId,
     findType,
     viewMode: "find",
+    initialQuery,
   });
 
   // Notify parent when pre-search data changes
@@ -301,7 +306,7 @@ export default function FindSearchInput({
           id={suggestionsId}
           role="listbox"
           aria-label="Search suggestions"
-          className="absolute top-full left-0 right-0 mt-1 border border-[var(--twilight)] rounded-lg shadow-xl shadow-[0_4px_20px_rgba(0,0,0,0.5)] z-50 overflow-hidden max-h-[70vh] overflow-y-auto animate-dropdown-in bg-[var(--dusk)]/95 backdrop-blur-md"
+          className="absolute top-full left-0 right-0 mt-1 border border-[var(--twilight)] rounded-lg shadow-xl shadow-[0_4px_20px_rgba(0,0,0,0.5)] z-50 overflow-hidden max-h-[70vh] overflow-y-auto animate-dropdown-in bg-[var(--dusk)]"
         >
           {/* Recent searches */}
           {search.showRecent && (
@@ -373,8 +378,8 @@ export default function FindSearchInput({
             </div>
           )}
 
-          {/* Quick Actions */}
-          {search.showQuickActions && (
+          {/* Quick Actions — suppressed when no results; trending pills serve as the fallback */}
+          {search.showQuickActions && !hasNoResults && (
             <QuickActionsList
               actions={search.quickActions}
               selectedIndex={search.selectedIndex}

@@ -96,6 +96,8 @@ export interface UseInstantSearchOptions {
   /** Ranking context overrides */
   viewMode?: "feed" | "find" | "community";
   userPreferences?: RankingContext["userPreferences"];
+  /** Initial query value — used to seed state from URL params on mount */
+  initialQuery?: string;
 }
 
 export interface UseInstantSearchReturn {
@@ -253,9 +255,11 @@ export function useInstantSearch({
   enabled = true,
   viewMode = "find",
   userPreferences,
+  initialQuery = "",
 }: UseInstantSearchOptions): UseInstantSearchReturn {
-  // State
-  const [query, setQuery] = useState("");
+  // State — initialQuery seeds the query from URL on mount to prevent
+  // the debounced URL-sync effect from clearing a URL-supplied search term.
+  const [query, setQuery] = useState(initialQuery);
   const [showDropdown, setShowDropdown] = useState(false);
   const [suggestions, setSuggestions] = useState<(SearchResult & { personalizationReason?: string })[]>([]);
   const [quickActions, setQuickActions] = useState<QuickAction[]>([]);

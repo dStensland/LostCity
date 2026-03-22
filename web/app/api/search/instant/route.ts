@@ -64,12 +64,17 @@ async function buildPreSearchPayload(
       .order("frequency", { ascending: false })
       .limit(20),
     (() => {
+      const todayStr = now.slice(0, 10);
+      const fourteenDaysOut = new Date(now);
+      fourteenDaysOut.setDate(fourteenDaysOut.getDate() + 14);
+      const fourteenDaysStr = fourteenDaysOut.toISOString().slice(0, 10);
       let q = serviceClient
         .from("events")
         .select(
           "id, title, start_date, start_time, is_free, image_url, venues!inner(name)"
         )
-        .gte("start_date", now.slice(0, 10))
+        .gte("start_date", todayStr)
+        .lte("start_date", fourteenDaysStr)
         .eq("is_active", true)
         .not("title", "is", null)
         .order("data_quality", { ascending: false })
