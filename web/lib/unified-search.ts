@@ -761,7 +761,7 @@ export async function unifiedSearch(
     includeFacets = true,
     includeDidYouMean = true,
     includeSocialProof = false,
-    includeEventPopularitySignals = true,
+    includeEventPopularitySignals = false,
     timingRecorder,
   } = options;
 
@@ -1035,7 +1035,7 @@ export async function unifiedSearch(
   allResults.sort((a, b) => b.score - a.score);
 
   const didYouMean =
-    includeDidYouMean && allResults.length === 0
+    includeDidYouMean && allResults.length < 3
       ? await measureSearchTiming(timingRecorder, "search_spelling", () =>
           getSpellingSuggestions(client, effectiveQuery, resolvedCity),
         )
