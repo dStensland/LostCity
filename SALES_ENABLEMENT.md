@@ -1,9 +1,9 @@
 # LostCity Sales Enablement Guide
 
-## Quick Reference Stats (As of Feb 2025)
+## Quick Reference Stats (As of March 2026)
 - **11,000+ upcoming events** in Atlanta metro
 - **2,300+ venues & destinations** mapped
-- **500+ data sources** crawled automatically
+- **1,000+ data sources** crawled automatically
 - **88% data completeness** on event details
 - **90% venue data completeness** with coordinates, neighborhoods, images
 - Coverage across all categories: music, film, theater, food, nightlife, arts, sports, community
@@ -16,7 +16,7 @@
 
 **LostCity turns Atlanta into a searchable, explorable database.**
 
-We've built the most comprehensive event and destination dataset for Atlanta — 11,000+ events from 500+ sources, 2,300+ venues with full metadata, updated daily. We make this available to organizations through white-label portals that feel native to your brand.
+We've built the most comprehensive event and destination dataset for Atlanta — 11,000+ events from 1,000+ sources, 2,300+ venues with full metadata, updated daily. We make this available to organizations through white-label portals that feel native to your brand.
 
 **What we solve:** Every organization serving Atlanta audiences faces the same problem — people want local recommendations, but curating events and destinations is a full-time job. Manual curation doesn't scale, goes stale, and never covers the breadth of what's actually happening in the city.
 
@@ -26,7 +26,7 @@ We've built the most comprehensive event and destination dataset for Atlanta —
 
 ### Why This Works
 
-1. **Comprehensiveness** — We crawl 500+ sources, from major venues to neighborhood bars, dive venues to arenas. We capture what other platforms miss.
+1. **Comprehensiveness** — We crawl 1,000+ sources, from major venues to neighborhood bars, dive venues to arenas. We capture what other platforms miss.
 
 2. **Always Current** — Daily automated crawls mean recommendations never go stale. You're not relying on editorial staff to update a spreadsheet.
 
@@ -65,7 +65,7 @@ We've built the most comprehensive event and destination dataset for Atlanta —
 - Updates daily with new events and venue information
 
 **Social Proof:**
-- "We're working with 2,300+ Atlanta destinations and 500+ event sources — from the Alliance Theatre to neighborhood coffee shops"
+- "We're working with 2,300+ Atlanta destinations and 1,000+ event sources — from the Alliance Theatre to neighborhood coffee shops"
 - "11,000+ events in our database right now, all verified and enriched with times, descriptions, images"
 
 **Call to Action:**
@@ -188,7 +188,7 @@ We've built the most comprehensive event and destination dataset for Atlanta —
 - Chatbot integration: Visitor asks questions, bot queries our API for real-time event results
 
 **Social Proof:**
-- "11,000+ upcoming events from 500+ sources — we crawl everything from the Fox Theatre to neighborhood bars"
+- "11,000+ upcoming events from 1,000+ sources — we crawl everything from the Fox Theatre to neighborhood bars"
 - "2,300+ destinations mapped with coordinates, neighborhoods, and vibe tags"
 - "Daily automated updates — fresher than any manually curated calendar"
 
@@ -229,7 +229,7 @@ We've built the most comprehensive event and destination dataset for Atlanta —
 - Weekly email newsletter: Auto-generated "This Weekend in Atlanta" from portal data
 
 **Social Proof:**
-- "11,000+ events, 500+ sources — we crawl venues your writers don't have time to cover"
+- "11,000+ events, 1,000+ sources — we crawl venues your writers don't have time to cover"
 - "88% of events have full metadata — times, prices, descriptions, images — ready to publish"
 - "We capture recurring events (weekly trivia, residencies) that most calendars miss"
 
@@ -341,7 +341,7 @@ We've built the most comprehensive event and destination dataset for Atlanta —
 
 **"Why this works better than alternatives:"**
 
-1. **Comprehensiveness** — "We crawl 500+ sources. That includes Ticketmaster, but also the neighborhood bar's website that only has 8 events/year."
+1. **Comprehensiveness** — "We crawl 1,000+ sources. That includes Ticketmaster, but also the neighborhood bar's website that only has 8 events/year."
 2. **Always current** — "Daily automated crawls. If a venue adds an event this morning, it's in the system tonight."
 3. **Destination-first** — "We capture bars, restaurants, coffee shops, galleries — not just ticketed events. That's 2,300+ places people want to visit."
 4. **Data quality** — "88% of events have full metadata — time, price, description, image. We use AI to fill gaps when venues don't provide details."
@@ -350,7 +350,7 @@ We've built the most comprehensive event and destination dataset for Atlanta —
 **Proof points:**
 - "11,000+ upcoming events right now"
 - "2,300+ venues mapped with coordinates and images"
-- "500+ data sources crawled automatically"
+- "1,000+ data sources crawled automatically"
 - "90% venue data completeness (address, neighborhood, images)"
 
 ### Close / Next Steps (1 minute)
@@ -383,14 +383,14 @@ We've built the most comprehensive event and destination dataset for Atlanta —
   - "Right — but those are generic to everyone. What we offer is brandable to YOUR audience and filterable to what matters to them. Plus, Google shows everything — including stuff 30 miles away. We let you set boundaries that make sense."
 
 - **If they say "Eventbrite embed" or similar:**
-  - "Totally. Question — does that show events from venues that don't use Eventbrite? Like the neighborhood bar with weekly trivia, or the gallery opening that's just on their website? We aggregate from 500+ sources, not just ticketing platforms."
+  - "Totally. Question — does that show events from venues that don't use Eventbrite? Like the neighborhood bar with weekly trivia, or the gallery opening that's just on their website? We aggregate from 1,000+ sources, not just ticketing platforms."
 
 - **If they say "We built something in-house":**
   - "That's impressive. How much time does your team spend keeping it current? Who handles it when they're on vacation?"
   - Agitate: "We've found that in-house solutions work great initially, but the ongoing maintenance becomes a hidden cost — someone's job becomes 'event curator' whether that was the plan or not."
 
 **Close:**
-"I'm not saying replace what you're doing overnight. But let me show you a side-by-side of what you have vs. what 500+ automated sources looks like. 15 minutes?"
+"I'm not saying replace what you're doing overnight. But let me show you a side-by-side of what you have vs. what 1,000+ automated sources looks like. 15 minutes?"
 
 ---
 
@@ -442,7 +442,7 @@ We've built the most comprehensive event and destination dataset for Atlanta —
 ### Objection 4: "How is this different from [Competitor]?"
 
 **vs. Eventbrite / Ticketing Platforms:**
-- "They're ticketing platforms — they only show events that use their ticketing system. We aggregate from 500+ sources, including venues that have their own ticketing, free events, and places that don't sell tickets at all."
+- "They're ticketing platforms — they only show events that use their ticketing system. We aggregate from 1,000+ sources, including venues that have their own ticketing, free events, and places that don't sell tickets at all."
 - "We capture destinations (bars, restaurants, galleries), not just ticketed events. That's a different use case."
 
 **vs. Google Events / Google Maps:**
@@ -451,7 +451,7 @@ We've built the most comprehensive event and destination dataset for Atlanta —
 
 **vs. Building In-House:**
 - "Totally possible to build. The question is whether event discovery is core to your business or a feature you need."
-- "We've spent 2 years building the crawler infrastructure to pull from 500+ sources, the data enrichment pipeline to fill missing details, and the deduplication logic to avoid showing the same event 5 times. You'd be buying those 2 years of development time."
+- "We've spent 2 years building the crawler infrastructure to pull from 1,000+ sources, the data enrichment pipeline to fill missing details, and the deduplication logic to avoid showing the same event 5 times. You'd be buying those 2 years of development time."
 - "Plus, crawlers break when venues redesign their websites — someone has to maintain them. That's our full-time job."
 
 **vs. Other Event Aggregators:**
@@ -508,7 +508,7 @@ We've built the most comprehensive event and destination dataset for Atlanta —
 **Likely answers and how to respond:**
 
 - **"Do you have case studies?":**
-  - "We're early, so we don't have published case studies yet. But I can walk you through our data quality metrics — 11,000+ events, 88% completeness, 500+ sources."
+  - "We're early, so we don't have published case studies yet. But I can walk you through our data quality metrics — 11,000+ events, 88% completeness, 1,000+ sources."
   - "Or we can do a pilot — you try it for 3 months, we track usage, and you decide if it's worth continuing."
 
 - **"Can I talk to a current customer?":**
@@ -532,7 +532,7 @@ Hi [Name],
 
 [Mutual contact] mentioned you handle digital experience at [Hospital] and might be interested in how we're helping hospital visitors explore Atlanta.
 
-Quick context: We've built a comprehensive database of Atlanta events and destinations (11,000+ events from 500+ sources, 2,300+ venues). We offer this as a white-label portal that organizations can brand for their audiences.
+Quick context: We've built a comprehensive database of Atlanta events and destinations (11,000+ events from 1,000+ sources, 2,300+ venues). We offer this as a white-label portal that organizations can brand for their audiences.
 
 **For hospitals, the use case is simple:** Out-of-town families waiting for patient care often ask "what's nearby?" or "what can I do this evening?" Right now, that either falls on concierge staff to research, or families Google it themselves and get overwhelmed.
 
@@ -558,7 +558,7 @@ Hi [Name],
 
 I've been following [Hotel Name]'s positioning as [insert their brand POV — e.g., "the insider's hotel in Atlanta" or "boutique luxury in Midtown"], and I think we might have a fit.
 
-Quick context: We've built the most comprehensive event and destination database for Atlanta — 11,000+ upcoming events from 500+ sources, 2,300+ venues (everything from rooftop bars to dive venues to coffee shops).
+Quick context: We've built the most comprehensive event and destination database for Atlanta — 11,000+ upcoming events from 1,000+ sources, 2,300+ venues (everything from rooftop bars to dive venues to coffee shops).
 
 We offer this as a white-label portal for hotels, so your guests get curated local recommendations that feel like they're coming from you, not Google.
 
@@ -614,7 +614,7 @@ Hi [Name],
 
 I noticed Discover Atlanta's event calendar and wanted to reach out with a thought.
 
-We've built a database of 11,000+ upcoming Atlanta events from 500+ sources — everything from Fox Theatre shows to neighborhood trivia nights. We offer this as white-label portals or embeddable widgets for tourism sites.
+We've built a database of 11,000+ upcoming Atlanta events from 1,000+ sources — everything from Fox Theatre shows to neighborhood trivia nights. We offer this as white-label portals or embeddable widgets for tourism sites.
 
 **Why I think this might be relevant:**
 - Your team probably can't manually cover 11,000+ events — editorial doesn't scale
@@ -641,7 +641,7 @@ Hi [Name],
 
 [Mutual contact] mentioned you're working on resident engagement initiatives for [City/County] and suggested I reach out.
 
-We've built a comprehensive database of Atlanta metro events and destinations — 11,000+ events from 500+ sources, 2,300+ venues mapped by neighborhood.
+We've built a comprehensive database of Atlanta metro events and destinations — 11,000+ events from 1,000+ sources, 2,300+ venues mapped by neighborhood.
 
 **For cities/counties, the use case is:**
 - Residents complain "there's nothing to do" when there are actually thousands of events
@@ -823,7 +823,7 @@ Best,
 "We charge [price] per month for unlimited users and continuous updates. To put that in perspective:
 - If your team spends 5 hours/week curating events, that's $X,000/year in labor. We're a fraction of that.
 - Building this in-house would take 6-12 months of dev time — we can launch in 2-4 weeks.
-- Generic platforms like Eventbrite are free to embed, but they only show Eventbrite events. We aggregate 500+ sources."
+- Generic platforms like Eventbrite are free to embed, but they only show Eventbrite events. We aggregate 1,000+ sources."
 
 **Offer a pilot:**
 

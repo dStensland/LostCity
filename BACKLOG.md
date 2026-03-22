@@ -1,19 +1,20 @@
 # LostCity Product Roadmap (Historical)
 
-> **Note:** This file is historical. The active roadmap is `DEV_PLAN.md`.
+> **Note:** This file is historical. The active roadmap is `DEV_PLAN.md`. Strategic principles in `STRATEGIC_PRINCIPLES.md`. North star in `.claude/north-star.md`.
 
 Active initiatives, reprioritized for launch proof and sales readiness.
 Updated 2026-02-23 with comprehensive implementation audit.
 
 ---
 
-## Current Operating Decision (2026-02-11, still active)
+## Current Operating Decision (updated 2026-03-21)
 
 1. **Non-negotiable:** strict portal attribution everywhere (events, preferences, activities, enrichments, analytics).
-2. **Launch focus:** increase Atlanta usage and quality to validate the core hypothesis.
-3. **Sales focus:** ship high-quality vertical demos (FORTH first, then 1-2 additional demo verticals).
+2. **Consumer-ready quality:** Atlanta, FORTH, HelpATL, and every new portal ships at "would a stranger recommend this?" quality — not demo quality. A live product with real users IS the sales motion.
+3. **First-party portals are the growth engine:** Family, Adventure, Arts, Sports each produce unique entity types that enrich the shared data layer.
 4. **Defer:** self-serve portal creation/admin expansion until real customers require it.
 5. **Icebox:** Public Developer API until after launch traction.
+6. **Build cost is not a decision variable:** Evaluate features on data readiness, market pull, and network effects — not effort estimates (Principle 12, STRATEGIC_PRINCIPLES.md).
 
 ---
 

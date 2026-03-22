@@ -43,12 +43,14 @@ $ARGUMENTS
 
 ## Design System Context
 
-LostCity has a signature dark, moody aesthetic:
-- Deep burgundy backgrounds with subtle texture
-- Coral (#f97066) primary accent
-- Gold/amber (#d4a574) secondary highlights
-- Glassmorphism effects
-- Category-specific color tints
+LostCity uses a "cinematic minimalism" aesthetic:
+- Solid surfaces with elevation shadows (no backdrop-blur on cards)
+- Subtle atmospheric glow — "city at night," distant and ambient, not decorative neon
+- Three core accents: coral (action/CTA), gold (time/featured), neon-green (free/success)
+- Dark theme surfaces: `--void`, `--night`, `--dusk`, `--twilight`
+- Text hierarchy: `--cream` (primary), `--soft` (secondary), `--muted` (tertiary)
+- Per-portal design languages — each portal has completely different typography, colors, border styles, and corner radii
+- No glassmorphism — glass was replaced by solid surfaces + shadow elevation
 
 ## Instructions
 

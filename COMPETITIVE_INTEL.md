@@ -4,7 +4,7 @@
 
 LostCity is entering a fragmented market where organizations need hyperlocal "what's happening" solutions but currently cobble together inadequate alternatives. **No one dominates the white-label, hyperlocal, comprehensive city discovery space.** Incumbents are either too generic (Google/TripAdvisor), too narrow (event ticketing), too expensive (hotel concierge platforms), or too limited in scope (single-city guides).
 
-LostCity's 500+ crawled sources, destination-first philosophy, and Atlanta-deep knowledge position it uniquely against all competitor categories.
+LostCity's 1,000+ crawled sources, destination-first philosophy, and Atlanta-deep knowledge position it uniquely against all competitor categories.
 
 ---
 
@@ -61,7 +61,7 @@ LostCity's 500+ crawled sources, destination-first philosophy, and Atlanta-deep 
 | **PocketSights** | White-label walking tour apps | GPS-guided tours, tourism-focused | Tours only, not events, narrow use case | $399/mo + $200/tour | Low |
 | **mTrip** | White-label travel guide apps | White-label, mobile, established | Static curated content, not real-time | $5K-20K+/yr | Low-Medium |
 
-**How LostCity Wins**: "Static travel guides go stale the day they launch. We're live, real-time, always updating from 500+ sources."
+**How LostCity Wins**: "Static travel guides go stale the day they launch. We're live, real-time, always updating from 1,000+ sources."
 
 ---
 
@@ -86,7 +86,7 @@ LostCity's 500+ crawled sources, destination-first philosophy, and Atlanta-deep 
 
 ## 3. LostCity's Unique Differentiators
 
-### 1. 500+ Crawled Original Sources
+### 1. 1,000+ Crawled Original Sources
 Most competitors rely on manual curation, user submissions, or aggregated feeds. "We're the only platform that crawls the dive bar's website AND the Fox Theatre."
 
 ### 2. Destinations, Not Just Events
@@ -110,7 +110,7 @@ Hospital employees need different results than hotel guests need different resul
 
 ### Master Positioning Statement
 
-> "LostCity powers white-label city discovery portals for organizations that want to connect their people to local experiences. Unlike generic platforms or limited event tools, we provide comprehensive, real-time, fully branded discovery from 500+ Atlanta sources. We're the city discovery infrastructure you can own."
+> "LostCity powers white-label city discovery portals for organizations that want to connect their people to local experiences. Unlike generic platforms or limited event tools, we provide comprehensive, real-time, fully branded discovery from 1,000+ Atlanta sources. We're the city discovery infrastructure you can own."
 
 ### Positioning by Competitor Type
 
@@ -187,7 +187,7 @@ Hospital employees need different results than hotel guests need different resul
 - Eventbrite only shows Eventbrite-ticketed events
 - Misses free events, neighborhood bars, gallery openings
 - Can't show venues as destinations (only events)
-- "We aggregate 500+ sources, including venues that don't use ticketing platforms"
+- "We aggregate 1,000+ sources, including venues that don't use ticketing platforms"
 
 ### vs. "We'll build it in-house"
 - 2+ years of engineering to replicate crawler infrastructure
@@ -244,6 +244,6 @@ Hospital employees need different results than hotel guests need different resul
 
 ## Key Takeaway
 
-The market is fragmented with no dominant player. LostCity's combination of comprehensive data (500+ sources), destination-first approach, white-label capability, and hyperlocal depth creates a unique position that no competitor currently matches. The biggest "competitor" is the status quo (Google + manual curation), which means the sales conversation is about education, not displacement.
+The market is fragmented with no dominant player. LostCity's combination of comprehensive data (1,000+ sources), destination-first approach, white-label capability, and hyperlocal depth creates a unique position that no competitor currently matches. The biggest "competitor" is the status quo (Google + manual curation), which means the sales conversation is about education, not displacement.
 
 **Win message**: "Enterprise-quality discovery at mid-market prices. The specialist platform that costs less than building it yourself."

@@ -115,6 +115,16 @@ The social layer (Hangs, profiles, friend activity, social proof) exists to get 
 **Do**: Build lightweight coordination tools (Hangs, invites, shared plans). Show social proof that helps decisions ("3 friends have been here"). Respect privacy tiers.
 **Don't**: Build comment systems, reaction feeds, or notification loops designed for retention. Don't optimize for session length. Don't make social features feel like social media.
 
+### 12. Build Cost Is Not a Decision Variable
+Agentic development collapses build cost to near-zero and enables massive parallelism. When a bespoke portal, a new API, and a crawler fleet all take roughly the same agent-hours, "how hard is this to build?" stops being a useful question.
+
+Sequencing decisions should be based on dependency graphs and market readiness, not effort estimates. Five portals can ship in the same week if the data layer supports them — the constraint is review bandwidth and data readiness, not build capacity.
+
+Prioritization shifts from "build complexity vs. business value" to pure signal: Does the data exist? Is there market pull? Does it compound? Build everything that passes the product smell test — the old "is this worth the engineering investment?" filter made sense when engineers were scarce. It doesn't anymore.
+
+**Do**: Evaluate features on data readiness, market pull, distribution leverage, and network effects. Parallelize independent work aggressively.
+**Don't**: Use effort estimates to defer good ideas. Don't sequence work that could be parallel. Don't let "build complexity" influence prioritization — it's a solved problem.
+
 ---
 
 ## Decision Framework
@@ -129,6 +139,7 @@ When evaluating any new feature, ask:
 6. **Is it fixing a root cause or bandaiding a symptom?** (Principle 9)
 7. **Does it produce unique entities that enrich the network?** (Hypothesis 4)
 8. **Does it reduce friction for going out together?** (Hypothesis 5, Principle 11)
+9. **Is effort the real blocker, or is it data/market readiness?** (Principle 12)
 
 If a feature fails on multiple questions, it's probably not aligned with strategy. Challenge it.
 
@@ -149,3 +160,4 @@ If a feature fails on multiple questions, it's probably not aligned with strateg
 - **Portals without unique entity types** — a vertical that's just a filtered event view isn't a content pillar
 - **Social features that feel like social media** — we're coordination infrastructure, not a feed algorithm
 - **Planning as progress** — strategy docs and roadmaps that substitute for shipping code
+- **Using build effort to defer good ideas** — "that would take too long" is almost never true anymore. If the data exists and there's market pull, build it. The real constraints are data readiness and review bandwidth.

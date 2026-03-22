@@ -18,7 +18,7 @@ $ARGUMENTS
 **Site Check:**
 - Homepage rendering
 - Portal pages
-- Feed tabs (Curated, For You, Activity)
+- Feed sections (CityPulse briefing, contextual sections, lineup)
 - Event cards and detail pages
 - Search and filters
 - Map view
@@ -27,7 +27,7 @@ $ARGUMENTS
 
 **Portal Check:**
 - Portal branding and customization
-- All feed sections (Tonight's Picks, Trending, etc.)
+- All feed sections (CityPulse, coming up, browse, experiences)
 - Category filtering
 - Neighborhood filtering
 - Event and venue pages

@@ -31,13 +31,11 @@ RESTful/GraphQL API giving developers programmatic access to Atlanta's event dat
 - Total: $418,800 ARR
 
 **How to Execute:**
-1. Build REST + GraphQL endpoints (already have data, just need API layer)
+1. Build REST + GraphQL endpoints (data layer exists; requires API gateway + auth/key management)
 2. Developer docs site with interactive examples (Stripe-quality)
-3. List on RapidAPI, AWS Marketplace, Zapier integrations
-4. SDKs for JavaScript, Python, Swift
+3. List on RapidAPI, AWS Marketplace, Zapier integrations (requires stable v1 API)
+4. SDKs for JavaScript, Python, Swift (requires stable API contract first)
 5. Freemium model drives adoption, usage-based pricing captures value
-
-**Timeline:** 2-3 months to v1 (API + docs + billing)
 
 ---
 
@@ -69,10 +67,10 @@ Start with music venues (they're data-savvy, marketing-focused):
 - Expand to breweries, restaurants, galleries, theaters
 
 **How to Execute:**
-1. Build analytics dashboard (2-3 months, reuse existing event data)
+1. Build analytics dashboard (requires venue claiming flow so venues can access their own data)
 2. Freemium model: basic stats are free, advanced features are paid
 3. Email campaign to top 200 venues: "Here's how people discover you (for free). Want more insights?"
-4. Upsell to white-label widget: "Embed our event feed on your website, co-branded"
+4. Upsell to white-label widget: "Embed our event feed on your website, co-branded" (requires embed widget product)
 
 ---
 
@@ -98,9 +96,9 @@ Events are free to list (keep the crawlers running), but venues/promoters can pa
 - Scale to 500 events/month = $25,000/mo = $300,000 ARR
 
 **How to Execute:**
-1. Build self-serve sponsorship dashboard (2 months)
+1. Build self-serve sponsorship dashboard (requires Stripe checkout + venue auth)
 2. Email top 50 venues with free $25 credit to test
-3. Add "Boost This Event" button to venue dashboards (from Analytics product)
+3. Add "Boost This Event" button to venue dashboards (requires venue claiming flow)
 4. Promote via social: "Your event is live. Want more eyes on it?"
 
 ---
@@ -163,7 +161,7 @@ Sell intent signals without selling ads. User searches "comedy shows this weeken
 - Add conversion tracking (CPA model) → $240,000 ARR
 
 **How to Execute:**
-1. Integrate Lyft/Uber/Resy APIs (1 month build)
+1. Integrate Lyft/Uber/Resy APIs (requires authenticated user session layer + search intent signals)
 2. A/B test: control group sees no ads, test group sees contextual offers
 3. Track CTR, conversion, user sentiment (don't ruin UX for $5 CPM)
 4. Pitch to local advertisers first (Atlanta restaurants, SpotHero), then national (Lyft, OpenTable)
@@ -251,7 +249,7 @@ JavaScript widget that any website can embed: `<script src="lostcity.com/widget.
 - 500 websites at $49/mo = $24,500/mo = $294,000 ARR
 
 **How to Execute:**
-1. Build embeddable widget (2-3 weeks, similar to Google Maps embed)
+1. Build embeddable widget (requires stable public API layer)
 2. Email all 2,300 crawled venues: "Add events to your website in 5 minutes"
 3. Self-serve signup, Stripe billing
 4. SEO benefit: every embed = backlink to LostCity
@@ -306,7 +304,7 @@ Shareable personality quiz (BuzzFeed-style) that generates personalized event re
 - Email list growth: 50,000 subscribers in 6 months
 - SEO: quiz generates unique result pages for every combination
 
-**Timeline:** 2 weeks to build, $0 marginal cost
+**Dependencies:** Requires sufficient event data volume to generate meaningful personalized results; email capture requires newsletter infrastructure.
 
 ---
 
@@ -328,9 +326,9 @@ Weekly "10 Best Things to Do in Atlanta This Weekend" newsletter, auto-generated
 **Total Revenue Potential:** $180,000 ARR (conservative)
 
 **How to Execute:**
-1. Auto-generate newsletter from top-ranked events (already have the data)
-2. Launch with free newsletter, build to 10k subs in 3 months
-3. Add sponsorships at 25k subs, paid tiers at 50k
+1. Auto-generate newsletter from top-ranked events (event ranking pipeline already exists)
+2. Launch with free newsletter; sponsorships unlock at subscriber scale
+3. Add paid niche tiers once audience segments are proven (not before)
 4. ConvertKit or Beehiiv for platform (built-in monetization tools)
 
 ---
@@ -363,7 +361,7 @@ Auto-generate thousands of SEO-optimized pages from existing event data.
 - Schema markup for events (Google rich snippets)
 - Internal linking between pages (neighborhood → category → specific events)
 
-**Timeline:** 1 month to build page templates, ongoing content generation is automated
+**Dependencies:** Requires sufficient event data depth per category/neighborhood to generate pages that aren't empty; schema markup requires structured event data (already have it).
 
 ---
 
@@ -392,9 +390,9 @@ Add social features to LostCity: user profiles, RSVPs, friend activity, user-gen
 - 2,500 × $5/mo = $12,500/mo = $150,000 ARR
 
 **How to Execute:**
-1. Phase 1: User accounts + saved events (1 month)
-2. Phase 2: Social RSVPs + friend activity (2 months)
-3. Phase 3: User-generated lists + premium tier (1 month)
+1. Phase 1: User accounts + saved events (auth infrastructure required)
+2. Phase 2: Social RSVPs + friend activity (requires active user base for social layer to have value)
+3. Phase 3: User-generated lists + premium tier (requires proven engagement in phases 1-2)
 4. Network effects kick in: more users = more value = more users
 
 ---
@@ -589,74 +587,118 @@ License LostCity tech stack to operators in other cities (Charleston, Savannah, 
 
 ## Prioritization Summary
 
-### Immediate (0-3 months) — $50-100k ARR Potential
-These have low build complexity and fast time-to-revenue:
+The old framework sorted by build complexity and human-team timelines. Both are wrong now — build cost is near-zero and parallelizable. The right variables are: do we have the data, is anyone pulling on this, can we reach buyers, and does it compound?
 
-1. **Event Discovery API** — 2-3 month build, freemium model, developer self-serve
-2. **Sponsored Event Listings** — 2 month build, Stripe checkout, venue self-serve
-3. **Newsletter Empire** — Auto-generated from data, ConvertKit setup, sponsorships at 25k subs
-4. **SEO Content Factory** — 1 month to template, ongoing automated, affiliate revenue
+### Tier 1 — Data Ready, Channel Exists, Start Now
 
-**Combined potential:** $50-100k ARR in first 6 months
+These have the data layer already built and a clear path to first dollar without prerequisites:
 
----
+1. **Newsletter Empire** — Event ranking pipeline exists, data is deep. Distribution channel is zero-cost (organic). First sponsorship revenue unlocks at subscriber scale, not at a build milestone. No dependencies.
+2. **SEO Content Factory** — Event + venue data exists at depth. Schema markup infrastructure is in place. Programmatic pages can be generated today. No sales cycle. Compounds over time via SEO flywheel.
+3. **Sponsored Event Listings** — Event inventory exists. Revenue model is self-serve. Unblocked except for Stripe checkout + venue auth (lowest-dependency unlock in the product stack).
+4. **Data Licensing to Institutions** — No new product to build; requires packaging existing exports and outreach. Explore Georgia, Federal Reserve, BeltLine Inc are all realistic first conversations. Largest single-contract upside relative to effort.
 
-### Near-Term (3-6 months) — $200-400k ARR Potential
-These require partnerships or deeper product builds:
-
-1. **Venue Analytics Dashboard** — 2-3 month build, upsell from free to $99/mo
-2. **White-Label Embed Widgets** — 2-3 week build, self-serve signup
-3. **Delta SkyMiles Partnership** — 3-6 month sales cycle, pilot in Atlanta
-4. **GWCC Convention Center** — Partnership pitch, 2-3 month implementation
-
-**Combined potential:** $200-400k ARR by month 12
+**Why these first:** No net-new infrastructure required. Revenue starts flowing before any partnership closes.
 
 ---
 
-### Long-Term (6-12 months) — $500k-1M+ ARR Potential
-These are platform plays with network effects:
+### Tier 2 — High Pull, but Requires One Unlock
 
-1. **"LostCity Verified" Badge Program** — Viral distribution, 300-1,000 venues
-2. **Community Platform** — Social features, freemium model, 25k active users
-3. **White-Label Franchise Model** — 10 cities, mostly passive revenue
-4. **Data Licensing** — Institutional contracts ($25-150k each)
+These have strong market demand but are blocked on a specific prerequisite:
 
-**Combined potential:** $500k-1M+ ARR by year 2
+1. **Event Discovery API** — Strong developer demand signal (dating apps, AI assistants, travel apps). Blocked on: API gateway, auth/key management, developer docs. Once those exist, freemium flywheel is self-sustaining.
+2. **Venue Analytics Dashboard** — Venues want this. Blocked on: venue claiming flow. Once venues can authenticate, the data layer (searches, impressions, keyword rankings) is already captured.
+3. **White-Label Embed Widgets** — Natural demand from the 2,300 venues already crawled. Blocked on: stable public API layer. Unlocked by the same build as the Event Discovery API.
+4. **GWCC Convention Center** — Sales conversation is ready to have. The product (custom convention landing pages) requires minimal new build. Blocked on: partnership initiation and a lightweight co-branded page template.
+
+**The key unlock:** Venue claiming flow + API layer together unblock Tier 2 items 1-3 simultaneously. Build once, unlock three revenue streams.
+
+---
+
+### Tier 3 — Compounding Network Effects, Requires Audience First
+
+These are the highest-ceiling plays but require scale that doesn't exist yet:
+
+1. **"LostCity Verified" Badge Program** — Viral SEO flywheel. Requires venue claiming flow (shares unlock with Tier 2) and enough brand recognition that venues want the badge.
+2. **Community Platform** — Social layer compounding. Requires active user base before social features have value. Freemium premium tier requires enough users to segment.
+3. **Event Intent Leads / Advertising** — High CPM potential. Requires authenticated users + search intent signals at scale. Premature without an active audience.
+4. **Delta SkyMiles Partnership** — World Cup 2026 makes this timely. Requires sales cycle + pilot product. Should be in active conversation now given the event horizon.
+
+---
+
+### Tier 4 — Strategic, Long Sales Cycles, Worth Pursuing in Parallel
+
+These won't close fast but each is worth one dedicated outreach effort running in background:
+
+1. **White-Label Franchise Model** — Requires proven Atlanta unit economics first. Southeast cities (Charleston, Nashville) are natural next markets.
+2. **MARTA Integration** — NextGen Bus launch (April 2026) and World Cup 2026 are real hooks. Long procurement cycle. Start now for a year-out contract.
+3. **Atlanta-Specific Leverage** (Delta, Film/TV, HBCU, BeltLine) — These are relationship plays. No blocking dependencies — just outreach.
 
 ---
 
 ## Execution Roadmap
 
-**Month 1-2:**
-- Launch Event Discovery API (freemium, developer docs)
-- Build Sponsored Event Listings (self-serve Stripe checkout)
-- Start Newsletter (free flagship, build to 10k subs)
+Month-based sequencing is the wrong unit. The right unit is dependency order — what unlocks what, and what can run in parallel. These tracks are independent and can be worked simultaneously.
 
-**Month 3-4:**
-- SEO Content Factory live (2,760+ auto-generated pages)
-- Venue Analytics Dashboard beta (free tier, upsell to $99/mo)
-- Pitch Delta SkyMiles partnership
+---
 
-**Month 5-6:**
-- White-Label Embed Widgets (self-serve signup)
-- GWCC partnership (custom convention landing pages)
-- Newsletter at 25k subs, add first sponsor ($3k/week)
+**Track A — No Prerequisites (Start Immediately)**
 
-**Month 7-9:**
-- "LostCity Verified" Badge Program launch
-- Community Platform phase 1 (user accounts + saved events)
-- Data licensing outreach (Explore Georgia, Federal Reserve)
+These require no new infrastructure beyond what already exists. They can begin in parallel right now.
 
-**Month 10-12:**
-- Franchise model pilot (Nashville or Charleston)
-- Community Platform phase 2 (social features + premium tier)
-- Scale API to 200+ developers
+- Launch Newsletter (auto-generate from existing event ranking; ConvertKit or Beehiiv setup)
+- SEO Content Factory (build page templates from existing event + category data)
+- Data licensing outreach (Explore Georgia, Federal Reserve, BeltLine Inc, city government)
+- Atlanta-specific relationship plays (Delta, Georgia Film Office, GWCC sales conversation)
 
-**Year 2:**
-- 10-city franchise expansion
-- Delta partnership scaled to all hubs
-- 1,000 venues in Badge Program
-- Community platform hits 25k active users
+Revenue from Track A begins before any partnership closes or any new product ships.
+
+---
+
+**Track B — Unlocked by Venue Claiming Flow**
+
+These three streams share a single prerequisite: venues need to be able to authenticate and access their data. Build venue claiming once, unlock all three simultaneously.
+
+- Sponsored Event Listings (self-serve Stripe checkout per venue)
+- Venue Analytics Dashboard (traffic, keyword insights, competitive benchmarking)
+- "LostCity Verified" Badge Program (claim listing → get badge → backlink flywheel)
+
+**The unlock:** Venue claiming flow + Stripe billing. After this ships, all three can go live in parallel.
+
+---
+
+**Track C — Unlocked by Public API Layer**
+
+The Event Discovery API and the White-Label Embed Widget share the same prerequisite: a stable, authenticated public API with developer docs.
+
+- Event Discovery API (freemium developer self-serve once API gateway + docs exist)
+- White-Label Embed Widgets (JS embed consumes the same public API)
+
+**The unlock:** API gateway + auth/key management + developer docs. Single build, two revenue streams.
+
+---
+
+**Track D — Unlocked by Active User Base**
+
+These require audience scale before the economics work. Start them when engagement data supports the investment.
+
+- Event Intent Leads / Advertising (requires 100k+ monthly users with intent signals)
+- Community Platform premium tier (requires active social layer; social layer requires active users)
+
+Don't rush Track D. Premature social features without an audience create the illusion of product without the substance.
+
+---
+
+**Track E — Long Sales Cycles, Run Concurrently**
+
+These have multi-month sales cycles regardless of build complexity. Start conversations now, close when they close.
+
+- MARTA integration (NextGen Bus April 2026 + World Cup 2026 are the hooks)
+- Delta SkyMiles partnership (World Cup 2026 window is closing; pitch now)
+- GWCC convention partnership (low build complexity; blocked on procurement)
+- White-Label Franchise Model (requires proven Atlanta unit economics first)
+
+The right move is one active conversation per partnership, running in the background while Tracks A-C ship.
 
 ---
 

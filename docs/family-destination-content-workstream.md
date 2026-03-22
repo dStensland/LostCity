@@ -1186,6 +1186,7 @@ This is the current autonomous burn-down queue from the live production audit. I
   - `club-scikidz-atlanta` and the branch-library layer now improved materially through builder-level bulk apply
   - the remaining library residuals are now mostly parking-type completeness, not accessibility or destination-identity gaps
   - `cobb-aquatic-center` is now one of the clearest single-venue practical-depth cleanups
+  - `island-ford-chattahoochee-river-national-recreation-area` now carries live `parking_type='free_lot'` plus real accessibility notes, so it is no longer just a thin trail-day description
 - the free/cheap-value layer is now a meaningful graph instead of a single exception:
   - `high-museum-of-art` carries `free-second-sunday-admission` and `children-5-and-under-free`
   - `atlanta-contemporary` now carries `always-free-gallery-admission`
@@ -1197,6 +1198,7 @@ This is the current autonomous burn-down queue from the live production audit. I
   - `childrens-museum-atlanta` now carries `children-under-1-free-admission` and `museums-for-all-discount-admission`
   - `georgia-aquarium` now carries `children-2-and-under-free` and `community-access-discount-admission`
   - `fernbank-museum` now carries `children-2-and-under-free`
+  - `gwinnett-environmental-heritage-center` now carries `children age 2 and under free admission` and `GEHC members free admission`
 - the next real gaps are now depth gaps, not coverage gaps:
   - more Family specials and cheap/free recurring value
   - more parking / accessibility / practical-note depth across the long tail

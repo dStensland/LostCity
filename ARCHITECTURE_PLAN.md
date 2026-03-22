@@ -64,7 +64,7 @@ This architecture remains directionally correct, but execution order is now cons
 - `api_keys` table exists (scopes, portal_id, expiry)
 
 **Crawler Pipeline** — proven at scale:
-- 500+ sources with auto-enrichment (TMDB, Spotify/Deezer, Google Places)
+- 1,000+ sources with auto-enrichment (TMDB, Spotify/Deezer, Google Places)
 - Validation layer with hard rejections + warnings
 - Series/festival/class rollup logic
 - Crawl health logging and tracking
@@ -292,7 +292,7 @@ Portal `settings.vertical` determines which route group renders. Shares one depl
                                    │
                     ┌──────────────┴──────────────────┐
                     │      Crawler Pipeline            │
-                    │  500+ sources → validate →       │
+                    │  1,000+ sources → validate →     │
                     │  enrich → dedupe → insert         │
                     │  + Venue self-service submissions │
                     └─────────────────────────────────┘
@@ -347,8 +347,10 @@ User visits City Consumer Portal:
 
 ## Implementation Priority
 
-### Phase 1: Attribution + Launch Proof (Weeks 1-4)
-Things that unblock trustworthy sales demos and hypothesis validation.
+Implementation order is driven by dependency graphs and market readiness, not calendar estimates. Each track below can only begin when its prerequisite condition is met. Work within a track is unordered — pick the highest-leverage item first.
+
+### Track A — No Prerequisites
+Can start immediately. No upstream work required.
 
 - [ ] Enforce strict portal attribution across behavior, enrichment, and analytics writes
 - [ ] Ensure cross-portal preference aggregation is portal-attributed and auditable
@@ -356,32 +358,32 @@ Things that unblock trustworthy sales demos and hypothesis validation.
 - [ ] Complete FORTH hotel demo polish with attribution QA
 - [ ] Build one additional high-priority demo vertical (film or hospital)
 
-### Phase 2: Enrichment Layer (Weeks 5-8)
-Things that activate the network effect.
+### Track B — Unlocked by Attribution Completeness
+Attribution (Track A) must be trustworthy before enrichment facts can be reliably sourced. Garbage-in attribution means garbage enrichment provenance.
 
 - [ ] Implement fact vs. preference routing for portal admin actions
 - [ ] Add `contributed_by_portal_id` to global enrichment tables
+
+### Track C — Unlocked by Venue Claiming
+Self-service management and verified badges only make sense once the claiming flow is production-grade and operators have reason to claim.
+
 - [ ] Build venue claiming + self-service management UI
 - [ ] Add "Verified" badge for claimed venues
 - [ ] Venue event submission (bypass crawlers for claimed venues)
 
-### Phase 3: Revenue Infrastructure (Weeks 9-12)
-Things that let you charge money without premature platform expansion.
+### Track D — Unlocked by Customer Pull
+Don't build billing, public API, or developer tooling until someone is ready to pay or integrate. Premature infrastructure is waste.
 
 - [ ] Stripe billing integration (subscriptions per portal)
 - [ ] Plan enforcement at API level
 - [ ] Portal analytics improvements used directly in sales and renewal conversations
-
-### Phase 4: Post-Launch Platform Expansion
-Activate only after launch traction and first customer pull.
-
 - [ ] Public API with key auth, rate limits, docs
 - [ ] Developer portal page
 - [ ] Self-serve Admin Portal onboarding and broader operator productization
 - [ ] Admin Portal analytics dashboard for paying customers
 
-### Phase 5: Scale (Weeks 13+)
-Things that compound the network.
+### Track E — Unlocked by Multi-Portal Scale
+These features only create value once there is an active ecosystem of portals producing enrichment signal and competing for audience attention.
 
 - [ ] Additional vertical layouts (film, hospital, community, fitness)
 - [ ] Venue analytics product (view counts, comparatives)
