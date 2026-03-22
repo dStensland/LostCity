@@ -6,7 +6,7 @@ Popular annual neighborhood festival with arts, parade, and home tours - April.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
@@ -41,30 +41,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
     now = datetime.now()
     year = now.year
 
-    # Inman Park Festival is typically last weekend of April
-    # 2026 dates are April 24-26 based on research
-    if year == 2026:
-        start_date = datetime(2026, 4, 24)
-        end_date = datetime(2026, 4, 26)
-    else:
+    def _last_friday_of_april(yr: int) -> datetime:
         # Last Friday-Sunday of April
-        april_30 = datetime(year, 4, 30)
+        april_30 = datetime(yr, 4, 30)
         days_back = (april_30.weekday() + 3) % 7  # Days back to Friday
-        last_friday = april_30 - __import__("datetime").timedelta(days=days_back)
-        start_date = last_friday
-        end_date = last_friday + __import__("datetime").timedelta(days=2)
+        return april_30 - timedelta(days=days_back)
+
+    # Inman Park Festival is typically last weekend of April
+    last_friday = _last_friday_of_april(year)
+    start_date = last_friday
+    end_date = last_friday + timedelta(days=2)
 
     if end_date < now:
         year += 1
-        if year == 2026:
-            start_date = datetime(2026, 4, 24)
-            end_date = datetime(2026, 4, 26)
-        else:
-            april_30 = datetime(year, 4, 30)
-            days_back = (april_30.weekday() + 3) % 7
-            last_friday = april_30 - __import__("datetime").timedelta(days=days_back)
-            start_date = last_friday
-            end_date = last_friday + __import__("datetime").timedelta(days=2)
+        last_friday = _last_friday_of_april(year)
+        start_date = last_friday
+        end_date = last_friday + timedelta(days=2)
 
     venue_id = get_or_create_venue(VENUE_DATA)
     events_found = 1
