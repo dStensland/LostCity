@@ -219,12 +219,22 @@ export default function FindSearchInput({
     }
   }, [browseMode]);
 
-  // No-results: query has been fetched (not loading) and returned 0 results
+  // Detect synthetic fallback results (injected by buildDirectQueryFallbackResults
+  // when a multi-word query has no real suggestions). These have string IDs like
+  // "search:query:event:live music" and should be treated as no-results so the
+  // trending pills fallback renders instead of the synthetic "Search events" rows.
+  const allResultsSynthetic =
+    search.showSuggestions &&
+    search.suggestions.every(
+      (r) => typeof r.id === "string" && (r.id as string).startsWith("search:query:")
+    );
+
+  // No-results: query has been fetched (not loading) and returned 0 real results
   const hasNoResults =
     search.query.length >= 2 &&
     !search.isLoading &&
-    !search.showSuggestions &&
-    !search.showRecent;
+    !search.showRecent &&
+    (!search.showSuggestions || allResultsSynthetic);
 
   const isSearching = search.query.trim() !== urlSearch || search.isLoading;
   const showDropdown = search.shouldShowDropdown || (search.showDropdown && hasNoResults);
@@ -364,8 +374,8 @@ export default function FindSearchInput({
             </div>
           )}
 
-          {/* Search header with result count */}
-          {search.showSuggestions && (
+          {/* Search header with result count — hidden when all results are synthetic fallbacks */}
+          {search.showSuggestions && !allResultsSynthetic && (
             <div className="px-3 py-2 border-b border-[var(--twilight)] bg-[var(--night)]/45">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs font-mono uppercase tracking-wider text-[var(--soft)] truncate">
@@ -389,8 +399,8 @@ export default function FindSearchInput({
             />
           )}
 
-          {/* Grouped Suggestions */}
-          {search.showSuggestions && (
+          {/* Grouped Suggestions — hidden when all results are synthetic fallbacks */}
+          {search.showSuggestions && !allResultsSynthetic && (
             <div className="p-2">
               {search.groupOrder.map((type, groupIdx) => {
                 const results = search.groupedResults[type as SearchResult["type"]] || [];

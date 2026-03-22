@@ -302,13 +302,29 @@ async function batchFetchVenueIds(filters: {
     // with multiple .or() filters and joins).
     // Use or(start_date >= today, end_date >= today) so recurring events
     // with a past start_date but future end_date (e.g. weekly series) are included.
+    // For multi-word queries like "live music", split into individual tokens and
+    // match any token via OR so results aren't limited to exact phrase matches.
     queries.push(
       (async () => {
         const today = getLocalDateString();
+        const searchWords = filters.searchTerm!.trim().split(/\s+/).filter(Boolean);
+        let titleDescCondition: string;
+        if (searchWords.length > 1) {
+          // OR each word: "live music" → title contains "live" OR "music" (or same for description)
+          const wordConditions = searchWords
+            .map((w) => {
+              const esc = escapePostgrestValue(w);
+              return `title.ilike.%${esc}%,description.ilike.%${esc}%`;
+            })
+            .join(",");
+          titleDescCondition = wordConditions;
+        } else {
+          titleDescCondition = `title.ilike.%${escapedTerm}%,description.ilike.%${escapedTerm}%`;
+        }
         const { data } = await supabase
           .from("events")
           .select("id")
-          .or(`title.ilike.%${escapedTerm}%,description.ilike.%${escapedTerm}%`)
+          .or(titleDescCondition)
           .or(`start_date.gte.${today},end_date.gte.${today}`)
           .limit(500);
         return (data || []).map((e: { id: number }) => e.id);
