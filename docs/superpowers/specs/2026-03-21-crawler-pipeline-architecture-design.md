@@ -325,16 +325,24 @@ After every batch crawl, the pipeline writes a summary to `crawl_health_reports`
 
 ### Source quality score
 
-Each source gets a rolling score (0-100) based on:
-- Consecutive successful runs (+)
-- Event yield stability vs baseline (+/-)
-- Entity lane completeness: declared vs produced (+/-)
-- Rejection rate at validation (-)
-- Days since last successful crawl (-)
+Each source gets a rolling score (0-100). Formula:
 
-Thresholds:
-- Score < 40 → auto-flagged for triage
+```
+score = (
+    run_success_score     * 0.30  +  # 0-100: consecutive successes (100 = 5+ in a row, -20 per failure)
+    yield_stability_score * 0.25  +  # 0-100: abs(actual - baseline) / baseline, inverted (100 = within 10%)
+    lane_completeness     * 0.20  +  # 0-100: % of declared entity lanes that produced data
+    rejection_rate_score  * 0.15  +  # 0-100: 100 - (rejected / total * 100)
+    freshness_score       * 0.10     # 0-100: days since last success (100 = today, -10/day, floor 0)
+)
+```
+
+**Baseline calibration:** Event yield baseline is the rolling 30-day median for each source. New sources (< 5 runs) get a grace period — no yield stability penalty until baseline is established.
+
+**Thresholds (calibrate empirically after 2 weeks of data collection):**
+- Score < 40 → auto-flagged for triage (initial threshold, adjust based on score distribution)
 - Score < 20 → auto-deactivated (extends existing `detect_zero_event_sources()`)
+- Auto-deactivation is disabled until the scoring system has run for 14 days and thresholds are validated against the actual score distribution
 
 ### Alerting
 
