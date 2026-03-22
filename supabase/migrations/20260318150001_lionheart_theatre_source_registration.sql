@@ -7,7 +7,7 @@
 INSERT INTO venues (
     name, slug, address, neighborhood, city, state, zip,
     lat, lng, venue_type, spot_type, website,
-    description, vibes, is_active
+    description, vibes, active
 )
 SELECT
     'Lionheart Theatre Company',
