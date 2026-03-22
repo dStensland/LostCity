@@ -173,6 +173,9 @@ export const TodayView = memo(function TodayView({
   // Determine whether weekend content should be prominently placed (Thu–Sun).
   const weekendProminent = isWeekendProminent();
 
+  // Gate school calendar section — only show if we have >= 5 future events
+  const showSchoolCalendar = calendarData && calendarData.length >= 5;
+
   // Determine whether to show the weather-aware banner.
   // Show only when weather is loaded, no explicit indoor/outdoor chip is active (the chip
   // already does the filtering), and conditions warrant a suggestion.
@@ -231,7 +234,9 @@ export const TodayView = memo(function TodayView({
           </div>
           {/* Right column: Heads Up + Registration */}
           <div className="flex flex-col gap-6">
-            <HeadsUpSection calendarData={calendarData} isLoading={loadingCalendar} />
+            {showSchoolCalendar && (
+              <HeadsUpSection calendarData={calendarData} isLoading={loadingCalendar} />
+            )}
             <RegistrationRadarSection radarData={radarData} isLoading={loadingRadar} />
           </div>
         </div>
@@ -273,7 +278,9 @@ export const TodayView = memo(function TodayView({
         />
 
         {/* Heads Up */}
-        <HeadsUpSection calendarData={calendarData} isLoading={loadingCalendar} />
+        {showSchoolCalendar && (
+          <HeadsUpSection calendarData={calendarData} isLoading={loadingCalendar} />
+        )}
 
         {/* Places to Go — destination carousel (weather-aware, mobile edge bleed) */}
         <PlacesToGoSection
