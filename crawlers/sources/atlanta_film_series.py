@@ -17,11 +17,11 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,10 @@ FESTIVALS = [
     "ATLANTA HORROR FILM FESTIVAL",
     "ATLANTA SPOTLIGHT FILM FESTIVAL",
 ]
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+}
 
 
 def parse_festival_dates(text: str) -> tuple[Optional[str], Optional[str]]:
@@ -87,168 +91,165 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        logger.info(f"Fetching Atlanta Film Series: {BASE_URL}")
+        response = requests.get(BASE_URL, headers=HEADERS, timeout=30)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "lxml")
 
-            logger.info(f"Fetching Atlanta Film Series: {BASE_URL}")
-            page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+        # Extract image alt-text → URL mapping for image_url lookups
+        image_map: dict[str, str] = {}
+        for img in soup.find_all("img", alt=True):
+            alt = img.get("alt", "").strip()
+            src = img.get("src") or img.get("data-src", "")
+            if alt and src and len(alt) > 3:
+                image_map[alt] = src
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+        # Extract event links (title → URL mapping)
+        event_links: dict[str, str] = {}
+        for a in soup.find_all("a", href=True):
+            text = a.get_text(strip=True)
+            href = a["href"]
+            if text and len(text) > 2:
+                if not href.startswith("http"):
+                    href = BASE_URL.rstrip("/") + href if href.startswith("/") else BASE_URL + "/" + href
+                event_links[text.lower()] = href
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+        venue_id = get_or_create_venue(VENUE_DATA)
+        body_text = soup.get_text(separator="\n")
+        lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+        # Parse festivals from page
+        current_festival = None
+        current_description = []
 
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+        for i, line in enumerate(lines):
+            # Check if this is a festival header
+            is_festival = any(f.lower() in line.lower() for f in FESTIVALS)
 
-            # Parse festivals from page
-            current_festival = None
-            current_description = []
+            if is_festival and len(line) > 10:
+                # Save previous festival if we have one
+                if current_festival:
+                    desc_text = " ".join(current_description)
+                    start_date, end_date = parse_festival_dates(desc_text)
 
-            for i, line in enumerate(lines):
-                # Check if this is a festival header
-                is_festival = any(f.lower() in line.lower() for f in FESTIVALS)
+                    if start_date:
+                        events_found += 1
+                        content_hash = generate_content_hash(
+                            current_festival, "Atlanta Film Series", start_date
+                        )
 
-                if is_festival and len(line) > 10:
-                    # Save previous festival if we have one
-                    if current_festival:
-                        desc_text = " ".join(current_description)
-                        start_date, end_date = parse_festival_dates(desc_text)
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            events_updated += 1
+                        else:
+                            # Get specific event URL
+                            event_url = event_links.get(current_festival.lower(), BASE_URL)
 
-                        if start_date:
-                            events_found += 1
-                            content_hash = generate_content_hash(
-                                current_festival, "Atlanta Film Series", start_date
-                            )
+                            event_record = {
+                                "source_id": source_id,
+                                "venue_id": venue_id,
+                                "title": current_festival,
+                                "description": (
+                                    desc_text[:500] if desc_text else None
+                                ),
+                                "start_date": start_date,
+                                "start_time": None,
+                                "end_date": end_date,
+                                "end_time": None,
+                                "is_all_day": False,
+                                "category": "film",
+                                "subcategory": "festival",
+                                "tags": [
+                                    "film",
+                                    "festival",
+                                    "independent",
+                                    "atlanta-film-series",
+                                ],
+                                "price_min": None,
+                                "price_max": None,
+                                "price_note": None,
+                                "is_free": False,
+                                "source_url": event_url,
+                                "ticket_url": event_url if event_url != BASE_URL else None,
+                                "image_url": image_map.get(current_festival),
+                                "raw_text": None,
+                                "extraction_confidence": 0.90,
+                                "is_recurring": False,
+                                "recurrence_rule": None,
+                                "content_hash": content_hash,
+                            }
 
-                            existing = find_event_by_hash(content_hash)
-                            if existing:
-                                events_updated += 1
-                            else:
-                                # Get specific event URL
+                            try:
+                                insert_event(event_record)
+                                events_new += 1
+                                logger.info(
+                                    f"Added: {current_festival} on {start_date}"
+                                )
+                            except Exception as e:
+                                logger.error(
+                                    f"Failed to insert: {current_festival}: {e}"
+                                )
 
-                                event_url = find_event_url(current_festival, event_links, BASE_URL)
+                # Start new festival
+                current_festival = line
+                current_description = []
+            elif current_festival:
+                # Accumulate description
+                current_description.append(line)
 
+        # Process last festival
+        if current_festival and current_description:
+            desc_text = " ".join(current_description)
+            start_date, end_date = parse_festival_dates(desc_text)
 
-                                event_record = {
-                                    "source_id": source_id,
-                                    "venue_id": venue_id,
-                                    "title": current_festival,
-                                    "description": (
-                                        desc_text[:500] if desc_text else None
-                                    ),
-                                    "start_date": start_date,
-                                    "start_time": None,
-                                    "end_date": end_date,
-                                    "end_time": None,
-                                    "is_all_day": False,
-                                    "category": "film",
-                                    "subcategory": "festival",
-                                    "tags": [
-                                        "film",
-                                        "festival",
-                                        "independent",
-                                        "atlanta-film-series",
-                                    ],
-                                    "price_min": None,
-                                    "price_max": None,
-                                    "price_note": None,
-                                    "is_free": False,
-                                    "source_url": event_url,
-                                    "ticket_url": event_url if event_url != BASE_URL else None,
-                                    "image_url": image_map.get(current_festival),
-                                    "raw_text": None,
-                                    "extraction_confidence": 0.90,
-                                    "is_recurring": False,
-                                    "recurrence_rule": None,
-                                    "content_hash": content_hash,
-                                }
+            if start_date:
+                events_found += 1
+                content_hash = generate_content_hash(
+                    current_festival, "Atlanta Film Series", start_date
+                )
 
-                                try:
-                                    insert_event(event_record)
-                                    events_new += 1
-                                    logger.info(
-                                        f"Added: {current_festival} on {start_date}"
-                                    )
-                                except Exception as e:
-                                    logger.error(
-                                        f"Failed to insert: {current_festival}: {e}"
-                                    )
+                existing = find_event_by_hash(content_hash)
+                if not existing:
+                    event_url = event_links.get(current_festival.lower(), BASE_URL)
 
-                    # Start new festival
-                    current_festival = line
-                    current_description = []
-                elif current_festival:
-                    # Accumulate description
-                    current_description.append(line)
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": current_festival,
+                        "description": desc_text[:500] if desc_text else None,
+                        "start_date": start_date,
+                        "start_time": None,
+                        "end_date": end_date,
+                        "end_time": None,
+                        "is_all_day": False,
+                        "category": "film",
+                        "subcategory": "festival",
+                        "tags": [
+                            "film",
+                            "festival",
+                            "independent",
+                            "atlanta-film-series",
+                        ],
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": None,
+                        "is_free": False,
+                        "source_url": event_url,
+                        "ticket_url": event_url if event_url != BASE_URL else None,
+                        "image_url": image_map.get(current_festival),
+                        "raw_text": None,
+                        "extraction_confidence": 0.90,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
 
-            # Process last festival
-            if current_festival and current_description:
-                desc_text = " ".join(current_description)
-                start_date, end_date = parse_festival_dates(desc_text)
-
-                if start_date:
-                    events_found += 1
-                    content_hash = generate_content_hash(
-                        current_festival, "Atlanta Film Series", start_date
-                    )
-
-                    existing = find_event_by_hash(content_hash)
-                    if not existing:
-                        # Get specific event URL
-
-                        event_url = find_event_url(current_festival, event_links, BASE_URL)
-
-
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": current_festival,
-                            "description": desc_text[:500] if desc_text else None,
-                            "start_date": start_date,
-                            "start_time": None,
-                            "end_date": end_date,
-                            "end_time": None,
-                            "is_all_day": False,
-                            "category": "film",
-                            "subcategory": "festival",
-                            "tags": [
-                                "film",
-                                "festival",
-                                "independent",
-                                "atlanta-film-series",
-                            ],
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": False,
-                            "source_url": event_url,
-                            "ticket_url": event_url if event_url != BASE_URL else None,
-                            "image_url": image_map.get(current_festival),
-                            "raw_text": None,
-                            "extraction_confidence": 0.90,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
-
-                        try:
-                            insert_event(event_record)
-                            events_new += 1
-                            logger.info(f"Added: {current_festival} on {start_date}")
-                        except Exception as e:
-                            logger.error(f"Failed to insert: {current_festival}: {e}")
-
-            browser.close()
+                    try:
+                        insert_event(event_record)
+                        events_new += 1
+                        logger.info(f"Added: {current_festival} on {start_date}")
+                    except Exception as e:
+                        logger.error(f"Failed to insert: {current_festival}: {e}")
 
         logger.info(
             f"Atlanta Film Series crawl complete: {events_found} found, {events_new} new"

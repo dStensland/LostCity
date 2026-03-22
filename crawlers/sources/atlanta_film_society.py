@@ -10,11 +10,11 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,10 @@ VENUE_DATA = {
     "zip": "30318",
     "venue_type": "cinema",
     "website": BASE_URL,
+}
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 }
 
 
@@ -75,136 +79,132 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
+        logger.info(f"Fetching Atlanta Film Society: {EVENTS_URL}")
+        response = requests.get(EVENTS_URL, headers=HEADERS, timeout=30)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "lxml")
+
+        # Extract image alt-text → URL mapping
+        image_map: dict[str, str] = {}
+        for img in soup.find_all("img", alt=True):
+            alt = img.get("alt", "").strip()
+            src = img.get("src") or img.get("data-src", "")
+            if alt and src and len(alt) > 3:
+                image_map[alt] = src
+
+        # Extract event links (title → URL mapping)
+        event_links: dict[str, str] = {}
+        for a in soup.find_all("a", href=True):
+            text = a.get_text(strip=True)
+            href = a["href"]
+            if text and len(text) > 2:
+                if not href.startswith("http"):
+                    href = BASE_URL.rstrip("/") + href if href.startswith("/") else BASE_URL + "/" + href
+                event_links[text.lower()] = href
+
+        venue_id = get_or_create_venue(VENUE_DATA)
+        body_text = soup.get_text(separator="\n")
+        lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+
+        # Pattern: Date line followed by event title
+        # "Jan 12, 2026" then "MEMBER Exclusive Screening: 28 YEARS LATER"
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+
+            # Look for date patterns
+            date_match = re.match(
+                r"^(\w{3}\s+\d+,?\s*\d{4}(?:\s*[–-]\s*\w{3}\s+\d+,?\s*\d{4})?)",
+                line,
             )
-            page = context.new_page()
+            if date_match and i + 1 < len(lines):
+                date_str = date_match.group(1)
+                title = lines[i + 1]
 
-            logger.info(f"Fetching Atlanta Film Society: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+                # Skip navigation items
+                skip_words = [
+                    "SKIP TO",
+                    "ABOUT",
+                    "SCREENINGS",
+                    "EDUCATION",
+                    "SUPPORT",
+                    "DONATE",
+                    "LOGIN",
+                    "ACCOUNT",
+                    "UPCOMING",
+                ]
+                if any(w.lower() in title.lower() for w in skip_words):
+                    i += 1
+                    continue
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+                if len(title) < 5:
+                    i += 1
+                    continue
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+                start_date, end_date = parse_date(date_str)
+                if not start_date:
+                    i += 1
+                    continue
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+                # Get description if available
+                description = None
+                if i + 2 < len(lines):
+                    desc_line = lines[i + 2]
+                    if len(desc_line) > 20 and not re.match(
+                        r"^\w{3}\s+\d+", desc_line
+                    ):
+                        description = desc_line[:300]
 
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+                events_found += 1
 
-            # Pattern: Date line followed by event title
-            # "Jan 12, 2026" then "MEMBER Exclusive Screening: 28 YEARS LATER"
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                # Look for date patterns
-                date_match = re.match(
-                    r"^(\w{3}\s+\d+,?\s*\d{4}(?:\s*[–-]\s*\w{3}\s+\d+,?\s*\d{4})?)",
-                    line,
+                content_hash = generate_content_hash(
+                    title, "Atlanta Film Society", start_date
                 )
-                if date_match and i + 1 < len(lines):
-                    date_str = date_match.group(1)
-                    title = lines[i + 1]
 
-                    # Skip navigation items
-                    skip_words = [
-                        "SKIP TO",
-                        "ABOUT",
-                        "SCREENINGS",
-                        "EDUCATION",
-                        "SUPPORT",
-                        "DONATE",
-                        "LOGIN",
-                        "ACCOUNT",
-                        "UPCOMING",
-                    ]
-                    if any(w.lower() in title.lower() for w in skip_words):
-                        i += 1
-                        continue
+                event_url = event_links.get(title.lower(), EVENTS_URL)
 
-                    if len(title) < 5:
-                        i += 1
-                        continue
+                event_record = {
+                    "source_id": source_id,
+                    "venue_id": venue_id,
+                    "title": title,
+                    "description": description,
+                    "start_date": start_date,
+                    "start_time": None,
+                    "end_date": end_date,
+                    "end_time": None,
+                    "is_all_day": False,
+                    "category": "film",
+                    "subcategory": "screening",
+                    "tags": ["film", "screening", "atlanta-film-society"],
+                    "price_min": None,
+                    "price_max": None,
+                    "price_note": None,
+                    "is_free": False,
+                    "source_url": event_url,
+                    "ticket_url": event_url if event_url != EVENTS_URL else None,
+                    "image_url": image_map.get(title),
+                    "raw_text": None,
+                    "extraction_confidence": 0.90,
+                    "is_recurring": False,
+                    "recurrence_rule": None,
+                    "content_hash": content_hash,
+                }
 
-                    start_date, end_date = parse_date(date_str)
-                    if not start_date:
-                        i += 1
-                        continue
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    i += 1
+                    continue
 
-                    # Get description if available
-                    description = None
-                    if i + 2 < len(lines):
-                        desc_line = lines[i + 2]
-                        if len(desc_line) > 20 and not re.match(
-                            r"^\w{3}\s+\d+", desc_line
-                        ):
-                            description = desc_line[:300]
+                try:
+                    insert_event(event_record)
+                    events_new += 1
+                    logger.info(f"Added: {title} on {start_date}")
+                except Exception as e:
+                    logger.error(f"Failed to insert: {title}: {e}")
 
-                    events_found += 1
-
-                    content_hash = generate_content_hash(
-                        title, "Atlanta Film Society", start_date
-                    )
-
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": description,
-                        "start_date": start_date,
-                        "start_time": None,
-                        "end_date": end_date,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "film",
-                        "subcategory": "screening",
-                        "tags": ["film", "screening", "atlanta-film-society"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": event_url,
-                        "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
-                        "image_url": image_map.get(title),
-                        "raw_text": None,
-                        "extraction_confidence": 0.90,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            browser.close()
+            i += 1
 
         logger.info(
             f"Atlanta Film Society crawl complete: {events_found} found, {events_new} new"

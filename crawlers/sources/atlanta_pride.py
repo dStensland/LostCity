@@ -12,7 +12,8 @@ import re
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
@@ -69,6 +70,13 @@ _MONTHS = {
     "november": 11,
     "dec": 12,
     "december": 12,
+}
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36"
+    )
 }
 
 
@@ -217,31 +225,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     page_text = ""
     selected_url = FESTIVAL_URL
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            user_agent=(
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36"
-            ),
-            viewport={"width": 1920, "height": 1080},
-        )
-        page = context.new_page()
-
-        for candidate in (FESTIVAL_URL, BASE_URL):
-            try:
-                page.goto(candidate, wait_until="domcontentloaded", timeout=45000)
-                page.wait_for_timeout(2000)
-                text = page.inner_text("body").strip()
-                if len(text) < 20:
-                    continue
-                page_text = text
-                selected_url = page.url or candidate
-                break
-            except Exception as exc:
-                logger.warning("Atlanta Pride candidate failed (%s): %s", candidate, exc)
-
-        browser.close()
+    for candidate in (FESTIVAL_URL, BASE_URL):
+        try:
+            response = requests.get(candidate, headers=HEADERS, timeout=45)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, "lxml")
+            text = soup.get_text(separator="\n").strip()
+            if len(text) < 20:
+                continue
+            page_text = text
+            selected_url = candidate
+            break
+        except Exception as exc:
+            logger.warning("Atlanta Pride candidate failed (%s): %s", candidate, exc)
 
     if not page_text:
         logger.warning("Atlanta Pride page text unavailable")

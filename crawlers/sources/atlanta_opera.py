@@ -10,11 +10,11 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,10 @@ VENUE_DATA = {
     "zip": "30339",
     "venue_type": "performing_arts",
     "website": "https://www.cobbenergycentre.com",
+}
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 }
 
 
@@ -77,117 +81,100 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        logger.info(f"Fetching Atlanta Opera: {PERFORMANCES_URL}")
+        response = requests.get(PERFORMANCES_URL, headers=HEADERS, timeout=30)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "lxml")
 
-            logger.info(f"Fetching Atlanta Opera: {PERFORMANCES_URL}")
-            page.goto(PERFORMANCES_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+        # Extract image alt-text → URL mapping
+        image_map: dict[str, str] = {}
+        for img in soup.find_all("img", alt=True):
+            alt = img.get("alt", "").strip()
+            src = img.get("src") or img.get("data-src", "")
+            if alt and src and len(alt) > 3:
+                image_map[alt] = src
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+        venue_id = get_or_create_venue(VENUE_DATA)
+        body_text = soup.get_text(separator="\n")
 
-            # Accept cookies if popup appears
+        # Pattern: OPERA NAME\nDATE RANGE\nVENUE\nBUY TICKETS
+        blocks = re.split(
+            r"(?:BUY TICKETS|LEARN MORE)", body_text, flags=re.IGNORECASE
+        )
+
+        for block in blocks:
+            lines = [l.strip() for l in block.strip().split("\n") if l.strip()]
+            if len(lines) < 2:
+                continue
+
+            title = None
+            date_text = None
+
+            for line in lines:
+                # Date pattern
+                if re.search(r"\w+\s+\d+,?\s*\d{4}", line):
+                    date_text = line
+                    continue
+
+                # Title - usually all caps opera name
+                skip = ["PERFORMANCES", "UPCOMING", "PAST", "COBB ENERGY"]
+                if (
+                    not title
+                    and len(line) > 3
+                    and not any(w in line.upper() for w in skip)
+                ):
+                    title = line
+
+            if not title or not date_text:
+                continue
+
+            start_date, end_date = parse_date_range(date_text)
+            if not start_date:
+                continue
+
+            events_found += 1
+
+            content_hash = generate_content_hash(title, "Atlanta Opera", start_date)
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": f"Atlanta Opera: {title}",
+                "description": None,
+                "start_date": start_date,
+                "start_time": None,
+                "end_date": end_date,
+                "end_time": None,
+                "is_all_day": False,
+                "category": "theater",
+                "subcategory": "opera",
+                "tags": ["opera", "performing-arts", "atlanta-opera"],
+                "price_min": None,
+                "price_max": None,
+                "price_note": None,
+                "is_free": False,
+                "source_url": PERFORMANCES_URL,
+                "ticket_url": None,
+                "image_url": image_map.get(title),
+                "raw_text": None,
+                "extraction_confidence": 0.90,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
             try:
-                accept_btn = page.query_selector(
-                    "[class*='accept'], button:has-text('Accept')"
-                )
-                if accept_btn:
-                    accept_btn.click()
-                    page.wait_for_timeout(1000)
-            except Exception:
-                pass
-
-            venue_id = get_or_create_venue(VENUE_DATA)
-
-            body_text = page.inner_text("body")
-
-            # Pattern: OPERA NAME\nDATE RANGE\nVENUE\nBUY TICKETS
-            blocks = re.split(
-                r"(?:BUY TICKETS|LEARN MORE)", body_text, flags=re.IGNORECASE
-            )
-
-            for block in blocks:
-                lines = [l.strip() for l in block.strip().split("\n") if l.strip()]
-                if len(lines) < 2:
-                    continue
-
-                title = None
-                date_text = None
-
-                for line in lines:
-                    # Date pattern
-                    if re.search(r"\w+\s+\d+,?\s*\d{4}", line):
-                        date_text = line
-                        continue
-
-                    # Title - usually all caps opera name
-                    skip = ["PERFORMANCES", "UPCOMING", "PAST", "COBB ENERGY"]
-                    if (
-                        not title
-                        and len(line) > 3
-                        and not any(w in line.upper() for w in skip)
-                    ):
-                        title = line
-
-                if not title or not date_text:
-                    continue
-
-                start_date, end_date = parse_date_range(date_text)
-                if not start_date:
-                    continue
-
-                events_found += 1
-
-                content_hash = generate_content_hash(title, "Atlanta Opera", start_date)
-
-
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": f"Atlanta Opera: {title}",
-                    "description": None,
-                    "start_date": start_date,
-                    "start_time": None,
-                    "end_date": end_date,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": "theater",
-                    "subcategory": "opera",
-                    "tags": ["opera", "performing-arts", "atlanta-opera"],
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": None,
-                    "is_free": False,
-                    "source_url": PERFORMANCES_URL,
-                    "ticket_url": None,
-                    "image_url": image_map.get(title),
-                    "raw_text": None,
-                    "extraction_confidence": 0.90,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                    continue
-
-                try:
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info(f"Added: {title} on {start_date}")
-                except Exception as e:
-                    logger.error(f"Failed to insert: {title}: {e}")
-
-            browser.close()
+                insert_event(event_record)
+                events_new += 1
+                logger.info(f"Added: {title} on {start_date}")
+            except Exception as e:
+                logger.error(f"Failed to insert: {title}: {e}")
 
         logger.info(
             f"Atlanta Opera crawl complete: {events_found} found, {events_new} new"

@@ -11,7 +11,8 @@ import logging
 import re
 from datetime import date, datetime
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
@@ -67,6 +68,13 @@ _MONTHS = {
     "november": 11,
     "dec": 12,
     "december": 12,
+}
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36"
+    )
 }
 
 
@@ -132,25 +140,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     page_text = ""
     selected_url = BASE_URL
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            user_agent=(
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36"
-            ),
-            viewport={"width": 1920, "height": 1080},
-        )
-        page = context.new_page()
-        try:
-            page.goto(BASE_URL, wait_until="domcontentloaded", timeout=45000)
-            page.wait_for_timeout(2500)
-            page_text = page.inner_text("body").strip()
-            selected_url = page.url or BASE_URL
-        except Exception as exc:
-            logger.warning("Atlanta Streets Alive fetch failed: %s", exc)
-        finally:
-            browser.close()
+    try:
+        logger.info(f"Fetching Atlanta Streets Alive: {BASE_URL}")
+        response = requests.get(BASE_URL, headers=HEADERS, timeout=45)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "lxml")
+        page_text = soup.get_text(separator="\n").strip()
+        selected_url = BASE_URL
+    except Exception as exc:
+        logger.warning("Atlanta Streets Alive fetch failed: %s", exc)
 
     if len(page_text) < 20:
         logger.warning("Atlanta Streets Alive page text unavailable")
