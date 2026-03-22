@@ -287,7 +287,7 @@ export function MobileSearchOverlay({
         <button
           type="button"
           onClick={handleCancel}
-          className="flex-shrink-0 text-sm font-medium text-[var(--coral)] px-1 py-2 min-h-[44px] min-w-[44px] flex items-center justify-end"
+          className="flex-shrink-0 text-sm font-medium text-[var(--action-primary)] px-1 py-2 min-h-[44px] min-w-[44px] flex items-center justify-end"
         >
           Cancel
         </button>
