@@ -59,7 +59,8 @@ export default function HoursSection({
   }, [hours, is24Hours]);
 
   // Format time for display (HH:MM -> readable)
-  const formatTime = (time: string): string => {
+  const formatTime = (time: string | null | undefined): string => {
+    if (!time) return "?";
     const [hourStr, minStr] = time.split(":");
     const hour = parseInt(hourStr, 10);
     const min = parseInt(minStr, 10);
