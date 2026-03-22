@@ -7,7 +7,7 @@ discovery:
   enabled: true
   type: list
   urls:
-  - https://laamistadinc.org/volunteer/
+  - https://laamistadinc.org/events/
 detail:
   enabled: true
 data_goals:

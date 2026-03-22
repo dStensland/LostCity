@@ -407,6 +407,8 @@ SOURCE_OVERRIDES = {
     # 404 Day/Weekend — filename uses "four04" to avoid starting with a digit
     "404-day": "sources.four04_day",
     "404-weekend": "sources.four04_weekend",
+    # Civic org slug-to-filename mismatches
+    "partnership-against-domestic-violence": "sources.padv",
 }
 
 

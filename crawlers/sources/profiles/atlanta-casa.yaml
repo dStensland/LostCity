@@ -7,7 +7,7 @@ discovery:
   enabled: true
   type: list
   urls:
-  - https://atlantacasa.org/get-involved/become-a-volunteer/
+  - https://atlantacasa.org/get-involved/event-calendar/
 detail:
   enabled: true
 data_goals:
