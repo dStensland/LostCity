@@ -3,6 +3,8 @@ Shared pytest fixtures for Lost City crawler tests.
 """
 
 import pytest
+
+collect_ignore_glob = ["archive/*"]
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
