@@ -2,8 +2,8 @@
 Crawler for Sports & Social Atlanta at Live! at the Battery.
 
 The old `/events` endpoint is gone. The current site exposes the venue's event
-list through a hydrated Next.js page, while each detail page contains Event
-JSON-LD we can trust for the final record.
+list through a Next.js page. Detail pages contain Event JSON-LD we can trust
+for the final record. Both listing and detail fetches use static HTTP.
 """
 
 from __future__ import annotations
@@ -16,7 +16,6 @@ from typing import Any, Optional
 
 import requests
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
 
 from db import (
     find_existing_event_for_insert,
@@ -226,13 +225,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     venue_id = get_or_create_venue(VENUE_DATA)
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page(viewport={"width": 1440, "height": 2200})
-        page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=60000)
-        page.wait_for_timeout(8000)
-        listing_html = page.content()
-        browser.close()
+    try:
+        listing_resp = requests.get(EVENTS_URL, headers=HEADERS, timeout=45)
+        listing_resp.raise_for_status()
+        listing_html = listing_resp.text
+    except Exception as exc:
+        logger.error("Failed to fetch Sports & Social listing page: %s", exc)
+        return 0, 0, 0
 
     detail_urls = parse_event_links_from_html(listing_html)
     logger.info("Sports & Social listing exposed %s detail URLs", len(detail_urls))

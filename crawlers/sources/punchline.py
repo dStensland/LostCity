@@ -5,6 +5,7 @@ National touring comedy acts in Atlanta.
 Crawls the /shows/ page which has inline comedian bios and images.
 Paginates via ?offset=N (6 shows per page). No individual show detail
 pages exist, so descriptions are extracted directly from the listings.
+Uses static HTTP (requests + BeautifulSoup).
 """
 
 from __future__ import annotations
@@ -24,7 +25,11 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://punchline.com"
 SHOWS_URL = f"{BASE_URL}/shows/"
-MAX_PAGES = 5  # 6 shows per page × 5 = 30 shows max
+MAX_PAGES = 5  # 6 shows per page x 5 = 30 shows max
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+}
 
 VENUE_DATA = {
     "name": "Punchline Comedy Club",
@@ -38,7 +43,7 @@ VENUE_DATA = {
     "website": BASE_URL,
 }
 
-# Venue boilerplate patterns — reject descriptions containing these
+# Venue boilerplate patterns - reject descriptions containing these
 BOILERPLATE_PATTERNS = [
     r"3652 Roswell",
     r"Atlanta's Number One",
@@ -73,11 +78,10 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
     """Parse date from 'Mar 15 - 17' or 'Mar 15' format."""
     try:
         current_year = datetime.now().year
-
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Range: "Mar 15 - 17"
-        range_match = re.match(r"(\w{3})\s+(\d+)\s*[-–]\s*(\d+)", date_text)
+        range_match = re.match(r"(\w{3})\s+(\d+)\s*[-\u2013]\s*(\d+)", date_text)
         if range_match:
             month, day1, day2 = range_match.groups()
             try:
@@ -108,7 +112,6 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
 
 
 def _is_boilerplate(text: str) -> bool:
-    """Check if text contains venue boilerplate that shouldn't be a description."""
     for pattern in BOILERPLATE_PATTERNS:
         if re.search(pattern, text, re.IGNORECASE):
             return True
@@ -116,34 +119,26 @@ def _is_boilerplate(text: str) -> bool:
 
 
 def _clean_description(raw: str) -> Optional[str]:
-    """Clean up a raw description block extracted from the shows page."""
     if not raw or len(raw) < 20:
         return None
 
-    # Remove HTML entities
     text = raw.replace("and#8203;", "").replace("&#8203;", "")
-
-    # Remove social media handles and URLs at the end
-    text = re.sub(r"\s*(Instagram|TikTok|Twitter|Facebook|YouTube|Socials)\s*[-–:]?\s*.*$",
-                  "", text, flags=re.IGNORECASE | re.DOTALL)
-
-    # Remove "For more info visit..." trailing text
+    text = re.sub(
+        r"\s*(Instagram|TikTok|Twitter|Facebook|YouTube|Socials)\s*[-\u2013:]?\s*.*$",
+        "",
+        text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
     text = re.sub(r"\s*For more info\s+visit\s+.*$", "", text, flags=re.IGNORECASE | re.DOTALL)
-
-    # Remove "VIP ACCESS TICKET..." preamble
     text = re.sub(r"^VIP ACCESS TICKET.*?(?:ADD-ON\.?\s*)", "", text, flags=re.IGNORECASE)
-
-    # Remove "Click here..." links
     text = re.sub(r"Click here[^.]*\.\s*", "", text, flags=re.IGNORECASE)
-
     text = text.strip()
+
     if not text or len(text) < 20:
         return None
 
-    # Truncate trailing "..." from page truncation
     if text.endswith("..."):
         text = text[:-3].strip()
-        # Try to end at the last complete sentence
         last_period = text.rfind(".")
         if last_period > len(text) // 2:
             text = text[: last_period + 1]
@@ -163,12 +158,10 @@ def _parse_show_blocks(body_text: str) -> list[dict]:
     - Description text (comedian bio)
     """
     shows = []
-
-    # Split by "Buy Tickets!" (the button text between show blocks)
     blocks = re.split(r"Buy Tickets!|BUY TICKETS", body_text, flags=re.IGNORECASE)
 
     for block in blocks:
-        lines = [l.strip() for l in block.strip().split("\n") if l.strip()]
+        lines = [line.strip() for line in block.strip().split("\n") if line.strip()]
         if len(lines) < 2:
             continue
 
@@ -177,30 +170,23 @@ def _parse_show_blocks(body_text: str) -> list[dict]:
         description_lines = []
 
         for line in lines:
-            # Date pattern: "Mar 4 | Atlanta" or "Mar 5 - 7 | Atlanta"
-            date_match = re.match(
-                r"(\w{3}\s+\d+(?:\s*[-–]\s*\d+)?)\s*\|\s*Atlanta", line
-            )
+            date_match = re.match(r"(\w{3}\s+\d+(?:\s*[-\u2013]\s*\d+)?)\s*\|\s*Atlanta", line)
             if date_match:
                 date_text = date_match.group(1)
                 continue
 
             if not title:
-                # Title must come AFTER a date line
                 if not date_text:
                     continue
-                # Title: first line after date with reasonable length
                 if len(line) > 3:
                     title = line
                     continue
             else:
-                # After title: collect ALL remaining lines as description
                 description_lines.append(line)
 
         if not title or not date_text:
             continue
 
-        # Join description lines
         raw_desc = " ".join(description_lines).strip()
         description = _clean_description(raw_desc)
 
@@ -213,6 +199,17 @@ def _parse_show_blocks(body_text: str) -> list[dict]:
     return shows
 
 
+def _extract_image_map(soup: BeautifulSoup) -> dict[str, str]:
+    """Extract alt-text to image URL mapping from a parsed page."""
+    image_map: dict[str, str] = {}
+    for img in soup.find_all("img", alt=True):
+        alt = (img.get("alt") or "").strip()
+        src = img.get("src") or img.get("data-src") or ""
+        if alt and src and len(alt) > 3:
+            image_map[alt] = src
+    return image_map
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Punchline events from the /shows/ page."""
     source_id = source["id"]
@@ -220,31 +217,26 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    _HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-    }
-
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
         all_shows: list[dict] = []
         image_map: dict[str, str] = {}
 
-        # Paginate through /shows/ pages
         for page_num in range(MAX_PAGES):
             offset = page_num * 6
             url = SHOWS_URL if offset == 0 else f"{SHOWS_URL}?offset={offset}"
 
             logger.info(f"Fetching Punchline shows page {page_num + 1}: {url}")
-            resp = requests.get(url, headers=_HEADERS, timeout=30)
-            resp.raise_for_status()
-            soup = BeautifulSoup(resp.text, "html.parser")
+            try:
+                resp = requests.get(url, headers=HEADERS, timeout=30)
+                resp.raise_for_status()
+            except Exception as exc:
+                logger.warning(f"Failed to fetch Punchline page {page_num + 1}: {exc}")
+                break
 
-            # Extract title→image map from this page
-            for img in soup.find_all("img", alt=True):
-                alt = (img.get("alt") or "").strip()
-                src = img.get("src") or img.get("data-src") or ""
-                if alt and src and len(alt) > 3:
-                    image_map[alt] = src
+            soup = BeautifulSoup(resp.text, "html.parser")
+            page_images = _extract_image_map(soup)
+            image_map.update(page_images)
 
             body_text = soup.get_text(separator="\n")
             shows = _parse_show_blocks(body_text)
@@ -272,10 +264,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 continue
 
             events_found += 1
-
-            content_hash = generate_content_hash(
-                title, "Punchline Comedy Club", start_date
-            )
+            content_hash = generate_content_hash(title, "Punchline Comedy Club", start_date)
 
             event_record = {
                 "source_id": source_id,
@@ -317,7 +306,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             except Exception as e:
                 logger.error(f"Failed to insert: {title}: {e}")
 
-        logger.info(f"Punchline crawl complete: {events_found} found, {events_new} new, {events_updated} updated")
+        logger.info(
+            f"Punchline crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Punchline: {e}")
