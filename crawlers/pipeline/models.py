@@ -91,3 +91,57 @@ class SourceProfile(BaseModel):
     discovery: DiscoveryConfig = Field(default_factory=DiscoveryConfig)
     detail: DetailConfig = Field(default_factory=DetailConfig)
     defaults: DefaultsConfig = Field(default_factory=DefaultsConfig)
+
+
+# --- v2 Profile Schema ---
+
+
+class FetchConfigV2(BaseModel):
+    method: Literal["static", "playwright", "api"] = "static"
+    urls: list[str] = Field(default_factory=list)
+    wait_for: Optional[str] = None
+    scroll: bool = False
+
+
+class ParseConfigV2(BaseModel):
+    method: Literal["llm", "jsonld", "api_adapter", "custom"] = "llm"
+    module: Optional[str] = None
+    adapter: Optional[str] = None
+
+
+class VenueConfig(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    neighborhood: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip: Optional[str] = None
+    venue_type: Optional[str] = None
+    website: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+
+
+class ScheduleConfig(BaseModel):
+    frequency: Literal["daily", "weekly", "biweekly", "monthly"] = "daily"
+    priority: Literal["high", "normal", "low"] = "normal"
+
+
+class DefaultsConfigV2(BaseModel):
+    category: Optional[str] = None
+    tags: list[str] = Field(default_factory=list)
+
+
+class SourceProfileV2(BaseModel):
+    version: int = 2
+    slug: str
+    name: str
+    city: str = "atlanta"
+    portal_id: Optional[str] = None
+    fetch: FetchConfigV2 = Field(default_factory=FetchConfigV2)
+    parse: ParseConfigV2 = Field(default_factory=ParseConfigV2)
+    entity_lanes: list[str] = Field(default_factory=lambda: ["events"])
+    venue: VenueConfig = Field(default_factory=VenueConfig)
+    defaults: DefaultsConfigV2 = Field(default_factory=DefaultsConfigV2)
+    schedule: ScheduleConfig = Field(default_factory=ScheduleConfig)
+    detail: DetailConfig = Field(default_factory=DetailConfig)
