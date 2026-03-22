@@ -124,6 +124,96 @@ export function applySourceDiversity(
   return [...primary, ...overflow];
 }
 
+// ---------------------------------------------------------------------------
+// Civic intent filter (HelpATL / community vertical)
+// ---------------------------------------------------------------------------
+
+/**
+ * Tags that indicate an event has genuine civic intent.
+ * Any one of these causes the event to pass the filter.
+ */
+const CIVIC_SIGNAL_TAGS = new Set([
+  "volunteer",
+  "government",
+  "public-meeting",
+  "civic-engagement",
+  "advocacy",
+  "school-board",
+  "npu",
+  "zoning",
+  "volunteer-outdoors",
+  "education",
+  "public-comment",
+  "civic",
+  "election",
+  "voter-registration",
+  "transit",
+  "food-security",
+  "housing",
+  "environment",
+  "health",
+  "marta-army",
+  "mutual-aid",
+  "town-hall",
+  "activism",
+  "mobilize",
+  "land-use",
+  "urban-planning",
+  "design-review",
+  "trees",
+  "planning",
+]);
+
+/**
+ * Tags that signal the event is entertainment rather than civic activity.
+ * Any one of these causes a community-category event to be rejected
+ * (unless it also has a civic signal tag, which takes precedence).
+ */
+const ENTERTAINMENT_SIGNAL_TAGS = new Set([
+  "viewing-party",
+  "happy-hour",
+  "bar-games",
+  "karaoke",
+  "brunch",
+  "nightlife",
+  "trivia",
+  "dj",
+  "drag",
+  "bar-poker",
+  "freeroll",
+]);
+
+/**
+ * Filter community-category events for civic intent.
+ *
+ * Applied only on community-vertical portals (HelpATL). Non-community
+ * category events always pass. Community-category events are scored:
+ * - Has a civic signal tag → pass
+ * - Has an entertainment signal tag (and no civic override) → reject
+ * - No signal either way → pass (benefit of the doubt)
+ *
+ * This removes watch parties and bar events mislabeled as "community"
+ * while preserving actual volunteer shifts, government meetings, and
+ * civic engagement events.
+ */
+export function filterCivicIntent(events: FeedEventData[]): FeedEventData[] {
+  return events.filter((event) => {
+    // Non-community categories always pass (portal scope already handles them)
+    if (event.category !== "community") return true;
+
+    const tags = event.tags as string[] | null;
+
+    // Has a civic signal tag → always pass
+    if (tags?.some((t) => CIVIC_SIGNAL_TAGS.has(t))) return true;
+
+    // Has an entertainment signal tag → reject
+    if (tags?.some((t) => ENTERTAINMENT_SIGNAL_TAGS.has(t))) return false;
+
+    // No signal either way → benefit of the doubt
+    return true;
+  });
+}
+
 /** Merge a base event array with per-interest supplemental results, deduplicating by ID */
 export function mergeEventPools(
   base: FeedEventData[],
@@ -305,8 +395,16 @@ export async function fetchEventPools(
     }
   }
 
+  // Apply civic intent filter for community-vertical portals (e.g. HelpATL).
+  // Removes entertainment events mislabeled as "community" (watch parties, bar events).
+  const isCivicPortal = ctx.manifest.vertical === "community";
+  let processedTodayRaw = todayRaw;
+  if (isCivicPortal) {
+    processedTodayRaw = filterCivicIntent(todayRaw);
+  }
+
   return {
-    todayEvents: postProcessEvents(applySourceDiversity(todayRaw)),
+    todayEvents: postProcessEvents(applySourceDiversity(processedTodayRaw)),
     trendingEvents: postProcessEvents((trendingResult.data || []) as unknown as FeedEventData[]),
     horizonEvents: dedupeEventsById(
       filterOutInactiveVenueEvents((horizonResult.data || []) as unknown as FeedEventData[]),
