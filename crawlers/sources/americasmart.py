@@ -14,8 +14,9 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 from urllib.parse import urlsplit, urlunsplit
 
+import requests
+
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
 
 from db import (
     find_existing_event_for_insert,
@@ -295,21 +296,16 @@ def parse_market_sections(html_text: str, today: date | None = None) -> list[dic
 
 
 def fetch_market_dates_html() -> str:
-    with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True)
-        context = browser.new_context(
-            user_agent=USER_AGENT,
-            viewport={"width": 1440, "height": 2200},
-        )
-        page = context.new_page()
-        page.goto(MARKET_DATES_URL, wait_until="networkidle", timeout=90000)
-        html = page.content()
-        browser.close()
-        return html
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    response = requests.get(MARKET_DATES_URL, headers=headers, timeout=30)
+    response.raise_for_status()
+    return response.text
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl official upcoming Atlanta Market windows from the market dates page."""
+    """Crawl official upcoming Atlanta Market windows from the market dates page via static HTTP."""
     source_id = source["id"]
     events_found = 0
     events_new = 0

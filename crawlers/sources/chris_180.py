@@ -5,7 +5,7 @@ Formerly Chris Kids, providing trauma-informed care for children, youth, and fam
 in crisis. Events include CHRIStal Ball gala, job fairs, volunteer events, and community
 training sessions.
 
-Uses Playwright to scrape JavaScript-rendered events page.
+Static HTML fetched via requests.
 """
 
 from __future__ import annotations
@@ -15,7 +15,8 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+
 from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
@@ -178,7 +179,7 @@ def is_public_event(title: str, description: str) -> bool:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Chris 180 events using Playwright."""
+    """Crawl Chris 180 events."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -187,168 +188,157 @@ def crawl(source: dict) -> tuple[int, int, int]:
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-            )
-            page = context.new_page()
+        logger.info(f"Fetching Chris 180 events: {EVENTS_URL}")
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        response = requests.get(EVENTS_URL, headers=headers, timeout=30)
+        response.raise_for_status()
+        html = response.text
+        soup = BeautifulSoup(html, "html.parser")
 
-            logger.info(f"Fetching Chris 180 events: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)  # Wait for JS to render
+        # Look for event containers (common WordPress patterns)
+        event_containers = []
 
-            # Get page HTML
-            html = page.content()
-            soup = BeautifulSoup(html, "html.parser")
+        # Try various selectors
+        for selector in [
+            ".tribe-events-list-event-row",
+            ".event",
+            ".event-item",
+            "article.post",
+            ".entry",
+            "[class*='event']",
+        ]:
+            found = soup.select(selector)
+            if found and len(found) > 0:
+                event_containers = found
+                logger.info(f"Found {len(event_containers)} events with selector '{selector}'")
+                break
 
-            # Look for event containers (common WordPress patterns)
-            event_containers = []
+        if not event_containers:
+            logger.warning("No event containers found on page")
+            return 0, 0, 0
 
-            # Try various selectors
-            for selector in [
-                ".tribe-events-list-event-row",
-                ".event",
-                ".event-item",
-                "article.post",
-                ".entry",
-                "[class*='event']",
-            ]:
-                found = soup.select(selector)
-                if found and len(found) > 0:
-                    event_containers = found
-                    logger.info(f"Found {len(event_containers)} events with selector '{selector}'")
-                    break
+        seen_events = set()
 
-            if not event_containers:
-                logger.warning("No event containers found on page")
-                browser.close()
-                return 0, 0, 0
-
-            seen_events = set()
-
-            for container in event_containers:
-                try:
-                    # Extract title
-                    title_elem = container.find(["h2", "h3", "h4", ".event-title", ".entry-title"])
-                    if not title_elem:
-                        continue
-
-                    title = title_elem.get_text(strip=True)
-                    if not title or len(title) < 5:
-                        continue
-
-                    # Extract date/time
-                    date_elem = container.find([".event-date", ".tribe-event-date-start", "time", ".date"])
-                    if not date_elem:
-                        # Try to find date in text
-                        text = container.get_text()
-                        date_match = re.search(
-                            r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}",
-                            text,
-                            re.I,
-                        )
-                        if date_match:
-                            date_str = date_match.group(0)
-                        else:
-                            continue
-                    else:
-                        date_str = date_elem.get("datetime") or date_elem.get_text(strip=True)
-
-                    start_date, start_time = parse_datetime(date_str)
-                    if not start_date:
-                        logger.debug(f"Could not parse date for: {title}")
-                        continue
-
-                    # Extract description
-                    desc_elem = container.find([".description", ".event-description", ".entry-summary", "p"])
-                    description = strip_html(str(desc_elem))[:500] if desc_elem else ""
-
-                    # Extract URL
-                    link_elem = container.find("a", href=True)
-                    event_url = link_elem["href"] if link_elem else EVENTS_URL
-                    if event_url.startswith("/"):
-                        event_url = f"{BASE_URL}{event_url}"
-
-                    # Extract image
-                    img_elem = container.find("img", src=True)
-                    image_url = img_elem["src"] if img_elem else None
-                    if image_url and image_url.startswith("/"):
-                        image_url = f"{BASE_URL}{image_url}"
-
-                    # Check if public
-                    if not is_public_event(title, description):
-                        logger.debug(f"Skipping internal event: {title}")
-                        continue
-
-                    # Dedupe
-                    event_key = f"{title}|{start_date}"
-                    if event_key in seen_events:
-                        continue
-                    seen_events.add(event_key)
-
-                    events_found += 1
-
-                    # Generate content hash
-                    content_hash = generate_content_hash(
-                        title, VENUE_DATA["name"], start_date
-                    )
-
-                    # Check for existing
-
-                    # Determine category and tags
-                    category, subcategory, tags = determine_category_and_tags(title, description)
-
-                    # Check if free
-                    cost_text = f"{title} {description}".lower()
-                    is_free = "free" in cost_text or "no cost" in cost_text or "complimentary" in cost_text
-
-                    # Build event record
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title[:200],
-                        "description": description if description else None,
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": category,
-                        "subcategory": subcategory,
-                        "tags": tags,
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": is_free,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_url,
-                        "raw_text": f"{title} {description}"[:500],
-                        "extraction_confidence": 0.85,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title[:50]}... on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                except Exception as e:
-                    logger.error(f"Error processing event: {e}")
+        for container in event_containers:
+            try:
+                # Extract title
+                title_elem = container.find(["h2", "h3", "h4", ".event-title", ".entry-title"])
+                if not title_elem:
                     continue
 
-            browser.close()
+                title = title_elem.get_text(strip=True)
+                if not title or len(title) < 5:
+                    continue
+
+                # Extract date/time
+                date_elem = container.find([".event-date", ".tribe-event-date-start", "time", ".date"])
+                if not date_elem:
+                    # Try to find date in text
+                    text = container.get_text()
+                    date_match = re.search(
+                        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}",
+                        text,
+                        re.I,
+                    )
+                    if date_match:
+                        date_str = date_match.group(0)
+                    else:
+                        continue
+                else:
+                    date_str = date_elem.get("datetime") or date_elem.get_text(strip=True)
+
+                start_date, start_time = parse_datetime(date_str)
+                if not start_date:
+                    logger.debug(f"Could not parse date for: {title}")
+                    continue
+
+                # Extract description
+                desc_elem = container.find([".description", ".event-description", ".entry-summary", "p"])
+                description = strip_html(str(desc_elem))[:500] if desc_elem else ""
+
+                # Extract URL
+                link_elem = container.find("a", href=True)
+                event_url = link_elem["href"] if link_elem else EVENTS_URL
+                if event_url.startswith("/"):
+                    event_url = f"{BASE_URL}{event_url}"
+
+                # Extract image
+                img_elem = container.find("img", src=True)
+                image_url = img_elem["src"] if img_elem else None
+                if image_url and image_url.startswith("/"):
+                    image_url = f"{BASE_URL}{image_url}"
+
+                # Check if public
+                if not is_public_event(title, description):
+                    logger.debug(f"Skipping internal event: {title}")
+                    continue
+
+                # Dedupe
+                event_key = f"{title}|{start_date}"
+                if event_key in seen_events:
+                    continue
+                seen_events.add(event_key)
+
+                events_found += 1
+
+                # Generate content hash
+                content_hash = generate_content_hash(
+                    title, VENUE_DATA["name"], start_date
+                )
+
+                # Determine category and tags
+                category, subcategory, tags = determine_category_and_tags(title, description)
+
+                # Check if free
+                cost_text = f"{title} {description}".lower()
+                is_free = "free" in cost_text or "no cost" in cost_text or "complimentary" in cost_text
+
+                # Build event record
+                event_record = {
+                    "source_id": source_id,
+                    "venue_id": venue_id,
+                    "title": title[:200],
+                    "description": description if description else None,
+                    "start_date": start_date,
+                    "start_time": start_time,
+                    "end_date": None,
+                    "end_time": None,
+                    "is_all_day": False,
+                    "category": category,
+                    "subcategory": subcategory,
+                    "tags": tags,
+                    "price_min": None,
+                    "price_max": None,
+                    "price_note": None,
+                    "is_free": is_free,
+                    "source_url": event_url,
+                    "ticket_url": event_url,
+                    "image_url": image_url,
+                    "raw_text": f"{title} {description}"[:500],
+                    "extraction_confidence": 0.85,
+                    "is_recurring": False,
+                    "recurrence_rule": None,
+                    "content_hash": content_hash,
+                }
+
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    continue
+
+                try:
+                    insert_event(event_record)
+                    events_new += 1
+                    logger.info(f"Added: {title[:50]}... on {start_date}")
+                except Exception as e:
+                    logger.error(f"Failed to insert: {title}: {e}")
+
+            except Exception as e:
+                logger.error(f"Error processing event: {e}")
+                continue
 
         logger.info(
             f"Chris 180 crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

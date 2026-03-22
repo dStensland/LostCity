@@ -23,7 +23,8 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+
 from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
@@ -147,32 +148,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        logger.info(f"Fetching Atlanta IQM2 calendar: {CALENDAR_URL}")
 
-            logger.info(f"Fetching Atlanta IQM2 calendar: {CALENDAR_URL}")
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+            response = requests.get(CALENDAR_URL, headers=headers, timeout=30)
+            response.raise_for_status()
+            html_content = response.text
 
-            try:
-                response = page.goto(CALENDAR_URL, wait_until="domcontentloaded", timeout=30000)
-                if not response or response.status >= 400:
-                    logger.error(f"Calendar returned status {response.status if response else 'none'}")
-                    browser.close()
-                    return 0, 0, 0
-
-                page.wait_for_timeout(3000)
-                html_content = page.content()
-
-            except Exception as e:
-                logger.error(f"Failed to load calendar page: {e}")
-                browser.close()
-                return 0, 0, 0
-            finally:
-                browser.close()
+        except Exception as e:
+            logger.error(f"Failed to load calendar page: {e}")
+            return 0, 0, 0
 
         soup = BeautifulSoup(html_content, "html.parser")
 
