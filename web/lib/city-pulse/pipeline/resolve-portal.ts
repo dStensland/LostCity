@@ -19,6 +19,7 @@ import {
   ALL_INTEREST_IDS,
   DEFAULT_INTEREST_IDS,
 } from "@/lib/city-pulse/interests";
+import { getCivicQuickLinks } from "@/lib/city-pulse/quick-links";
 
 // ---------------------------------------------------------------------------
 // Internal types
@@ -228,6 +229,12 @@ export async function resolvePortalContext(
     ? opts.interestsParam.split(",").filter((id) => ALL_INTEREST_IDS.includes(id))
     : [...DEFAULT_INTEREST_IDS];
 
+  // Apply content policy: replace quick links for civic portals
+  const effectiveFeedContext =
+    manifest.contentPolicy.quickLinkMode === "civic"
+      ? { ...feedContext, quick_links: getCivicQuickLinks(canonicalSlug) }
+      : feedContext;
+
   const context: PipelineContext = {
     portalData,
     canonicalSlug,
@@ -248,7 +255,7 @@ export async function resolvePortalContext(
     portalDay,
     portalHour,
     requestedInterests,
-    feedContext,
+    feedContext: effectiveFeedContext,
     manifest,
     hasSubscribedSources,
     applyPortalScope,

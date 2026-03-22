@@ -362,6 +362,49 @@ function applyWeatherOverrides(
 // Public API
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Civic quick links (HelpATL / community vertical)
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate civic quick links for community/volunteer portals.
+ * These are static — they don't vary by time or weather.
+ */
+export function getCivicQuickLinks(portalSlug: string): QuickLink[] {
+  return [
+    {
+      label: "Volunteer Today",
+      icon: "HandHeart",
+      href: buildHref(portalSlug, { categories: "community", date: "today" }),
+      accent_color: "var(--neon-green)",
+    },
+    {
+      label: "City Meetings",
+      icon: "Bank",
+      href: buildHref(portalSlug, { categories: "government", date: "this_week" }),
+      accent_color: "var(--gold)",
+    },
+    {
+      label: "School Board",
+      icon: "GraduationCap",
+      href: buildHref(portalSlug, { categories: "education", date: "this_week" }),
+      accent_color: "var(--neon-cyan)",
+    },
+    {
+      label: "Groups",
+      icon: "UsersThree",
+      href: buildHref(portalSlug, { categories: "community", type: "events" }),
+      accent_color: "var(--coral)",
+    },
+    {
+      label: "Support",
+      icon: "Lifebuoy",
+      href: buildHref(portalSlug, { categories: "social_services", date: "this_week" }),
+      accent_color: "#A78BFA",
+    },
+  ];
+}
+
 /**
  * Generate contextual quick links for the current moment.
  * Returns 4-6 links tailored to time of day, day of week, and weather.

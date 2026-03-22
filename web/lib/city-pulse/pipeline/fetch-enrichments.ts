@@ -72,12 +72,15 @@ export async function fetchPhaseAEnrichments(
   supabase: SupabaseClient,
   ctx: PipelineContext,
 ): Promise<PhaseAEnrichments> {
+  const skipSpecials = ctx.manifest.contentPolicy.skipEnrichments.specials;
+  const skipWeatherVenues = ctx.manifest.contentPolicy.skipEnrichments.weatherVenues;
+
   const weatherFilter = ctx.feedContext.weather
     ? getWeatherVenueFilter(ctx.feedContext.weather as WeatherData)
     : null;
 
   // Build weather venue query
-  const weatherVenuePromise: Promise<{ data: unknown[] | null }> = weatherFilter
+  const weatherVenuePromise: Promise<{ data: unknown[] | null }> = !skipWeatherVenues && weatherFilter
     ? (() => {
         const typesList = weatherFilter.venue_types.join(",");
         const vibesList = weatherFilter.vibes.join(",");
@@ -102,22 +105,24 @@ export async function fetchPhaseAEnrichments(
     : Promise.resolve({ data: [] });
 
   // Specials query
-  const specialsPromise = (() => {
-    let q = supabase
-      .from("venue_specials")
-      .select(`
+  const specialsPromise = skipSpecials
+    ? Promise.resolve({ data: [] })
+    : (() => {
+        let q = supabase
+          .from("venue_specials")
+          .select(`
         id, venue_id, title, type, description,
         days_of_week, time_start, time_end,
         start_date, end_date, price_note,
         venue:venues!inner(id, name, slug, neighborhood, venue_type, image_url, city)
       `)
-      .eq("is_active", true)
-      .eq("venue.active", true);
-    if (ctx.portalCity) {
-      q = q.ilike("venue.city", `%${ctx.portalCity}%`);
-    }
-    return q.limit(50);
-  })();
+          .eq("is_active", true)
+          .eq("venue.active", true);
+        if (ctx.portalCity) {
+          q = q.ilike("venue.city", `%${ctx.portalCity}%`);
+        }
+        return q.limit(50);
+      })();
 
   const [
     weatherVenuesResult,
