@@ -127,17 +127,21 @@ def mock_get_venue_by_id_cached():
 
 
 @pytest.fixture(autouse=True)
-def mock_enrichment_enqueue():
+def mock_enrichment_enqueue(request):
     """Mock db.enrichment_queue.enqueue_task to a no-op by default.
 
     Enrichment (TMDB/Spotify/blurhash) is now async — tasks are enqueued after
     insert rather than executing inline. Without this mock, _step_enqueue_enrichment
     calls enqueue_task which attempts a DB insert, corrupting mock execute() call
     counts in insert tests.
-    Tests that need to assert enqueue behavior can access the mock via:
-        with patch("db.enrichment_queue.enqueue_task") as mock_enqueue:
-            ...
+
+    Skipped for test_enrichment_queue.py and test_enrichment_worker.py — those
+    tests provide their own mocks and need the real function signatures.
     """
+    module_name = request.node.module.__name__
+    if module_name in ("tests.test_enrichment_queue", "tests.test_enrichment_worker"):
+        yield None
+        return
     with patch("db.enrichment_queue.enqueue_task") as _mock:
         yield _mock
 
