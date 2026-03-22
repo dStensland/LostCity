@@ -1207,6 +1207,25 @@ def run_post_crawl_tasks(
     except Exception as e:
         logger.warning(f"Report generation failed: {e}")
 
+    # 8. Drain enrichment queue
+    try:
+        from enrichment_worker import run_worker
+        logger.info("POST-CRAWL: Draining enrichment queue...")
+        processed = run_worker(batch_size=20, max_batches=200)
+        logger.info("POST-CRAWL: Enrichment queue processed %d tasks", processed)
+    except Exception as e:
+        logger.error("POST-CRAWL: Enrichment worker error: %s", e)
+
+    # 9. Generate health report
+    try:
+        from health_report import generate_health_report
+        import time as _time
+        logger.info("POST-CRAWL: Generating health report...")
+        report = generate_health_report(run_id=f"run-{int(_time.time())}", crawl_results=[])
+        logger.info("POST-CRAWL: Health report: %s", report.get("summary", ""))
+    except Exception as e:
+        logger.error("POST-CRAWL: Health report error: %s", e)
+
     if run_launch_maintenance:
         ok = run_launch_post_crawl_maintenance(
             city=maintenance_city,
