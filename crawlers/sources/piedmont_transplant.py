@@ -13,11 +13,11 @@ from datetime import datetime
 from calendar import monthrange
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 PORTAL_SLUG = "piedmont"
 
@@ -138,59 +138,23 @@ def crawl(source: dict) -> tuple[int, int, int]:
     portal_id = get_portal_id_by_slug(PORTAL_SLUG)
 
     try:
-        # First, verify the page and scrape any additional events
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        # Verify the page is accessible; extract any og:image hints
+        image_map: dict[str, str] = {}
+        logger.info(f"Fetching Piedmont Transplant Support: {SUPPORT_GROUP_URL}")
+        try:
+            resp = requests.get(
+                SUPPORT_GROUP_URL,
+                headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"},
+                timeout=30,
             )
-            page = context.new_page()
-
-            logger.info(f"Fetching Piedmont Transplant Support: {SUPPORT_GROUP_URL}")
-            try:
-                page.goto(SUPPORT_GROUP_URL, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(2000)
-
-                # Extract images from page
-                image_map = extract_images_from_page(page)
-                body_text = page.inner_text("body")
-                logger.info(f"Page loaded, content length: {len(body_text)}")
-
-                # Try to extract any specific dates mentioned
-                lines = [line.strip() for line in body_text.split("\n") if line.strip()]
-
-                for i, line in enumerate(lines):
-                    date_match = re.search(
-                        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:-\d{1,2})?,?\s+\d{4}",
-                        line,
-                        re.IGNORECASE
-                    )
-
-                    if date_match:
-                        date_text = date_match.group(0)
-                        date_text = re.sub(r"-\d{1,2}", "", date_text)
-
-                        match = re.search(
-                            r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})",
-                            date_text,
-                            re.IGNORECASE
-                        )
-
-                        if match:
-                            month, day, year = match.groups()
-                            try:
-                                dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
-                                if dt.date() >= datetime.now().date():
-                                    # Found a specific event date - add it
-                                    events_found += 1
-                                    # (We'll rely on the recurring events below)
-                            except ValueError:
-                                pass
-
-            except Exception as e:
-                logger.warning(f"Could not fetch page, using known schedule: {e}")
-
-            browser.close()
+            resp.raise_for_status()
+            soup_pg = BeautifulSoup(resp.text, "html.parser")
+            og_img = soup_pg.find("meta", property="og:image")
+            if og_img and og_img.get("content"):
+                image_map["og:image"] = og_img["content"]
+            logger.info("Page loaded, content length: %d", len(resp.text))
+        except Exception as e:
+            logger.warning(f"Could not fetch page, using known schedule: {e}")
 
         # Generate events from known recurring schedules
         venue_id = get_or_create_venue(VENUE_DATA)

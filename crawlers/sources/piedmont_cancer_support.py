@@ -13,11 +13,11 @@ from datetime import datetime
 from calendar import monthrange
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 # Portal ID for Piedmont-exclusive events
 PORTAL_SLUG = "piedmont"
@@ -177,27 +177,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
     portal_id = get_portal_id_by_slug(PORTAL_SLUG)
 
     try:
-        # First, verify the support groups page is accessible and scrape any updates
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        # Verify the support groups page is accessible; extract any og:image hints
+        image_map: dict[str, str] = {}
+        logger.info(f"Fetching Piedmont Cancer Support Groups: {SUPPORT_GROUPS_URL}")
+        try:
+            resp = requests.get(
+                SUPPORT_GROUPS_URL,
+                headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"},
+                timeout=30,
             )
-            page = context.new_page()
-
-            logger.info(f"Fetching Piedmont Cancer Support Groups: {SUPPORT_GROUPS_URL}")
-            try:
-                page.goto(SUPPORT_GROUPS_URL, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(2000)
-
-                # Extract images from page
-                image_map = extract_images_from_page(page)
-                body_text = page.inner_text("body")
-                logger.info(f"Page loaded, content length: {len(body_text)}")
-            except Exception as e:
-                logger.warning(f"Could not fetch page, using known schedule: {e}")
-
-            browser.close()
+            resp.raise_for_status()
+            soup_pg = BeautifulSoup(resp.text, "html.parser")
+            og_img = soup_pg.find("meta", property="og:image")
+            if og_img and og_img.get("content"):
+                # Map a generic key so callers can find it if needed
+                image_map["og:image"] = og_img["content"]
+            logger.info("Page loaded, content length: %d", len(resp.text))
+        except Exception as e:
+            logger.warning(f"Could not fetch page, using known schedule: {e}")
 
         # Generate events from known schedules
         for group in SUPPORT_GROUPS:

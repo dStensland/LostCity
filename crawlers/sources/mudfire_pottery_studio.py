@@ -16,11 +16,11 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+import requests
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, parse_price, normalize_time_format
+from utils import parse_price, normalize_time_format
 
 logger = logging.getLogger(__name__)
 
@@ -86,9 +86,9 @@ def parse_time(time_text: str) -> Optional[str]:
     return normalized
 
 
-def parse_acuity_scheduling_page(page, venue_id: int, source_id: int) -> list[dict]:
+def parse_acuity_scheduling_page(html_content: str) -> list[dict]:
     """
-    Parse Acuity Scheduling (Square Appointments) page.
+    Parse Acuity Scheduling (Square Appointments) page HTML.
 
     Acuity embeds all class/appointment data in a BUSINESS JavaScript object.
     We extract this and return the class types (not specific times, as those
@@ -99,11 +99,6 @@ def parse_acuity_scheduling_page(page, venue_id: int, source_id: int) -> list[di
     class_types = []
 
     try:
-        # Wait for the page to load
-        page.wait_for_timeout(3000)
-
-        # Extract the BUSINESS JavaScript object
-        html_content = page.content()
 
         # Find the BUSINESS object definition
         business_match = re.search(r'var BUSINESS = ({.*?});', html_content, re.DOTALL)
@@ -175,29 +170,27 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.error(f"Failed to create venue: {e}")
         return 0, 0, 0
 
+    _HEADERS = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        ),
+    }
+
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        all_class_types = []
 
-            all_class_types = []
+        # Try Acuity Scheduling page first
+        try:
+            logger.info(f"Fetching Acuity Scheduling page: {SCHEDULING_URL}")
+            resp = requests.get(SCHEDULING_URL, headers=_HEADERS, timeout=30)
+            resp.raise_for_status()
+            class_types = parse_acuity_scheduling_page(resp.text)
+            all_class_types.extend(class_types)
+            logger.info(f"Found {len(class_types)} class types from scheduling page")
 
-            # Try Acuity Scheduling page first
-            try:
-                logger.info(f"Fetching Acuity Scheduling page: {SCHEDULING_URL}")
-                page.goto(SCHEDULING_URL, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(3000)
-
-                class_types = parse_acuity_scheduling_page(page, venue_id, source_id)
-                all_class_types.extend(class_types)
-                logger.info(f"Found {len(class_types)} class types from scheduling page")
-
-            except Exception as e:
-                logger.warning(f"Could not parse Acuity Scheduling page: {e}")
+        except Exception as e:
+            logger.warning(f"Could not parse Acuity Scheduling page: {e}")
 
             # Process collected class types and generate upcoming class occurrences
             # Since we don't have specific dates, we'll generate placeholder events
@@ -291,15 +284,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     except Exception as e:
                         logger.error(f"Failed to insert event: {class_name}: {e}")
 
-            browser.close()
-
         logger.info(
             f"MudFire crawl complete: {events_found} found, {events_new} new, {events_updated} existing"
         )
 
-    except PlaywrightTimeout as e:
-        logger.error(f"Timeout fetching MudFire: {e}")
-        raise
     except Exception as e:
         logger.error(f"Failed to crawl MudFire: {e}")
         raise

@@ -14,11 +14,11 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -220,105 +220,102 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
+    _HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+    }
+
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
+        venue_id = get_or_create_venue(VENUE_DATA)
+        all_shows: list[dict] = []
+        image_map: dict[str, str] = {}
+
+        # Paginate through /shows/ pages
+        for page_num in range(MAX_PAGES):
+            offset = page_num * 6
+            url = SHOWS_URL if offset == 0 else f"{SHOWS_URL}?offset={offset}"
+
+            logger.info(f"Fetching Punchline shows page {page_num + 1}: {url}")
+            resp = requests.get(url, headers=_HEADERS, timeout=30)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "html.parser")
+
+            # Extract title→image map from this page
+            for img in soup.find_all("img", alt=True):
+                alt = (img.get("alt") or "").strip()
+                src = img.get("src") or img.get("data-src") or ""
+                if alt and src and len(alt) > 3:
+                    image_map[alt] = src
+
+            body_text = soup.get_text(separator="\n")
+            shows = _parse_show_blocks(body_text)
+
+            if not shows:
+                logger.info(f"No shows found on page {page_num + 1}, stopping pagination")
+                break
+
+            all_shows.extend(shows)
+
+            has_more = "view more shows" in body_text.lower()
+            logger.info(f"Page {page_num + 1}: found {len(shows)} shows, has_more={has_more}")
+
+            if not has_more:
+                break
+
+        logger.info(f"Total shows found across all pages: {len(all_shows)}")
+
+        for show in all_shows:
+            title = show["title"]
+            date_text = show["date_text"]
+
+            start_date, end_date = parse_date_range(date_text)
+            if not start_date:
+                continue
+
+            events_found += 1
+
+            content_hash = generate_content_hash(
+                title, "Punchline Comedy Club", start_date
             )
-            page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
-            all_shows: list[dict] = []
-            image_map: dict[str, str] = {}
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title,
+                "description": show["description"],
+                "start_date": start_date,
+                "start_time": _infer_showtime(start_date),
+                "end_date": end_date,
+                "end_time": None,
+                "is_all_day": False,
+                "category": "comedy",
+                "subcategory": "standup",
+                "tags": ["comedy", "standup", "punchline"],
+                "price_min": None,
+                "price_max": None,
+                "price_note": None,
+                "is_free": False,
+                "source_url": SHOWS_URL,
+                "ticket_url": None,
+                "image_url": image_map.get(title),
+                "raw_text": None,
+                "extraction_confidence": 0.9,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
 
-            # Paginate through /shows/ pages
-            for page_num in range(MAX_PAGES):
-                offset = page_num * 6
-                url = SHOWS_URL if offset == 0 else f"{SHOWS_URL}?offset={offset}"
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
-                logger.info(f"Fetching Punchline shows page {page_num + 1}: {url}")
-                page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(3000)
-
-                # Extract images from this page
-                page_images = extract_images_from_page(page)
-                image_map.update(page_images)
-
-                body_text = page.inner_text("body")
-                shows = _parse_show_blocks(body_text)
-
-                if not shows:
-                    logger.info(f"No shows found on page {page_num + 1}, stopping pagination")
-                    break
-
-                all_shows.extend(shows)
-
-                has_more = "view more shows" in body_text.lower()
-                logger.info(f"Page {page_num + 1}: found {len(shows)} shows, has_more={has_more}")
-
-                # Stop if no "View More Shows" link
-                if not has_more:
-                    break
-
-            logger.info(f"Total shows found across all pages: {len(all_shows)}")
-
-            for show in all_shows:
-                title = show["title"]
-                date_text = show["date_text"]
-
-                start_date, end_date = parse_date_range(date_text)
-                if not start_date:
-                    continue
-
-                events_found += 1
-
-                content_hash = generate_content_hash(
-                    title, "Punchline Comedy Club", start_date
-                )
-
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": title,
-                    "description": show["description"],
-                    "start_date": start_date,
-                    "start_time": _infer_showtime(start_date),
-                    "end_date": end_date,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": "comedy",
-                    "subcategory": "standup",
-                    "tags": ["comedy", "standup", "punchline"],
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": None,
-                    "is_free": False,
-                    "source_url": SHOWS_URL,
-                    "ticket_url": None,
-                    "image_url": image_map.get(title),
-                    "raw_text": None,
-                    "extraction_confidence": 0.9,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                    continue
-
-                try:
-                    insert_event(event_record, genres=["comedy", "stand-up"])
-                    events_new += 1
-                    logger.info(f"Added: {title} on {start_date}")
-                except Exception as e:
-                    logger.error(f"Failed to insert: {title}: {e}")
-
-            browser.close()
+            try:
+                insert_event(event_record, genres=["comedy", "stand-up"])
+                events_new += 1
+                logger.info(f"Added: {title} on {start_date}")
+            except Exception as e:
+                logger.error(f"Failed to insert: {title}: {e}")
 
         logger.info(f"Punchline crawl complete: {events_found} found, {events_new} new, {events_updated} updated")
 

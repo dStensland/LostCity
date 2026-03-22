@@ -13,11 +13,11 @@ from datetime import datetime
 from calendar import monthrange
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 PORTAL_SLUG = "piedmont"
 
@@ -159,122 +159,124 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
+    _HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+    }
+
     portal_id = get_portal_id_by_slug(PORTAL_SLUG)
 
     try:
-        # First, verify the page is accessible
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-            )
-            page = context.new_page()
+        image_map: dict[str, str] = {}
 
-            logger.info(f"Fetching Piedmont Athens Chapel: {ATHENS_CHAPEL_URL}")
-            try:
-                page.goto(ATHENS_CHAPEL_URL, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(2000)
+        # Fetch the page and extract any specifically mentioned events
+        logger.info(f"Fetching Piedmont Athens Chapel: {ATHENS_CHAPEL_URL}")
+        try:
+            resp = requests.get(ATHENS_CHAPEL_URL, headers=_HEADERS, timeout=30)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "html.parser")
 
-                # Extract images from page
-                image_map = extract_images_from_page(page)
-                body_text = page.inner_text("body")
-                logger.info(f"Page loaded, content length: {len(body_text)}")
+            # Extract images
+            for img in soup.find_all("img", alt=True):
+                alt = (img.get("alt") or "").strip()
+                src = img.get("src") or img.get("data-src") or ""
+                if alt and src and len(alt) > 3:
+                    image_map[alt] = src
 
-                # Try to extract any specific events mentioned
-                lines = [line.strip() for line in body_text.split("\n") if line.strip()]
+            body_text = soup.get_text(separator="\n")
+            logger.info(f"Page loaded, content length: {len(body_text)}")
 
-                skip_items = [
-                    "home", "about", "contact", "menu", "locations", "piedmont",
-                    "athens", "skip to", "services",
-                ]
+            lines = [line.strip() for line in body_text.split("\n") if line.strip()]
 
-                for i, line in enumerate(lines):
-                    date_match = re.search(
-                        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:-\d{1,2})?,?\s+\d{4}",
-                        line,
+            skip_items = [
+                "home", "about", "contact", "menu", "locations", "piedmont",
+                "athens", "skip to", "services",
+            ]
+
+            venue_id = get_or_create_venue(VENUE_DATA)
+
+            for i, line in enumerate(lines):
+                date_match = re.search(
+                    r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:-\d{1,2})?,?\s+\d{4}",
+                    line,
+                    re.IGNORECASE
+                )
+
+                if date_match:
+                    date_text = date_match.group(0)
+                    date_text = re.sub(r"-\d{1,2}", "", date_text)
+
+                    match = re.search(
+                        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})",
+                        date_text,
                         re.IGNORECASE
                     )
 
-                    if date_match:
-                        date_text = date_match.group(0)
-                        date_text = re.sub(r"-\d{1,2}", "", date_text)
+                    if match:
+                        month, day, year = match.groups()
+                        try:
+                            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
+                            if dt.date() >= datetime.now().date():
+                                title = None
+                                for offset in range(-3, 0):
+                                    idx = i + offset
+                                    if 0 <= idx < len(lines):
+                                        check_line = lines[idx].strip()
+                                        if check_line.lower() not in skip_items and 10 < len(check_line) < 100:
+                                            title = check_line
+                                            break
 
-                        match = re.search(
-                            r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})",
-                            date_text,
-                            re.IGNORECASE
-                        )
+                                if title:
+                                    events_found += 1
+                                    start_date = dt.strftime("%Y-%m-%d")
 
-                        if match:
-                            month, day, year = match.groups()
-                            try:
-                                dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
-                                if dt.date() >= datetime.now().date():
-                                    # Look for title
-                                    title = None
-                                    for offset in range(-3, 0):
-                                        idx = i + offset
-                                        if 0 <= idx < len(lines):
-                                            check_line = lines[idx].strip()
-                                            if check_line.lower() not in skip_items and 10 < len(check_line) < 100:
-                                                title = check_line
-                                                break
+                                    content_hash = generate_content_hash(
+                                        title, VENUE_DATA["name"], start_date
+                                    )
 
-                                    if title:
-                                        events_found += 1
-                                        venue_id = get_or_create_venue(VENUE_DATA)
-                                        start_date = dt.strftime("%Y-%m-%d")
+                                    existing = find_event_by_hash(content_hash)
+                                    if not existing:
+                                        event_record = {
+                                            "source_id": source_id,
+                                            "venue_id": venue_id,
+                                            "portal_id": portal_id,
+                                            "title": title,
+                                            "description": None,
+                                            "start_date": start_date,
+                                            "start_time": None,
+                                            "end_date": None,
+                                            "end_time": None,
+                                            "is_all_day": True,
+                                            "category": "community",
+                                            "subcategory": "spiritual",
+                                            "tags": ["piedmont", "athens", "spiritual", "healthcare"],
+                                            "price_min": None,
+                                            "price_max": None,
+                                            "price_note": "Free and open to all",
+                                            "is_free": True,
+                                            "source_url": ATHENS_CHAPEL_URL,
+                                            "ticket_url": ATHENS_CHAPEL_URL,
+                                            "image_url": image_map.get(title),
+                                            "raw_text": f"{title} - {start_date}",
+                                            "extraction_confidence": 0.8,
+                                            "is_recurring": False,
+                                            "recurrence_rule": None,
+                                            "content_hash": content_hash,
+                                        }
 
-                                        content_hash = generate_content_hash(
-                                            title, VENUE_DATA["name"], start_date
-                                        )
+                                        try:
+                                            insert_event(event_record)
+                                            events_new += 1
+                                            logger.info(f"Added: {title} on {start_date}")
+                                        except Exception as e:
+                                            logger.error(f"Failed to insert: {title}: {e}")
+                                    else:
+                                        events_updated += 1
 
-                                        existing = find_event_by_hash(content_hash)
-                                        if not existing:
-                                            event_record = {
-                                                "source_id": source_id,
-                                                "venue_id": venue_id,
-                                                "portal_id": portal_id,
-                                                "title": title,
-                                                "description": None,
-                                                "start_date": start_date,
-                                                "start_time": None,
-                                                "end_date": None,
-                                                "end_time": None,
-                                                "is_all_day": True,
-                                                "category": "community",
-                                                "subcategory": "spiritual",
-                                                "tags": ["piedmont", "athens", "spiritual", "healthcare"],
-                                                "price_min": None,
-                                                "price_max": None,
-                                                "price_note": "Free and open to all",
-                                                "is_free": True,
-                                                "source_url": ATHENS_CHAPEL_URL,
-                                                "ticket_url": ATHENS_CHAPEL_URL,
-                                                "image_url": image_map.get(title),
-                                                "raw_text": f"{title} - {start_date}",
-                                                "extraction_confidence": 0.8,
-                                                "is_recurring": False,
-                                                "recurrence_rule": None,
-                                                "content_hash": content_hash,
-                                            }
+                        except ValueError:
+                            pass
 
-                                            try:
-                                                insert_event(event_record)
-                                                events_new += 1
-                                                logger.info(f"Added: {title} on {start_date}")
-                                            except Exception as e:
-                                                logger.error(f"Failed to insert: {title}: {e}")
-                                        else:
-                                            events_updated += 1
-
-                            except ValueError:
-                                pass
-
-            except Exception as e:
-                logger.warning(f"Could not fetch page: {e}")
-
-            browser.close()
+        except Exception as e:
+            logger.warning(f"Could not fetch page: {e}")
 
         # Generate events from known recurring schedules
         venue_id = get_or_create_venue(VENUE_DATA)

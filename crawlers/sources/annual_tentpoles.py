@@ -13,7 +13,8 @@ from datetime import date, datetime
 from typing import Optional
 from urllib.parse import urlparse
 
-from playwright.sync_api import sync_playwright
+import urllib.request
+import urllib.error
 
 from db import (
     find_event_by_hash,
@@ -623,41 +624,42 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     today = date.today()
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-            viewport={"width": 1920, "height": 1080},
-        )
-        page = context.new_page()
+    _HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
 
-        selected_url = None
-        page_title = ""
-        body_text = ""
+    selected_url = None
+    page_title = ""
+    body_text = ""
 
-        for candidate_url in config.urls:
-            try:
-                response = page.goto(candidate_url, wait_until="domcontentloaded", timeout=45000)
-                page.wait_for_timeout(2000)
-                final_url = page.url or candidate_url
-                status = response.status if response else None
-                if status and status >= 400:
-                    logger.warning("Skipping %s candidate due HTTP %s: %s", slug, status, final_url)
+    for candidate_url in config.urls:
+        try:
+            req = urllib.request.Request(candidate_url, headers=_HEADERS)
+            with urllib.request.urlopen(req, timeout=45) as resp:
+                final_url = resp.url or candidate_url
+                if resp.status >= 400:
+                    logger.warning("Skipping %s candidate due HTTP %s: %s", slug, resp.status, final_url)
                     continue
                 if not _host_allowed(final_url, config.allowed_hosts):
                     logger.warning("Skipping %s candidate due off-domain redirect: %s", slug, final_url)
                     continue
-                text = page.inner_text("body").strip()
-                if len(text) < 20:
-                    continue
-                selected_url = final_url
-                page_title = page.title() or ""
-                body_text = text
-                break
-            except Exception as err:
-                logger.warning("Failed %s candidate %s: %s", slug, candidate_url, err)
+                raw_html = resp.read().decode("utf-8", errors="replace")
 
-        browser.close()
+            from bs4 import BeautifulSoup as _BS
+            _soup = _BS(raw_html, "html.parser")
+            title_tag = _soup.find("title")
+            page_title = title_tag.get_text(strip=True) if title_tag else ""
+            body_tag = _soup.find("body")
+            text = body_tag.get_text(separator="\n", strip=True) if body_tag else _soup.get_text(separator="\n", strip=True)
+            if len(text) < 20:
+                continue
+            selected_url = final_url
+            body_text = text
+            break
+        except Exception as err:
+            logger.warning("Failed %s candidate %s: %s", slug, candidate_url, err)
 
     window = _extract_window(slug, page_title, body_text) if selected_url else None
     if not window:
