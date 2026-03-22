@@ -9,22 +9,16 @@ import { addRecentSearch } from "@/lib/searchHistory";
 import { SuggestionGroup, QuickActionsList } from "@/components/search";
 import type { SearchResult } from "@/lib/unified-search";
 import type { QuickAction } from "@/lib/search-ranking";
-
-const TRENDING_SEARCHES = ["Live Music", "Comedy", "Free", "Rooftop", "Late Night"];
-
-const CATEGORY_CHIPS = [
-  { value: "music", label: "Music" },
-  { value: "comedy", label: "Comedy" },
-  { value: "food_drink", label: "Food & Drink" },
-  { value: "art", label: "Arts" },
-  { value: "nightlife", label: "Nightlife" },
-] as const;
+import type { PreSearchPayload } from "@/lib/search-presearch";
+import { TRENDING_SEARCHES } from "@/lib/search-presearch";
 
 interface FindSearchInputProps {
   portalSlug: string;
   portalId?: string;
   findType?: string | null;
   placeholder?: string;
+  /** Called whenever preSearchData or preSearchLoading changes. Used by parent to render PreSearchState. */
+  onPreSearchChange?: (data: PreSearchPayload | null, loading: boolean) => void;
 }
 
 function resolveViewAllHref(params: {
@@ -59,20 +53,14 @@ export default function FindSearchInput({
   portalId,
   findType,
   placeholder = "Search events...",
+  onPreSearchChange,
 }: FindSearchInputProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const urlSyncRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  // Count-based skip: set to N to suppress the next N runs of the URL sync
-  // effect. We need 2 skips because router.push() and search.setQuery("") each
-  // trigger a separate effect run (searchParams and search.query are both
-  // dependencies), and consuming a boolean skip on the first run leaves the
-  // second run unguarded.
   const skipUrlSyncRef = useRef(0);
-  // browseMode: true after Enter commits a query. Shows dimmed query in input.
-  // Click to re-enter editing mode. Suppresses URL→input sync while active.
   const [browseMode, setBrowseMode] = useState(false);
   const pathname = `/${portalSlug}`;
 
@@ -83,23 +71,24 @@ export default function FindSearchInput({
     viewMode: "find",
   });
 
+  // Notify parent when pre-search data changes
+  useEffect(() => {
+    onPreSearchChange?.(search.preSearchData, search.preSearchLoading);
+  // onPreSearchChange is stable (useCallback in parent) — safe to include
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.preSearchData, search.preSearchLoading]);
+
   // Sync URL search param → query on mount and external changes.
-  // Suppressed when browseMode is active so clicking a filter chip or
-  // navigating back doesn't overwrite the dimmed query display.
   const urlSearch = searchParams?.get("search") || "";
   const prevUrlSearchRef = useRef(urlSearch);
   useEffect(() => {
     if (urlSearch !== prevUrlSearchRef.current) {
       prevUrlSearchRef.current = urlSearch;
-      // Don't sync back into the input while user is browsing results —
-      // the dimmed query display is correct, and re-syncing would clear it.
       if (!browseMode && urlSearch !== search.query) {
         search.setQuery(urlSearch);
       }
-      // If the URL search was cleared externally (chip removed), exit browseMode.
-      // Deferred to avoid calling setState synchronously within an effect.
       if (!urlSearch) {
-        setTimeout(() => setBrowseMode(false), 0);
+        setBrowseMode(false);
       }
     }
   }, [urlSearch]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -138,12 +127,6 @@ export default function FindSearchInput({
         resultPosition: search.selectedIndex,
       });
       search.selectSuggestion(result);
-      // Set skip count to 2: one skip for the effect run triggered by
-      // search.query changing to "", and one for the run triggered by
-      // searchParams updating after router.push(). Without both skips the
-      // second run fires with the stale "brunch" query and writes
-      // ?search=brunch back into the URL, which the URL→query sync then picks
-      // up and fills the input with the event title instead of navigating.
       skipUrlSyncRef.current = 2;
       search.setQuery("");
       const url = buildSearchResultHref(result, { portalSlug });
@@ -174,13 +157,11 @@ export default function FindSearchInput({
     [search]
   );
 
-  // Wrap handleKeyDown to add navigation on Enter for selected items
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter") {
         e.preventDefault();
 
-        // If an item is selected, navigate to it
         if (search.selectedIndex >= 0) {
           const item = search.allItems[search.selectedIndex];
           if (item?.type === "suggestion") {
@@ -197,20 +178,15 @@ export default function FindSearchInput({
           }
         }
 
-        // No item selected — commit the search query to URL immediately
         const trimmed = search.query.trim();
         if (trimmed) {
           clearTimeout(urlSyncRef.current);
-          // Skip 1: the router.replace we're about to do will change searchParams,
-          // which re-runs the URL sync effect. Suppress it to avoid a double-write.
           skipUrlSyncRef.current = 1;
           addRecentSearch(trimmed);
           const params = new URLSearchParams(searchParams?.toString() || "");
           params.set("search", trimmed);
           params.delete("page");
           router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-          // Enter commits the search — switch to browse mode so the input
-          // shows the dimmed query as a visual reminder (not empty).
           setBrowseMode(true);
         }
         search.setShowDropdown(false);
@@ -222,7 +198,7 @@ export default function FindSearchInput({
     [search, searchParams, pathname, router, handleSelectSuggestion, handleSelectQuickAction, handleSelectRecent]
   );
 
-  // Handle trending search click
+  // Handle trending search click (used in no-results fallback in dropdown)
   const handleTrendingSearch = useCallback(
     (term: string) => {
       search.setQuery(term);
@@ -231,31 +207,22 @@ export default function FindSearchInput({
     [search]
   );
 
-  // Handle category chip click — apply as filter param
-  const handleCategoryChip = useCallback(
-    (category: string) => {
-      search.setShowDropdown(false);
-      const params = new URLSearchParams(searchParams?.toString() || "");
-      params.set("categories", category);
-      params.delete("search");
-      params.delete("page");
-      router.push(`${pathname}?${params.toString()}`, { scroll: false });
-    },
-    [router, search, searchParams, pathname]
-  );
-
-  // Exit browseMode when the user clears the search chip or actively types.
   const handleExitBrowseMode = useCallback(() => {
     if (browseMode) {
       setBrowseMode(false);
-      // Restore focus and pre-fill the current query for editing
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [browseMode]);
 
+  // No-results: query has been fetched (not loading) and returned 0 results
+  const hasNoResults =
+    search.query.length >= 2 &&
+    !search.isLoading &&
+    !search.showSuggestions &&
+    !search.showRecent;
+
   const isSearching = search.query.trim() !== urlSearch || search.isLoading;
-  const showPreSearch = search.showDropdown && search.query.length < 2;
-  const showDropdown = search.shouldShowDropdown || showPreSearch;
+  const showDropdown = search.shouldShowDropdown || (search.showDropdown && hasNoResults);
 
   const quickActionsStartIndex = 0;
   const groupedStartIndexes = search.groupOrder.reduce<Record<string, number>>(
@@ -296,7 +263,6 @@ export default function FindSearchInput({
         type="text"
         value={search.query}
         onChange={(e) => {
-          // Any typing exits browse mode (user is refining the query)
           if (browseMode) setBrowseMode(false);
           search.setQuery(e.target.value);
         }}
@@ -393,48 +359,6 @@ export default function FindSearchInput({
             </div>
           )}
 
-          {/* Trending + category chips — shown in pre-search state */}
-          {showPreSearch && (
-            <div className="p-2">
-              <div className="flex items-center gap-2 px-2 pb-2">
-                <svg className="h-3 w-3 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-                <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider">Trending</p>
-              </div>
-              <div className="flex flex-wrap gap-1.5 px-2">
-                {TRENDING_SEARCHES.map((term) => (
-                  <button
-                    key={term}
-                    onMouseDown={() => handleTrendingSearch(term)}
-                    className="px-3 py-1.5 rounded-full bg-[var(--twilight)]/70 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors text-xs font-mono"
-                  >
-                    {term}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-3 px-2">
-                <div className="flex items-center gap-2 pb-2">
-                  <svg className="h-3 w-3 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                  </svg>
-                  <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider">Browse</p>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {CATEGORY_CHIPS.map((cat) => (
-                    <button
-                      key={cat.value}
-                      onMouseDown={() => handleCategoryChip(cat.value)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--twilight)]/60 bg-white/5 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 transition-colors text-xs font-mono"
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Search header with result count */}
           {search.showSuggestions && (
             <div className="px-3 py-2 border-b border-[var(--twilight)] bg-[var(--night)]/45">
@@ -510,23 +434,49 @@ export default function FindSearchInput({
             </div>
           )}
 
-          {/* Keyboard hint — desktop only, no physical keyboard on mobile */}
-          <div className="hidden sm:block px-3 py-2 border-t border-[var(--twilight)] bg-[var(--night)]/50">
-            <p className="text-xs text-[var(--muted)] flex items-center gap-3">
-              <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-2xs">&#8593;&#8595;</kbd>
-                <span>navigate</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-2xs">&#8629;</kbd>
-                <span>select</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-2xs">esc</kbd>
-                <span>close</span>
-              </span>
-            </p>
-          </div>
+          {/* No-results state — shown when query >= 2 chars but returned 0 results */}
+          {hasNoResults && (
+            <div className="p-4 space-y-3">
+              <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider">
+                No results for &ldquo;{search.query}&rdquo;
+              </p>
+              <div>
+                <p className="text-xs text-[var(--muted)] mb-2">Try:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {TRENDING_SEARCHES.slice(0, 4).map((term) => (
+                    <button
+                      key={term}
+                      type="button"
+                      onMouseDown={() => handleTrendingSearch(term)}
+                      className="px-3 py-1.5 rounded-full bg-[var(--twilight)]/60 border border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors text-xs font-mono"
+                    >
+                      {term}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Keyboard hint — desktop only */}
+          {!hasNoResults && (
+            <div className="hidden sm:block px-3 py-2 border-t border-[var(--twilight)] bg-[var(--night)]/50">
+              <p className="text-xs text-[var(--muted)] flex items-center gap-3">
+                <span className="flex items-center gap-1">
+                  <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-2xs">&#8593;&#8595;</kbd>
+                  <span>navigate</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-2xs">&#8629;</kbd>
+                  <span>select</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-2xs">esc</kbd>
+                  <span>close</span>
+                </span>
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

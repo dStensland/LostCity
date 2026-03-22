@@ -1,9 +1,12 @@
 "use client";
 
 import { Suspense, useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import FindFilterBar from "@/components/find/FindFilterBar";
 import FindSearchInput from "@/components/find/FindSearchInput";
+import { PreSearchState } from "@/components/search";
+import type { PreSearchPayload } from "@/lib/search-presearch";
+import { TRENDING_SEARCHES } from "@/lib/search-presearch";
 import EventList from "@/components/EventList";
 import MapViewWrapper from "@/components/MapViewWrapper";
 import CalendarView from "@/components/CalendarView";
@@ -32,6 +35,94 @@ interface EventsFinderProps {
 }
 
 /**
+ * Inner implementation of EventsFinderFilters — needs access to URL params
+ * (useSearchParams) so it lives inside the Suspense boundary.
+ */
+function EventsFinderFiltersInner({
+  portalId,
+  portalSlug,
+  portalExclusive,
+  displayMode,
+  hasActiveFilters,
+  vertical,
+}: EventsFinderProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlSearch = searchParams?.get("search") || "";
+
+  // Pre-search state — populated via callback from FindSearchInput
+  const [preSearchData, setPreSearchData] = useState<PreSearchPayload>({
+    trending: TRENDING_SEARCHES,
+    popularNow: [],
+  });
+  const [preSearchLoading, setPreSearchLoading] = useState(false);
+
+  const handlePreSearchChange = useCallback(
+    (data: PreSearchPayload | null, loading: boolean) => {
+      if (data) setPreSearchData(data);
+      setPreSearchLoading(loading);
+    },
+    []
+  );
+
+  // Show PreSearchState when no URL search is active (query empty) and we're
+  // not in map mode (where space is at a premium).
+  const showPreSearch = !urlSearch && displayMode !== "map";
+
+  return (
+    <div className="mt-2.5 pt-2.5 border-t border-[var(--twilight)]/65">
+      {/* Search input with typeahead */}
+      <div className="mb-3">
+        <FindSearchInput
+          portalSlug={portalSlug}
+          portalId={portalId}
+          findType="events"
+          placeholder="Search events..."
+          onPreSearchChange={handlePreSearchChange}
+        />
+      </div>
+
+      {/* Pre-search discovery state — trending pills + popular events.
+          Rendered as SIBLING of FindSearchInput (not inside the dropdown). */}
+      {showPreSearch && (
+        <div className="mb-3">
+          <PreSearchState
+            trending={preSearchData.trending}
+            popularNow={preSearchData.popularNow}
+            onTrendingClick={(term) => {
+              // Clicking a trending pill sets it as a URL search param.
+              // FindSearchInput's URL→query sync effect picks this up automatically.
+              const params = new URLSearchParams(searchParams?.toString() || "");
+              params.set("search", term);
+              params.delete("page");
+              router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
+            }}
+            portalSlug={portalSlug}
+            layout="wrap"
+            loading={preSearchLoading && preSearchData.popularNow.length === 0}
+          />
+        </div>
+      )}
+
+      <FindFilterBar
+        variant={displayMode === "map" ? "compact" : "full"}
+        hideDate={displayMode === "calendar"}
+        portalId={portalId}
+        portalExclusive={portalExclusive}
+        portalSlug={portalSlug}
+        vertical={vertical}
+      />
+      {/* Active Filters */}
+      {hasActiveFilters && displayMode === "list" && (
+        <div className="px-1 pt-2">
+          <ActiveFiltersRow />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * Events filter bar section — rendered inside FindShell's control panel.
  */
 export function EventsFinderFilters({
@@ -44,31 +135,14 @@ export function EventsFinderFilters({
 }: EventsFinderProps) {
   return (
     <Suspense fallback={<div className="h-10 bg-[var(--night)] rounded-xl mt-3" />}>
-      <div className="mt-2.5 pt-2.5 border-t border-[var(--twilight)]/65">
-        {/* Search input with typeahead */}
-        <div className="mb-3">
-          <FindSearchInput
-            portalSlug={portalSlug}
-            portalId={portalId}
-            findType="events"
-            placeholder="Search events..."
-          />
-        </div>
-        <FindFilterBar
-          variant={displayMode === "map" ? "compact" : "full"}
-          hideDate={displayMode === "calendar"}
-          portalId={portalId}
-          portalExclusive={portalExclusive}
-          portalSlug={portalSlug}
-          vertical={vertical}
-        />
-        {/* Active Filters */}
-        {hasActiveFilters && displayMode === "list" && (
-          <div className="px-1 pt-2">
-            <ActiveFiltersRow />
-          </div>
-        )}
-      </div>
+      <EventsFinderFiltersInner
+        portalId={portalId}
+        portalSlug={portalSlug}
+        portalExclusive={portalExclusive}
+        displayMode={displayMode}
+        hasActiveFilters={hasActiveFilters}
+        vertical={vertical}
+      />
     </Suspense>
   );
 }

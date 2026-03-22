@@ -7,6 +7,7 @@ import {
   removeRecentSearch,
   clearRecentSearches,
 } from "@/lib/searchHistory";
+import { TRENDING_SEARCHES, type PreSearchPayload } from "@/lib/search-presearch";
 import {
   trackSearchQuery,
   trackSearchZeroResults,
@@ -133,6 +134,10 @@ export interface UseInstantSearchReturn {
   allItems: AllItem[];
   /** Intent type from API */
   intentType: IntentType | null;
+  /** Pre-search discovery data (trending + popular events) */
+  preSearchData: PreSearchPayload | null;
+  /** Whether pre-search data is loading */
+  preSearchLoading: boolean;
 }
 
 export type AllItem =
@@ -265,11 +270,14 @@ export function useInstantSearch({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(false);
   const [intentType, setIntentType] = useState<IntentType | null>(null);
+  const [preSearchData, setPreSearchData] = useState<PreSearchPayload | null>(null);
+  const [preSearchLoading, setPreSearchLoading] = useState(false);
 
   // Refs
   const fetchIdRef = useRef(0);
   const analyticsTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const abortRef = useRef<AbortController | null>(null);
+  const preSearchAbortRef = useRef<AbortController | null>(null);
 
   // Build ranking context
   const rankingContext = useMemo<RankingContext>(() => ({
@@ -279,6 +287,46 @@ export function useInstantSearch({
     portalId,
     userPreferences,
   }), [viewMode, findType, portalSlug, portalId, userPreferences]);
+
+  // Fetch pre-search data on mount (when query is empty)
+  useEffect(() => {
+    if (!enabled) return;
+
+    // Serve curated fallback immediately so the UI has something to show
+    setPreSearchData({ trending: TRENDING_SEARCHES, popularNow: [] });
+
+    let cancelled = false;
+    const controller = new AbortController();
+    preSearchAbortRef.current = controller;
+
+    const params = new URLSearchParams({ portal: portalSlug });
+    if (portalId) params.set("portal_id", portalId);
+
+    setPreSearchLoading(true);
+
+    fetch(`/api/search/instant?${params.toString()}`, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error("pre-search failed");
+        return res.json() as Promise<{ preSearch: PreSearchPayload }>;
+      })
+      .then((data) => {
+        if (!cancelled && data.preSearch) {
+          setPreSearchData(data.preSearch);
+        }
+      })
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.name === "AbortError") return;
+        // Keep curated fallback already in state — no-op on error
+      })
+      .finally(() => {
+        if (!cancelled) setPreSearchLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [portalSlug, portalId, enabled]);
 
   // Fetch suggestions as user types
   useEffect(() => {
@@ -291,6 +339,13 @@ export function useInstantSearch({
       setApiGroupedResults({});
       setIntentType(null);
       return;
+    }
+
+    // Abort in-flight pre-search fetch as soon as user starts typing
+    if (preSearchAbortRef.current) {
+      preSearchAbortRef.current.abort();
+      preSearchAbortRef.current = null;
+      setPreSearchLoading(false);
     }
 
     const fetchId = ++fetchIdRef.current;
@@ -633,5 +688,7 @@ export function useInstantSearch({
     showQuickActions,
     allItems,
     intentType,
+    preSearchData,
+    preSearchLoading,
   };
 }

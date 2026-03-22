@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import {
   getCachedPortalQueryContext,
   resolvePortalQueryContext,
@@ -15,6 +16,11 @@ import {
   buildInstantSearchPayload,
   type InstantSearchEntityType,
 } from "@/lib/instant-search-service";
+import {
+  TRENDING_SEARCHES,
+  type PreSearchPayload,
+  type PreSearchPopularEvent,
+} from "@/lib/search-presearch";
 
 // Helper to safely parse integers with validation
 function safeParseInt(
@@ -33,6 +39,102 @@ const INSTANT_SEARCH_CACHE_TTL_MS = 30 * 1000;
 const INSTANT_SEARCH_CACHE_MAX_ENTRIES = 200;
 const INSTANT_SEARCH_CACHE_NAMESPACE = "api:search-instant";
 const INSTANT_SEARCH_CACHE_CONTROL = "public, s-maxage=30, stale-while-revalidate=60";
+
+// Pre-search (empty query) constants
+const PRE_SEARCH_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const PRE_SEARCH_CACHE_NAMESPACE = "api:search-presearch";
+const PRE_SEARCH_CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=600";
+
+async function buildPreSearchPayload(
+  portalId: string | undefined,
+  portalSlug: string,
+  portalCity: string | undefined,
+): Promise<PreSearchPayload> {
+  const serviceClient = createServiceClient();
+  const now = new Date().toISOString();
+
+  // Fetch top search suggestions by frequency (for trending pills)
+  // and top quality upcoming events (for popular cards) in parallel
+  const [suggestionsResult, eventsResult] = await Promise.allSettled([
+    serviceClient
+      .from("search_suggestions")
+      .select("suggestion, type, frequency")
+      .in("type", ["event", "venue", "vibe", "tag"])
+      .gt("frequency", 1)
+      .order("frequency", { ascending: false })
+      .limit(20),
+    (() => {
+      let q = serviceClient
+        .from("events")
+        .select(
+          "id, title, start_date, start_time, is_free, image_url, venues!inner(name)"
+        )
+        .gte("start_date", now.slice(0, 10))
+        .eq("is_active", true)
+        .not("title", "is", null)
+        .order("data_quality", { ascending: false })
+        .limit(4);
+      if (portalId) {
+        q = q.eq("portal_id", portalId);
+      } else if (portalCity) {
+        q = q.eq("city", portalCity);
+      }
+      return q;
+    })(),
+  ]);
+
+  // Build trending list: merge curated with DB suggestions, dedupe, keep top 8
+  const dbTrending: string[] = [];
+  if (suggestionsResult.status === "fulfilled" && suggestionsResult.value.data) {
+    for (const row of suggestionsResult.value.data) {
+      const text = (row as { suggestion: string }).suggestion;
+      if (text && text.length >= 3 && text.length <= 30) {
+        dbTrending.push(text);
+      }
+    }
+  }
+
+  const seen = new Set<string>();
+  const trending: string[] = [];
+  for (const term of [...TRENDING_SEARCHES, ...dbTrending]) {
+    const key = term.toLowerCase();
+    if (!seen.has(key) && trending.length < 8) {
+      seen.add(key);
+      trending.push(term);
+    }
+  }
+
+  // Build popular now cards
+  const popularNow: PreSearchPopularEvent[] = [];
+  if (eventsResult.status === "fulfilled" && eventsResult.value.data) {
+    for (const row of eventsResult.value.data.slice(0, 2)) {
+      const r = row as {
+        id: string;
+        title: string;
+        start_date: string | null;
+        start_time: string | null;
+        is_free: boolean | null;
+        image_url: string | null;
+        venues: { name: string } | { name: string }[] | null;
+      };
+      const venueName = Array.isArray(r.venues)
+        ? (r.venues[0]?.name ?? null)
+        : (r.venues?.name ?? null);
+      popularNow.push({
+        id: r.id,
+        title: r.title,
+        venueName,
+        startDate: r.start_date,
+        startTime: r.start_time,
+        isFree: r.is_free === true,
+        imageUrl: r.image_url,
+        href: `/${portalSlug}/events/${r.id}`,
+      });
+    }
+  }
+
+  return { trending, popularNow };
+}
 const INSTANT_SEARCH_IN_FLIGHT_LOADS = new Map<
   string,
   Promise<{
@@ -50,7 +152,7 @@ const INSTANT_SEARCH_IN_FLIGHT_LOADS = new Map<
  * GET /api/search/instant
  *
  * Query parameters:
- * - q: Search query (required, min 2 characters)
+ * - q: Search query (optional; when absent or < 2 chars, returns pre-search discovery data)
  * - limit: Maximum number of results per section (default: 6, max: 12)
  * - portal: Portal slug for scoped search (canonical)
  * - portal_id: Portal UUID for scoped search
@@ -58,7 +160,10 @@ const INSTANT_SEARCH_IN_FLIGHT_LOADS = new Map<
  * - viewMode: Current view mode (feed, find, community)
  * - findType: Current find type (events, classes, destinations)
  *
- * Response:
+ * Response (q empty / < 2 chars):
+ * { preSearch: { trending: string[], popularNow: PreSearchPopularEvent[] } }
+ *
+ * Response (q >= 2 chars):
  * {
  *   suggestions: SearchResult[],  // Top matches for autocomplete
  *   topResults: SearchResult[],   // Additional results
@@ -83,19 +188,65 @@ export async function GET(request: NextRequest) {
 
     const query = searchParams.get("q") || "";
 
-    // Validate query
+    // ── Pre-search: empty query → return discovery data, not 400 ──────────
     if (!query || query.trim().length < 2) {
-      return NextResponse.json(
-        {
-          suggestions: [],
-          topResults: [],
-          quickActions: [],
-          groupedResults: {},
-          groupOrder: [],
-          error: "Query must be at least 2 characters",
-        },
-        { status: 400 }
+      // Resolve portal context for scoping
+      const supabase = await createClient();
+      const verticalOpts = getVerticalFromRequest(request);
+      const portalContext = await (async () => {
+        const cached = await getCachedPortalQueryContext(searchParams, verticalOpts);
+        if (cached) return cached;
+        return resolvePortalQueryContext(supabase, searchParams, verticalOpts);
+      })();
+
+      const portalId = portalContext.portalId || undefined;
+      const portalSlug =
+        portalContext.portalSlug || searchParams.get("portalSlug") || "atlanta";
+      const portalCity = portalContext.filters.city || undefined;
+
+      const preSearchCacheKey = `${portalSlug}:${portalId ?? "global"}`;
+      const cachedPreSearch = await getSharedCacheJson<PreSearchPayload>(
+        PRE_SEARCH_CACHE_NAMESPACE,
+        preSearchCacheKey,
       );
+      if (cachedPreSearch) {
+        return NextResponse.json(
+          { preSearch: cachedPreSearch },
+          {
+            headers: {
+              "Cache-Control": PRE_SEARCH_CACHE_CONTROL,
+              "Server-Timing": timing.toHeader(),
+            },
+          }
+        );
+      }
+
+      try {
+        const preSearch = await buildPreSearchPayload(portalId, portalSlug, portalCity);
+        await setSharedCacheJson(PRE_SEARCH_CACHE_NAMESPACE, preSearchCacheKey, preSearch, PRE_SEARCH_CACHE_TTL_MS);
+        return NextResponse.json(
+          { preSearch },
+          {
+            headers: {
+              "Cache-Control": PRE_SEARCH_CACHE_CONTROL,
+              "Server-Timing": timing.toHeader(),
+            },
+          }
+        );
+      } catch (preSearchError) {
+        logger.error("Pre-search API error:", preSearchError);
+        // Fall back to curated data on error
+        const fallback: PreSearchPayload = { trending: TRENDING_SEARCHES, popularNow: [] };
+        return NextResponse.json(
+          { preSearch: fallback },
+          {
+            headers: {
+              "Cache-Control": "public, s-maxage=30",
+              "Server-Timing": timing.toHeader(),
+            },
+          }
+        );
+      }
     }
 
     const limit = safeParseInt(searchParams.get("limit"), 6, 1, 12);
