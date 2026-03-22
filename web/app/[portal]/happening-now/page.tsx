@@ -5,7 +5,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { usePortal } from "@/lib/portal-context";
 import Link from "next/link";
 import { NEIGHBORHOOD_NAMES, getNeighborhoodByName } from "@/config/neighborhoods";
-import { PortalHeader } from "@/components/headers";
 import CategoryFilterChips, { type FilterCategory } from "@/components/CategoryFilterChips";
 import AroundMeCard from "@/components/AroundMeCard";
 import { getDayPart, getHappeningNowGreeting } from "@/lib/time-greeting";
@@ -233,8 +232,6 @@ export default function WhatsOpenPage() {
 
   return (
     <div className="min-h-screen bg-[var(--void)]">
-      <PortalHeader portalSlug={portal.slug} portalName={portal.name} />
-
       {/* Sticky filter bar */}
       <div className="sticky top-[52px] z-20 bg-[var(--night)]/95 backdrop-blur-sm border-b border-[var(--twilight)]/50">
         <div className="max-w-3xl mx-auto px-4 py-2 space-y-2">

@@ -22,7 +22,6 @@ interface MinimalHeaderProps {
     fallbackHref?: string;
     label: string;
   };
-  hideNav?: boolean;
   headerConfig: HeaderConfig;
 }
 

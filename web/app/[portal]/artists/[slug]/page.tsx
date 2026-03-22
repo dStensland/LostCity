@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { format, parseISO } from "date-fns";
-import { PortalHeader } from "@/components/headers";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getArtistBySlug,
@@ -165,12 +164,6 @@ export default async function PortalArtistPage({ params }: Props) {
       <ScopedStylesServer css={accentClass?.css || ""} />
 
       <div className={`min-h-screen ${accentClass?.className ?? ""}`}>
-        <PortalHeader
-          portalSlug={activePortalSlug}
-          portalName={activePortalName}
-          hideNav
-        />
-
         <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-8">
           {/* Hero */}
           <DetailHero

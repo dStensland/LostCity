@@ -140,7 +140,7 @@ function CompactVariant({ moment, portalSlug }: Omit<FeaturedFestivalCardProps, 
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <h4 className="text-xs font-bold text-[var(--cream)] leading-tight truncate">
+        <h4 className="text-xs font-bold text-[var(--cream)] leading-tight line-clamp-2">
           {festival.name}
         </h4>
         {dates && (

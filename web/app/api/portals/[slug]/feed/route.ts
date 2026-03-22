@@ -46,6 +46,7 @@ import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import {
   filterOutInactiveVenueEvents,
 } from "@/lib/event-feed-health";
+import { applyImageFallback, applyImageFallbacks } from "@/lib/image-fallback";
 import { applyFeedGate } from "@/lib/feed-gate";
 import {
   buildPortalFeedAutoSectionPlan,
@@ -300,6 +301,8 @@ type Event = {
       | "recovery_meeting"
       | null;
     city: string | null;
+    image_url?: string | null;
+    hero_image_url?: string | null;
     active?: boolean | null;
   } | null;
 };
@@ -604,7 +607,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
-        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, image_url, active)
+        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, image_url, hero_image_url, active)
       `;
 
   const sectionEventsCacheKey = buildSectionEventsCacheKey({
@@ -698,12 +701,12 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Merge curated + pinned event rows into a single lookup map
   const eventMap = new Map<number, Event>();
   for (const event of filterOutInactiveVenueEvents(
-    suppressEventImagesIfVenueFlagged((curatedEvents || []) as Event[]),
+    applyImageFallbacks(suppressEventImagesIfVenueFlagged((curatedEvents || []) as Event[])),
   )) {
     eventMap.set(event.id, event);
   }
   for (const event of filterOutInactiveVenueEvents(
-    suppressEventImagesIfVenueFlagged((pinnedEvents || []) as Event[]),
+    applyImageFallbacks(suppressEventImagesIfVenueFlagged((pinnedEvents || []) as Event[])),
   )) {
     eventMap.set(event.id, event);
   }
@@ -816,13 +819,13 @@ export async function GET(request: NextRequest, { params }: Props) {
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
         source_id,
-        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, image_url, active)
+        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, image_url, hero_image_url, active)
     `;
 
     // Merge all buckets into the pool
     const addToPool = (events: Event[]) => {
       for (const rawEvent of filterOutInactiveVenueEvents(events)) {
-        const event = suppressEventImageIfVenueFlagged(rawEvent);
+        const event = applyImageFallback(suppressEventImageIfVenueFlagged(rawEvent));
         if (
           !isEventCategoryAllowedForSourceAccess(
             federationAccess,
@@ -1050,7 +1053,7 @@ export async function GET(request: NextRequest, { params }: Props) {
             festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
           ),
           source_id,
-          venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, active)
+          venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, hero_image_url, active)
         `,
           )
           .or(`start_date.gte.${today},end_date.gte.${today}`)
@@ -1377,7 +1380,7 @@ export async function GET(request: NextRequest, { params }: Props) {
                   day_of_week,
                   festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
                 ),
-                venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, active)
+                venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, hero_image_url, active)
             `,
               )
               .in("id", holidayCandidateIds);
@@ -1394,9 +1397,9 @@ export async function GET(request: NextRequest, { params }: Props) {
             );
 
             const holidayEventsById = new Map(
-              suppressEventImagesIfVenueFlagged(
+              applyImageFallbacks(suppressEventImagesIfVenueFlagged(
                 (holidayDetailRows as (Event & { tags?: string[] })[]) || [],
-              ).map((event) => [event.id, event]),
+              )).map((event) => [event.id, event]),
             );
             holidayEvents = holidayCandidateIds
               .map((eventId) => holidayEventsById.get(eventId))

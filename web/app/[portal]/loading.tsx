@@ -50,36 +50,11 @@ export default function PortalLoading({ params }: Props) {
   return <CityFeedPortalLoading />;
 }
 
-// --- Inline static header skeleton ------------------------------------------
-// Replaces PortalHeader (which is "use client") with a visually-equivalent
-// static placeholder that renders in the initial HTML at T=0.
-
-function StaticHeaderSkeleton({ light }: { light?: boolean }) {
-  if (light) {
-    return (
-      <header className="sticky top-0 z-50 bg-[#faf8f4]/95 border-b border-black/8 h-14 flex items-center px-4 sm:px-6">
-        <div className="flex items-center gap-2">
-          <S light className="h-5 w-24 rounded" />
-        </div>
-      </header>
-    );
-  }
-  return (
-    <header className="sticky top-0 z-50 bg-[var(--void)]/95 border-b border-[var(--twilight)]/60 h-14 flex items-center px-4 sm:px-6">
-      <div className="flex items-center gap-2">
-        <S className="h-5 w-24 rounded" />
-      </div>
-    </header>
-  );
-}
-
 // --- City feed skeleton (default) -------------------------------------------
 
 function CityFeedPortalLoading() {
   return (
     <div data-skeleton-route="portal-root" data-skeleton-vertical="city" className="min-h-screen">
-      <StaticHeaderSkeleton />
-
       <main className="max-w-3xl mx-auto px-4 pb-16">
         {/* GreetingBar hero skeleton — matches the full-bleed photo hero */}
         <div

@@ -14,7 +14,8 @@ import { applyPreset } from "@/lib/apply-preset";
 import type { PortalBranding } from "@/lib/portal-context";
 import { getVerticalStyles } from "@/lib/portal-animation-config";
 import { buildPortalOrigin } from "@/lib/site-url";
-import { shouldDisableAmbientEffects } from "@/lib/portal-taxonomy";
+import { shouldDisableAmbientEffects, isFilmPortalVertical } from "@/lib/portal-taxonomy";
+import PortalHeader from "@/components/headers/PortalHeader";
 
 import type { Metadata } from "next";
 import { headers } from "next/headers";
@@ -139,6 +140,8 @@ export default async function PortalLayout({ children, params }: Props) {
   const isHotel = vertical === "hotel";
   const isFamily = vertical === "family";
   const isAdventure = vertical === "adventure";
+  const isDog = vertical === "dog";
+  const isFilm = isFilmPortalVertical(vertical);
   const resolvedBranding = applyPreset((portal.branding || {}) as PortalBranding);
   const isLightTheme = resolvedBranding.theme_mode === "light";
   const isMarketplace = vertical === "marketplace" || isPCMDemoPortal(portal.slug);
@@ -172,6 +175,9 @@ export default async function PortalLayout({ children, params }: Props) {
         <Suspense fallback={null}>
           <PortalTracker portalSlug={portal.slug} />
         </Suspense>
+        {!isHotel && !isMarketplace && !isFilm && !isDog && (
+          <PortalHeader portalSlug={portal.slug} portalName={portal.name} />
+        )}
         {children}
         <PortalFooter />
         <CannyWidget />

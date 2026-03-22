@@ -24,7 +24,6 @@ interface BrandedHeaderProps {
     fallbackHref?: string;
     label: string;
   };
-  hideNav?: boolean;
   headerConfig: HeaderConfig;
 }
 
@@ -51,7 +50,6 @@ export default function BrandedHeader({
   portalName,
   branding,
   backLink,
-  hideNav = false,
   headerConfig,
 }: BrandedHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -288,12 +286,43 @@ export default function BrandedHeader({
       </div>
 
       {/* Bottom row: Navigation tabs (desktop) */}
-      {!hideNav && (
-        <nav
-          className={`hidden sm:flex items-center justify-center pb-3 px-4 ${getNavStyleClass()}`}
-          role="tablist"
-          aria-label="Main navigation"
-        >
+      <nav
+        className={`hidden sm:flex items-center justify-center pb-3 px-4 ${getNavStyleClass()}`}
+        role="tablist"
+        aria-label="Main navigation"
+      >
+        {TABS.map((tab, index) => {
+          const active = isActive(tab);
+          return (
+            <Link
+              key={tab.key}
+              href={getHref(tab)}
+              className={`nav-tab relative px-4 py-1.5 rounded-full font-mono text-xs whitespace-nowrap transition-all duration-300 ${
+                active
+                  ? "nav-tab-active bg-[var(--coral)] text-[var(--void)] font-medium"
+                  : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
+              }`}
+              role="tab"
+              aria-selected={active}
+              aria-controls={`${tab.key}-panel`}
+              tabIndex={active ? 0 : -1}
+              onKeyDown={(e) => handleKeyDown(e, index)}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Mobile navigation bar */}
+      <nav
+        className={`sm:hidden border-t border-[var(--twilight)]/30 ${
+          isLightTheme ? "bg-white/80" : "bg-[var(--night)]/95"
+        } ${getNavStyleClass()}`}
+        role="tablist"
+        aria-label="Main navigation"
+      >
+        <div className="flex py-2 px-4 justify-center gap-2">
           {TABS.map((tab, index) => {
             const active = isActive(tab);
             return (
@@ -303,7 +332,7 @@ export default function BrandedHeader({
                 className={`nav-tab relative px-4 py-1.5 rounded-full font-mono text-xs whitespace-nowrap transition-all duration-300 ${
                   active
                     ? "nav-tab-active bg-[var(--coral)] text-[var(--void)] font-medium"
-                    : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
+                    : "text-[var(--muted)] hover:text-[var(--cream)]"
                 }`}
                 role="tab"
                 aria-selected={active}
@@ -315,43 +344,8 @@ export default function BrandedHeader({
               </Link>
             );
           })}
-        </nav>
-      )}
-
-      {/* Mobile navigation bar */}
-      {!hideNav && (
-        <nav
-          className={`sm:hidden border-t border-[var(--twilight)]/30 ${
-            isLightTheme ? "bg-white/80" : "bg-[var(--night)]/95"
-          } ${getNavStyleClass()}`}
-          role="tablist"
-          aria-label="Main navigation"
-        >
-          <div className="flex py-2 px-4 justify-center gap-2">
-            {TABS.map((tab, index) => {
-              const active = isActive(tab);
-              return (
-                <Link
-                  key={tab.key}
-                  href={getHref(tab)}
-                  className={`nav-tab relative px-4 py-1.5 rounded-full font-mono text-xs whitespace-nowrap transition-all duration-300 ${
-                    active
-                      ? "nav-tab-active bg-[var(--coral)] text-[var(--void)] font-medium"
-                      : "text-[var(--muted)] hover:text-[var(--cream)]"
-                  }`}
-                  role="tab"
-                  aria-selected={active}
-                  aria-controls={`${tab.key}-panel`}
-                  tabIndex={active ? 0 : -1}
-                  onKeyDown={(e) => handleKeyDown(e, index)}
-                >
-                  {tab.label}
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
-      )}
+        </div>
+      </nav>
     </header>
   );
 }

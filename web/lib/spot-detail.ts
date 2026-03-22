@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getDistanceMiles } from "@/lib/geo";
 import { getLocalDateString } from "@/lib/formats";
+import { isOpenAt } from "@/lib/hours";
 import { fetchSocialProofCounts } from "@/lib/social-proof";
 import { applyVenueGate } from "@/lib/feed-gate";
 import { ATTACHED_CHILD_DESTINATION_VENUE_TYPES } from "@/lib/destination-graph";
@@ -399,8 +400,14 @@ async function fetchNearbyDestinations(
     }
   }
 
+  const now = new Date();
   for (const category of Object.keys(nearbyDestinations)) {
-    nearbyDestinations[category].sort((a, b) => (a.distance || 999) - (b.distance || 999));
+    nearbyDestinations[category].sort((a, b) => {
+      const aOpen = isOpenAt(a.hours, now)?.isOpen ? 0 : 1;
+      const bOpen = isOpenAt(b.hours, now)?.isOpen ? 0 : 1;
+      if (aOpen !== bOpen) return aOpen - bOpen;
+      return (a.distance || 999) - (b.distance || 999);
+    });
     nearbyDestinations[category] = nearbyDestinations[category].slice(0, 10);
   }
 

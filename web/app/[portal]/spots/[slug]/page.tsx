@@ -7,7 +7,6 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { cache } from "react";
 import { safeJsonLd } from "@/lib/formats";
-import { PortalHeader } from "@/components/headers";
 import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
 import { mapSpotDetailToViewData } from "@/lib/mappers/spot-detail-mapper";
 import VenueDetailWrapper from "./VenueDetailWrapper";
@@ -223,11 +222,6 @@ export default async function PortalSpotPage({ params }: Props) {
             ])
           ),
         }}
-      />
-      <PortalHeader
-        portalSlug={activePortalSlug}
-        portalName={activePortalName}
-        hideNav
       />
       <VenueDetailWrapper
         slug={slug}

@@ -1,4 +1,3 @@
-import { PortalHeader } from "@/components/headers";
 import NetworkFeedPage from "@/components/feed/sections/NetworkFeedPage";
 
 export const revalidate = 60;
@@ -21,10 +20,6 @@ export default async function NetworkPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
-      <PortalHeader
-        portalSlug={portalSlug}
-      />
-
       <div className="max-w-2xl mx-auto px-4 py-6 pb-28">
         <NetworkFeedPage portalSlug={portalSlug} />
       </div>

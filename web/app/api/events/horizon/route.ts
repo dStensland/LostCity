@@ -1,4 +1,5 @@
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { applyImageFallbacks } from "@/lib/image-fallback";
 import { apiResponse, errorApiResponse } from "@/lib/api-utils";
 import { createClient } from "@/lib/supabase/server";
 import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
         ticket_status, ticket_status_checked_at, sellout_risk,
         ticket_url, price_min, price_max, is_free,
         series_id, festival_id,
-        venue:venues(id, name, slug, neighborhood, city)
+        venue:venues(id, name, slug, neighborhood, city, image_url, hero_image_url)
       `,
       )
       .in("importance", importance)
@@ -115,8 +116,10 @@ export async function GET(request: Request) {
     });
 
     // Enrich with urgency and freshness computed server-side, map category_id → category
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const dedupedWithFallback = applyImageFallbacks(deduped as any[]);
     const events: Array<PlanningHorizonEvent & { urgency: ReturnType<typeof getPlanningUrgency>; ticket_freshness: string | null }> =
-      deduped.slice(0, 20).map((e) => {
+      dedupedWithFallback.slice(0, 20).map((e) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const ev = e as any;
         return {

@@ -1,4 +1,3 @@
-import { PortalHeader } from "@/components/headers";
 import ListDetailView from "@/components/community/ListDetailView";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -64,8 +63,6 @@ export default async function CurationDetailPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
-      <PortalHeader portalSlug={portalSlug} hideNav />
-
       <div className="max-w-3xl mx-auto px-4 py-6 pb-28">
         <ListDetailView portalSlug={portalSlug} listSlug={slug} />
       </div>

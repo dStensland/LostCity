@@ -3,7 +3,6 @@ import Link from "next/link";
 import type { ReactElement } from "react";
 import { cache } from "react";
 import ScrollToTop from "@/components/ScrollToTop";
-import { PortalHeader } from "@/components/headers";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getSeriesBySlug,
@@ -365,12 +364,6 @@ export default async function PortalSeriesPage({ params }: Props) {
 
 
       <div className={`min-h-screen ${seriesAccentClass?.className ?? ""}`}>
-        <PortalHeader
-          portalSlug={activePortalSlug}
-          portalName={activePortalName}
-          hideNav
-        />
-
         <main data-clean-detail="true" className="max-w-5xl mx-auto px-4 py-4 sm:py-6 pb-32 md:pb-16 space-y-6 sm:space-y-9">
           {/* Hero Section - Poster Mode */}
           <DetailHero

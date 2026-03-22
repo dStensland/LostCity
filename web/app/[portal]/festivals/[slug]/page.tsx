@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { cache } from "react";
 import ScrollToTop from "@/components/ScrollToTop";
-import { PortalHeader } from "@/components/headers";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getFestivalBySlug,
@@ -323,12 +322,6 @@ export default async function PortalFestivalPage({ params }: Props) {
 
 
       <div className={`min-h-screen ${festivalAccentClass?.className ?? ""}`}>
-        <PortalHeader
-          portalSlug={activePortalSlug}
-          portalName={activePortalName}
-          hideNav
-        />
-
         <main
           data-festival-detail="true"
           className={`max-w-5xl mx-auto px-4 py-4 sm:py-6 ${

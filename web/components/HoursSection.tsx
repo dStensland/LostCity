@@ -109,7 +109,7 @@ export default function HoursSection({
           ) : (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-[var(--coral)]/20 text-[var(--coral)] border border-[var(--coral)]/30">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--coral)]" />
-              Closed
+              {todayHours ? `Opens at ${formatTime(todayHours.open)}` : "Closed today"}
             </span>
           )}
 
@@ -117,11 +117,6 @@ export default function HoursSection({
           {todayHours && (
             <span className="text-xs text-[var(--muted)] font-mono">
               Today: {formatTime(todayHours.open)} - {formatTime(todayHours.close)}
-            </span>
-          )}
-          {!todayHours && (
-            <span className="text-xs text-[var(--muted)] font-mono">
-              Closed today
             </span>
           )}
         </div>

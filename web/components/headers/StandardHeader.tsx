@@ -24,7 +24,6 @@ interface StandardHeaderProps {
     fallbackHref?: string;
     label: string;
   };
-  hideNav?: boolean;
   headerConfig: HeaderConfig;
 }
 
@@ -84,7 +83,6 @@ export default function StandardHeader({
   portalName,
   branding,
   backLink,
-  hideNav = false,
   headerConfig,
 }: StandardHeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -206,6 +204,9 @@ export default function StandardHeader({
     if (tab.key === "happening") {
       return (
         isFindRoute ||
+        pathname.startsWith(`/${portalSlug}/events/`) ||
+        pathname.startsWith(`/${portalSlug}/series/`) ||
+        pathname.startsWith(`/${portalSlug}/festivals/`) ||
         (isPortalPage && (
           currentView === "happening" ||
           currentView === "find" ||
@@ -216,7 +217,10 @@ export default function StandardHeader({
       );
     }
     if (tab.key === "places") {
-      return isPortalPage && (currentView === "places" || currentView === "spots");
+      return (
+        pathname.startsWith(`/${portalSlug}/spots/`) ||
+        (isPortalPage && (currentView === "places" || currentView === "spots"))
+      );
     }
     if (tab.key === "community") {
       return isCommunityRoute || (isPortalPage && currentView === "community");
@@ -340,35 +344,33 @@ export default function StandardHeader({
           </div>
 
           {/* Center: Nav tabs (desktop only) */}
-          {!hideNav && (
-            <nav
-              className={`portal-feed-nav hidden sm:flex items-center flex-1 max-w-md mx-auto ${getNavStyleClass()}`}
-              role="tablist"
-              aria-label="Main navigation"
-            >
-              {TABS.map((tab, index) => {
-                const active = isActive(tab);
-                return (
-                  <Link
-                    key={tab.key}
-                    href={getHref(tab)}
-                    className={`portal-feed-tab nav-tab relative flex-1 text-center px-3 py-1.5 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
-                      active
-                        ? "nav-tab-active text-[var(--cream)] font-medium"
-                        : "text-[var(--muted)] hover:text-[var(--soft)] border border-transparent"
-                    }`}
-                    role="tab"
-                    aria-selected={active}
-                    aria-controls={`${tab.key}-panel`}
-                    tabIndex={active ? 0 : -1}
-                    onKeyDown={(e) => handleKeyDown(e, index)}
-                  >
-                    {tab.label}
-                  </Link>
-                );
-              })}
-            </nav>
-          )}
+          <nav
+            className={`portal-feed-nav hidden sm:flex items-center flex-1 max-w-md mx-auto ${getNavStyleClass()}`}
+            role="tablist"
+            aria-label="Main navigation"
+          >
+            {TABS.map((tab, index) => {
+              const active = isActive(tab);
+              return (
+                <Link
+                  key={tab.key}
+                  href={getHref(tab)}
+                  className={`portal-feed-tab nav-tab relative flex-1 text-center px-3 py-1.5 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
+                    active
+                      ? "nav-tab-active text-[var(--cream)] font-medium"
+                      : "text-[var(--muted)] hover:text-[var(--soft)] border border-transparent"
+                  }`}
+                  role="tab"
+                  aria-selected={active}
+                  aria-controls={`${tab.key}-panel`}
+                  tabIndex={active ? 0 : -1}
+                  onKeyDown={(e) => handleKeyDown(e, index)}
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </nav>
 
           {/* Right: Search, User menu, Mobile overflow */}
           <div className="portal-feed-actions flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-auto">
@@ -425,37 +427,35 @@ export default function StandardHeader({
         </div>
 
         {/* Mobile Nav Bar (below header on mobile) */}
-        {!hideNav && (
-          <nav
-            className={`portal-feed-nav portal-feed-nav-mobile sm:hidden border-t border-[var(--twilight)]/30 bg-[var(--night)]/95 ${getNavStyleClass()}`}
-            role="tablist"
-            aria-label="Main navigation"
-          >
-            <div className="flex py-1.5 px-3">
-              {TABS.map((tab, index) => {
-                const active = isActive(tab);
-                return (
-                  <Link
-                    key={tab.key}
-                    href={getHref(tab)}
-                    className={`portal-feed-tab nav-tab relative flex-1 text-center py-1 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
-                      active
-                        ? "nav-tab-active text-[var(--cream)] font-medium"
-                        : "text-[var(--muted)] hover:text-[var(--soft)] border border-transparent"
-                    }`}
-                    role="tab"
-                    aria-selected={active}
-                    aria-controls={`${tab.key}-panel`}
-                    tabIndex={active ? 0 : -1}
-                    onKeyDown={(e) => handleKeyDown(e, index)}
-                  >
-                    {tab.label}
-                  </Link>
-                );
-              })}
-            </div>
-          </nav>
-        )}
+        <nav
+          className={`portal-feed-nav portal-feed-nav-mobile sm:hidden border-t border-[var(--twilight)]/30 bg-[var(--night)]/95 ${getNavStyleClass()}`}
+          role="tablist"
+          aria-label="Main navigation"
+        >
+          <div className="flex py-1.5 px-3">
+            {TABS.map((tab, index) => {
+              const active = isActive(tab);
+              return (
+                <Link
+                  key={tab.key}
+                  href={getHref(tab)}
+                  className={`portal-feed-tab nav-tab relative flex-1 text-center py-1 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
+                    active
+                      ? "nav-tab-active text-[var(--cream)] font-medium"
+                      : "text-[var(--muted)] hover:text-[var(--soft)] border border-transparent"
+                  }`}
+                  role="tab"
+                  aria-selected={active}
+                  aria-controls={`${tab.key}-panel`}
+                  tabIndex={active ? 0 : -1}
+                  onKeyDown={(e) => handleKeyDown(e, index)}
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
         </div>{/* end content layer */}
       </header>
     </>
