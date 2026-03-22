@@ -31,7 +31,6 @@ from datetime import datetime
 
 import requests
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
@@ -171,32 +170,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
             logger.info(f"Trying simple fetch: {url}")
             soup = try_simple_requests_first(url)
 
-            # If simple request didn't work, use Playwright
+            # If simple request didn't work, retry once more
             if not soup:
-                logger.info(f"Fetching with Playwright: {url}")
-                with sync_playwright() as p:
-                    browser = p.chromium.launch(headless=True)
-                    context = browser.new_context(
-                        user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                        viewport={"width": 1920, "height": 1080},
-                    )
-                    page = context.new_page()
-
-                    try:
-                        page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                        page.wait_for_timeout(3000)
-
-                        for _ in range(3):
-                            page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                            page.wait_for_timeout(1000)
-
-                        html_content = page.content()
-                        soup = BeautifulSoup(html_content, "html.parser")
-                    except Exception as e:
-                        logger.warning(f"Failed to fetch {url}: {e}")
-                        continue
-                    finally:
-                        browser.close()
+                logger.info(f"Retrying with plain requests: {url}")
+                try:
+                    headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
+                    resp = requests.get(url, headers=headers, timeout=30)
+                    resp.raise_for_status()
+                    soup = BeautifulSoup(resp.text, "html.parser")
+                except Exception as e:
+                    logger.warning(f"Failed to fetch {url}: {e}")
+                    continue
 
             # Look for event containers
             event_selectors = [

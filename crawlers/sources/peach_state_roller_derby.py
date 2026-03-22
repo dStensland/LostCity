@@ -13,7 +13,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
 from bs4 import BeautifulSoup
 
 from db import (
@@ -181,7 +181,7 @@ def canonicalize_event_title(raw_title: str) -> str:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Peach State Roller Derby schedule using Playwright."""
+    """Crawl Peach State Roller Derby schedule."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -189,35 +189,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
     current_hashes: set[str] = set()
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        venue_id = get_or_create_venue(VENUE_DATA)
 
-            # Get or create venue
-            venue_id = get_or_create_venue(VENUE_DATA)
+        logger.info(f"Fetching Peach State Roller Derby: {BASE_URL}")
+        headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
+        response = requests.get(BASE_URL, headers=headers, timeout=30)
+        response.raise_for_status()
+        html_content = response.text
 
-            logger.info(f"Fetching Peach State Roller Derby: {BASE_URL}")
-            page.goto(BASE_URL, wait_until="networkidle", timeout=60000)
-            page.wait_for_timeout(3000)
-
-            # Scroll to load lazy content
-            for _ in range(3):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            # Get text content directly from Playwright (preserves line breaks better)
-            all_text = page.inner_text("body")
-
-            # Also get HTML for link extraction
-            html_content = page.content()
-            browser.close()
-
-        # Parse HTML with BeautifulSoup for links
+        # Parse HTML with BeautifulSoup
         soup = BeautifulSoup(html_content, "html.parser")
+
+        # Extract text content line by line (mirrors page.inner_text("body") behaviour)
+        body_elem = soup.find("body")
+        raw_text = body_elem.get_text("\n") if body_elem else soup.get_text("\n")
+        all_text = raw_text
 
         # Strategy 1: Look for text containing date patterns
         lines = [l.strip() for l in all_text.split('\n') if l.strip()]

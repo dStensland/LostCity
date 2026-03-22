@@ -2,7 +2,6 @@
 Crawler for North Georgia State Fair (northgeorgiastatefair.com).
 
 Annual fair in Marietta featuring demolition derby, monster trucks, rides, and concerts.
-Site uses Wix platform - requires Playwright for JavaScript rendering.
 """
 
 from __future__ import annotations
@@ -12,7 +11,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
 from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
@@ -93,169 +92,143 @@ def categorize_event(title: str, description: str = "") -> tuple[str, Optional[s
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl North Georgia State Fair events using Playwright."""
+    """Crawl North Georgia State Fair events."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
+    headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
+
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        venue_id = get_or_create_venue(VENUE_DATA)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+        # Try BigTickets first for structured event data
+        bigtickets_url = "https://www.bigtickets.com/e/northgeorgiastatefair/"
+        logger.info(f"Checking BigTickets: {bigtickets_url}")
 
-            # Try BigTickets first for structured event data
-            bigtickets_url = "https://www.bigtickets.com/e/northgeorgiastatefair/"
-            logger.info(f"Checking BigTickets: {bigtickets_url}")
+        try:
+            response = requests.get(bigtickets_url, headers=headers, timeout=30)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, "html.parser")
 
-            try:
-                page.goto(bigtickets_url, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(3000)
+            # Look for event listings on BigTickets
+            event_links = soup.find_all("a", href=re.compile(r"/events/"))
 
-                html = page.content()
-                soup = BeautifulSoup(html, "html.parser")
+            for link in event_links:
+                title = link.get_text(strip=True)
 
-                # Look for event listings on BigTickets
-                event_links = soup.find_all("a", href=re.compile(r"/events/"))
+                if not title or len(title) < 5:
+                    continue
+                if any(skip in title.lower() for skip in ["buy tickets", "view all", "more events"]):
+                    continue
 
-                for link in event_links:
-                    title = link.get_text(strip=True)
+                event_url = link.get("href")
+                if event_url and not event_url.startswith("http"):
+                    event_url = f"https://www.bigtickets.com{event_url}"
 
-                    # Skip navigation/header items
-                    if not title or len(title) < 5:
-                        continue
-                    if any(skip in title.lower() for skip in ["buy tickets", "view all", "more events"]):
-                        continue
+                parent = link.find_parent()
+                date_text = parent.get_text() if parent else ""
 
-                    event_url = link.get("href")
-                    if event_url and not event_url.startswith("http"):
-                        event_url = f"https://www.bigtickets.com{event_url}"
+                date_match = re.search(
+                    r"(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.?\s+(\d{1,2})(?:,?\s+(\d{4}))?",
+                    date_text,
+                    re.IGNORECASE
+                )
 
-                    # Try to find date information near the link
-                    parent = link.find_parent()
-                    date_text = parent.get_text() if parent else ""
+                if date_match:
+                    month = date_match.group(1)
+                    day = date_match.group(2)
+                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
 
-                    # Look for date patterns
-                    date_match = re.search(
-                        r"(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.?\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                        date_text,
-                        re.IGNORECASE
-                    )
-
-                    if date_match:
-                        month = date_match.group(1)
-                        day = date_match.group(2)
-                        year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                        try:
-                            # Convert month name to number
-                            month_map = {
-                                "jan": 1, "january": 1,
-                                "feb": 2, "february": 2,
-                                "mar": 3, "march": 3,
-                                "apr": 4, "april": 4,
-                                "may": 5,
-                                "jun": 6, "june": 6,
-                                "jul": 7, "july": 7,
-                                "aug": 8, "august": 8,
-                                "sep": 9, "september": 9,
-                                "oct": 10, "october": 10,
-                                "nov": 11, "november": 11,
-                                "dec": 12, "december": 12,
-                            }
-                            month_num = month_map.get(month.lower()[:3])
-                            dt = datetime(int(year), month_num, int(day))
-
-                            # If date is in the past, assume next year
-                            if dt.date() < datetime.now().date():
-                                dt = datetime(int(year) + 1, month_num, int(day))
-
-                            start_date = dt.strftime("%Y-%m-%d")
-
-                        except (ValueError, KeyError):
-                            logger.debug(f"Could not parse date: {month} {day} {year}")
-                            continue
-
-                        # Parse time if present
-                        start_time = parse_time(date_text)
-
-                        events_found += 1
-
-                        # Generate content hash for deduplication
-                        content_hash = generate_content_hash(title, "North Georgia State Fair", start_date)
-
-
-                        # Categorize the event
-                        category, subcategory, tags = categorize_event(title, "")
-
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": title,
-                            "description": f"Event at North Georgia State Fair - {title}",
-                            "start_date": start_date,
-                            "start_time": start_time,
-                            "end_date": None,
-                            "end_time": None,
-                            "is_all_day": False,
-                            "category": category,
-                            "subcategory": subcategory,
-                            "tags": tags,
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": False,
-                            "source_url": event_url if event_url else bigtickets_url,
-                            "ticket_url": event_url if event_url else bigtickets_url,
-                            "image_url": None,
-                            "raw_text": f"{title} - {date_text[:200]}",
-                            "extraction_confidence": 0.75,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
+                    try:
+                        month_map = {
+                            "jan": 1, "january": 1,
+                            "feb": 2, "february": 2,
+                            "mar": 3, "march": 3,
+                            "apr": 4, "april": 4,
+                            "may": 5,
+                            "jun": 6, "june": 6,
+                            "jul": 7, "july": 7,
+                            "aug": 8, "august": 8,
+                            "sep": 9, "september": 9,
+                            "oct": 10, "october": 10,
+                            "nov": 11, "november": 11,
+                            "dec": 12, "december": 12,
                         }
+                        month_num = month_map.get(month.lower()[:3])
+                        dt = datetime(int(year), month_num, int(day))
 
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
+                        if dt.date() < datetime.now().date():
+                            dt = datetime(int(year) + 1, month_num, int(day))
 
-                        try:
-                            insert_event(event_record)
-                            events_new += 1
-                            logger.info(f"Added: {title} on {start_date}")
-                        except Exception as e:
-                            logger.error(f"Failed to insert: {title}: {e}")
+                        start_date = dt.strftime("%Y-%m-%d")
 
-            except Exception as e:
-                logger.warning(f"BigTickets fetch failed: {e}")
+                    except (ValueError, KeyError):
+                        logger.debug(f"Could not parse date: {month} {day} {year}")
+                        continue
 
-            # If no events found via BigTickets, try main site
-            if events_found == 0:
-                logger.info(f"Fetching main site: {BASE_URL}")
-                page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(3000)
+                    start_time = parse_time(date_text)
+                    events_found += 1
 
-                # Scroll to load all content
-                for _ in range(3):
-                    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                    page.wait_for_timeout(1000)
+                    content_hash = generate_content_hash(title, "North Georgia State Fair", start_date)
+                    category, subcategory, tags = categorize_event(title, "")
 
-                html = page.content()
-                soup = BeautifulSoup(html, "html.parser")
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": title,
+                        "description": f"Event at North Georgia State Fair - {title}",
+                        "start_date": start_date,
+                        "start_time": start_time,
+                        "end_date": None,
+                        "end_time": None,
+                        "is_all_day": False,
+                        "category": category,
+                        "subcategory": subcategory,
+                        "tags": tags,
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": None,
+                        "is_free": False,
+                        "source_url": event_url if event_url else bigtickets_url,
+                        "ticket_url": event_url if event_url else bigtickets_url,
+                        "image_url": None,
+                        "raw_text": f"{title} - {date_text[:200]}",
+                        "extraction_confidence": 0.75,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
 
-                # Look for schedule/dates section
-                body_text = page.inner_text("body")
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        continue
 
-                # Try to find fair dates
-                # Common pattern: "September 20-29, 2024" or similar
+                    try:
+                        insert_event(event_record)
+                        events_new += 1
+                        logger.info(f"Added: {title} on {start_date}")
+                    except Exception as e:
+                        logger.error(f"Failed to insert: {title}: {e}")
+
+        except Exception as e:
+            logger.warning(f"BigTickets fetch failed: {e}")
+
+        # If no events found via BigTickets, try main site
+        if events_found == 0:
+            logger.info(f"Fetching main site: {BASE_URL}")
+            try:
+                response = requests.get(BASE_URL, headers=headers, timeout=30)
+                response.raise_for_status()
+                soup = BeautifulSoup(response.text, "html.parser")
+
+                # Extract body text for date range matching
+                body_elem = soup.find("body")
+                body_text = body_elem.get_text(" ", strip=True) if body_elem else soup.get_text(" ", strip=True)
+
                 date_range_match = re.search(
                     r"(September|Sept)\s+(\d{1,2})\s*[-–]\s*(\d{1,2})(?:,?\s+(\d{4}))?",
                     body_text,
@@ -263,17 +236,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 )
 
                 if date_range_match:
-                    month = "September"  # North Georgia State Fair is typically in September
                     start_day = int(date_range_match.group(2))
                     end_day = int(date_range_match.group(3))
                     year = date_range_match.group(4) if date_range_match.group(4) else str(datetime.now().year)
 
                     try:
-                        # Create the fair event
                         start_dt = datetime(int(year), 9, start_day)
                         end_dt = datetime(int(year), 9, end_day)
 
-                        # If dates are in the past, assume next year
                         if start_dt.date() < datetime.now().date():
                             start_dt = datetime(int(year) + 1, 9, start_day)
                             end_dt = datetime(int(year) + 1, 9, end_day)
@@ -331,7 +301,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 else:
                     logger.warning("Could not find fair date range on main site")
 
-            browser.close()
+            except Exception as e:
+                logger.warning(f"Main site fetch failed: {e}")
 
         logger.info(
             f"North Georgia State Fair crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
