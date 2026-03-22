@@ -41,9 +41,6 @@ vi.mock("@/lib/api-utils", () => ({
   }),
 }));
 
-vi.mock("@/lib/event-content-classification", () => ({
-  isSuppressedFromGeneralEventFeed: vi.fn(() => false),
-}));
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(() => Promise.resolve({

@@ -2,7 +2,7 @@ import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import type { EventWithLocation } from "@/lib/search";
 import type { SeriesInfo, SeriesVenueGroup } from "@/components/SeriesCard";
 import type { Festival } from "@/lib/festivals";
-import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
+
 
 // Rollup thresholds
 const VENUE_ROLLUP_THRESHOLD = 4;
@@ -151,10 +151,8 @@ export function groupEventsForDisplay(
   options: GroupDisplayOptions = {}
 ): DisplayItem[] {
   // Filter out events with no start_time (unless all-day).
-  // Also hide long-running exhibit-like content from generic event feeds.
   const filteredEvents = events.filter((e) => {
     if (!e.start_time && !e.is_all_day) return false;
-    if (isSuppressedFromGeneralEventFeed(e)) return false;
     return true;
   });
 

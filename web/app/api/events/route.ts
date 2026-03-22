@@ -5,7 +5,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limi
 import { generateNextCursor } from "@/lib/cursor";
 import { logger } from "@/lib/logger";
 import { apiResponse } from "@/lib/api-utils";
-import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
+
 import { createClient } from "@/lib/supabase/server";
 import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 
@@ -116,9 +116,7 @@ export async function GET(request: Request) {
       );
 
       // Enrich with social proof counts
-      const events = (await enrichEventsWithSocialProof(rawEvents)).filter(
-        (event) => !isSuppressedFromGeneralEventFeed(event)
-      );
+      const events = await enrichEventsWithSocialProof(rawEvents);
 
       return apiResponse(
         {
@@ -138,9 +136,7 @@ export async function GET(request: Request) {
       const { events: rawEvents, total } = await getFilteredEventsWithSearch(filters, page, pageSize);
 
       // Enrich with social proof counts
-      const events = (await enrichEventsWithSocialProof(rawEvents)).filter(
-        (event) => !isSuppressedFromGeneralEventFeed(event)
-      );
+      const events = await enrichEventsWithSocialProof(rawEvents);
 
       // Also generate a cursor from the last event for gradual migration
       const nextCursor = events.length > 0 ? generateNextCursor(events) : null;

@@ -24,7 +24,7 @@ import {
   suppressEventImagesIfVenueFlagged,
 } from "@/lib/image-quality-suppression";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
-import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
+
 import { filterOutInactiveVenueEvents } from "@/lib/event-feed-health";
 import { applyFeedGate } from "@/lib/feed-gate";
 import {
@@ -906,7 +906,6 @@ export async function GET(request: Request) {
       events = filterByPortalContentScope(events, contentFilters);
     }
 
-    events = events.filter((event) => !isSuppressedFromGeneralEventFeed(event));
     events = events.filter((event) => !isSceneEvent(event));
 
     let followedChannelCount = 0;
@@ -1134,11 +1133,9 @@ export async function GET(request: Request) {
         portalFilters.city || "Atlanta",
         { allowMissingCity: true },
       );
-      const filteredTrendingEventsData = (hideAdultContent
+      const filteredTrendingEventsData = hideAdultContent
         ? trendingEventsData.filter((event) => event.is_adult !== true)
-        : trendingEventsData).filter(
-        (event) => !isSuppressedFromGeneralEventFeed(event),
-      );
+        : trendingEventsData;
       const routableTrendingEventsData = filteredTrendingEventsData.filter(
         (event) => !isSceneEvent(event),
       );

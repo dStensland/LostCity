@@ -350,8 +350,31 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             events_found += 1
             hash_start_date = record.pop("hash_start_date", None) or record["start_date"]
-            content_hash = generate_content_hash(record["title"], VENUE_DATA["name"], hash_start_date)
 
+            # Exhibitions go to exhibitions table only — never written to events table
+            if record.get("content_kind") == "exhibit":
+                try:
+                    exhibition_record = {
+                        "title": record["title"],
+                        "venue_id": venue_id,
+                        "source_id": source_id,
+                        "_venue_name": VENUE_DATA["name"],
+                        "opening_date": hash_start_date,
+                        "closing_date": record["end_date"],
+                        "description": record["description"],
+                        "image_url": record["image_url"],
+                        "source_url": record["source_url"],
+                        "admission_type": "free" if record.get("is_free") else "ticketed",
+                        "tags": ["museum", "moca-ga", "west-midtown", "exhibition", "contemporary-art"],
+                        "is_active": True,
+                    }
+                    insert_exhibition(exhibition_record)
+                    events_new += 1
+                except Exception as exc:
+                    logger.debug("Exhibition insert failed for %r: %s", record["title"], exc)
+                continue
+
+            content_hash = generate_content_hash(record["title"], VENUE_DATA["name"], hash_start_date)
             event_record = {
                 "source_id": source_id,
                 "venue_id": venue_id,
@@ -379,29 +402,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "recurrence_rule": None,
                 "content_hash": content_hash,
             }
-
-            # Exhibitions go to exhibitions table only, events to events table
-            if record.get("content_kind") == "exhibit":
-                try:
-                    exhibition_record = {
-                        "title": record["title"],
-                        "venue_id": venue_id,
-                        "source_id": source_id,
-                        "_venue_name": VENUE_DATA["name"],
-                        "opening_date": hash_start_date,
-                        "closing_date": record["end_date"],
-                        "description": record["description"],
-                        "image_url": record["image_url"],
-                        "source_url": record["source_url"],
-                        "admission_type": "free" if record.get("is_free") else "ticketed",
-                        "tags": ["museum", "moca-ga", "west-midtown", "exhibition", "contemporary-art"],
-                        "is_active": True,
-                    }
-                    insert_exhibition(exhibition_record)
-                    events_new += 1
-                except Exception as exc:
-                    logger.debug("Exhibition insert failed for %r: %s", record["title"], exc)
-                continue
 
             existing = find_event_by_hash(content_hash)
             if existing:
