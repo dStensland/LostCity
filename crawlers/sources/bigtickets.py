@@ -3,6 +3,9 @@ BigTickets.com aggregator crawler for Atlanta metro area events.
 
 Scrapes search results pages to discover events, resolves venues against
 our DB via get_or_create_venue, and enriches existing events with ticket URLs.
+
+BigTickets serves its search results and event detail pages as static HTML —
+no JavaScript rendering required.
 """
 
 from __future__ import annotations
@@ -13,7 +16,7 @@ import time
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
 from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
@@ -24,6 +27,13 @@ logger = logging.getLogger(__name__)
 SEARCH_URL = "https://www.bigtickets.com/events/q/atlanta-ga-all-dates/"
 PAGE_SIZE = 20
 MAX_PAGES = 10  # Safety cap; typically ~5 pages exist
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    )
+}
 
 CATEGORY_MAP = {
     "concerts": "music",
@@ -119,12 +129,12 @@ def _parse_venue_location(text: str) -> tuple[str, str, str]:
         return "TBA", "Atlanta", "GA"
 
     # Try "Venue - City, City, ST" pattern first (BigTickets sometimes repeats city)
-    m = re.match(r"^(.+?)\s*[-–]\s*.+?,\s*([A-Z]{2})\s*$", text)
+    m = re.match(r"^(.+?)\s*[-\u2013]\s*.+?,\s*([A-Z]{2})\s*$", text)
     if m:
         venue_name = m.group(1).strip()
         state = m.group(2)
         # Extract city: everything between dash and state, take last comma-segment
-        after_dash = re.split(r"\s*[-–]\s*", text, maxsplit=1)[1]
+        after_dash = re.split(r"\s*[-\u2013]\s*", text, maxsplit=1)[1]
         city_part = re.sub(r",\s*[A-Z]{2}\s*$", "", after_dash).strip()
         # If city is repeated ("Atlanta, Atlanta"), take unique value
         cities = [c.strip() for c in city_part.split(",") if c.strip()]
@@ -139,13 +149,12 @@ def _parse_venue_location(text: str) -> tuple[str, str, str]:
     return text, "Atlanta", "GA"
 
 
-def _fetch_detail_description(page, event_url: str) -> Optional[str]:
-    """Fetch event detail page for description. Returns description text or None."""
+def _fetch_detail_description(event_url: str) -> Optional[str]:
+    """Fetch event detail page for description using plain HTTP. Returns description text or None."""
     try:
-        page.goto(event_url, wait_until="domcontentloaded", timeout=20000)
-        page.wait_for_timeout(2000)
-        html = page.content()
-        soup = BeautifulSoup(html, "html.parser")
+        response = requests.get(event_url, headers=HEADERS, timeout=20)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
 
         # Look for description in meta tags first
         meta_desc = soup.find("meta", attrs={"name": "description"})
@@ -165,6 +174,17 @@ def _fetch_detail_description(page, event_url: str) -> Optional[str]:
         return None
     except Exception as e:
         logger.debug(f"Could not fetch detail page {event_url}: {e}")
+        return None
+
+
+def _fetch_page_html(url: str) -> Optional[str]:
+    """Fetch a page and return its HTML, or None on failure."""
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=20)
+        response.raise_for_status()
+        return response.text
+    except Exception as e:
+        logger.warning(f"Failed to load {url}: {e}")
         return None
 
 
@@ -273,6 +293,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
       1. Collect all unique event cards across paginated search pages.
       2. Process each card: dedup against DB, enrich existing events with
          ticket URLs, or fetch detail page + insert for truly new events.
+
+    BigTickets serves static HTML — no JavaScript rendering required.
     """
     source_id = source["id"]
     events_found = 0
@@ -280,147 +302,134 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        # --- Pass 1: collect all unique cards ---
+        all_cards: list[dict] = []
+        seen_hashes: set[str] = set()
 
-            # --- Pass 1: collect all unique cards ---
-            all_cards: list[dict] = []
-            seen_hashes: set[str] = set()
+        for page_idx in range(MAX_PAGES):
+            offset = page_idx * (PAGE_SIZE + 1) if page_idx > 0 else 0
+            url = f"{SEARCH_URL}?p={offset}" if offset > 0 else SEARCH_URL
+            logger.info(f"Fetching page {page_idx + 1} (offset {offset})")
 
-            for page_idx in range(MAX_PAGES):
-                offset = page_idx * (PAGE_SIZE + 1) if page_idx > 0 else 0
-                url = f"{SEARCH_URL}?p={offset}" if offset > 0 else SEARCH_URL
-                logger.info(f"Fetching page {page_idx + 1} (offset {offset})")
+            html = _fetch_page_html(url)
+            if not html:
+                break
 
-                try:
-                    page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                    page.wait_for_timeout(3000)
-                except Exception as e:
-                    logger.warning(f"Failed to load page {page_idx + 1}: {e}")
-                    break
+            cards = _parse_event_cards(html)
 
-                cards = _parse_event_cards(page.content())
+            if not cards:
+                logger.info(f"No events on page {page_idx + 1}, stopping")
+                break
 
-                if not cards:
-                    logger.info(f"No events on page {page_idx + 1}, stopping")
-                    break
+            new_on_page = 0
+            for c in cards:
+                h = generate_content_hash(c["title"], c["venue_name"], c["start_date"])
+                if h not in seen_hashes:
+                    seen_hashes.add(h)
+                    all_cards.append(c)
+                    new_on_page += 1
 
-                new_on_page = 0
-                for c in cards:
-                    h = generate_content_hash(c["title"], c["venue_name"], c["start_date"])
-                    if h not in seen_hashes:
-                        seen_hashes.add(h)
-                        all_cards.append(c)
-                        new_on_page += 1
+            if not new_on_page:
+                logger.info(f"Page {page_idx + 1}: all duplicates, stopping")
+                break
 
-                if not new_on_page:
-                    logger.info(f"Page {page_idx + 1}: all duplicates, stopping")
-                    break
+            logger.info(f"Page {page_idx + 1}: {new_on_page} new ({len(all_cards)} total)")
+            time.sleep(1)
 
-                logger.info(f"Page {page_idx + 1}: {new_on_page} new ({len(all_cards)} total)")
-                time.sleep(1)
+        logger.info(f"Collected {len(all_cards)} unique events, processing...")
 
-            logger.info(f"Collected {len(all_cards)} unique events, processing...")
+        # --- Pass 2: resolve venues, dedup, insert/update ---
+        for card in all_cards:
+            events_found += 1
+            title = card["title"]
+            start_date = card["start_date"]
+            venue_name = card["venue_name"]
+            event_url = card["event_url"]
 
-            # --- Pass 2: resolve venues, dedup, insert/update ---
-            for card in all_cards:
-                events_found += 1
-                title = card["title"]
-                start_date = card["start_date"]
-                venue_name = card["venue_name"]
-                event_url = card["event_url"]
-
-                # Resolve venue
-                venue_id = None
-                if venue_name and venue_name != "TBA":
-                    venue_record = {
-                        "name": venue_name,
-                        "slug": re.sub(r"[^a-z0-9-]", "", venue_name.lower().replace(" ", "-"))[:50],
-                        "city": card["city"],
-                        "state": card["state"],
-                        "venue_type": "event_space",
-                    }
-                    try:
-                        venue_id = get_or_create_venue(venue_record)
-                    except Exception as e:
-                        logger.warning(f"Could not resolve venue '{venue_name}': {e}")
-
-                # Dedup via content hash
-                content_hash = generate_content_hash(title, venue_name, start_date)
-                existing = find_event_by_hash(content_hash)
-
-                if existing:
-                    # Enrich with ticket URL if missing
-                    update_fields = {}
-                    if event_url and not existing.get("ticket_url"):
-                        update_fields["ticket_url"] = event_url
-                    if event_url and not existing.get("source_url"):
-                        update_fields["source_url"] = event_url
-                    if update_fields:
-                        smart_update_existing_event(existing, {
-                            **update_fields,
-                            "source_id": source_id,
-                            "content_hash": content_hash,
-                        })
-                    events_updated += 1
-                    logger.debug(f"Existing: {title}")
-                    continue
-
-                # New event — fetch detail page for description
-                description = None
-                if event_url:
-                    description = _fetch_detail_description(page, event_url)
-
-                if not description:
-                    description = f"{title} at {venue_name}."
-
-                tags = [card["category"]]
-                if card["is_free"]:
-                    tags.append("free")
-                for raw_cat in card["raw_categories"]:
-                    tag = raw_cat.lower().replace(" & ", "-").replace(" ", "-")
-                    if tag not in tags:
-                        tags.append(tag)
-
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": title,
-                    "description": description[:2000],
-                    "start_date": start_date,
-                    "start_time": card["start_time"],
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": card["category"],
-                    "tags": tags,
-                    "price_min": card["price_min"],
-                    "price_max": card["price_max"],
-                    "price_note": "Free" if card["is_free"] else None,
-                    "is_free": card["is_free"],
-                    "source_url": event_url or SEARCH_URL,
-                    "ticket_url": event_url,
-                    "image_url": None,
-                    "raw_text": f"{title} | {venue_name} | {start_date}",
-                    "extraction_confidence": 0.80,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
+            # Resolve venue
+            venue_id = None
+            if venue_name and venue_name != "TBA":
+                venue_record = {
+                    "name": venue_name,
+                    "slug": re.sub(r"[^a-z0-9-]", "", venue_name.lower().replace(" ", "-"))[:50],
+                    "city": card["city"],
+                    "state": card["state"],
+                    "venue_type": "event_space",
                 }
-
                 try:
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info(f"Added: {title} on {start_date} at {venue_name}")
+                    venue_id = get_or_create_venue(venue_record)
                 except Exception as e:
-                    logger.error(f"Failed to insert: {title}: {e}")
+                    logger.warning(f"Could not resolve venue '{venue_name}': {e}")
 
-            browser.close()
+            # Dedup via content hash
+            content_hash = generate_content_hash(title, venue_name, start_date)
+            existing = find_event_by_hash(content_hash)
+
+            if existing:
+                # Enrich with ticket URL if missing
+                update_fields = {}
+                if event_url and not existing.get("ticket_url"):
+                    update_fields["ticket_url"] = event_url
+                if event_url and not existing.get("source_url"):
+                    update_fields["source_url"] = event_url
+                if update_fields:
+                    smart_update_existing_event(existing, {
+                        **update_fields,
+                        "source_id": source_id,
+                        "content_hash": content_hash,
+                    })
+                events_updated += 1
+                logger.debug(f"Existing: {title}")
+                continue
+
+            # New event — fetch detail page for description
+            description = None
+            if event_url:
+                description = _fetch_detail_description(event_url)
+
+            if not description:
+                description = f"{title} at {venue_name}."
+
+            tags = [card["category"]]
+            if card["is_free"]:
+                tags.append("free")
+            for raw_cat in card["raw_categories"]:
+                tag = raw_cat.lower().replace(" & ", "-").replace(" ", "-")
+                if tag not in tags:
+                    tags.append(tag)
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title,
+                "description": description[:2000],
+                "start_date": start_date,
+                "start_time": card["start_time"],
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": card["category"],
+                "tags": tags,
+                "price_min": card["price_min"],
+                "price_max": card["price_max"],
+                "price_note": "Free" if card["is_free"] else None,
+                "is_free": card["is_free"],
+                "source_url": event_url or SEARCH_URL,
+                "ticket_url": event_url,
+                "image_url": None,
+                "raw_text": f"{title} | {venue_name} | {start_date}",
+                "extraction_confidence": 0.80,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
+
+            try:
+                insert_event(event_record)
+                events_new += 1
+                logger.info(f"Added: {title} on {start_date} at {venue_name}")
+            except Exception as e:
+                logger.error(f"Failed to insert: {title}: {e}")
 
         logger.info(
             f"BigTickets crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

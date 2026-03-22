@@ -18,7 +18,7 @@ STRATEGY:
 - Category: "community" for networking, "learning" for workshops/summits
 - Most events are free for veterans
 
-Site may use modern JS framework - check if static or JS-rendered.
+Site uses The Events Calendar (WordPress/Tribe) plugin — static HTML served directly.
 """
 
 from __future__ import annotations
@@ -30,7 +30,6 @@ from datetime import datetime
 
 import requests
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
@@ -40,6 +39,13 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://atlvets.org"
 EVENTS_URL = f"{BASE_URL}/calendar/"
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    )
+}
 
 VENUE_DATA = {
     "name": "ATLVets",
@@ -67,11 +73,11 @@ def parse_time_string(time_str: str) -> Optional[str]:
         time_str = time_str.strip().upper()
 
         # If it's a range, extract the first time
-        if '-' in time_str or '–' in time_str:
-            time_str = re.split(r'[-–]', time_str)[0].strip()
+        if "-" in time_str or "\u2013" in time_str:
+            time_str = re.split(r"[-\u2013]", time_str)[0].strip()
 
         # Pattern: H:MM AM/PM or H AM/PM or HAM/PM
-        match = re.search(r'(\d{1,2})(?::(\d{2}))?\s*(AM|PM)', time_str)
+        match = re.search(r"(\d{1,2})(?::(\d{2}))?\s*(AM|PM)", time_str)
         if match:
             hour = int(match.group(1))
             minute = match.group(2) or "00"
@@ -139,37 +145,12 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     return category, list(set(tags)), is_free
 
 
-def try_simple_requests_first(url: str) -> Optional[BeautifulSoup]:
-    """
-    Try fetching with simple requests first (faster than Playwright).
-    Returns BeautifulSoup object if successful, None if needs Playwright.
-    """
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-        }
-        response = requests.get(url, headers=headers, timeout=20)
-        response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        # Check if we got meaningful content (not a JS-only redirect)
-        # Look for event-related content
-        if soup.find(string=re.compile(r'event|calendar|date', re.I)):
-            return soup
-
-        return None
-    except Exception as e:
-        logger.debug(f"Simple request failed, will use Playwright: {e}")
-        return None
-
-
 def crawl(source: dict) -> tuple[int, int, int]:
     """
     Crawl ATLVets calendar.
 
-    First tries simple requests, falls back to Playwright if the page
-    requires JavaScript rendering.
+    ATLVets uses The Events Calendar WordPress plugin which renders events
+    as static HTML — no JavaScript rendering required.
     """
     source_id = source["id"]
     events_found = 0
@@ -177,66 +158,34 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        # Create venue record
         venue_id = get_or_create_venue(VENUE_DATA)
 
-        # Try simple requests first
-        logger.info(f"Trying simple fetch: {EVENTS_URL}")
-        soup = try_simple_requests_first(EVENTS_URL)
+        logger.info(f"Fetching ATLVets: {EVENTS_URL}")
+        response = requests.get(EVENTS_URL, headers=HEADERS, timeout=20)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
 
-        # If simple request didn't work, use Playwright
-        if not soup:
-            logger.info(f"Fetching with Playwright: {EVENTS_URL}")
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                context = browser.new_context(
-                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    viewport={"width": 1920, "height": 1080},
-                )
-                page = context.new_page()
-                page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(3000)
-
-                # Scroll to load any lazy-loaded content
-                for _ in range(3):
-                    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                    page.wait_for_timeout(1000)
-
-                html_content = page.content()
-                soup = BeautifulSoup(html_content, "html.parser")
-                browser.close()
-
-        # Look for event containers - try various common selectors
+        # The Events Calendar plugin renders events in article elements
+        # or .tribe-events-list-event containers
         event_selectors = [
-            ".event-item",
-            ".event-card",
-            ".event",
-            "[class*='event']",
-            ".calendar-event",
+            ".tribe-events-list-event",
+            "article.tribe-type-single-tribe_events",
             "article",
-            ".tribe-events-list-event",  # The Events Calendar plugin
-            ".wp-block-post",  # WordPress Gutenberg blocks
-            ".calendar-item",
-            ".fc-event",  # FullCalendar plugin
+            ".event-item",
         ]
 
-        events = None
+        events = []
         for selector in event_selectors:
             events = soup.select(selector)
-            if events and len(events) > 0:
+            if events:
                 logger.info(f"Found {len(events)} events using selector: {selector}")
                 break
 
-        # If no structured events found, look for calendar/list content
-        if not events or len(events) == 0:
+        if not events:
             logger.info("No structured event elements found, searching page text")
-
-            # Look for any text mentioning events or dates
             page_text = soup.get_text()
             if "event" in page_text.lower() or "calendar" in page_text.lower():
                 logger.info("Found event-related content but couldn't parse structure")
-
-            # For now, just ensure venue exists
             logger.info(f"ATLVets venue record ensured (ID: {venue_id})")
             return 0, 0, 0
 
@@ -244,13 +193,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
         for event_elem in events:
             try:
                 # Extract title
-                title_elem = event_elem.select_one("h1, h2, h3, h4, .title, .event-title, [class*='title']")
+                title_elem = event_elem.select_one(
+                    "h1, h2, h3, h4, .tribe-events-list-event-title, "
+                    ".tribe-event-url, .title, .event-title, [class*='title']"
+                )
                 if title_elem:
                     title = title_elem.get_text(strip=True)
                 else:
-                    # Fallback: first significant text
-                    event_text = event_elem.get_text(strip=True)
-                    lines = [l.strip() for l in event_text.split("\n") if l.strip()]
+                    lines = [
+                        l.strip()
+                        for l in event_elem.get_text().split("\n")
+                        if l.strip()
+                    ]
                     title = lines[0] if lines else None
 
                 if not title or len(title) < 3:
@@ -261,24 +215,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if any(pattern in title.lower() for pattern in skip_patterns):
                     continue
 
-                # Extract date
-                date_elem = event_elem.select_one(".date, .event-date, [class*='date'], time")
+                # Extract date — Tribe uses <abbr> or <time datetime="...">
+                start_date = None
+                date_elem = event_elem.select_one(
+                    "abbr.tribe-events-abbr, time[datetime], "
+                    ".tribe-events-start-datetime, .date, .event-date, [class*='date']"
+                )
                 date_str = None
                 if date_elem:
-                    date_str = date_elem.get_text(strip=True)
-                    # Also check datetime attribute
-                    if hasattr(date_elem, 'get'):
-                        datetime_attr = date_elem.get("datetime")
-                        if datetime_attr:
-                            date_str = datetime_attr
+                    date_str = date_elem.get("datetime") or date_elem.get("title") or date_elem.get_text(strip=True)
 
-                # If no date element, search text for date patterns
                 if not date_str:
                     event_text = event_elem.get_text()
                     date_match = re.search(
-                        r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:,?\s+\d{4})?',
+                        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:,?\s+\d{4})?",
                         event_text,
-                        re.IGNORECASE
+                        re.IGNORECASE,
                     )
                     if date_match:
                         date_str = date_match.group(0)
@@ -287,7 +239,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     logger.debug(f"No date found for: {title}")
                     continue
 
-                # Parse date
                 start_date = parse_human_date(date_str)
                 if not start_date:
                     logger.debug(f"Could not parse date '{date_str}' for: {title}")
@@ -301,23 +252,27 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_found += 1
 
                 # Extract time
-                time_elem = event_elem.select_one(".time, .event-time, [class*='time']")
                 time_str = None
+                time_elem = event_elem.select_one(
+                    ".tribe-events-start-datetime, .time, .event-time, [class*='time']"
+                )
                 if time_elem:
                     time_str = time_elem.get_text(strip=True)
                 else:
-                    # Search for time in text
-                    time_match = re.search(r'\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)', event_elem.get_text())
+                    time_match = re.search(
+                        r"\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)", event_elem.get_text()
+                    )
                     if time_match:
                         time_str = time_match.group(0)
 
-                start_time = None
-                if time_str:
-                    start_time = parse_time_string(time_str)
+                start_time = parse_time_string(time_str) if time_str else None
 
                 # Extract description
                 description = None
-                desc_elem = event_elem.select_one(".description, .event-description, .excerpt, .summary, p")
+                desc_elem = event_elem.select_one(
+                    ".tribe-events-list-event-description, "
+                    ".description, .event-description, .excerpt, .summary, p"
+                )
                 if desc_elem:
                     description = desc_elem.get_text(strip=True)
                     if len(description) > 500:
@@ -346,9 +301,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 category, tags, is_free = determine_category_and_tags(title, description or "")
 
                 # Generate content hash for deduplication
-                content_hash = generate_content_hash(
-                    title, "ATLVets", start_date
-                )
+                content_hash = generate_content_hash(title, "ATLVets", start_date)
 
                 # Create event record
                 event_record = {
@@ -401,8 +354,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             f"{events_new} new, {events_updated} updated"
         )
 
-    except PlaywrightTimeout as e:
-        logger.error(f"Timeout fetching ATLVets events: {e}")
+    except requests.RequestException as e:
+        logger.error(f"HTTP error fetching ATLVets: {e}")
         raise
     except Exception as e:
         logger.error(f"Failed to crawl ATLVets: {e}")
