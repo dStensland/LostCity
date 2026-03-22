@@ -175,6 +175,9 @@ _NON_EVENT_TITLE_PATTERNS = [
     re.compile(r"\breplica game ball\b", re.IGNORECASE),
     re.compile(r"\bdelta sky\s*360 club experience\b", re.IGNORECASE),
     re.compile(r"\bred carpet experience\b", re.IGNORECASE),
+    re.compile(r"\bselfie\s+w/", re.IGNORECASE),
+    re.compile(r"\bphoto\s*(?:op|session|experience)\b", re.IGNORECASE),
+    re.compile(r"\bmeet\s*&?\s*greet\b", re.IGNORECASE),
 ]
 
 _TOUR_CATEGORY_PATTERNS = [
