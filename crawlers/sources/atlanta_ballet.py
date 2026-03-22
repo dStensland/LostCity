@@ -10,11 +10,11 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -73,24 +73,23 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+        logger.info(f"Fetching Atlanta Ballet: {PERFORMANCES_URL}")
+        response = requests.get(PERFORMANCES_URL, headers=headers, timeout=30)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
 
-            logger.info(f"Fetching Atlanta Ballet: {PERFORMANCES_URL}")
-            page.goto(PERFORMANCES_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+        # Extract images from page
+        image_map = {}
+        for img in soup.find_all("img", alt=True):
+            alt = (img.get("alt") or "").strip()
+            src = img.get("src") or img.get("data-src", "")
+            if alt and src and len(alt) > 3:
+                image_map[alt] = src
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+        venue_id = get_or_create_venue(VENUE_DATA)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
-
-            body_text = page.inner_text("body")
+        body_text = soup.get_text(separator="\n")
 
             # Pattern: Performance Name\nDate Range\nBUY TICKETS
             # Split by "BUY TICKETS" or "MORE INFO"
@@ -174,8 +173,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     logger.info(f"Added: {title} on {start_date}")
                 except Exception as e:
                     logger.error(f"Failed to insert: {title}: {e}")
-
-            browser.close()
 
         logger.info(
             f"Atlanta Ballet crawl complete: {events_found} found, {events_new} new"
