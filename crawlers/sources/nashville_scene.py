@@ -3,6 +3,9 @@ Crawler for Nashville Scene Events Calendar (nashvillescene.com/calendar).
 Nashville's alternative weekly publication - comprehensive local events coverage.
 Uses Playwright for JavaScript-rendered content.
 """
+# DEACTIVATED: Editorial aggregator — violates original-source-only policy.
+# See CRAWLER_STRATEGY.md "Source Rule: Original Sources Over Curators".
+# Events from this source should come from the original venue crawlers instead.
 
 from __future__ import annotations
 

@@ -3,6 +3,9 @@ Crawler for Visit Franklin TN (visitfranklin.com/things-to-do-events).
 Official tourism board for Franklin, TN - events, festivals, and attractions.
 Uses Playwright for JavaScript-rendered content.
 """
+# DEACTIVATED: Editorial aggregator — violates original-source-only policy.
+# See CRAWLER_STRATEGY.md "Source Rule: Original Sources Over Curators".
+# Events from this source should come from the original venue crawlers instead.
 
 from __future__ import annotations
 
