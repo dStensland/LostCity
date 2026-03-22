@@ -65,7 +65,7 @@ HEADERS = {
 
 # Max chars for raw_description storage
 MAX_DESCRIPTION_CHARS = 5000
-DEFAULT_RETENTION_DAYS = 7
+DEFAULT_RETENTION_DAYS = 30
 
 # ── Per-post classification ──────────────────────────────────────────
 
