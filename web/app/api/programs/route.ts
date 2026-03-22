@@ -85,6 +85,26 @@ export async function GET(request: NextRequest) {
 
     const portalId = portalContext.portalId;
 
+    // Resolve federated source access for programs entity family.
+    // This includes sources owned by the portal AND sources the portal subscribes to
+    // via the portal_source_entity_access materialized view.
+    const sourceAccess = await getPortalSourceAccess(portalId, { entityFamily: "programs" });
+    const sourceIds = sourceAccess?.sourceIds ?? [];
+
+    // Use service client for federated reads — programs from subscribed sources have
+    // a different portal_id (the owning portal), which would be blocked by RLS on the
+    // user-scoped client.
+    const serviceClient = createServiceClient();
+
+    // Scope filter: programs directly owned by this portal OR from any accessible source.
+    // Mirrors the same OR pattern used in weekend/route.ts for events federation.
+    let programsScopeFilter: string;
+    if (sourceIds.length > 0) {
+      programsScopeFilter = `portal_id.eq.${portalId},source_id.in.(${sourceIds.join(",")})`;
+    } else {
+      programsScopeFilter = `portal_id.eq.${portalId}`;
+    }
+
     // Query programs table first
     const today = new Date().toISOString().split("T")[0];
     // Guard against stale programs that have null session_end but a session_start
@@ -94,7 +114,7 @@ export async function GET(request: NextRequest) {
       .toISOString()
       .split("T")[0];
 
-    let programsQuery = supabase
+    let programsQuery = serviceClient
       .from("programs")
       .select(
         `
@@ -129,7 +149,7 @@ export async function GET(request: NextRequest) {
         venue:venues(id, name, neighborhood, address, city, lat, lng, image_url, indoor_outdoor)
       `
       )
-      .eq("portal_id", portalId)
+      .or(programsScopeFilter)
       .eq("status", "active")
       // Temporal gate:
       // - Programs with a future or present session_end → included
@@ -323,9 +343,7 @@ export async function GET(request: NextRequest) {
 
     // Compatibility mode only: fall back to recurring events when explicitly requested.
     if (programs.length === 0 && offset === 0 && includeEventsFallback) {
-      const sourceAccess = await getPortalSourceAccess(portalId, { entityFamily: "programs" });
-      const sourceIds = sourceAccess?.sourceIds ?? [];
-
+      // sourceIds and serviceClient are already resolved above for the main query.
       if (sourceIds.length === 0) {
         return NextResponse.json(
           {
@@ -343,7 +361,6 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const serviceClient = createServiceClient();
       const today = new Date().toISOString().split("T")[0];
 
       let eventsQuery = serviceClient
