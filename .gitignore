@@ -1,3 +1,6 @@
+# Worktrees
+.claude/worktrees/
+
 # Environment variables
 .env
 .env.local
