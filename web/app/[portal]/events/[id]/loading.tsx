@@ -1,6 +1,5 @@
 "use client";
 
-import { PortalHeader } from "@/components/headers";
 import Skeleton from "@/components/Skeleton";
 import { useParams } from "next/navigation";
 import { usePortalOptional } from "@/lib/portal-context";
@@ -117,11 +116,6 @@ export default function EventLoading() {
 
   return (
     <div data-skeleton-route="event-detail" data-skeleton-vertical="city" className="min-h-screen">
-      <PortalHeader
-        portalSlug={portalSlug}
-        portalName={portal?.name || "Lost City"}
-        hideNav
-      />
       <div className="flex flex-col min-h-[calc(100dvh-56px)]">
         <div className="lg:flex flex-1">
           <section className="lg:w-[340px] lg:flex-shrink-0 border-b border-[var(--twilight)]/40 lg:border-b-0 lg:border-r lg:border-[var(--twilight)]/40 bg-[var(--card-bg,var(--night))]">

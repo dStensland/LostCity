@@ -1,24 +1,10 @@
 "use client";
 
-import { PortalHeader } from "@/components/headers";
 import Skeleton from "@/components/Skeleton";
-import { useParams } from "next/navigation";
-import { usePortalOptional } from "@/lib/portal-context";
 
 export default function SpotLoading() {
-  const params = useParams();
-  const portalSlug = (params?.portal as string) || "atlanta";
-  const portalContext = usePortalOptional();
-  const portal = portalContext?.portal;
-
   return (
     <div data-skeleton-route="spot-detail" className="min-h-screen">
-      <PortalHeader
-        portalSlug={portalSlug}
-        portalName={portal?.name || "Lost City"}
-        hideNav
-      />
-
       <main
         className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-8 animate-fade-in"
         style={{ animationDelay: "100ms", animationFillMode: "backwards" }}

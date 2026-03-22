@@ -102,8 +102,12 @@ PLAYWRIGHT_SOURCES: set[str] = set()
 TRANSIENT_CRAWL_ERROR_PATTERNS = (
     "server disconnected",
     "connection terminated",
+    "connectionterminated",          # h2 library uses CamelCase: ConnectionTerminated
+    "compression_error",             # h2 ErrorCodes.COMPRESSION_ERROR in repr
+    "protocol_error",                # h2 ErrorCodes.PROTOCOL_ERROR in repr
     "connection reset by peer",
     "remote protocol error",
+    "remoteprotocolerror",           # httpx CamelCase variant
     "temporarily unavailable",
     "timed out",
     "timeout",
@@ -353,6 +357,7 @@ SOURCE_OVERRIDES = {
     "ebenezer-baptist-church": "sources.ebenezer_church",
     "ellis-station-candle-co": "sources.ellis_station",
     "fun-spot-america-atlanta": "sources.fun_spot_atlanta",
+    "georgia-elections-calendar": "sources.georgia_elections",
     "georgia-ensemble-theatre": "sources.georgia_ensemble",
     "georgia-ethics-commission": "sources.georgia_ethics_commission",
     "georgian-terrace-hotel": "sources.georgian_terrace",
@@ -365,7 +370,7 @@ SOURCE_OVERRIDES = {
     "michael-c-carlos-museum": "sources.carlos_museum",
     "millennium-gate-museum": "sources.millennium_gate",
     "ncg-cinemas-atlanta": "sources.ncg_atlanta",
-    "sandler-hudson-gallery": "sources.sandler_hudson",
+    "sandler-hudson-gallery": "sources.sandler_hudson_gallery",
     "silverspot-cinema-atlanta": "sources.silverspot_atlanta",
     "six-flags-over-georgia": "sources.six_flags",
     "skylounge-glenn-hotel": "sources.skylounge_glenn",

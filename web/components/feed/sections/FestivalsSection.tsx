@@ -218,7 +218,7 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
 
               {/* Content below image */}
               <div className="p-3">
-                <h3 className="text-sm font-semibold text-[var(--cream)] line-clamp-1 group-hover:text-white transition-colors">
+                <h3 className="text-sm font-semibold text-[var(--cream)] line-clamp-2 group-hover:text-white transition-colors">
                   {item.title}
                 </h3>
                 {(dateStr || item.location) && (

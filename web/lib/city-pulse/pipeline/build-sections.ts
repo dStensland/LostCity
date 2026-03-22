@@ -129,7 +129,7 @@ export function buildSections(
     .slice(0, 4);
 
   // Build all sections
-  const sections = [
+  const rawSections = [
     buildBannerSection(ctx.feedContext),
     buildRightNowSection(
       ctx.feedContext,
@@ -157,6 +157,12 @@ export function buildSections(
     buildPlanningHorizonSection(horizonEvents),
     buildBrowseSection(ctx.canonicalSlug, venueTypeCounts, allEventCategoryCounts),
   ].filter(Boolean) as CityPulseSection[];
+
+  // Filter sections suppressed by the portal's content policy
+  const { suppressedSections } = ctx.manifest.contentPolicy;
+  const sections = suppressedSections.size > 0
+    ? rawSections.filter((s) => !suppressedSections.has(s.type))
+    : rawSections;
 
   // Compute personalization level
   const personalizationLevel: PersonalizationLevel = !ctx.userId

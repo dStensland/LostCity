@@ -407,6 +407,37 @@ def infer_tags(
     ):
         tags.add("running")
 
+    # Civic meeting tags
+    if any(
+        phrase in text
+        for phrase in [
+            "public meeting",
+            "public hearing",
+            "board meeting",
+            "commission meeting",
+            "public comment",
+        ]
+    ):
+        tags.add("public-meeting")
+
+    if any(phrase in text for phrase in ["mutual aid", "solidarity", "free pantry", "food distribution"]):
+        tags.add("mutual-aid")
+
+    if re.search(r"\bnpu\b", text) or any(
+        phrase in text for phrase in ["neighborhood planning unit"]
+    ):
+        tags.add("npu")
+
+    if any(
+        phrase in text
+        for phrase in [
+            "town hall",
+            "community forum",
+            "constituent meeting",
+        ]
+    ):
+        tags.add("town-hall")
+
     # Outdoor volunteer / cleanup
     if any(
         phrase in text
@@ -709,6 +740,18 @@ def infer_tags(
     if "all-ages" in tags:
         tags.discard("21+")
         tags.discard("18+")
+
+    # 21+ venue-type signal overrides weak family-friendly text signal
+    if "21+" in tags and "family-friendly" in tags:
+        # Only keep family-friendly if explicit family language in title/description
+        family_phrases = [
+            "bring the kids", "kid-friendly", "children welcome",
+            "for families", "family event", "all ages welcome",
+            "family-friendly", "for all ages",
+        ]
+        text_check = f"{event.get('title', '')} {event.get('description', '')}".lower()
+        if not any(phrase in text_check for phrase in family_phrases):
+            tags.discard("family-friendly")
 
     # Filter to only valid tags
     valid_tags = [t for t in tags if t in ALL_TAGS]
@@ -1803,7 +1846,6 @@ def infer_genres(
             ),
             (
                 [
-                    "church",
                     "faith",
                     "spiritual",
                     "worship",

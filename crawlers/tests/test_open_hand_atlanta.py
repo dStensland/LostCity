@@ -1,66 +1,62 @@
-from datetime import datetime
-
-from sources.open_hand_atlanta import _parse_volunteer_calendar_text, build_description
-
-
-def test_parse_volunteer_calendar_text_extracts_dated_shifts():
-    body_text = """
-    Volunteer Calendar
-    Session Time
-    March 2026
-    Sunday Monday Tuesday Wednesday Thursday Friday Saturday
-    9
-    10
-    8:30am - 12:00pm
-    AM Meal Packing
-    9:00am - 12:00pm
-    Delivery Driver Volunteer
-    11
-    8:30am - 12:00pm
-    Loading Assistance
-    Next month
-    """
-
-    shifts = _parse_volunteer_calendar_text(
-        body_text,
-        reference_dt=datetime(2026, 3, 10, 9, 0),
-    )
-
-    assert shifts == [
-        {
-            "title": "AM Meal Packing",
-            "start_date": "2026-03-10",
-            "start_time": "08:30",
-            "end_time": "12:00",
-        },
-        {
-            "title": "Delivery Driver Volunteer",
-            "start_date": "2026-03-10",
-            "start_time": "09:00",
-            "end_time": "12:00",
-        },
-        {
-            "title": "Loading Assistance",
-            "start_date": "2026-03-11",
-            "start_time": "08:30",
-            "end_time": "12:00",
-        },
-    ]
+from sources.open_hand_atlanta import (
+    _determine_category,
+    _extract_tags,
+    _clean_description,
+    _format_time,
+    _format_time_label,
+)
 
 
-def test_build_description_uses_role_specific_fallbacks():
-    assert (
-        build_description("Delivery Driver Volunteer")
-        == "Help deliver Open Hand meals directly to clients across metro Atlanta."
-    )
-    assert (
-        build_description("AM Meal Packing")
-        == "Pack medically tailored meals that Open Hand delivers to Atlanta neighbors in need."
-    )
+def test_determine_category_defaults_to_community():
+    assert _determine_category("Delivery Driver Volunteer") == "community"
 
 
-def test_build_description_falls_back_for_unknown_roles():
-    description = build_description("Special Kitchen Support")
+def test_determine_category_detects_learning():
+    assert _determine_category("Building Tours") == "learning"
+    assert _determine_category("Orientation Training") == "learning"
 
-    assert "special kitchen support shift" in description.lower()
-    assert "Open Hand Atlanta".lower() in description.lower()
+
+def test_extract_tags_always_includes_base_tags():
+    tags = _extract_tags("Some random role")
+    assert "volunteer" in tags
+    assert "volunteer-opportunity" in tags
+    assert "open-hand-atlanta" in tags
+
+
+def test_extract_tags_detects_delivery():
+    tags = _extract_tags("Delivery Driver Volunteer")
+    assert "delivery" in tags
+
+
+def test_extract_tags_detects_food():
+    tags = _extract_tags("AM Meal Packing")
+    assert "food" in tags
+
+
+def test_clean_description_normalizes_whitespace():
+    raw = "Line one.\r\n\r\n\r\nLine two.   Extra  spaces."
+    result = _clean_description(raw)
+    assert "\r\n" not in result
+    assert "\n\n\n" not in result
+    assert "  " not in result
+
+
+def test_format_time():
+    # March 23 2026 07:00 EDT = 1742731200 (approximate, depends on TZ)
+    # Use a known timestamp instead
+    import time as _time
+    from datetime import datetime
+
+    dt = datetime(2026, 3, 23, 7, 0, 0)
+    ts = int(dt.timestamp())
+    assert _format_time(ts) == "07:00"
+
+
+def test_format_time_label():
+    from datetime import datetime
+
+    dt = datetime(2026, 3, 23, 7, 0, 0)
+    ts = int(dt.timestamp())
+    label = _format_time_label(ts)
+    assert "7:00" in label
+    assert "AM" in label

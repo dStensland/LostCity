@@ -10,7 +10,6 @@ import {
   formatFestivalDates,
 } from "@/lib/moments-utils";
 import { getLocalDateString } from "@/lib/formats";
-import { PortalHeader } from "@/components/headers";
 import FilmPortalNav from "../_components/film/FilmPortalNav";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
@@ -196,12 +195,6 @@ export default async function BigStuffPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
-      <PortalHeader
-        portalSlug={activePortalSlug}
-        portalName={activePortalName}
-        hideNav
-      />
-
       <main className="max-w-4xl mx-auto px-4 py-6 pb-16 space-y-8">
         {isFilmPortal && <FilmPortalNav portalSlug={activePortalSlug} />}
 

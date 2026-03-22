@@ -40,7 +40,7 @@ const EVENT_LIST_SELECT = `
   importance, on_sale_date, presale_date, early_bird_deadline, sellout_risk,
   featured_blurb, series_id, venue_id, source_id,
   recurrence_rule, is_regular_ready,
-  venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, location_designator, blurhash),
+  venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, location_designator, blurhash, image_url, hero_image_url),
   category_data:categories(typical_price_min, typical_price_max),
   series:series(id, slug, title, series_type, image_url, frequency, day_of_week, festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood))
 `;
@@ -80,6 +80,8 @@ export interface SearchFilters {
   portal_city?: string;
   // Importance tier filter — surfaces flagship/major events for planning horizon
   importance?: string[];
+  // Time-of-day filter — only show events starting at or after this time (HH:MM)
+  time_after?: string;
 }
 
 // Rollup types for collapsed event groups
@@ -701,6 +703,16 @@ async function applySearchFilters(
   // Apply importance tier filter (planning horizon)
   if (filters.importance && filters.importance.length > 0) {
     query = query.in("importance", filters.importance);
+  }
+
+  // Apply time-of-day filter — only show events starting at or after this time.
+  // Used by CityPulse "tonight" links to scope to evening events (e.g. time_after=17:00).
+  // All-day events are excluded since they have no start_time to compare against.
+  if (filters.time_after) {
+    const timeAfter = filters.time_after;
+    query = query
+      .gte("start_time", timeAfter)
+      .or("is_all_day.eq.false,is_all_day.is.null");
   }
 
   return { query, shouldReturnEmpty: false };

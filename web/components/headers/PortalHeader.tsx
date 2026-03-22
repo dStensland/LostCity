@@ -23,8 +23,6 @@ export interface PortalHeaderProps {
     fallbackHref?: string;
     label: string;
   };
-  /** Hide the main navigation tabs */
-  hideNav?: boolean;
 }
 
 /**
@@ -35,7 +33,6 @@ function PortalHeaderInner({
   portalSlug,
   portalName,
   backLink,
-  hideNav = false,
 }: PortalHeaderProps) {
   const portalContext = usePortalOptional();
   const portal = portalContext?.portal ?? DEFAULT_PORTAL;
@@ -53,7 +50,7 @@ function PortalHeaderInner({
     return <ATLittleHeader />;
   }
 
-  if (resolvedSlug === "yonder") {
+  if (resolvedSlug === "adventure") {
     return <AdventureHeader />;
   }
 
@@ -63,7 +60,6 @@ function PortalHeaderInner({
     portalName: portalName || portal.name,
     branding: portal.branding,
     backLink,
-    hideNav,
     headerConfig,
   };
 

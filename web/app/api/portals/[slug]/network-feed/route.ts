@@ -10,6 +10,40 @@ type RouteContext = {
   params: Promise<{ slug: string }>;
 };
 
+// ── Civic keyword filtering ───────────────────────────────────────────────────
+
+const CIVIC_INCLUDE_KEYWORDS = [
+  // Existing from NetworkFeedSection client-side list
+  "government", "council", "vote", "voting", "housing",
+  "school", "zoning", "ordinance", "community", "volunteer", "nonprofit",
+  "election", "policy", "legislation", "budget", "public safety",
+  "neighborhood", "development", "rezoning", "aps", "commission",
+  "mayor", "alderman", "city hall", "county", "board", "hearing", "meeting",
+  "public comment", "grant", "affordable", "homeless", "shelter",
+  "civic", "municipal", "accountability", "transparency",
+  // New additions
+  "transit", "park", "library", "displacement", "gentrification",
+  "immigration", "refugee", "marta", "beltline", "equity",
+  "justice", "police", "fire", "ems", "infrastructure",
+  "water", "sewer", "education", "affordable", "planning",
+];
+
+const CIVIC_EXCLUDE_TITLE_KEYWORDS = [
+  "restaurant", "dining", "bar", "cocktail", "hawks", "falcons",
+  "braves", "united", "concert", "festival", "nightlife", "recipe",
+  "wine", "beer", "chef",
+];
+
+function filterCivicPosts(posts: Record<string, unknown>[]): Record<string, unknown>[] {
+  return posts.filter((post) => {
+    const title = ((post.title as string) || "").toLowerCase();
+    const summary = ((post.summary as string) || "").toLowerCase();
+    const text = `${title} ${summary}`;
+    if (CIVIC_EXCLUDE_TITLE_KEYWORDS.some((kw) => title.includes(kw))) return false;
+    return CIVIC_INCLUDE_KEYWORDS.some((kw) => text.includes(kw));
+  });
+}
+
 type NetworkSourceRow = {
   id: number;
   name: string;
@@ -32,6 +66,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const category = searchParams.get("category") || null;
   const includeSources = searchParams.get("include_sources") === "true";
   const sourceScope = searchParams.get("source_scope") || "all";
+  const civicFilter = searchParams.get("civic_filter") === "true";
+
+  // When civic filtering is active, fetch more rows so we have enough after
+  // server-side keyword filtering. The caller's requested limit is applied
+  // after filtering.
+  const fetchLimit = civicFilter ? Math.min(limit * 4, 100) : limit;
 
   try {
     const portal = await getPortalBySlug(slug);
@@ -122,7 +162,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .in("source_id", accessibleSourceIds)
       .eq("network_sources.is_active", true)
       .order("published_at", { ascending: false, nullsFirst: false })
-      .range(offset, offset + limit - 1);
+      .range(offset, offset + fetchLimit - 1);
 
     // Filter on post-level categories (keyword-classified per article)
     if (category) {
@@ -140,7 +180,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Failed to fetch network feed" }, { status: 500 });
     }
 
-    const posts = data || [];
+    let posts = (data || []) as Record<string, unknown>[];
+
+    if (civicFilter) {
+      posts = filterCivicPosts(posts).slice(0, limit);
+    }
+
     const responseBody: Record<string, unknown> = {
       posts,
       has_more: posts.length === limit,

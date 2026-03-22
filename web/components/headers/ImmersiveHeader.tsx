@@ -25,7 +25,6 @@ interface ImmersiveHeaderProps {
     fallbackHref?: string;
     label: string;
   };
-  hideNav?: boolean;
   headerConfig: HeaderConfig;
 }
 
@@ -52,7 +51,6 @@ export default function ImmersiveHeader({
   portalName,
   branding,
   backLink,
-  hideNav = false,
   headerConfig,
 }: ImmersiveHeaderProps) {
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -234,7 +232,7 @@ export default function ImmersiveHeader({
           </div>
 
           {/* Center: Navigation (desktop, when header becomes solid) */}
-          {!hideNav && scrollProgress > 0.5 && (
+          {scrollProgress > 0.5 && (
             <nav
               className="hidden sm:flex items-center gap-1 flex-1 max-w-md mx-auto justify-center"
               role="tablist"
@@ -319,7 +317,7 @@ export default function ImmersiveHeader({
       </header>
 
       {/* Fixed mobile nav at bottom when scrolled past hero */}
-      {!hideNav && scrollProgress > 0.8 && (
+      {scrollProgress > 0.8 && (
         <nav
           className="sm:hidden fixed bottom-0 left-0 right-0 z-[90] border-t border-[var(--twilight)]/50 bg-[var(--void)]/95 backdrop-blur-md"
           role="tablist"

@@ -139,14 +139,6 @@ export async function PortalTheme({ portal }: PortalThemeProps) {
       cssVars.push(`--midnight-blue: ${adjustBrightness(secondaryDark, 5)};`);
       cssVars.push(`--twilight-purple: ${secondaryMid};`);
       cssVars.push(`--nebula: ${adjustBrightness(secondaryMid, 15)};`);
-      if (isLight) {
-        // For light themes, twilight should be a light border color
-        cssVars.push(`--twilight: ${safeSecondary};`);
-        cssVars.push(`--dusk: ${adjustBrightness(safeSecondary, -3)};`);
-      } else {
-        cssVars.push(`--twilight: ${safeSecondary};`);
-        cssVars.push(`--dusk: ${adjustBrightness(safeSecondary, 15)};`);
-      }
     }
   }
 
@@ -172,10 +164,13 @@ export async function PortalTheme({ portal }: PortalThemeProps) {
       cssVars.push(`--void: ${safeBg};`);
       cssVars.push(`--background: ${safeBg};`);
       if (isLight) {
-        // For light themes, night should be slightly darker than background
         cssVars.push(`--night: ${adjustBrightness(safeBg, -3)};`);
+        cssVars.push(`--dusk: ${adjustBrightness(safeBg, -6)};`);
+        cssVars.push(`--twilight: ${adjustBrightness(safeBg, -10)};`);
       } else {
         cssVars.push(`--night: ${adjustBrightness(safeBg, 8)};`);
+        cssVars.push(`--dusk: ${adjustBrightness(safeBg, 16)};`);
+        cssVars.push(`--twilight: ${adjustBrightness(safeBg, 24)};`);
       }
     }
   }
@@ -217,10 +212,7 @@ export async function PortalTheme({ portal }: PortalThemeProps) {
     const safeBorder = sanitizeCssColor(borderColor);
     if (safeBorder) {
       cssVars.push(`--portal-border: ${safeBorder};`);
-      // Also set twilight if not already set from secondaryColor
-      if (!secondaryColor) {
-        cssVars.push(`--twilight: ${safeBorder};`);
-      }
+      cssVars.push(`--twilight: ${safeBorder};`);
     }
   }
 
@@ -228,9 +220,10 @@ export async function PortalTheme({ portal }: PortalThemeProps) {
     const safeCard = sanitizeCssColor(cardColor);
     if (safeCard) {
       cssVars.push(`--portal-card: ${safeCard};`);
-      // Also set dusk for card backgrounds if not already set
-      if (!secondaryColor) {
-        cssVars.push(`--dusk: ${safeCard};`);
+      if (isLight) {
+        cssVars.push(`--dusk: ${adjustBrightness(safeCard, -3)};`);
+      } else {
+        cssVars.push(`--dusk: ${adjustBrightness(safeCard, 8)};`);
       }
     }
   }

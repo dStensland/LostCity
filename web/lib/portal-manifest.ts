@@ -9,6 +9,12 @@ import {
 
 export type PortalType = "city" | "event" | "business" | "personal" | string;
 
+export type ContentPolicy = {
+  suppressedSections: Set<string>;
+  skipEnrichments: { specials: boolean; weatherVenues: boolean };
+  quickLinkMode: "entertainment" | "civic";
+};
+
 export type EventMetadataField =
   | "date"
   | "time"
@@ -55,6 +61,7 @@ export type PortalManifest = {
     weather: boolean;
     map: boolean;
   };
+  contentPolicy: ContentPolicy;
 };
 
 type PortalManifestInput = {
@@ -92,6 +99,29 @@ function resolveEventMetadataOrder(vertical: PortalVertical): EventMetadataField
   }
 
   return ["date", "time", "venue", "neighborhood", "price", "status"];
+}
+
+function resolveContentPolicy(vertical: PortalVertical): ContentPolicy {
+  if (vertical === "community") {
+    return {
+      suppressedSections: new Set([
+        "todays_specials",
+        "city_pulse_banner",
+        "weather_discovery",
+        "browse",
+        "the_scene",
+        "new_from_spots",
+        "your_people",
+      ]),
+      skipEnrichments: { specials: true, weatherVenues: true },
+      quickLinkMode: "civic",
+    };
+  }
+  return {
+    suppressedSections: new Set(),
+    skipEnrichments: { specials: false, weatherVenues: false },
+    quickLinkMode: "entertainment",
+  };
 }
 
 function resolveParticipantModel(vertical: PortalVertical): ParticipantModel {
@@ -145,6 +175,7 @@ export function buildPortalManifest(input: PortalManifestInput): PortalManifest 
       weather: supportsPortalWeather(vertical),
       map: supportsPortalMap(vertical),
     },
+    contentPolicy: resolveContentPolicy(vertical),
   };
 }
 

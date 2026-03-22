@@ -5,7 +5,6 @@ import { format, parseISO } from "date-fns";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import { createClient } from "@/lib/supabase/server";
 import ScrollToTop from "@/components/ScrollToTop";
-import PortalHeader from "@/components/headers/PortalHeader";
 import {
   DetailHero,
   InfoCard,
@@ -273,16 +272,6 @@ export default async function ProgramDetailPage({ params }: Props) {
         data-theme="light"
         style={{ backgroundColor: CREAM_CANVAS, color: DARK_FOREST }}
       >
-        <PortalHeader
-          portalSlug={activePortalSlug}
-          portalName={portalName}
-          backLink={{
-            fallbackHref: `/${activePortalSlug}`,
-            label: "Programs",
-          }}
-          hideNav
-        />
-
         <main className="max-w-2xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-4 sm:space-y-5">
           {/* Hero */}
           <DetailHero

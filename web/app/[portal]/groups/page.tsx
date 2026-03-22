@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
-import { PortalHeader } from "@/components/headers";
 import { getCachedPortalBySlug, getCachedPortalByVerticalAndCity, getPortalVertical } from "@/lib/portal";
 import PortalGroupsClient from "@/components/channels/PortalGroupsClient";
 import { CivicTabBar } from "@/components/civic/CivicTabBar";
@@ -69,8 +68,6 @@ export default async function PortalGroupsPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
-      <PortalHeader portalSlug={portalSlug} />
-
       <main className="max-w-5xl mx-auto px-4 py-6 pb-28 space-y-4">
         <header className="space-y-1">
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-[var(--muted)]">

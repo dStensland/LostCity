@@ -250,7 +250,7 @@ export default async function CommunityHubPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-[#090d16] text-[#f6f7fb]">
-      <PortalHeader portalSlug={portal.slug} portalName={portal.name} hideNav />
+      <PortalHeader portalSlug={portal.slug} portalName={portal.name} />
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-6 space-y-7">
         <FilmPortalNav portalSlug={portal.slug} />
 

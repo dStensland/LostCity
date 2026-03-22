@@ -4,6 +4,7 @@ import { forwardRef } from "react";
 
 export type FilterChipVariant =
   | "default"      // Gray/muted
+  | "search"       // Action-primary (coral on Atlanta, portal-themed elsewhere)
   | "category"     // Cream
   | "genre"        // Coral
   | "date"         // Gold
@@ -30,6 +31,11 @@ const VARIANT_STYLES: Record<FilterChipVariant, { active: string; inactive: stri
     inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--soft)]",
     active: "bg-[var(--twilight)] text-[var(--cream)] border-[var(--soft)]",
     glowClass: "",
+  },
+  search: {
+    inactive: "border-[var(--action-primary)]/40 text-[var(--action-primary)] hover:border-[var(--action-primary)]",
+    active: "bg-[var(--action-primary)]/15 text-[var(--action-primary)] border-[var(--action-primary)]/50",
+    glowClass: "chip-glow-coral",
   },
   category: {
     inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--cream)]/50",

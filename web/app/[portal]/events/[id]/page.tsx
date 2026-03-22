@@ -1,7 +1,6 @@
 import ScrollToTop from "@/components/ScrollToTop";
 import { getEventById, getRelatedEvents } from "@/lib/supabase";
 import { getCachedPortalBySlug } from "@/lib/portal";
-import { PortalHeader } from "@/components/headers";
 import { format, parseISO } from "date-fns";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -319,11 +318,6 @@ export default async function PortalEventPage({ params }: Props) {
             ])
           ),
         }}
-      />
-      <PortalHeader
-        portalSlug={activePortalSlug}
-        portalName={activePortalName}
-        hideNav
       />
       <EventDetailWrapper
         eventId={event.id}

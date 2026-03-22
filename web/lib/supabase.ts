@@ -108,6 +108,7 @@ export type Venue = {
   city: string;
   state: string;
   image_url?: string | null;
+  hero_image_url?: string | null;
   location_designator?:
     | "standard"
     | "private_after_signup"

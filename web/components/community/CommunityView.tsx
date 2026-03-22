@@ -96,7 +96,7 @@ function CommunityViewInner({ portalId, portalSlug, portalName, activeTab }: Com
   };
 
   return (
-    <div className="py-6">
+    <div className="py-6 min-h-[60vh] flex flex-col">
       {/* Tab navigation */}
       <div className="mb-6">
         <div className="flex p-1 bg-[var(--night)] rounded-lg max-w-md mx-auto">
@@ -136,22 +136,28 @@ function CommunityViewInner({ portalId, portalSlug, portalName, activeTab }: Com
       </div>
 
       {/* Tab content */}
-      {activeTab === "people" && <DashboardActivity />}
+      <div className="flex-1 flex flex-col items-center justify-center">
+        {activeTab === "people" && <div className="w-full"><DashboardActivity /></div>}
 
-      {activeTab === "curations" && (
-        <CurationsDiscoveryView
-          portalId={portalId}
-          portalSlug={portalSlug}
-        />
-      )}
+        {activeTab === "curations" && (
+          <div className="w-full">
+            <CurationsDiscoveryView
+              portalId={portalId}
+              portalSlug={portalSlug}
+            />
+          </div>
+        )}
 
-      {activeTab === "groups" && (
-        <PortalCommunityView
-          portalId={portalId}
-          portalSlug={portalSlug}
-          portalName={portalName}
-        />
-      )}
+        {activeTab === "groups" && (
+          <div className="w-full">
+            <PortalCommunityView
+              portalId={portalId}
+              portalSlug={portalSlug}
+              portalName={portalName}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

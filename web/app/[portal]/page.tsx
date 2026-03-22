@@ -1,6 +1,5 @@
 import { getCachedPortalBySlug, getCachedPortalByVerticalAndCity, getPortalVertical } from "@/lib/portal";
 import { headers } from "next/headers";
-import { PortalHeader, DogHeader, AdventureHeader, ATLittleHeader } from "@/components/headers";
 import { AmbientBackground } from "@/components/ambient";
 import HappeningView from "@/components/find/HappeningView";
 import type { HappeningContent } from "@/components/find/HappeningView";
@@ -217,9 +216,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
         <AmbientSuppression />
         <style>{`.dog-portal-root { ${DOG_PORTAL_VAR_OVERRIDES} }.dog-portal-root ${DOG_DETAIL_VIEW_CSS}`}</style>
         <div className="dog-portal-root">
-          <Suspense fallback={null}>
-            <DogHeader portalSlug={portal.slug} />
-          </Suspense>
           {dogView === "find" ? (
             <Suspense fallback={<DogMapSkeleton />}>
               <DetailViewRouter portalSlug={portal.slug}>
@@ -253,9 +249,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
       <div className="min-h-screen overflow-x-hidden">
         <AmbientSuppression />
         <Suspense fallback={null}>
-          <ATLittleHeader />
-        </Suspense>
-        <Suspense fallback={null}>
           <DetailViewRouter portalSlug={portal.slug}>
             <FamilyFeed
               portalId={portal.id}
@@ -273,9 +266,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
     return (
       <div className="min-h-screen overflow-x-hidden">
         <AmbientSuppression />
-        <Suspense fallback={null}>
-          <AdventureHeader />
-        </Suspense>
         <Suspense fallback={null}>
           <DetailViewRouter portalSlug={portal.slug}>
             <DefaultTemplate portal={portal} />
@@ -397,11 +387,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
       />
       {disableAmbientEffects && <AmbientSuppression />}
       {!disableAmbientEffects && <AmbientBackground />}
-      <PortalHeader
-        portalSlug={portal.slug}
-        portalName={portal.name}
-        hideNav={isFilm}
-      />
 
       <main className={mainClassName}>
         {/* DetailViewRouter handles showing detail views (event, venue, series, org) as overlays.

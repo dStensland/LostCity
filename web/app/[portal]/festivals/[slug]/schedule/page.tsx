@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ScrollToTop from "@/components/ScrollToTop";
-import { PortalHeader } from "@/components/headers";
 import FestivalSchedule from "@/components/FestivalSchedule";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import {
@@ -42,7 +41,6 @@ export default async function FestivalSchedulePage({ params }: Props) {
   return (
     <div className="min-h-screen">
       <ScrollToTop />
-      <PortalHeader portalSlug={activePortalSlug} portalName={activePortalName} hideNav />
 
       <main data-festival-detail="true" className="max-w-5xl mx-auto px-4 py-4 sm:py-6 pb-12 space-y-5 sm:space-y-7">
         <section className="rounded-lg border border-[var(--twilight)]/85 bg-[var(--night)] p-4 sm:p-5">

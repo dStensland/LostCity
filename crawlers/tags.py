@@ -90,6 +90,8 @@ CONTENT_TAGS = {
     "health",  # Health-related
     "election",  # Election-related event
     "voter-registration",  # Voter registration drive
+    "mutual-aid",  # Mutual aid / community solidarity event
+    "town-hall",  # Town hall / community forum
     "arts",  # Arts & culture event
     "artsatl",  # ArtsATL calendar source
     "design-review",  # Design review hearing

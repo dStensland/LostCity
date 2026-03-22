@@ -3,7 +3,6 @@ import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { getCachedPortalBySlug } from "@/lib/portal";
-import { PortalHeader } from "@/components/headers";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
 import FollowButton from "@/components/FollowButton";
@@ -347,12 +346,6 @@ export default async function PortalOrganizerPage({ params }: Props) {
       <ScopedStylesServer css={scopedCss} />
 
       <div className="min-h-screen">
-        <PortalHeader
-          portalSlug={activePortalSlug}
-          portalName={activePortalName}
-          hideNav
-        />
-
         <main data-clean-detail="true" className="max-w-5xl mx-auto px-4 py-4 sm:py-6 pb-36 md:pb-16 space-y-6 sm:space-y-9">
           {/* Hero Section */}
           <DetailHero

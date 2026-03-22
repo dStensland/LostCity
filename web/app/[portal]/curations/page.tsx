@@ -1,4 +1,3 @@
-import { PortalHeader } from "@/components/headers";
 import CurationsDiscoveryView from "@/components/community/CurationsDiscoveryView";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { AnySupabase } from "@/lib/api-utils";
@@ -32,8 +31,6 @@ export default async function CurationsPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
-      <PortalHeader portalSlug={portalSlug} />
-
       <div className="max-w-3xl mx-auto px-4 py-6 pb-28">
         <CurationsDiscoveryView portalId={portalId} portalSlug={portalSlug} />
       </div>

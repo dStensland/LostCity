@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
     const includeDidYouMean =
       searchParams.get("include_did_you_mean") !== "false";
     const includeEventPopularity =
-      searchParams.get("include_event_popularity") !== "false";
+      searchParams.get("include_event_popularity") === "true";
     const cacheKey = buildStableSearchCacheKey(searchParams);
 
     const cachedPayload = await timing.measure("cache_lookup", () =>
