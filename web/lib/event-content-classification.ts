@@ -48,7 +48,6 @@ const EXHIBIT_VENUE_TYPES = new Set([
 ]);
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
-const SUPPRESSED_KINDS = new Set(["exhibit"]);
 
 function parseDate(date: string | null | undefined): Date | null {
   if (!date) return null;
@@ -114,19 +113,14 @@ export function isLongRunningExhibitLikeEvent(
 }
 
 /**
- * General feed suppression rule:
- * - Explicit `content_kind=exhibit` always suppresses from event feeds.
- * - Fallback heuristic catches legacy data before/without migration backfill.
+ * General feed suppression rule.
+ * Suppresses long-running exhibit-like events (all-day, 14+ days, exhibit signals)
+ * that are better represented in the exhibitions table. The content_kind="exhibit"
+ * explicit suppression was removed after exhibitions were migrated to their own table.
  */
 export function isSuppressedFromGeneralEventFeed(
   event: EventClassificationShape,
   options?: { minDurationDays?: number }
 ): boolean {
-  const normalizedContentKind = String(event.content_kind || "")
-    .trim()
-    .toLowerCase();
-  if (SUPPRESSED_KINDS.has(normalizedContentKind)) {
-    return true;
-  }
   return isLongRunningExhibitLikeEvent(event, options);
 }

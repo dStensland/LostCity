@@ -14,9 +14,11 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
-from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url, parse_date_range, enrich_event_record
+from db import get_or_create_venue
+from entity_lanes import TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
+from exhibition_utils import build_exhibition_record
+from utils import extract_images_from_page, extract_event_links, find_event_url, parse_date_range
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +53,11 @@ def parse_time(time_text: str) -> Optional[str]:
 
 def crawl(source: dict) -> tuple[int, int, int]:
     source_id = source["id"]
+    portal_id = source.get("portal_id")
     events_found = 0
     events_new = 0
     events_updated = 0
+    exhibition_envelope = TypedEntityEnvelope()
 
     try:
         with sync_playwright() as p:
@@ -143,84 +147,43 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     events_found += 1
-                    content_hash = generate_content_hash(title, "Kai Lin Art", start_date)
-
-
-                    # Get specific event URL
-
 
                     event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Exhibition at Kai Lin Art",
-                        "start_date": start_date,
-                        "start_time": None,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": True,
-                        "content_kind": "exhibit",
-                        "category": "art",
-                        "subcategory": "gallery",
-                        "tags": ["art", "gallery", "contemporary", "inman-park", "exhibition"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": True,
-                        "source_url": event_url,
-                        "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
 
                     # Date range extraction: scan surrounding lines for end dates
                     context_start = max(0, i - 3)
                     context_end = min(len(lines), i + 5)
                     range_text = " ".join(lines[context_start:context_end])
-                    _, range_end = parse_date_range(range_text)
-                    if range_end:
-                        event_record["end_date"] = range_end
+                    _, closing_date = parse_date_range(range_text)
 
-                    # Enrich from detail page
-                    enrich_event_record(event_record, source_name="Kai Lin Art")
-
-                    # Determine is_free if still unknown after enrichment
-                    if event_record.get("is_free") is None:
-                        desc_lower = (event_record.get("description") or "").lower()
-                        title_lower = event_record.get("title", "").lower()
-                        combined = f"{title_lower} {desc_lower}"
-                        if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
-                            event_record["is_free"] = True
-                            event_record["price_min"] = event_record.get("price_min") or 0
-                            event_record["price_max"] = event_record.get("price_max") or 0
-                        else:
-                            event_record["is_free"] = False
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
+                    record, artists = build_exhibition_record(
+                        title=title,
+                        venue_id=venue_id,
+                        source_id=source_id,
+                        opening_date=start_date,
+                        closing_date=closing_date,
+                        venue_name=VENUE_DATA["name"],
+                        description="Exhibition at Kai Lin Art",
+                        image_url=image_map.get(title),
+                        source_url=event_url,
+                        portal_id=portal_id,
+                        admission_type="free",
+                        tags=["art", "gallery", "contemporary", "inman-park", "exhibition"],
+                    )
+                    if artists:
+                        record["artists"] = artists
+                    exhibition_envelope.add("exhibitions", record)
+                    events_new += 1
+                    logger.info(f"Queued exhibition: {title} on {start_date}")
 
                 i += 1
 
             browser.close()
+
+        if exhibition_envelope.has_records():
+            persist_typed_entity_envelope(exhibition_envelope)
+            ex_count = len(exhibition_envelope.exhibitions)
+            logger.info(f"Kai Lin Art: persisted {ex_count} exhibition(s) to exhibitions table")
 
         logger.info(f"Kai Lin Art crawl complete: {events_found} found, {events_new} new, {events_updated} updated")
 

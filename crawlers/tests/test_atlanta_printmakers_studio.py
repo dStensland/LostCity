@@ -58,40 +58,25 @@ def test_extract_candidates_parses_current_and_dated_exhibitions():
     assert dated.image_url == "https://example.com/future.jpg"
 
 
-def test_crawl_dual_writes_events_and_exhibitions(monkeypatch):
+def test_crawl_writes_exhibitions_only(monkeypatch):
+    """Exhibitions go to exhibitions table only — no event writes."""
     import sources.atlanta_printmakers_studio as crawler
 
     soup = BeautifulSoup(SAMPLE_HTML, "html.parser")
-    inserted_events: list[dict] = []
     inserted_exhibitions: list[dict] = []
 
     monkeypatch.setattr(crawler, "_today", lambda: date(2026, 3, 17))
     monkeypatch.setattr(crawler, "_fetch_soup", lambda _url: soup)
     monkeypatch.setattr(crawler, "get_or_create_venue", lambda _venue: 77)
-    monkeypatch.setattr(crawler, "find_event_by_hash", lambda _hash: None)
-    monkeypatch.setattr(crawler, "insert_event", lambda payload: inserted_events.append(payload) or 1)
     monkeypatch.setattr(
         crawler,
         "insert_exhibition",
         lambda payload: inserted_exhibitions.append(payload) or "exh-id",
     )
-    monkeypatch.setattr(
-        crawler,
-        "smart_update_existing_event",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("unexpected update path")),
-    )
 
     found, new, updated = crawler.crawl({"id": 11})
 
     assert (found, new, updated) == (2, 2, 0)
-    assert [row["title"] for row in inserted_events] == [
-        "RISO Pin-up Show",
-        "Spring Ink Invitational",
-    ]
-    assert inserted_events[0]["start_date"] == "2026-03-17"
-    assert inserted_events[1]["start_date"] == "2026-04-20"
-    assert inserted_events[1]["end_date"] == "2026-05-25"
-
     assert [row["title"] for row in inserted_exhibitions] == [
         "RISO Pin-up Show",
         "Spring Ink Invitational",

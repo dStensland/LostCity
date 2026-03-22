@@ -639,64 +639,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 try:
                     events_found += 1
 
-                    canonical_start_date = exhibition["canonical_start_date"]
-                    content_hash = generate_content_hash(
-                        exhibition["title"],
-                        "Atlanta Contemporary",
-                        canonical_start_date,
-                    )
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": exhibition["title"],
-                        "description": exhibition["description"],
-                        "start_date": exhibition["start_date"],
-                        "start_time": None,
-                        "end_date": exhibition["end_date"],
-                        "end_time": None,
-                        "is_all_day": True,
-                        "content_kind": "exhibit",
-                        "category": "art",
-                        "subcategory": "exhibition",
-                        "tags": [
-                            "atlanta-contemporary",
-                            "museum",
-                            "contemporary-art",
-                            "west-midtown",
-                            "exhibition",
-                            "free",
-                        ],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": "Free admission",
-                        "is_free": True,
-                        "source_url": exhibition["source_url"],
-                        "ticket_url": exhibition["ticket_url"],
-                        "image_url": exhibition["image_url"],
-                        "raw_text": (
-                            f"{exhibition['title']} - {canonical_start_date}"
-                            f" - {exhibition['end_date'] or ''}"
-                        ),
-                        "extraction_confidence": 0.88,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                    else:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(
-                            "Added exhibit: %s on %s",
-                            exhibition["title"],
-                            exhibition["start_date"],
-                        )
-
                     exhibition_record, artists = build_exhibition_lane_record(
                         exhibition,
                         source_id=source_id,
@@ -706,6 +648,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if artists:
                         exhibition_record["artists"] = artists
                     exhibition_envelope.add("exhibitions", exhibition_record)
+                    events_new += 1
+                    logger.info(
+                        "Added exhibition: %s (%s - %s)",
+                        exhibition["title"],
+                        exhibition["canonical_start_date"],
+                        exhibition.get("end_date") or "ongoing",
+                    )
 
                 except Exception as e:
                     logger.warning("Error parsing Atlanta Contemporary exhibition: %s", e)

@@ -625,8 +625,28 @@ def _step_parse_artists(event_data: dict, ctx: InsertContext) -> dict:
     return event_data
 
 
+def _is_volunteer_event(event_data: dict) -> bool:
+    """Return True if this event is a volunteer opportunity.
+
+    Volunteer events should have their category preserved as ``community`` and
+    must never be reclassified to ``food_drink`` or any other category by
+    downstream inference rules.
+    """
+    subcategory = str(event_data.get("subcategory") or "").strip().lower()
+    if subcategory == "volunteer":
+        return True
+    tags = event_data.get("tags") or []
+    return "volunteer" in {str(t).strip().lower() for t in tags}
+
+
 def _step_infer_category(event_data: dict, ctx: InsertContext) -> dict:
     """Infer class/religious/support_group/kids category overrides."""
+    # Volunteer events are definitionally community events — preserve the
+    # crawler's category assignment and skip all downstream inference.
+    if _is_volunteer_event(event_data):
+        event_data["category"] = "community"
+        return event_data
+
     if not ctx.is_class_flag:
         if infer_is_class(event_data, source_slug=ctx.source_slug, venue_type=ctx.venue_type):
             ctx.is_class_flag = True
@@ -1438,7 +1458,18 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
             and existing_category in {"community", "other"}
             and incoming_category not in {"community", "other"}
         ):
-            updates["category_id"] = incoming_category
+            # Never override the category of a volunteer event — it is
+            # intentionally ``community`` regardless of venue type or title
+            # signals from other sources (e.g. a farmers-market venue type
+            # would otherwise push it to ``food_drink``).
+            existing_subcategory = str(existing.get("subcategory") or existing.get("subcategory_id") or "").strip().lower()
+            existing_tags = existing.get("tags") or []
+            existing_is_volunteer = (
+                existing_subcategory == "volunteer"
+                or "volunteer" in {str(t).strip().lower() for t in existing_tags}
+            )
+            if not existing_is_volunteer:
+                updates["category_id"] = incoming_category
 
     if not existing.get("is_sensitive"):
         source_id = existing.get("source_id") or incoming.get("source_id")

@@ -196,17 +196,16 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
             span_days = (end_date_obj.date() - event_date).days
             if span_days > 30:
                 explicit_kind = str(event_data.get("content_kind") or "").strip().lower()
-                if explicit_kind != "event":
+                if explicit_kind not in ("event", "exhibit"):
                     _LONG_SPAN_OK_RE = re.compile(
                         r"(festival|conference|convention|fair|summit|expo|marathon|relay)",
                         re.IGNORECASE,
                     )
                     if not _LONG_SPAN_OK_RE.search(title):
-                        event_data["content_kind"] = "exhibit"
                         warnings.append(
-                            f"Classified as exhibit (spans {span_days} days): {title}"
+                            f"Long-span event ({span_days} days) — crawler should route to exhibitions if this is an exhibit: {title}"
                         )
-                        _validation_stats.record_warning("long_span_exhibit")
+                        _validation_stats.record_warning("long_span_event_warning")
         except (ValueError, TypeError):
             pass
 
@@ -574,47 +573,20 @@ def infer_content_kind(
     series_hint: Optional[dict] = None,
     source_slug: Optional[str] = None,
 ) -> str:
-    """Infer event content kind for feed-level filtering and UX treatment."""
+    """Infer event content kind for feed-level filtering and UX treatment.
+
+    Exhibitions should be routed to the exhibitions table by the crawler,
+    not auto-classified here. This function only handles explicit values
+    and rejects permanent attractions that aren't real events.
+    """
     explicit_value = str(event_data.get("content_kind") or "").strip().lower()
     if explicit_value in _CONTENT_KIND_ALLOWED:
         return explicit_value
 
-    series_type = (
-        str(
-            (series_hint or {}).get("series_type")
-            or (
-                (event_data.get("series") or {})
-                if isinstance(event_data.get("series"), dict)
-                else {}
-            ).get("series_type")
-            or ""
-        )
-        .strip()
-        .lower()
-    )
-    if series_type == "exhibition":
-        return "exhibit"
-
-    tags = {str(tag).strip().lower() for tag in (event_data.get("tags") or [])}
-    genres = {str(genre).strip().lower() for genre in (event_data.get("genres") or [])}
-    searchable_text = " ".join(
-        filter(
-            None,
-            [
-                str(event_data.get("title") or ""),
-                str(event_data.get("description") or ""),
-                str((series_hint or {}).get("series_title") or ""),
-            ],
-        )
-    )
-
-    if tags & _EXHIBIT_SIGNAL_TAGS or genres & _EXHIBIT_SIGNAL_TAGS:
-        return "exhibit"
-    if _EXHIBIT_SIGNAL_RE.search(searchable_text):
-        return "exhibit"
-
+    # Reject permanent attractions — these aren't events or exhibitions
     title = str(event_data.get("title") or "").strip().lower()
     if title in _ATTRACTION_TITLES or _ATTRACTION_TITLE_RE.match(title):
-        return "exhibit"
+        logger.debug("Rejecting attraction title from events: %s", title)
+        return "exhibit"  # Kept as "exhibit" so suppression still catches any stragglers
 
     return "event"

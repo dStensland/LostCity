@@ -16,6 +16,9 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
+from exhibition_utils import build_exhibition_record
 from utils import (
     extract_images_from_page, extract_event_links, find_event_url,
     enrich_event_record, parse_price, parse_date_range,
@@ -102,9 +105,11 @@ def determine_category(title: str, description: str) -> tuple[str, Optional[str]
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl MODA events using Playwright."""
     source_id = source["id"]
+    portal_id = source.get("portal_id")
     events_found = 0
     events_new = 0
     events_updated = 0
+    exhibition_envelope = TypedEntityEnvelope()
 
     try:
         with sync_playwright() as p:
@@ -283,43 +288,65 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             if range_end:
                                 event_record["end_date"] = range_end
 
-                            # Detect exhibits and set content_kind
+                            # Detect exhibits — route to exhibition lane
                             _exhibit_kw = ["exhibit", "exhibition", "on view", "collection", "installation"]
                             _check = f"{title} {event_record.get('description') or ''}".lower()
-                            if any(kw in _check for kw in _exhibit_kw):
-                                event_record["content_kind"] = "exhibit"
-                                event_record["is_all_day"] = True
-                                event_record["start_time"] = None
+                            is_exhibit = any(kw in _check for kw in _exhibit_kw)
 
-                            # Series grouping for recurring programs
-                            series_hint = None
-                            for prefix in SERIES_PREFIXES:
-                                if title.lower().startswith(prefix.lower()):
-                                    series_hint = {
-                                        "series_type": "class_series",
-                                        "series_title": prefix,
-                                        "frequency": "monthly",
-                                    }
-                                    event_record["is_recurring"] = True
-                                    break
-
-                            existing = find_event_by_hash(content_hash)
-                            if existing:
-                                smart_update_existing_event(existing, event_record)
-                                events_updated += 1
-                                i += 1
-                                continue
-
-                            try:
-                                insert_event(event_record, series_hint=series_hint)
+                            if is_exhibit:
+                                record, artists = build_exhibition_record(
+                                    title=title,
+                                    venue_id=venue_id if not is_virtual else None,
+                                    source_id=source_id,
+                                    opening_date=start_date,
+                                    closing_date=event_record.get("end_date"),
+                                    venue_name=VENUE_DATA["name"],
+                                    description=event_record.get("description"),
+                                    image_url=event_record.get("image_url"),
+                                    source_url=event_record.get("source_url"),
+                                    portal_id=portal_id,
+                                    admission_type="free" if event_record.get("is_free") else "ticketed",
+                                    tags=event_record.get("tags", []),
+                                )
+                                if artists:
+                                    record["artists"] = artists
+                                exhibition_envelope.add("exhibitions", record)
                                 events_new += 1
-                                logger.info(f"Added: {title} on {start_date}")
-                            except Exception as e:
-                                logger.error(f"Failed to insert: {title}: {e}")
+                            else:
+                                # Series grouping for recurring programs
+                                series_hint = None
+                                for prefix in SERIES_PREFIXES:
+                                    if title.lower().startswith(prefix.lower()):
+                                        series_hint = {
+                                            "series_type": "class_series",
+                                            "series_title": prefix,
+                                            "frequency": "monthly",
+                                        }
+                                        event_record["is_recurring"] = True
+                                        break
+
+                                existing = find_event_by_hash(content_hash)
+                                if existing:
+                                    smart_update_existing_event(existing, event_record)
+                                    events_updated += 1
+                                    i += 1
+                                    continue
+
+                                try:
+                                    insert_event(event_record, series_hint=series_hint)
+                                    events_new += 1
+                                    logger.info(f"Added: {title} on {start_date}")
+                                except Exception as e:
+                                    logger.error(f"Failed to insert: {title}: {e}")
 
                 i += 1
 
             browser.close()
+
+        if exhibition_envelope.has_records():
+            persist_typed_entity_envelope(exhibition_envelope)
+            ex_count = len(exhibition_envelope.exhibitions)
+            logger.info(f"MODA: persisted {ex_count} exhibition(s) to exhibitions table")
 
         logger.info(
             f"MODA crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

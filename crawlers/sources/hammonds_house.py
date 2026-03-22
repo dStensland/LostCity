@@ -16,9 +16,17 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
+from exhibition_utils import build_exhibition_record
 from utils import parse_date_range, enrich_event_record
 
 logger = logging.getLogger(__name__)
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    exhibitions=True,
+)
 
 BASE_URL = "https://hammondshousemuseum.org"
 
@@ -213,9 +221,11 @@ def determine_category(title: str, description: str = "") -> tuple[str, Optional
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Hammonds House Museum events."""
     source_id = source["id"]
+    portal_id = source.get("portal_id")
     events_found = 0
     events_new = 0
     events_updated = 0
+    exhibition_envelope = TypedEntityEnvelope()
 
     try:
         # ----------------------------------------------------------------
@@ -350,15 +360,33 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "content_hash": content_hash,
                             }
 
-                            # Exhibit detection
+                            enrich_event_record(event_record, source_name="Hammonds House Museum")
+
+                            # Exhibit detection: route to exhibitions lane instead of events
                             exhibit_keywords = ["exhibit", "exhibition", "on view", "collection", "installation"]
                             combined_exhibit = f"{title.lower()} {(description or '').lower()}"
                             if any(kw in combined_exhibit for kw in exhibit_keywords):
-                                event_record["content_kind"] = "exhibit"
-                                event_record["is_all_day"] = True
-                                event_record["start_time"] = None
-
-                            enrich_event_record(event_record, source_name="Hammonds House Museum")
+                                ex_record, ex_artists = build_exhibition_record(
+                                    title=title,
+                                    venue_id=venue_id,
+                                    source_id=source_id,
+                                    opening_date=start_date,
+                                    closing_date=event_record.get("end_date"),
+                                    venue_name=VENUE_DATA["name"],
+                                    description=description,
+                                    image_url=None,
+                                    source_url=event_record.get("source_url"),
+                                    portal_id=portal_id,
+                                    admission_type="ticketed",
+                                    tags=["museum", "hammonds-house", "west-end", "african-american-art", "exhibition"],
+                                )
+                                if ex_artists:
+                                    ex_record["artists"] = ex_artists
+                                exhibition_envelope.add("exhibitions", ex_record)
+                                events_found += 1
+                                events_new += 1
+                                logger.info(f"Queued exhibition: {title} on {start_date}")
+                                continue
 
                             existing = find_event_by_hash(content_hash)
                             if existing:
@@ -486,48 +514,34 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     start_date, end_date = parse_date_range(on_view_line)
                     if start_date and end_date:
                         start_date, end_date = normalize_ongoing_exhibit_dates(start_date, end_date)
-                        content_hash = generate_content_hash(exhibit_title, "Hammonds House Museum", start_date)
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": exhibit_title,
-                            "description": f"Current exhibit at Hammonds House Museum. {on_view_line}",
-                            "start_date": start_date,
-                            "start_time": None,
-                            "end_date": end_date,
-                            "end_time": None,
-                            "is_all_day": True,
-                            "category": "museums",
-                            "subcategory": "exhibition",
-                            "tags": ["hammonds-house", "west-end", "museum", "exhibition", "on-view"],
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": False,
-                            "source_url": BASE_URL,
-                            "ticket_url": BASE_URL,
-                            "image_url": None,
-                            "raw_text": on_view_line,
-                            "extraction_confidence": 0.85,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                            "content_kind": "exhibit",
-                        }
-
-                        enrich_event_record(event_record, source_name="Hammonds House Museum")
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                        else:
-                            insert_event(event_record)
-                            events_new += 1
+                        ex_record, ex_artists = build_exhibition_record(
+                            title=exhibit_title,
+                            venue_id=venue_id,
+                            source_id=source_id,
+                            opening_date=start_date,
+                            closing_date=end_date,
+                            venue_name=VENUE_DATA["name"],
+                            description=f"Current exhibit at Hammonds House Museum. {on_view_line}",
+                            image_url=None,
+                            source_url=BASE_URL,
+                            portal_id=portal_id,
+                            admission_type="ticketed",
+                            tags=["museum", "hammonds-house", "west-end", "african-american-art", "exhibition", "on-view"],
+                        )
+                        if ex_artists:
+                            ex_record["artists"] = ex_artists
+                        exhibition_envelope.add("exhibitions", ex_record)
                         events_found += 1
-                        logger.info(f"Added current exhibit: {exhibit_title} ({start_date} - {end_date})")
+                        events_new += 1
+                        logger.info(f"Queued current exhibit: {exhibit_title} ({start_date} - {end_date})")
         except Exception as e:
             logger.debug(f"Could not extract current exhibit: {e}")
+
+        if exhibition_envelope.exhibitions:
+            persist_result = persist_typed_entity_envelope(exhibition_envelope)
+            skipped = persist_result.skipped.get("exhibitions", 0)
+            if skipped:
+                logger.warning("Hammonds House Museum: skipped %d exhibition rows", skipped)
 
         logger.info(f"Hammonds House Museum crawl complete: {events_found} found, {events_new} new, {events_updated} updated")
 

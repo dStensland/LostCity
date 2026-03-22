@@ -468,8 +468,11 @@ def _upsert_record(record: dict) -> tuple[int, int]:
     return 1, 0
 
 
-def _crawl_exhibitions(source_id: int, venue_id: int) -> tuple[int, int, int]:
-    found = new = updated = 0
+def _crawl_exhibitions(source_id: int, venue_id: int, portal_id: Optional[str] = None) -> tuple[int, int, int]:
+    from exhibition_utils import build_exhibition_record
+
+    found = new = 0
+    envelope = TypedEntityEnvelope()
     index_soup = _fetch_soup(EXHIBITIONS_URL)
     for url in _collect_exhibition_urls(index_soup):
         try:
@@ -480,10 +483,30 @@ def _crawl_exhibitions(source_id: int, venue_id: int) -> tuple[int, int, int]:
         if not record:
             continue
         found += 1
-        added, refreshed = _upsert_record(record)
-        new += added
-        updated += refreshed
-    return found, new, updated
+        ex_record, _ = build_exhibition_record(
+            title=record["title"],
+            venue_id=venue_id,
+            source_id=source_id,
+            opening_date=record["start_date"],
+            closing_date=record.get("end_date"),
+            venue_name=VENUE_DATA["name"],
+            description=record.get("description"),
+            image_url=record.get("image_url"),
+            source_url=record.get("source_url"),
+            portal_id=portal_id,
+            admission_type="ticketed",
+            tags=record.get("tags", ["history", "museum", "exhibition"]),
+        )
+        envelope.add("exhibitions", ex_record)
+        new += 1
+
+    if envelope.exhibitions:
+        persist_result = persist_typed_entity_envelope(envelope)
+        skipped = persist_result.skipped.get("exhibitions", 0)
+        if skipped:
+            logger.warning("Atlanta History Center: skipped %d exhibition rows", skipped)
+
+    return found, new, 0
 
 
 def _crawl_summer_camps(source_id: int, venue_id: int) -> tuple[int, int, int]:
@@ -630,7 +653,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     venue_id = get_or_create_venue(VENUE_DATA)
     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
-    exhibit_found, exhibit_new, exhibit_updated = _crawl_exhibitions(source["id"], venue_id)
+    exhibit_found, exhibit_new, exhibit_updated = _crawl_exhibitions(source["id"], venue_id, source.get("portal_id"))
     camp_found, camp_new, camp_updated = _crawl_summer_camps(source["id"], venue_id)
 
     total_found = events_found + exhibit_found + camp_found

@@ -19,6 +19,7 @@ from db import get_or_create_venue, insert_event, find_event_by_hash, smart_upda
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
+from exhibition_utils import build_exhibition_record
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record, parse_date_range
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     events=True,
     destinations=True,
     destination_details=True,
+    exhibitions=True,
     venue_features=True,
     venue_specials=True,
 )
@@ -208,9 +210,11 @@ def determine_category(title: str, category_type: str) -> tuple[str, Optional[st
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Fernbank Museum events using Playwright."""
     source_id = source["id"]
+    portal_id = source.get("portal_id")
     events_found = 0
     events_new = 0
     events_updated = 0
+    exhibition_envelope = TypedEntityEnvelope()
 
     try:
         with sync_playwright() as p:
@@ -391,13 +395,31 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if range_end:
                         event_record["end_date"] = range_end
 
-                    # Detect exhibits and set content_kind / is_all_day
+                    # Detect exhibits: route to exhibitions lane instead of events
                     exhibit_keywords = ["exhibit", "exhibition", "on view", "collection", "installation"]
                     combined_text = f"{title} {description or ''}".lower()
                     if any(kw in combined_text for kw in exhibit_keywords):
-                        event_record["content_kind"] = "exhibit"
-                        event_record["is_all_day"] = True
-                        event_record["start_time"] = None
+                        ex_record, ex_artists = build_exhibition_record(
+                            title=title,
+                            venue_id=venue_id,
+                            source_id=source_id,
+                            opening_date=start_date,
+                            closing_date=event_record.get("end_date"),
+                            venue_name=VENUE_DATA["name"],
+                            description=description,
+                            image_url=image_map.get(title),
+                            source_url=event_record.get("source_url"),
+                            portal_id=portal_id,
+                            admission_type="ticketed",
+                            tags=["museum", "fernbank", "druid-hills", "exhibition"],
+                        )
+                        if ex_artists:
+                            ex_record["artists"] = ex_artists
+                        exhibition_envelope.add("exhibitions", ex_record)
+                        events_new += 1
+                        logger.info(f"Queued exhibition: {title} on {start_date}")
+                        i += 1
+                        continue
 
                     # Group "Fernbank After Dark" (Museum Nights) into a recurring series
                     title_lower = title.lower()
@@ -430,6 +452,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 i += 1
 
             browser.close()
+
+        if exhibition_envelope.exhibitions:
+            persist_result = persist_typed_entity_envelope(exhibition_envelope)
+            skipped = persist_result.skipped.get("exhibitions", 0)
+            if skipped:
+                logger.warning("Fernbank Museum: skipped %d exhibition rows", skipped)
 
         logger.info(
             f"Fernbank Museum crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

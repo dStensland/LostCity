@@ -23,6 +23,7 @@ from db import get_client, get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
+from exhibition_utils import build_exhibition_record
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record, parse_date_range
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     events=True,
     destinations=True,
     destination_details=True,
+    exhibitions=True,
     venue_features=True,
     venue_specials=True,
 )
@@ -291,9 +293,11 @@ def determine_category(title: str) -> tuple[str, Optional[str], list[str]]:
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Georgia Aquarium events using Playwright."""
     source_id = source["id"]
+    portal_id = source.get("portal_id")
     events_found = 0
     events_new = 0
     events_updated = 0
+    exhibition_envelope = TypedEntityEnvelope()
 
     try:
         with sync_playwright() as p:
@@ -494,19 +498,37 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             else:
                                 event_record["is_free"] = False
 
-                        # Detect exhibits and set content_kind
-                        _exhibit_kw = ["exhibit", "exhibition", "on view", "collection", "installation"]
-                        _check = f"{event_record.get('title', '')} {event_record.get('description') or ''}".lower()
-                        if any(kw in _check for kw in _exhibit_kw):
-                            event_record["content_kind"] = "exhibit"
-                            event_record["is_all_day"] = True
-                            event_record["start_time"] = None
-
                         # Extract end_date from date range patterns
                         range_text = f"{event_record.get('title', '')} {event_record.get('description') or ''}"
                         _, range_end = parse_date_range(range_text)
                         if range_end:
                             event_record["end_date"] = range_end
+
+                        # Detect exhibits: route to exhibitions lane instead of events
+                        _exhibit_kw = ["exhibit", "exhibition", "on view", "collection", "installation"]
+                        _check = f"{event_record.get('title', '')} {event_record.get('description') or ''}".lower()
+                        if any(kw in _check for kw in _exhibit_kw):
+                            ex_record, ex_artists = build_exhibition_record(
+                                title=title,
+                                venue_id=venue_id,
+                                source_id=source_id,
+                                opening_date=start_date,
+                                closing_date=event_record.get("end_date"),
+                                venue_name=VENUE_DATA["name"],
+                                description=description,
+                                image_url=image_map.get(title),
+                                source_url=event_record.get("source_url"),
+                                portal_id=portal_id,
+                                admission_type="ticketed",
+                                tags=["aquarium", "georgia-aquarium", "downtown", "exhibition"],
+                            )
+                            if ex_artists:
+                                ex_record["artists"] = ex_artists
+                            exhibition_envelope.add("exhibitions", ex_record)
+                            events_new += 1
+                            logger.info(f"Queued exhibition: {title} on {start_date}")
+                            i += 1
+                            continue
 
                         existing = find_event_by_hash(content_hash)
                         if existing:
@@ -525,6 +547,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 i += 1
 
             browser.close()
+
+        if exhibition_envelope.exhibitions:
+            persist_result = persist_typed_entity_envelope(exhibition_envelope)
+            skipped = persist_result.skipped.get("exhibitions", 0)
+            if skipped:
+                logger.warning("Georgia Aquarium: skipped %d exhibition rows", skipped)
 
         logger.info(
             f"Georgia Aquarium crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

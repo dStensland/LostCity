@@ -342,46 +342,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         artist_name = artist_match.group(1).lower().replace(' ', '-')
                         tags.append(artist_name)
 
-                # Check for duplicates
-                content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
-
-                # Create event record
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": title,
-                    "description": description,
-                    "start_date": start_date,
-                    "start_time": None,
-                    "end_date": end_date,
-                    "end_time": None,
-                    "is_all_day": True,
-                    "content_kind": "exhibit",
-                    "category": "art",
-                    "tags": tags,
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": "Suggested donation $3",
-                    "is_free": True,
-                    "source_url": CURRENT_EXHIBITIONS_URL,
-                    "ticket_url": CURRENT_EXHIBITIONS_URL,
-                    "image_url": exhibition_data.get('image_url'),
-                    "raw_text": f"{title}\n{date_text}\n{description}",
-                    "extraction_confidence": 0.90,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                else:
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.debug(f"Inserted exhibition: {title} ({start_date} - {end_date})")
-
                 exhibition_envelope.add(
                     "exhibitions",
                     build_exhibition_lane_record(
@@ -391,6 +351,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         portal_id=portal_id,
                     ),
                 )
+                events_new += 1
+                logger.debug(f"Added exhibition: {title} ({start_date} - {end_date})")
 
             except Exception as e:
                 logger.error(f"Failed to process exhibition '{exhibition_data.get('title', 'Unknown')}': {e}", exc_info=True)

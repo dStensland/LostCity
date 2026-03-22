@@ -37,6 +37,9 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
+from exhibition_utils import build_exhibition_record
 
 logger = logging.getLogger(__name__)
 
@@ -644,6 +647,8 @@ def _crawl_special_events(
     source_id: int,
     venue_id: int,
     today: date,
+    exhibition_envelope: TypedEntityEnvelope,
+    portal_id: Optional[str] = None,
 ) -> tuple[int, int, int]:
     """Crawl special events from the MEC WordPress calendar."""
     found = new = updated = 0
@@ -755,64 +760,80 @@ def _crawl_special_events(
             default_category="art",
         )
 
-        # Content kind for exhibitions
-        content_kind: Optional[str] = None
-        if re.search(
+        # Detect exhibitions — route to exhibition lane, not events table
+        is_exhibit = bool(re.search(
             r"\b(exhibit|exhibition|gallery|on view|residency)\b",
             f"{title} {description}",
             re.I,
-        ):
-            content_kind = "exhibit"
-
-        content_hash = generate_content_hash(
-            title,
-            "Spruill Center for the Arts",
-            f"{start_date}|{start_time or ''}",
-        )
-
-        record: dict = {
-            "source_id": source_id,
-            "venue_id": venue_id,
-            "title": title[:200],
-            "description": description if description else None,
-            "start_date": start_date,
-            "end_date": effective_end_date,
-            "start_time": start_time,
-            "end_time": end_time,
-            "is_all_day": start_time is None and content_kind == "exhibit",
-            "category": category,
-            "tags": tags,
-            "is_free": is_free,
-            "price_min": price_min,
-            "price_max": price_max,
-            "price_note": None,
-            "source_url": event_url,
-            "ticket_url": event_url,
-            "image_url": image_url,
-            "raw_text": f"{title} | spruill-center",
-            "extraction_confidence": 0.92,
-            "is_recurring": False,
-            "content_hash": content_hash,
-        }
-
-        if content_kind:
-            record["content_kind"] = content_kind
+        ))
 
         found += 1
 
-        existing = find_event_by_hash(content_hash)
-        if existing:
-            smart_update_existing_event(existing, record)
-            updated += 1
+        if is_exhibit:
+            record, artists = build_exhibition_record(
+                title=title[:200],
+                venue_id=venue_id,
+                source_id=source_id,
+                opening_date=start_date,
+                closing_date=effective_end_date,
+                venue_name=VENUE_DATA["name"],
+                description=description if description else None,
+                image_url=image_url,
+                source_url=event_url,
+                portal_id=portal_id,
+                admission_type="free" if is_free else "ticketed",
+                tags=tags,
+            )
+            if artists:
+                record["artists"] = artists
+            exhibition_envelope.add("exhibitions", record)
+            new += 1
+            logger.info("[spruill/events] Queued exhibition: %s on %s", title[:50], start_date)
         else:
-            try:
-                insert_event(record)
-                new += 1
-                logger.info("[spruill/events] Added: %s on %s", title[:50], start_date)
-            except Exception as exc:
-                logger.error(
-                    "[spruill/events] Failed to insert %r: %s", title[:50], exc
-                )
+            content_hash = generate_content_hash(
+                title,
+                "Spruill Center for the Arts",
+                f"{start_date}|{start_time or ''}",
+            )
+
+            record: dict = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title[:200],
+                "description": description if description else None,
+                "start_date": start_date,
+                "end_date": effective_end_date,
+                "start_time": start_time,
+                "end_time": end_time,
+                "is_all_day": False,
+                "category": category,
+                "tags": tags,
+                "is_free": is_free,
+                "price_min": price_min,
+                "price_max": price_max,
+                "price_note": None,
+                "source_url": event_url,
+                "ticket_url": event_url,
+                "image_url": image_url,
+                "raw_text": f"{title} | spruill-center",
+                "extraction_confidence": 0.92,
+                "is_recurring": False,
+                "content_hash": content_hash,
+            }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, record)
+                updated += 1
+            else:
+                try:
+                    insert_event(record)
+                    new += 1
+                    logger.info("[spruill/events] Added: %s on %s", title[:50], start_date)
+                except Exception as exc:
+                    logger.error(
+                        "[spruill/events] Failed to insert %r: %s", title[:50], exc
+                    )
 
     return found, new, updated
 
@@ -835,6 +856,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     Returns (events_found, events_new, events_updated).
     """
     source_id = source["id"]
+    portal_id = source.get("portal_id")
 
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
@@ -844,6 +866,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     today = date.today()
     http_session = requests.Session()
+    exhibition_envelope = TypedEntityEnvelope()
 
     total_found = total_new = total_updated = 0
 
@@ -859,9 +882,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
         c_updated,
     )
 
-    # --- Special events ---
+    # --- Special events (exhibits go into exhibition_envelope) ---
     e_found, e_new, e_updated = _crawl_special_events(
-        http_session, source_id, venue_id, today
+        http_session, source_id, venue_id, today, exhibition_envelope, portal_id
     )
     total_found += e_found
     total_new += e_new
@@ -872,6 +895,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
         e_new,
         e_updated,
     )
+
+    if exhibition_envelope.has_records():
+        persist_typed_entity_envelope(exhibition_envelope)
+        ex_count = len(exhibition_envelope.exhibitions)
+        logger.info("[spruill] Persisted %d exhibition(s) to exhibitions table", ex_count)
 
     logger.info(
         "[spruill] Crawl complete: %d found, %d new, %d updated",

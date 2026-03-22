@@ -15,8 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, insert_exhibition
-from dedupe import generate_content_hash
+from db import get_or_create_venue, insert_exhibition
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
@@ -190,64 +189,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if full_title.isupper():
                             full_title = full_title.title()
 
-                        content_hash = generate_content_hash(full_title, "Marcia Wood Gallery", start_date_str)
-
-
                         description = "Art exhibition at Marcia Wood Gallery"
                         if artist:
                             description = f"{title} - an exhibition by {artist} at Marcia Wood Gallery"
                         description += f". On view through {end_date.strftime('%B %d, %Y')}."
 
-                        # Get specific event URL
-
-
                         event_url = find_event_url(title, event_links, EVENTS_URL)
 
-
-
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": full_title,
-                            "description": description,
-                            "start_date": start_date_str,
-                            "start_time": None,
-                            "end_date": end_date_str,
-                            "end_time": None,
-                            "is_all_day": True,
-                            "content_kind": "exhibit",
-                            "category": "art",
-                            "subcategory": "gallery",
-                            "tags": ["art", "gallery", "contemporary-art", "exhibition", "buckhead"],
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": "Free admission",
-                            "is_free": True,
-                            "source_url": event_url,
-                            "ticket_url": event_url,
-                            "image_url": image_map.get(full_title),
-                            "raw_text": f"{full_title} - {start_date_str} to {end_date_str}",
-                            "extraction_confidence": 0.90,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            i += 1
-                            continue
-
-                        try:
-                            insert_event(event_record)
-                            events_new += 1
-                            logger.info(f"Added: {full_title} ({start_date_str} - {end_date_str})")
-                        except Exception as e:
-                            logger.error(f"Failed to insert: {full_title}: {e}")
-
-                        # Dual-write: also insert as exhibition
                         try:
                             exhibition_record = {
                                 "title": full_title,
@@ -265,9 +213,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "is_active": True,
                             }
                             artists = [{"artist_name": artist}] if artist else None
-                            insert_exhibition(exhibition_record, artists=artists)
+                            result = insert_exhibition(exhibition_record, artists=artists)
+                            if result:
+                                events_new += 1
+                                logger.info(f"Added exhibition: {full_title} ({start_date_str} - {end_date_str})")
+                            else:
+                                events_updated += 1
                         except Exception as exc:
-                            logger.debug("Exhibition insert failed for %r: %s", full_title, exc)
+                            logger.error("Exhibition insert failed for %r: %s", full_title, exc)
 
                 i += 1
 

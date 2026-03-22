@@ -19,13 +19,9 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import (
-    find_event_by_hash,
     get_or_create_venue,
-    insert_event,
     insert_exhibition,
-    smart_update_existing_event,
 )
-from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
@@ -309,53 +305,10 @@ def _extract_candidates(soup: BeautifulSoup, *, today: date) -> list[ExhibitionC
     return candidates
 
 
-def _sync_exhibition_event(
-    candidate: ExhibitionCandidate,
-    *,
-    source_id: int,
-    venue_id: int,
+def _sync_exhibition_record(
+    candidate: ExhibitionCandidate, *, source_id: int, venue_id: int
 ) -> tuple[int, int, int]:
-    title = candidate.title
-    content_hash = generate_content_hash(title, VENUE_DATA["name"], candidate.hash_basis)
-
-    event_record = {
-        "source_id": source_id,
-        "venue_id": venue_id,
-        "title": title,
-        "description": candidate.description,
-        "start_date": candidate.event_start_date,
-        "start_time": None,
-        "end_date": candidate.closing_date,
-        "end_time": None,
-        "is_all_day": True,
-        "content_kind": "exhibit",
-        "category": "art",
-        "subcategory": "exhibition",
-        "tags": ["art", "printmaking", "exhibition", "studio", "atlanta-printmakers"],
-        "price_min": 0,
-        "price_max": 0,
-        "price_note": "Free admission",
-        "is_free": True,
-        "source_url": EXHIBITIONS_URL,
-        "ticket_url": None,
-        "image_url": candidate.image_url,
-        "raw_text": f"{title} | {candidate.hash_basis}",
-        "extraction_confidence": 0.86,
-        "is_recurring": False,
-        "recurrence_rule": None,
-        "content_hash": content_hash,
-    }
-
-    existing = find_event_by_hash(content_hash)
-    if existing:
-        smart_update_existing_event(existing, event_record)
-        return 1, 0, 1
-
-    insert_event(event_record)
-    return 1, 1, 0
-
-
-def _sync_exhibition_record(candidate: ExhibitionCandidate, *, source_id: int, venue_id: int) -> None:
+    """Persist an exhibition record and return (found, new, updated)."""
     exhibition_record = {
         "title": candidate.title,
         "venue_id": venue_id,
@@ -374,7 +327,11 @@ def _sync_exhibition_record(candidate: ExhibitionCandidate, *, source_id: int, v
             {"date_precision": "current_no_dates"} if candidate.current_without_dates else None
         ),
     }
-    insert_exhibition(exhibition_record)
+    result = insert_exhibition(exhibition_record)
+    # insert_exhibition returns the UUID on new insert, None on skip/duplicate
+    if result:
+        return 1, 1, 0
+    return 1, 0, 1
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -393,7 +350,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         return 0, 0, 0
 
     for candidate in candidates:
-        found_delta, new_delta, updated_delta = _sync_exhibition_event(
+        found_delta, new_delta, updated_delta = _sync_exhibition_record(
             candidate,
             source_id=source_id,
             venue_id=venue_id,
@@ -401,7 +358,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
         events_found += found_delta
         events_new += new_delta
         events_updated += updated_delta
-        _sync_exhibition_record(candidate, source_id=source_id, venue_id=venue_id)
         logger.info(
             "Atlanta Printmakers Studio exhibition synced: %s (open=%s close=%s)",
             candidate.title,

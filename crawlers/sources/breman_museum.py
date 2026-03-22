@@ -22,9 +22,17 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
+from exhibition_utils import build_exhibition_record
 from utils import parse_date_range
 
 logger = logging.getLogger(__name__)
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    exhibitions=True,
+)
 
 BASE_URL = "https://thebreman.org"
 API_URL = f"{BASE_URL}/wp-json/wp/v2/events"
@@ -218,9 +226,11 @@ def extract_ticket_url(content: str) -> Optional[str]:
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl The Breman Museum events via WordPress REST API."""
     source_id = source["id"]
+    portal_id = source.get("portal_id")
     events_found = 0
     events_new = 0
     events_updated = 0
+    exhibition_envelope = TypedEntityEnvelope()
 
     try:
         # Fetch og:image from homepage to enrich venue record
@@ -349,13 +359,30 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if range_end:
                     event_record["end_date"] = range_end
 
-                # Detect exhibits and set content_kind / is_all_day
+                # Detect exhibits: route to exhibitions lane instead of events
                 exhibit_keywords = ["exhibit", "exhibition", "on view", "collection", "installation"]
                 combined_text = f"{title} {description or ''}".lower()
                 if any(kw in combined_text for kw in exhibit_keywords):
-                    event_record["content_kind"] = "exhibit"
-                    event_record["is_all_day"] = True
-                    event_record["start_time"] = None
+                    ex_record, ex_artists = build_exhibition_record(
+                        title=title,
+                        venue_id=venue_id,
+                        source_id=source_id,
+                        opening_date=details["date"],
+                        closing_date=event_record.get("end_date"),
+                        venue_name=VENUE_DATA["name"],
+                        description=description,
+                        image_url=image_url,
+                        source_url=event_url,
+                        portal_id=portal_id,
+                        admission_type="ticketed",
+                        tags=["museum", "jewish", "history", "midtown", "breman-museum", "exhibition"],
+                    )
+                    if ex_artists:
+                        ex_record["artists"] = ex_artists
+                    exhibition_envelope.add("exhibitions", ex_record)
+                    events_new += 1
+                    logger.info(f"Queued exhibition: {title} on {details['date']}")
+                    continue
 
                 existing = find_event_by_hash(content_hash)
                 if existing:
@@ -370,6 +397,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
             except Exception as e:
                 logger.error(f"Error processing event: {e}")
                 continue
+
+        if exhibition_envelope.exhibitions:
+            persist_result = persist_typed_entity_envelope(exhibition_envelope)
+            skipped = persist_result.skipped.get("exhibitions", 0)
+            if skipped:
+                logger.warning("Breman Museum: skipped %d exhibition rows", skipped)
 
         logger.info(
             f"Breman Museum crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

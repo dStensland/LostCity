@@ -17,10 +17,11 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, insert_exhibition
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
+from exhibition_utils import build_exhibition_record
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record, parse_date_range
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     venue_features=True,
     venue_specials=True,
 )
+
 
 BASE_URL = "https://high.org"
 EVENTS_URL = f"{BASE_URL}/events/"
@@ -322,6 +324,8 @@ def _scrape_page_events(
     image_map: dict,
     event_links: dict,
     seen_events: set,
+    exhibition_envelope: TypedEntityEnvelope,
+    portal_id: Optional[str] = None,
 ) -> tuple[int, int, int]:
     """Parse events from the current Playwright page state and insert/update them.
 
@@ -518,22 +522,40 @@ def _scrape_page_events(
                     "Included with museum admission ($17.50 adults, $12 youth/seniors; free second Sunday)",
                 )
 
-            # Exhibit detection: flag exhibit-related events
-            exhibit_keywords = [
-                "exhibit", "exhibition", "on view", "collection", "installation",
-            ]
-            combined_exhibit = f"{title.lower()} {(description or '').lower()}"
-            if any(kw in combined_exhibit for kw in exhibit_keywords):
-                event_record["content_kind"] = "exhibit"
-                event_record["is_all_day"] = True
-                event_record["start_time"] = None
-
             # Date range extraction: scan for end dates in text
             raw_text = event_record.get("raw_text") or ""
             range_text = f"{title} {description or ''} {raw_text}"
             _, range_end = parse_date_range(range_text)
             if range_end:
                 event_record["end_date"] = range_end
+
+            # Exhibit detection: route to exhibitions lane instead of events
+            exhibit_keywords = [
+                "exhibit", "exhibition", "on view", "collection", "installation",
+            ]
+            combined_exhibit = f"{title.lower()} {(description or '').lower()}"
+            if any(kw in combined_exhibit for kw in exhibit_keywords):
+                ex_record, ex_artists = build_exhibition_record(
+                    title=title,
+                    venue_id=venue_id,
+                    source_id=source_id,
+                    opening_date=current_date,
+                    closing_date=event_record.get("end_date"),
+                    venue_name=VENUE_DATA["name"],
+                    description=description,
+                    image_url=image_map.get(title),
+                    source_url=event_record.get("source_url"),
+                    portal_id=portal_id,
+                    admission_type="ticketed",
+                    tags=["museum", "high-museum", "midtown", "exhibition"],
+                )
+                if ex_artists:
+                    ex_record["artists"] = ex_artists
+                exhibition_envelope.add("exhibitions", ex_record)
+                events_new += 1
+                logger.info(f"Queued exhibition: {title} on {current_date}")
+                i += 1
+                continue
 
             existing = find_event_by_hash(content_hash)
             if existing:
@@ -559,11 +581,12 @@ def _crawl_exhibitions(
     source_id: int,
     venue_id: int,
     seen_events: set,
+    exhibition_envelope: TypedEntityEnvelope,
+    portal_id: Optional[str] = None,
 ) -> tuple[int, int, int]:
     """Crawl the exhibitions page for current and upcoming shows.
 
-    Exhibitions are long-running, all-day events. We parse their title,
-    date range, and description and insert each as a separate event.
+    Exhibitions are written to the exhibitions lane via the envelope.
     """
     events_found = 0
     events_new = 0
@@ -658,77 +681,27 @@ def _crawl_exhibitions(
 
             events_found += 1
 
-            content_hash = generate_content_hash(
-                title, "High Museum of Art", exhibit_start
-            )
-
             event_url = find_event_url(title, exhibit_links, EXHIBITIONS_URL)
 
-            event_record = {
-                "source_id": source_id,
-                "venue_id": venue_id,
-                "title": title,
-                "description": description,
-                "start_date": exhibit_start,
-                "start_time": None,
-                "end_date": end_date,
-                "end_time": None,
-                "is_all_day": True,
-                "category": "museums",
-                "subcategory": "exhibition",
-                "tags": ["art", "museum", "high-museum", "midtown", "exhibition"],
-                "price_min": None,
-                "price_max": None,
-                "price_note": "Included with museum admission ($17.50 adults, $12 youth/seniors; free second Sunday)",
-                "is_free": False,
-                "source_url": event_url,
-                "ticket_url": event_url,
-                "image_url": exhibit_image_map.get(title),
-                "raw_text": f"{title} {line}",
-                "extraction_confidence": 0.88,
-                "is_recurring": False,
-                "recurrence_rule": None,
-                "content_hash": content_hash,
-                "content_kind": "exhibit",
-            }
-
-            enrich_event_record(event_record, source_name="High Museum of Art")
-
-            if event_record.get("is_free") is None:
-                event_record["is_free"] = False
-
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                smart_update_existing_event(existing, event_record)
-                events_updated += 1
-                continue
-
-            try:
-                insert_event(event_record)
-                events_new += 1
-                logger.info(f"Added exhibition: {title} ({exhibit_start} – {end_date})")
-            except Exception as e:
-                logger.error(f"Failed to insert exhibition: {title}: {e}")
-
-            # Dual-write: also insert as exhibition
-            try:
-                exhibition_record = {
-                    "title": title,
-                    "venue_id": venue_id,
-                    "source_id": source_id,
-                    "_venue_name": VENUE_DATA["name"],
-                    "opening_date": start_date or exhibit_start,
-                    "closing_date": end_date,
-                    "description": description,
-                    "image_url": exhibit_image_map.get(title),
-                    "source_url": event_url,
-                    "admission_type": "ticketed",
-                    "tags": ["museum", "high-museum", "midtown", "exhibition"],
-                    "is_active": True,
-                }
-                insert_exhibition(exhibition_record)
-            except Exception as exc:
-                logger.debug("Exhibition insert failed for %r: %s", title, exc)
+            ex_record, ex_artists = build_exhibition_record(
+                title=title,
+                venue_id=venue_id,
+                source_id=source_id,
+                opening_date=start_date or exhibit_start,
+                closing_date=end_date,
+                venue_name=VENUE_DATA["name"],
+                description=description,
+                image_url=exhibit_image_map.get(title),
+                source_url=event_url,
+                portal_id=portal_id,
+                admission_type="ticketed",
+                tags=["museum", "high-museum", "midtown", "exhibition"],
+            )
+            if ex_artists:
+                ex_record["artists"] = ex_artists
+            exhibition_envelope.add("exhibitions", ex_record)
+            events_new += 1
+            logger.info(f"Queued exhibition: {title} ({exhibit_start} – {end_date})")
 
     except Exception as e:
         logger.warning(f"Failed to crawl exhibitions page: {e}")
@@ -739,9 +712,11 @@ def _crawl_exhibitions(
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl High Museum events and exhibitions using Playwright."""
     source_id = source["id"]
+    portal_id = source.get("portal_id")
     events_found = 0
     events_new = 0
     events_updated = 0
+    exhibition_envelope = TypedEntityEnvelope()
 
     try:
         with sync_playwright() as p:
@@ -798,7 +773,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             while True:
                 logger.info(f"Scraping High Museum events page {page_num}")
                 f, n, u = _scrape_page_events(
-                    page, source_id, venue_id, image_map, event_links, seen_events
+                    page, source_id, venue_id, image_map, event_links, seen_events,
+                    exhibition_envelope, portal_id,
                 )
                 events_found += f
                 events_new += n
@@ -857,13 +833,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # 2. Exhibitions page
             # ----------------------------------------------------------------
             ex_found, ex_new, ex_updated = _crawl_exhibitions(
-                page, source_id, venue_id, seen_events
+                page, source_id, venue_id, seen_events,
+                exhibition_envelope, portal_id,
             )
             events_found += ex_found
             events_new += ex_new
             events_updated += ex_updated
 
             browser.close()
+
+        # Persist exhibitions collected during this crawl
+        if exhibition_envelope.exhibitions:
+            persist_result = persist_typed_entity_envelope(exhibition_envelope)
+            skipped = persist_result.skipped.get("exhibitions", 0)
+            if skipped:
+                logger.warning("High Museum: skipped %d exhibition rows", skipped)
 
         # Minimum-event validation: the High Museum always has many concurrent programs
         if events_found < 15:

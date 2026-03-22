@@ -700,7 +700,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 continue
 
         museum_venue_id = get_or_create_venue(VENUES["museum"])
-        persist_typed_entity_envelope(_build_destination_envelope(museum_venue_id))
+        dest_envelope = _build_destination_envelope(museum_venue_id)
+        persist_typed_entity_envelope(dest_envelope)
+
+        exhibition_envelope = TypedEntityEnvelope()
+        portal_id = source.get("portal_id")
         for exhibit in museum_exhibitions:
             try:
                 end_date = exhibit.get("end_date")
@@ -708,52 +712,25 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 events_found += 1
-                hash_start_date = exhibit.get("hash_start_date") or exhibit["start_date"]
-                hash_candidates = _museum_hash_candidates(exhibit["title"], hash_start_date)
+                from exhibition_utils import build_exhibition_record
 
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": museum_venue_id,
-                    "title": exhibit["title"],
-                    "description": exhibit["description"],
-                    "start_date": exhibit["start_date"],
-                    "start_time": None,
-                    "end_date": exhibit["end_date"],
-                    "end_time": None,
-                    "is_all_day": True,
-                    "content_kind": "exhibit",
-                    "category": "art",
-                    "subcategory": "exhibition",
-                    "tags": ["art", "museum", "spelman", "hbcu", "exhibition"],
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": "Suggested donation: $5",
-                    "is_free": True,
-                    "source_url": exhibit["source_url"],
-                    "ticket_url": exhibit["ticket_url"],
-                    "image_url": exhibit["image_url"],
-                    "raw_text": json.dumps(exhibit),
-                    "extraction_confidence": 0.93,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": hash_candidates[0],
-                }
-
-                existing = None
-                for candidate_hash in hash_candidates:
-                    existing = find_event_by_hash(candidate_hash)
-                    if existing:
-                        event_record["content_hash"] = candidate_hash
-                        break
-
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                    continue
-
-                insert_event(event_record)
+                ex_record, ex_artists = build_exhibition_record(
+                    title=exhibit["title"],
+                    venue_id=museum_venue_id,
+                    source_id=source_id,
+                    opening_date=exhibit.get("hash_start_date") or exhibit["start_date"],
+                    closing_date=exhibit["end_date"],
+                    venue_name=VENUES["museum"]["name"],
+                    description=exhibit["description"],
+                    image_url=exhibit.get("image_url"),
+                    source_url=exhibit["source_url"],
+                    portal_id=portal_id,
+                    admission_type="donation",
+                    tags=["art", "museum", "spelman", "hbcu", "exhibition"],
+                )
+                exhibition_envelope.add("exhibitions", ex_record)
                 events_new += 1
-                logger.debug(f"Inserted museum exhibit: {exhibit['title']} ({exhibit['start_date']})")
+                logger.debug("Added museum exhibition: %s (%s)", exhibit["title"], exhibit["start_date"])
 
             except Exception as e:
                 logger.error(
@@ -761,6 +738,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     exc_info=True,
                 )
                 continue
+
+        if exhibition_envelope.exhibitions:
+            persist_result = persist_typed_entity_envelope(exhibition_envelope)
+            skipped = persist_result.skipped.get("exhibitions", 0)
+            if skipped:
+                logger.warning("Spelman College: skipped %d exhibition rows", skipped)
 
         logger.info(f"Spelman College: Found {events_found} events, {events_new} new, {events_updated} existing")
 

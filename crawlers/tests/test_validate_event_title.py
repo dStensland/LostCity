@@ -76,8 +76,11 @@ def test_infer_content_kind_explicit_override():
     assert infer_content_kind({"title": "Summit Skyride", "content_kind": "event"}) == "event"
 
 
-def test_infer_content_kind_exhibit_signals():
-    """Existing exhibit inference from tags/description still works."""
-    assert infer_content_kind({"title": "Foo", "tags": ["exhibit"]}) == "exhibit"
-    assert infer_content_kind({"title": "Winter Exhibition at Gallery"}) == "exhibit"
-    assert infer_content_kind({"title": "On View: Modern Art"}) == "exhibit"
+def test_infer_content_kind_no_longer_auto_classifies_exhibits():
+    """Exhibitions are routed by crawlers, not auto-classified from tags/signals."""
+    # Tags and title keywords no longer trigger exhibit classification
+    assert infer_content_kind({"title": "Foo", "tags": ["exhibit"]}) == "event"
+    assert infer_content_kind({"title": "Winter Exhibition at Gallery"}) == "event"
+    assert infer_content_kind({"title": "On View: Modern Art"}) == "event"
+    # But explicit content_kind='exhibit' is still respected
+    assert infer_content_kind({"title": "Foo", "content_kind": "exhibit"}) == "exhibit"

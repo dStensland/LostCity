@@ -65,7 +65,6 @@ export interface GroupDisplayOptions {
   rollupVenues?: boolean;
   rollupCategories?: boolean;
   sortByTime?: boolean;
-  includeLongRunningExhibits?: boolean;
 }
 
 /**
@@ -152,11 +151,10 @@ export function groupEventsForDisplay(
   options: GroupDisplayOptions = {}
 ): DisplayItem[] {
   // Filter out events with no start_time (unless all-day).
-  // Also hide long-running exhibit-like content from generic event feeds by default.
-  const includeLongRunningExhibits = options.includeLongRunningExhibits ?? false;
+  // Also hide long-running exhibit-like content from generic event feeds.
   const filteredEvents = events.filter((e) => {
     if (!e.start_time && !e.is_all_day) return false;
-    if (!includeLongRunningExhibits && isSuppressedFromGeneralEventFeed(e)) return false;
+    if (isSuppressedFromGeneralEventFeed(e)) return false;
     return true;
   });
 
