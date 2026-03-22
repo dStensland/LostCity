@@ -19,6 +19,7 @@ from db import get_or_create_venue, insert_event, find_event_by_hash, smart_upda
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
+from exhibition_utils import build_exhibition_record
 
 logger = logging.getLogger(__name__)
 
@@ -301,6 +302,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             _enrich_venue_data(page)
             venue_id = get_or_create_venue(VENUE_DATA)
             persist_typed_entity_envelope(_build_destination_envelope(venue_id))
+            exhibition_envelope = TypedEntityEnvelope()
 
             logger.info(f"Fetching College Football Hall of Fame: {HAPPENINGS_URL}")
             page.goto(HAPPENINGS_URL, wait_until="domcontentloaded", timeout=30000)
@@ -402,6 +404,26 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
+                    # Route exhibitions to the exhibitions table, not events
+                    if content_kind == "exhibit":
+                        ex_record, _ = build_exhibition_record(
+                            title=title,
+                            venue_id=venue_id,
+                            source_id=source_id,
+                            opening_date=start_date,
+                            closing_date=end_date,
+                            venue_name="College Football Hall of Fame",
+                            description=description,
+                            image_url=image_url,
+                            source_url=event_url,
+                            admission_type="ticketed",
+                            tags=["college-football", "hall-of-fame", "exhibition", "downtown", "sports"],
+                        )
+                        exhibition_envelope.add("exhibitions", ex_record)
+                        events_new += 1
+                        logger.info(f"Exhibition routed: {title} ({start_date} → {end_date})")
+                        continue
+
                     content_hash = generate_content_hash(title, "College Football Hall of Fame", start_date)
 
                     event_record = {
@@ -414,7 +436,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "end_date": end_date,
                         "end_time": None,
                         "is_all_day": True,
-                        "content_kind": content_kind,
+                        "content_kind": "event",
                         "category": "museums",
                         "subcategory": None,
                         "tags": [
@@ -455,6 +477,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 except Exception as e:
                     logger.error(f"Error processing event card: {e}")
                     continue
+
+            if exhibition_envelope.exhibitions:
+                persist_typed_entity_envelope(exhibition_envelope)
 
             browser.close()
 
