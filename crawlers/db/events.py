@@ -1773,6 +1773,32 @@ def prefetch_hashes(source_id: int = None, venue_id: int = None) -> set[str]:
         return set()
 
 
+def prefetch_events_by_source(source_id: int) -> dict[str, dict]:
+    """Pre-fetch all active events for a source, keyed by content_hash.
+
+    Returns full event records so callers can pass them directly to
+    smart_update_existing_event() without individual DB lookups.
+    One query replaces ~1,000 individual find_event_by_hash() calls.
+    """
+    try:
+        client = get_client()
+        result = (
+            client.table("events")
+            .select("*")
+            .eq("source_id", source_id)
+            .eq("is_active", True)
+            .execute()
+        )
+        return {
+            row["content_hash"]: row
+            for row in (result.data or [])
+            if row.get("content_hash")
+        }
+    except Exception as e:
+        logger.warning(f"Failed to prefetch events for source {source_id}: {e}")
+        return {}
+
+
 @retry_on_network_error(max_retries=3, base_delay=0.5)
 def find_existing_event_by_natural_key(event_data: dict) -> Optional[dict]:
     """Find a likely duplicate event by natural key when hash lookup misses."""

@@ -37,6 +37,7 @@ from db import (
     get_or_create_venue,
     insert_event,
     find_event_by_hash,
+    prefetch_events_by_source,
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
@@ -445,6 +446,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
+    # Step 0: Prefetch all existing events for this source in one query.
+    # Eliminates ~1,000 individual find_event_by_hash() calls per run,
+    # cutting Supabase HTTP/2 traffic from ~2,000 requests to ~20.
+    logger.info("Prefetching existing HOA events for dedup")
+    existing_events = prefetch_events_by_source(source_id)
+    logger.info("Prefetched %d existing events for source %d", len(existing_events), source_id)
+
     # Step 1: Fetch the full opportunity listing
     logger.info("Fetching Hands On Atlanta opportunity listing")
     try:
@@ -571,7 +579,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "content_hash": content_hash,
             }
 
-            existing = find_event_by_hash(content_hash)
+            # Check prefetched cache first (no DB call); fall back to DB for misses
+            existing = existing_events.get(content_hash)
+            if existing is None:
+                existing = find_event_by_hash(content_hash)
             if existing:
                 smart_update_existing_event(existing, event_record)
                 events_updated += 1

@@ -247,13 +247,20 @@ def retry_on_network_error(max_retries: int = 3, base_delay: float = 0.5):
                     else:
                         raise
                 except Exception as e:
-                    error_str = str(e)
+                    error_str = str(e).lower()
                     if (
-                        "Resource temporarily unavailable" in error_str
-                        or "Connection reset" in error_str
+                        "resource temporarily unavailable" in error_str
+                        or "connection reset" in error_str
+                        or "connectionterminated" in error_str
+                        or "compression_error" in error_str
+                        or "protocol_error" in error_str
+                        or "remoteprotocolerror" in error_str
                     ):
                         last_error = e
                         delay = base_delay * (2 ** attempt)
+                        # HTTP/2 connection died — reset client so retry gets a fresh connection
+                        if "connectionterminated" in error_str or "protocol_error" in error_str:
+                            reset_client()
                         logger.debug(
                             f"Network error in {func.__name__}, retrying in {delay}s (attempt {attempt + 1}/{max_retries})"
                         )

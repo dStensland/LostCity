@@ -139,6 +139,7 @@ from db.events import (
     _normalize_title_for_natural_key,
     find_event_by_hash,
     prefetch_hashes,
+    prefetch_events_by_source,
     find_existing_event_by_natural_key,
     find_existing_event_for_insert,
     _source_priority_for_dedupe,
