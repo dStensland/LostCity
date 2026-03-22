@@ -375,6 +375,27 @@ def run_crawler(source: dict) -> tuple[int, int, int]:
     slug = source["slug"]
     modules = get_source_modules()
 
+    # Prefer the v2 profile pipeline when a profile exists with a non-custom
+    # parser, even if a Python module is also present.  Custom-parser sources
+    # intentionally keep their bespoke logic in the Python module.
+    if slug in modules:
+        try:
+            from pipeline.loader import find_profile_path, load_profile
+
+            profile_path = find_profile_path(slug)
+            if profile_path:
+                profile = load_profile(slug)
+                if profile.version >= 2 and profile.parse.method != "custom":
+                    logger.info("Using v2 profile pipeline for %s", slug)
+                    from pipeline_main import run_profile
+
+                    result = run_profile(slug, dry_run=not writes_enabled(), limit=None)
+                    return result.events_found, result.events_new, result.events_updated
+        except Exception as e:
+            logger.debug(
+                "Profile load failed for %s, falling back to module: %s", slug, e
+            )
+
     if slug not in modules:
         fallback_result = _run_profile_fallback(source)
         if fallback_result is not None:
