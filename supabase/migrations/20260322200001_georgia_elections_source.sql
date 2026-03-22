@@ -21,7 +21,7 @@ DO $$
 DECLARE
   atlanta_id  UUID;
   helpatl_id  UUID;
-  src_id      UUID;
+  src_id      INTEGER;
 BEGIN
   SELECT id INTO atlanta_id FROM portals WHERE slug = 'atlanta';
   SELECT id INTO helpatl_id FROM portals WHERE slug = 'helpatl';

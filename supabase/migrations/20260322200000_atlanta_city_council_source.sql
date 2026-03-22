@@ -12,7 +12,7 @@ DO $$
 DECLARE
   helpatl_id UUID;
   atlanta_id  UUID;
-  src_id      UUID;
+  src_id      INTEGER;
 BEGIN
   SELECT id INTO helpatl_id FROM portals WHERE slug = 'helpatl';
   SELECT id INTO atlanta_id  FROM portals WHERE slug = 'atlanta';
