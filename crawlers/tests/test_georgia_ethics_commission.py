@@ -33,7 +33,7 @@ def test_extract_training_events_parses_visible_training_block() -> None:
       <h5>2026 Trainings:</h5>
       <p>Athens, February 25-27 | <strong>GMA Newly Elected Officials Conference</strong></p>
       <p>Tifton, March 18-20 | <strong>GMA Newly Elected Officials Conference</strong></p>
-      <p>Athens, March 23 | <strong>GAVERO Conference</strong></p>
+      <p>Athens, April 15 | <strong>GAVERO Conference</strong></p>
       <p>Athens, May 12 | <strong>Georgia Association of Tax Professionals Conference</strong></p>
       <div>CONNECT WITH US</div>
     </body></html>
@@ -42,9 +42,9 @@ def test_extract_training_events_parses_visible_training_block() -> None:
     events = _extract_training_events(home_html)
 
     assert [event["title"] for event in events[:2]] == [
-        "GMA Newly Elected Officials Conference (Tifton)",
         "GAVERO Conference (Athens)",
+        "Georgia Association of Tax Professionals Conference (Athens)",
     ]
-    assert events[0]["start_date"] == "2026-03-18"
+    assert events[0]["start_date"] == "2026-04-15"
     assert events[0]["category"] == "learning"
     assert "training" in events[0]["tags"]
