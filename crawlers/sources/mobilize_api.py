@@ -2,12 +2,17 @@
 Mobilize.us public API crawler for Atlanta civic/advocacy events.
 
 API: https://api.mobilize.us/v1/events (no auth required)
-Coverage: ~37 nonelectoral in-person events for Atlanta metro; ~125 metro total
-before electoral filtering. GA state total is ~302 events, 88% electoral.
+Coverage: geo query returns ~15 in-person Atlanta events; org-specific pass adds
+~40+ more from Atlanta-area civic orgs whose events lack geocoordinates or fall
+just outside the 30-mile radius.
 
 Design decisions (see prds/research/1a-mobilize-api-audit.md):
 - Geographic filter: zipcode=30303 + radius=30 miles (correct approach per API audit;
   state=GA returns all 302 GA events and city param does NOT actually filter).
+- Org-specific pass: supplement geo query with direct fetches from known
+  Atlanta-area civic org IDs (CIVIC_ORG_IDS). Events are accepted if within
+  ORG_PASS_RADIUS_MILES OR have a GA zipcode with no coordinates (private-address
+  or missing geocoding). Deduplicates against geo query results by event ID.
 - Electoral filter: org_type-based gate (CAMPAIGN/PARTY_COMMITTEE excluded). For
   GRASSROOTS_GROUP orgs, event_type determines include/exclude. sponsor.is_nonelectoral
   is used as a secondary signal.
@@ -45,16 +50,94 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 API_BASE = "https://api.mobilize.us/v1/events"
+ORG_EVENTS_BASE = "https://api.mobilize.us/v1/organizations/{org_id}/events"
 # Zipcode-based geo filter is the correct approach (city param does not actually filter)
 ATLANTA_ZIP = "30303"
 SEARCH_RADIUS_MILES = 30
+# Wider radius for org-specific pass: captures Cobb/Cherokee/Forsyth suburbs
+ORG_PASS_RADIUS_MILES = 40
 EVENTS_PER_PAGE = 25  # API default; keep low to respect rate limit
-REQUEST_DELAY = 0.5   # seconds between page fetches
+REQUEST_DELAY = 1.0   # seconds between page fetches (org pass makes more requests)
 RATE_LIMIT_BACKOFF = 30  # seconds on 429
 
 # Atlanta center for fallback distance check
 ATLANTA_LAT = 33.749
 ATLANTA_LNG = -84.388
+
+# ---------------------------------------------------------------------------
+# Atlanta-area civic org IDs for org-specific supplemental pass.
+#
+# These orgs are confirmed Atlanta-metro-based and post events that the geo
+# query misses (private addresses, missing geocoordinates, or slightly outside
+# the 30-mile radius). Only include genuinely nonpartisan civic orgs — no
+# campaign/electoral orgs. IDs verified against the Mobilize API on 2026-03-21.
+# ---------------------------------------------------------------------------
+
+# Maps numeric Mobilize org ID → slug (for logging only; slug is not used in API calls)
+CIVIC_ORG_IDS: dict[int, str] = {
+    # Indivisible / grassroots organizing (Atlanta metro chapters)
+    42534: "indivisibleatl",               # Indivisible ATL
+    42539: "intownwomensresistance",        # Intown Women's Resistance
+    42562: "indivisiblecobb",              # Indivisible Cobb
+    40568: "indivisiblenorthmetroatlantaga",  # Indivisible North Metro Atlanta GA
+    46219: "indivisiblecherokeeunited",    # Indivisible Cherokee United
+    40450: "indivisibleboldlyblue",        # Indivisible Boldly Blue (Walton/Barrow county line)
+    34214: "indivisiblegeorgiadistrict10", # Indivisible GA District 10
+    # Civic advocacy orgs with Atlanta-area events
+    36066: "georgiayouthjustice",          # Georgia Youth Justice Coalition (school board meetings)
+    5766: "blackvotersmatter",             # Black Voters Matter
+    6600: "commoncause",                   # Common Cause (GA chapter events)
+    27586: "hrcga",                        # HRC in Georgia
+    36233: "equityineducation",            # Equity in Education
+    37218: "surj",                         # Showing Up for Racial Justice
+    39198: "aflcio",                       # AFL-CIO (GA labor events)
+    41324: "50501georgia",                 # 50501 Georgia
+    42198: "nokings",                      # No Kings (national, ATL events)
+    44708: "necessarytrouble",             # Necessary Trouble
+    46673: "50501northga",                 # 50501 North GA (C3)
+    46827: "committeetoprotect",           # Committee to Protect Health Care
+    2835: "gae",                           # Georgia Association of Educators
+}
+
+# ---------------------------------------------------------------------------
+# Distance calculation
+# ---------------------------------------------------------------------------
+
+def _haversine_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Return great-circle distance in miles between two lat/lng points."""
+    R = 3958.8  # Earth radius in miles
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dlng / 2) ** 2
+    )
+    return 2 * R * math.asin(math.sqrt(a))
+
+
+def _is_in_atlanta_metro(
+    lat: Optional[float],
+    lng: Optional[float],
+    postal_code: str,
+    *,
+    radius_miles: float = ORG_PASS_RADIUS_MILES,
+) -> bool:
+    """
+    Return True if the event is within the Atlanta metro area.
+
+    Accepts if:
+    - lat/lng within radius_miles of downtown Atlanta, OR
+    - No lat/lng but postal_code starts with '30' (GA zip prefix for metro area).
+      Private-address events from Atlanta-area orgs use this path.
+    """
+    if lat and lng:
+        dist = _haversine_miles(ATLANTA_LAT, ATLANTA_LNG, lat, lng)
+        return dist <= radius_miles
+    # No coordinates — use zipcode as proxy for Atlanta metro
+    return bool(postal_code) and postal_code.startswith("30")
+
 
 # ---------------------------------------------------------------------------
 # Electoral content filtering
@@ -343,7 +426,7 @@ def should_include_event(event: dict) -> tuple[bool, str]:
     if org_type in ALWAYS_INCLUDE_ORG_TYPES:
         # But still gate on is_nonelectoral if explicitly False for C4s
         if org_type == "C4" and is_nonelectoral is False:
-            return False, f"C4 with is_nonelectoral=False"
+            return False, "C4 with is_nonelectoral=False"
         return True, f"allowed org_type={org_type}"
 
     # GRASSROOTS_GROUP: gate on event_type
@@ -367,7 +450,8 @@ def should_include_event(event: dict) -> tuple[bool, str]:
 # ---------------------------------------------------------------------------
 
 _PLACEHOLDER_VENUE_RE = re.compile(
-    r"(meet\s+us\s+in\s+the\s+parking\s+lot|located\s+at\s*$|^parking\s+lot$|^tbd?$|^tba$|^virtual$|^online$)",
+    r"(meet\s+us\s+in\s+the\s+parking\s+lot|located\s+at\s*$|^parking\s+lot$|^tbd?$|^tba$|^virtual$|^online$"
+    r"|this\s+event.{0,10}address\s+is\s+private|sign\s+up\s+for\s+more\s+details)",
     re.I,
 )
 
@@ -409,7 +493,10 @@ def build_venue_data(location: dict, *, event_title: str = "") -> Optional[dict]
         return None
 
     address_lines = location.get("address_lines") or []
-    address = address_lines[0].strip() if address_lines and address_lines[0] else None
+    raw_address = address_lines[0].strip() if address_lines and address_lines[0] else None
+    # Private-address events have "This event's address is private..." in address_lines;
+    # treat these as no address so the venue falls back to city-level.
+    address = raw_address if raw_address and not _PLACEHOLDER_VENUE_RE.search(raw_address) else None
 
     venue_name = _normalize_venue_name(
         location.get("venue") or "",
@@ -558,6 +645,99 @@ def fetch_all_events() -> list[dict]:
     return all_events
 
 
+def fetch_org_events(
+    org_id: int,
+    org_slug: str,
+    *,
+    exclude_ids: set[int],
+) -> list[dict]:
+    """
+    Fetch in-person future events for a specific org by numeric ID.
+
+    Uses /v1/organizations/{id}/events (numeric ID only — slug path returns 404).
+
+    Filters:
+    - is_virtual=false (in-person only)
+    - timeslot_start=gte_now (future only)
+    - Skips events already seen in exclude_ids (from geo query)
+    - Skips events outside ORG_PASS_RADIUS_MILES unless they have a GA zipcode
+      (private-address or missing-geocoordinate local events)
+
+    Returns a list of raw API event dicts that pass the geo relevance check.
+    """
+    url: Optional[str] = ORG_EVENTS_BASE.format(org_id=org_id)
+    first_page = True
+    params = {
+        "timeslot_start": "gte_now",
+        "is_virtual": "false",
+        "per_page": EVENTS_PER_PAGE,
+    }
+    org_events: list[dict] = []
+    page_num = 0
+
+    while url:
+        page_num += 1
+        try:
+            if first_page:
+                response = requests.get(url, params=params, timeout=30)
+                first_page = False
+            else:
+                response = requests.get(url, timeout=30)
+
+            if response.status_code == 429:
+                logger.warning(
+                    f"Mobilize org {org_slug} ({org_id}) rate-limited on page {page_num}, "
+                    f"backing off {RATE_LIMIT_BACKOFF}s"
+                )
+                time.sleep(RATE_LIMIT_BACKOFF)
+                continue
+
+            if response.status_code == 404:
+                logger.warning(f"Mobilize org {org_slug} ({org_id}): 404 not found, skipping")
+                break
+
+            response.raise_for_status()
+            data = response.json()
+
+        except requests.RequestException as e:
+            logger.error(f"Mobilize org {org_slug} ({org_id}) fetch error on page {page_num}: {e}")
+            break
+
+        for event in data.get("data") or []:
+            event_id = event.get("id")
+            if event_id in exclude_ids:
+                continue  # Already captured by geo query
+
+            # Geographic relevance check
+            location = event.get("location") or {}
+            geo = location.get("location") or {}
+            try:
+                lat = float(geo.get("latitude") or 0) or None
+                lng = float(geo.get("longitude") or 0) or None
+            except (TypeError, ValueError):
+                lat, lng = None, None
+            postal_code = (location.get("postal_code") or "").strip()
+
+            if not _is_in_atlanta_metro(lat, lng, postal_code):
+                logger.debug(
+                    f"Mobilize org {org_slug}: skipping out-of-metro event "
+                    f"{(event.get('title') or '')[:50]!r} (postal={postal_code!r})"
+                )
+                continue
+
+            org_events.append(event)
+
+        url = data.get("next")
+        if url:
+            time.sleep(REQUEST_DELAY)
+
+    logger.info(
+        f"Mobilize org {org_slug} ({org_id}): {len(org_events)} new metro events "
+        f"across {page_num} page(s)"
+    )
+    return org_events
+
+
 # ---------------------------------------------------------------------------
 # Main crawl function
 # ---------------------------------------------------------------------------
@@ -587,7 +767,31 @@ def crawl(source: dict) -> tuple[int, int, int]:
     skipped_no_timeslot = 0
 
     try:
-        raw_events = fetch_all_events()
+        # --- Pass 1: geo query (zipcode + radius) ---
+        geo_events = fetch_all_events()
+        geo_event_ids: set[int] = {e["id"] for e in geo_events if e.get("id")}
+        logger.info(
+            f"Mobilize geo pass: {len(geo_events)} events. "
+            f"Starting org-specific pass for {len(CIVIC_ORG_IDS)} Atlanta-area orgs..."
+        )
+
+        # --- Pass 2: org-specific supplemental fetch ---
+        org_events: list[dict] = []
+        for org_id, org_slug in CIVIC_ORG_IDS.items():
+            events = fetch_org_events(org_id, org_slug, exclude_ids=geo_event_ids)
+            org_events.extend(events)
+            # Add newly seen IDs so later orgs don't duplicate (e.g., same event
+            # cross-posted by two orgs won't produce duplicate records)
+            for e in events:
+                if e.get("id"):
+                    geo_event_ids.add(e["id"])
+            time.sleep(REQUEST_DELAY)
+
+        raw_events = geo_events + org_events
+        logger.info(
+            f"Mobilize combined: {len(geo_events)} geo events + "
+            f"{len(org_events)} org-specific events = {len(raw_events)} total to process"
+        )
         logger.info(f"Processing {len(raw_events)} raw Mobilize events from API...")
 
         for api_event in raw_events:
