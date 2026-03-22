@@ -1,0 +1,2101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Search Redesign — Design Screens</title>
+<style>
+/* ═══════════════════════════════════════════════════════════
+   DESIGN TOKENS (from globals.css)
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --void: #09090B;
+  --night: #0F0F14;
+  --dusk: #18181F;
+  --twilight: #252530;
+  --muted: #8B8B94;
+  --soft: #A1A1AA;
+  --cream: #F5F5F3;
+  --coral: #FF6B7A;
+  --gold: #FFD93D;
+  --neon-green: #00D9A0;
+  --neon-cyan: #00D4E8;
+  --neon-magenta: #E855A0;
+  --vibe: #A78BFA;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #111118;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  padding: 60px 40px;
+  color: var(--cream);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CANVAS LAYOUT
+   ═══════════════════════════════════════════════════════════ */
+.canvas-title {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 40px;
+}
+
+.canvas-label {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+  padding-left: 4px;
+}
+
+.screens-row {
+  display: flex;
+  gap: 48px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 72px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN SHELL — 390px desktop view
+   ═══════════════════════════════════════════════════════════ */
+.screen {
+  width: 390px;
+  background: var(--void);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 32px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+.screen-mobile {
+  width: 375px;
+  background: var(--void);
+  border-radius: 40px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 32px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);
+  border: 3px solid #1a1a1a;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════════════════════ */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--void);
+  border-bottom: 1px solid rgba(37, 37, 48, 0.6);
+  position: relative;
+  z-index: 10;
+}
+
+.header-logo {
+  font-family: 'SF Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--cream);
+}
+
+.header-logo span {
+  color: var(--coral);
+}
+
+.header-search-compact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(37, 37, 48, 0.5);
+  border: 1px solid rgba(37, 37, 48, 0.8);
+  border-radius: 8px;
+  width: 160px;
+}
+
+.header-search-compact .search-icon {
+  width: 13px;
+  height: 13px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.header-search-compact .placeholder {
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  flex: 1;
+}
+
+.header-search-compact .kbd {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  color: rgba(139,139,148,0.6);
+  background: rgba(37,37,48,0.8);
+  border: 1px solid rgba(37,37,48,1);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-nav-item {
+  font-size: 12px;
+  color: var(--soft);
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.header-nav-item.active {
+  color: var(--cream);
+  background: rgba(37,37,48,0.5);
+}
+
+.header-avatar {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, var(--coral), var(--neon-magenta));
+  border-radius: 50%;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FIND VIEW TABS
+   ═══════════════════════════════════════════════════════════ */
+.find-tabs {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(37, 37, 48, 0.6);
+  background: var(--night);
+  gap: 0;
+}
+
+.find-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 12px;
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.find-tab.active {
+  color: var(--coral);
+  border-bottom-color: var(--coral);
+}
+
+.find-tab svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SEARCH BAR — FIND VIEW (full-width)
+   ═══════════════════════════════════════════════════════════ */
+.find-search-wrapper {
+  padding: 14px 16px 12px;
+  background: var(--night);
+}
+
+.find-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  height: 48px;
+  background: var(--dusk);
+  border: 1px solid rgba(37, 37, 48, 0.9);
+  border-radius: 14px;
+  position: relative;
+  transition: border-color 0.15s;
+}
+
+.find-search-bar.focused {
+  border-color: var(--coral);
+  box-shadow: 0 0 0 3px rgba(255, 107, 122, 0.10), 0 0 20px rgba(255, 107, 122, 0.08);
+}
+
+.find-search-bar .search-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.find-search-bar.focused .search-icon {
+  color: var(--coral);
+}
+
+.find-search-input {
+  flex: 1;
+  font-family: 'SF Mono', monospace;
+  font-size: 14px;
+  color: var(--cream);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.find-search-input.placeholder {
+  color: var(--muted);
+}
+
+.find-search-input.typed {
+  color: var(--cream);
+}
+
+.find-search-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 15px;
+  background: var(--coral);
+  margin-left: 1px;
+  vertical-align: middle;
+  border-radius: 1px;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.find-search-clear {
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.find-search-bar .kbd-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.find-search-bar .kbd {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  color: rgba(139,139,148,0.5);
+  background: rgba(37,37,48,0.6);
+  border: 1px solid rgba(37,37,48,1);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN 1: PRE-SEARCH STATE
+   ═══════════════════════════════════════════════════════════ */
+.presearch-content {
+  padding: 0 16px 24px;
+  background: var(--night);
+  min-height: 480px;
+}
+
+/* Section header */
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding-top: 18px;
+}
+
+.section-label svg {
+  width: 12px;
+  height: 12px;
+}
+
+.section-label span {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Trending pills */
+.trending-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 4px;
+}
+
+.trending-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: rgba(37, 37, 48, 0.5);
+  border: 1px solid rgba(37, 37, 48, 0.8);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.trending-pill:hover {
+  background: rgba(37, 37, 48, 0.9);
+  border-color: rgba(255, 107, 122, 0.3);
+}
+
+.trending-pill span {
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  color: var(--soft);
+}
+
+.trending-pill .trend-arrow {
+  width: 10px;
+  height: 10px;
+  color: var(--coral);
+  opacity: 0.7;
+}
+
+/* Category shortcuts grid */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.category-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 6px;
+  background: rgba(15, 15, 20, 0.8);
+  border: 1px solid rgba(37, 37, 48, 0.7);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.category-chip:hover {
+  background: rgba(37, 37, 48, 0.5);
+  border-color: rgba(255, 107, 122, 0.2);
+}
+
+.category-chip .cat-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.category-chip .cat-label {
+  font-family: 'SF Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  text-align: center;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+/* Popular right now cards */
+.popular-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.popular-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--void);
+  border: 1px solid rgba(37, 37, 48, 0.6);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.popular-card:hover {
+  border-color: rgba(37, 37, 48, 0.9);
+  background: rgba(15, 15, 20, 0.9);
+}
+
+.popular-card-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.popular-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.popular-card-img-placeholder {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.popular-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.popular-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cream);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.popular-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.popular-card-meta span {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.popular-card-meta .dot {
+  width: 2px;
+  height: 2px;
+  background: var(--twilight);
+  border-radius: 50%;
+}
+
+.popular-card-badge {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-family: 'SF Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.badge-live {
+  background: rgba(255, 90, 90, 0.15);
+  color: #FF5A5A;
+  border: 1px solid rgba(255, 90, 90, 0.25);
+}
+
+.badge-free {
+  background: rgba(0, 217, 160, 0.12);
+  color: var(--neon-green);
+  border: 1px solid rgba(0, 217, 160, 0.25);
+}
+
+.badge-trending {
+  background: rgba(255, 217, 61, 0.12);
+  color: var(--gold);
+  border: 1px solid rgba(255, 217, 61, 0.25);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN 2: TYPING STATE — INSTANT DROPDOWN
+   ═══════════════════════════════════════════════════════════ */
+.dropdown-overlay {
+  background: rgba(24, 24, 31, 0.97);
+  border: 1px solid rgba(37, 37, 48, 0.9);
+  border-top: none;
+  border-radius: 0 0 14px 14px;
+  overflow: hidden;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: rgba(15, 15, 20, 0.6);
+  border-bottom: 1px solid rgba(37, 37, 48, 0.5);
+}
+
+.dropdown-header-left {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.dropdown-header-left strong {
+  color: var(--cream);
+  font-weight: 600;
+}
+
+.dropdown-header-count {
+  padding: 2px 8px;
+  background: rgba(37,37,48,0.7);
+  border-radius: 999px;
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* Quick action pills in dropdown */
+.quick-actions-row {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid rgba(37, 37, 48, 0.4);
+  overflow-x: auto;
+}
+
+.quick-action-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  background: rgba(37, 37, 48, 0.4);
+  border: 1px solid rgba(37, 37, 48, 0.7);
+  border-radius: 999px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.quick-action-pill:hover {
+  background: rgba(255, 107, 122, 0.1);
+  border-color: rgba(255, 107, 122, 0.3);
+}
+
+.quick-action-pill span {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  color: var(--soft);
+}
+
+.quick-action-pill svg {
+  width: 11px;
+  height: 11px;
+  color: var(--coral);
+}
+
+/* Group section in dropdown */
+.suggestion-group {
+  padding: 10px 0 6px;
+  border-bottom: 1px solid rgba(37, 37, 48, 0.3);
+}
+
+.suggestion-group:last-child {
+  border-bottom: none;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px 8px;
+}
+
+.group-type-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.group-label {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.group-count {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.group-see-all {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  color: var(--coral);
+  cursor: pointer;
+}
+
+/* Result rows */
+.result-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: all 0.1s;
+  margin: 1px 6px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+
+.result-row:hover, .result-row.selected {
+  background: rgba(37, 37, 48, 0.5);
+}
+
+.result-row.selected {
+  border-color: rgba(255, 107, 122, 0.25);
+  transform: translateX(1px);
+}
+
+.result-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: rgba(37, 37, 48, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 15px;
+  overflow: hidden;
+}
+
+.result-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.result-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.result-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cream);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.result-title .match {
+  color: var(--coral);
+  font-weight: 600;
+}
+
+.result-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.result-subtitle span {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.result-date-badge {
+  padding: 1px 6px;
+  background: rgba(15, 15, 20, 0.8);
+  border: 1px solid rgba(37, 37, 48, 0.7);
+  border-radius: 999px;
+  font-family: 'SF Mono', monospace;
+  font-size: 9px;
+  color: var(--soft);
+}
+
+.result-chevron {
+  width: 12px;
+  height: 12px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.result-row.selected .result-chevron {
+  color: var(--coral);
+}
+
+/* Dropdown footer hint */
+.dropdown-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-top: 1px solid rgba(37, 37, 48, 0.5);
+  background: rgba(15, 15, 20, 0.5);
+}
+
+.dropdown-footer span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'SF Mono', monospace;
+  font-size: 9px;
+  color: rgba(139, 139, 148, 0.5);
+}
+
+.dropdown-footer kbd {
+  padding: 1px 4px;
+  background: rgba(37, 37, 48, 0.6);
+  border: 1px solid rgba(37, 37, 48, 0.9);
+  border-radius: 3px;
+  font-family: 'SF Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN 3: BROWSE STATE — filtered Find view
+   ═══════════════════════════════════════════════════════════ */
+.filter-bar-wrapper {
+  padding: 10px 16px;
+  background: var(--night);
+  border-bottom: 1px solid rgba(37, 37, 48, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow-x: auto;
+}
+
+.filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px 5px 12px;
+  border-radius: 999px;
+  border: 1px solid;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.filter-chip-search {
+  background: rgba(255, 107, 122, 0.12);
+  border-color: rgba(255, 107, 122, 0.3);
+}
+
+.filter-chip-search span {
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  color: var(--coral);
+}
+
+.filter-chip-search .chip-x {
+  width: 14px;
+  height: 14px;
+  color: rgba(255, 107, 122, 0.7);
+  cursor: pointer;
+}
+
+.filter-chip-date {
+  background: rgba(255, 217, 61, 0.10);
+  border-color: rgba(255, 217, 61, 0.25);
+}
+
+.filter-chip-date span {
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  color: var(--gold);
+}
+
+.filter-chip-date .chip-x {
+  width: 14px;
+  height: 14px;
+  color: rgba(255, 217, 61, 0.6);
+}
+
+.filter-chip-free {
+  background: rgba(0, 217, 160, 0.10);
+  border-color: rgba(0, 217, 160, 0.25);
+}
+
+.filter-chip-free span {
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  color: var(--neon-green);
+}
+
+.filter-chip-add {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: transparent;
+  border: 1px dashed rgba(37, 37, 48, 0.6);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.filter-chip-add span {
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Results section header */
+.results-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+}
+
+.results-count {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.results-count strong {
+  color: var(--cream);
+}
+
+.results-sort {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Event list rows */
+.event-list {
+  padding: 0 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.event-row-card {
+  display: flex;
+  align-items: stretch;
+  background: var(--night);
+  border: 1px solid rgba(37, 37, 48, 0.75);
+  border-left: 2px solid var(--coral);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.event-row-card:nth-child(2) { border-left-color: var(--gold); }
+.event-row-card:nth-child(3) { border-left-color: var(--coral); }
+.event-row-card:nth-child(4) { border-left-color: var(--neon-magenta); }
+.event-row-card:nth-child(5) { border-left-color: var(--coral); }
+
+.event-row-card:hover {
+  border-color: rgba(37, 37, 48, 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.event-row-image {
+  width: 72px;
+  flex-shrink: 0;
+  background: var(--twilight);
+  position: relative;
+  overflow: hidden;
+}
+
+.event-row-image-placeholder {
+  width: 72px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px 6px;
+}
+
+.event-row-time {
+  font-family: 'SF Mono', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--cream);
+  line-height: 1;
+  tabular-nums: ;
+}
+
+.event-row-period {
+  font-family: 'SF Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.event-row-content {
+  flex: 1;
+  padding: 10px 12px 10px;
+  min-width: 0;
+}
+
+.event-row-category {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.event-row-cat-icon {
+  width: 14px;
+  height: 14px;
+  font-size: 10px;
+}
+
+.event-row-cat-label {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.event-row-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cream);
+  line-height: 1.3;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-row-title .match {
+  color: var(--coral);
+}
+
+.event-row-venue {
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  color: var(--soft);
+}
+
+.event-row-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.event-badge-free {
+  padding: 2px 6px;
+  background: rgba(0, 217, 160, 0.1);
+  border: 1px solid rgba(0, 217, 160, 0.2);
+  border-radius: 999px;
+  font-family: 'SF Mono', monospace;
+  font-size: 9px;
+  color: var(--neon-green);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.event-badge-tonight {
+  padding: 2px 6px;
+  background: rgba(255, 90, 90, 0.1);
+  border: 1px solid rgba(255, 90, 90, 0.2);
+  border-radius: 999px;
+  font-family: 'SF Mono', monospace;
+  font-size: 9px;
+  color: #FF5A5A;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN 4: MOBILE — Full Screen Search
+   ═══════════════════════════════════════════════════════════ */
+.mobile-safe-top {
+  height: 44px;
+  background: var(--void);
+  display: flex;
+  align-items: flex-end;
+  padding: 0 20px 8px;
+}
+
+.mobile-safe-top .time {
+  font-family: 'SF Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cream);
+}
+
+.mobile-search-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px 10px;
+  background: var(--void);
+  border-bottom: 1px solid rgba(37, 37, 48, 0.5);
+}
+
+.mobile-back-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(37, 37, 48, 0.4);
+  flex-shrink: 0;
+}
+
+.mobile-back-btn svg {
+  width: 16px;
+  height: 16px;
+  color: var(--cream);
+}
+
+.mobile-search-input-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 40px;
+  background: var(--dusk);
+  border: 1px solid rgba(255, 107, 122, 0.5);
+  border-radius: 12px;
+  box-shadow: 0 0 0 3px rgba(255, 107, 122, 0.08);
+}
+
+.mobile-search-input-container svg {
+  width: 14px;
+  height: 14px;
+  color: var(--coral);
+  flex-shrink: 0;
+}
+
+.mobile-search-text {
+  flex: 1;
+  font-family: 'SF Mono', monospace;
+  font-size: 13px;
+  color: var(--cream);
+}
+
+.mobile-cancel-btn {
+  font-family: 'SF Mono', monospace;
+  font-size: 12px;
+  color: var(--coral);
+  flex-shrink: 0;
+}
+
+/* Mobile content */
+.mobile-content {
+  background: var(--void);
+  overflow-y: auto;
+}
+
+.mobile-section {
+  padding: 16px 16px 0;
+}
+
+.mobile-trending-pills {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 16px;
+  scrollbar-width: none;
+}
+
+.mobile-trending-pills::-webkit-scrollbar { display: none; }
+
+.mobile-trending-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 13px;
+  background: rgba(37, 37, 48, 0.5);
+  border: 1px solid rgba(37, 37, 48, 0.8);
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mobile-trending-pill span {
+  font-family: 'SF Mono', monospace;
+  font-size: 12px;
+  color: var(--soft);
+}
+
+/* Mobile results (full-screen, no dropdown) */
+.mobile-results {
+  padding: 0;
+}
+
+.mobile-result-section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 8px;
+  border-top: 1px solid rgba(37, 37, 48, 0.4);
+}
+
+.mobile-result-section-label span {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mobile-result-section-label a {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  color: var(--coral);
+}
+
+.mobile-result-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(37, 37, 48, 0.3);
+  cursor: pointer;
+}
+
+.mobile-result-row:active {
+  background: rgba(37, 37, 48, 0.3);
+}
+
+.mobile-result-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(37, 37, 48, 0.6);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  overflow: hidden;
+}
+
+.mobile-result-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-result-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cream);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-result-title .match {
+  color: var(--coral);
+}
+
+.mobile-result-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.mobile-result-meta span {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.mobile-result-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CATEGORY COLORS
+   ═══════════════════════════════════════════════════════════ */
+.cat-music { background: rgba(255, 107, 122, 0.15); }
+.cat-food { background: rgba(0, 217, 160, 0.15); }
+.cat-art { background: rgba(0, 212, 232, 0.15); }
+.cat-comedy { background: rgba(255, 217, 61, 0.15); }
+.cat-outdoors { background: rgba(134, 239, 172, 0.15); }
+.cat-nightlife { background: rgba(232, 85, 160, 0.15); }
+.cat-film { background: rgba(167, 139, 250, 0.15); }
+.cat-sports { background: rgba(0, 212, 232, 0.15); }
+
+.type-events { color: var(--neon-magenta); }
+.type-venues { color: var(--coral); }
+.type-series { color: var(--gold); }
+.dot-events { background: var(--neon-magenta); }
+.dot-venues { background: var(--coral); }
+.dot-series { background: var(--gold); }
+
+/* SVG icons inline */
+svg { display: inline-block; }
+
+/* Separator between screens */
+.screen-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(37, 37, 48, 0.4);
+  margin: 64px 0;
+}
+
+/* Annotation callouts */
+.annotation {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 5px 10px;
+  background: rgba(37, 37, 48, 0.3);
+  border: 1px solid rgba(37, 37, 48, 0.5);
+  border-radius: 6px;
+}
+
+.annotation span {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.annotation strong {
+  color: var(--soft);
+}
+</style>
+</head>
+<body>
+
+<div class="canvas-title">Search Redesign — Design Screens · Lost City Atlanta · 2026-03-22</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ROW 1: Pre-Search State + Typing State
+     ══════════════════════════════════════════════════════════════ -->
+<div class="screens-row">
+
+  <!-- ─── SCREEN 1: Pre-Search State ─────────────────────────────── -->
+  <div>
+    <div class="canvas-label">Screen 1 — Find View · Pre-Search State (Discovery Launchpad)</div>
+    <div class="screen">
+      <!-- Header -->
+      <div class="header">
+        <div class="header-logo">LOST<span>CITY</span></div>
+        <div style="display:flex;gap:16px;align-items:center;">
+          <div class="header-nav">
+            <span class="header-nav-item">Feed</span>
+            <span class="header-nav-item active">Find</span>
+          </div>
+          <div class="header-avatar"></div>
+        </div>
+      </div>
+
+      <!-- Find Tabs -->
+      <div class="find-tabs">
+        <div class="find-tab active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Events
+        </div>
+        <div class="find-tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Places
+        </div>
+        <div class="find-tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+          Regulars
+        </div>
+        <div class="find-tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>
+          Calendar
+        </div>
+      </div>
+
+      <!-- Search Bar — idle state -->
+      <div class="find-search-wrapper">
+        <div class="find-search-bar">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <span class="find-search-input placeholder">Search events, venues, series...</span>
+          <div class="kbd-hint">
+            <span class="kbd">⌘K</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pre-Search Content -->
+      <div class="presearch-content">
+
+        <!-- Trending -->
+        <div class="section-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;color:var(--coral)"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          <span>Trending</span>
+        </div>
+        <div class="trending-pills">
+          <div class="trending-pill">
+            <span>Shaky Knees</span>
+          </div>
+          <div class="trending-pill">
+            <span>patio brunch</span>
+          </div>
+          <div class="trending-pill">
+            <span>comedy tonight</span>
+          </div>
+          <div class="trending-pill">
+            <span>free events</span>
+          </div>
+          <div class="trending-pill">
+            <span>BeltLine</span>
+          </div>
+          <div class="trending-pill">
+            <span>art galleries</span>
+          </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="section-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;color:var(--muted)"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+          <span>Browse by Category</span>
+        </div>
+        <div class="category-grid">
+          <div class="category-chip">
+            <div class="cat-icon cat-music">🎵</div>
+            <span class="cat-label">Music</span>
+          </div>
+          <div class="category-chip">
+            <div class="cat-icon cat-food">🍽️</div>
+            <span class="cat-label">Food & Drink</span>
+          </div>
+          <div class="category-chip">
+            <div class="cat-icon cat-art">🎨</div>
+            <span class="cat-label">Art</span>
+          </div>
+          <div class="category-chip">
+            <div class="cat-icon cat-comedy">😂</div>
+            <span class="cat-label">Comedy</span>
+          </div>
+          <div class="category-chip">
+            <div class="cat-icon cat-outdoors">🌿</div>
+            <span class="cat-label">Outdoors</span>
+          </div>
+          <div class="category-chip">
+            <div class="cat-icon cat-nightlife">🌙</div>
+            <span class="cat-label">Nightlife</span>
+          </div>
+          <div class="category-chip">
+            <div class="cat-icon cat-film">🎬</div>
+            <span class="cat-label">Film</span>
+          </div>
+          <div class="category-chip">
+            <div class="cat-icon cat-sports">⚡</div>
+            <span class="cat-label">Sports</span>
+          </div>
+        </div>
+
+        <!-- Popular Right Now -->
+        <div class="section-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;color:var(--gold)"><path d="M17.657 18.657A8 8 0 0 1 3.343 5.343a8 8 0 0 0 11.314 11.314zM12 2v1m0 18v1M4.22 4.22l.707.707m12.146 12.146.707.707M2 12h1m18 0h1M4.22 19.778l.707-.707M18.778 5.22l.707-.707"/></svg>
+          <span>Popular Right Now</span>
+        </div>
+        <div class="popular-cards">
+          <div class="popular-card">
+            <div class="popular-card-img-placeholder cat-music" style="border-radius:8px;">🎸</div>
+            <div class="popular-card-body">
+              <div class="popular-card-title">Vinyl Night at The Earl</div>
+              <div class="popular-card-meta">
+                <span>Tonight · 9pm</span>
+                <div class="dot"></div>
+                <span>East Atlanta</span>
+              </div>
+            </div>
+            <span class="popular-card-badge badge-live">Live</span>
+          </div>
+          <div class="popular-card">
+            <div class="popular-card-img-placeholder cat-food" style="border-radius:8px;">🍳</div>
+            <div class="popular-card-body">
+              <div class="popular-card-title">Sunday BeltLine Brunch Walk</div>
+              <div class="popular-card-meta">
+                <span>Sun · 11am</span>
+                <div class="dot"></div>
+                <span>Inman Park</span>
+              </div>
+            </div>
+            <span class="popular-card-badge badge-free">Free</span>
+          </div>
+          <div class="popular-card">
+            <div class="popular-card-img-placeholder cat-comedy" style="border-radius:8px;">🎭</div>
+            <div class="popular-card-body">
+              <div class="popular-card-title">Shaky Knees Music Festival</div>
+              <div class="popular-card-meta">
+                <span>May 2–4</span>
+                <div class="dot"></div>
+                <span>Central Park</span>
+              </div>
+            </div>
+            <span class="popular-card-badge badge-trending">Trending</span>
+          </div>
+        </div>
+
+      </div><!-- /presearch-content -->
+    </div><!-- /screen -->
+    <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
+      <div class="annotation"><span><strong>Search bar</strong> — 48px, bg-dusk, font-mono, rounded-xl</span></div>
+      <div class="annotation"><span><strong>Trending pills</strong> — bg-twilight/50, font-mono text-xs, rounded-full</span></div>
+      <div class="annotation"><span><strong>Category grid</strong> — 4-col, 10px radius, icon + mono label</span></div>
+      <div class="annotation"><span><strong>Popular cards</strong> — bg-void, 44px image, badge system</span></div>
+    </div>
+  </div>
+
+  <!-- ─── SCREEN 2: Typing State (Instant Dropdown) ────────────────── -->
+  <div>
+    <div class="canvas-label">Screen 2 — Find View · Typing State — "live mus" + instant dropdown</div>
+    <div class="screen">
+      <!-- Header -->
+      <div class="header">
+        <div class="header-logo">LOST<span>CITY</span></div>
+        <div style="display:flex;gap:16px;align-items:center;">
+          <div class="header-nav">
+            <span class="header-nav-item">Feed</span>
+            <span class="header-nav-item active">Find</span>
+          </div>
+          <div class="header-avatar"></div>
+        </div>
+      </div>
+
+      <!-- Find Tabs -->
+      <div class="find-tabs">
+        <div class="find-tab active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Events
+        </div>
+        <div class="find-tab">Places</div>
+        <div class="find-tab">Regulars</div>
+        <div class="find-tab">Calendar</div>
+      </div>
+
+      <!-- Search Bar — focused, typing state -->
+      <div class="find-search-wrapper" style="padding-bottom:0">
+        <div class="find-search-bar focused">
+          <svg class="search-icon" style="color:var(--coral)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <span class="find-search-input typed">live mus<span class="find-search-cursor"></span></span>
+          <svg class="find-search-clear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </div>
+      </div>
+
+      <!-- Instant Dropdown -->
+      <div style="padding:0 16px;background:var(--night);">
+        <div class="dropdown-overlay">
+
+          <!-- Dropdown header bar -->
+          <div class="dropdown-header">
+            <span class="dropdown-header-left">Search: <strong>"live mus"</strong></span>
+            <span class="dropdown-header-count">16 results</span>
+          </div>
+
+          <!-- Quick actions -->
+          <div class="quick-actions-row">
+            <div class="quick-action-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>Tonight only</span>
+            </div>
+            <div class="quick-action-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              <span>Free events</span>
+            </div>
+            <div class="quick-action-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>Near me</span>
+            </div>
+          </div>
+
+          <!-- Events group -->
+          <div class="suggestion-group">
+            <div class="group-header">
+              <div class="group-type-dot dot-events"></div>
+              <span class="group-label type-events">Events</span>
+              <span class="group-count">(12)</span>
+              <span class="group-see-all">see all →</span>
+            </div>
+
+            <div class="result-row selected">
+              <div class="result-icon cat-music" style="font-size:15px;">🎸</div>
+              <div class="result-body">
+                <div class="result-title"><span class="match">Live Mus</span>ic Thursday @ Terminal West</div>
+                <div class="result-subtitle">
+                  <span>Terminal West</span>
+                  <span>·</span>
+                  <span class="result-date-badge">Tonight</span>
+                </div>
+              </div>
+              <svg class="result-chevron" style="color:var(--coral)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+
+            <div class="result-row">
+              <div class="result-icon cat-music">🎷</div>
+              <div class="result-body">
+                <div class="result-title">Jazz Jam at Smith's Olde Bar</div>
+                <div class="result-subtitle">
+                  <span>Smith's Olde Bar</span>
+                  <span>·</span>
+                  <span class="result-date-badge">Fri</span>
+                </div>
+              </div>
+              <svg class="result-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+
+            <div class="result-row">
+              <div class="result-icon cat-music">🎵</div>
+              <div class="result-body">
+                <div class="result-title">Vinyl Night & <span class="match">Live Mus</span>ic</div>
+                <div class="result-subtitle">
+                  <span>The Earl</span>
+                  <span>·</span>
+                  <span class="result-date-badge">Sat</span>
+                </div>
+              </div>
+              <svg class="result-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <!-- Venues group -->
+          <div class="suggestion-group">
+            <div class="group-header">
+              <div class="group-type-dot dot-venues"></div>
+              <span class="group-label type-venues">Places</span>
+              <span class="group-count">(5)</span>
+              <span class="group-see-all">see all →</span>
+            </div>
+
+            <div class="result-row">
+              <div class="result-icon cat-music">🎙️</div>
+              <div class="result-body">
+                <div class="result-title">Terminal West</div>
+                <div class="result-subtitle">
+                  <span>West Midtown</span>
+                  <span>·</span>
+                  <span>Concert Venue</span>
+                </div>
+              </div>
+              <svg class="result-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+
+            <div class="result-row">
+              <div class="result-icon cat-music">🎸</div>
+              <div class="result-body">
+                <div class="result-title">The Earl</div>
+                <div class="result-subtitle">
+                  <span>East Atlanta</span>
+                  <span>·</span>
+                  <span>Bar + Venue</span>
+                </div>
+              </div>
+              <svg class="result-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <!-- Series group -->
+          <div class="suggestion-group" style="border-bottom:none;">
+            <div class="group-header">
+              <div class="group-type-dot dot-series"></div>
+              <span class="group-label type-series">Series</span>
+              <span class="group-count">(3)</span>
+              <span class="group-see-all">see all →</span>
+            </div>
+
+            <div class="result-row">
+              <div class="result-icon" style="background:rgba(255,217,61,0.12);">♻️</div>
+              <div class="result-body">
+                <div class="result-title">Friday Jazz at Churchill Grounds</div>
+                <div class="result-subtitle">
+                  <span>Every Friday</span>
+                  <span>·</span>
+                  <span>Churchill Grounds</span>
+                </div>
+              </div>
+              <svg class="result-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <!-- Keyboard hint -->
+          <div class="dropdown-footer">
+            <span><kbd>↑↓</kbd> navigate</span>
+            <span><kbd>↵</kbd> browse all</span>
+            <span><kbd>esc</kbd> close</span>
+          </div>
+
+        </div>
+      </div>
+      <div style="height:24px;background:var(--night)"></div>
+    </div><!-- /screen -->
+    <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
+      <div class="annotation"><span><strong>Coral border + glow</strong> — focused state signals active search</span></div>
+      <div class="annotation"><span><strong>Quick actions</strong> — contextual, scrollable row at top of dropdown</span></div>
+      <div class="annotation"><span><strong>Group headers</strong> — colored dot + mono type label + count + see-all</span></div>
+      <div class="annotation"><span><strong>Match highlight</strong> — coral text, not bold alone</span></div>
+      <div class="annotation"><span><strong>Selected row</strong> — twilight bg + coral border + 1px nudge right</span></div>
+      <div class="annotation"><span><strong>Keyboard hint</strong> — desktop only (hidden on mobile)</span></div>
+    </div>
+  </div>
+
+</div><!-- /row 1 -->
+
+<!-- ══════════════════════════════════════════════════════════════
+     ROW 2: Browse State + Mobile Full-Screen
+     ══════════════════════════════════════════════════════════════ -->
+<div class="screens-row">
+
+  <!-- ─── SCREEN 3: Browse State ──────────────────────────────────── -->
+  <div>
+    <div class="canvas-label">Screen 3 — Find View · Browse State — "live music ✕" chip + filtered list</div>
+    <div class="screen">
+      <!-- Header -->
+      <div class="header">
+        <div class="header-logo">LOST<span>CITY</span></div>
+        <div style="display:flex;gap:16px;align-items:center;">
+          <div class="header-nav">
+            <span class="header-nav-item">Feed</span>
+            <span class="header-nav-item active">Find</span>
+          </div>
+          <div class="header-avatar"></div>
+        </div>
+      </div>
+
+      <!-- Find Tabs -->
+      <div class="find-tabs">
+        <div class="find-tab active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Events
+        </div>
+        <div class="find-tab">Places</div>
+        <div class="find-tab">Regulars</div>
+        <div class="find-tab">Calendar</div>
+      </div>
+
+      <!-- Search Bar — query committed, show chip -->
+      <div class="find-search-wrapper">
+        <div class="find-search-bar">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <span class="find-search-input placeholder">Search events, venues, series...</span>
+          <div class="kbd-hint">
+            <span class="kbd">⌘K</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter bar with search chip active -->
+      <div class="filter-bar-wrapper">
+        <!-- Search query chip — coral, primary position -->
+        <div class="filter-chip filter-chip-search">
+          <svg style="width:11px;height:11px;color:var(--coral);flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <span>live music</span>
+          <svg class="chip-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </div>
+        <!-- Date chip -->
+        <div class="filter-chip filter-chip-date">
+          <span>Today</span>
+          <svg class="chip-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </div>
+        <!-- Free chip -->
+        <div class="filter-chip filter-chip-free">
+          <span>Free</span>
+          <svg class="chip-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </div>
+        <!-- Add filter -->
+        <div class="filter-chip-add">
+          <svg style="width:11px;height:11px;color:var(--muted)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Filter</span>
+        </div>
+      </div>
+
+      <!-- Results header -->
+      <div class="results-section-header" style="background:var(--night)">
+        <span class="results-count"><strong>47</strong> events · live music</span>
+        <span class="results-sort">
+          <svg style="width:10px;height:10px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
+          Relevance
+        </span>
+      </div>
+
+      <!-- Event list -->
+      <div class="event-list" style="background:var(--night)">
+
+        <div class="event-row-card">
+          <div class="event-row-image-placeholder" style="background:rgba(255,107,122,0.1);color:var(--muted);">
+            <div class="event-row-time">9</div>
+            <div class="event-row-period">PM</div>
+          </div>
+          <div class="event-row-content">
+            <div class="event-row-category">
+              <span class="event-row-cat-icon">🎸</span>
+              <span class="event-row-cat-label" style="color:var(--coral)">Music</span>
+            </div>
+            <div class="event-row-title"><span class="match">Live Music</span> Thursday</div>
+            <div class="event-row-venue">Terminal West · West Midtown</div>
+            <div class="event-row-footer">
+              <span class="event-badge-tonight">Tonight</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="event-row-card">
+          <div class="event-row-image-placeholder" style="background:rgba(255,217,61,0.1);color:var(--muted);">
+            <div class="event-row-time">8</div>
+            <div class="event-row-period">PM</div>
+          </div>
+          <div class="event-row-content">
+            <div class="event-row-category">
+              <span class="event-row-cat-icon">🎷</span>
+              <span class="event-row-cat-label" style="color:var(--gold)">Jazz</span>
+            </div>
+            <div class="event-row-title">Vinyl Night & <span class="match">Live Music</span></div>
+            <div class="event-row-venue">The Earl · East Atlanta Village</div>
+            <div class="event-row-footer">
+              <span class="event-badge-free">Free</span>
+              <span class="event-badge-tonight">Tonight</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="event-row-card">
+          <div class="event-row-image-placeholder" style="background:rgba(255,107,122,0.1);color:var(--muted);">
+            <div class="event-row-time">7</div>
+            <div class="event-row-period">PM</div>
+          </div>
+          <div class="event-row-content">
+            <div class="event-row-category">
+              <span class="event-row-cat-icon">🎵</span>
+              <span class="event-row-cat-label" style="color:var(--coral)">Music</span>
+            </div>
+            <div class="event-row-title">Open Mic &amp; <span class="match">Live Music</span></div>
+            <div class="event-row-venue">Sister Louisa's · Ponce</div>
+            <div class="event-row-footer">
+              <span class="event-badge-free">Free</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="event-row-card">
+          <div class="event-row-image-placeholder" style="background:rgba(232,85,160,0.1);color:var(--muted);">
+            <div class="event-row-time">10</div>
+            <div class="event-row-period">PM</div>
+          </div>
+          <div class="event-row-content">
+            <div class="event-row-category">
+              <span class="event-row-cat-icon">🌙</span>
+              <span class="event-row-cat-label" style="color:var(--neon-magenta)">Nightlife</span>
+            </div>
+            <div class="event-row-title">DJ Set + <span class="match">Live Music</span></div>
+            <div class="event-row-venue">MJQ Concourse · Ponce</div>
+          </div>
+        </div>
+
+        <div class="event-row-card">
+          <div class="event-row-image-placeholder" style="background:rgba(255,107,122,0.1);color:var(--muted);">
+            <div class="event-row-time">6</div>
+            <div class="event-row-period">PM</div>
+          </div>
+          <div class="event-row-content">
+            <div class="event-row-category">
+              <span class="event-row-cat-icon">🎸</span>
+              <span class="event-row-cat-label" style="color:var(--coral)">Music</span>
+            </div>
+            <div class="event-row-title">Rooftop <span class="match">Live Music</span> Series</div>
+            <div class="event-row-venue">Ponce City Market · Old Fourth Ward</div>
+          </div>
+        </div>
+
+        <!-- More results indicator -->
+        <div style="text-align:center;padding:4px 0;">
+          <span style="font-family:'SF Mono',monospace;font-size:11px;color:var(--coral);cursor:pointer;">+42 more results →</span>
+        </div>
+
+      </div><!-- /event-list -->
+    </div><!-- /screen -->
+    <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
+      <div class="annotation"><span><strong>Search chip</strong> — coral/15 bg, coral text, coral ✕, first in filter bar</span></div>
+      <div class="annotation"><span><strong>Date chip</strong> — gold, same pattern</span></div>
+      <div class="annotation"><span><strong>Free chip</strong> — neon-green, same pattern</span></div>
+      <div class="annotation"><span><strong>Result count</strong> — mono label, prominent number</span></div>
+      <div class="annotation"><span><strong>Left border</strong> — category accent color, 2px</span></div>
+      <div class="annotation"><span><strong>Match highlight</strong> — coral in titles, consistent with dropdown</span></div>
+    </div>
+  </div>
+
+  <!-- ─── SCREEN 4: Mobile Full-Screen Search ──────────────────────── -->
+  <div>
+    <div class="canvas-label">Screen 4 — Mobile · Full-Screen Search Overlay (375px · iPhone)</div>
+    <div class="screen-mobile">
+
+      <!-- Safe area top -->
+      <div class="mobile-safe-top">
+        <span class="time">9:41</span>
+      </div>
+
+      <!-- Mobile search header -->
+      <div class="mobile-search-header">
+        <div class="mobile-back-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        </div>
+        <div class="mobile-search-input-container">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <span class="mobile-search-text">live mus<span class="find-search-cursor"></span></span>
+          <svg style="width:14px;height:14px;color:var(--muted)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </div>
+        <span class="mobile-cancel-btn">Cancel</span>
+      </div>
+
+      <!-- Mobile content: No dropdown — results fill screen -->
+      <div class="mobile-content">
+
+        <!-- Trending (collapsed when typing) -->
+        <div class="mobile-section">
+          <div class="section-label" style="padding-top:12px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;color:var(--coral)"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+            <span>Trending</span>
+          </div>
+          <div class="mobile-trending-pills">
+            <div class="mobile-trending-pill">
+              <span>Shaky Knees</span>
+            </div>
+            <div class="mobile-trending-pill">
+              <span>patio brunch</span>
+            </div>
+            <div class="mobile-trending-pill">
+              <span>comedy tonight</span>
+            </div>
+            <div class="mobile-trending-pill">
+              <span>BeltLine</span>
+            </div>
+            <div class="mobile-trending-pill">
+              <span>free events</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Full-screen results — no dropdown, fills page -->
+        <div class="mobile-results">
+
+          <!-- Events section -->
+          <div class="mobile-result-section-label">
+            <span class="type-events">Events (12)</span>
+            <a class="group-see-all">See all →</a>
+          </div>
+
+          <div class="mobile-result-row">
+            <div class="mobile-result-icon cat-music">🎸</div>
+            <div class="mobile-result-body">
+              <div class="mobile-result-title"><span class="match">Live Mus</span>ic Thursday</div>
+              <div class="mobile-result-meta">
+                <span>Tonight · 9pm</span>
+                <span>·</span>
+                <span>Terminal West</span>
+              </div>
+            </div>
+            <svg class="mobile-result-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+
+          <div class="mobile-result-row">
+            <div class="mobile-result-icon cat-music">🎷</div>
+            <div class="mobile-result-body">
+              <div class="mobile-result-title">Jazz Jam at Smith's Olde Bar</div>
+              <div class="mobile-result-meta">
+                <span>Tonight · 8pm</span>
+                <span>·</span>
+                <span>Smith's Olde Bar</span>
+              </div>
+            </div>
+            <svg class="mobile-result-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+
+          <div class="mobile-result-row">
+            <div class="mobile-result-icon cat-music">🎵</div>
+            <div class="mobile-result-body">
+              <div class="mobile-result-title">Vinyl Night & <span class="match">Live Mus</span>ic</div>
+              <div class="mobile-result-meta">
+                <span>Sat · 9pm</span>
+                <span>·</span>
+                <span>The Earl</span>
+              </div>
+            </div>
+            <svg class="mobile-result-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+
+          <!-- Places section -->
+          <div class="mobile-result-section-label">
+            <span class="type-venues">Places (5)</span>
+            <a class="group-see-all">See all →</a>
+          </div>
+
+          <div class="mobile-result-row">
+            <div class="mobile-result-icon cat-music">🎙️</div>
+            <div class="mobile-result-body">
+              <div class="mobile-result-title">Terminal West</div>
+              <div class="mobile-result-meta">
+                <span>West Midtown</span>
+                <span>·</span>
+                <span>Concert Venue</span>
+              </div>
+            </div>
+            <svg class="mobile-result-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+
+          <div class="mobile-result-row">
+            <div class="mobile-result-icon cat-music">🎸</div>
+            <div class="mobile-result-body">
+              <div class="mobile-result-title">The Earl</div>
+              <div class="mobile-result-meta">
+                <span>East Atlanta</span>
+                <span>·</span>
+                <span>Bar + Venue</span>
+              </div>
+            </div>
+            <svg class="mobile-result-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+
+          <!-- Series section -->
+          <div class="mobile-result-section-label">
+            <span class="type-series">Series (3)</span>
+            <a class="group-see-all">See all →</a>
+          </div>
+
+          <div class="mobile-result-row">
+            <div class="mobile-result-icon" style="background:rgba(255,217,61,0.12);">♻️</div>
+            <div class="mobile-result-body">
+              <div class="mobile-result-title">Friday Jazz at Churchill Grounds</div>
+              <div class="mobile-result-meta">
+                <span>Every Friday</span>
+                <span>·</span>
+                <span>Churchill Grounds</span>
+              </div>
+            </div>
+            <svg class="mobile-result-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+
+          <!-- Bottom padding -->
+          <div style="height:32px;"></div>
+
+        </div><!-- /mobile-results -->
+      </div><!-- /mobile-content -->
+    </div><!-- /screen-mobile -->
+    <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
+      <div class="annotation"><span><strong>Back arrow + Cancel</strong> — iOS native pattern, cancel = text</span></div>
+      <div class="annotation"><span><strong>44px touch targets</strong> — result rows, minimum for iOS/Android</span></div>
+      <div class="annotation"><span><strong>No dropdown</strong> — results fill screen directly, no popover layer</span></div>
+      <div class="annotation"><span><strong>Section dividers</strong> — full-width, strong sectioning</span></div>
+      <div class="annotation"><span><strong>Trending horizontal scroll</strong> — pills stay accessible while typing</span></div>
+      <div class="annotation"><span><strong>Keyboard awareness</strong> — trending collapses, results scroll freely</span></div>
+    </div>
+  </div>
+
+</div><!-- /row 2 -->
+
+<!-- ══════════════════════════════════════════════════════════════
+     DESIGN DECISIONS & TOKEN REFERENCE
+     ══════════════════════════════════════════════════════════════ -->
+<div style="margin-top:24px;padding:32px;background:var(--night);border:1px solid rgba(37,37,48,0.7);border-radius:16px;max-width:860px;">
+  <div class="canvas-label" style="margin-bottom:20px;padding-top:0">Design Decisions & Implementation Notes</div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;">
+    <div>
+      <div style="font-family:'SF Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--coral);margin-bottom:12px;">Search Bar</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Height: 48px (min-h-[48px]) — prominent but not oversized</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Background: bg-[var(--dusk)] — one step elevated from the night surface</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Border: 1px solid var(--twilight) → var(--coral) on focus</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Focus glow: ring-2 ring-coral/10 + shadow 0 0 20px coral/08</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Border radius: rounded-xl (14px) — slightly more than card radius</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Placeholder: font-mono text-sm text-muted "Search events, venues, series..."</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Active text: font-mono text-sm text-cream</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">⌘K badge: hidden when focused, visible at rest (desktop only)</div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'SF Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;">Dropdown</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Surface: bg-dusk/97 — slightly lighter than night for elevation</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Border: inherits from search bar, top excluded (seamless join)</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Radius: 0 0 14px 14px — bottom corners match search bar</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Max-height: 60vh — scrollable, keyboard shortcuts visible</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Animation: animate-dropdown-in (existing keyframe)</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Group stagger: animationDelay 0/40/80ms (existing pattern)</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Selected row: bg-twilight + border-coral/25 + translateX(1px)</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Result icon: 32px rounded-lg bg-twilight/70, category color</div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'SF Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--neon-green);margin-bottom:12px;">Filter Chips</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Search chip: bg-coral/12 text-coral border-coral/30 — highest visual priority</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Date chip: bg-gold/10 text-gold border-gold/25</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Free chip: bg-neon-green/10 text-neon-green border-neon-green/25</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Search icon inside chip: 11px coral svg, consistent with search bar</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Font: font-mono text-xs (11px) — consistent with FilterChip component</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Clear ✕: svg at 14px, same color as text at 60-70% opacity</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Order: search chip always first (semantic priority)</div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'SF Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--neon-cyan);margin-bottom:12px;">Mobile Specifics</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Full-screen overlay: fixed inset-0 z-50 bg-void — native modal feel</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Header: back arrow (←) + search input + Cancel text</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Input: no rounded-full — sharp nav bar feel, iOS-consistent</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Results: direct fill (no dropdown), section headers with see-all</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Touch targets: 44px minimum height on all rows</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Trending: horizontal scroll, flex-nowrap, -webkit-overflow-scrolling</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Pre-search on mobile: trending pills + category 2-col grid</div>
+        <div style="font-size:12px;color:var(--soft);line-height:1.5;">Enter → same overlay collapses, browse state loads behind it</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
