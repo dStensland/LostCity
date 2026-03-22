@@ -1,13 +1,17 @@
 """
 Crawler for Fulton County Schools Board of Education meetings.
 
-Source: https://simbli.eboardsolutions.com/SB_Meetings/SB_MeetingListing.aspx?S=36031609
-Platform: Simbli eBoard — protected by Incapsula WAF, requires Playwright.
+Primary source: https://www.fultonschools.org/calendar01
+  Finalsite calendar widget (data-calendar-ids=820) showing the FCS District &
+  Board Calendar. Board meeting and Work Session events appear as structured
+  HTML with ISO 8601 datetime attributes — no Playwright required.
 
-Meeting types and venue mapping:
-- Work Session        → Fulton County Schools North Learning Center (Sandy Springs)
-- Board Meeting       → Fulton County Schools South Learning Center (Union City)
-- Special Called Meeting → ad hoc; defaults to South Learning Center
+Fallback URL (kept for reference): Simbli eBoard only shows past meetings for
+this district, so we do not use it for upcoming event discovery.
+
+Meeting venue mapping:
+- FCS Board Work Session → North Learning Center (Sandy Springs)
+- FCS Board Meeting      → South Learning Center (Union City)
 
 All meetings are free and open to the public. Public comment opens at 6:00 PM.
 """
@@ -16,12 +20,12 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime
+import urllib.request
+from datetime import date, datetime, timedelta
 from typing import Optional
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
 
 from date_utils import parse_human_date
 from db import (
@@ -34,10 +38,22 @@ from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
-MEETING_LIST_URL = (
-    "https://simbli.eboardsolutions.com/SB_Meetings/SB_MeetingListing.aspx?S=36031609"
-)
-BASE_URL = "https://simbli.eboardsolutions.com"
+# Primary source: FCS district calendar (Finalsite CMS, no WAF)
+CALENDAR_BASE_URL = "https://www.fultonschools.org/calendar01"
+# Finalsite element ID for the FCS District & Board Calendar widget
+CALENDAR_ELEMENT_ID = "217572"
+# Canonical source URL for event records
+SOURCE_URL = "https://www.fultonschools.org/fcs-board-of-education/meeting-calendar"
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/122.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
 # Work Sessions alternate at the North Learning Center
 VENUE_NORTH = {
@@ -81,10 +97,17 @@ EVENT_TAGS = [
     "civic",
 ]
 
-DESCRIPTION = (
+DESCRIPTION_BOARD_MEETING = (
     "Fulton County Schools Board of Education meeting. "
-    "The meeting is free and open to the public. "
+    "Free and open to the public. "
     "Public comment period opens at 6:00 PM."
+)
+
+DESCRIPTION_WORK_SESSION = (
+    "Fulton County Schools Board of Education Work Session. "
+    "Free and open to the public. "
+    "Recognitions and public comment open at 6:00 PM. "
+    "Held at the North Learning Center in Sandy Springs."
 )
 
 SERIES_HINT_WORK_SESSION = {
@@ -99,333 +122,250 @@ SERIES_HINT_BOARD_MEETING = {
     "frequency": "monthly",
 }
 
+# Event title keywords from the Finalsite calendar
+BOARD_MEETING_KEYWORDS = ["fcs board meeting", "board meeting"]
+WORK_SESSION_KEYWORDS = ["fcs board work session", "work session", "board work session"]
 
-def parse_time_string(time_str: str) -> Optional[str]:
-    """Convert '6:00 PM' or '6:30 p.m.' to 24-hour 'HH:MM'."""
-    if not time_str:
+
+def _fetch_html(url: str) -> Optional[str]:
+    """Fetch a page with a realistic browser user-agent."""
+    try:
+        req = urllib.request.Request(url, headers=HEADERS)
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return resp.read().decode("utf-8", errors="replace")
+    except Exception as exc:
+        logger.error(f"Fulton County Schools Board: HTTP fetch error for {url}: {exc}")
         return None
-    time_str = time_str.strip()
-
-    # Normalize abbreviated periods: p.m. -> PM, a.m. -> AM
-    time_str = re.sub(r"p\.m\.", "PM", time_str, flags=re.IGNORECASE)
-    time_str = re.sub(r"a\.m\.", "AM", time_str, flags=re.IGNORECASE)
-
-    # Handle ranges — take the start time only
-    if "-" in time_str or "\u2013" in time_str:
-        time_str = re.split(r"[-\u2013]", time_str)[0].strip()
-
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(AM|PM)", time_str.upper())
-    if match:
-        hour = int(match.group(1))
-        minute = match.group(2)
-        period = match.group(3)
-        if period == "PM" and hour != 12:
-            hour += 12
-        elif period == "AM" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-
-    # Try H:MM without AM/PM — fall back to None rather than guess
-    return None
 
 
-def resolve_venue(raw_name: str) -> dict:
+def _month_url(year: int, month: int) -> str:
+    """Return the FCS calendar URL for a specific month."""
+    # The Finalsite calendar doesn't use URL params for month navigation in
+    # the main calendar01 page — it uses JS. But the print endpoint exposes
+    # the full month grid as static HTML.
+    return (
+        f"https://www.fultonschools.org/fs/elements/{CALENDAR_ELEMENT_ID}/print"
+        f"?cal_date={year:04d}-{month:02d}-01"
+    )
+
+
+def _parse_board_events_from_html(html: str) -> list[dict]:
     """
-    Return the appropriate venue dict based on meeting type.
+    Extract board meeting and work session events from a Finalsite calendar page.
 
-    Work Sessions → North Learning Center (Sandy Springs)
-    Board Meetings → South Learning Center (Union City)
-    Special Called or unknown → South Learning Center (default)
-    """
-    name_lower = raw_name.lower()
-    if "work session" in name_lower:
-        return VENUE_NORTH
-    # Board meetings, special called meetings, and anything else default south
-    return VENUE_SOUTH
+    Finalsite grid-view (print view) uses:
+    - <div class="fsCalendarEventTitle [fsCalendarEventLink]"> for event titles
+    - <time class="fsStartTime" datetime="ISO8601"> for start time
+    - Both live inside a <div class="fsCalendarInfo"> within a <div class="fsCalendarDaybox">
 
+    Finalsite list-view (calendar page) may also use:
+    - <a class="fsCalendarEventTitle fsCalendarEventLink"> (anchor, not div)
+    - <time class="fsDate" datetime="ISO8601"> on the article container
 
-def build_event_title(raw_name: str) -> str:
-    """
-    Normalize meeting names scraped from the listing into clean event titles.
-
-    Examples:
-        'Work Session'            -> 'Fulton County Schools Board of Education — Work Session'
-        'Board Meeting'           -> 'Fulton County Schools Board of Education — Board Meeting'
-        'Special Called Meeting'  -> 'Fulton County Schools Board of Education — Special Called Meeting'
-        'Fulton County ...'       -> kept as-is
-    """
-    raw = raw_name.strip()
-    prefix = "Fulton County Schools Board of Education"
-
-    if "fulton" in raw.lower():
-        return raw
-
-    return f"{prefix} \u2014 {raw}"
-
-
-def determine_series_hint(raw_name: str) -> Optional[dict]:
-    """Return the appropriate series hint based on meeting type."""
-    name_lower = raw_name.lower()
-    if "work session" in name_lower:
-        return SERIES_HINT_WORK_SESSION
-    if "board meeting" in name_lower or "regular" in name_lower:
-        return SERIES_HINT_BOARD_MEETING
-    # Special called meetings and one-offs get no series grouping
-    return None
-
-
-def _fetch_html_with_playwright() -> Optional[str]:
-    """
-    Load the Simbli eBoard meeting listing with Playwright.
-
-    Simbli is behind Incapsula WAF. Using a full Chromium browser with a
-    realistic user-agent is enough to pass the challenge for a static listing
-    page. If the site starts returning a CAPTCHA page, we'll need to add a
-    solved challenge cookie or switch to a residential proxy — but that hasn't
-    been necessary historically.
-    """
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            user_agent=(
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/122.0.0.0 Safari/537.36"
-            ),
-            viewport={"width": 1440, "height": 900},
-            locale="en-US",
-            extra_http_headers={
-                "Accept-Language": "en-US,en;q=0.9",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            },
-        )
-        page = context.new_page()
-
-        try:
-            logger.info(f"Loading Simbli eBoard calendar: {MEETING_LIST_URL}")
-            response = page.goto(
-                MEETING_LIST_URL, wait_until="networkidle", timeout=45000
-            )
-
-            if not response:
-                logger.error("Fulton County Schools Board: no response from Simbli eBoard")
-                return None
-
-            if response.status >= 400:
-                logger.error(
-                    f"Fulton County Schools Board: Simbli eBoard returned HTTP {response.status}"
-                )
-                return None
-
-            # Wait a beat for any JS rendering to finish
-            page.wait_for_timeout(3000)
-
-            html = page.content()
-            return html
-
-        except Exception as exc:
-            logger.error(f"Fulton County Schools Board: Playwright error: {exc}")
-            return None
-
-        finally:
-            browser.close()
-
-
-def parse_meeting_rows(html: str) -> list[dict]:
-    """
-    Parse the meeting listing table from Simbli eBoard HTML.
-
-    Simbli renders a <table> (or <div>-based grid) with columns:
-        Meeting Name | Date | Time | Location | Agenda | Minutes
-
-    We try the table-row approach first, then fall back to scanning for
-    date patterns if the layout is different.
-
-    Returns a list of raw dicts with keys: name, date_str, time_str, detail_url.
+    Returns a list of dicts with keys: title, iso_datetime, source_url.
     """
     soup = BeautifulSoup(html, "lxml")
-    meetings: list[dict] = []
+    events: list[dict] = []
 
-    # ------------------------------------------------------------------ #
-    # Strategy 1: Standard <table> rows                                   #
-    # ------------------------------------------------------------------ #
-    table = soup.find(
-        "table",
-        id=re.compile(r"(MeetingList|grdMtg|MtgGrid|dgMeetings)", re.IGNORECASE),
-    )
-    if not table:
-        # Some Simbli versions use a plain table without a specific id
-        table = soup.find(
-            "table", class_=re.compile(r"(meeting|grid|listing)", re.IGNORECASE)
-        )
-    if not table:
-        # Last resort: pick the largest table on the page
-        tables = soup.find_all("table")
-        if tables:
-            table = max(tables, key=lambda t: len(t.find_all("tr")))
-
-    if table:
-        rows = table.find_all("tr")
-        # Skip the header row
-        for row in rows[1:]:
-            cells = row.find_all("td")
-            if len(cells) < 2:
-                continue
-
-            # Cell 0 usually has the meeting name (sometimes as a link)
-            name_cell = cells[0]
-            name_link = name_cell.find("a")
-            raw_name = (
-                name_link.get_text(strip=True)
-                if name_link
-                else name_cell.get_text(strip=True)
-            )
-
-            if not raw_name or len(raw_name) < 3:
-                continue
-
-            # Grab the detail URL if present
-            detail_url = MEETING_LIST_URL
-            if name_link and name_link.get("href"):
-                detail_url = urljoin(BASE_URL, name_link["href"])
-            else:
-                any_link = row.find(
-                    "a", href=re.compile(r"MeetingDetail|Agenda", re.IGNORECASE)
-                )
-                if any_link and any_link.get("href"):
-                    detail_url = urljoin(BASE_URL, any_link["href"])
-
-            # Date — look through remaining cells for a date pattern
-            date_str: Optional[str] = None
-            time_str: Optional[str] = None
-
-            for cell in cells[1:]:
-                text = cell.get_text(strip=True)
-                # Date patterns: MM/DD/YYYY, Month DD, YYYY, etc.
-                if not date_str and re.search(r"\d{1,2}/\d{1,2}/\d{4}", text):
-                    date_str = text
-                    continue
-                if not date_str and re.search(
-                    r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{1,2},?\s+\d{4}",
-                    text,
-                    re.IGNORECASE,
-                ):
-                    date_str = text
-                    continue
-                # Time patterns: H:MM AM/PM, H:MM p.m., etc.
-                if not time_str and re.search(
-                    r"\d{1,2}:\d{2}\s*(AM|PM|a\.m\.|p\.m\.)", text, re.IGNORECASE
-                ):
-                    time_str = text
-
-            if not date_str:
-                # Try to find a date in the full row text
-                row_text = row.get_text()
-                m = re.search(r"\d{1,2}/\d{1,2}/\d{4}", row_text)
-                if m:
-                    date_str = m.group(0)
-
-            if not date_str:
-                logger.debug(
-                    f"Fulton County Schools Board: no date found for meeting: {raw_name!r}"
-                )
-                continue
-
-            meetings.append(
-                {
-                    "name": raw_name,
-                    "date_str": date_str,
-                    "time_str": time_str,
-                    "detail_url": detail_url,
-                }
-            )
-
-        if meetings:
-            logger.info(
-                f"Fulton County Schools Board: parsed {len(meetings)} meeting rows from table"
-            )
-            return meetings
-
-    # ------------------------------------------------------------------ #
-    # Strategy 2: Scan full page text for date+name patterns              #
-    # Simbli occasionally uses a div-based layout                         #
-    # ------------------------------------------------------------------ #
-    logger.warning(
-        "Fulton County Schools Board: table strategy found no meetings — falling back to text scan"
-    )
-    body_text = soup.get_text(separator="\n")
-    lines = [ln.strip() for ln in body_text.splitlines() if ln.strip()]
-
-    date_pattern = re.compile(
-        r"(\d{1,2}/\d{1,2}/\d{4}|"
-        r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{1,2},?\s+\d{4})",
-        re.IGNORECASE,
-    )
-    time_pattern = re.compile(
-        r"\d{1,2}:\d{2}\s*(AM|PM|a\.m\.|p\.m\.)", re.IGNORECASE
-    )
-    meeting_type_pattern = re.compile(
-        r"(board\s+meeting|work\s+session|special\s+call|regular\s+meeting|"
-        r"public\s+hearing|budget\s+hearing)",
-        re.IGNORECASE,
+    # Find all elements (div or a) with the fsCalendarEventTitle class.
+    # The print/grid view uses <div>, the list view uses <a>.
+    title_els = soup.find_all(
+        True,
+        class_=re.compile(r"\bfsCalendarEventTitle\b"),
     )
 
-    for i, line in enumerate(lines):
-        dm = date_pattern.search(line)
-        if not dm:
+    for el in title_els:
+        raw_title = el.get_text(strip=True)
+        if not raw_title:
             continue
 
-        date_str = dm.group(0)
+        title_lower = raw_title.lower()
+        is_board_meeting = any(kw in title_lower for kw in BOARD_MEETING_KEYWORDS)
+        is_work_session = any(kw in title_lower for kw in WORK_SESSION_KEYWORDS)
 
-        # Look for a meeting type in nearby lines (±3)
-        raw_name = None
-        time_str_candidate = None
-        for offset in range(-3, 4):
-            idx = i + offset
-            if not (0 <= idx < len(lines)):
-                continue
-            check = lines[idx]
-            if meeting_type_pattern.search(check) and not raw_name:
-                raw_name = check
-            tm = time_pattern.search(check)
-            if tm and not time_str_candidate:
-                time_str_candidate = check
-
-        if not raw_name:
+        if not (is_board_meeting or is_work_session):
             continue
 
-        meetings.append(
+        iso_datetime: Optional[str] = None
+
+        # Strategy 1: look for fsStartTime in the nearby fsCalendarInfo div
+        parent_info = el.find_parent("div", class_=re.compile(r"\bfsCalendarInfo\b"))
+        if parent_info:
+            start_time_el = parent_info.find("time", class_="fsStartTime")
+            if start_time_el and start_time_el.get("datetime"):
+                iso_datetime = start_time_el["datetime"]
+
+        # Strategy 2: list-view article has fsDate as sibling/parent element
+        if not iso_datetime:
+            parent_article = el.find_parent("article")
+            if parent_article:
+                start_time_el = parent_article.find("time", class_="fsStartTime")
+                if start_time_el and start_time_el.get("datetime"):
+                    iso_datetime = start_time_el["datetime"]
+                else:
+                    date_el = parent_article.find("time", class_="fsDate")
+                    if date_el and date_el.get("datetime"):
+                        iso_datetime = date_el["datetime"]
+
+        # Strategy 3: grid-view — read data-day/data-month/data-year from daybox
+        if not iso_datetime:
+            daybox = el.find_parent("div", class_=re.compile(r"\bfsCalendarDaybox\b"))
+            if daybox:
+                # Day number is in a header span; the date is in a time[datetime] or
+                # can be reconstructed from the month picker data-month/data-year + day label
+                day_el = daybox.find("time")
+                if day_el and day_el.get("datetime"):
+                    iso_datetime = day_el["datetime"]
+                else:
+                    # Read the day label text from the daybox header
+                    # e.g. "Thursday, April 16" — need the month from page-level context
+                    month_picker = soup.find(
+                        "span", class_=re.compile(r"\bfsCalendarGridShowMonthPickerButton\b")
+                    )
+                    if month_picker:
+                        year = month_picker.get("data-year", "")
+                        month = month_picker.get("data-month", "")  # 1-indexed here
+                        # Get day number from daybox header text
+                        header = daybox.find(class_=re.compile(r"\bfsCalendarDayNumber\b"))
+                        day_num = header.get_text(strip=True) if header else ""
+                        # Alternative: parse from the aria-label or header span
+                        if not day_num:
+                            day_link = daybox.find("a")
+                            if day_link:
+                                day_num = re.search(r"\d+", day_link.get_text()).group()
+                        if year and month and day_num:
+                            try:
+                                iso_datetime = (
+                                    f"{year}-{int(month):02d}-{int(day_num):02d}"
+                                )
+                            except ValueError:
+                                pass
+
+        if not iso_datetime:
+            logger.debug(
+                f"Fulton County Schools Board: no datetime found for event: {raw_title!r}"
+            )
+            continue
+
+        events.append(
             {
-                "name": raw_name,
-                "date_str": date_str,
-                "time_str": time_str_candidate,
-                "detail_url": MEETING_LIST_URL,
+                "title": raw_title,
+                "iso_datetime": iso_datetime,
+                "source_url": SOURCE_URL,
             }
         )
 
+    return events
+
+
+def _iso_to_date_time(iso_str: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Convert an ISO 8601 datetime string to (YYYY-MM-DD, HH:MM) tuple.
+
+    Handles:
+    - '2026-04-23T16:30:00-04:00' -> ('2026-04-23', '16:30')
+    - '2026-04-23' -> ('2026-04-23', None)
+    """
+    if not iso_str:
+        return None, None
+
+    # Try full ISO with time
+    for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            dt = datetime.strptime(iso_str[:19], fmt[:19])
+            return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
+        except ValueError:
+            pass
+
+    # Try date-only
+    try:
+        dt = datetime.strptime(iso_str[:10], "%Y-%m-%d")
+        return dt.strftime("%Y-%m-%d"), None
+    except ValueError:
+        pass
+
+    return None, None
+
+
+def resolve_venue(raw_title: str) -> dict:
+    """Return the appropriate venue dict based on meeting type."""
+    title_lower = raw_title.lower()
+    if "work session" in title_lower:
+        return VENUE_NORTH
+    return VENUE_SOUTH
+
+
+def determine_series_hint(raw_title: str) -> Optional[dict]:
+    """Return the appropriate series hint based on meeting type."""
+    title_lower = raw_title.lower()
+    if "work session" in title_lower:
+        return SERIES_HINT_WORK_SESSION
+    if "board meeting" in title_lower:
+        return SERIES_HINT_BOARD_MEETING
+    return None
+
+
+def fetch_upcoming_meetings(months_ahead: int = 5) -> list[dict]:
+    """
+    Fetch board meeting events from the FCS district calendar for the next
+    N months. Fetches each month's print view (static HTML, no JS required).
+
+    Returns deduplicated list of event dicts.
+    """
+    all_events: list[dict] = []
+    seen_keys: set[str] = set()
+
+    today = date.today()
+
+    # Start from today's month and look ahead
+    for month_offset in range(months_ahead):
+        # Calculate target month
+        target_month = today.month + month_offset
+        target_year = today.year + (target_month - 1) // 12
+        target_month = ((target_month - 1) % 12) + 1
+
+        url = _month_url(target_year, target_month)
+        logger.debug(f"Fulton County Schools Board: fetching calendar for {target_year}-{target_month:02d}")
+
+        html = _fetch_html(url)
+        if not html:
+            # Try the main calendar page for the current month as a fallback
+            if month_offset == 0:
+                logger.info("Fulton County Schools Board: print view failed, trying main calendar page")
+                html = _fetch_html(CALENDAR_BASE_URL)
+            if not html:
+                continue
+
+        month_events = _parse_board_events_from_html(html)
+        for event in month_events:
+            key = f"{event['title']}|{event['iso_datetime'][:10]}"
+            if key not in seen_keys:
+                seen_keys.add(key)
+                all_events.append(event)
+
     logger.info(
-        f"Fulton County Schools Board: text-scan strategy found {len(meetings)} meetings"
+        f"Fulton County Schools Board: found {len(all_events)} board events across {months_ahead} months"
     )
-    return meetings
+    return all_events
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
     """
     Crawl Fulton County Schools Board of Education meeting calendar.
 
-    Uses Playwright to bypass the Incapsula WAF on Simbli eBoard, then
-    parses the meeting listing table for upcoming board meetings.
+    Fetches upcoming board meeting and work session events from the FCS
+    district calendar website (fultonschools.org/calendar01). This is a
+    plain HTML Finalsite calendar — no Playwright or WAF bypass required.
 
-    Work Sessions are mapped to the North Learning Center (Sandy Springs);
-    Board Meetings are mapped to the South Learning Center (Union City).
+    Work Sessions → North Learning Center (Sandy Springs)
+    Board Meetings → South Learning Center (Union City)
     """
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
-    # Pre-create both venues so they exist in the DB regardless of upcoming
-    # meeting schedule — venue records have standalone value.
+    # Pre-create both venues so they exist in the DB regardless of meeting schedule.
     venue_id_north = get_or_create_venue(VENUE_NORTH)
     venue_id_south = get_or_create_venue(VENUE_SOUTH)
 
@@ -434,35 +374,29 @@ def crawl(source: dict) -> tuple[int, int, int]:
         "south": venue_id_south,
     }
 
-    # Fetch the page
-    html = _fetch_html_with_playwright()
-    if not html:
-        logger.error("Fulton County Schools Board: could not fetch Simbli eBoard page — aborting")
-        return 0, 0, 0
+    # Fetch upcoming meetings (current month + 4 months ahead)
+    raw_events = fetch_upcoming_meetings(months_ahead=5)
 
-    # Parse meeting rows
-    raw_meetings = parse_meeting_rows(html)
-    if not raw_meetings:
+    if not raw_events:
         logger.warning(
-            "Fulton County Schools Board: no meetings found on Simbli eBoard listing page"
+            "Fulton County Schools Board: no upcoming board meetings found on FCS calendar"
         )
         return 0, 0, 0
 
-    today = datetime.now().date()
+    today = date.today()
     seen: set[str] = set()
 
-    for meeting in raw_meetings:
+    for event in raw_events:
         try:
-            raw_name = meeting["name"]
-            date_str = meeting["date_str"]
-            time_str = meeting.get("time_str")
-            detail_url = meeting.get("detail_url") or MEETING_LIST_URL
+            raw_title = event["title"]
+            iso_datetime = event["iso_datetime"]
+            event_source_url = event.get("source_url") or SOURCE_URL
 
-            # Parse and validate date
-            start_date = parse_human_date(date_str)
+            # Parse date and time from ISO string
+            start_date, start_time = _iso_to_date_time(iso_datetime)
             if not start_date:
                 logger.debug(
-                    f"Fulton County Schools Board: could not parse date {date_str!r} for {raw_name!r}"
+                    f"Fulton County Schools Board: could not parse datetime {iso_datetime!r}"
                 )
                 continue
 
@@ -473,24 +407,26 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             if event_date < today:
                 logger.debug(
-                    f"Fulton County Schools Board: skipping past meeting: {raw_name} on {start_date}"
+                    f"Fulton County Schools Board: skipping past event: {raw_title} on {start_date}"
                 )
                 continue
 
-            # Resolve venue and parse time
-            venue_data = resolve_venue(raw_name)
+            # Resolve venue
+            venue_data = resolve_venue(raw_title)
             venue_id = (
                 venue_id_map["north"]
                 if venue_data is VENUE_NORTH
                 else venue_id_map["south"]
             )
 
-            # Default to 18:00 when the listing doesn't show a time — all
-            # public comment periods open at 6:00 PM per the standing schedule.
-            start_time = parse_time_string(time_str) if time_str else "18:00"
+            # Default to 18:00 when the calendar doesn't show a time —
+            # public comment always opens at 6:00 PM per standing schedule.
+            if not start_time:
+                start_time = "18:00"
 
-            # Build clean title
-            title = build_event_title(raw_name)
+            # Build clean title from raw calendar title
+            # FCS calendar labels are already clean: "FCS Board Meeting", "FCS Board Work Session"
+            title = raw_title
 
             # Dedupe within this run
             dedup_key = f"{title}|{start_date}"
@@ -500,17 +436,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             events_found += 1
 
+            # Choose description based on meeting type
+            description = (
+                DESCRIPTION_WORK_SESSION
+                if "work session" in title.lower()
+                else DESCRIPTION_BOARD_MEETING
+            )
+
             # Content hash for DB-level dedup
             content_hash = generate_content_hash(title, venue_data["name"], start_date)
 
-            # Determine series grouping
-            series_hint = determine_series_hint(raw_name)
+            # Series grouping
+            series_hint = determine_series_hint(raw_title)
 
             event_record = {
                 "source_id": source_id,
                 "venue_id": venue_id,
                 "title": title,
-                "description": DESCRIPTION,
+                "description": description,
                 "start_date": start_date,
                 "start_time": start_time,
                 "end_date": None,
@@ -523,10 +466,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "price_max": None,
                 "price_note": None,
                 "is_free": True,
-                "source_url": detail_url,
+                "source_url": event_source_url,
                 "ticket_url": None,
                 "image_url": None,
-                "raw_text": f"{raw_name} — {date_str}",
+                "raw_text": f"{raw_title} — {iso_datetime}",
                 "extraction_confidence": 0.90,
                 "is_recurring": bool(series_hint),
                 "recurrence_rule": "FREQ=MONTHLY" if series_hint else None,
@@ -548,7 +491,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         except Exception as exc:
             logger.warning(
-                f"Fulton County Schools Board: error processing meeting {meeting!r}: {exc}"
+                f"Fulton County Schools Board: error processing event {event!r}: {exc}"
             )
             continue
 
