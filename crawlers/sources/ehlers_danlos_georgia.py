@@ -24,7 +24,6 @@ from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
@@ -122,24 +121,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
 
-        logger.info(f"Fetching with Playwright: {EVENTS_URL}")
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
-
-            for _ in range(3):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            html_content = page.content()
-            soup = BeautifulSoup(html_content, "html.parser")
-            browser.close()
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        logger.info(f"Fetching EDS Georgia events: {EVENTS_URL}")
+        response = requests.get(EVENTS_URL, headers=headers, timeout=30)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
 
         event_selectors = [
             ".event",
@@ -281,9 +269,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
             f"{events_new} new, {events_updated} updated"
         )
 
-    except PlaywrightTimeout as e:
-        logger.error(f"Timeout fetching EDS Georgia events: {e}")
-        raise
     except Exception as e:
         logger.error(f"Failed to crawl EDS Georgia: {e}")
         raise
