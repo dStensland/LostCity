@@ -40,40 +40,15 @@ export function QuickAction({
       aria-selected={isSelected}
       onMouseDown={() => onSelect(action)}
       onMouseEnter={() => onHover(index)}
-      className={`flex items-start gap-2.5 w-full text-left px-3 py-2.5 rounded-lg transition-all mx-1 w-[calc(100%-8px)] border border-transparent ${
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium border transition-all flex-shrink-0 ${
         isSelected
-          ? "bg-[var(--coral)]/14 text-[var(--coral)] translate-x-0.5 border-[var(--coral)]/35"
-          : "text-[var(--cream)] hover:bg-[var(--twilight)]/50"
+          ? "bg-[var(--action-primary)]/15 text-[var(--action-primary)] border-[var(--action-primary)]/40 scale-[1.02]"
+          : "bg-[var(--twilight)]/50 text-[var(--soft)] border-[var(--twilight)] hover:text-[var(--cream)] hover:border-[var(--soft)]/50"
       }`}
+      title={action.description}
     >
-      {/* Lightning bolt icon */}
-      <span className="mt-0.5 inline-flex items-center justify-center w-7 h-7 rounded-md bg-[var(--twilight)]/70 flex-shrink-0">
-        <QuickActionIcon icon={action.icon} isSelected={isSelected} />
-      </span>
-
-      <span className="flex-1 min-w-0">
-        <span className="block text-sm font-medium truncate">{action.label}</span>
-        <span className="block text-xs text-[var(--muted)] truncate mt-0.5">
-          {action.description}
-        </span>
-      </span>
-
-      {/* Arrow indicator */}
-      <svg
-        className={`h-3.5 w-3.5 mt-2 transition-transform ${
-          isSelected ? "translate-x-0.5 text-[var(--coral)]" : "text-[var(--muted)]"
-        }`}
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M9 5l7 7-7 7"
-        />
-      </svg>
+      <QuickActionIcon icon={action.icon} isSelected={isSelected} />
+      <span className="truncate max-w-[120px]">{action.label}</span>
     </button>
   );
 }
@@ -88,11 +63,11 @@ export default function QuickActionsList({
   if (actions.length === 0) return null;
 
   return (
-    <div className="pt-2 pb-1 border-b border-[var(--twilight)]">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-3 pb-2">
+    <div className="px-3 pt-2.5 pb-2 border-b border-[var(--twilight)]">
+      {/* Section label */}
+      <div className="flex items-center gap-1.5 mb-2">
         <svg
-          className="h-3.5 w-3.5 text-[var(--coral)]"
+          className="h-3 w-3 text-[var(--action-primary)]"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -104,22 +79,24 @@ export default function QuickActionsList({
             d="M13 10V3L4 14h7v7l9-11h-7z"
           />
         </svg>
-        <span className="text-xs font-mono uppercase tracking-wider text-[var(--coral)]">
+        <span className="text-2xs font-mono uppercase tracking-wider text-[var(--muted)]">
           Quick Actions
         </span>
       </div>
 
-      {/* Actions */}
-      {actions.map((action, idx) => (
-        <QuickAction
-          key={action.id}
-          action={action}
-          isSelected={selectedIndex === startIndex + idx}
-          index={startIndex + idx}
-          onSelect={onSelect}
-          onHover={onHover}
-        />
-      ))}
+      {/* Pills — horizontal scrollable row */}
+      <div className="flex flex-wrap gap-1.5">
+        {actions.map((action, idx) => (
+          <QuickAction
+            key={action.id}
+            action={action}
+            isSelected={selectedIndex === startIndex + idx}
+            index={startIndex + idx}
+            onSelect={onSelect}
+            onHover={onHover}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -135,8 +112,8 @@ function QuickActionIcon({
   icon: QuickActionType["icon"];
   isSelected: boolean;
 }) {
-  const baseClass = `h-4 w-4 flex-shrink-0 transition-colors ${
-    isSelected ? "text-[var(--coral)]" : "text-[var(--gold)]"
+  const baseClass = `h-3 w-3 flex-shrink-0 transition-colors ${
+    isSelected ? "text-[var(--action-primary)]" : "text-[var(--soft)]"
   }`;
 
   switch (icon) {

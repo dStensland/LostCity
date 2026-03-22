@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useInstantSearch } from "@/lib/hooks/useInstantSearch";
 import { buildSearchResultHref } from "@/lib/search-navigation";
@@ -71,6 +71,9 @@ export default function FindSearchInput({
   // dependencies), and consuming a boolean skip on the first run leaves the
   // second run unguarded.
   const skipUrlSyncRef = useRef(0);
+  // browseMode: true after Enter commits a query. Shows dimmed query in input.
+  // Click to re-enter editing mode. Suppresses URL→input sync while active.
+  const [browseMode, setBrowseMode] = useState(false);
   const pathname = `/${portalSlug}`;
 
   const search = useInstantSearch({
@@ -80,14 +83,23 @@ export default function FindSearchInput({
     viewMode: "find",
   });
 
-  // Sync URL search param → query on mount and external changes
+  // Sync URL search param → query on mount and external changes.
+  // Suppressed when browseMode is active so clicking a filter chip or
+  // navigating back doesn't overwrite the dimmed query display.
   const urlSearch = searchParams?.get("search") || "";
   const prevUrlSearchRef = useRef(urlSearch);
   useEffect(() => {
     if (urlSearch !== prevUrlSearchRef.current) {
       prevUrlSearchRef.current = urlSearch;
-      if (urlSearch !== search.query) {
+      // Don't sync back into the input while user is browsing results —
+      // the dimmed query display is correct, and re-syncing would clear it.
+      if (!browseMode && urlSearch !== search.query) {
         search.setQuery(urlSearch);
+      }
+      // If the URL search was cleared externally (chip removed), exit browseMode.
+      // Deferred to avoid calling setState synchronously within an effect.
+      if (!urlSearch) {
+        setTimeout(() => setBrowseMode(false), 0);
       }
     }
   }, [urlSearch]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -197,6 +209,9 @@ export default function FindSearchInput({
           params.set("search", trimmed);
           params.delete("page");
           router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+          // Enter commits the search — switch to browse mode so the input
+          // shows the dimmed query as a visual reminder (not empty).
+          setBrowseMode(true);
         }
         search.setShowDropdown(false);
         inputRef.current?.blur();
@@ -228,6 +243,15 @@ export default function FindSearchInput({
     },
     [router, search, searchParams, pathname]
   );
+
+  // Exit browseMode when the user clears the search chip or actively types.
+  const handleExitBrowseMode = useCallback(() => {
+    if (browseMode) {
+      setBrowseMode(false);
+      // Restore focus and pre-fill the current query for editing
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [browseMode]);
 
   const isSearching = search.query.trim() !== urlSearch || search.isLoading;
   const showPreSearch = search.showDropdown && search.query.length < 2;
@@ -271,23 +295,31 @@ export default function FindSearchInput({
         id={searchId}
         type="text"
         value={search.query}
-        onChange={(e) => search.setQuery(e.target.value)}
+        onChange={(e) => {
+          // Any typing exits browse mode (user is refining the query)
+          if (browseMode) setBrowseMode(false);
+          search.setQuery(e.target.value);
+        }}
         onFocus={search.handleFocus}
         onBlur={search.handleBlur}
         onKeyDown={handleKeyDown}
+        onClick={handleExitBrowseMode}
         placeholder={placeholder}
-        className="w-full pl-10 pr-10 h-11 bg-[var(--dusk)]/90 border border-[var(--twilight)]/80 rounded-xl font-mono text-sm text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] focus:ring-2 focus:ring-[var(--coral)]/30 focus:shadow-[0_0_0_4px_var(--coral)/10,0_0_20px_var(--coral)/15] transition-all"
+        className={`w-full pl-10 pr-10 h-11 bg-[var(--dusk)]/90 border border-[var(--twilight)]/80 rounded-xl font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] focus:ring-2 focus:ring-[var(--coral)]/30 focus:shadow-[0_0_0_4px_var(--coral)/10,0_0_20px_var(--coral)/15] transition-all ${
+          browseMode ? "text-[var(--muted)] cursor-pointer" : "text-[var(--cream)]"
+        }`}
         role="combobox"
         aria-expanded={search.shouldShowDropdown}
         aria-controls={suggestionsId}
         aria-activedescendant={search.selectedIndex >= 0 ? `find-suggestion-${search.selectedIndex}` : undefined}
         aria-autocomplete="list"
         autoComplete="off"
+        title={browseMode ? "Click to edit search" : undefined}
       />
       {search.query && (
         <button
           type="button"
-          onClick={() => { search.clear(); }}
+          onClick={() => { search.clear(); setBrowseMode(false); }}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
           aria-label="Clear search"
         >

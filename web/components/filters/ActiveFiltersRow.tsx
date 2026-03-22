@@ -19,7 +19,7 @@ interface ActiveFilter {
   type: "search" | "category" | "tag" | "genre" | "date" | "free" | "price" | "vibe" | "neighborhood";
   value: string;
   label: string;
-  variant: FilterChipVariant;
+  variant: FilterChipVariant; // "search" chips use --action-primary token
 }
 
 interface ActiveFiltersRowProps {
@@ -59,7 +59,7 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
         type: "search",
         value: searchParam!,
         label: searchLabel,
-        variant: "default",
+        variant: "search",
       });
     }
 

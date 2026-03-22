@@ -291,8 +291,26 @@ export default function EventList({
     );
   }
 
+  // Build result count header label when a search is active
+  const searchResultLabel = (() => {
+    if (!filters.search || events.length === 0) return null;
+    const parts: string[] = [`${events.length}${hasMore ? "+" : ""} event${events.length !== 1 ? "s" : ""}`];
+    if (filters.categories && filters.categories.length > 0) {
+      parts.push(filters.categories.map((c) => c.replace(/_/g, " ")).join(", "));
+    }
+    return parts.join(" · ");
+  })();
+
   return (
     <PullToRefresh onRefresh={handleRefresh} disabled={isLoading || isRefetching}>
+      {/* Search result count header — visible when a search query is active */}
+      {searchResultLabel && (
+        <div className="px-1 pb-2 pt-1">
+          <p className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider">
+            {searchResultLabel}
+          </p>
+        </div>
+      )}
       {/* Virtualized list for 80+ items — flat EventCard rendering for performance */}
       {useVirtual ? (
         <div
