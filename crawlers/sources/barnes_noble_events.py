@@ -287,7 +287,7 @@ def _parse_event(
 
     is_recurring = event.get("isStoryTime") or bool(_STORYTIME_PATTERNS.search(title))
 
-    venue_name = store_info.get("name", "Barnes & Noble")
+    venue_name = f"Barnes & Noble {store_info.get('name', '')}"
     content_hash = generate_content_hash(title, venue_name, start_date)
 
     record = {
