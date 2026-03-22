@@ -102,7 +102,13 @@ describe("GET /api/programs", () => {
       from: vi.fn(() => programsQuery),
     });
     mocks.createServiceClient.mockReturnValue({
-      from: vi.fn(),
+      from: vi.fn(() => programsQuery),
+    });
+    mocks.getPortalSourceAccess.mockResolvedValue({
+      entityFamily: "programs",
+      sourceIds: [],
+      categoryConstraints: new Map(),
+      accessDetails: [],
     });
 
     const { GET } = await import("@/app/api/programs/route");
@@ -113,8 +119,11 @@ describe("GET /api/programs", () => {
 
     const response = await GET(request);
 
-    expect(mocks.getPortalSourceAccess).not.toHaveBeenCalled();
-    expect(mocks.createServiceClient).not.toHaveBeenCalled();
+    // Federation is now called for ALL programs requests (not just fallback)
+    expect(mocks.getPortalSourceAccess).toHaveBeenCalledWith("portal-family", {
+      entityFamily: "programs",
+    });
+    expect(mocks.createServiceClient).toHaveBeenCalled();
     await expect(response.json()).resolves.toMatchObject({
       programs: [],
       total: 0,
@@ -136,8 +145,9 @@ describe("GET /api/programs", () => {
     mocks.createClient.mockResolvedValue({
       from: vi.fn(() => programsQuery),
     });
+    // serviceClient.from() is called for BOTH programs (main query) and events (fallback)
     mocks.createServiceClient.mockReturnValue({
-      from: vi.fn(() => eventsQuery),
+      from: vi.fn((table: string) => table === "events" ? eventsQuery : programsQuery),
     });
     mocks.getPortalSourceAccess.mockResolvedValue({
       entityFamily: "programs",
