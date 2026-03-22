@@ -33,6 +33,7 @@ async function main() {
     .select('id, name, slug, category, owner_portal_id, is_active')
     .in('id', topSourceIds);
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sourceMap: Record<number, any> = {};
   for (const s of (sources || [])) sourceMap[s.id] = s;
   
@@ -132,6 +133,7 @@ async function main() {
     .limit(60);
 
   // Group by source
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const bySource: Record<number, any[]> = {};
   for (const e of (sampleEvents || [])) {
     if (!bySource[e.source_id]) bySource[e.source_id] = [];
@@ -180,6 +182,7 @@ async function main() {
     .from('sources')
     .select('id, name, slug, category, owner_portal_id, is_active, url')
     .in('id', topIds);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const topSourceMap: Record<number, any> = {};
   for (const s of (topSourcesData || [])) topSourceMap[s.id] = s;
   

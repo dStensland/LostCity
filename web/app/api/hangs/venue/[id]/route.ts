@@ -93,7 +93,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const publicHangsRaw = (publicRows ?? []) as HangProfileRow[];
 
     // Block filtering: exclude users the viewer has blocked or been blocked by
-    let blockedUserIds = new Set<string>();
+    const blockedUserIds = new Set<string>();
     if (user) {
       const { data: blocks } = await serviceClient
         .from("user_blocks")

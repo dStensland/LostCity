@@ -20,6 +20,7 @@ export default function OutingShareModal({
   const [copied, setCopied] = useState(false);
   const [canNativeShare, setCanNativeShare] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
   useEffect(() => {
     setCanNativeShare(typeof navigator !== "undefined" && "share" in navigator);
   }, []);

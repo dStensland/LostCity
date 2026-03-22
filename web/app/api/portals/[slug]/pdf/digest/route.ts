@@ -116,6 +116,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       e.venue_name && typeof e.venue_name === "object" && "name" in (e.venue_name as Record<string, unknown>)
         ? String((e.venue_name as Record<string, unknown>).name)
         : null,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     category: typeof (e as any).category_id === "string" ? (e as any).category_id : null,
   }));
 

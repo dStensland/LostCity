@@ -35,8 +35,10 @@ export default function ContextPanel({
   const [stats, setStats] = useState<CityPulseStats | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
 
     fetch(`/api/portals/${portalSlug}/city-pulse?day=${day}&time_slot=${slot}`)

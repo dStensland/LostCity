@@ -6,6 +6,7 @@ const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const ATLANTA_ID = '74c2f211-ee11-453d-8386-ac2861705695';
 const FAMILIES_ID = '840edaab-ab97-4f15-9dca-fe8dd2101ec3';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchJSON(url: string): Promise<any[]> {
   const resp = await fetch(url, {
     headers: {
@@ -55,6 +56,7 @@ async function main() {
   
   // Fetch source names
   const sources = await fetchJSON(`${BASE}/sources?id=in.(${sourceIds.join(',')})&select=id,name,slug,category`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sourceMap: Record<string, any> = {};
   for (const s of sources) sourceMap[String(s.id)] = s;
   
@@ -92,6 +94,7 @@ async function main() {
   const familySources = await fetchJSON(
     `${BASE}/events?portal_id=eq.${FAMILIES_ID}&is_active=eq.true&select=source_id&limit=5000`
   );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const familySourceIds = [...new Set(familySources.map((e: any) => e.source_id))];
   console.log(`Family portal has ${familySourceIds.length} distinct source_ids`);
   

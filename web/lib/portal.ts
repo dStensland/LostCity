@@ -528,7 +528,7 @@ export async function getPortalByVerticalAndCity(
     5 * 60 * 1000,
     async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let result = await (supabase as any)
+      const result = await (supabase as any)
         .from("portals")
         .select(`${BASE_PORTAL_COLUMNS},${B2B_PORTAL_COLUMNS}`)
         .eq("vertical_slug", vertical)
@@ -561,7 +561,7 @@ export async function getPortalByCitySlug(city: string): Promise<Portal | null> 
     5 * 60 * 1000,
     async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let result = await (supabase as any)
+      const result = await (supabase as any)
         .from("portals")
         .select(`${BASE_PORTAL_COLUMNS},${B2B_PORTAL_COLUMNS}`)
         .is("vertical_slug", null)

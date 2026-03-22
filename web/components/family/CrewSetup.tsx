@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, memo } from "react";
+import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   KID_COLOR_PRESETS,
@@ -474,13 +475,13 @@ export const CrewSetup = memo(function CrewSetup({
         className={`p-4 rounded-xl border text-sm text-center ${className}`}
         style={{ borderColor: `${WARM_STONE}30`, color: WARM_STONE }}
       >
-        <a
+        <Link
           href="/auth/login"
           className="font-semibold underline hover:opacity-70 transition-opacity"
           style={{ color: SAGE }}
         >
           Sign in
-        </a>{" "}
+        </Link>{" "}
         to set up your crew and get personalized recommendations.
       </div>
     );

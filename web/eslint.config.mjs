@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Ignore built/minified files in public directory
+    "public/**",
   ]),
 ]);
 

@@ -801,6 +801,7 @@ export async function getFilteredEventsWithSearch(
   // Also alias category_id → category for downstream component compatibility
   events = events.map((event) => {
     const isLive = computeIsLive(event, now, today);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return { ...event, ...(isLive ? { is_live: true } : {}), category: (event as any).category_id ?? (event as any).category ?? null };
   });
   events = events.filter((event) => !isSceneEvent(event));
@@ -945,6 +946,7 @@ export async function getFilteredEventsWithCursor(
   // Also alias category_id → category for downstream component compatibility
   events = events.map((event) => {
     const isLive = computeIsLive(event, now, today);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return { ...event, ...(isLive ? { is_live: true } : {}), category: (event as any).category_id ?? (event as any).category ?? null };
   });
   events = events.filter((event) => !isSceneEvent(event));
@@ -1091,6 +1093,7 @@ export async function getEventsForMap(
 
   const events = (data as EventWithLocation[]).map((event) => {
     const isLive = computeIsLive(event, now, currentDate);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return { ...event, ...(isLive ? { is_live: true } : {}), category: (event as any).category_id ?? (event as any).category ?? null };
   });
 

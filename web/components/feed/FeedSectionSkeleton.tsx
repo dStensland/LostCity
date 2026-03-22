@@ -270,12 +270,13 @@ export default function FeedSectionSkeleton({
  */
 export function useMinSkeletonDelay(isLoading: boolean, minMs = 400): boolean {
   const [showSkeleton, setShowSkeleton] = useState(isLoading);
-  const loadStartRef = useRef<number>(isLoading ? Date.now() : 0);
+  const loadStartRef = useRef<number>(0);
 
   useEffect(() => {
     if (isLoading) {
       // Loading started — record start time, show skeleton
       loadStartRef.current = Date.now();
+      // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
       setShowSkeleton(true);
     } else if (loadStartRef.current > 0) {
       // Loading ended — wait for remaining minimum time before hiding

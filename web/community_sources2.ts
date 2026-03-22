@@ -7,6 +7,7 @@ const ATLANTA_ID = '74c2f211-ee11-453d-8386-ac2861705695';
 const FAMILIES_ID = '840edaab-ab97-4f15-9dca-fe8dd2101ec3';
 const HELPATL_ID = '8d479b53-bab7-433f-8df6-b26cf412cd1d';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchJSON(url: string): Promise<any> {
   const resp = await fetch(url, {
     headers: {
@@ -56,6 +57,7 @@ async function main() {
   
   // Fetch source names in one call
   const sourcesRaw = await fetchJSON(`${BASE}/sources?id=in.(${sourceIds})&select=id,name,slug,owner_portal_id,category`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sourceMap: Record<string, any> = {};
   if (Array.isArray(sourcesRaw)) {
     for (const s of sourcesRaw) sourceMap[String(s.id)] = s;

@@ -30,7 +30,7 @@ type RawMeetupEventRow = {
   start_date: string;
   start_time: string | null;
   image_url: string | null;
-  category: string | null;
+  category_id: string | null;
   tags: string[] | null;
   organization: {
     name: string;
@@ -130,7 +130,7 @@ function isFilmMeetup(row: RawMeetupEventRow): boolean {
   const searchable = `${row.title} ${tags.join(" ")} ${row.organization?.name || ""}`.toLowerCase();
 
   return (
-    (row as any).category_id === "community" ||
+    row.category_id === "community" ||
     /film|cinema|movie|society|club|collective|meetup|workshop|filmmaker|screenwriter|discussion/.test(searchable)
   );
 }

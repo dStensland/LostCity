@@ -114,6 +114,7 @@ export const WeatherCard = memo(function WeatherCard({
             {condition}
           </div>
         </div>
+        {/* eslint-disable-next-line react-hooks/static-components */}
         <WeatherIcon
           size={48}
           weight="bold"

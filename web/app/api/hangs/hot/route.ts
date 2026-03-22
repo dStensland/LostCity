@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     // Batch fetch: single query for all venue IDs to avoid N+1
     const venueIds = rows.map((r) => r.venue_id);
 
-    let currentEventsByVenue: Map<number, string> = new Map();
+    const currentEventsByVenue: Map<number, string> = new Map();
 
     if (venueIds.length > 0) {
       const now = new Date();

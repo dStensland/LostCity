@@ -493,7 +493,7 @@ export default function Home() {
                       className="font-[family-name:var(--font-mono)]"
                       style={{ fontSize: "9px", color: "#C9874F", opacity: 0.5, letterSpacing: "0.1em" }}
                     >
-                      // lost
+                      {"// lost"}
                     </div>
                     <div
                       className="font-[family-name:var(--font-serif)] italic leading-[0.8]"
@@ -719,7 +719,7 @@ export default function Home() {
                       className="font-[family-name:var(--font-mono)]"
                       style={{ fontSize: "9px", color: "#4F7CAC", opacity: 0.5, letterSpacing: "0.1em" }}
                     >
-                      // lost
+                      {"// lost"}
                     </div>
                     <div
                       className="font-[family-name:var(--font-serif)] italic leading-[0.85]"

@@ -225,7 +225,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
       eventEnd.setHours(eventStart.getHours() + 3, eventStart.getMinutes(), 0, 0);
     }
     return now >= eventStart && now <= eventEnd;
-  }, [event?.start_date, event?.start_time, event?.end_time]);
+  }, [event]);
 
   const displayParticipants = useMemo(
     () => event ? getDisplayParticipants(eventArtists, { eventTitle: event.title, eventCategory: event.category }) : [],

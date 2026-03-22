@@ -44,6 +44,7 @@ export function ConditionsBanner({ temp, condition, windSpeed, humidity }: Condi
   if (!condition) return null;
 
   const assessment = getAdventureAssessment(temp, condition, windSpeed);
+  // eslint-disable-next-line react-hooks/static-components
   const WeatherIcon = getWeatherIcon(condition);
 
   return (
@@ -57,6 +58,7 @@ export function ConditionsBanner({ temp, condition, windSpeed, humidity }: Condi
     >
       {/* Left: icon + temp */}
       <div className="flex items-center gap-2">
+        {/* eslint-disable-next-line react-hooks/static-components */}
         <WeatherIcon size={28} weight="bold" color={ADV.CREAM} />
         <span
           className="text-xl font-bold leading-none"

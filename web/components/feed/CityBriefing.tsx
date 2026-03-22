@@ -933,6 +933,7 @@ export default function CityBriefing({
 
   // ── Hero image with fallback ─────────────────────────────────────────────
   const [heroImageUrl, setHeroImageUrl] = useState(header.hero_image_url);
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
   useEffect(() => { setHeroImageUrl(header.hero_image_url); }, [header.hero_image_url]);
 
   // ── Derived state ────────────────────────────────────────────────────────

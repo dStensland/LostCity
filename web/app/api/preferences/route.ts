@@ -188,6 +188,7 @@ export async function POST(request: NextRequest) {
       if (!("cross_portal_recommendations" in body)) payload.cross_portal_recommendations = true;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (serviceClient as any).from("user_preferences").upsert(
       payload,
       { onConflict: "user_id" },

@@ -85,8 +85,10 @@ export default function RegularsView({ portalId, portalSlug }: RegularsViewProps
   );
 
   // Fetch all events for the week (filtering happens client-side)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError(null);
 

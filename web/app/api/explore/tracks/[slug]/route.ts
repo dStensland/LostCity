@@ -65,7 +65,7 @@ type EventRow = {
   start_date: string;
   start_time: string | null;
   end_time: string | null;
-  category: string | null;
+  category_id: string | null;
   is_free: boolean | null;
   price_min: number | null;
   price_max: number | null;
@@ -332,7 +332,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           start_date: ev.start_date,
           start_time: ev.start_time,
           end_time: ev.end_time,
-          category: (ev as any).category_id ?? null,
+          category: ev.category_id ?? null,
           is_free: ev.is_free ?? false,
           price_min: ev.price_min,
           price_max: ev.price_max,
