@@ -143,6 +143,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     destinations=True,
     destination_details=True,
     venue_features=True,
+    venue_specials=True,
 )
 
 
@@ -248,6 +249,33 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "url": _VENUE_DATA["website"],
             "is_free": False,
             "sort_order": 40,
+        },
+    )
+
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "children-2-and-under-free-admission",
+            "title": "Children age 2 and under free admission",
+            "description": "General admission at Gwinnett Environmental & Heritage Center is free for children age 2 and under.",
+            "price_note": "Children age 2 and under: free admission.",
+            "is_free": True,
+            "source_url": "https://gwinnettehc.org/visit/general-admission",
+            "category": "admission",
+        },
+    )
+    envelope.add(
+        "venue_specials",
+        {
+            "venue_id": venue_id,
+            "slug": "gehc-members-free-admission",
+            "title": "GEHC members free admission",
+            "description": "Gwinnett Environmental & Heritage Center members receive free general admission.",
+            "price_note": "GEHC members: free admission.",
+            "is_free": True,
+            "source_url": "https://gwinnettehc.org/visit/general-admission",
+            "category": "membership",
         },
     )
 

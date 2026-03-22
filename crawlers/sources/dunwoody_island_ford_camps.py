@@ -94,12 +94,16 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "primary_activity": "family river park visit",
             "best_seasons": ["spring", "summer", "fall"],
             "weather_fit_tags": ["outdoor", "family-daytrip"],
+            "parking_type": "free_lot",
             "best_time_of_day": "morning",
             "family_suitability": "yes",
             "reservation_required": False,
             "permit_required": False,
             "practical_notes": (
-                "Island Ford gives families access to Chattahoochee River exploration, pond canoeing, and trail time inside the national recreation area."
+                "Island Ford works best as a shorter half-day river-and-trails outing where families can choose a manageable loop and layer in pond or river exploration without committing to a full destination day."
+            ),
+            "accessibility_notes": (
+                "Island Ford is strongest for families comfortable with natural surfaces and trail-based movement, not for families expecting fully paved circulation or compact indoor backup spaces."
             ),
             "fee_note": "Open park access and special camp programming can have different pricing or registration requirements.",
             "source_url": SOURCE_URL,

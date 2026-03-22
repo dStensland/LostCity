@@ -113,6 +113,12 @@ TRANSIENT_CRAWL_ERROR_PATTERNS = (
     "403 forbidden",
 )
 TRANSIENT_CRAWL_MAX_ATTEMPTS = 2
+TRANSIENT_POST_CRAWL_ERROR_PATTERNS = TRANSIENT_CRAWL_ERROR_PATTERNS + (
+    "[errno 8]",
+    "nodename nor servname provided",
+    "failed to resolve",
+    "nameresolutionerror",
+)
 
 
 def is_transient_crawl_error(exc: Exception) -> bool:
@@ -121,6 +127,48 @@ def is_transient_crawl_error(exc: Exception) -> bool:
     if not message:
         return False
     return any(pattern in message for pattern in TRANSIENT_CRAWL_ERROR_PATTERNS)
+
+
+def is_transient_post_crawl_error(exc: Exception) -> bool:
+    """Return True when a post-crawl failure looks like a short-lived network problem."""
+    message = str(exc or "").strip().lower()
+    if not message:
+        return False
+    return any(pattern in message for pattern in TRANSIENT_POST_CRAWL_ERROR_PATTERNS)
+
+
+def run_post_crawl_step_with_retry(
+    step_name: str,
+    fn,
+    *,
+    max_attempts: int = 3,
+    base_sleep_seconds: float = 2.0,
+):
+    """Retry transient post-crawl failures without masking deterministic code errors."""
+    last_exc: Optional[Exception] = None
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return fn()
+        except Exception as exc:
+            last_exc = exc
+            if attempt >= max_attempts or not is_transient_post_crawl_error(exc):
+                raise
+
+            sleep_seconds = base_sleep_seconds * attempt
+            logger.warning(
+                "Transient post-crawl failure for %s on attempt %s/%s: %s. Retrying in %.1fs.",
+                step_name,
+                attempt,
+                max_attempts,
+                exc,
+                sleep_seconds,
+            )
+            time.sleep(sleep_seconds)
+
+    if last_exc:
+        raise last_exc
+    raise RuntimeError(f"Post-crawl step exhausted without result: {step_name}")
 
 
 def run_crawler_with_retry(source: dict) -> tuple[int, int, int]:
@@ -921,7 +969,6 @@ def demote_stale_festival_dates() -> int:
 
     return demoted
 
-
 def check_unannounced_festivals(soon_only: bool = False, dry_run: bool = False) -> dict:
     """
     Check unannounced festivals for newly posted dates.
@@ -932,7 +979,7 @@ def check_unannounced_festivals(soon_only: bool = False, dry_run: bool = False) 
       2. Remaining festivals (background sweep)
       3. Promote existing pending rows if confidence improved
     """
-    from check_festival_dates import check_festival_dates
+    from scripts.check_festival_dates import check_festival_dates
 
     if soon_only:
         check_festival_dates(dry_run=dry_run, soon_only=True)
@@ -1091,7 +1138,10 @@ def run_post_crawl_tasks(
     # 2b. Demote stale festival dates (announced_start in the past)
     logger.info("Demoting stale festival dates...")
     try:
-        demoted_count = demote_stale_festival_dates()
+        demoted_count = run_post_crawl_step_with_retry(
+            "demote_stale_festival_dates",
+            demote_stale_festival_dates,
+        )
         if demoted_count > 0:
             logger.info(f"Demoted {demoted_count} festivals with past announced dates")
     except Exception as e:
@@ -1101,7 +1151,10 @@ def run_post_crawl_tasks(
     logger.info("Running festival health check...")
     try:
         from festival_health import run_festival_health_check
-        fh_stats = run_festival_health_check()
+        fh_stats = run_post_crawl_step_with_retry(
+            "festival_health_check",
+            run_festival_health_check,
+        )
         backfilled = fh_stats.get("titles_backfilled", 0) + fh_stats.get("festival_dates_backfilled", 0)
         if backfilled > 0:
             logger.info(f"Festival health: backfilled {backfilled} series")
@@ -1111,13 +1164,19 @@ def run_post_crawl_tasks(
     # 2d. Check unannounced festivals for newly posted dates (soon only to keep fast)
     logger.info("Checking unannounced festivals for date updates...")
     try:
-        check_unannounced_festivals(soon_only=True)
+        run_post_crawl_step_with_retry(
+            "check_unannounced_festivals",
+            lambda: check_unannounced_festivals(soon_only=True),
+        )
     except Exception as e:
         logger.warning(f"Festival date check failed: {e}")
 
     # 2e. Festival tier summary
     try:
-        tiers = get_festival_tier_summary()
+        tiers = run_post_crawl_step_with_retry(
+            "festival_tier_summary",
+            get_festival_tier_summary,
+        )
         logger.info(
             f"Festival tiers: {tiers['t1']} confirmed (T1) | "
             f"{tiers['t2']} pending (T2) | {tiers['t3']} unannounced (T3)"
@@ -1129,7 +1188,10 @@ def run_post_crawl_tasks(
     logger.info("Running artist backfill and normalization...")
     try:
         from scripts.backfill_event_artists import run_artist_backfill
-        artist_stats = run_artist_backfill(dry_run=False)
+        artist_stats = run_post_crawl_step_with_retry(
+            "artist_backfill",
+            lambda: run_artist_backfill(dry_run=False),
+        )
         logger.info(
             "Artist backfill: cleanup %s checked (%s changed, %s deleted), "
             "backfill %s checked (%s added)",
@@ -1152,7 +1214,10 @@ def run_post_crawl_tasks(
         )
         try:
             from hydrate_tba_events import hydrate_tba_events
-            tba_stats = hydrate_tba_events(apply=True, limit=tba_hydration_limit)
+            tba_stats = run_post_crawl_step_with_retry(
+                "hydrate_tba_events",
+                lambda: hydrate_tba_events(apply=True, limit=tba_hydration_limit),
+            )
             tba_total = tba_stats.get("total", 0)
             if tba_total > 0:
                 logger.info(
@@ -1167,7 +1232,10 @@ def run_post_crawl_tasks(
     # 3b. Report remaining TBA events
     logger.info("Counting remaining TBA events...")
     try:
-        tba_count = deactivate_tba_events()
+        tba_count = run_post_crawl_step_with_retry(
+            "deactivate_tba_events",
+            deactivate_tba_events,
+        )
         if tba_count > 0:
             logger.info(f"Still {tba_count} TBA events remaining (hidden from feeds)")
     except Exception as e:
@@ -1176,8 +1244,11 @@ def run_post_crawl_tasks(
     # 4. Backfill tags for any events missing venue-type-based tags
     logger.info("Running tag backfill...")
     try:
-        from backfill_tags import backfill_tags
-        tag_stats = backfill_tags(dry_run=False, batch_size=200)
+        from scripts.backfill_tags import backfill_tags
+        tag_stats = run_post_crawl_step_with_retry(
+            "backfill_tags",
+            lambda: backfill_tags(dry_run=False, batch_size=200),
+        )
         logger.info(f"Tag backfill: {tag_stats.get('updated', 0)} events updated")
     except Exception as e:
         logger.warning(f"Tag backfill failed: {e}")
@@ -1185,7 +1256,10 @@ def run_post_crawl_tasks(
     # 5. Zero-event source detection
     logger.info("Checking for zero-event source regressions...")
     try:
-        deactivated_count, deactivated_slugs = detect_zero_event_sources()
+        deactivated_count, deactivated_slugs = run_post_crawl_step_with_retry(
+            "detect_zero_event_sources",
+            detect_zero_event_sources,
+        )
         if deactivated_count > 0:
             logger.warning(f"Auto-deactivated {deactivated_count} sources: {', '.join(deactivated_slugs)}")
     except Exception as e:
@@ -1194,7 +1268,10 @@ def run_post_crawl_tasks(
     # 6. Record daily analytics snapshot
     logger.info("Recording analytics snapshot...")
     try:
-        snapshot = record_daily_snapshot()
+        snapshot = run_post_crawl_step_with_retry(
+            "record_daily_snapshot",
+            record_daily_snapshot,
+        )
         logger.info(f"Analytics: {snapshot.get('total_upcoming_events', 0)} upcoming events")
     except Exception as e:
         logger.warning(f"Analytics snapshot failed: {e}")
@@ -1202,7 +1279,10 @@ def run_post_crawl_tasks(
     # 7. Generate HTML report
     logger.info("Generating post-crawl report...")
     try:
-        report_path = save_html_report()
+        report_path = run_post_crawl_step_with_retry(
+            "save_html_report",
+            save_html_report,
+        )
         logger.info(f"Report saved: {report_path}")
     except Exception as e:
         logger.warning(f"Report generation failed: {e}")

@@ -405,8 +405,23 @@ def _guide_compatible_with_venue(guide_name: Optional[str], venue_type: Optional
         if topic in guide_lower:
             return venue_type in compatible_types
 
-    # No topic keyword matched → can't determine incompatibility
+    # No topic keyword matched — landmark venue types are prone to false positives
+    # (e.g. "Best Things to Do" articles mention museums/parks as landmarks).
+    # Body-only mentions of landmarks should be incidental unless the guide topic
+    # explicitly matches their category.
+    if venue_type in _LANDMARK_VENUE_TYPES:
+        return False
+
     return True
+
+
+# Venue types that are commonly mentioned as landmarks/waypoints in articles about
+# other topics (e.g. "near the High Museum", "across from Centennial Park").
+# Body-only mentions of these types need explicit topic alignment to be primary.
+_LANDMARK_VENUE_TYPES = frozenset([
+    "museum", "gallery", "park", "garden", "arena", "stadium",
+    "convention_center", "historic_site", "church", "college", "university",
+])
 
 
 def determine_relevance(

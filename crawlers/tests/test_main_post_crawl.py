@@ -40,6 +40,43 @@ def test_batch_runs_can_skip_post_crawl():
     assert should_run_post_crawl_for_batch(args) is False
 
 
+def test_post_crawl_step_retries_transient_dns_error(monkeypatch):
+    attempts = {"count": 0}
+    sleeps = []
+
+    monkeypatch.setattr(main.time, "sleep", lambda seconds: sleeps.append(seconds))
+
+    def flaky():
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise RuntimeError("[Errno 8] nodename nor servname provided, or not known")
+        return "ok"
+
+    result = main.run_post_crawl_step_with_retry("dns-test", flaky)
+
+    assert result == "ok"
+    assert attempts["count"] == 3
+    assert sleeps == [2.0, 4.0]
+
+
+def test_post_crawl_step_does_not_retry_non_transient_error(monkeypatch):
+    attempts = {"count": 0}
+    monkeypatch.setattr(main.time, "sleep", lambda _seconds: None)
+
+    def broken():
+        attempts["count"] += 1
+        raise RuntimeError("No module named 'backfill_tags'")
+
+    try:
+        main.run_post_crawl_step_with_retry("import-test", broken)
+    except RuntimeError as exc:
+        assert "backfill_tags" in str(exc)
+    else:
+        raise AssertionError("Expected non-transient error to surface immediately")
+
+    assert attempts["count"] == 1
+
+
 def test_scoped_post_crawl_skips_all_follow_on_tasks(monkeypatch):
     calls = []
 
@@ -149,6 +186,11 @@ def test_full_post_crawl_refreshes_filters_and_search(monkeypatch):
         "backfill_tags",
         SimpleNamespace(backfill_tags=lambda **_: {"updated": 0}),
     )
+    monkeypatch.setitem(
+        sys.modules,
+        "scripts.backfill_tags",
+        SimpleNamespace(backfill_tags=lambda **_: {"updated": 0}),
+    )
 
     run_post_crawl_tasks(
         run_global_tasks=True,
@@ -217,6 +259,11 @@ def test_post_crawl_can_skip_tba_hydration(monkeypatch):
     monkeypatch.setitem(
         sys.modules,
         "backfill_tags",
+        SimpleNamespace(backfill_tags=lambda **_: {"updated": 0}),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "scripts.backfill_tags",
         SimpleNamespace(backfill_tags=lambda **_: {"updated": 0}),
     )
     monkeypatch.setitem(

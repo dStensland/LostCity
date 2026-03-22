@@ -609,9 +609,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 title, description, age_min, age_max
             )
 
-            # Detect exhibits to set content_kind
+            # Children's museum "exhibits" are permanent attractions/amenities, not
+            # art exhibitions or temporal events. Skip them entirely.
             exhibit_kw = ["exhibit", "exhibition", "on view", "collection", "installation"]
             is_exhibit = any(kw in f"{title} {description}".lower() for kw in exhibit_kw)
+            if is_exhibit:
+                logger.debug("Skipping permanent attraction: %s", title)
+                continue
 
             # Expand multi-day programs into individual event records
             current_date = start_date
@@ -638,11 +642,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "title": title,
                     "description": description,
                     "start_date": current_date.strftime("%Y-%m-%d"),
-                    "start_time": None if is_exhibit else start_time,
+                    "start_time": start_time,
                     "end_date": current_date.strftime("%Y-%m-%d"),
-                    "end_time": None if is_exhibit else end_time,
-                    "is_all_day": is_exhibit,
-                    "content_kind": "exhibit" if is_exhibit else None,
+                    "end_time": end_time,
+                    "is_all_day": False,
+                    "content_kind": None,
                     "category": category,
                     "subcategory": subcategory,
                     "tags": tags,

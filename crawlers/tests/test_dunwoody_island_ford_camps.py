@@ -1,7 +1,12 @@
 from types import SimpleNamespace
 
 from sources._dunwoody_camp_pdf import extract_title_date_pairs_from_lines
-from sources.dunwoody_island_ford_camps import _build_event_record, _rows_from_pairs, crawl
+from sources.dunwoody_island_ford_camps import (
+    _build_destination_envelope,
+    _build_event_record,
+    _rows_from_pairs,
+    crawl,
+)
 
 
 RAW_LINES = [
@@ -41,6 +46,15 @@ def test_build_event_record_shapes_program_event() -> None:
     assert record["category"] == "programs"
     assert record["subcategory"] == "camp"
     assert record["start_time"] == "09:00"
+
+
+def test_build_destination_envelope_for_island_ford() -> None:
+    envelope = _build_destination_envelope(4201)
+
+    assert envelope.destination_details[0]["venue_id"] == 4201
+    assert envelope.destination_details[0]["destination_type"] == "park"
+    assert envelope.destination_details[0]["parking_type"] == "free_lot"
+    assert envelope.destination_details[0]["accessibility_notes"]
 
 
 def test_crawl_updates_existing_row_with_existing_record(monkeypatch) -> None:

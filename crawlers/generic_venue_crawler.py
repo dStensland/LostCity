@@ -30,7 +30,9 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 from supabase import Client
 
 from db import get_client, insert_event, find_event_by_hash, update_source_health_tags
+from db.exhibitions import insert_exhibition
 from dedupe import generate_content_hash
+from exhibition_utils import build_exhibition_record
 from extract import extract_events
 from utils import setup_logging, extract_text_content
 
@@ -345,7 +347,7 @@ def crawl_venue(
                 logger.info(f"  [DRY RUN] {event.title} on {event.start_date}")
             return events_found, 0, 0, health_tags
 
-        # Insert events
+        # Insert events (exhibitions route to exhibitions table)
         for event in extracted_events:
             # Skip past events
             try:
@@ -353,6 +355,34 @@ def crawl_venue(
                 if event_date < datetime.now().date():
                     continue
             except ValueError:
+                continue
+
+            # Route exhibitions to exhibitions table
+            if event.content_kind == "exhibition":
+                hint = event.exhibition_hint
+                ex_record, ex_artists = build_exhibition_record(
+                    title=event.title,
+                    venue_id=venue_id,
+                    source_id=source_id,
+                    opening_date=hint.opening_date if hint else event.start_date,
+                    closing_date=hint.closing_date if hint else event.end_date,
+                    venue_name=venue_name,
+                    description=event.description,
+                    image_url=event.image_url,
+                    source_url=source_url,
+                    admission_type=(hint.admission_type if hint else None) or "free",
+                    tags=event.tags,
+                    medium=hint.medium if hint else None,
+                    exhibition_type=hint.exhibition_type if hint else None,
+                    artists=[{"artist_name": a} for a in hint.artists] if hint and hint.artists else None,
+                )
+                try:
+                    result = insert_exhibition(ex_record, artists=ex_artists)
+                    if result:
+                        events_new += 1
+                        logger.info(f"  Added exhibition: {event.title}")
+                except Exception as e:
+                    logger.error(f"  Failed to insert exhibition {event.title}: {e}")
                 continue
 
             # Generate content hash for deduplication

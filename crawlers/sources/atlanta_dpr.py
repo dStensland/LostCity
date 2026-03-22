@@ -59,6 +59,7 @@ from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 from sources._activecommunities_family_filter import (
     infer_activecommunities_schedule_time_range,
+    is_family_relevant_activity,
     normalize_activecommunities_age,
     parse_age_from_name,
 )
@@ -817,6 +818,47 @@ def _should_skip_dedicated_item(name: str, desc_text: str) -> bool:
     return any(keyword in combined for keyword in _DEDICATED_SOURCE_KEYWORDS)
 
 
+def _is_family_only(
+    name: str,
+    desc_text: str,
+    age_min: Optional[int],
+    age_max: Optional[int],
+    category: str,
+    tags: list[str],
+) -> bool:
+    """Return True when an activity is exclusively family/youth-targeted.
+
+    These events belong in the family portal (via atlanta_family_programs.py)
+    and should NOT appear in the general Atlanta feed.  Activities that are
+    all-ages or adult-inclusive stay in the general feed.
+    """
+    # If the family filter wouldn't claim it, it's general-audience
+    if not is_family_relevant_activity(
+        name=name,
+        desc_text=desc_text,
+        age_min=age_min,
+        age_max=age_max,
+        category=category,
+        tags=tags,
+    ):
+        return False
+
+    # Explicitly capped at youth — this is a kids/teen program
+    if age_max is not None and age_max <= 18:
+        return True
+
+    # Camp keyword is a strong family signal
+    combined = f"{name} {desc_text}".lower()
+    if re.search(r"\bcamp\b", combined):
+        return True
+
+    # Category was classified as "family" by _classify()
+    if category == "family":
+        return True
+
+    return False
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Session / API helpers
 # ──────────────────────────────────────────────────────────────────────────────
@@ -1069,6 +1111,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # Category / tags
                 category, tags = _classify(name, desc_text, age_min, age_max)
+
+                # Skip family-only events — they belong in the family portal
+                # (handled by atlanta_family_programs.py)
+                if _is_family_only(name, desc_text, age_min, age_max, category, tags):
+                    continue
 
                 # Detail URL — prefer the clean slug URL
                 detail_url: str = item.get("detail_url") or ACTIVITY_SEARCH_URL

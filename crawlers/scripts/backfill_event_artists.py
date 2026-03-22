@@ -659,7 +659,6 @@ def run_artist_backfill(
             portal_id=portal_id,
             dry_run=dry_run,
             skip_linking=skip_linking,
-            allow_single_entity=allow_single_entity,
             max_events=max_events,
         ))
 

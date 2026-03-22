@@ -41,6 +41,27 @@ def test_run_artist_backfill_forwards_allow_single_entity_false_by_default(monke
     assert captured["allow_single_entity"] is False
 
 
+def test_run_artist_backfill_does_not_forward_allow_single_entity_to_cleanup(monkeypatch):
+    captured = {}
+
+    def fake_cleanup_pass(**kwargs):
+        captured.update(kwargs)
+        return {"cleanup_checked": 0, "cleanup_changed": 0, "cleanup_deleted": 0}
+
+    monkeypatch.setattr(backfill, "run_cleanup_pass", fake_cleanup_pass)
+
+    result = backfill.run_artist_backfill(
+        categories=["music"],
+        cleanup=True,
+        backfill=False,
+        dry_run=True,
+        allow_single_entity=True,
+    )
+
+    assert result["cleanup_checked"] == 0
+    assert "allow_single_entity" not in captured
+
+
 def test_high_confidence_backfill_allows_long_ensemble_name() -> None:
     assert backfill._is_high_confidence_backfill(  # noqa: SLF001
         title="ASO Education Presents: Columbus State University's Schwob Percussion Ensemble",

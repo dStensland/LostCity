@@ -16,3 +16,7 @@ def test_build_destination_envelope_projects_family_destination_details() -> Non
     assert "historic-chesser-williams-house" in feature_slugs
     assert "indoor-environmental-exhibits" in feature_slugs
     assert "wooded-picnic-pavilion" in feature_slugs
+    assert {special["slug"] for special in envelope.venue_specials} == {
+        "children-2-and-under-free-admission",
+        "gehc-members-free-admission",
+    }
