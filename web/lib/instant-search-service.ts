@@ -23,7 +23,8 @@ export type InstantSearchEntityType =
   | "organizer"
   | "series"
   | "list"
-  | "festival";
+  | "festival"
+  | "program";
 
 export type InstantSearchPayload = {
   suggestions: SearchResult[];
@@ -275,7 +276,8 @@ function getDefaultInstantTypes(params: {
   }
 
   if (findType === "classes") {
-    return ["event"] as const;
+    // Include programs alongside events for enrollment/class searches
+    return ["event", "program"] as const;
   }
 
   if (findType === "destinations") {

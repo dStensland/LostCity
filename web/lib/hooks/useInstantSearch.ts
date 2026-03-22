@@ -454,6 +454,7 @@ export function useInstantSearch({
       neighborhood: [],
       category: [],
       festival: [],
+      program: [],
     };
     if (!showSuggestions) return empty;
 

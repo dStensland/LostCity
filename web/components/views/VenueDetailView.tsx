@@ -262,6 +262,13 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
 
   const isDog = isDogPortal(portalSlug);
 
+  // ── ALL useMemo hooks must live here — before any early return ────────
+  // Step 3: Separate true exhibitions (have closing_date) from programs
+  const trueExhibitions = useMemo(
+    () => exhibitions.filter((ex) => ex.closing_date != null),
+    [exhibitions]
+  );
+
   // ── LOADING SKELETON ─────────────────────────────────────────────────
   if (status === "loading") {
     const skeletonTopBar = (
@@ -542,12 +549,6 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
   const typedFeatures = (data?.features ?? []) as unknown as VenueFeature[];
   const typedSpecials = (data?.specials ?? []) as unknown as VenueSpecial[];
   const typedHighlights = (data?.highlights ?? []) as unknown as { id: number; highlight_type: string; title: string; description: string | null; image_url: string | null }[];
-
-  // Step 3: Separate true exhibitions (have closing_date) from programs
-  const trueExhibitions = useMemo(
-    () => exhibitions.filter((ex) => ex.closing_date != null),
-    [exhibitions]
-  );
 
   // Step 9: Filter nonsensical occasions for museum-type venues
   const MUSEUM_EXCLUDED_OCCASIONS = new Set(["brunch", "late_night", "quick_bite", "dancing", "pre_game"]);

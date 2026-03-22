@@ -13,7 +13,10 @@ function buildFindSearchHref(
   findType: "events" | "classes" | "destinations",
   query: string,
 ): string {
-  return `/${portalSlug}?view=find&type=${findType}&search=${encodeURIComponent(query)}`;
+  if (findType === "destinations") {
+    return `/${portalSlug}?view=places&search=${encodeURIComponent(query)}`;
+  }
+  return `/${portalSlug}?view=happening&search=${encodeURIComponent(query)}`;
 }
 
 function shouldIncludeSuggestionType(
@@ -21,11 +24,13 @@ function shouldIncludeSuggestionType(
   findType?: FindType | null,
 ): boolean {
   if (!findType || findType === "events") {
-    return true;
+    // Programs don't belong in default event search
+    return suggestionType !== "program";
   }
 
   if (findType === "classes") {
-    return suggestionType === "event";
+    // In classes mode, show both events and programs
+    return suggestionType === "event" || suggestionType === "program";
   }
 
   if (findType === "destinations") {
@@ -69,10 +74,7 @@ export function mapSuggestionToSearchResult(
         id: syntheticId,
         type: "event",
         title: suggestion.text,
-        subtitle:
-          navigationContext.findType === "classes"
-            ? "Search classes"
-            : "Search events",
+        subtitle: navigationContext.findType === "classes" ? "Class" : "Event",
         href: eventSearchHref,
         score: baseScore,
       };
@@ -81,7 +83,7 @@ export function mapSuggestionToSearchResult(
         id: syntheticId,
         type: "venue",
         title: suggestion.text,
-        subtitle: "Search places",
+        subtitle: "Place",
         href: destinationSearchHref,
         score: baseScore - 20,
       };
@@ -90,7 +92,7 @@ export function mapSuggestionToSearchResult(
         id: syntheticId,
         type: mode === "preview" ? "event" : "festival",
         title: suggestion.text,
-        subtitle: "Search festivals",
+        subtitle: "Festival",
         href: eventSearchHref,
         score: baseScore - 30,
       };
@@ -102,8 +104,8 @@ export function mapSuggestionToSearchResult(
         subtitle: mode === "preview" ? "Neighborhood" : undefined,
         href:
           navigationContext.findType === "destinations"
-            ? `/${portalSlug}?view=find&type=destinations&neighborhoods=${encoded}`
-            : `/${portalSlug}?view=find&type=events&neighborhoods=${encoded}`,
+            ? `/${portalSlug}?view=places&neighborhoods=${encoded}`
+            : `/${portalSlug}?view=happening&neighborhoods=${encoded}`,
         score: baseScore - 40,
       };
     case "category":
@@ -112,7 +114,7 @@ export function mapSuggestionToSearchResult(
         type: mode === "preview" ? "event" : "category",
         title: suggestion.text,
         subtitle: mode === "preview" ? "Category" : undefined,
-        href: `/${portalSlug}?view=find&type=events&categories=${encoded}`,
+        href: `/${portalSlug}?view=happening&categories=${encoded}`,
         score: baseScore - 50,
       };
     case "tag":
@@ -121,7 +123,7 @@ export function mapSuggestionToSearchResult(
         type: mode === "preview" ? "event" : "category",
         title: suggestion.text,
         subtitle: mode === "preview" ? "Tag" : "Tag",
-        href: `/${portalSlug}?view=find&type=events&tags=${encoded}`,
+        href: `/${portalSlug}?view=happening&tags=${encoded}`,
         score: baseScore - 55,
       };
     case "vibe":
@@ -130,8 +132,19 @@ export function mapSuggestionToSearchResult(
         type: "venue",
         title: suggestion.text,
         subtitle: "Vibe",
-        href: `/${portalSlug}?view=find&type=destinations&vibes=${encoded}`,
+        href: `/${portalSlug}?view=places&vibes=${encoded}`,
         score: baseScore - 60,
+      };
+    case "program":
+      // Programs link to the family portal programs page.
+      // These suggestions only appear in classes findType context.
+      return {
+        id: syntheticId,
+        type: "program",
+        title: suggestion.text,
+        subtitle: "Program",
+        href: `/family?view=programs&search=${encoded}`,
+        score: baseScore - 10,
       };
     case "organizer":
       return null;

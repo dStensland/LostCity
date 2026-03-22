@@ -44,14 +44,14 @@ function resolveViewAllHref(params: {
   }
 
   if (params.resultType === "venue") {
-    return `/${params.portalSlug}?view=find&type=destinations&search=${encodedQuery}`;
+    return `/${params.portalSlug}?view=places&search=${encodedQuery}`;
   }
 
   if (params.findType === "classes") {
-    return `/${params.portalSlug}?view=find&type=classes&search=${encodedQuery}`;
+    return `/${params.portalSlug}?view=happening&content=classes&search=${encodedQuery}`;
   }
 
-  return `/${params.portalSlug}?view=find&type=events&search=${encodedQuery}`;
+  return `/${params.portalSlug}?view=happening&search=${encodedQuery}`;
 }
 
 export default function FindSearchInput({
@@ -65,7 +65,12 @@ export default function FindSearchInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const urlSyncRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const skipUrlSyncRef = useRef(false);
+  // Count-based skip: set to N to suppress the next N runs of the URL sync
+  // effect. We need 2 skips because router.push() and search.setQuery("") each
+  // trigger a separate effect run (searchParams and search.query are both
+  // dependencies), and consuming a boolean skip on the first run leaves the
+  // second run unguarded.
+  const skipUrlSyncRef = useRef(0);
   const pathname = `/${portalSlug}`;
 
   const search = useInstantSearch({
@@ -90,8 +95,8 @@ export default function FindSearchInput({
   // Debounced sync of query → URL
   useEffect(() => {
     clearTimeout(urlSyncRef.current);
-    if (skipUrlSyncRef.current) {
-      skipUrlSyncRef.current = false;
+    if (skipUrlSyncRef.current > 0) {
+      skipUrlSyncRef.current -= 1;
       return;
     }
     urlSyncRef.current = setTimeout(() => {
@@ -121,7 +126,13 @@ export default function FindSearchInput({
         resultPosition: search.selectedIndex,
       });
       search.selectSuggestion(result);
-      skipUrlSyncRef.current = true;
+      // Set skip count to 2: one skip for the effect run triggered by
+      // search.query changing to "", and one for the run triggered by
+      // searchParams updating after router.push(). Without both skips the
+      // second run fires with the stale "brunch" query and writes
+      // ?search=brunch back into the URL, which the URL→query sync then picks
+      // up and fills the input with the event title instead of navigating.
+      skipUrlSyncRef.current = 2;
       search.setQuery("");
       const url = buildSearchResultHref(result, { portalSlug });
       router.push(url, { scroll: false });
@@ -134,7 +145,7 @@ export default function FindSearchInput({
   const handleSelectQuickAction = useCallback(
     (action: QuickAction) => {
       search.selectQuickAction(action);
-      skipUrlSyncRef.current = true;
+      skipUrlSyncRef.current = 2;
       search.setQuery("");
       router.push(action.url, { scroll: false });
       inputRef.current?.blur();
@@ -178,7 +189,9 @@ export default function FindSearchInput({
         const trimmed = search.query.trim();
         if (trimmed) {
           clearTimeout(urlSyncRef.current);
-          skipUrlSyncRef.current = true;
+          // Skip 1: the router.replace we're about to do will change searchParams,
+          // which re-runs the URL sync effect. Suppress it to avoid a double-write.
+          skipUrlSyncRef.current = 1;
           addRecentSearch(trimmed);
           const params = new URLSearchParams(searchParams?.toString() || "");
           params.set("search", trimmed);

@@ -674,6 +674,7 @@ CREATE TABLE IF NOT EXISTS programs (
   lunch_included BOOLEAN NOT NULL DEFAULT false,
   tags TEXT[],
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'draft', 'archived')),
+  search_vector TSVECTOR,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -887,7 +888,8 @@ CREATE TABLE IF NOT EXISTS entity_search_terms (
       'tag',
       'vibe',
       'festival',
-      'neighborhood'
+      'neighborhood',
+      'program'
     )
   ),
   term_type TEXT NOT NULL CHECK (
@@ -941,7 +943,8 @@ CREATE TABLE IF NOT EXISTS search_term_overrides (
       'tag',
       'vibe',
       'festival',
-      'neighborhood'
+      'neighborhood',
+      'program'
     )
   ),
   term_type TEXT NOT NULL DEFAULT 'alias' CHECK (
@@ -1342,7 +1345,7 @@ BEGIN
     entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
   )
   SELECT
-    'program', p.id::TEXT, 'event', 'primary', p.name, normalize_search_term(p.name), v.city, 1, 'programs.name'
+    'program', p.id::TEXT, 'program', 'primary', p.name, normalize_search_term(p.name), v.city, 1, 'programs.name'
   FROM programs p
   LEFT JOIN venues v ON v.id = p.venue_id
   WHERE p.status = 'active'
@@ -1354,7 +1357,7 @@ BEGIN
     entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
   )
   SELECT
-    'program', p.id::TEXT, 'event', 'alias', p.name, alias.term, v.city, 1, 'programs.generated_aliases'
+    'program', p.id::TEXT, 'program', 'alias', p.name, alias.term, v.city, 1, 'programs.generated_aliases'
   FROM programs p
   LEFT JOIN venues v ON v.id = p.venue_id
   CROSS JOIN LATERAL unnest(search_term_alias_candidates(p.name, p.slug)) AS alias(term)
@@ -1368,7 +1371,7 @@ BEGIN
     entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
   )
   SELECT
-    'program', p.id::TEXT, 'event', 'provider', p.name, normalize_search_term(p.provider_name), v.city, 1, 'programs.provider_name'
+    'program', p.id::TEXT, 'program', 'provider', p.name, normalize_search_term(p.provider_name), v.city, 1, 'programs.provider_name'
   FROM programs p
   LEFT JOIN venues v ON v.id = p.venue_id
   WHERE p.status = 'active'
@@ -1383,7 +1386,7 @@ BEGIN
     entity_type, entity_id, suggestion_type, term_type, display_term, match_term, city, weight, source
   )
   SELECT
-    'program', p.id::TEXT, 'event', 'venue', p.name, normalize_search_term(v.name), v.city, 1, 'programs.venue'
+    'program', p.id::TEXT, 'program', 'venue', p.name, normalize_search_term(v.name), v.city, 1, 'programs.venue'
   FROM programs p
   JOIN venues v ON v.id = p.venue_id
   WHERE p.status = 'active'

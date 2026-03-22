@@ -110,6 +110,7 @@ export async function GET(request: NextRequest) {
       "series",
       "list",
       "festival",
+      "program",
     ] as const;
     const requestedTypes = typesParam
       ? (typesParam
@@ -123,6 +124,7 @@ export async function GET(request: NextRequest) {
             | "series"
             | "list"
             | "festival"
+            | "program"
           )[])
       : undefined;
 

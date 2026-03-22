@@ -60,10 +60,11 @@ const CONTEXT_BOOSTS: Record<
       list: 5,
       neighborhood: 3,
       category: 2,
+      program: 5,
     },
-    events: { event: 10, venue: 10, organizer: 10, festival: 10, series: 8, list: 5, neighborhood: 3, category: 2 },
-    classes: { event: 10, venue: 10, organizer: 10, festival: 5, series: 8, list: 5, neighborhood: 3, category: 2 },
-    destinations: { event: 10, venue: 10, organizer: 10, festival: 8, series: 8, list: 5, neighborhood: 3, category: 2 },
+    events: { event: 10, venue: 10, organizer: 10, festival: 10, series: 8, list: 5, neighborhood: 3, category: 2, program: 5 },
+    classes: { event: 10, venue: 10, organizer: 10, festival: 5, series: 8, list: 5, neighborhood: 3, category: 2, program: 20 },
+    destinations: { event: 10, venue: 10, organizer: 10, festival: 8, series: 8, list: 5, neighborhood: 3, category: 2, program: 5 },
   },
   find: {
     default: {
@@ -75,6 +76,7 @@ const CONTEXT_BOOSTS: Record<
       list: 5,
       neighborhood: 8,
       category: 8,
+      program: 5,
     },
     events: {
       event: 30,
@@ -85,6 +87,7 @@ const CONTEXT_BOOSTS: Record<
       list: 5,
       neighborhood: 10,
       category: 10,
+      program: 5,
     },
     destinations: {
       venue: 30,
@@ -95,6 +98,7 @@ const CONTEXT_BOOSTS: Record<
       list: 5,
       neighborhood: 15,
       category: 5,
+      program: 5,
     },
     classes: {
       event: 25, // Classes are events
@@ -105,6 +109,7 @@ const CONTEXT_BOOSTS: Record<
       list: 5,
       neighborhood: 10,
       category: 10,
+      program: 20, // Programs are primary for classes/enrollment queries
     },
   },
   community: {
@@ -117,10 +122,11 @@ const CONTEXT_BOOSTS: Record<
       series: 10,
       neighborhood: 3,
       category: 3,
+      program: 5,
     },
-    events: { organizer: 25, list: 20, event: 10, festival: 8, venue: 5, series: 10, neighborhood: 3, category: 3 },
-    classes: { organizer: 25, list: 20, event: 10, festival: 5, venue: 5, series: 10, neighborhood: 3, category: 3 },
-    destinations: { organizer: 25, list: 20, event: 10, festival: 8, venue: 5, series: 10, neighborhood: 3, category: 3 },
+    events: { organizer: 25, list: 20, event: 10, festival: 8, venue: 5, series: 10, neighborhood: 3, category: 3, program: 5 },
+    classes: { organizer: 25, list: 20, event: 10, festival: 5, venue: 5, series: 10, neighborhood: 3, category: 3, program: 15 },
+    destinations: { organizer: 25, list: 20, event: 10, festival: 8, venue: 5, series: 10, neighborhood: 3, category: 3, program: 5 },
   },
 };
 
@@ -292,7 +298,7 @@ export function detectQuickActions(
   }
 
   const actions: QuickAction[] = [];
-  const baseUrl = `/${portalSlug}?view=find&type=events`;
+  const baseUrl = `/${portalSlug}?view=happening`;
 
   // Check for "free" intent
   if (/\bfree\b/i.test(trimmedQuery)) {
@@ -379,10 +385,13 @@ export function groupResultsByType(
     neighborhood: [],
     category: [],
     festival: [],
+    program: [],
   };
 
   for (const result of results) {
-    groups[result.type].push(result);
+    if (result.type in groups) {
+      groups[result.type as ResultType].push(result);
+    }
   }
 
   return groups;
@@ -395,18 +404,18 @@ export function getGroupDisplayOrder(context: SearchContext): ResultType[] {
   if (context.viewMode === "find") {
     switch (context.findType) {
       case "events":
-        return ["event", "festival", "venue", "organizer", "series", "neighborhood", "category", "list"];
+        return ["event", "festival", "venue", "organizer", "series", "neighborhood", "category", "list", "program"];
       case "destinations":
-        return ["venue", "neighborhood", "festival", "event", "organizer", "series", "category", "list"];
+        return ["venue", "neighborhood", "festival", "event", "organizer", "series", "category", "list", "program"];
       case "classes":
-        return ["event", "venue", "organizer", "series", "festival", "neighborhood", "category", "list"];
+        return ["program", "event", "venue", "organizer", "series", "festival", "neighborhood", "category", "list"];
     }
   }
 
   if (context.viewMode === "community") {
-    return ["organizer", "list", "event", "festival", "venue", "series", "neighborhood", "category"];
+    return ["organizer", "list", "event", "festival", "venue", "series", "neighborhood", "category", "program"];
   }
 
   // Feed: balanced display
-  return ["event", "festival", "venue", "organizer", "series", "list", "neighborhood", "category"];
+  return ["event", "festival", "venue", "organizer", "series", "list", "neighborhood", "category", "program"];
 }

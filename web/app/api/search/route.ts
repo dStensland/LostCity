@@ -104,11 +104,11 @@ export async function GET(request: NextRequest) {
 
     // Parse types
     const typesParam = searchParams.get("types");
-    const validTypes = ["event", "venue", "organizer", "series", "list"] as const;
+    const validTypes = ["event", "venue", "organizer", "series", "list", "program"] as const;
     const types = typesParam
       ? (typesParam.split(",").filter((t) =>
           validTypes.includes(t as (typeof validTypes)[number])
-        ) as ("event" | "venue" | "organizer" | "series" | "list")[])
+        ) as ("event" | "venue" | "organizer" | "series" | "list" | "program")[])
       : undefined;
 
     // Parse other parameters

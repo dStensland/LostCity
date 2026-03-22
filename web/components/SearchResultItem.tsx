@@ -4,10 +4,17 @@ import Link from "next/link";
 import type { SearchResult } from "@/lib/unified-search";
 import { formatCompactCount } from "@/lib/formats";
 import { buildSearchResultHref } from "@/lib/search-navigation";
+import { PUBLIC_EVENT_CATEGORY_OPTIONS } from "@/lib/event-taxonomy";
+
+const CATEGORY_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  PUBLIC_EVENT_CATEGORY_OPTIONS.map(({ id, label }) => [id, label])
+);
 
 interface SearchResultItemProps {
   result: SearchResult;
   onClick?: () => void;
+  /** When provided, the item renders as a button and calls this with the resolved href instead of using a Link. Use this to control navigation timing (e.g. close overlay first, then navigate). */
+  onNavigate?: (href: string) => void;
   portalSlug?: string;
   compact?: boolean;
 }
@@ -19,6 +26,7 @@ interface SearchResultItemProps {
 export default function SearchResultItem({
   result,
   onClick,
+  onNavigate,
   portalSlug,
   compact = false,
 }: SearchResultItemProps) {
@@ -34,15 +42,12 @@ export default function SearchResultItem({
     ? "hover:border-l-[var(--neon-green)]"
     : "hover:border-l-[var(--soft)]";
 
-  return (
-    <Link
-      href={href}
-      scroll={false}
-      onClick={onClick}
-      className={`flex items-center gap-3 rounded-lg border border-transparent hover:border-[var(--twilight)] hover:bg-[var(--twilight)]/50 transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-inset border-l-2 border-transparent hover:border-l-2 ${hoverBorderClass} ${
-        compact ? "p-2" : "px-3 py-2.5"
-      }`}
-    >
+  const sharedClassName = `w-full text-left flex items-center gap-3 rounded-lg border border-transparent hover:border-[var(--twilight)] hover:bg-[var(--twilight)]/50 transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-inset border-l-2 border-transparent hover:border-l-2 ${hoverBorderClass} ${
+    compact ? "p-2" : "px-3 py-2.5"
+  }`;
+
+  const innerContent = (
+    <>
       {/* Type Icon */}
       <div
         className={`flex items-center justify-center flex-shrink-0 rounded-lg ${config.bgClass} ${
@@ -76,6 +81,24 @@ export default function SearchResultItem({
           {getBadge(result)}
         </span>
       )}
+    </>
+  );
+
+  // When onNavigate is provided, use a button so we control the navigation
+  // sequence: the parent closes the overlay first, then navigates. This prevents
+  // simultaneous overlay teardown + new view mount from causing React hook count
+  // mismatches ("Rendered more hooks than during the previous render").
+  if (onNavigate) {
+    return (
+      <button type="button" onClick={() => onNavigate(href)} className={sharedClassName}>
+        {innerContent}
+      </button>
+    );
+  }
+
+  return (
+    <Link href={href} scroll={false} onClick={onClick} className={sharedClassName}>
+      {innerContent}
     </Link>
   );
 }
@@ -358,7 +381,7 @@ function getBadge(result: SearchResult): string | null {
   }
 
   if (result.metadata?.category) {
-    return result.metadata.category;
+    return CATEGORY_LABEL_MAP[result.metadata.category] ?? result.metadata.category;
   }
 
   if (result.type === "series" && result.metadata?.eventCount) {

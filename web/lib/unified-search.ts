@@ -7,7 +7,7 @@
  */
 
 import { createServiceClient } from "./supabase/service";
-import { analyzeQueryIntent, applyIntentBoost, extractCleanQuery, type QueryIntentResult, type SearchType } from "./query-intent";
+import { analyzeQueryIntent, applyIntentBoost, extractCategorySignals, extractCleanQuery, type QueryIntentResult, type SearchType } from "./query-intent";
 import { fetchSocialProofCounts } from "@/lib/social-proof";
 
 // ============================================
@@ -16,7 +16,7 @@ import { fetchSocialProofCounts } from "@/lib/social-proof";
 
 export interface SearchResult {
   id: number | string;
-  type: "event" | "venue" | "organizer" | "series" | "list" | "neighborhood" | "category" | "festival";
+  type: "event" | "venue" | "organizer" | "series" | "list" | "neighborhood" | "category" | "festival" | "program";
   title: string;
   subtitle?: string;
   href: string;
@@ -46,12 +46,19 @@ export interface SearchResult {
     exploreFeatured?: boolean;
     dataQuality?: number;
     isEventVenue?: boolean;
+    // Program-specific
+    programType?: string;
+    ageMin?: number;
+    ageMax?: number;
+    registrationStatus?: string;
+    sessionStart?: string;
+    sessionEnd?: string;
   };
 }
 
 export interface SearchOptions {
   query: string;
-  types?: ("event" | "venue" | "organizer" | "series" | "list" | "festival")[];
+  types?: ("event" | "venue" | "organizer" | "series" | "list" | "festival" | "program")[];
   limit?: number;
   offset?: number;
   categories?: string[];
@@ -74,7 +81,7 @@ export interface SearchOptions {
 }
 
 export interface SearchFacet {
-  type: "event" | "venue" | "organizer" | "series" | "list" | "festival";
+  type: "event" | "venue" | "organizer" | "series" | "list" | "festival" | "program";
   count: number;
 }
 
@@ -88,6 +95,126 @@ export interface UnifiedSearchResponse {
 type SearchTimingRecorder = {
   measure<T>(name: string, fn: () => Promise<T> | T, desc?: string): Promise<T>;
 };
+
+/**
+ * Valid category IDs that can be injected from query intent analysis.
+ * These must match the `category` column values in the events table.
+ * "free" is intentionally excluded — it becomes an isFree filter, not a category.
+ */
+const INTENT_CATEGORY_IDS = new Set([
+  "music",
+  "film",
+  "comedy",
+  "theater",
+  "art",
+  "sports",
+  "food_drink",
+  "nightlife",
+  "community",
+  "exercise",
+  "family",
+  "learning",
+  "words",
+  "religious",
+  "wellness",
+  "outdoors",
+  "recreation",
+]);
+
+/**
+ * Extract valid category slugs and free-flag from a query string using intent analysis.
+ * Returns null for both if no category signals are detected.
+ * Used to inject category filters when the user typed a category name (e.g. "music").
+ */
+function extractIntentCategories(query: string): {
+  categories: string[] | null;
+  isFreeFromIntent: boolean;
+} {
+  const signals = extractCategorySignals(query);
+  if (signals.length === 0) return { categories: null, isFreeFromIntent: false };
+
+  const isFreeFromIntent = signals.includes("free");
+  const validCategories = signals.filter((s) => INTENT_CATEGORY_IDS.has(s));
+
+  return {
+    categories: validCategories.length > 0 ? validCategories : null,
+    isFreeFromIntent,
+  };
+}
+
+/**
+ * Strip category signal words from a query when those signals are being applied
+ * as filters instead. E.g. "music tonight" → "tonight" when music is a category filter.
+ * Only strips when the remaining text isn't meaningful on its own.
+ */
+function stripCategoryKeywords(query: string): string {
+  // Remove the common category keyword patterns
+  const patterns = [
+    /\blive music\b/gi,
+    /\blive show\b/gi,
+    /\blive band\b/gi,
+    /\bconcert\b/gi,
+    /\bband\b/gi,
+    /\bcomedy\b/gi,
+    /\bstandup\b/gi,
+    /\bstand-up\b/gi,
+    /\bimprov\b/gi,
+    /\bopen mic\b/gi,
+    /\btheater\b/gi,
+    /\btheatre\b/gi,
+    /\bmusical\b/gi,
+    /\bdrama\b/gi,
+    /\bplay\b/gi,
+    /\bgallery\b/gi,
+    /\bexhibit\b/gi,
+    /\bexhibition\b/gi,
+    /\bmuseum\b/gi,
+    /\bscreening\b/gi,
+    /\bcinema\b/gi,
+    /\bsports\b/gi,
+    /\bgame\b/gi,
+    /\bmatch\b/gi,
+    /\brace\b/gi,
+    /\btasting\b/gi,
+    /\bbrunch\b/gi,
+    /\bdinner\b/gi,
+    /\bnightlife\b/gi,
+    /\bclub\b/gi,
+    /\bparty\b/gi,
+    /\bnetworking\b/gi,
+    /\bfitness\b/gi,
+    /\byoga\b/gi,
+    /\bworkout\b/gi,
+    /\bkids\b/gi,
+    /\bchildren\b/gi,
+    /\ball ages\b/gi,
+    /\bfree\b/gi,
+    /\bno cover\b/gi,
+    /\bdonation\b/gi,
+    // Match "music" last so "live music" is caught above first
+    /\bmusic\b/gi,
+    /\bart\b/gi,
+    /\bfilm\b/gi,
+    /\bdj\b/gi,
+    /\bdance\b/gi,
+    /\bfood\b/gi,
+    /\bdrink\b/gi,
+    /\bcommunity\b/gi,
+    /\bmeetup\b/gi,
+    /\bsocial\b/gi,
+    /\brun\b/gi,
+    /\bclass\b/gi,
+    /\bfamily\b/gi,
+    /\bshow\b/gi,
+    /\blive\b/gi,
+  ];
+
+  let cleaned = query;
+  for (const pat of patterns) {
+    cleaned = cleaned.replace(pat, " ");
+  }
+  return cleaned.replace(/\s+/g, " ").trim();
+}
 
 /** Convert legacy subcategory values (e.g., "nightlife.karaoke") to genre values ("karaoke") and merge with explicit genres */
 function mergeSubcategoriesToGenres(subcategories?: string[], genres?: string[]): string[] | undefined {
@@ -228,6 +355,34 @@ interface FestivalSearchRow {
   announced_end: string | null;
   primary_type: string | null;
   festival_type: string | null;
+  ts_rank: number;
+  similarity_score: number;
+  combined_score: number;
+}
+
+interface ProgramSearchRow {
+  id: string;
+  name: string;
+  slug: string | null;
+  description: string | null;
+  program_type: string;
+  provider_name: string | null;
+  age_min: number | null;
+  age_max: number | null;
+  season: string | null;
+  session_start: string | null;
+  session_end: string | null;
+  registration_status: string;
+  registration_url: string | null;
+  cost_amount: number | null;
+  cost_period: string | null;
+  tags: string[] | null;
+  venue_id: number | null;
+  venue_name: string | null;
+  venue_neighborhood: string | null;
+  venue_slug: string | null;
+  portal_id: string | null;
+  image_url: string | null;
   ts_rank: number;
   similarity_score: number;
   combined_score: number;
@@ -617,7 +772,42 @@ export async function unifiedSearch(
 
   // Analyze query intent for smarter results
   const intent = useIntentAnalysis ? analyzeQueryIntent(trimmedQuery) : undefined;
-  const effectiveQuery = intent ? extractCleanQuery(trimmedQuery, intent) : trimmedQuery;
+
+  // Inject category filters from intent analysis when the caller didn't provide explicit categories.
+  // Run extractCategorySignals independently (not just from intent.extractedValue) so compound
+  // queries like "music tonight" (which get intent="time") still get the category applied.
+  // Skip injection for venue/organizer intent — "comedy club" is a venue search, not a category filter.
+  let effectiveCategories = categories;
+  let effectiveIsFree = isFree;
+  const intentBlocksCategoryInjection =
+    intent?.intent === "venue" || intent?.intent === "organizer";
+  if (useIntentAnalysis && !categories && !intentBlocksCategoryInjection) {
+    const { categories: intentCategories, isFreeFromIntent } = extractIntentCategories(trimmedQuery);
+    if (intentCategories) {
+      effectiveCategories = intentCategories;
+    }
+    if (isFreeFromIntent && isFree == null) {
+      effectiveIsFree = true;
+    }
+  }
+
+  // When injecting category filters from intent, strip the category keywords from the FTS query
+  // so we don't search for the literal word "music" — the category filter handles the scoping.
+  let effectiveQuery: string;
+  if (intent) {
+    const baseClean = extractCleanQuery(trimmedQuery, intent);
+    if (effectiveCategories && effectiveCategories !== categories) {
+      // We injected categories from intent — strip category keywords from the FTS query
+      const stripped = stripCategoryKeywords(baseClean);
+      // If stripping left us with something meaningful, use it; otherwise empty the FTS query
+      // so the category filter does all the work (avoids near-zero FTS results)
+      effectiveQuery = stripped.length >= 2 ? stripped : "";
+    } else {
+      effectiveQuery = baseClean;
+    }
+  } else {
+    effectiveQuery = trimmedQuery;
+  }
 
   // Use intent-derived date filter if not explicitly provided
   // Map "tonight" to "today" for the event search (they're handled the same at DB level)
@@ -674,12 +864,12 @@ export async function unifiedSearch(
         searchEvents(client, effectiveQuery, {
           limit: limitPerType,
           offset,
-          categories,
+          categories: effectiveCategories,
           genres: mergeSubcategoriesToGenres(subcategories, genres),
           tags,
           neighborhoods,
           dateFilter: effectiveDateFilter,
-          isFree,
+          isFree: effectiveIsFree,
           portalId,
         }),
       )
@@ -746,6 +936,21 @@ export async function unifiedSearch(
     searchPromises.push(
       measureSearchTiming(timingRecorder, "search_festivals_rpc", () =>
         searchFestivals(client, effectiveQuery, {
+          limit: limitPerType,
+          offset,
+          portalId,
+        }),
+      )
+    );
+  }
+
+  // Programs: only when explicitly requested AND a portal is provided.
+  // Programs are family-portal entities — they must not leak into base-portal searches.
+  if (types.includes("program") && portalId) {
+    searchTypes.push("program");
+    searchPromises.push(
+      measureSearchTiming(timingRecorder, "search_programs_rpc", () =>
+        searchPrograms(client, effectiveQuery, {
           limit: limitPerType,
           offset,
           portalId,
@@ -1371,6 +1576,72 @@ function formatFestivalDateRange(start: string, end: string | null): string {
 }
 
 /**
+ * Search programs using the search_programs_ranked RPC function.
+ * Portal-scoped: portalId is required; returns empty if absent.
+ */
+async function searchPrograms(
+  client: ReturnType<typeof createServiceClient>,
+  query: string,
+  options: {
+    limit: number;
+    offset: number;
+    portalId: string; // Required — programs are portal-scoped
+    programType?: string;
+    ageMin?: number;
+    ageMax?: number;
+  }
+): Promise<SearchResult[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (client.rpc as any)("search_programs_ranked", {
+    p_query: query,
+    p_limit: options.limit,
+    p_offset: options.offset,
+    p_portal_id: options.portalId,
+    p_program_type: options.programType || null,
+    p_age_min: options.ageMin ?? null,
+    p_age_max: options.ageMax ?? null,
+    p_categories: null,
+  });
+
+  if (error) {
+    console.error("Error searching programs:", error);
+    return [];
+  }
+
+  const rows = (data as ProgramSearchRow[]) || [];
+
+  return rows.map((row) => {
+    const subtitle = row.venue_name
+      ? `${row.program_type} · ${row.venue_name}`
+      : row.program_type;
+
+    // Link to portal programs page filtered by this program slug
+    // Programs don't have standalone detail pages yet; link to portal programs list
+    const href = row.slug
+      ? `/family?program=${row.slug}`
+      : `/family?view=programs`;
+
+    return {
+      id: row.id,
+      type: "program" as const,
+      title: row.name,
+      subtitle,
+      href,
+      score: row.combined_score,
+      metadata: {
+        neighborhood: row.venue_neighborhood || undefined,
+        programType: row.program_type || undefined,
+        ageMin: row.age_min ?? undefined,
+        ageMax: row.age_max ?? undefined,
+        registrationStatus: row.registration_status || undefined,
+        sessionStart: row.session_start || undefined,
+        sessionEnd: row.session_end || undefined,
+      },
+    };
+  });
+}
+
+/**
  * Get search facets (counts per entity type).
  */
 async function getSearchFacets(
@@ -1394,7 +1665,7 @@ async function getSearchFacets(
   const rows = (data as FacetRow[]) || [];
 
   return rows.map((row) => ({
-    type: row.entity_type as "event" | "venue" | "organizer" | "series" | "list" | "festival",
+    type: row.entity_type as "event" | "venue" | "organizer" | "series" | "list" | "festival" | "program",
     count: Number(row.count),
   }));
 }
@@ -1407,11 +1678,14 @@ async function getSpellingSuggestions(
   query: string,
   city?: string
 ): Promise<string[]> {
+  // Lower threshold for short queries — short misspellings need more tolerance
+  const minSimilarity = query.length < 8 ? 0.15 : 0.25;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (client.rpc as any)("get_spelling_suggestions", {
     p_query: query,
     p_limit: 3,
     p_city: city || null,
+    p_min_similarity: minSimilarity,
   });
 
   if (error) {
@@ -1449,7 +1723,7 @@ export async function instantSearch(
     portalId?: string;
     city?: string;
     limit?: number;
-    types?: ("event" | "venue" | "organizer" | "series" | "list" | "festival")[];
+    types?: ("event" | "venue" | "organizer" | "series" | "list" | "festival" | "program")[];
     includeSocialProof?: boolean;
     includeFacets?: boolean;
     includeDidYouMean?: boolean;

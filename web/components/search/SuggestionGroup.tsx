@@ -160,6 +160,7 @@ function getTypeLabel(type: SearchResult["type"]): string {
     neighborhood: "Neighborhoods",
     category: "Categories",
     festival: "Festivals",
+    program: "Programs",
   };
   return labels[type] || type;
 }
@@ -174,6 +175,7 @@ function getTypeColor(type: SearchResult["type"]): string {
     neighborhood: "text-[var(--soft)]",
     category: "text-[var(--muted)]",
     festival: "text-[var(--gold)]",
+    program: "text-[var(--neon-green)]",
   };
   return colors[type] || "text-[var(--muted)]";
 }

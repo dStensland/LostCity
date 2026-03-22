@@ -23,7 +23,7 @@ export interface QueryIntentResult {
   suggestions?: string[]; // Related search suggestions
 }
 
-export type SearchType = "event" | "venue" | "organizer" | "series" | "list" | "neighborhood" | "category" | "festival";
+export type SearchType = "event" | "venue" | "organizer" | "series" | "list" | "neighborhood" | "category" | "festival" | "program";
 
 export type SearchTypePriority = {
   [K in SearchType]?: number; // Higher numbers = higher priority
@@ -78,6 +78,12 @@ const CATEGORY_KEYWORDS: { pattern: RegExp; category: string }[] = [
   { pattern: /\b(fitness|yoga|workout|run|class)\b/i, category: "exercise" },
   { pattern: /\b(family|kids|children|all ages)\b/i, category: "family" },
   { pattern: /\b(free|no cover|donation)\b/i, category: "free" },
+  // Program-specific patterns (camp, classes, lessons, enrichment, leagues)
+  { pattern: /\b(camp|camps|summer camp|day camp|overnight camp)\b/i, category: "program" },
+  { pattern: /\b(class|classes|lessons?|enrichment|after school|afterschool)\b/i, category: "program" },
+  { pattern: /\b(swim|swimming|gymnastics|soccer|baseball|basketball|volleyball|tennis)\b/i, category: "program" },
+  { pattern: /\b(tutoring|stem|coding|robotics|art class|music lesson)\b/i, category: "program" },
+  { pattern: /\b(rec league|recreational league|youth league|youth sports)\b/i, category: "program" },
 ];
 
 export function extractCategorySignals(query: string): string[] {

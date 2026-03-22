@@ -64,7 +64,7 @@ const spellingSuggestionsInFlight = new Map<
 
 export interface SearchSuggestion {
   text: string;
-  type: "event" | "venue" | "neighborhood" | "organizer" | "category" | "tag" | "vibe" | "festival";
+  type: "event" | "venue" | "neighborhood" | "organizer" | "category" | "tag" | "vibe" | "festival" | "program";
   frequency: number;
   similarity?: number;
 }
@@ -145,7 +145,8 @@ function isHighValueSuggestionType(type: SearchSuggestion["type"]): boolean {
     type === "organizer" ||
     type === "festival" ||
     type === "vibe" ||
-    type === "neighborhood"
+    type === "neighborhood" ||
+    type === "program"
   );
 }
 
@@ -177,6 +178,8 @@ function getIntentAwareSuggestionTypePriority(
         return 280;
       case "festival":
         return 240;
+      case "program":
+        return 200;
       case "category":
         return 140;
       case "vibe":
@@ -188,12 +191,41 @@ function getIntentAwareSuggestionTypePriority(
     }
   }
 
+  // Program-intent queries — detected by the category "program" from CATEGORY_KEYWORDS
+  const isProgramIntent = intent.intent === "category" && intent.extractedValue === "program";
+  if (isProgramIntent) {
+    switch (type) {
+      case "program":
+        return 700;
+      case "event":
+        return 400;
+      case "venue":
+        return 300;
+      case "organizer":
+        return 250;
+      case "festival":
+        return 150;
+      case "neighborhood":
+        return 200;
+      case "category":
+        return 120;
+      case "vibe":
+        return 80;
+      case "tag":
+        return 60;
+      default:
+        return 100;
+    }
+  }
+
   if (isEventIntent) {
     switch (type) {
       case "event":
         return 620;
       case "festival":
         return 520;
+      case "program":
+        return 480;
       case "venue":
         return 360;
       case "organizer":
@@ -220,6 +252,8 @@ function getIntentAwareSuggestionTypePriority(
       return 400;
     case "festival":
       return 360;
+    case "program":
+      return 340;
     case "neighborhood":
       return 300;
     case "category":
@@ -616,12 +650,16 @@ export async function getTypoCorrectedSuggestions(
 
   const loadPromise = (async () => {
     const client = createServiceClient();
+    // Lower threshold for short queries — "concrts" (7 chars) needs more tolerance
+    // than a long phrase. Queries under 8 chars use 0.15; longer queries use 0.25.
+    const minSimilarity = trimmed.length < 8 ? 0.15 : 0.25;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (client.rpc as any)("get_spelling_suggestions", {
       p_query: trimmed,
       p_limit: limit,
       p_city: city || null,
+      p_min_similarity: minSimilarity,
     });
 
     if (error) {
@@ -676,6 +714,8 @@ export async function getGroupedSuggestions(
   categories: SearchSuggestion[];
   tags: SearchSuggestion[];
   vibes: SearchSuggestion[];
+  festivals: SearchSuggestion[];
+  programs: SearchSuggestion[];
 }> {
   // Get more suggestions and group them
   const allSuggestions = await getSearchSuggestions(prefix, 30, city);
@@ -690,6 +730,7 @@ export async function getGroupedSuggestions(
     tags: [] as SearchSuggestion[],
     vibes: [] as SearchSuggestion[],
     festivals: [] as SearchSuggestion[],
+    programs: [] as SearchSuggestion[],
   };
 
   const typeLimits: Record<SearchSuggestion["type"], number> = {
@@ -701,6 +742,7 @@ export async function getGroupedSuggestions(
     tag: limits.tag ?? defaultLimit,
     vibe: limits.vibe ?? defaultLimit,
     festival: limits.festival ?? defaultLimit,
+    program: limits.program ?? defaultLimit,
   };
 
   for (const suggestion of allSuggestions) {
@@ -714,6 +756,7 @@ export async function getGroupedSuggestions(
       tag: "tags",
       vibe: "vibes",
       festival: "festivals",
+      program: "programs",
     };
 
     const resultKey = typeToKeyMap[suggestion.type];
@@ -776,6 +819,8 @@ function mapSuggestionType(type: string): SearchSuggestion["type"] {
       return "vibe";
     case "festival":
       return "festival";
+    case "program":
+      return "program";
     default:
       return "event";
   }
@@ -802,6 +847,8 @@ export function getSuggestionIcon(type: SearchSuggestion["type"]): string {
       return "sparkles";
     case "festival":
       return "flag";
+    case "program":
+      return "backpack";
     default:
       return "search";
   }
@@ -828,6 +875,8 @@ export function getSuggestionLabel(type: SearchSuggestion["type"]): string {
       return "Vibe";
     case "festival":
       return "Festival";
+    case "program":
+      return "Program";
     default:
       return "Suggestion";
   }

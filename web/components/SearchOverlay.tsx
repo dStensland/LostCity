@@ -273,23 +273,21 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     }
   }, [query, activeQuickAction]);
 
-  // Handler for clicking on a result (add to recent searches and close)
-  const handleResultClick = useCallback(() => {
-    // Add to recent searches
-    if (query.trim()) {
-      addRecentSearch(query.trim());
-    }
-    onClose();
-  }, [query, onClose]);
-
   const router = useRouter();
 
+  // Unified navigate handler: records recent search, closes overlay, then navigates.
+  // Using router.push() after onClose() ensures the overlay state teardown happens
+  // before the new route mounts — avoiding React hook count mismatches that occur
+  // when Link onClick and navigation fire simultaneously.
   const navigateToHref = useCallback(
     (href: string) => {
+      if (query.trim()) {
+        addRecentSearch(query.trim());
+      }
       onClose();
       router.push(href);
     },
-    [onClose, router]
+    [query, onClose, router]
   );
 
   // Load quick action results (filter-only events list)
@@ -1090,7 +1088,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                           >
                             <SearchResultItem
                               result={result}
-                              onClick={handleResultClick}
+                              onNavigate={navigateToHref}
                               portalSlug={portal?.slug}
                             />
                           </div>
@@ -1120,7 +1118,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                           >
                             <SearchResultItem
                               result={result}
-                              onClick={handleResultClick}
+                              onNavigate={navigateToHref}
                               portalSlug={portal?.slug}
                             />
                           </div>
@@ -1150,7 +1148,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                           >
                             <SearchResultItem
                               result={result}
-                              onClick={handleResultClick}
+                              onNavigate={navigateToHref}
                               portalSlug={portal?.slug}
                             />
                           </div>
@@ -1180,7 +1178,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                           >
                             <SearchResultItem
                               result={result}
-                              onClick={handleResultClick}
+                              onNavigate={navigateToHref}
                               portalSlug={portal?.slug}
                             />
                           </div>
@@ -1210,7 +1208,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                           >
                             <SearchResultItem
                               result={result}
-                              onClick={handleResultClick}
+                              onNavigate={navigateToHref}
                               portalSlug={portal?.slug}
                             />
                           </div>
