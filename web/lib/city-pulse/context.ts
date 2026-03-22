@@ -70,12 +70,6 @@ const HOLIDAYS: HolidayConfig[] = [
     active: (_y, m, d) => (m === 2 && d >= 28) || (m === 3 && d <= 5),
   },
   {
-    slug: "womens-history-month",
-    title: "Women's History Month",
-    accent_color: "#ab47bc",
-    active: (_y, m, d) => (m === 2 && d >= 25) || m === 3,
-  },
-  {
     slug: "st-patricks-day",
     title: "St. Patrick's Day",
     accent_color: "#4caf50",

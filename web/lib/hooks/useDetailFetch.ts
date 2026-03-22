@@ -72,17 +72,20 @@ export function useDetailFetch<T>(
           if (cancelled) return;
 
           if (!res.ok) {
+            // Retryable server errors — try again
             if (
               (res.status === 503 || res.status === 429 || res.status >= 500) &&
               attempt < maxRetries
             ) {
               continue;
             }
-            throw new Error(
-              res.status === 404
-                ? `${entityLabel.charAt(0).toUpperCase() + entityLabel.slice(1)} not found`
-                : `Failed to load ${entityLabel} (${res.status})`
-            );
+            // Non-retryable errors (404, 400, etc.) — fail immediately
+            const msg = res.status === 404
+              ? `${entityLabel.charAt(0).toUpperCase() + entityLabel.slice(1)} not found`
+              : `Failed to load ${entityLabel} (${res.status})`;
+            setError(msg);
+            setStatus("error");
+            return;
           }
 
           const json = await res.json();

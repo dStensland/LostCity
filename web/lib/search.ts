@@ -792,7 +792,7 @@ export async function getFilteredEventsWithSearch(
 
   if (error) {
     logger.error("Failed to fetch filtered events", error, { filters, page, pageSize });
-    return { events: [], total: 0 };
+    throw new Error(`Event query failed: ${error.message}`);
   }
 
   let events = data as EventWithLocation[];
@@ -931,7 +931,7 @@ export async function getFilteredEventsWithCursor(
 
   if (error) {
     logger.error("Failed to fetch filtered events with cursor", error, { filters, cursor, pageSize });
-    return { events: [], nextCursor: null, hasMore: false };
+    throw new Error(`Event query failed: ${error.message}`);
   }
 
   let events = data as EventWithLocation[];

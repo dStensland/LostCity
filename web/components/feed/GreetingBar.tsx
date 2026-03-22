@@ -473,7 +473,7 @@ export default function GreetingBar({ header, context, portalSlug, quickLinks, d
       {/* ── Festival/holiday alert ─────────────────────────────── */}
       {hasFestival && !hasHoliday && (
         <Link
-          href={`/${portalSlug}?view=happening&series=${context.active_festivals[0].slug}`}
+          href={`/${portalSlug}?festival=${context.active_festivals[0].slug}`}
           className="w-full flex items-center rounded-xl px-4 py-2.5 border text-left transition-colors hover:bg-[var(--dusk)] mt-2"
           style={{
             borderColor: `color-mix(in srgb, ${accentColor} 30%, var(--twilight))`,

@@ -43,8 +43,11 @@ export async function getSpotBySlug(slug: string): Promise<Spot | null> {
     .eq("slug", slug)
     .maybeSingle();
 
-  if (error || !data) {
+  if (error) {
     console.error("Error fetching spot:", error);
+    return null;
+  }
+  if (!data) {
     return null;
   }
 

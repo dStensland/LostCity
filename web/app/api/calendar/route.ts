@@ -5,7 +5,6 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-lim
 import { logger } from "@/lib/logger";
 import { parseIntParam } from "@/lib/api-utils";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { fetchSocialProofCounts } from "@/lib/social-proof";
 import {
   applyFederatedPortalScopeToQuery,
   excludeSensitiveEvents,
@@ -85,8 +84,8 @@ export async function GET(request: NextRequest) {
   const sourceAccess = portalId ? await getPortalSourceAccess(portalId) : null;
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
-  // Type for calendar events
-  type CalendarEvent = {
+  // Type for calendar events (flat — no FK joins for query performance)
+  type CalendarEventRow = {
     id: number;
     title: string;
     start_date: string;
@@ -97,16 +96,23 @@ export async function GET(request: NextRequest) {
     price_min: number | null;
     price_max: number | null;
     tags?: string[] | null;
-    genres?: string[] | null;
     image_url: string | null;
     blurhash: string | null;
     is_tentpole: boolean;
     featured_blurb: string | null;
-    venue: { id: number; name: string; neighborhood: string | null; city: string | null; lat: number | null; lng: number | null } | null;
-    series: { genres: string[] | null } | null;
+    venue_id: number | null;
   };
 
-  // Helper to build base query with filters
+  type VenueRow = {
+    id: number;
+    name: string;
+    neighborhood: string | null;
+    city: string | null;
+    lat: number | null;
+    lng: number | null;
+  };
+
+  // Helper to build base query with filters (no FK joins — they cause timeouts on large portals)
   const buildQuery = () => {
     let query = supabase
       .from("events")
@@ -125,17 +131,7 @@ export async function GET(request: NextRequest) {
         blurhash,
         is_tentpole,
         featured_blurb,
-        venue:venues!events_venue_id_fkey (
-          id,
-          name,
-          neighborhood,
-          city,
-          lat,
-          lng
-        ),
-        series:series!events_series_id_fkey (
-          genres
-        )
+        venue_id
       `)
       .gte("start_date", startDate)
       .lte("start_date", endDate)
@@ -148,10 +144,7 @@ export async function GET(request: NextRequest) {
       query = query.in("category_id", categories);
     }
 
-    // Apply neighborhood filter via venue
-    if (neighborhoods && neighborhoods.length > 0) {
-      query = query.in("venue.neighborhood", neighborhoods);
-    }
+    // Neighborhood filter applied post-query via venue lookup (no FK join for performance)
 
     // Apply genre filter (series-level genres stored on events via tags or series join)
     if (genres && genres.length > 0) {
@@ -211,7 +204,7 @@ export async function GET(request: NextRequest) {
       async (): Promise<CalendarPayload> => {
         // Fetch all events using pagination (Supabase has 1000 row limit)
         const PAGE_SIZE = 1000;
-        const allEvents: CalendarEvent[] = [];
+        const allEvents: CalendarEventRow[] = [];
         const seenIds = new Set<number>();
         let page = 0;
         let hasMore = true;
@@ -227,7 +220,7 @@ export async function GET(request: NextRequest) {
             throw new Error(pageError.message);
           }
 
-          const pageEvents = (data || []) as CalendarEvent[];
+          const pageEvents = (data || []) as CalendarEventRow[];
 
           // Deduplicate as we go
           for (const event of pageEvents) {
@@ -245,39 +238,49 @@ export async function GET(request: NextRequest) {
           if (page > 10) break;
         }
 
-        const events = filterByPortalCity(allEvents, portalCity, {
+        // Batch-fetch venue data for all unique venue IDs
+        const venueIds = [...new Set(allEvents.map(e => e.venue_id).filter((id): id is number => id !== null))];
+        const venueMap = new Map<number, VenueRow>();
+        if (venueIds.length > 0) {
+          // Fetch in chunks of 500 to stay under Supabase URL length limits
+          for (let i = 0; i < venueIds.length; i += 500) {
+            const chunk = venueIds.slice(i, i + 500);
+            const { data: venues } = await supabase
+              .from("venues")
+              .select("id, name, neighborhood, city, lat, lng")
+              .in("id", chunk);
+            if (venues) {
+              for (const v of venues as VenueRow[]) {
+                venueMap.set(v.id, v);
+              }
+            }
+          }
+        }
+
+        // Merge venue data onto events, dropping venue_id from response
+        type CalendarEvent = Omit<CalendarEventRow, "venue_id"> & {
+          venue: { id: number; name: string; neighborhood: string | null; city: string | null; lat: number | null; lng: number | null } | null;
+        };
+        const eventsWithVenues: CalendarEvent[] = allEvents.map(({ venue_id, ...event }) => {
+          const venue = venue_id ? venueMap.get(venue_id) ?? null : null;
+          return { ...event, venue };
+        });
+
+        // Apply portal city filter using venue city data
+        const cityFiltered = filterByPortalCity(eventsWithVenues, portalCity, {
           allowMissingCity: true,
         });
 
-        // Flatten genres from series into top-level event field
-        const eventsWithGenres = events.map((event) => {
-          const { series, ...rest } = event;
-          return {
-            ...rest,
-            genres: series?.genres || null,
-          };
-        });
-
-        // Fetch social proof counts in a single batch RPC call
-        const eventIds = eventsWithGenres.map((e) => e.id);
-        const socialProofCounts = await fetchSocialProofCounts(eventIds);
-
-        // Merge social proof onto events
-        const eventsWithSocialProof = eventsWithGenres.map((event) => {
-          const counts = socialProofCounts.get(event.id);
-          return {
-            ...event,
-            going_count: counts?.going || 0,
-            interested_count: counts?.interested || 0,
-          };
-        });
+        // Apply neighborhood filter post-query
+        const events = (neighborhoods && neighborhoods.length > 0)
+          ? cityFiltered.filter(e => e.venue?.neighborhood && neighborhoods.includes(e.venue.neighborhood))
+          : cityFiltered;
 
         // Group events by date
-        type EventWithSocialProof = (typeof eventsWithSocialProof)[number];
-        const eventsByDate: Record<string, EventWithSocialProof[]> = {};
+        const eventsByDate: Record<string, CalendarEvent[]> = {};
         const categoryCounts: Record<string, number> = {};
 
-        eventsWithSocialProof.forEach((event) => {
+        events.forEach((event) => {
           const dateKey = event.start_date;
           if (!eventsByDate[dateKey]) {
             eventsByDate[dateKey] = [];
@@ -291,7 +294,7 @@ export async function GET(request: NextRequest) {
         });
 
         // Calculate summary stats
-        const totalEvents = eventsWithSocialProof.length;
+        const totalEvents = events.length;
         const daysWithEvents = Object.keys(eventsByDate).length;
 
         return {

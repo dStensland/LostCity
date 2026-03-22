@@ -224,24 +224,6 @@ export function buildPortalHolidaySections(
     );
   }
 
-  if ((currentMonth === 2 && currentDay >= 25) || currentMonth === 3) {
-    holidaySections.push(
-      createHolidaySection(currentYear, {
-        idPrefix: "womens-history-month",
-        title: "Women's History Month",
-        slug: "womens-history-month",
-        description: "Celebrating the women shaping Atlanta",
-        tag: "womens-history-month",
-        dateFilter: "next_30_days",
-        displayOrder: -11,
-        style: {
-          accent_color: "#ab47bc",
-          icon: "purple-heart",
-        },
-      }),
-    );
-  }
-
   if (currentMonth === 3 && currentDay >= 10 && currentDay <= 17) {
     holidaySections.push(
       createHolidaySection(currentYear, {

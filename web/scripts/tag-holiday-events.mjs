@@ -10,20 +10,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 const HOLIDAYS = [
   {
-    tag: "womens-history-month",
-    label: "Women's History Month",
-    eventIds: [
-      // High-confidence WHM
-      17677, 51910, 15934, 26066, 53188, 12495, 7262, 46200,
-      // Ladies Night (March WHM tie-in)
-      15503, 15534, 15532, 53469, 15207, 56478, 17535,
-      // Circle of Sisterhood
-      46203, 46204, 59471,
-      // Menopause the Musical 2
-      11131, 11132, 11133, 11134, 11135, 11137, 58231,
-    ],
-  },
-  {
     tag: "st-patricks-day",
     label: "St. Patrick's Day",
     eventIds: [
