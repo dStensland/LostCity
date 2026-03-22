@@ -14,7 +14,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
 from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
@@ -24,6 +24,10 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://atlanta.shambhala.org"
 CALENDAR_URL = f"{BASE_URL}/monthly-calendar/"
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+}
 
 VENUE_DATA = {
     "name": "Shambhala Meditation Center of Atlanta",
@@ -171,18 +175,14 @@ def determine_category_and_series(title: str, description: str) -> tuple[str, Op
     return "wellness", None, tags, None
 
 
-def extract_events_from_calendar_plugin(page) -> list[dict]:
+def extract_events_from_soup(soup: BeautifulSoup) -> list[dict]:
     """
-    Extract events from Shambhala's WordPress calendar plugin.
+    Extract events from Shambhala's WordPress calendar plugin using BeautifulSoup.
     The site uses a custom Shambhala programs plugin with calendar shortcode.
     """
     events = []
 
-    # Wait for calendar to load
-    page.wait_for_timeout(2000)
-
     # Try multiple selectors that might contain events
-    # Shambhala centers often use custom plugins, so we need to be flexible
     selectors = [
         ".program-item",
         ".calendar-event",
@@ -195,26 +195,26 @@ def extract_events_from_calendar_plugin(page) -> list[dict]:
     ]
 
     for selector in selectors:
-        elements = page.query_selector_all(selector)
+        elements = soup.select(selector)
         if elements:
             logger.info(f"Found {len(elements)} events using selector: {selector}")
 
             for elem in elements:
                 try:
-                    text = elem.inner_text().strip()
+                    text = elem.get_text(separator=" ", strip=True)
                     if len(text) < 10:
                         continue
 
                     # Extract title
-                    title_elem = elem.query_selector("h2, h3, h4, .program-title, .event-title, strong")
-                    title = title_elem.inner_text().strip() if title_elem else text.split("\n")[0]
+                    title_elem = elem.select_one("h2, h3, h4, .program-title, .event-title, strong")
+                    title = title_elem.get_text(strip=True) if title_elem else text.split("\n")[0]
 
                     # Get full text for date/time parsing
                     full_text = text
 
                     # Try to extract link
-                    link_elem = elem.query_selector("a")
-                    event_url = link_elem.get_attribute("href") if link_elem else CALENDAR_URL
+                    link_elem = elem.select_one("a")
+                    event_url = link_elem.get("href") if link_elem else CALENDAR_URL
                     if event_url and not event_url.startswith("http"):
                         event_url = BASE_URL + event_url
 
@@ -234,11 +234,12 @@ def extract_events_from_calendar_plugin(page) -> list[dict]:
     # If no events found with specific selectors, try parsing the page content more broadly
     if not events:
         logger.info("No events found with specific selectors, trying broad text parsing")
-        html = page.content()
-        soup = BeautifulSoup(html, "lxml")
 
         # Look for calendar table or event list structures
-        calendar_containers = soup.find_all(["table", "div"], class_=lambda x: x and ("calendar" in x.lower() or "program" in x.lower()))
+        calendar_containers = soup.find_all(
+            ["table", "div"],
+            class_=lambda x: x and ("calendar" in x.lower() or "program" in x.lower())
+        )
 
         for container in calendar_containers:
             text_content = container.get_text(separator="\n", strip=True)
@@ -267,136 +268,125 @@ def extract_events_from_calendar_plugin(page) -> list[dict]:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Shambhala Meditation Center of Atlanta events using Playwright."""
+    """Crawl Shambhala Meditation Center of Atlanta events."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        venue_id = get_or_create_venue(VENUE_DATA)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+        logger.info(f"Fetching Shambhala Atlanta calendar: {CALENDAR_URL}")
+        try:
+            response = requests.get(CALENDAR_URL, headers=HEADERS, timeout=30)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, "html.parser")
+        except Exception as e:
+            logger.error(f"Failed to fetch Shambhala calendar: {e}")
+            return 0, 0, 0
 
-            logger.info(f"Fetching Shambhala Atlanta calendar: {CALENDAR_URL}")
-            page.goto(CALENDAR_URL, wait_until="domcontentloaded", timeout=30000)
+        # Extract events
+        event_items = extract_events_from_soup(soup)
+        logger.info(f"Extracted {len(event_items)} potential events")
 
-            # Scroll to load dynamic content
-            for _ in range(3):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+        seen_events = set()
 
-            # Extract events
-            event_items = extract_events_from_calendar_plugin(page)
-            logger.info(f"Extracted {len(event_items)} potential events")
+        for event_data in event_items:
+            try:
+                title = event_data["title"]
 
-            seen_events = set()
-
-            for event_data in event_items:
-                try:
-                    title = event_data["title"]
-
-                    # Skip if title is too short or looks like a header
-                    if len(title) < 5 or title.lower() in ["date", "time", "event", "program", "calendar"]:
-                        continue
-
-                    full_text = event_data.get("full_text", title)
-
-                    # Parse date
-                    start_date = event_data.get("parsed_date") or parse_date(full_text)
-                    if not start_date:
-                        logger.debug(f"No date found for: {title[:50]}")
-                        continue
-
-                    # Skip past events
-                    event_date = datetime.strptime(start_date, "%Y-%m-%d")
-                    if event_date.date() < datetime.now().date():
-                        continue
-
-                    # Parse time
-                    start_time = parse_time(full_text)
-
-                    # Build description from full text (excluding title and date/time info)
-                    description_lines = []
-                    for line in full_text.split("\n"):
-                        if line.strip() == title:
-                            continue
-                        if parse_date(line) or parse_time(line):
-                            continue
-                        if len(line) > 20:
-                            description_lines.append(line.strip())
-                            if len(description_lines) >= 2:
-                                break
-
-                    description = " ".join(description_lines) if description_lines else f"Event at Shambhala Meditation Center of Atlanta"
-
-                    # Dedupe by title + date
-                    event_key = f"{title}|{start_date}"
-                    if event_key in seen_events:
-                        continue
-                    seen_events.add(event_key)
-
-                    events_found += 1
-
-                    # Generate content hash
-                    content_hash = generate_content_hash(
-                        title, "Shambhala Meditation Center of Atlanta", start_date
-                    )
-
-                    # Check for existing
-
-                    # Determine category and tags
-                    category, subcategory, tags, series_hint = determine_category_and_series(title, description)
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title[:200],
-                        "description": description[:1000] if description else None,
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": category,
-                        "subcategory": subcategory,
-                        "tags": tags,
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": "Free - donations welcome",
-                        "is_free": True,
-                        "source_url": event_data.get("url", CALENDAR_URL),
-                        "ticket_url": event_data.get("url", CALENDAR_URL),
-                        "image_url": None,
-                        "raw_text": full_text[:500],
-                        "extraction_confidence": 0.75,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        continue
-
-                    try:
-                        insert_event(event_record, series_hint=series_hint)
-                        events_new += 1
-                        logger.info(f"Added: {title[:50]}... on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                except Exception as e:
-                    logger.error(f"Error processing event: {e}")
+                # Skip if title is too short or looks like a header
+                if len(title) < 5 or title.lower() in ["date", "time", "event", "program", "calendar"]:
                     continue
 
-            browser.close()
+                full_text = event_data.get("full_text", title)
+
+                # Parse date
+                start_date = event_data.get("parsed_date") or parse_date(full_text)
+                if not start_date:
+                    logger.debug(f"No date found for: {title[:50]}")
+                    continue
+
+                # Skip past events
+                event_date = datetime.strptime(start_date, "%Y-%m-%d")
+                if event_date.date() < datetime.now().date():
+                    continue
+
+                # Parse time
+                start_time = parse_time(full_text)
+
+                # Build description from full text (excluding title and date/time info)
+                description_lines = []
+                for line in full_text.split("\n"):
+                    if line.strip() == title:
+                        continue
+                    if parse_date(line) or parse_time(line):
+                        continue
+                    if len(line) > 20:
+                        description_lines.append(line.strip())
+                        if len(description_lines) >= 2:
+                            break
+
+                description = " ".join(description_lines) if description_lines else f"Event at Shambhala Meditation Center of Atlanta"
+
+                # Dedupe by title + date
+                event_key = f"{title}|{start_date}"
+                if event_key in seen_events:
+                    continue
+                seen_events.add(event_key)
+
+                events_found += 1
+
+                # Generate content hash
+                content_hash = generate_content_hash(
+                    title, "Shambhala Meditation Center of Atlanta", start_date
+                )
+
+                # Determine category and tags
+                category, subcategory, tags, series_hint = determine_category_and_series(title, description)
+
+                event_record = {
+                    "source_id": source_id,
+                    "venue_id": venue_id,
+                    "title": title[:200],
+                    "description": description[:1000] if description else None,
+                    "start_date": start_date,
+                    "start_time": start_time,
+                    "end_date": None,
+                    "end_time": None,
+                    "is_all_day": False,
+                    "category": category,
+                    "subcategory": subcategory,
+                    "tags": tags,
+                    "price_min": None,
+                    "price_max": None,
+                    "price_note": "Free - donations welcome",
+                    "is_free": True,
+                    "source_url": event_data.get("url", CALENDAR_URL),
+                    "ticket_url": event_data.get("url", CALENDAR_URL),
+                    "image_url": None,
+                    "raw_text": full_text[:500],
+                    "extraction_confidence": 0.75,
+                    "content_hash": content_hash,
+                }
+
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    continue
+
+                try:
+                    insert_event(event_record, series_hint=series_hint)
+                    events_new += 1
+                    logger.info(f"Added: {title[:50]}... on {start_date}")
+                except Exception as e:
+                    logger.error(f"Failed to insert: {title}: {e}")
+
+            except Exception as e:
+                logger.error(f"Error processing event: {e}")
+                continue
 
         logger.info(
             f"Shambhala Atlanta crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

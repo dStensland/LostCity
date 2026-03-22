@@ -13,11 +13,12 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import parse_price, extract_images_from_page
+from utils import parse_price
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,10 @@ BASE_URL = "https://www.thebakeryatlanta.com"
 EVENTS_URL = "https://www.thebakeryatlanta.com/events"
 # Ticket Tailor public listing
 TT_URL = "https://www.tickettailor.com/events/thebakeryatlanta"
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+}
 
 VENUE_DATA = {
     "name": "The Bakery",
@@ -123,6 +128,17 @@ def determine_category(title: str) -> tuple[str, Optional[str], list[str]]:
     return "music", "live", tags + ["live-music"]
 
 
+def _extract_images_from_soup(soup: BeautifulSoup) -> dict[str, str]:
+    """Extract alt-text-to-URL mapping for event images."""
+    image_map = {}
+    for img in soup.find_all("img", alt=True):
+        alt = img.get("alt", "").strip()
+        src = img.get("src") or img.get("data-src")
+        if alt and src and len(alt) > 3:
+            image_map[alt] = src
+    return image_map
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl The Bakery events via Ticket Tailor."""
     source_id = source["id"]
@@ -133,56 +149,34 @@ def crawl(source: dict) -> tuple[int, int, int]:
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        # Try Ticket Tailor first, fall back to main site
+        html = None
+        loaded_url = None
+        for url in [TT_URL, EVENTS_URL]:
+            try:
+                logger.info(f"Trying: {url}")
+                response = requests.get(url, headers=HEADERS, timeout=30)
+                response.raise_for_status()
+                html = response.text
+                loaded_url = url
+                break
+            except Exception as e:
+                logger.debug(f"Failed to load {url}: {e}")
+                continue
 
-            # Try Ticket Tailor first, fall back to main site
-            loaded = False
-            for url in [TT_URL, EVENTS_URL]:
-                try:
-                    logger.info(f"Trying: {url}")
-                    page.goto(url, wait_until="domcontentloaded", timeout=20000)
-                    page.wait_for_timeout(3000)
-                    loaded = True
-                    break
-                except Exception as e:
-                    logger.debug(f"Failed to load {url}: {e}")
-                    continue
-
-            if not loaded:
-                browser.close()
-                logger.warning("Could not load any Bakery events page")
-                return 0, 0, 0
-
-            # Scroll to load all events
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            # Extract image map for event images
-            image_map = extract_images_from_page(page)
-
-            body_text = page.inner_text("body")
-            html = page.content()
-
-            browser.close()
-
-        # Parse the page
-        from bs4 import BeautifulSoup
+        if not html:
+            logger.warning("Could not load any Bakery events page")
+            return 0, 0, 0
 
         soup = BeautifulSoup(html, "html.parser")
 
-        # Strategy 1: Ticket Tailor event cards
-        # TT uses .event-listing or similar structures
-        event_cards = soup.select("[class*='event']")
+        # Extract image map for event images
+        image_map = _extract_images_from_soup(soup)
 
-        # Strategy 2: Parse from text if no structured cards
-        # Ticket Tailor pages have event blocks with title, date, price
+        # Get body text for line-by-line parsing
+        body_text = soup.get_text(separator="\n")
+
+        # Parse the page
         lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
         # Look for event patterns in the text

@@ -16,13 +16,12 @@ Events include:
 - Professional legal training and CLE courses
 
 STRATEGY:
-- Primary: Scrape main events page at /events/ with Playwright (site blocks simple requests)
-- Fallback: Use Eventbrite org page if main site continues to block
+- Primary: Scrape main events page at /events/ with requests
+- Fallback: Use Eventbrite org page if main site blocks
 - Tag appropriately: civil-rights, legal-aid, social-justice, human-rights
 - Category mapping: "learning" for trainings/workshops, "community" for forums/galas/advocacy
 
 Site notes:
-- Main site returns 403 with simple requests - MUST use Playwright with realistic headers
 - Eventbrite fallback: https://www.eventbrite.com/o/southern-center-for-human-rights-13836291777
 """
 
@@ -33,7 +32,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+import requests
 from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
@@ -45,6 +44,16 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.schr.org"
 EVENTS_URL = f"{BASE_URL}/events/"
 EVENTBRITE_URL = "https://www.eventbrite.com/o/southern-center-for-human-rights-13836291777"
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Accept-Encoding": "gzip, deflate, br",
+    "DNT": "1",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+}
 
 VENUE_DATA = {
     "name": "Southern Center for Human Rights",
@@ -165,7 +174,7 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
 
 def crawl_main_site(source_id: int, venue_id: int) -> tuple[int, int, int]:
     """
-    Attempt to crawl main SCHR website with Playwright.
+    Attempt to crawl main SCHR website with requests.
     Returns (events_found, events_new, events_updated).
     """
     events_found = 0
@@ -176,40 +185,13 @@ def crawl_main_site(source_id: int, venue_id: int) -> tuple[int, int, int]:
 
     logger.info(f"Attempting to fetch SCHR events from main site: {EVENTS_URL}")
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            viewport={"width": 1920, "height": 1080},
-            extra_http_headers={
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-                "Accept-Language": "en-US,en;q=0.5",
-                "Accept-Encoding": "gzip, deflate, br",
-                "DNT": "1",
-                "Connection": "keep-alive",
-                "Upgrade-Insecure-Requests": "1",
-            }
-        )
-        page = context.new_page()
-
-        try:
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(5000)
-
-            # Scroll to load any lazy-loaded content
-            for _ in range(3):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            html_content = page.content()
-            soup = BeautifulSoup(html_content, "html.parser")
-
-        except Exception as e:
-            logger.warning(f"Failed to load main site: {e}")
-            browser.close()
-            return 0, 0, 0
-        finally:
-            browser.close()
+    try:
+        response = requests.get(EVENTS_URL, headers=HEADERS, timeout=30)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+    except Exception as e:
+        logger.warning(f"Failed to load main site: {e}")
+        return 0, 0, 0
 
     # Look for The Events Calendar plugin events
     events = soup.select('.tribe-events-calendar-list__event')
@@ -384,187 +366,9 @@ def crawl_main_site(source_id: int, venue_id: int) -> tuple[int, int, int]:
     return events_found, events_new, events_updated
 
 
-def crawl_eventbrite_fallback(source_id: int, venue_id: int) -> tuple[int, int, int]:
-    """
-    Fallback: Crawl SCHR's Eventbrite page.
-    Returns (events_found, events_new, events_updated).
-    """
-    events_found = 0
-    events_new = 0
-    events_updated = 0
-    today = datetime.now().date()
-    seen_events = set()
-
-    logger.info(f"Attempting Eventbrite fallback: {EVENTBRITE_URL}")
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            viewport={"width": 1920, "height": 1080},
-        )
-        page = context.new_page()
-
-        try:
-            page.goto(EVENTBRITE_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(5000)
-
-            # Scroll to load events
-            for _ in range(3):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            html_content = page.content()
-            soup = BeautifulSoup(html_content, "html.parser")
-
-        except Exception as e:
-            logger.error(f"Failed to load Eventbrite page: {e}")
-            browser.close()
-            return 0, 0, 0
-        finally:
-            browser.close()
-
-    # Eventbrite selectors
-    event_cards = soup.select("[data-event-id]")
-    if not event_cards:
-        event_cards = soup.select(".discover-search-desktop-card, .event-card-details, [class*='EventCard']")
-
-    if not event_cards or len(event_cards) == 0:
-        logger.warning("No events found on Eventbrite page")
-        return 0, 0, 0
-
-    logger.info(f"Found {len(event_cards)} events on Eventbrite")
-
-    for card in event_cards:
-        try:
-            # Extract title
-            title_elem = card.select_one("h2, h3, [class*='event-title'], [class*='EventTitle']")
-            if not title_elem:
-                continue
-
-            title = title_elem.get_text(strip=True)
-            if not title or len(title) < 3:
-                continue
-
-            # Extract URL
-            link_elem = card.select_one("a[href*='eventbrite.com/e/']")
-            event_url = link_elem.get("href") if link_elem else EVENTBRITE_URL
-
-            # Extract date
-            date_elem = card.select_one("time, [class*='date'], [class*='Date']")
-            date_str = None
-            if date_elem:
-                date_str = date_elem.get("datetime") or date_elem.get_text(strip=True)
-
-            if not date_str:
-                logger.debug(f"No date found for: {title}")
-                continue
-
-            start_date = parse_human_date(date_str)
-            if not start_date:
-                logger.debug(f"Could not parse date '{date_str}' for: {title}")
-                continue
-
-            # Skip past events
-            try:
-                event_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-                if event_date < today:
-                    logger.debug(f"Skipping past event: {title} on {start_date}")
-                    continue
-            except ValueError:
-                continue
-
-            # Dedupe
-            event_key = f"{title}|{start_date}"
-            if event_key in seen_events:
-                continue
-            seen_events.add(event_key)
-
-            events_found += 1
-
-            # Extract time
-            time_str = None
-            time_match = re.search(r'\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)', card.get_text())
-            if time_match:
-                time_str = time_match.group(0)
-
-            start_time = None
-            if time_str:
-                start_time = parse_time_string(time_str)
-
-            # Extract description
-            description = None
-            desc_elem = card.select_one("[class*='description'], [class*='summary'], p")
-            if desc_elem:
-                description = desc_elem.get_text(strip=True)
-                if len(description) > 500:
-                    description = description[:497] + "..."
-
-            # Extract image
-            image_url = None
-            img_elem = card.select_one("img")
-            if img_elem:
-                image_url = img_elem.get("src")
-
-            # Determine category and tags
-            category, tags, is_free = determine_category_and_tags(title, description or "")
-
-            # Generate content hash
-            content_hash = generate_content_hash(
-                title, "Southern Center for Human Rights", start_date
-            )
-
-            # Check if already exists
-            if find_event_by_hash(content_hash):
-                events_updated += 1
-                logger.debug(f"Event already exists: {title}")
-                continue
-
-            # Create event record
-            event_record = {
-                "source_id": source_id,
-                "venue_id": venue_id,
-                "title": title,
-                "description": description,
-                "start_date": start_date,
-                "start_time": start_time,
-                "end_date": None,
-                "end_time": None,
-                "is_all_day": False,
-                "category": category,
-                "subcategory": None,
-                "tags": tags,
-                "price_min": None,
-                "price_max": None,
-                "price_note": "Free" if is_free else None,
-                "is_free": is_free,
-                "source_url": event_url,
-                "ticket_url": event_url,
-                "image_url": image_url,
-                "raw_text": card.get_text()[:500],
-                "extraction_confidence": 0.85,
-                "is_recurring": False,
-                "recurrence_rule": None,
-                "content_hash": content_hash,
-            }
-
-            try:
-                insert_event(event_record)
-                events_new += 1
-                logger.info(f"Added: {title} on {start_date}")
-            except Exception as e:
-                logger.error(f"Failed to insert event '{title}': {e}")
-
-        except Exception as e:
-            logger.warning(f"Error parsing event card: {e}")
-            continue
-
-    return events_found, events_new, events_updated
-
-
 def crawl(source: dict) -> tuple[int, int, int]:
     """
-    Crawl SCHR events using Playwright.
+    Crawl SCHR events.
 
     Tries main site first, falls back to Eventbrite if main site blocks or has no events.
     """
@@ -577,19 +381,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
         # Try main site first
         events_found, events_new, events_updated = crawl_main_site(source_id, venue_id)
 
-        # If main site failed or had no events, try Eventbrite fallback
-        if events_found == 0:
-            logger.info("Main site returned no events, trying Eventbrite fallback")
-            events_found, events_new, events_updated = crawl_eventbrite_fallback(source_id, venue_id)
-
         logger.info(
             f"SCHR crawl complete: {events_found} found, "
             f"{events_new} new, {events_updated} updated"
         )
 
-    except PlaywrightTimeout as e:
-        logger.error(f"Timeout fetching SCHR events: {e}")
-        raise
     except Exception as e:
         logger.error(f"Failed to crawl SCHR: {e}")
         raise

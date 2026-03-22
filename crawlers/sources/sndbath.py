@@ -15,17 +15,21 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+import requests
 from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, parse_price
+from utils import parse_price
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.sndbath.com"
 EVENTS_URL = f"{BASE_URL}/events"
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+}
 
 # Default venue for SNDBATH organization
 # Note: Wellness/meditation/spiritual are expressed via event genres, not venue vibes
@@ -159,6 +163,20 @@ def get_event_genres(title: str, description: str) -> list[str]:
         genres.append("yoga")
 
     return list(set(genres))
+
+
+def extract_images_from_soup(soup: BeautifulSoup) -> dict[str, str]:
+    """
+    Extract title-to-image mapping from parsed HTML.
+    Returns dict mapping alt text to image URLs.
+    """
+    image_map = {}
+    for img in soup.find_all("img", alt=True):
+        alt = img.get("alt", "").strip()
+        src = img.get("src") or img.get("data-src")
+        if alt and src and len(alt) > 3:
+            image_map[alt] = src
+    return image_map
 
 
 def parse_event(article, source_id: int, image_map: dict) -> Optional[dict]:
@@ -295,70 +313,55 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        logger.info(f"Fetching SNDBATH events page: {EVENTS_URL}")
+        try:
+            response = requests.get(EVENTS_URL, headers=HEADERS, timeout=30)
+            response.raise_for_status()
+            html = response.text
+        except Exception as e:
+            logger.error(f"Failed to fetch SNDBATH events: {e}")
+            return 0, 0, 0
 
-            logger.info(f"Fetching SNDBATH events page: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(5000)
+        soup = BeautifulSoup(html, "html.parser")
 
-            # Scroll to load all events
-            for _ in range(3):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+        # Extract images from parsed HTML (alt text to URL mapping)
+        image_map = extract_images_from_soup(soup)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+        # Find all event articles
+        event_articles = soup.find_all("article", class_=lambda x: x and "eventlist-event" in x)
+        logger.info(f"Found {len(event_articles)} event articles on page")
 
-            # Get HTML and parse with BeautifulSoup
-            html = page.content()
-            soup = BeautifulSoup(html, "html.parser")
+        for article in event_articles:
+            event_record = parse_event(article, source_id, image_map)
 
-            # Find all event articles
-            event_articles = soup.find_all("article", class_=lambda x: x and "eventlist-event" in x)
-            logger.info(f"Found {len(event_articles)} event articles on page")
+            if not event_record:
+                continue
 
-            for article in event_articles:
-                event_record = parse_event(article, source_id, image_map)
+            events_found += 1
 
-                if not event_record:
-                    continue
+            # Check for existing event
+            existing = find_event_by_hash(event_record["content_hash"])
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
-                events_found += 1
-
-                # Check for existing event
-                existing = find_event_by_hash(event_record["content_hash"])
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                    continue
-
-                try:
-                    # Extract genres to pass separately
-                    genres = event_record.pop("_genres", None)
-                    insert_event(event_record, genres=genres)
-                    events_new += 1
-                    logger.info(
-                        f"Added: {event_record['title']} on {event_record['start_date']} "
-                        f"at {event_record.get('start_time', 'TBD')}"
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to insert event '{event_record['title']}': {e}")
-
-            browser.close()
+            try:
+                # Extract genres to pass separately
+                genres = event_record.pop("_genres", None)
+                insert_event(event_record, genres=genres)
+                events_new += 1
+                logger.info(
+                    f"Added: {event_record['title']} on {event_record['start_date']} "
+                    f"at {event_record.get('start_time', 'TBD')}"
+                )
+            except Exception as e:
+                logger.error(f"Failed to insert event '{event_record['title']}': {e}")
 
         logger.info(
             f"SNDBATH crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
         )
 
-    except PlaywrightTimeout as e:
-        logger.error(f"Timeout fetching SNDBATH events: {e}")
-        raise
     except Exception as e:
         logger.error(f"Failed to crawl SNDBATH: {e}")
         raise

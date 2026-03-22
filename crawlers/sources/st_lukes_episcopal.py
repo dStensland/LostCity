@@ -12,17 +12,21 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
 from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_event_links, find_event_url, normalize_time_format
+from utils import normalize_time_format
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://stlukesatlanta.org"
 MUSIC_URL = f"{BASE_URL}/music"
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+}
 
 VENUE_DATA = {
     "name": "St. Luke's Episcopal Church",
@@ -39,6 +43,13 @@ VENUE_DATA = {
     "website": BASE_URL,
     "vibes": ["faith-christian", "episcopal", "live-music", "historic"],
 }
+
+# Navigation/UI words to skip when scanning for event titles
+_NAV_SKIP_WORDS = [
+    "upcoming", "calendar", "events", "navigation",
+    "menu", "search", "subscribe", "donate",
+    "home", "about", "contact", "music program",
+]
 
 
 def parse_date(date_text: str) -> Optional[str]:
@@ -153,279 +164,298 @@ def determine_category(title: str, description: str = "") -> str:
     return "community"
 
 
+def _extract_event_links_from_soup(soup: BeautifulSoup) -> dict[str, str]:
+    """
+    Extract title-to-URL mapping from parsed HTML.
+    Returns dict mapping lowercase titles to full URLs.
+    """
+    skip_words = [
+        "view more", "learn more", "read more", "see all", "load more",
+        "submit", "upcoming", "donate", "subscribe", "newsletter",
+        "sign up", "log in", "register", "contact", "about", "home",
+        "menu", "navigation", "search", "filter", "sort", "reset",
+        "privacy", "terms", "cookie", "accept", "decline",
+    ]
+    event_links = {}
+    for anchor in soup.find_all("a", href=True):
+        href = anchor.get("href", "")
+        text = anchor.get_text(strip=True)
+        if not text or len(text) < 3:
+            continue
+        if any(w in text.lower() for w in skip_words):
+            continue
+        full_url = href if href.startswith("http") else (BASE_URL + href if href.startswith("/") else None)
+        if full_url:
+            event_links[text.lower()] = full_url
+    return event_links
+
+
+def _find_event_url(title: str, event_links: dict[str, str]) -> str:
+    """Find the best matching URL for an event title."""
+    title_lower = title.lower()
+    if title_lower in event_links:
+        return event_links[title_lower]
+    # Partial match
+    for link_title, url in event_links.items():
+        if title_lower in link_title or link_title in title_lower:
+            return url
+    return MUSIC_URL
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl St. Luke's Episcopal music events using Playwright."""
+    """Crawl St. Luke's Episcopal music events."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        venue_id = get_or_create_venue(VENUE_DATA)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+        logger.info(f"Fetching St. Luke's Episcopal: {MUSIC_URL}")
+        try:
+            response = requests.get(MUSIC_URL, headers=HEADERS, timeout=30)
+            response.raise_for_status()
+            html = response.text
+        except Exception as e:
+            logger.error(f"Failed to fetch St. Luke's Episcopal page: {e}")
+            return 0, 0, 0
 
-            logger.info(f"Fetching St. Luke's Episcopal: {MUSIC_URL}")
+        soup = BeautifulSoup(html, "html.parser")
 
-            page.goto(MUSIC_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+        # Build event links map from HTML
+        event_links = _extract_event_links_from_soup(soup)
 
-            # Scroll to load all content
-            for _ in range(3):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+        # Try to find structured concert listings
+        event_containers = soup.find_all(
+            ["article", "div", "section"],
+            class_=lambda x: x and any(w in x.lower() for w in ["event", "concert", "recital", "performance", "music"])
+        )
 
-            # Extract event links
-            event_links = extract_event_links(page, BASE_URL)
+        # If no structured containers, parse from text
+        if not event_containers:
+            body_text = soup.get_text(separator="\n")
+            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-            # Get page HTML and parse with BeautifulSoup
-            html = page.content()
-            soup = BeautifulSoup(html, "html.parser")
+            i = 0
+            while i < len(lines):
+                line = lines[i]
 
-            # Try to find structured concert listings
-            event_containers = soup.find_all(
-                ["article", "div", "section"],
-                class_=lambda x: x and any(w in x.lower() for w in ["event", "concert", "recital", "performance", "music"])
-            )
+                # Look for date patterns
+                date_match = re.search(
+                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+(\w+)\s+(\d{1,2})",
+                    line,
+                    re.IGNORECASE
+                )
 
-            # If no structured containers, parse from text
-            if not event_containers:
-                body_text = page.inner_text("body")
-                lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+                if date_match:
+                    start_date = parse_date(line)
 
-                i = 0
-                while i < len(lines):
-                    line = lines[i]
+                    if start_date:
+                        # Look for title and time nearby
+                        title = None
+                        start_time = None
 
-                    # Look for date patterns
-                    date_match = re.search(
-                        r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+(\w+)\s+(\d{1,2})",
-                        line,
-                        re.IGNORECASE
-                    )
+                        # Check surrounding lines
+                        for offset in [-3, -2, -1, 1, 2, 3, 4]:
+                            idx = i + offset
+                            if 0 <= idx < len(lines):
+                                check_line = lines[idx]
 
-                    if date_match:
-                        start_date = parse_date(line)
+                                # Skip navigation/UI elements
+                                if any(w in check_line.lower() for w in _NAV_SKIP_WORDS):
+                                    continue
 
-                        if start_date:
-                            # Look for title and time nearby
-                            title = None
-                            start_time = None
-
-                            # Check surrounding lines
-                            for offset in [-3, -2, -1, 1, 2, 3, 4]:
-                                idx = i + offset
-                                if 0 <= idx < len(lines):
-                                    check_line = lines[idx]
-
-                                    # Skip navigation/UI elements
-                                    skip_words = [
-                                        "upcoming", "calendar", "events", "navigation",
-                                        "menu", "search", "subscribe", "donate",
-                                        "home", "about", "contact", "music program"
-                                    ]
-                                    if any(w in check_line.lower() for w in skip_words):
+                                # Check for time
+                                if not start_time:
+                                    time_result = parse_time(check_line)
+                                    if time_result:
+                                        start_time = time_result
                                         continue
 
-                                    # Check for time
-                                    if not start_time:
-                                        time_result = parse_time(check_line)
-                                        if time_result:
-                                            start_time = time_result
-                                            continue
+                                # Check for title
+                                if not title and len(check_line) > 5:
+                                    # Skip date patterns
+                                    if not re.search(r"(?:January|February|March|April|May|June|July|August|September|October|November|December)", check_line, re.IGNORECASE):
+                                        # Skip price/register patterns
+                                        if not re.search(r"(free|tickets|\$|register|admission)", check_line, re.IGNORECASE):
+                                            title = check_line
+                                            break
 
-                                    # Check for title
-                                    if not title and len(check_line) > 5:
-                                        # Skip date patterns
-                                        if not re.search(r"(?:January|February|March|April|May|June|July|August|September|October|November|December)", check_line, re.IGNORECASE):
-                                            # Skip price/register patterns
-                                            if not re.search(r"(free|tickets|\$|register|admission)", check_line, re.IGNORECASE):
-                                                title = check_line
-                                                break
+                        if title:
+                            # Determine category
+                            category = determine_category(title)
 
-                            if title:
-                                # Determine category
-                                category = determine_category(title)
+                            # Skip religious services (not concerts)
+                            if category == "religious":
+                                i += 1
+                                continue
 
-                                # Skip religious services (not concerts)
-                                if category == "religious":
-                                    i += 1
-                                    continue
+                            events_found += 1
 
-                                events_found += 1
+                            content_hash = generate_content_hash(
+                                title, "St. Luke's Episcopal Church", start_date
+                            )
 
-                                content_hash = generate_content_hash(
-                                    title, "St. Luke's Episcopal Church", start_date
-                                )
+                            event_url = _find_event_url(title, event_links)
 
+                            # Check if it's a lunchtime recital (typically free)
+                            is_free = "lunchtime" in title.lower() or (start_time and start_time.startswith("12:"))
 
-                                event_url = find_event_url(title, event_links, MUSIC_URL)
+                            event_record = {
+                                "source_id": source_id,
+                                "venue_id": venue_id,
+                                "title": title,
+                                "description": f"Event at St. Luke's Episcopal Church, a historic downtown Atlanta church known for its music program.",
+                                "start_date": start_date,
+                                "start_time": start_time,
+                                "end_date": None,
+                                "end_time": None,
+                                "is_all_day": False,
+                                "category": category,
+                                "subcategory": "concert" if category == "music" else None,
+                                "tags": ["episcopal", "downtown", "historic", "live-music"],
+                                "price_min": 0 if is_free else None,
+                                "price_max": 0 if is_free else None,
+                                "price_note": "Free admission" if is_free else None,
+                                "is_free": is_free,
+                                "source_url": event_url,
+                                "ticket_url": event_url if event_url != MUSIC_URL else None,
+                                "image_url": None,
+                                "raw_text": f"{title} - {start_date}",
+                                "extraction_confidence": 0.80,
+                                "is_recurring": False,
+                                "recurrence_rule": None,
+                                "content_hash": content_hash,
+                            }
 
-                                # Check if it's a lunchtime recital (typically free)
-                                is_free = "lunchtime" in title.lower() or (start_time and start_time.startswith("12:"))
+                            existing = find_event_by_hash(content_hash)
+                            if existing:
+                                smart_update_existing_event(existing, event_record)
+                                events_updated += 1
+                                i += 1
+                                continue
 
-                                event_record = {
-                                    "source_id": source_id,
-                                    "venue_id": venue_id,
-                                    "title": title,
-                                    "description": f"Event at St. Luke's Episcopal Church, a historic downtown Atlanta church known for its music program.",
-                                    "start_date": start_date,
-                                    "start_time": start_time,
-                                    "end_date": None,
-                                    "end_time": None,
-                                    "is_all_day": False,
-                                    "category": category,
-                                    "subcategory": "concert" if category == "music" else None,
-                                    "tags": ["episcopal", "downtown", "historic", "live-music"],
-                                    "price_min": 0 if is_free else None,
-                                    "price_max": 0 if is_free else None,
-                                    "price_note": "Free admission" if is_free else None,
-                                    "is_free": is_free,
-                                    "source_url": event_url,
-                                    "ticket_url": event_url if event_url != MUSIC_URL else None,
-                                    "image_url": None,
-                                    "raw_text": f"{title} - {start_date}",
-                                    "extraction_confidence": 0.80,
-                                    "is_recurring": False,
-                                    "recurrence_rule": None,
-                                    "content_hash": content_hash,
-                                }
+                            try:
+                                insert_event(event_record)
+                                events_new += 1
+                                logger.info(f"Added: {title} on {start_date}")
+                            except Exception as e:
+                                logger.error(f"Failed to insert: {title}: {e}")
 
-                                existing = find_event_by_hash(content_hash)
-                                if existing:
-                                    smart_update_existing_event(existing, event_record)
-                                    events_updated += 1
-                                    i += 1
-                                    continue
+                i += 1
 
-                                try:
-                                    insert_event(event_record)
-                                    events_new += 1
-                                    logger.info(f"Added: {title} on {start_date}")
-                                except Exception as e:
-                                    logger.error(f"Failed to insert: {title}: {e}")
-
-                    i += 1
-
-            else:
-                # Process structured event containers
-                for container in event_containers:
-                    try:
-                        # Extract title
-                        title_elem = (
-                            container.find("h2") or
-                            container.find("h3") or
-                            container.find("h4") or
-                            container.find(class_=lambda x: x and "title" in x.lower())
-                        )
-                        if not title_elem:
-                            continue
-
-                        title = title_elem.get_text(strip=True)
-
-                        # Skip if this is just a heading/label
-                        if len(title) < 5 or title.lower() in ["music", "concerts", "upcoming events", "schedule"]:
-                            continue
-
-                        # Extract date
-                        date_elem = container.find(class_=lambda x: x and "date" in x.lower())
-                        if not date_elem:
-                            # Try to find date in text content
-                            date_elem = container
-
-                        date_text = date_elem.get_text()
-                        start_date = parse_date(date_text)
-
-                        if not start_date:
-                            continue
-
-                        # Extract time
-                        time_text = date_text
-                        start_time = parse_time(time_text)
-
-                        # Extract description
-                        desc_elem = container.find(class_=lambda x: x and ("description" in x.lower() or "excerpt" in x.lower()))
-                        description = desc_elem.get_text(strip=True) if desc_elem else f"Event at St. Luke's Episcopal Church, a historic downtown Atlanta church known for its music program."
-
-                        # Determine category
-                        category = determine_category(title, description)
-
-                        # Skip religious services
-                        if category == "religious":
-                            continue
-
-                        # Extract link
-                        link_elem = container.find("a", href=True)
-                        event_url = link_elem["href"] if link_elem else MUSIC_URL
-                        if event_url and not event_url.startswith("http"):
-                            event_url = BASE_URL + event_url if event_url.startswith("/") else BASE_URL + "/" + event_url
-
-                        # Extract image
-                        img_elem = container.find("img", src=True)
-                        image_url = img_elem["src"] if img_elem else None
-                        if image_url and not image_url.startswith("http"):
-                            image_url = BASE_URL + image_url if image_url.startswith("/") else None
-
-                        # Check if it's a lunchtime recital (typically free)
-                        is_free = "lunchtime" in title.lower() or "lunchtime" in description.lower() or (start_time and start_time.startswith("12:"))
-
-                        events_found += 1
-
-                        content_hash = generate_content_hash(
-                            title, "St. Luke's Episcopal Church", start_date
-                        )
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
-
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": title,
-                            "description": description,
-                            "start_date": start_date,
-                            "start_time": start_time,
-                            "end_date": None,
-                            "end_time": None,
-                            "is_all_day": False,
-                            "category": category,
-                            "subcategory": "concert" if category == "music" else None,
-                            "tags": ["episcopal", "downtown", "historic", "live-music"],
-                            "price_min": 0 if is_free else None,
-                            "price_max": 0 if is_free else None,
-                            "price_note": "Free admission" if is_free else None,
-                            "is_free": is_free,
-                            "source_url": event_url,
-                            "ticket_url": event_url if event_url != MUSIC_URL else None,
-                            "image_url": image_url,
-                            "raw_text": f"{title} - {start_date}",
-                            "extraction_confidence": 0.85,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
-
-                        try:
-                            insert_event(event_record)
-                            events_new += 1
-                            logger.info(f"Added: {title} on {start_date}")
-                        except Exception as e:
-                            logger.error(f"Failed to insert: {title}: {e}")
-
-                    except Exception as e:
-                        logger.error(f"Failed to parse event container: {e}")
+        else:
+            # Process structured event containers
+            for container in event_containers:
+                try:
+                    # Extract title
+                    title_elem = (
+                        container.find("h2") or
+                        container.find("h3") or
+                        container.find("h4") or
+                        container.find(class_=lambda x: x and "title" in x.lower())
+                    )
+                    if not title_elem:
                         continue
 
-            browser.close()
+                    title = title_elem.get_text(strip=True)
+
+                    # Skip if this is just a heading/label
+                    if len(title) < 5 or title.lower() in ["music", "concerts", "upcoming events", "schedule"]:
+                        continue
+
+                    # Extract date
+                    date_elem = container.find(class_=lambda x: x and "date" in x.lower())
+                    if not date_elem:
+                        # Try to find date in text content
+                        date_elem = container
+
+                    date_text = date_elem.get_text()
+                    start_date = parse_date(date_text)
+
+                    if not start_date:
+                        continue
+
+                    # Extract time
+                    time_text = date_text
+                    start_time = parse_time(time_text)
+
+                    # Extract description
+                    desc_elem = container.find(class_=lambda x: x and ("description" in x.lower() or "excerpt" in x.lower()))
+                    description = desc_elem.get_text(strip=True) if desc_elem else f"Event at St. Luke's Episcopal Church, a historic downtown Atlanta church known for its music program."
+
+                    # Determine category
+                    category = determine_category(title, description)
+
+                    # Skip religious services
+                    if category == "religious":
+                        continue
+
+                    # Extract link
+                    link_elem = container.find("a", href=True)
+                    event_url = link_elem["href"] if link_elem else MUSIC_URL
+                    if event_url and not event_url.startswith("http"):
+                        event_url = BASE_URL + event_url if event_url.startswith("/") else BASE_URL + "/" + event_url
+
+                    # Extract image
+                    img_elem = container.find("img", src=True)
+                    image_url = img_elem["src"] if img_elem else None
+                    if image_url and not image_url.startswith("http"):
+                        image_url = BASE_URL + image_url if image_url.startswith("/") else None
+
+                    # Check if it's a lunchtime recital (typically free)
+                    is_free = "lunchtime" in title.lower() or "lunchtime" in description.lower() or (start_time and start_time.startswith("12:"))
+
+                    events_found += 1
+
+                    content_hash = generate_content_hash(
+                        title, "St. Luke's Episcopal Church", start_date
+                    )
+
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": title,
+                        "description": description,
+                        "start_date": start_date,
+                        "start_time": start_time,
+                        "end_date": None,
+                        "end_time": None,
+                        "is_all_day": False,
+                        "category": category,
+                        "subcategory": "concert" if category == "music" else None,
+                        "tags": ["episcopal", "downtown", "historic", "live-music"],
+                        "price_min": 0 if is_free else None,
+                        "price_max": 0 if is_free else None,
+                        "price_note": "Free admission" if is_free else None,
+                        "is_free": is_free,
+                        "source_url": event_url,
+                        "ticket_url": event_url if event_url != MUSIC_URL else None,
+                        "image_url": image_url,
+                        "raw_text": f"{title} - {start_date}",
+                        "extraction_confidence": 0.85,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        continue
+
+                    try:
+                        insert_event(event_record)
+                        events_new += 1
+                        logger.info(f"Added: {title} on {start_date}")
+                    except Exception as e:
+                        logger.error(f"Failed to insert: {title}: {e}")
+
+                except Exception as e:
+                    logger.error(f"Failed to parse event container: {e}")
+                    continue
 
         logger.info(
             f"St. Luke's Episcopal crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

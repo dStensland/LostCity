@@ -1,8 +1,6 @@
 """
 Crawler for Station Inn (stationinn.com).
 Nashville's premier bluegrass venue since 1974.
-
-Site may use JavaScript rendering - using Playwright for safety.
 """
 
 from __future__ import annotations
@@ -12,17 +10,21 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
 from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_event_links, find_event_url, enrich_event_record
+from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://stationinn.com"
 EVENTS_URL = f"{BASE_URL}/events/"
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+}
 
 VENUE_DATA = {
     "name": "Station Inn",
@@ -99,188 +101,204 @@ def parse_time(time_text: str) -> Optional[str]:
     return None
 
 
+def _build_event_links(soup: BeautifulSoup) -> dict[str, str]:
+    """Extract title-to-URL mapping from parsed HTML for event detail linking."""
+    skip_words = [
+        "view more", "learn more", "read more", "see all", "load more",
+        "submit", "upcoming", "donate", "subscribe", "newsletter",
+        "sign up", "log in", "register", "contact", "about", "home",
+        "menu", "navigation", "search", "filter", "sort", "reset",
+    ]
+    event_links = {}
+    for anchor in soup.find_all("a", href=True):
+        href = anchor.get("href", "")
+        text = anchor.get_text(strip=True)
+        if not text or len(text) < 3:
+            continue
+        if any(w in text.lower() for w in skip_words):
+            continue
+        full_url = href if href.startswith("http") else (BASE_URL + href if href.startswith("/") else None)
+        if full_url:
+            event_links[text.lower()] = full_url
+    return event_links
+
+
+def _find_event_url(title: str, event_links: dict[str, str]) -> str:
+    """Find the best matching URL for an event title."""
+    title_lower = title.lower()
+    if title_lower in event_links:
+        return event_links[title_lower]
+    for link_title, url in event_links.items():
+        if title_lower in link_title or link_title in title_lower:
+            return url
+    return EVENTS_URL
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Station Inn events using Playwright."""
+    """Crawl Station Inn events."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        venue_id = get_or_create_venue(VENUE_DATA)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+        logger.info(f"Fetching Station Inn: {EVENTS_URL}")
+        try:
+            response = requests.get(EVENTS_URL, headers=HEADERS, timeout=30)
+            response.raise_for_status()
+            html = response.text
+        except Exception as e:
+            logger.error(f"Failed to fetch Station Inn events: {e}")
+            return 0, 0, 0
 
-            logger.info(f"Fetching Station Inn: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+        soup = BeautifulSoup(html, "html.parser")
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+        # Build event links map
+        event_links = _build_event_links(soup)
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+        # Find all event articles (The Events Calendar plugin)
+        event_containers = soup.find_all("article", class_=lambda x: x and "tribe-events" in x)
+        logger.info(f"Found {len(event_containers)} potential event containers")
 
-            # Get page HTML and parse with BeautifulSoup
-            html = page.content()
-            soup = BeautifulSoup(html, "html.parser")
-
-            # Find all event articles (The Events Calendar plugin)
-            event_containers = soup.find_all("article", class_=lambda x: x and "tribe-events" in x)
-            logger.info(f"Found {len(event_containers)} potential event containers")
-
-            for container in event_containers:
-                try:
-                    # Extract title from tribe-events-calendar-list__event-title
-                    title_elem = container.find(class_="tribe-events-calendar-list__event-title")
-                    if not title_elem:
-                        continue
-
-                    # Get the link text
-                    link = title_elem.find("a")
-                    if link:
-                        title = link.get_text(strip=True)
-                    else:
-                        title = title_elem.get_text(strip=True)
-
-                    if not title or len(title) < 3:
-                        continue
-
-                    # Extract date and time from tribe-event-date-start
-                    date_elem = container.find("span", class_="tribe-event-date-start")
-                    if not date_elem:
-                        # Try to get from time element with datetime attribute
-                        time_elem = container.find("time")
-                        if time_elem and time_elem.get("datetime"):
-                            datetime_str = time_elem.get("datetime")
-                            # Format: 2026-02-01
-                            start_date = datetime_str
-                            # Get time from text
-                            date_text = time_elem.get_text(strip=True)
-                        else:
-                            continue
-                    else:
-                        date_text = date_elem.get_text(strip=True)
-
-                    # Parse date and time from text like "February 1 @ 3:00 pm"
-                    if "@" in date_text:
-                        date_part, time_part = date_text.split("@", 1)
-                        date_part = date_part.strip()
-                        time_part = time_part.strip()
-                    else:
-                        date_part = date_text
-                        time_part = None
-
-                    start_date = parse_date(date_part)
-                    if not start_date:
-                        logger.debug(f"Could not parse date for: {title} ({date_part})")
-                        continue
-
-                    # Extract time
-                    start_time = None
-                    if time_part:
-                        start_time = parse_time(time_part)
-
-                    # Extract description from tribe-events-calendar-list__event-description
-                    desc_elem = container.find(class_="tribe-events-calendar-list__event-description")
-                    description = desc_elem.get_text(strip=True) if desc_elem else "Live bluegrass music at Nashville's legendary Station Inn"
-
-                    # Extract event URL from title link
-                    ticket_url = EVENTS_URL
-                    if link and link.get("href"):
-                        ticket_url = link["href"]
-                        if not ticket_url.startswith("http"):
-                            ticket_url = BASE_URL + ticket_url
-
-                    # Extract image URL
-                    image_url = None
-                    img_elem = container.find("img", class_="tribe-events-calendar-list__event-featured-image")
-                    if img_elem:
-                        image_url = img_elem.get("src") or img_elem.get("data-src")
-                        # Handle lazy loading
-                        if not image_url or "data:image" in image_url:
-                            image_url = img_elem.get("data-src") or img_elem.get("data-lazy-src")
-
-                    events_found += 1
-
-                    content_hash = generate_content_hash(title, "Station Inn", start_date)
-
-
-                    # Build tags
-                    tags = ["station-inn", "the-gulch", "bluegrass", "live-music", "legendary-venue"]
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": description,
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "music",
-                        "subcategory": "bluegrass",
-                        "tags": tags,
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": None,
-                        "source_url": event_url,
-                        "ticket_url": ticket_url,
-                        "image_url": image_url,
-                        "raw_text": f"{title} - {start_date} - {description}",
-                        "extraction_confidence": 0.85,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    # Enrich from detail page
-                    enrich_event_record(event_record, source_name="The Station Inn")
-
-                    # Determine is_free if still unknown after enrichment
-                    if event_record.get("is_free") is None:
-                        desc_lower = (event_record.get("description") or "").lower()
-                        title_lower = event_record.get("title", "").lower()
-                        combined = f"{title_lower} {desc_lower}"
-                        if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
-                            event_record["is_free"] = True
-                            event_record["price_min"] = event_record.get("price_min") or 0
-                            event_record["price_max"] = event_record.get("price_max") or 0
-                        else:
-                            event_record["is_free"] = False
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        continue
-
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info(f"Added: {title} on {start_date}")
-
-                except Exception as e:
-                    logger.error(f"Failed to parse event: {e}")
+        for container in event_containers:
+            try:
+                # Extract title from tribe-events-calendar-list__event-title
+                title_elem = container.find(class_="tribe-events-calendar-list__event-title")
+                if not title_elem:
                     continue
 
-            browser.close()
+                # Get the link text
+                link = title_elem.find("a")
+                if link:
+                    title = link.get_text(strip=True)
+                else:
+                    title = title_elem.get_text(strip=True)
+
+                if not title or len(title) < 3:
+                    continue
+
+                # Extract date and time from tribe-event-date-start
+                date_elem = container.find("span", class_="tribe-event-date-start")
+                if not date_elem:
+                    # Try to get from time element with datetime attribute
+                    time_elem = container.find("time")
+                    if time_elem and time_elem.get("datetime"):
+                        datetime_str = time_elem.get("datetime")
+                        # Format: 2026-02-01
+                        start_date = datetime_str
+                        # Get time from text
+                        date_text = time_elem.get_text(strip=True)
+                    else:
+                        continue
+                else:
+                    date_text = date_elem.get_text(strip=True)
+
+                # Parse date and time from text like "February 1 @ 3:00 pm"
+                if "@" in date_text:
+                    date_part, time_part = date_text.split("@", 1)
+                    date_part = date_part.strip()
+                    time_part = time_part.strip()
+                else:
+                    date_part = date_text
+                    time_part = None
+
+                start_date = parse_date(date_part)
+                if not start_date:
+                    logger.debug(f"Could not parse date for: {title} ({date_part})")
+                    continue
+
+                # Extract time
+                start_time = None
+                if time_part:
+                    start_time = parse_time(time_part)
+
+                # Extract description from tribe-events-calendar-list__event-description
+                desc_elem = container.find(class_="tribe-events-calendar-list__event-description")
+                description = desc_elem.get_text(strip=True) if desc_elem else "Live bluegrass music at Nashville's legendary Station Inn"
+
+                # Extract event URL from title link
+                ticket_url = EVENTS_URL
+                if link and link.get("href"):
+                    ticket_url = link["href"]
+                    if not ticket_url.startswith("http"):
+                        ticket_url = BASE_URL + ticket_url
+
+                # Extract image URL
+                image_url = None
+                img_elem = container.find("img", class_="tribe-events-calendar-list__event-featured-image")
+                if img_elem:
+                    image_url = img_elem.get("src") or img_elem.get("data-src")
+                    # Handle lazy loading
+                    if not image_url or "data:image" in image_url:
+                        image_url = img_elem.get("data-src") or img_elem.get("data-lazy-src")
+
+                events_found += 1
+
+                content_hash = generate_content_hash(title, "Station Inn", start_date)
+
+                # Build tags
+                tags = ["station-inn", "the-gulch", "bluegrass", "live-music", "legendary-venue"]
+
+                # Get specific event URL
+                event_url = _find_event_url(title, event_links)
+
+                event_record = {
+                    "source_id": source_id,
+                    "venue_id": venue_id,
+                    "title": title,
+                    "description": description,
+                    "start_date": start_date,
+                    "start_time": start_time,
+                    "end_date": None,
+                    "end_time": None,
+                    "is_all_day": False,
+                    "category": "music",
+                    "subcategory": "bluegrass",
+                    "tags": tags,
+                    "price_min": None,
+                    "price_max": None,
+                    "price_note": None,
+                    "is_free": None,
+                    "source_url": event_url,
+                    "ticket_url": ticket_url,
+                    "image_url": image_url,
+                    "raw_text": f"{title} - {start_date} - {description}",
+                    "extraction_confidence": 0.85,
+                    "is_recurring": False,
+                    "recurrence_rule": None,
+                    "content_hash": content_hash,
+                }
+
+                # Enrich from detail page
+                enrich_event_record(event_record, source_name="The Station Inn")
+
+                # Determine is_free if still unknown after enrichment
+                if event_record.get("is_free") is None:
+                    desc_lower = (event_record.get("description") or "").lower()
+                    title_lower = event_record.get("title", "").lower()
+                    combined = f"{title_lower} {desc_lower}"
+                    if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
+                        event_record["is_free"] = True
+                        event_record["price_min"] = event_record.get("price_min") or 0
+                        event_record["price_max"] = event_record.get("price_max") or 0
+                    else:
+                        event_record["is_free"] = False
+
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    continue
+
+                insert_event(event_record)
+                events_new += 1
+                logger.info(f"Added: {title} on {start_date}")
+
+            except Exception as e:
+                logger.error(f"Failed to parse event: {e}")
+                continue
 
         logger.info(
             f"Station Inn crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
