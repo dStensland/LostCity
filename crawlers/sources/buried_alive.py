@@ -10,16 +10,21 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
+from utils import find_event_url
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://buriedalivefilmfest.com"
 EVENTS_URL = BASE_URL
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+}
 
 VENUE_DATA = {
     "name": "Buried Alive Film Festival",
@@ -51,96 +56,99 @@ def parse_dates(text: str) -> tuple[Optional[str], Optional[str]]:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Buried Alive Film Festival."""
+    """Crawl Buried Alive Film Festival using requests + BeautifulSoup."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
+        logger.info(f"Fetching Buried Alive: {BASE_URL}")
+        response = requests.get(BASE_URL, headers=HEADERS, timeout=30)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Extract event links
+        event_links: dict[str, str] = {}
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            text = a.get_text(strip=True)
+            if text and len(text) > 3:
+                if not href.startswith("http"):
+                    href = BASE_URL + href if href.startswith("/") else href
+                if text.lower() not in event_links:
+                    event_links[text.lower()] = href
+
+        # Extract images
+        image_map: dict[str, str] = {}
+        for img in soup.find_all("img", src=True):
+            alt = img.get("alt", "").strip()
+            src = img["src"]
+            if alt and src and not src.endswith(".svg"):
+                if not src.startswith("http"):
+                    src = BASE_URL + src if src.startswith("/") else src
+                image_map[alt] = src
+
+        venue_id = get_or_create_venue(VENUE_DATA)
+
+        body_text = soup.get_text(separator="\n")
+
+        # Look for festival dates in format "November 5-8, 2026"
+        start_date, end_date = parse_dates(body_text)
+
+        if start_date:
+            events_found += 1
+
+            title = "Buried Alive Film Festival 2026"
+            content_hash = generate_content_hash(
+                title, "Buried Alive Film Festival", start_date
             )
-            page = context.new_page()
 
-            logger.info(f"Fetching Buried Alive: {BASE_URL}")
-            page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                events_updated += 1
+            else:
+                event_url = find_event_url(title, event_links, EVENTS_URL)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+                event_record = {
+                    "source_id": source_id,
+                    "venue_id": venue_id,
+                    "title": title,
+                    "description": "Underground filmmaking and independent horror film festival. Features screenings, awards, and filmmaker events.",
+                    "start_date": start_date,
+                    "start_time": None,
+                    "end_date": end_date,
+                    "end_time": None,
+                    "is_all_day": False,
+                    "category": "film",
+                    "subcategory": "festival",
+                    "tags": [
+                        "film",
+                        "festival",
+                        "horror",
+                        "independent",
+                        "buried-alive",
+                    ],
+                    "price_min": None,
+                    "price_max": None,
+                    "price_note": None,
+                    "is_free": False,
+                    "source_url": event_url,
+                    "ticket_url": event_url if event_url != EVENTS_URL else None,
+                    "image_url": image_map.get(title),
+                    "raw_text": None,
+                    "extraction_confidence": 0.95,
+                    "is_recurring": False,
+                    "recurrence_rule": None,
+                    "content_hash": content_hash,
+                }
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
-
-            venue_id = get_or_create_venue(VENUE_DATA)
-
-            body_text = page.inner_text("body")
-
-            # Look for festival dates in format "November 5-8, 2026"
-            start_date, end_date = parse_dates(body_text)
-
-            if start_date:
-                events_found += 1
-
-                title = "Buried Alive Film Festival 2026"
-                content_hash = generate_content_hash(
-                    title, "Buried Alive Film Festival", start_date
-                )
-
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    events_updated += 1
-                else:
-                    # Get specific event URL
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Underground filmmaking and independent horror film festival. Features screenings, awards, and filmmaker events.",
-                        "start_date": start_date,
-                        "start_time": None,
-                        "end_date": end_date,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "film",
-                        "subcategory": "festival",
-                        "tags": [
-                            "film",
-                            "festival",
-                            "horror",
-                            "independent",
-                            "buried-alive",
-                        ],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": event_url,
-                        "ticket_url": event_url if event_url != EVENTS_URL else None,
-                        "image_url": image_map.get(title),
-                        "raw_text": None,
-                        "extraction_confidence": 0.95,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date} - {end_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-            browser.close()
+                try:
+                    insert_event(event_record)
+                    events_new += 1
+                    logger.info(f"Added: {title} on {start_date} - {end_date}")
+                except Exception as e:
+                    logger.error(f"Failed to insert: {title}: {e}")
 
         logger.info(
             f"Buried Alive crawl complete: {events_found} found, {events_new} new"

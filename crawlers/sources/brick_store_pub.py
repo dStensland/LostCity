@@ -1,8 +1,8 @@
 """
-Crawler for Brick Store Pub.
+Crawler for Brick Store Pub (brickstorepub.com).
 One of America's best beer bars with special events, beer celebrations, and Oktoberfest.
 
-Located in Downtown Decatur. Site uses Cloudflare - must use Playwright.
+Located in Downtown Decatur.
 """
 
 from __future__ import annotations
@@ -12,16 +12,21 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
+from utils import find_event_url
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.brickstorepub.com"
 EVENTS_URL = f"{BASE_URL}/events"
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+}
 
 VENUE_DATA = {
     "name": "Brick Store Pub",
@@ -96,183 +101,177 @@ def parse_date(date_text: str) -> Optional[str]:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Brick Store Pub events using Playwright."""
+    """Crawl Brick Store Pub events using requests + BeautifulSoup."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        venue_id = get_or_create_venue(VENUE_DATA)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+        logger.info(f"Fetching Brick Store Pub: {EVENTS_URL}")
+        response = requests.get(EVENTS_URL, headers=HEADERS, timeout=30)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
 
-            logger.info(f"Fetching Brick Store Pub: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="networkidle", timeout=60000)
-            page.wait_for_timeout(3000)
+        # Extract event links
+        event_links: dict[str, str] = {}
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            text = a.get_text(strip=True)
+            if text and len(text) > 3:
+                if not href.startswith("http"):
+                    href = BASE_URL + href if href.startswith("/") else href
+                if text.lower() not in event_links:
+                    event_links[text.lower()] = href
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+        # Extract images
+        image_map: dict[str, str] = {}
+        for img in soup.find_all("img", src=True):
+            alt = img.get("alt", "").strip()
+            src = img["src"]
+            if alt and src and not src.endswith(".svg"):
+                if not src.startswith("http"):
+                    src = BASE_URL + src if src.startswith("/") else src
+                image_map[alt] = src
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+        # Get page text and parse line by line
+        body_text = soup.get_text(separator="\n")
+        lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+        # Parse events - look for date patterns and event titles
+        i = 0
+        while i < len(lines):
+            line = lines[i]
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            # Skip very short lines
+            if len(line) < 5:
+                i += 1
+                continue
 
-            # Parse events - look for date patterns and event titles
-            i = 0
-            while i < len(lines):
-                line = lines[i]
+            # Try to parse date from current line
+            start_date = parse_date(line)
 
-                # Skip very short lines
-                if len(line) < 5:
+            if start_date:
+                # Found a date, now look for title and time nearby
+                title = None
+                start_time = None
+                description = ""
+
+                # Look in surrounding lines for title and time
+                for offset in range(-2, 6):
+                    idx = i + offset
+                    if 0 <= idx < len(lines):
+                        check_line = lines[idx]
+
+                        # Skip the date line itself
+                        if idx == i:
+                            continue
+
+                        # Look for time
+                        if not start_time:
+                            time_result = parse_time(check_line)
+                            if time_result:
+                                start_time = time_result
+
+                        # Look for title - should be a substantial line
+                        if not title and len(check_line) > 10:
+                            # Skip common non-title patterns
+                            if re.match(r"^\d{1,2}[:/]", check_line):
+                                continue
+                            if parse_date(check_line):
+                                continue
+                            if re.match(r"(tickets|register|more info|view details|learn more)", check_line.lower()):
+                                continue
+                            # This looks like a title
+                            title = check_line
+
+                        # Collect description from nearby lines
+                        if offset > 1 and len(check_line) > 20:
+                            description += " " + check_line
+
+                if not title:
                     i += 1
                     continue
 
-                # Try to parse date from current line
-                start_date = parse_date(line)
-
-                if start_date:
-                    # Found a date, now look for title and time nearby
-                    title = None
-                    start_time = None
-                    description = ""
-
-                    # Look in surrounding lines for title and time
-                    for offset in range(-2, 6):
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-
-                            # Skip the date line itself
-                            if idx == i:
-                                continue
-
-                            # Look for time
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-
-                            # Look for title - should be a substantial line
-                            if not title and len(check_line) > 10:
-                                # Skip common non-title patterns
-                                if re.match(r"^\d{1,2}[:/]", check_line):
-                                    continue
-                                if parse_date(check_line):
-                                    continue
-                                if re.match(r"(tickets|register|more info|view details|learn more)", check_line.lower()):
-                                    continue
-                                # This looks like a title
-                                title = check_line
-
-                            # Collect description from nearby lines
-                            if offset > 1 and len(check_line) > 20:
-                                description += " " + check_line
-
-                    if not title:
+                # Skip events in the past
+                try:
+                    event_dt = datetime.strptime(start_date, "%Y-%m-%d")
+                    if event_dt.date() < datetime.now().date():
                         i += 1
                         continue
+                except ValueError:
+                    i += 1
+                    continue
 
-                    # Skip events in the past
-                    try:
-                        event_dt = datetime.strptime(start_date, "%Y-%m-%d")
-                        if event_dt.date() < datetime.now().date():
-                            i += 1
-                            continue
-                    except ValueError:
-                        i += 1
-                        continue
+                events_found += 1
 
-                    events_found += 1
+                content_hash = generate_content_hash(title, "Brick Store Pub", start_date)
 
-                    content_hash = generate_content_hash(title, "Brick Store Pub", start_date)
+                # Determine category based on title
+                title_lower = title.lower()
 
+                if any(w in title_lower for w in ["oktoberfest", "beer fest", "beer celebration", "tap takeover", "beer dinner"]):
+                    category, subcategory = "food_drink", "beer_event"
+                    tags = ["beer", "craft-beer", "downtown-decatur", "bar"]
+                elif any(w in title_lower for w in ["trivia", "quiz"]):
+                    category, subcategory = "nightlife", "trivia"
+                    tags = ["trivia", "bar", "downtown-decatur"]
+                elif any(w in title_lower for w in ["live music", "band", "acoustic", "jazz", "blues"]):
+                    category, subcategory = "music", "live_music"
+                    tags = ["music", "live-music", "bar", "downtown-decatur"]
+                elif any(w in title_lower for w in ["tasting", "pairing", "whiskey", "wine"]):
+                    category, subcategory = "food_drink", "tasting"
+                    tags = ["tasting", "craft-beer", "downtown-decatur", "bar"]
+                else:
+                    category, subcategory = "nightlife", "bar_event"
+                    tags = ["beer", "bar", "downtown-decatur"]
 
-                    # Determine category based on title
-                    title_lower = title.lower()
-                    description_lower = description.lower()
+                event_url = find_event_url(title, event_links, EVENTS_URL)
 
-                    if any(w in title_lower for w in ["oktoberfest", "beer fest", "beer celebration", "tap takeover", "beer dinner"]):
-                        category, subcategory = "food_drink", "beer_event"
-                        tags = ["beer", "craft-beer", "downtown-decatur", "bar"]
-                    elif any(w in title_lower for w in ["trivia", "quiz"]):
-                        category, subcategory = "nightlife", "trivia"
-                        tags = ["trivia", "bar", "downtown-decatur"]
-                    elif any(w in title_lower for w in ["live music", "band", "acoustic", "jazz", "blues"]):
-                        category, subcategory = "music", "live_music"
-                        tags = ["music", "live-music", "bar", "downtown-decatur"]
-                    elif any(w in title_lower for w in ["tasting", "pairing", "whiskey", "wine"]):
-                        category, subcategory = "food_drink", "tasting"
-                        tags = ["tasting", "craft-beer", "downtown-decatur", "bar"]
-                    else:
-                        category, subcategory = "nightlife", "bar_event"
-                        tags = ["beer", "bar", "downtown-decatur"]
+                event_record = {
+                    "source_id": source_id,
+                    "venue_id": venue_id,
+                    "title": title[:200],
+                    "description": (description.strip() or "Event at Brick Store Pub, one of America's best beer bars")[:500],
+                    "start_date": start_date,
+                    "start_time": start_time,
+                    "end_date": None,
+                    "end_time": None,
+                    "is_all_day": False,
+                    "category": category,
+                    "subcategory": subcategory,
+                    "tags": tags,
+                    "price_min": None,
+                    "price_max": None,
+                    "price_note": None,
+                    "is_free": None,
+                    "source_url": event_url,
+                    "ticket_url": event_url if event_url != EVENTS_URL else None,
+                    "image_url": image_map.get(title),
+                    "raw_text": f"{title} - {start_date}",
+                    "extraction_confidence": 0.80,
+                    "is_recurring": False,
+                    "recurrence_rule": None,
+                    "content_hash": content_hash,
+                }
 
-                    # Get specific event URL
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    i += 1
+                    continue
 
+                try:
+                    insert_event(event_record)
+                    events_new += 1
+                    logger.info(f"Added: {title} on {start_date}")
+                except Exception as e:
+                    logger.error(f"Failed to insert: {title}: {e}")
 
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title[:200],
-                        "description": (description.strip() or "Event at Brick Store Pub, one of America's best beer bars")[:500],
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": category,
-                        "subcategory": subcategory,
-                        "tags": tags,
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": None,
-                        "source_url": event_url,
-                        "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            browser.close()
+            i += 1
 
         logger.info(
             f"Brick Store Pub crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

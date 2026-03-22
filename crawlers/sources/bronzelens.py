@@ -10,7 +10,8 @@ import re
 import logging
 from datetime import datetime
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
@@ -19,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://bronzelens.com"
 EVENTIVE_URL = "https://bronzelens.eventive.org"
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+}
 
 VENUE_DATA = {
     "name": "BronzeLens Film Festival",
@@ -56,7 +61,7 @@ def parse_dates(text: str) -> tuple[str | None, str | None]:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl BronzeLens Film Festival."""
+    """Crawl BronzeLens Film Festival using requests + BeautifulSoup."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -67,24 +72,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         body_text = ""
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
+        try:
+            response = requests.get(BASE_URL, headers=HEADERS, timeout=30)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, "html.parser")
+            body_text = soup.get_text(separator="\n")
+        except Exception as exc:
+            logger.warning(
+                "BronzeLens site fetch failed; using known-date fallback: %s", exc
             )
-            page = context.new_page()
-
-            logger.info(f"Fetching BronzeLens: {BASE_URL}")
-            try:
-                page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(2000)
-                body_text = page.inner_text("body")
-            except Exception as exc:
-                logger.warning(
-                    "BronzeLens site fetch failed; using known-date fallback: %s", exc
-                )
-            browser.close()
 
         # Try to find dates on the page
         start_date, end_date = parse_dates(body_text) if body_text else (None, None)
