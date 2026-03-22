@@ -43,8 +43,14 @@ from pipeline.detail_enrich import enrich_from_detail
 from pipeline.feed_discovery import discover_from_feed
 from pipeline.html_discovery import discover_from_html
 from pipeline.api_adapters import discover_events as discover_api_events
+from pipeline.extraction_cache import compute_content_hash, get_cached_extraction, store_extraction
+from pipeline.entity_router import route_extracted_data
+from pipeline.domain_limiter import DomainLimiter, extract_domain
+from db.client import get_client
 
 logger = logging.getLogger(__name__)
+
+_domain_limiter = DomainLimiter(max_per_domain=2)
 
 
 @dataclass
@@ -438,7 +444,8 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
         seen_keys: set[tuple] = set()
 
         for feed_url in profile.discovery.urls:
-            content, err = fetch_html(feed_url, profile.discovery.fetch)
+            with _domain_limiter.limit(extract_domain(feed_url)):
+                content, err = fetch_html(feed_url, profile.discovery.fetch)
             if err:
                 logger.warning(f"Feed fetch failed ({slug}): {feed_url} - {err}")
                 continue
@@ -468,7 +475,8 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
 
             enriched: dict = {}
             if detail_url and profile.detail.enabled:
-                html, err = fetch_html(detail_url, profile.detail.fetch)
+                with _domain_limiter.limit(extract_domain(detail_url)):
+                    html, err = fetch_html(detail_url, profile.detail.fetch)
                 if err:
                     logger.debug(f"Detail fetch failed: {detail_url} - {err}")
                 else:
@@ -626,7 +634,8 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
     seen_keys: set[tuple] = set()
 
     for list_url in profile.discovery.urls:
-        html, err = fetch_html(list_url, profile.discovery.fetch)
+        with _domain_limiter.limit(extract_domain(list_url)):
+            html, err = fetch_html(list_url, profile.discovery.fetch)
         if err:
             logger.warning(f"Fetch failed ({slug}): {list_url} - {err}")
             continue
@@ -656,7 +665,8 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
 
         enriched: dict = {}
         if detail_url and profile.detail.enabled:
-            html, err = fetch_html(detail_url, profile.detail.fetch)
+            with _domain_limiter.limit(extract_domain(detail_url)):
+                html, err = fetch_html(detail_url, profile.detail.fetch)
             if err:
                 logger.debug(f"Detail fetch failed: {detail_url} - {err}")
             else:
@@ -811,19 +821,40 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
     if result is None:
         result = CrawlResult()
     all_events: list[dict] = []
+    _cache_client = None
+    try:
+        _cache_client = get_client()
+    except Exception:
+        pass  # cache is best-effort; proceed without it if client unavailable
+
     for url in profile.discovery.urls:
-        html, err = fetch_html(url, profile.discovery.fetch)
+        with _domain_limiter.limit(extract_domain(url)):
+            html, err = fetch_html(url, profile.discovery.fetch)
         if err:
             logger.warning(f"Fetch failed ({profile.slug}): {url} - {err}")
             continue
-        events = discover_from_html(
-            html,
-            url,
-            profile.name,
-            profile.discovery,
-            profile.detail,
-            limit=limit,
-        )
+
+        # Extraction cache: skip LLM if HTML is unchanged since last run.
+        url_hash = compute_content_hash(html)
+        cached = None
+        if _cache_client is not None:
+            cached = get_cached_extraction(_cache_client, profile.slug, url_hash)
+
+        if cached is not None:
+            logger.info("Cache hit for %s (%s) — skipping LLM extraction", profile.slug, url)
+            events = cached
+        else:
+            events = discover_from_html(
+                html,
+                url,
+                profile.name,
+                profile.discovery,
+                profile.detail,
+                limit=limit,
+            )
+            if events and _cache_client is not None:
+                store_extraction(_cache_client, profile.slug, url_hash, events)
+
         all_events.extend(events)
 
     all_events = _dedupe_discovered_events(all_events)
@@ -832,6 +863,18 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
         all_events = all_events[:limit]
 
     logger.info(f"{profile.slug}: {len(all_events)} LLM events discovered")
+
+    # Route extracted records to declared entity lanes.
+    routed = route_extracted_data(all_events, profile.entity_lanes)
+    all_events = routed.get("events", [])
+    for lane, records in routed.items():
+        if lane != "events" and records:
+            logger.info(
+                "%s: %d record(s) routed to lane %r — not yet wired to an insert handler",
+                profile.slug,
+                len(records),
+                lane,
+            )
 
     for event in all_events:
         event = _normalize_discovery_seed_urls(event, profile.discovery.urls[0])
@@ -843,7 +886,8 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
         detail_url = event.get("detail_url")
         enriched = {}
         if detail_url and profile.detail.enabled:
-            html, err = fetch_html(detail_url, profile.detail.fetch)
+            with _domain_limiter.limit(extract_domain(detail_url)):
+                html, err = fetch_html(detail_url, profile.detail.fetch)
             if err:
                 logger.debug(f"Detail fetch failed: {detail_url} - {err}")
             else:
@@ -998,6 +1042,20 @@ def _process_api_events(events: list[dict], source: dict, profile, default_venue
     if result is None:
         result = CrawlResult()
     api_confidence = 0.95
+
+    # Route records to declared entity lanes before processing.
+    entity_lanes = getattr(profile, "entity_lanes", ["events"])
+    routed = route_extracted_data(events, entity_lanes)
+    events = routed.get("events", [])
+    for lane, records in routed.items():
+        if lane != "events" and records:
+            logger.info(
+                "%s: %d record(s) routed to lane %r — not yet wired to an insert handler",
+                source.get("slug", ""),
+                len(records),
+                lane,
+            )
+
     for event in events:
         title = event.get("title")
         start_date = event.get("start_date")
