@@ -1604,6 +1604,9 @@ def auto_discover_modules() -> dict[str, str]:
         return discovered
 
     for filename in os.listdir(sources_dir):
+        # Skip private/internal modules and anything that isn't a plain .py file.
+        # os.listdir() is non-recursive, so subdirectories like sources/archive/
+        # are never descended into — archived crawlers are intentionally excluded.
         if filename.endswith(".py") and not filename.startswith("_"):
             module_name = filename[:-3]  # Remove .py
             # Convert underscores to hyphens for slug
