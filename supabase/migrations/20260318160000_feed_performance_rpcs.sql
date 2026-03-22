@@ -13,9 +13,8 @@
 --      feed queries (canonical_event_id IS NULL, not class, not sensitive)
 --   6. idx_events_active_future_feed — partial index for the tag-count endpoint
 --
--- CONCURRENTLY indexes cannot run inside a transaction block. They are placed
--- at the end of this file, outside any transaction, matching the pattern used
--- in migrations 150 and 152.
+-- Note: Supabase runs migrations inside a transaction block, so CONCURRENTLY
+-- is not used here. Standard CREATE INDEX IF NOT EXISTS is safe.
 --
 -- Mirror: database/migrations/583_feed_performance_rpcs.sql
 -- Update database/schema.sql when schema changes land in this file.
@@ -25,23 +24,55 @@
 -- 1. feed_category_counts summary table
 -- ============================================================
 
+-- Create the table without an inline FK so the statement is idempotent
+-- even in environments where the portals bootstrap has not yet run
+-- (e.g. a fresh supabase db reset that only replays timestamp migrations).
 CREATE TABLE IF NOT EXISTS feed_category_counts (
-  portal_id  UUID NOT NULL REFERENCES portals(id) ON DELETE CASCADE,
-  window     TEXT NOT NULL CHECK (window IN ('today', 'week', 'coming_up')),
+  portal_id  UUID NOT NULL,
+  "window"   TEXT NOT NULL CHECK ("window" IN ('today', 'week', 'coming_up')),
   dimension  TEXT NOT NULL CHECK (dimension IN ('category', 'genre', 'tag')),
   value      TEXT NOT NULL,
   cnt        INT  NOT NULL DEFAULT 0,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (portal_id, window, dimension, value)
+  PRIMARY KEY (portal_id, "window", dimension, value)
 );
+
+-- Add FK to portals(id) only when the portals table is present.
+-- In all normal deployments (production, staging, supabase db push on an
+-- existing project) portals already exists, so this constraint always lands.
+DO $$
+BEGIN
+  IF to_regclass('public.portals') IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1
+       FROM information_schema.table_constraints
+       WHERE table_name      = 'feed_category_counts'
+         AND constraint_name = 'feed_category_counts_portal_id_fkey'
+         AND constraint_type = 'FOREIGN KEY'
+     )
+  THEN
+    ALTER TABLE feed_category_counts
+      ADD CONSTRAINT feed_category_counts_portal_id_fkey
+      FOREIGN KEY (portal_id) REFERENCES portals(id) ON DELETE CASCADE;
+  END IF;
+END $$;
 
 -- RLS: public read (counts contain no PII)
 ALTER TABLE feed_category_counts ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public read feed_category_counts"
-  ON feed_category_counts
-  FOR SELECT
-  USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename  = 'feed_category_counts'
+      AND policyname = 'Public read feed_category_counts'
+  ) THEN
+    CREATE POLICY "Public read feed_category_counts"
+      ON feed_category_counts
+      FOR SELECT
+      USING (true);
+  END IF;
+END $$;
 
 
 -- ============================================================
@@ -78,7 +109,7 @@ BEGIN
   DELETE FROM feed_category_counts WHERE portal_id = p_portal_id;
 
   -- Compute and insert fresh counts
-  INSERT INTO feed_category_counts (portal_id, window, dimension, value, cnt)
+  INSERT INTO feed_category_counts (portal_id, "window", dimension, value, cnt)
   WITH base AS (
     -- Eligible events within the 28-day coming_up window
     SELECT
@@ -105,7 +136,7 @@ BEGIN
         WHEN start_date = v_today          THEN 'today'
         WHEN start_date <= v_week_end      THEN 'week'
         ELSE                                    'coming_up'
-      END AS window,
+      END AS "window",
       category_id,
       genres,
       tags,
@@ -115,14 +146,14 @@ BEGIN
   -- Deduplicate series events: one representative row per (window, series_id).
   -- Standalone events (series_id IS NULL) pass through as-is.
   deduped_series AS (
-    SELECT DISTINCT ON (window, series_id)
-      window, category_id, genres, tags
+    SELECT DISTINCT ON ("window", series_id)
+      "window", category_id, genres, tags
     FROM windowed
     WHERE series_id IS NOT NULL
-    ORDER BY window, series_id
+    ORDER BY "window", series_id
   ),
   standalone AS (
-    SELECT window, category_id, genres, tags
+    SELECT "window", category_id, genres, tags
     FROM windowed
     WHERE series_id IS NULL
   ),
@@ -132,25 +163,25 @@ BEGIN
     SELECT * FROM standalone
   )
   -- Category counts
-  SELECT p_portal_id, window, 'category', category_id, COUNT(*)::INT
+  SELECT p_portal_id, "window", 'category', category_id, COUNT(*)::INT
   FROM combined
-  GROUP BY window, category_id
+  GROUP BY "window", category_id
 
   UNION ALL
 
   -- Genre counts (unnest the genres array)
-  SELECT p_portal_id, window, 'genre', g, COUNT(*)::INT
+  SELECT p_portal_id, "window", 'genre', g, COUNT(*)::INT
   FROM combined, unnest(genres) AS g
   WHERE genres IS NOT NULL
-  GROUP BY window, g
+  GROUP BY "window", g
 
   UNION ALL
 
   -- Tag counts (unnest the tags array)
-  SELECT p_portal_id, window, 'tag', t, COUNT(*)::INT
+  SELECT p_portal_id, "window", 'tag', t, COUNT(*)::INT
   FROM combined, unnest(tags) AS t
   WHERE tags IS NOT NULL
-  GROUP BY window, t;
+  GROUP BY "window", t;
 
   -- Refresh the updated_at timestamp for all rows just written
   UPDATE feed_category_counts
@@ -253,14 +284,14 @@ $$;
 
 
 -- ============================================================
--- 5 & 6. Indexes (CONCURRENTLY — must run outside a transaction)
+-- 5 & 6. Indexes
 -- ============================================================
 
 -- Composite partial index for source-scoped feed queries.
 -- Covers the WHERE clause shared by all portal feed endpoints:
 --   canonical_event_id IS NULL AND is_class = false AND is_sensitive = false
 -- With (source_id, start_date) as leading columns for portal_source_access joins.
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_events_source_date_feed
+CREATE INDEX IF NOT EXISTS idx_events_source_date_feed
   ON events (source_id, start_date)
   WHERE canonical_event_id IS NULL
     AND COALESCE(is_class, false)     = false

@@ -45,7 +45,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE;
 
-COMMENT ON FUNCTION get_spelling_suggestions IS
+COMMENT ON FUNCTION get_spelling_suggestions(TEXT, INTEGER, TEXT, REAL) IS
   'City-scoped spelling correction suggestions using trigram similarity. '
   'p_min_similarity controls the threshold (default 0.3). '
   'Returns nothing when the query exactly matches a known suggestion.';

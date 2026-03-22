@@ -1,9 +1,7 @@
--- Migration 591: Add p_min_similarity parameter to get_spelling_suggestions
+-- Migration: Add p_min_similarity parameter to get_spelling_suggestions
 -- Allows callers to lower the threshold for short queries (e.g. "concrts" → "concerts").
 -- Previous hardcoded threshold was 0.4 — too strict for short mistyped words.
 -- Default kept at 0.3 to preserve existing behavior when param is not supplied.
-
--- UP
 
 CREATE OR REPLACE FUNCTION get_spelling_suggestions(
     p_query TEXT,
@@ -47,10 +45,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE;
 
-COMMENT ON FUNCTION get_spelling_suggestions IS
+COMMENT ON FUNCTION get_spelling_suggestions(TEXT, INTEGER, TEXT, REAL) IS
   'City-scoped spelling correction suggestions using trigram similarity. '
   'p_min_similarity controls the threshold (default 0.3). '
   'Returns nothing when the query exactly matches a known suggestion.';
-
--- DOWN
--- To revert: recreate with hardcoded 0.4 threshold and drop p_min_similarity param.
