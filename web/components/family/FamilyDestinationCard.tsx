@@ -82,6 +82,31 @@ const VENUE_TYPE_FALLBACK_COLORS: Record<string, string> = {
   botanical_garden: "#5E7A5E",
 };
 
+function VenueImageFallback({
+  venueType,
+  fallbackColor,
+}: {
+  venueType: string | null;
+  fallbackColor: string;
+}) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        background: `linear-gradient(135deg, ${fallbackColor}55 0%, ${fallbackColor}22 100%)`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <span style={{ fontSize: 36, opacity: 0.4 }}>
+        {typeEmojiFor(venueType)}
+      </span>
+    </div>
+  );
+}
+
 function IndoorOutdoorBadge({ indoor_outdoor, venue_type }: { indoor_outdoor: string | null; venue_type: string | null }) {
   // Derive if not explicit
   let label: string | null = null;
@@ -189,22 +214,10 @@ export const FamilyDestinationCard = memo(function FamilyDestinationCard({
             fill
             sizes="(max-width: 640px) 280px, 260px"
             style={{ objectFit: "cover" }}
+            fallback={<VenueImageFallback venueType={venue_type} fallbackColor={fallbackColor} />}
           />
         ) : (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: `linear-gradient(135deg, ${fallbackColor}55 0%, ${fallbackColor}22 100%)`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <span style={{ fontSize: 36, opacity: 0.4 }}>
-              {typeEmojiFor(venue_type)}
-            </span>
-          </div>
+          <VenueImageFallback venueType={venue_type} fallbackColor={fallbackColor} />
         )}
 
         {/* Indoor/outdoor badge — top left */}
