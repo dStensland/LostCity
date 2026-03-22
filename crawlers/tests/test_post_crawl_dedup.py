@@ -172,7 +172,7 @@ def test_find_duplicate_clusters_groups_same_title_date_venue_different_sources(
     mock_result = MagicMock()
     mock_result.data = events
     mock_client = MagicMock()
-    mock_client.table.return_value.select.return_value.gte.return_value.lte.return_value.eq.return_value.is_.return_value.order.return_value.execute.return_value = mock_result
+    mock_client.table.return_value.select.return_value.gte.return_value.lte.return_value.eq.return_value.is_.return_value.order.return_value.range.return_value.execute.return_value = mock_result
 
     with patch("post_crawl_dedup.get_client", return_value=mock_client):
         from post_crawl_dedup import find_duplicate_clusters
@@ -195,7 +195,7 @@ def test_find_duplicate_clusters_does_not_group_same_source():
     mock_result = MagicMock()
     mock_result.data = events
     mock_client = MagicMock()
-    mock_client.table.return_value.select.return_value.gte.return_value.lte.return_value.eq.return_value.is_.return_value.order.return_value.execute.return_value = mock_result
+    mock_client.table.return_value.select.return_value.gte.return_value.lte.return_value.eq.return_value.is_.return_value.order.return_value.range.return_value.execute.return_value = mock_result
 
     with patch("post_crawl_dedup.get_client", return_value=mock_client):
         from post_crawl_dedup import find_duplicate_clusters
@@ -215,7 +215,7 @@ def test_find_duplicate_clusters_does_not_group_different_dates():
     mock_result = MagicMock()
     mock_result.data = events
     mock_client = MagicMock()
-    mock_client.table.return_value.select.return_value.gte.return_value.lte.return_value.eq.return_value.is_.return_value.order.return_value.execute.return_value = mock_result
+    mock_client.table.return_value.select.return_value.gte.return_value.lte.return_value.eq.return_value.is_.return_value.order.return_value.range.return_value.execute.return_value = mock_result
 
     with patch("post_crawl_dedup.get_client", return_value=mock_client):
         from post_crawl_dedup import find_duplicate_clusters
@@ -235,7 +235,7 @@ def test_find_duplicate_clusters_does_not_group_different_venues():
     mock_result = MagicMock()
     mock_result.data = events
     mock_client = MagicMock()
-    mock_client.table.return_value.select.return_value.gte.return_value.lte.return_value.eq.return_value.is_.return_value.order.return_value.execute.return_value = mock_result
+    mock_client.table.return_value.select.return_value.gte.return_value.lte.return_value.eq.return_value.is_.return_value.order.return_value.range.return_value.execute.return_value = mock_result
 
     with patch("post_crawl_dedup.get_client", return_value=mock_client):
         from post_crawl_dedup import find_duplicate_clusters
@@ -255,7 +255,7 @@ def test_find_duplicate_clusters_normalizes_title_before_grouping():
     mock_result = MagicMock()
     mock_result.data = events
     mock_client = MagicMock()
-    mock_client.table.return_value.select.return_value.gte.return_value.lte.return_value.eq.return_value.is_.return_value.order.return_value.execute.return_value = mock_result
+    mock_client.table.return_value.select.return_value.gte.return_value.lte.return_value.eq.return_value.is_.return_value.order.return_value.range.return_value.execute.return_value = mock_result
 
     with patch("post_crawl_dedup.get_client", return_value=mock_client):
         from post_crawl_dedup import find_duplicate_clusters
@@ -275,7 +275,7 @@ def test_find_duplicate_clusters_skips_events_with_missing_venue():
     mock_result = MagicMock()
     mock_result.data = events
     mock_client = MagicMock()
-    mock_client.table.return_value.select.return_value.gte.return_value.lte.return_value.eq.return_value.is_.return_value.order.return_value.execute.return_value = mock_result
+    mock_client.table.return_value.select.return_value.gte.return_value.lte.return_value.eq.return_value.is_.return_value.order.return_value.range.return_value.execute.return_value = mock_result
 
     with patch("post_crawl_dedup.get_client", return_value=mock_client):
         from post_crawl_dedup import find_duplicate_clusters
@@ -297,7 +297,7 @@ def test_find_duplicate_clusters_returns_multiple_independent_clusters():
     mock_result = MagicMock()
     mock_result.data = events
     mock_client = MagicMock()
-    mock_client.table.return_value.select.return_value.gte.return_value.lte.return_value.eq.return_value.is_.return_value.order.return_value.execute.return_value = mock_result
+    mock_client.table.return_value.select.return_value.gte.return_value.lte.return_value.eq.return_value.is_.return_value.order.return_value.range.return_value.execute.return_value = mock_result
 
     with patch("post_crawl_dedup.get_client", return_value=mock_client):
         from post_crawl_dedup import find_duplicate_clusters

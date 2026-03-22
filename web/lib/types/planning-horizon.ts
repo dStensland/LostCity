@@ -223,7 +223,7 @@ export function ticketStatusFreshness(
   const hoursSince =
     (now.getTime() - checked.getTime()) / (1000 * 60 * 60);
 
-  if (hoursSince < 1) return "moments ago";
+  if (hoursSince < 1) return "just checked";
   if (hoursSince < 2) return "as of 1 hour ago";
   if (hoursSince < 24) return `as of ${Math.floor(hoursSince)} hours ago`;
   const daysSince = Math.floor(hoursSince / 24);

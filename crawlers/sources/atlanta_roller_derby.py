@@ -82,10 +82,14 @@ def build_matchup_participants(*bouts: str | None) -> list[dict]:
     return participants
 
 
-def parse_date(date_str: str) -> Optional[str]:
+def parse_date(date_str: str, *, today: date | None = None) -> Optional[str]:
     """
     Parse date from format 'March 21' or 'February 28'.
     Returns YYYY-MM-DD string.
+
+    Args:
+        date_str: Date string to parse
+        today: Reference date for determining year (defaults to today)
     """
     date_str = date_str.strip()
     match = re.match(r"(\w+)\s+(\d{1,2})", date_str, re.IGNORECASE)
@@ -102,13 +106,13 @@ def parse_date(date_str: str) -> Optional[str]:
     day = int(day)
 
     # Determine year (assume current year or next year if date has passed)
-    now = datetime.now()
-    year = now.year
+    ref_date = today or datetime.now().date()
+    year = ref_date.year
 
     try:
         event_date = datetime(year, month, day)
         # If date is in the past, use next year
-        if event_date.date() < now.date():
+        if event_date.date() < ref_date:
             year += 1
             event_date = datetime(year, month, day)
 
@@ -145,7 +149,7 @@ def extract_schedule_events(html_content: str, *, today: date | None = None) -> 
     date_headings = soup.find_all("h3")
     for h3 in date_headings:
         date_text = h3.get_text(strip=True)
-        start_date = parse_date(date_text)
+        start_date = parse_date(date_text, today=ref_today)
         if not start_date:
             continue
         if datetime.strptime(start_date, "%Y-%m-%d").date() < ref_today:
