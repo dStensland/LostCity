@@ -35,6 +35,113 @@ def mock_has_event_extractions_table():
         yield
 
 
+@pytest.fixture(autouse=True)
+def mock_events_support_show_signal_columns():
+    """Mock events_support_show_signal_columns to return False by default.
+
+    This schema detection function calls get_client() on first invocation.
+    Without this mock all INSERT_PIPELINE tests fail with a credentials error.
+    Tests that need a specific value can override with their own @patch decorator.
+    """
+    with patch("db.events.events_support_show_signal_columns", return_value=False):
+        yield
+
+
+@pytest.fixture(autouse=True)
+def mock_venues_support_location_designator():
+    """Mock venues_support_location_designator to return False by default.
+
+    This schema detection function calls get_client() on first invocation.
+    Without this mock all get_or_create_venue tests that reach the insert path
+    fail with a credentials error.
+    """
+    with patch("db.venues.venues_support_location_designator", return_value=False):
+        yield
+
+
+@pytest.fixture(autouse=True)
+def mock_events_support_is_active_column():
+    """Mock events_support_is_active_column to return True by default.
+
+    This schema detection function calls get_client() on first invocation.
+    Without this mock any test calling smart_update_existing_event,
+    find_event_by_hash, or find_cross_source_canonical_for_insert fails with
+    a credentials error when the column detection cache is cold.
+    Tests that need False (e.g. legacy schema paths) can override with @patch.
+    """
+    with patch("db.events.events_support_is_active_column", return_value=True):
+        yield
+
+
+@pytest.fixture(autouse=True)
+def mock_events_support_field_metadata_columns():
+    """Mock events_support_field_metadata_columns to return False by default.
+
+    This schema detection function calls get_client() on first invocation.
+    Without this mock any INSERT_PIPELINE test that reaches _step_field_metadata
+    fails with a credentials error.
+    Tests that need True can override with @patch.
+    """
+    with patch("db.events.events_support_field_metadata_columns", return_value=False):
+        yield
+
+
+@pytest.fixture(autouse=True)
+def mock_events_support_film_identity_columns():
+    """Mock events_support_film_identity_columns to return False by default.
+
+    This schema detection function calls get_client() on first invocation.
+    Without this mock any test calling smart_update_existing_event or
+    _step_enrich_film fails with a credentials error.
+    Tests that need True can override with @patch.
+    """
+    with patch("db.events.events_support_film_identity_columns", return_value=False):
+        yield
+
+
+@pytest.fixture(autouse=True)
+def mock_events_support_content_kind_column():
+    """Mock events_support_content_kind_column to return True by default.
+
+    This schema detection function calls get_client() on first invocation.
+    Without this mock all INSERT_PIPELINE tests and smart_update_existing_event
+    tests that call _step_infer_content_kind fail with a credentials error.
+    Tests that need False can override with @patch.
+    """
+    with patch("db.events.events_support_content_kind_column", return_value=True):
+        yield
+
+
+@pytest.fixture(autouse=True)
+def mock_get_venue_by_id_cached():
+    """Mock get_venue_by_id_cached to return None by default.
+
+    get_venue_by_id_cached calls db.client.get_client() which requires real
+    credentials. Tests that call smart_update_existing_event or insert_event
+    with a venue_id will hit this function during genre inference. Returning
+    None is safe — genre inference degrades gracefully when venue is missing.
+    Tests that need a specific venue shape can override with @patch.
+    """
+    with patch("db.events.get_venue_by_id_cached", return_value=None):
+        yield
+
+
+@pytest.fixture(autouse=True)
+def mock_enrichment_enqueue():
+    """Mock db.enrichment_queue.enqueue_task to a no-op by default.
+
+    Enrichment (TMDB/Spotify/blurhash) is now async — tasks are enqueued after
+    insert rather than executing inline. Without this mock, _step_enqueue_enrichment
+    calls enqueue_task which attempts a DB insert, corrupting mock execute() call
+    counts in insert tests.
+    Tests that need to assert enqueue behavior can access the mock via:
+        with patch("db.enrichment_queue.enqueue_task") as mock_enqueue:
+            ...
+    """
+    with patch("db.enrichment_queue.enqueue_task") as _mock:
+        yield _mock
+
+
 @pytest.fixture
 def mock_supabase_client():
     """Mock Supabase client for database tests."""

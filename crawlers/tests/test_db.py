@@ -1073,38 +1073,29 @@ class TestInsertEvent:
     @patch("db.events.find_cross_source_canonical_for_insert", return_value=None)
     @patch("db.events.find_existing_event_for_insert", return_value=None)
     @patch("db.events.get_source_info")
-    @patch("db.events.events_support_film_identity_columns", return_value=True)
-    @patch("db.events.get_metadata_for_film_event")
     @patch("db.events.get_venue_by_id_cached")
     @patch("db.events.get_client")
     def test_stores_film_identity_without_overwriting_event_title(
         self,
         mock_get_client,
         mock_get_venue,
-        mock_get_film_metadata,
-        mock_film_cols,
         mock_get_source_info,
         _mock_find_existing,
         _mock_find_cross_source,
         mock_festival_hint,
         sample_event_data,
+        mock_enrichment_enqueue,
     ):
-        """Film identity should be stored in dedicated fields while title stays venue-provided."""
+        """Film events insert successfully and title is preserved; TMDB enrichment is async.
+
+        Enrichment now async — TMDB/Spotify populate via enrichment_queue worker.
+        The insert pipeline no longer calls get_metadata_for_film_event inline.
+        An enrich_film task is enqueued after insert for the worker to process.
+        """
         client = MagicMock()
         mock_get_client.return_value = client
         mock_get_venue.return_value = {"vibes": []}
         mock_get_source_info.return_value = {"slug": "test-source", "url": "https://example.com", "source_type": "organization"}
-        mock_get_film_metadata.return_value = SimpleNamespace(
-            title="The NeverEnding Story",
-            poster_url="https://example.com/poster.jpg",
-            director="Wolfgang Petersen",
-            runtime_minutes=94,
-            year=1984,
-            rating="PG",
-            imdb_id="tt0088323",
-            genres=["adventure", "family"],
-            plot="A young boy discovers a magical world through a mysterious book.",
-        )
 
         table = MagicMock()
         client.table.return_value = table
@@ -1122,53 +1113,47 @@ class TestInsertEvent:
 
         assert event_id == 901
         inserted_data = table.insert.call_args_list[0][0][0]
+        # Title must be preserved exactly as the venue provided it
         assert (
             inserted_data["title"]
             == "The NeverEnding Story (40th Anniversary Screening)"
         )
-        assert inserted_data["film_title"] == "The NeverEnding Story"
-        assert inserted_data["film_release_year"] == 1984
-        assert inserted_data["film_imdb_id"] == "tt0088323"
-        assert inserted_data["film_identity_source"] == "omdb"
-        assert inserted_data["film_external_genres"] == ["adventure", "family"]
+        # TMDB enrichment is now async — film_title / film_release_year / film_imdb_id
+        # will not be present at insert time; the worker populates them later.
+        assert "film_title" not in inserted_data
+        assert "film_imdb_id" not in inserted_data
+        # enrich_film task must be enqueued for the worker
+        mock_enrichment_enqueue.assert_any_call(
+            client, "event", str(event_id), "enrich_film", priority=3
+        )
 
     @patch("db.events.get_festival_source_hint", return_value=None)
     @patch("db.events.find_cross_source_canonical_for_insert", return_value=None)
     @patch("db.events.find_existing_event_for_insert", return_value=None)
     @patch("db.events.get_source_info")
-    @patch("db.events.events_support_film_identity_columns", return_value=True)
-    @patch("db.events.get_metadata_for_film_event")
     @patch("db.events.get_venue_by_id_cached")
     @patch("db.events.get_client")
     def test_uses_wikidata_source_for_film_identity_when_omdb_misses(
         self,
         mock_get_client,
         mock_get_venue,
-        mock_get_film_metadata,
-        mock_film_cols,
         mock_get_source_info,
         _mock_find_existing,
         _mock_find_cross_source,
         mock_festival_hint,
         sample_event_data,
+        mock_enrichment_enqueue,
     ):
-        """Film identity source should reflect Wikidata fallback when it provides metadata."""
+        """Film events insert successfully with title preserved; TMDB/Wikidata enrichment is async.
+
+        Enrichment now async — TMDB/Spotify populate via enrichment_queue worker.
+        The Wikidata fallback path (previously in _step_enrich_film) now runs in
+        the enrichment worker. An enrich_film task is enqueued for the worker.
+        """
         client = MagicMock()
         mock_get_client.return_value = client
         mock_get_venue.return_value = {"vibes": []}
         mock_get_source_info.return_value = {"slug": "test-source", "url": "https://example.com", "source_type": "organization"}
-        mock_get_film_metadata.return_value = SimpleNamespace(
-            title="Fight Club",
-            poster_url=None,
-            director="David Fincher",
-            runtime_minutes=139,
-            year=1999,
-            rating=None,
-            imdb_id="tt0137523",
-            genres=["drama"],
-            plot=None,
-            source="wikidata",
-        )
 
         table = MagicMock()
         client.table.return_value = table
@@ -1186,8 +1171,14 @@ class TestInsertEvent:
         assert event_id == 902
         inserted_data = table.insert.call_args_list[0][0][0]
         assert inserted_data["title"] == "Fight Club (1999)"
-        assert inserted_data["film_title"] == "Fight Club"
-        assert inserted_data["film_identity_source"] == "wikidata"
+        # TMDB/Wikidata enrichment is now async — film_title / film_identity_source
+        # will not be present at insert time; the worker populates them later.
+        assert "film_title" not in inserted_data
+        assert "film_identity_source" not in inserted_data
+        # enrich_film task must be enqueued for the worker
+        mock_enrichment_enqueue.assert_any_call(
+            client, "event", str(event_id), "enrich_film", priority=3
+        )
 
     @patch("db.events.get_festival_source_hint", return_value=None)
     @patch("db.events.find_cross_source_canonical_for_insert", return_value=None)
