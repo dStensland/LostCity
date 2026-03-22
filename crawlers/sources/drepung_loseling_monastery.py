@@ -14,7 +14,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
 from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
@@ -274,120 +274,109 @@ def extract_events_from_calendar(html_content: str, current_month: int, current_
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Drepung Loseling Monastery calendar using Playwright."""
+    """Crawl Drepung Loseling Monastery calendar using static HTTP."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        venue_id = get_or_create_venue(VENUE_DATA)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+        logger.info(f"Fetching Drepung Loseling Monastery calendar: {CALENDAR_URL}")
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        }
+        resp = requests.get(CALENDAR_URL, headers=headers, timeout=30)
+        resp.raise_for_status()
+        html_content = resp.text
 
-            logger.info(f"Fetching Drepung Loseling Monastery calendar: {CALENDAR_URL}")
-            page.goto(CALENDAR_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(2000)
+        # Extract month and year from page <title>
+        soup_title = BeautifulSoup(html_content, "lxml")
+        title_tag = soup_title.find("title")
+        title_text = title_tag.get_text(strip=True) if title_tag else ""
+        month_match = re.search(
+            r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+-\s+(\d{4})",
+            title_text,
+        )
 
-            # Get the HTML content
-            html_content = page.content()
+        if month_match:
+            month_name = month_match.group(1)
+            year = int(month_match.group(2))
+            month = datetime.strptime(month_name, "%B").month
+        else:
+            now = datetime.now()
+            month = now.month
+            year = now.year
 
-            # Extract month and year from page title
-            title_text = page.title()
-            month_match = re.search(r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+-\s+(\d{4})", title_text)
+        logger.info(f"Parsing calendar for {month}/{year}")
 
-            if month_match:
-                month_name = month_match.group(1)
-                year = int(month_match.group(2))
-                month = datetime.strptime(month_name, "%B").month
-            else:
-                # Default to current month
-                now = datetime.now()
-                month = now.month
-                year = now.year
+        events = extract_events_from_calendar(html_content, month, year)
+        logger.info(f"Extracted {len(events)} potential events from calendar")
 
-            logger.info(f"Parsing calendar for {month}/{year}")
+        seen_events = set()
 
-            # Parse events from calendar
-            events = extract_events_from_calendar(html_content, month, year)
-            logger.info(f"Extracted {len(events)} potential events from calendar")
+        for event_data in events:
+            try:
+                title = event_data["title"]
+                start_date = event_data["start_date"]
 
-            seen_events = set()
+                event_key = f"{title}|{start_date}"
+                if event_key in seen_events:
+                    continue
+                seen_events.add(event_key)
 
-            for event_data in events:
-                try:
-                    title = event_data["title"]
-                    start_date = event_data["start_date"]
+                events_found += 1
 
-                    # Dedupe by title + date
-                    event_key = f"{title}|{start_date}"
-                    if event_key in seen_events:
-                        continue
-                    seen_events.add(event_key)
+                content_hash = generate_content_hash(
+                    title, "Drepung Loseling Monastery", start_date
+                )
 
-                    events_found += 1
+                category, subcategory, tags, series_hint = determine_category_and_series(
+                    title, event_data.get("description", "")
+                )
 
-                    # Generate content hash
-                    content_hash = generate_content_hash(
-                        title, "Drepung Loseling Monastery", start_date
-                    )
+                event_record = {
+                    "source_id": source_id,
+                    "venue_id": venue_id,
+                    "title": title[:200],
+                    "description": event_data.get("description", "")[:1000],
+                    "start_date": start_date,
+                    "start_time": event_data.get("start_time"),
+                    "end_date": None,
+                    "end_time": None,
+                    "is_all_day": False,
+                    "category": category,
+                    "subcategory": subcategory,
+                    "tags": tags,
+                    "price_min": None,
+                    "price_max": None,
+                    "price_note": "Free - donations welcome",
+                    "is_free": True,
+                    "source_url": CALENDAR_URL,
+                    "ticket_url": CALENDAR_URL,
+                    "image_url": None,
+                    "raw_text": event_data.get("raw_text", "")[:500],
+                    "extraction_confidence": 0.80,
+                    "content_hash": content_hash,
+                }
 
-                    # Check for existing
-
-                    # Determine category and tags
-                    category, subcategory, tags, series_hint = determine_category_and_series(
-                        title, event_data.get("description", "")
-                    )
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title[:200],
-                        "description": event_data.get("description", "")[:1000],
-                        "start_date": start_date,
-                        "start_time": event_data.get("start_time"),
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": category,
-                        "subcategory": subcategory,
-                        "tags": tags,
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": "Free - donations welcome",
-                        "is_free": True,
-                        "source_url": CALENDAR_URL,
-                        "ticket_url": CALENDAR_URL,
-                        "image_url": None,
-                        "raw_text": event_data.get("raw_text", "")[:500],
-                        "extraction_confidence": 0.80,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        continue
-
-                    try:
-                        insert_event(event_record, series_hint=series_hint)
-                        events_new += 1
-                        logger.info(f"Added: {title[:50]}... on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                except Exception as e:
-                    logger.error(f"Error processing event: {e}")
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
                     continue
 
-            browser.close()
+                try:
+                    insert_event(event_record, series_hint=series_hint)
+                    events_new += 1
+                    logger.info(f"Added: {title[:50]}... on {start_date}")
+                except Exception as e:
+                    logger.error(f"Failed to insert: {title}: {e}")
+
+            except Exception as e:
+                logger.error(f"Error processing event: {e}")
+                continue
 
         logger.info(
             f"Drepung Loseling crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
