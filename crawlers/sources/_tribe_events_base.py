@@ -81,8 +81,8 @@ _PAGE_SIZE = 20
 # Polite delay between paginated requests (seconds)
 _REQUEST_DELAY = 0.8
 
-# Maximum pages to fetch per crawl (safety cap — 20 pages × 20 events = 400)
-_MAX_PAGES = 50
+# Maximum pages to fetch per crawl (safety cap — 75 pages × 20 events = 1500)
+_MAX_PAGES = 75
 
 # ---------------------------------------------------------------------------
 # Tribe category slug → LostCity category
