@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { SPOT_TYPES, formatPriceLevel, getSpotTypeLabels, type SpotType } from "@/lib/spots-constants";
 import FollowButton from "@/components/FollowButton";
 import VenueTagList from "@/components/VenueTagList";
@@ -226,6 +226,29 @@ const dogVibeLabels: Record<string, string> = {
 };
 
 function CollapsibleVenueTags({ venueId }: { venueId: number }) {
+  // Only render the section if the venue has at least one community tag.
+  // Fetching just the count avoids showing the "Community Tags" header on
+  // venues with no tags, which was always the case for 99% of venues.
+  const [hasTags, setHasTags] = useState<boolean | null>(null); // null = loading
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/venues/${venueId}/tags`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!cancelled) {
+          setHasTags(Array.isArray(data?.tags) && data.tags.length > 0);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setHasTags(false);
+      });
+    return () => { cancelled = true; };
+  }, [venueId]);
+
+  // Don't render anything while loading or when no tags exist
+  if (!hasTags) return null;
+
   return (
     <CollapsibleSection title="Community Tags">
       <VenueTagList venueId={venueId} />

@@ -1,4 +1,5 @@
 import { getFilteredEventsWithSearch, getFilteredEventsWithCursor, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
+import { applyImageFallbacks } from "@/lib/image-fallback";
 import { enrichEventsWithSocialProof } from "@/lib/social-proof";
 import type { MoodId } from "@/lib/moods";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
@@ -78,6 +79,10 @@ export async function GET(request: Request) {
     const importanceRaw = searchParams.get("importance")?.split(",").filter(Boolean) || undefined;
     const importance = importanceRaw?.filter((i) => VALID_IMPORTANCE.has(i));
 
+    // Parse time_after — must be HH:MM format (e.g. "17:00")
+    const timeAfterRaw = searchParams.get("time_after");
+    const timeAfter = timeAfterRaw && /^\d{2}:\d{2}$/.test(timeAfterRaw) ? timeAfterRaw : undefined;
+
     const filters: SearchFilters = {
       search: searchParams.get("search") || undefined,
       categories: searchParams.get("categories")?.split(",").filter(Boolean) || undefined,
@@ -101,6 +106,7 @@ export async function GET(request: Request) {
       // (which exceeds PostgREST URL limits for cities with 2500+ venues).
       portal_city: portalCity,
       importance: importance && importance.length > 0 ? importance : undefined,
+      time_after: timeAfter,
     };
 
     const pageSize = safeParseInt(searchParams.get("pageSize"), 20, 1, 500);
@@ -116,7 +122,7 @@ export async function GET(request: Request) {
       );
 
       // Enrich with social proof counts
-      const events = await enrichEventsWithSocialProof(rawEvents);
+      const events = await enrichEventsWithSocialProof(applyImageFallbacks(rawEvents));
 
       return apiResponse(
         {
@@ -136,7 +142,7 @@ export async function GET(request: Request) {
       const { events: rawEvents, total } = await getFilteredEventsWithSearch(filters, page, pageSize);
 
       // Enrich with social proof counts
-      const events = await enrichEventsWithSocialProof(rawEvents);
+      const events = await enrichEventsWithSocialProof(applyImageFallbacks(rawEvents));
 
       // Also generate a cursor from the last event for gradual migration
       const nextCursor = events.length > 0 ? generateNextCursor(events) : null;
