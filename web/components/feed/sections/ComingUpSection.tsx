@@ -34,7 +34,7 @@ export default function ComingUpSection({ section, portalSlug }: Props) {
         priority="secondary"
         accentColor="var(--neon-green)"
         icon={<Confetti weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=find&type=events&date=next_7_days`}
+        seeAllHref={`/${portalSlug}?view=happening&date=next_7_days`}
         seeAllLabel="This week"
       />
 
@@ -52,7 +52,7 @@ export default function ComingUpSection({ section, portalSlug }: Props) {
 
       {events.length > 6 && (
         <Link
-          href={`/${portalSlug}?view=find&type=events&date=next_7_days`}
+          href={`/${portalSlug}?view=happening&date=next_7_days`}
           className="mt-2 w-full flex items-center justify-center gap-1.5 text-xs font-mono font-medium py-2 rounded-lg transition-all hover:bg-white/[0.02] text-[var(--neon-green)]"
         >
           +{events.length - 6} more this week

@@ -128,7 +128,7 @@ export function buildDirectQueryFallbackResults(
       type: "event",
       title: query,
       subtitle: findType === "classes" ? "Search classes" : "Search events",
-      href: `/${portalSlug}?view=find&type=${eventTarget}&search=${encodeURIComponent(query)}`,
+      href: `/${portalSlug}?view=happening&search=${encodeURIComponent(query)}`,
       score: 560,
     });
   }
@@ -139,7 +139,7 @@ export function buildDirectQueryFallbackResults(
       type: "venue",
       title: query,
       subtitle: getFindSearchSubtitle("venue"),
-      href: `/${portalSlug}?view=find&type=destinations&search=${encodeURIComponent(query)}`,
+      href: `/${portalSlug}?view=places&search=${encodeURIComponent(query)}`,
       score: 540,
     });
   }

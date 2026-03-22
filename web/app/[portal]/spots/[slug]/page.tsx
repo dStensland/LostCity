@@ -217,7 +217,7 @@ export default async function PortalSpotPage({ params }: Props) {
               { name: activePortalName, href: `/${activePortalSlug}` },
               {
                 name: "Spots",
-                href: `/${activePortalSlug}?view=find&type=destinations`,
+                href: `/${activePortalSlug}?view=places`,
               },
               { name: spotName },
             ])

@@ -311,7 +311,7 @@ export default async function PortalFestivalPage({ params }: Props) {
           __html: safeJsonLd(
             buildBreadcrumbSchema([
               { name: activePortalName, href: `/${activePortalSlug}` },
-              { name: "Festivals", href: `/${activePortalSlug}?view=find&type=events&categories=festivals` },
+              { name: "Festivals", href: `/${activePortalSlug}?view=happening&categories=festivals` },
               { name: festival.name },
             ])
           ),

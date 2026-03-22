@@ -323,7 +323,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
           Organizations in {portalName} will appear here. We&apos;re working on bringing more community groups to the platform.
         </p>
         <Link
-          href={`/${portalSlug}?view=find`}
+          href={`/${portalSlug}?view=happening`}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

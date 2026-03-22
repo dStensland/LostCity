@@ -208,7 +208,7 @@ export default function EventsFinder({
               />
             </div>
             <div className="flex-1 min-w-0">
-              <MapErrorBoundary listHref={`/${portalSlug}?view=find&type=events`}>
+              <MapErrorBoundary listHref={`/${portalSlug}?view=happening`}>
                 <MapViewWrapper
                   events={mapEvents}
                   portalId={portalId}
@@ -232,7 +232,7 @@ export default function EventsFinder({
             className="md:hidden relative"
             style={{ height: MAP_MOBILE_HEIGHT }}
           >
-            <MapErrorBoundary listHref={`/${portalSlug}?view=find&type=events`}>
+            <MapErrorBoundary listHref={`/${portalSlug}?view=happening`}>
               <MapViewWrapper
                 events={mapEvents}
                 portalId={portalId}

@@ -8,12 +8,12 @@ describe("buildSearchResultHref", () => {
       id: "search:event:music",
       type: "event",
       title: "music",
-      href: "/atlanta?view=find&type=events&search=music",
+      href: "/atlanta?view=happening&search=music",
       score: 700,
     };
 
     expect(buildSearchResultHref(result, { portalSlug: "atlanta" })).toBe(
-      "/atlanta?view=find&type=events&search=music",
+      "/atlanta?view=happening&search=music",
     );
   });
 });

@@ -77,7 +77,7 @@ export default function BrowseSection({ section, portalSlug }: Props) {
             priority="secondary"
             accentColor="var(--neon-cyan)"
             icon={<Compass weight="duotone" className="w-5 h-5" />}
-            seeAllHref={`/${portalSlug}?view=find&type=events`}
+            seeAllHref={`/${portalSlug}?view=happening`}
           />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
             {eventTiles.map(({ key: cat, count }) => {
@@ -85,7 +85,7 @@ export default function BrowseSection({ section, portalSlug }: Props) {
               return (
                 <Link
                   key={cat}
-                  href={`/${portalSlug}?view=find&type=events&categories=${cat}`}
+                  href={`/${portalSlug}?view=happening&categories=${cat}`}
                   className="relative flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl border transition-all hover:scale-105 active:scale-95"
                   style={{
                     borderColor: `color-mix(in srgb, ${catColor} 28%, transparent)`,
@@ -120,13 +120,13 @@ export default function BrowseSection({ section, portalSlug }: Props) {
             priority="secondary"
             accentColor="var(--neon-green)"
             icon={<MapPin weight="duotone" className="w-5 h-5" />}
-            seeAllHref={`/${portalSlug}?view=find&type=spots`}
+            seeAllHref={`/${portalSlug}?view=places`}
           />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
             {destinationTiles.map((tile) => (
               <Link
                 key={tile.key}
-                href={`/${portalSlug}?view=find&type=spots`}
+                href={`/${portalSlug}?view=places`}
                 className="relative flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl border transition-all hover:scale-105 active:scale-95"
                 style={{
                   borderColor: `color-mix(in srgb, ${tile.color} 28%, transparent)`,

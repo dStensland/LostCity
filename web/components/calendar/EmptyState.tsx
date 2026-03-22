@@ -105,7 +105,7 @@ export function EmptyState() {
 
       <div className="mt-8">
         <Link
-          href={`/${DEFAULT_PORTAL_SLUG}?view=find&type=events`}
+          href={`/${DEFAULT_PORTAL_SLUG}?view=happening`}
           className="inline-block bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium rounded-lg px-6 py-2.5 hover:opacity-90 transition-opacity"
         >
           Browse Events

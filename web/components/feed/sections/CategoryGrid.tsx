@@ -42,7 +42,7 @@ export function CategoryGrid({
         {categories.map((cat) => (
           <Link
             key={cat.id}
-            href={`/${portalSlug}?view=find&type=events&categories=${cat.id}`}
+            href={`/${portalSlug}?view=happening&categories=${cat.id}`}
             className="flex flex-col items-center gap-2 p-4 rounded-xl border border-[var(--twilight)] hover:border-[var(--coral)]/50 transition-all group min-h-[80px] relative bg-[var(--card-bg)]"
           >
             <CategoryIcon

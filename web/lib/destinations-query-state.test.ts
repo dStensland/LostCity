@@ -43,8 +43,8 @@ describe("destinations-query-state", () => {
       },
     });
 
-    expect(next.get("view")).toBe("find");
-    expect(next.get("type")).toBe("destinations");
+    expect(next.get("view")).toBe("places");
+    expect(next.has("type")).toBe(false);
     expect(next.get("tab")).toBe("things-to-do");
     expect(next.get("with_events")).toBe("true");
     expect(next.get("venue_type")).toBe("gallery,museum");

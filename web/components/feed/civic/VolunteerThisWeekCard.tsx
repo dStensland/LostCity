@@ -225,7 +225,7 @@ export default function VolunteerThisWeekCard({
 
       <div className="mt-4 flex flex-wrap gap-3">
         <Link
-          href={`/${portalSlug}?view=find&type=events&categories=community,volunteer&date=next_7_days`}
+          href={`/${portalSlug}?view=happening&categories=community,volunteer&date=next_7_days`}
           className="inline-flex items-center gap-1 rounded-md border border-[var(--twilight)]/80 px-3 py-1.5 text-xs font-medium text-[var(--cream)] transition-colors hover:border-[var(--action-primary)]/35 hover:text-[var(--action-primary)]"
         >
           See all volunteer events

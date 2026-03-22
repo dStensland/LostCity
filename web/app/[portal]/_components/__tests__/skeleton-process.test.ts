@@ -17,7 +17,8 @@ describe("portal skeleton process guardrails", () => {
 
     expect(routeLoader).toContain('data-skeleton-route="portal-root"');
     expect(pageFile).toContain('data-skeleton-route="feed-view"');
-    expect(pageFile).toContain('data-skeleton-route="find-view"');
+    expect(pageFile).toContain('data-skeleton-route="happening-view"');
+    expect(pageFile).toContain('data-skeleton-route="places-view"');
     expect(pageFile).toContain('data-skeleton-route="community-view"');
     expect(eventLoader).toContain('data-skeleton-route="event-detail"');
     expect(happeningLoader).toContain('data-skeleton-route="happening-now"');

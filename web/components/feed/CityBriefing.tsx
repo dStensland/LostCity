@@ -1017,7 +1017,7 @@ export default function CityBriefing({
         {/* Festival alert ribbon */}
         {hasFestival && !hasHoliday && (
           <Link
-            href={`/${portalSlug}?view=find&type=events&series=${context.active_festivals[0].slug}`}
+            href={`/${portalSlug}?view=happening&series=${context.active_festivals[0].slug}`}
             className="w-full flex items-center px-4 py-2.5 border text-left transition-colors hover:bg-[var(--dusk)] mt-2"
             style={{
               borderColor: `color-mix(in srgb, ${header.accent_color} 30%, var(--twilight))`,

@@ -87,7 +87,7 @@ const COMMUNITY_PATHS = [
   {
     title: "Classes + Workshops",
     body: "Film education, craft workshops, and production skill-building sessions.",
-    hrefFor: (slug: string) => `/${slug}?view=find&type=classes`,
+    hrefFor: (slug: string) => `/${slug}?view=happening`,
   },
 ];
 

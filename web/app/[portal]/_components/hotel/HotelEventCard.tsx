@@ -21,7 +21,7 @@ function resolveEventHref(
   const id = event.id == null ? "" : String(event.id).trim();
   if (id) return `/${portalSlug}/events/${id}`;
   const fallbackQuery = event.venue_name || event.title;
-  return `/${portalSlug}?view=find&type=events&search=${encodeURIComponent(fallbackQuery)}`;
+  return `/${portalSlug}?view=happening&search=${encodeURIComponent(fallbackQuery)}`;
 }
 
 function formatEventDate(dateValue: string): string {

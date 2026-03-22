@@ -284,7 +284,7 @@ export default function TheSceneSection({ portalSlug }: Props) {
         priority="secondary"
         accentColor="var(--vibe)"
         icon={<MicrophoneStage weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=find&type=regulars${activeChipId !== "all" ? `&activity=${activeChipId}` : ""}${activeDays.length > 0 ? `&weekday=${activeDays.join(",")}` : ""}`}
+        seeAllHref={`/${portalSlug}?view=happening&content=regulars${activeChipId !== "all" ? `&activity=${activeChipId}` : ""}${activeDays.length > 0 ? `&weekday=${activeDays.join(",")}` : ""}`}
       />
 
       {/* Activity chip strip */}

@@ -103,7 +103,7 @@ const TABS: TabConfig[] = [
     dateFilter: (e) => e.start_date <= getToday(),
     accent: "var(--coral)",
     icon: Lightning,
-    seeAllHref: (s) => `/${s}?view=find&type=events&date=today`,
+    seeAllHref: (s) => `/${s}?view=happening&date=today`,
   },
   {
     id: "this_week",
@@ -115,7 +115,7 @@ const TABS: TabConfig[] = [
     },
     accent: "var(--neon-green)",
     icon: CalendarBlank,
-    seeAllHref: (s) => `/${s}?view=find&type=events&date=next_7_days`,
+    seeAllHref: (s) => `/${s}?view=happening&date=next_7_days`,
   },
   {
     id: "coming_up",
@@ -127,7 +127,7 @@ const TABS: TabConfig[] = [
     },
     accent: "var(--gold)",
     icon: CalendarBlank,
-    seeAllHref: (s) => `/${s}?view=find&type=events&date=next_30_days`,
+    seeAllHref: (s) => `/${s}?view=happening&date=next_30_days`,
   },
 ];
 
@@ -472,7 +472,7 @@ export default function LineupSection({
         priority="secondary"
         accentColor={sectionAccentColor}
         icon={<Lightning weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=find&type=events`}
+        seeAllHref={`/${portalSlug}?view=happening`}
       />
 
       {/* Date tabs — counts are lineup-filtered */}

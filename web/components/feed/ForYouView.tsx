@@ -369,7 +369,7 @@ function ForYouViewInner({ portalSlug }: ForYouViewProps) {
           </p>
           <div className="flex flex-col sm:flex-row gap-2.5 justify-center">
             <Link
-              href={`/${portalSlug}?view=find&type=events`}
+              href={`/${portalSlug}?view=happening`}
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-xs font-medium hover:bg-[var(--rose)] transition-colors"
             >
               <MagnifyingGlass size={14} weight="bold" />

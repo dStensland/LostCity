@@ -19,7 +19,7 @@ export default async function FilmShowtimesPage({ params }: Props) {
   }
 
   if (getPortalVertical(portal) !== "film") {
-    redirect(`/${portal.slug}?view=find&type=events`);
+    redirect(`/${portal.slug}?view=happening`);
   }
 
   return (

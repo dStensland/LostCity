@@ -2,7 +2,13 @@ import { getCachedPortalBySlug, getCachedPortalByVerticalAndCity, getPortalVerti
 import { headers } from "next/headers";
 import { PortalHeader, DogHeader, AdventureHeader, ATLittleHeader } from "@/components/headers";
 import { AmbientBackground } from "@/components/ambient";
-import FindView from "@/components/find/FindView";
+import HappeningView from "@/components/find/HappeningView";
+import type { HappeningContent } from "@/components/find/HappeningView";
+import dynamic from "next/dynamic";
+
+const SpotsFinder = dynamic(() => import("@/components/find/SpotsFinder"), {
+  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading places...</div>,
+});
 import CommunityHub from "@/components/community/CommunityHub";
 import DetailViewRouter from "@/components/views/DetailViewRouter";
 import { DefaultTemplate } from "./_templates/default";
@@ -90,8 +96,7 @@ export async function generateMetadata({
   };
 }
 
-type ViewMode = "feed" | "find" | "community";
-type FindType = "events" | "classes" | "destinations" | "showtimes" | "whats_on" | "regulars";
+type ViewMode = "feed" | "happening" | "places" | "community";
 type FindDisplay = "list" | "map" | "calendar";
 
 type PortalSearchParams = {
@@ -131,6 +136,7 @@ type PortalSearchParams = {
   mode?: string;
   persona?: string;
   support?: string;
+  content?: string;
   // Detail view params
   event?: string;
   spot?: string;
@@ -282,49 +288,57 @@ export default async function PortalPage({ params, searchParams }: Props) {
   const viewParam = searchParamsData.view;
   const findTypeParam = searchParamsData.type;
   const findDisplayParam = searchParamsData.display;
+  const contentParam = searchParamsData.content;
   const hasFindSignals = Boolean(
     findTypeParam ||
       findDisplayParam ||
       hasAnyActiveFindFilters(searchParamsData)
   );
 
-  // Parse view mode with deterministic fallback behavior.
-  // If filter/display/type signals are present without explicit `view`, prefer Find.
+  // ─── View Mode Resolution ───────────────────────────────────────────────
+  // New URL scheme: view=happening, view=places, view=community
+  // Backward compat: view=find maps to happening or places based on type param
   let viewMode: ViewMode = "feed";
   if (viewParam === "feed") {
     viewMode = "feed";
   } else if (viewParam === "community") {
     viewMode = "community";
-  } else if (
-    viewParam === "find" ||
-    viewParam === "events" ||
-    viewParam === "spots" ||
-    viewParam === "map" ||
-    viewParam === "calendar" ||
-    hasFindSignals
-  ) {
-    viewMode = "find";
-  }
-  // Determine find type - support legacy view params
-  // Note: "orgs" was moved to community view, redirect to events
-  // Note: "spots" is a URL alias for the "destinations" findType
-  const VALID_FIND_TYPES = new Set<FindType>(["events", "classes", "destinations", "showtimes", "whats_on", "regulars"]);
-  let findType: FindType = "events";
-  if (findTypeParam && findTypeParam !== "orgs" && findTypeParam !== "playbook") {
-    let mapped = findTypeParam === "spots" ? "destinations" : findTypeParam;
-    // Backward compat: ?type=showtimes now resolves to whats_on
-    if (mapped === "showtimes") mapped = "whats_on";
-    findType = VALID_FIND_TYPES.has(mapped as FindType) ? (mapped as FindType) : "events";
-  } else if (viewParam === "spots") {
-    findType = "destinations";
+  } else if (viewParam === "places") {
+    viewMode = "places";
+  } else if (viewParam === "happening") {
+    viewMode = "happening";
+  } else if (viewParam === "find" || viewParam === "events" || viewParam === "spots" || viewParam === "map" || viewParam === "calendar") {
+    // Backward compat: view=find routes to happening or places based on type
+    const typeP = findTypeParam;
+    if (typeP === "destinations" || typeP === "spots" || viewParam === "spots") {
+      viewMode = "places";
+    } else {
+      viewMode = "happening";
+    }
+  } else if (hasFindSignals) {
+    // Filter signals without explicit view → infer from type
+    if (findTypeParam === "destinations" || findTypeParam === "spots") {
+      viewMode = "places";
+    } else {
+      viewMode = "happening";
+    }
   }
 
-  // Community portals only support events in the Find view
-  if (isCommunity && findType !== "events") {
-    findType = "events";
+  // ─── Happening Content Type ─────────────────────────────────────────────
+  // Maps ?content= param (or legacy ?type= param) to content type
+  let happeningContent: HappeningContent = "all";
+  if (contentParam === "regulars" || findTypeParam === "regulars") {
+    happeningContent = "regulars";
+  } else if (contentParam === "showtimes" || findTypeParam === "showtimes" || findTypeParam === "whats_on") {
+    happeningContent = "showtimes";
   }
 
-  // Determine display mode - support legacy view params
+  // Community portals only support events content
+  if (isCommunity) {
+    happeningContent = "all";
+  }
+
+  // ─── Display Mode ──────────────────────────────────────────────────────
   let findDisplay: FindDisplay = "list";
   if (findDisplayParam) {
     findDisplay = findDisplayParam as FindDisplay;
@@ -334,21 +348,24 @@ export default async function PortalPage({ params, searchParams }: Props) {
     findDisplay = "calendar";
   }
 
-  // Destinations tab defaults to list unless the URL explicitly pairs
-  // type=destinations (or view=spots) with display=map. This prevents the map
-  // from auto-loading when the user switches to this tab from another find type
-  // that had display=map, which risks exhausting browser WebGL contexts.
-  if (findType === "destinations") {
-    const destinationsTypeExplicit =
-      findTypeParam === "destinations" || viewParam === "spots";
+  // Places defaults to list unless display=map is explicit
+  if (viewMode === "places") {
+    const placesExplicit =
+      viewParam === "places" || viewParam === "spots" ||
+      findTypeParam === "destinations" || findTypeParam === "spots";
     const mapExplicit = findDisplayParam === "map";
-    if (!(destinationsTypeExplicit && mapExplicit)) {
+    if (!(placesExplicit && mapExplicit)) {
       findDisplay = "list";
     }
   }
 
+  // Map the content type to FindType for filter checking
+  const findTypeForFilters = happeningContent === "regulars" ? "regulars" as const
+    : happeningContent === "showtimes" ? "showtimes" as const
+    : "events" as const;
+
   // Check for active filters
-  const hasActiveFilters = hasActiveFindFilters(searchParamsData, findType);
+  const hasActiveFilters = hasActiveFindFilters(searchParamsData, findTypeForFilters);
   const portalPageSchema = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -364,7 +381,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
   const mainClassName = (() => {
     const base = "mx-auto px-4 sm:px-6 lg:px-8 pb-20";
-    if (viewMode !== "find") {
+    if (viewMode === "feed") {
       return isFilm
         ? `max-w-6xl ${base}`
         : `max-w-[1600px] ${base}`;
@@ -430,17 +447,30 @@ export default async function PortalPage({ params, searchParams }: Props) {
                     </Suspense>
                   )}
 
-                  {viewMode === "find" && (
-                    <div data-skeleton-route="find-view" className="contents">
-                      <FindView
+                  {viewMode === "happening" && (
+                    <div data-skeleton-route="happening-view" className="contents">
+                      <HappeningView
                         portalId={portal.id}
                         portalSlug={portal.slug}
                         portalExclusive={isExclusive}
-                        findType={findType}
                         displayMode={findDisplay}
                         hasActiveFilters={hasActiveFilters}
                         vertical={vertical}
+                        contentType={happeningContent}
                       />
+                    </div>
+                  )}
+
+                  {viewMode === "places" && (
+                    <div data-skeleton-route="places-view" className="contents">
+                      <Suspense fallback={<div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading places...</div>}>
+                        <SpotsFinder
+                          portalId={portal.id}
+                          portalSlug={portal.slug}
+                          portalExclusive={isExclusive}
+                          displayMode={findDisplay === "calendar" ? "list" : findDisplay as "list" | "map"}
+                        />
+                      </Suspense>
                     </div>
                   )}
 

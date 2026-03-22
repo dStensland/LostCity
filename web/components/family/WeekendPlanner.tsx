@@ -462,7 +462,7 @@ function AddSomethingCard({
   dateString: string;
 }) {
   const copy = `Browse events for ${dayLabel}`;
-  const href = `/${portalSlug}?view=find&type=events&date=${dateString}`;
+  const href = `/${portalSlug}?view=happening&date=${dateString}`;
 
   return (
     <Link
@@ -986,7 +986,7 @@ function BudgetPicksSection({
           Budget Picks
         </p>
         <Link
-          href={`/${portalSlug}?view=find&type=events&date=weekend&free=1`}
+          href={`/${portalSlug}?view=happening&date=weekend&free=1`}
           style={{
             fontFamily: FONT_BODY,
             fontSize: 12,
@@ -1162,7 +1162,7 @@ function WeekendDestinationsSection({
           {headerLabel}
         </p>
         <Link
-          href={`/${portalSlug}?view=find&type=destinations`}
+          href={`/${portalSlug}?view=places`}
           style={{
             fontFamily: FONT_BODY,
             fontSize: 12,
@@ -1434,7 +1434,7 @@ export const WeekendPlanner = memo(function WeekendPlanner({
               Perfect For This Weekend
             </p>
             <Link
-              href={`/${portalSlug}?view=find&type=events&date=weekend`}
+              href={`/${portalSlug}?view=happening&date=weekend`}
               style={{
                 fontFamily: FONT_BODY,
                 fontSize: 12,

@@ -286,7 +286,7 @@ export default function ExperiencesSection({ portalSlug }: Props) {
         priority="secondary"
         accentColor="var(--neon-green)"
         icon={<Binoculars weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=find&type=destinations&tab=things-to-do`}
+        seeAllHref={`/${portalSlug}?view=places&tab=things-to-do`}
       />
 
       {/* Category chip strip */}

@@ -102,7 +102,7 @@ export default function ExploreTrackSection({
           {/* "See all" card */}
           {track.venueCount > track.previewVenues.length && (
             <Link
-              href={`/${portalSlug}?view=find&type=destinations&search=${encodeURIComponent(track.name)}`}
+              href={`/${portalSlug}?view=places&search=${encodeURIComponent(track.name)}`}
               className="flex-shrink-0 w-28 rounded-lg flex items-center justify-center transition-all hover:scale-[1.02]"
               style={{
                 background: EXPLORE_THEME.bg,

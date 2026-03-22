@@ -82,13 +82,13 @@ function ExploreFeedOutro({ portalSlug }: { portalSlug: string }) {
 
         <div className="mt-4 flex flex-wrap gap-2.5">
           <Link
-            href={`/${portalSlug}?view=find&type=destinations`}
+            href={`/${portalSlug}?view=places`}
             className="px-3.5 py-2 rounded-lg border border-[var(--twilight)] text-[var(--cream)] text-xs font-mono hover:border-[var(--neon-amber)]/40 hover:text-[var(--neon-amber)] transition-colors"
           >
             Browse Places
           </Link>
           <Link
-            href={`/${portalSlug}?view=find&type=events`}
+            href={`/${portalSlug}?view=happening`}
             className="px-3.5 py-2 rounded-lg border border-[var(--twilight)] text-[var(--cream)] text-xs font-mono hover:border-[var(--coral)]/40 hover:text-[var(--coral)] transition-colors"
           >
             Tonight&apos;s Events

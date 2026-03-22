@@ -53,8 +53,8 @@ function DestinationsMapFilterBar({ portalSlug }: { portalSlug: string }) {
         else params.set(key, value);
       });
 
-      params.set("view", "find");
-      params.set("type", "destinations");
+      params.set("view", "places");
+      params.delete("type");
       params.set("display", "map");
 
       router.replace(`/${portalSlug}?${params.toString()}`, { scroll: false });
@@ -259,7 +259,7 @@ export default function SpotsFinder({
             <DestinationsMapFilterBar portalSlug={portalSlug} />
           </div>
           <div style={{ height: MAP_DESKTOP_HEIGHT }}>
-            <MapErrorBoundary listHref={`/${portalSlug}?view=find&type=destinations`}>
+            <MapErrorBoundary listHref={`/${portalSlug}?view=places`}>
               <MapViewWrapper
                 portalId={portalId}
                 portalExclusive={portalExclusive}

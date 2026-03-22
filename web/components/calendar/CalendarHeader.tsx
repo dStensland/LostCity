@@ -173,7 +173,7 @@ export function CalendarHeader({ summary, friends, feedUrls, isLoading }: Calend
               </div>
 
               <Link
-                href={`/${portalSlug}?view=find&type=events&display=calendar${selectedDate ? `&date=${format(selectedDate, "yyyy-MM-dd")}` : ""}`}
+                href={`/${portalSlug}?view=happening&display=calendar${selectedDate ? `&date=${format(selectedDate, "yyyy-MM-dd")}` : ""}`}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[var(--twilight)]/75 bg-[var(--void)]/65 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/45 font-mono text-xs transition-colors"
               >
                 Find Calendar

@@ -65,7 +65,7 @@ export function OpenTimeBlock({ events, selectedDate }: OpenTimeBlockProps) {
   if (!gap) return null;
 
   const dateParam = format(selectedDate, "yyyy-MM-dd");
-  const exploreHref = `/${DEFAULT_PORTAL_SLUG}?view=find&type=events&date=${dateParam}`;
+  const exploreHref = `/${DEFAULT_PORTAL_SLUG}?view=happening&date=${dateParam}`;
 
   return (
     <div className="bg-gradient-to-r from-[var(--coral)]/10 to-[var(--gold)]/10 border border-[var(--coral)]/20 rounded-xl p-4">

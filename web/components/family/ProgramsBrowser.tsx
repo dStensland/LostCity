@@ -972,7 +972,7 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
               </button>
             ) : (
               <a
-                href={`/${portalSlug}?view=find&categories=family,community`}
+                href={`/${portalSlug}?view=happening&categories=family,community`}
                 style={{
                   display: "inline-block",
                   marginTop: 16,

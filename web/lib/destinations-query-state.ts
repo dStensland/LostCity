@@ -174,8 +174,8 @@ export function applyDestinationsQueryState(
     }
   };
 
-  nextParams.set("view", "find");
-  nextParams.set("type", "destinations");
+  nextParams.set("view", "places");
+  nextParams.delete("type");
   setOrDelete("tab", state.activeTab !== "eat-drink" ? state.activeTab : null);
   setOrDelete("occasion", filters.occasion);
   setOrDelete("open_now", filters.openNow ? "true" : null);

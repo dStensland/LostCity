@@ -490,7 +490,7 @@ export default function TrendingSection({ section, portalSlug }: Props) {
             </h2>
           </div>
           <Link
-            href={`/${portalSlug}?view=find&type=events`}
+            href={`/${portalSlug}?view=happening`}
             className="text-xs flex items-center gap-1 text-[var(--coral)] transition-colors hover:opacity-80"
           >
             See all <ArrowRight className="w-3 h-3" />

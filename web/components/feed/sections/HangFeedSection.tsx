@@ -173,7 +173,7 @@ function HangsEmptyState({ portalSlug }: { portalSlug: string }) {
         </p>
       </div>
       <Link
-        href={`/${portalSlug}?view=find`}
+        href={`/${portalSlug}?view=happening`}
         className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-[var(--neon-green)]/15 border border-[var(--neon-green)]/25 text-xs font-mono font-medium text-[var(--neon-green)] hover:bg-[var(--neon-green)]/25 transition-colors active:scale-95"
       >
         I&apos;m Out

@@ -53,7 +53,7 @@ export function PlacesToGoSection({
       <SectionLabel
         text={labelText}
         color={SAGE}
-        rightSlot={<SeeAllLink href={`/${portalSlug}?view=find&type=destinations`} />}
+        rightSlot={<SeeAllLink href={`/${portalSlug}?view=places`} />}
       />
       {isLoading ? (
         <div className="flex gap-2.5 overflow-hidden">
@@ -78,7 +78,7 @@ export function PlacesToGoSection({
         </div>
       ) : (
         <Link
-          href={`/${portalSlug}?view=find&type=destinations`}
+          href={`/${portalSlug}?view=places`}
           className="hover:opacity-70 transition-opacity"
           style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 13, color: SAGE }}
         >

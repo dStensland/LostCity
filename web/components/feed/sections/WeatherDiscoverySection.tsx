@@ -60,7 +60,7 @@ export default function WeatherDiscoverySection({
           </h2>
         </div>
         <Link
-          href={`/${portalSlug}?view=find&type=destinations`}
+          href={`/${portalSlug}?view=places`}
           className="text-xs flex items-center gap-1 transition-colors hover:opacity-80"
           style={{ color: accentColor }}
         >

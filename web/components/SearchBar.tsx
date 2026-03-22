@@ -204,7 +204,7 @@ export default function SearchBar() {
   const handleCategoryChip = useCallback(
     (category: string) => {
       search.setShowDropdown(false);
-      router.push(`/${portalSlug}?view=find&type=events&categories=${category}`, { scroll: false });
+      router.push(`/${portalSlug}?view=happening&categories=${category}`, { scroll: false });
     },
     [portalSlug, router, search]
   );
@@ -450,8 +450,8 @@ export default function SearchBar() {
                         } else if (type === "organizer") {
                           router.push(`/${portalSlug}?view=community&search=${encodeURIComponent(search.query)}`, { scroll: false });
                         } else {
-                          const findType = type === "venue" ? "destinations" : "events";
-                          router.push(`/${portalSlug}?view=find&type=${findType}&search=${encodeURIComponent(search.query)}`, { scroll: false });
+                          const viewParam = type === "venue" ? "places" : "happening";
+                          router.push(`/${portalSlug}?view=${viewParam}&search=${encodeURIComponent(search.query)}`, { scroll: false });
                         }
                       } : undefined}
                     />

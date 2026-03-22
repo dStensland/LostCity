@@ -22,7 +22,7 @@ export type FeatureSectionConfig = {
 };
 
 export const FEATURE_SECTION_CONFIG: Record<string, FeatureSectionConfig> = {
-  museum: { title: "On View", Icon: PaintBrush, color: "#F472B6" },
+  museum: { title: "What's Here", Icon: PaintBrush, color: "#F472B6" },
   gallery: { title: "Current Exhibition", Icon: Image, color: "#A78BFA" },
   park: { title: "Things to Do", Icon: TreePalm, color: "#4ADE80" },
   cinema: { title: "Now Playing", Icon: FilmSlate, color: "#FBBF24" },

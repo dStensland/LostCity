@@ -313,7 +313,7 @@ export default function FilmShowtimeBoard({
           </div>
 
           <Link
-            href={`/${portalSlug}?view=find&type=showtimes`}
+            href={`/${portalSlug}?view=happening&content=showtimes`}
             className="text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]"
           >
             Open full finder

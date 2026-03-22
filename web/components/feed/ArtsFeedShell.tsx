@@ -12,6 +12,28 @@ interface ArtsFeedShellProps {
   portalSlug: string;
 }
 
+// Shape returned by the exhibitions table via the arts-feed API
+interface ApiExhibition {
+  id: string;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  opening_date: string | null;
+  closing_date: string | null;
+  exhibition_type: string | null;
+  admission_type: string | null;
+  source_url: string | null;
+  tags: string[] | null;
+  venue: {
+    id: number;
+    name: string;
+    neighborhood: string | null;
+    slug: string | null;
+    image_url: string | null;
+    blurhash: string | null;
+  } | null;
+}
+
 interface ArtsFeedData {
   openingThisWeek: FeedEventData[];
   closingSoon: FeedEventData[];
@@ -19,15 +41,7 @@ interface ArtsFeedData {
   classes: FeedEventData[];
 }
 
-const EXHIBITION_TAGS = ["exhibition", "gallery", "art-show", "museum", "visual-art", "sculpture", "installation"];
 const CLASS_TAGS = ["class", "workshop", "ceramics", "pottery", "printmaking", "painting-class"];
-
-function isExhibition(e: FeedEventData): boolean {
-  return (
-    e.tags?.some((t: string) => EXHIBITION_TAGS.includes(t)) === true ||
-    e.category === "art"
-  );
-}
 
 function isClass(e: FeedEventData): boolean {
   return (
@@ -35,6 +49,45 @@ function isClass(e: FeedEventData): boolean {
     (e.title?.toLowerCase().includes("class") ?? false) ||
     (e.title?.toLowerCase().includes("workshop") ?? false)
   );
+}
+
+/**
+ * Map an exhibitions-table row to FeedEventData so ExhibitionCard can render it.
+ * opening_date → start_date, closing_date → end_date.
+ * is_free derived from admission_type.
+ */
+function exhibitionToFeedEvent(ex: ApiExhibition): FeedEventData {
+  return {
+    id: ex.id as unknown as number, // ExhibitionCard only uses id as a key
+    title: ex.title,
+    start_date: ex.opening_date ?? "",
+    end_date: ex.closing_date ?? null,
+    start_time: null,
+    end_time: null,
+    is_all_day: true,
+    is_free: ex.admission_type === "free",
+    price_min: null,
+    price_max: null,
+    image_url: ex.image_url,
+    blurhash: null,
+    description: ex.description,
+    tags: ex.tags ?? null,
+    ticket_url: ex.source_url ?? null,
+    source_url: ex.source_url ?? null,
+    category: "art",
+    venue: ex.venue
+      ? {
+          id: ex.venue.id,
+          name: ex.venue.name,
+          neighborhood: ex.venue.neighborhood,
+          slug: ex.venue.slug ?? "",
+          image_url: ex.venue.image_url,
+          blurhash: ex.venue.blurhash,
+        }
+      : null,
+    going_count: 0,
+    interested_count: 0,
+  };
 }
 
 /**
@@ -46,8 +99,8 @@ function isClass(e: FeedEventData): boolean {
  *  3. Happening This Week — openings, artist talks, performances (grid)
  *  4. Classes + Workshops — ceramics, printmaking, painting (grid)
  *
- * Uses the portal feed API with client-side arts-specific bucketing.
- * No CityPulse dependency — this is a fresh composition.
+ * Uses the portal feed API. Exhibitions come from the exhibitions table
+ * directly; events come from the events table (no tag-based heuristics).
  */
 export default function ArtsFeedShell({ portalSlug }: ArtsFeedShellProps) {
   const { portal } = usePortal();
@@ -62,28 +115,35 @@ export default function ArtsFeedShell({ portalSlug }: ArtsFeedShellProps) {
       if (!res.ok) throw new Error(`Feed fetch failed: ${res.status}`);
       const json = await res.json();
 
-      const events: FeedEventData[] = json.events ?? json.payload?.events ?? [];
+      const events: FeedEventData[] = json.events ?? [];
+      const rawExhibitions: ApiExhibition[] = json.exhibitions ?? [];
 
-      const exhibitions = events.filter(isExhibition);
+      // Map exhibitions to FeedEventData for ExhibitionCard
+      const exhibitionFeedItems = rawExhibitions.map(exhibitionToFeedEvent);
+
       const classes = events.filter(isClass);
       const otherEvents = events.filter((e) => !isClass(e));
 
       const now = new Date();
+      const today = now.toISOString().split("T")[0];
       const weekOut = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
       const twoWeeksOut = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+      const weekOutStr = weekOut.toISOString().split("T")[0];
+      const twoWeeksOutStr = twoWeeksOut.toISOString().split("T")[0];
 
-      const openingThisWeek = exhibitions
+      // "Fresh on the Walls" — opening within next 7 days (opening_date between today and weekOut)
+      const openingThisWeek = exhibitionFeedItems
         .filter((e) => {
-          const start = new Date(e.start_date);
-          return start >= now && start <= weekOut;
+          if (!e.start_date) return false;
+          return e.start_date >= today && e.start_date <= weekOutStr;
         })
         .slice(0, 6);
 
-      const closingSoon = exhibitions
+      // "Don't Sleep on These" — closing within next 14 days
+      const closingSoon = exhibitionFeedItems
         .filter((e) => {
           if (!e.end_date) return false;
-          const end = new Date(e.end_date);
-          return end >= now && end <= twoWeeksOut;
+          return e.end_date >= today && e.end_date <= twoWeeksOutStr;
         })
         .slice(0, 6);
 
