@@ -558,6 +558,72 @@ function BreakCountdownCTA({
   );
 }
 
+// ---- Crew onboarding prompt (Today tab, first-visit) ---------------------
+
+function CrewOnboardingPrompt({ onSetUpCrew, onDismiss }: { onSetUpCrew: () => void; onDismiss: () => void }) {
+  return (
+    <div
+      className="flex items-start gap-4 rounded-2xl border px-5 py-4"
+      style={{
+        backgroundColor: CARD_SURFACE,
+        borderColor: BORDER,
+        borderLeftColor: SAGE,
+        borderLeftWidth: 4,
+      }}
+    >
+      {/* Icon */}
+      <div
+        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-xl"
+        style={{ backgroundColor: `${SAGE}18` }}
+        aria-hidden="true"
+      >
+        👨‍👩‍👧
+      </div>
+
+      {/* Text */}
+      <div className="flex-1 min-w-0">
+        <p
+          className="text-sm font-semibold leading-snug"
+          style={{ fontFamily: FAMILY_TOKENS.fontHeading, color: TEXT_PRIMARY }}
+        >
+          Set up your crew
+        </p>
+        <p
+          className="mt-0.5 text-sm leading-relaxed"
+          style={{ fontFamily: FAMILY_TOKENS.fontBody, color: TEXT_SECONDARY }}
+        >
+          Add your kids once and get age-matched recommendations across every tab.
+        </p>
+        <button
+          type="button"
+          onClick={onSetUpCrew}
+          className="mt-3 rounded-lg px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-85 active:scale-95"
+          style={{
+            backgroundColor: SAGE,
+            color: "#fff",
+            fontFamily: FAMILY_TOKENS.fontBody,
+          }}
+        >
+          Set up my crew
+        </button>
+      </div>
+
+      {/* Dismiss */}
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss crew setup prompt"
+        className="flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:opacity-70"
+        style={{ color: TEXT_SECONDARY }}
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 // ---- Main component ------------------------------------------------------
 
 export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
@@ -566,6 +632,17 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
   const [activeKidIds, setActiveKidIds] = useState<string[]>([]);
   const [activeGenericFilters, setActiveGenericFilters] = useState<GenericFilter[]>([]);
   const [activePlannerBreak, setActivePlannerBreak] = useState<SchoolCalendarEvent | null>(null);
+
+  const [crewDismissed, setCrewDismissed] = useState(() =>
+    typeof window !== "undefined"
+      ? localStorage.getItem("family-crew-onboarding-dismissed") === "true"
+      : false
+  );
+
+  const handleDismissCrewPrompt = useCallback(() => {
+    localStorage.setItem("family-crew-onboarding-dismissed", "true");
+    setCrewDismissed(true);
+  }, []);
 
   // Read initial tab from URL param — used by deep links.
   // Only applies on first mount; tab state is purely client-side after that.
@@ -618,6 +695,10 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
   // Show the full SpringBreakBanner when the break is within 21 days OR ongoing.
   // SpringBreakBanner handles the ongoing check internally via its props.
   const showBreakBanner = nextBreak !== null;
+
+  // Show crew onboarding prompt on Today tab for authenticated users with no kids.
+  // Suppressed once dismissed via localStorage.
+  const showCrewPrompt = !!user && !authLoading && kids.length === 0 && !crewDismissed;
 
   // ---- Planner view — replaces main content when a break is selected -------
   if (activePlannerBreak !== null) {
@@ -702,6 +783,16 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
             <BreakCountdownCTA
               breakEvent={nextBreak}
               onOpenPlanner={() => handleOpenPlanner(nextBreak)}
+            />
+          </div>
+        )}
+
+        {/* Crew onboarding prompt — first-visit, authenticated, no kids set up */}
+        {showCrewPrompt && activeTab === "today" && (
+          <div className="px-4 pt-3">
+            <CrewOnboardingPrompt
+              onSetUpCrew={() => setActiveTab("crew")}
+              onDismiss={handleDismissCrewPrompt}
             />
           </div>
         )}
@@ -795,6 +886,16 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
               <BreakCountdownCTA
                 breakEvent={nextBreak}
                 onOpenPlanner={() => handleOpenPlanner(nextBreak)}
+              />
+            </div>
+          )}
+
+          {/* Crew onboarding prompt — first-visit, authenticated, no kids set up */}
+          {showCrewPrompt && activeTab === "today" && (
+            <div className="mb-4">
+              <CrewOnboardingPrompt
+                onSetUpCrew={() => setActiveTab("crew")}
+                onDismiss={handleDismissCrewPrompt}
               />
             </div>
           )}
