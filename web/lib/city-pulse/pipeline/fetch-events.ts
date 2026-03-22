@@ -58,6 +58,72 @@ export function postProcessEvents(raw: FeedEventData[]): FeedEventData[] {
   );
 }
 
+/**
+ * Apply source diversity to an event pool.
+ *
+ * When a single source_id dominates (e.g., HOA's 467 shifts drowning out
+ * government meetings in HelpATL), this reorders the pool so no single source
+ * accounts for more than `maxSourceFraction` of the total items.
+ *
+ * Excess items from over-represented sources are moved to the END of the list
+ * rather than removed — comprehensive coverage is preserved, just not at the
+ * top. Ordering within each source group is unchanged.
+ *
+ * Only applies when the pool has at least `minItems` entries — small sections
+ * are not artificially reordered.
+ *
+ * @param events  Ordered event array to rebalance
+ * @param maxSourceFraction  Max share any single source may hold (default 0.4)
+ * @param minItems  Minimum pool size to trigger rebalancing (default 10)
+ */
+export function applySourceDiversity(
+  events: FeedEventData[],
+  maxSourceFraction = 0.4,
+  minItems = 10,
+): FeedEventData[] {
+  if (events.length < minItems) return events;
+
+  // Count events per source_id (null source_id treated as its own group)
+  const sourceCounts = new Map<string, number>();
+  for (const event of events) {
+    const sid = String(
+      (event as unknown as { source_id?: number | null }).source_id ?? "null",
+    );
+    sourceCounts.set(sid, (sourceCounts.get(sid) ?? 0) + 1);
+  }
+
+  const cap = Math.floor(events.length * maxSourceFraction);
+
+  // Identify which sources are over-represented
+  const overRepresented = new Set<string>();
+  for (const [sid, count] of sourceCounts) {
+    if (count > cap) overRepresented.add(sid);
+  }
+
+  // If no source is over-represented, nothing to do
+  if (overRepresented.size === 0) return events;
+
+  // Partition: primary (within cap) + overflow (excess from over-represented sources)
+  const sourceSeen = new Map<string, number>();
+  const primary: FeedEventData[] = [];
+  const overflow: FeedEventData[] = [];
+
+  for (const event of events) {
+    const sid = String(
+      (event as unknown as { source_id?: number | null }).source_id ?? "null",
+    );
+    const seen = sourceSeen.get(sid) ?? 0;
+    if (overRepresented.has(sid) && seen >= cap) {
+      overflow.push(event);
+    } else {
+      primary.push(event);
+      sourceSeen.set(sid, seen + 1);
+    }
+  }
+
+  return [...primary, ...overflow];
+}
+
 /** Merge a base event array with per-interest supplemental results, deduplicating by ID */
 export function mergeEventPools(
   base: FeedEventData[],
@@ -240,7 +306,7 @@ export async function fetchEventPools(
   }
 
   return {
-    todayEvents: postProcessEvents(todayRaw),
+    todayEvents: postProcessEvents(applySourceDiversity(todayRaw)),
     trendingEvents: postProcessEvents((trendingResult.data || []) as unknown as FeedEventData[]),
     horizonEvents: dedupeEventsById(
       filterOutInactiveVenueEvents((horizonResult.data || []) as unknown as FeedEventData[]),
