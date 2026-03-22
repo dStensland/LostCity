@@ -115,8 +115,7 @@ export function isLongRunningExhibitLikeEvent(
 /**
  * General feed suppression rule.
  * Suppresses long-running exhibit-like events (all-day, 14+ days, exhibit signals)
- * that are better represented in the exhibitions table. The content_kind="exhibit"
- * explicit suppression was removed after exhibitions were migrated to their own table.
+ * that are better represented in venue/destination contexts than in event streams.
  */
 export function isSuppressedFromGeneralEventFeed(
   event: EventClassificationShape,

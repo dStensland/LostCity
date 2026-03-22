@@ -416,7 +416,7 @@ export async function GET(request: Request) {
       venue:venues(id, name, neighborhood, slug, location_designator, blurhash, city, lat, lng, image_url, active)
     `,
       )
-      .or(`start_date.gte.${startDateFilter},end_date.gte.${startDateFilter}`) // Include ongoing events (exhibitions with end_date)
+      .or(`start_date.gte.${startDateFilter},end_date.gte.${startDateFilter}`) // Include ongoing events (multi-day events with end_date)
       .is("canonical_event_id", null) // Only show canonical events, not duplicates
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null")

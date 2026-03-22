@@ -52,9 +52,11 @@ _NOT_EXHIBITION_RE = re.compile(
     r"film screening|recital|lecture|concert|comedy|live$|"
     r"opening reception|meet\s|fundraiser|gala|benefit|"
     r"book club|story time|storytime|toddler|baby|"
-    r"fitness|zumba|crossfit|martial art|karate|"
+    r"fitness|zumba|crossfit|martial art|karate|training|"
     r"birthday|party|brunch|happy hour|trivia|"
-    r"tour|walking tour|run\b|5k|10k|marathon)",
+    r"tour|walking tour|run\b|5k|10k|marathon|"
+    r"celebrate\s|celebration|kwanzaa|closing reception|"
+    r"curated talk|salon\|)",
     re.IGNORECASE,
 )
 

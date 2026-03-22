@@ -574,10 +574,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     walkableNeighborsPromise,
   ]);
 
-  // Filter out exhibition-type events — they're already shown in the "On View" section
-  const filteredRows = dedupedRows.filter(e => e.content_kind !== 'exhibit');
-
-  const upcomingEventsWithCounts: Array<Record<string, unknown>> = filteredRows.map((event) => {
+  const upcomingEventsWithCounts: Array<Record<string, unknown>> = dedupedRows.map((event) => {
     const counts = upcomingCounts.get(event.id);
     const artists = (artistsByEventId.get(event.id) || []).map((artist) => ({
       name: artist.name,
