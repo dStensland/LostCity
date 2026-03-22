@@ -95,7 +95,7 @@ export default function EventsFinder({
     portalId,
     portalExclusive,
     enabled: isMapMode,
-    dateOverride: undefined,
+    dateOverride: new Date().toISOString().slice(0, 10),
   });
 
   const { eventsInView, spotsInView, handleBoundsChange } = useViewportFilter({

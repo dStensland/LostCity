@@ -125,6 +125,7 @@ export default function ArtistChip({
               height={40}
               className="object-cover w-full h-full"
               unoptimized
+              fallback={<InitialsFallback name={displayName} discipline={discipline} size="sm" />}
             />
           ) : (
             <InitialsFallback name={displayName} discipline={discipline} size="sm" />
@@ -187,6 +188,7 @@ export default function ArtistChip({
             height={size}
             className="object-cover w-full h-full"
             unoptimized
+            fallback={<InitialsFallback name={displayName} discipline={discipline} size={isHeadliner ? "lg" : "sm"} />}
           />
         ) : (
           <InitialsFallback name={displayName} discipline={discipline} size={isHeadliner ? "lg" : "sm"} />
