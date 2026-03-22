@@ -30,7 +30,6 @@ from datetime import datetime
 
 import requests
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
@@ -55,6 +54,10 @@ VENUE_DATA = {
     "spot_type": "organization",
     "website": BASE_URL,
     "vibes": ["cancer", "financial-assistance", "patient-support", "community"],
+}
+
+_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
 
@@ -132,31 +135,9 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     return category, list(set(tags)), is_free
 
 
-def try_simple_requests_first(url: str) -> Optional[BeautifulSoup]:
-    """Try fetching with simple requests first."""
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-        }
-        response = requests.get(url, headers=headers, timeout=20)
-        response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        if soup.find(string=re.compile(r'event|calendar|news', re.I)):
-            return soup
-
-        return None
-    except Exception as e:
-        logger.debug(f"Simple request failed, will use Playwright: {e}")
-        return None
-
-
 def crawl(source: dict) -> tuple[int, int, int]:
     """
-    Crawl Atlanta Cancer Care Foundation events.
-
-    First tries simple requests, falls back to Playwright if needed.
+    Crawl Atlanta Cancer Care Foundation events using requests + BeautifulSoup.
     """
     source_id = source["id"]
     events_found = 0
@@ -167,30 +148,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
         # Create venue record
         venue_id = get_or_create_venue(VENUE_DATA)
 
-        # Try simple requests first
-        logger.info(f"Trying simple fetch: {EVENTS_URL}")
-        soup = try_simple_requests_first(EVENTS_URL)
-
-        # If simple request didn't work, use Playwright
-        if not soup:
-            logger.info(f"Fetching with Playwright: {EVENTS_URL}")
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                context = browser.new_context(
-                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                    viewport={"width": 1920, "height": 1080},
-                )
-                page = context.new_page()
-                page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(3000)
-
-                for _ in range(3):
-                    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                    page.wait_for_timeout(1000)
-
-                html_content = page.content()
-                soup = BeautifulSoup(html_content, "html.parser")
-                browser.close()
+        logger.info(f"Fetching Atlanta Cancer Care Foundation events: {EVENTS_URL}")
+        try:
+            response = requests.get(EVENTS_URL, headers=_HEADERS, timeout=20)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, "html.parser")
+        except Exception as e:
+            logger.error(f"Failed to fetch Atlanta Cancer Care Foundation events: {e}")
+            return 0, 0, 0
 
         # Look for event containers
         event_selectors = [
@@ -234,10 +199,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 date_str = None
                 if date_elem:
                     date_str = date_elem.get_text(strip=True)
-                    if hasattr(date_elem, 'get'):
-                        datetime_attr = date_elem.get("datetime")
-                        if datetime_attr:
-                            date_str = datetime_attr
+                    datetime_attr = date_elem.get("datetime")
+                    if datetime_attr:
+                        date_str = datetime_attr
 
                 if not date_str:
                     date_match = re.search(
@@ -360,9 +324,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
             f"{events_new} new, {events_updated} updated"
         )
 
-    except PlaywrightTimeout as e:
-        logger.error(f"Timeout fetching Atlanta Cancer Care Foundation events: {e}")
-        raise
     except Exception as e:
         logger.error(f"Failed to crawl Atlanta Cancer Care Foundation: {e}")
         raise

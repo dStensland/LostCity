@@ -2,13 +2,10 @@
 Crawler for Atlanta Humane Society events (atlantahumane.org/events/).
 
 Atlanta Humane Society uses WordPress with The Events Calendar (Tribe Events)
-plugin. Their entire site is behind Cloudflare bot detection, which blocks
-plain requests but allows Playwright with domcontentloaded wait.
-
-Events include adoption events, fundraising galas, volunteer orientations,
+plugin. Events include adoption events, fundraising galas, volunteer orientations,
 give-back nights, bingo fundraisers, and community education programs. The
-Tribe Events list view loads fully after domcontentloaded and exposes clean
-structured data: datetime attributes, venue address, and description snippets.
+Tribe Events list view exposes clean structured data: datetime attributes,
+venue address, and description snippets.
 
 Pagination: Tribe Events list view renders all upcoming events in a single
 request (typically ~5-15 events). Pagination links are checked and followed
@@ -22,8 +19,8 @@ import re
 from datetime import datetime
 from typing import Optional
 
+import requests
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
 
 from db import (
     find_event_by_hash,
@@ -39,6 +36,14 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://atlantahumane.org"
 EVENTS_URL = f"{BASE_URL}/events/"
+
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
 VENUE_DATA = {
     "name": "Atlanta Humane Society",
@@ -224,13 +229,24 @@ def _parse_events_from_html(html: str, source_url: str) -> list[dict]:
     return events
 
 
+def _fetch_page(url: str) -> Optional[str]:
+    """Fetch a page with requests and return the HTML, or None on failure."""
+    try:
+        response = requests.get(url, headers=_HEADERS, timeout=30)
+        response.raise_for_status()
+        return response.text
+    except Exception as exc:
+        logger.error("Failed to fetch %s: %s", url, exc)
+        return None
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """
-    Crawl Atlanta Humane Society events using Playwright.
+    Crawl Atlanta Humane Society events using requests + BeautifulSoup.
 
-    The site is behind Cloudflare; Playwright with domcontentloaded bypasses
-    it. Tribe Events list view renders synchronously — no extra wait needed
-    beyond the initial page load.
+    Tribe Events list view renders all upcoming events in the initial HTML
+    response — no JS rendering required. Pagination links are followed
+    when present.
     """
     source_id = source["id"]
     events_found = 0
@@ -241,53 +257,38 @@ def crawl(source: dict) -> tuple[int, int, int]:
     venue_id = get_or_create_venue(VENUE_DATA)
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent=(
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                ),
-                viewport={"width": 1440, "height": 900},
-                locale="en-US",
-                timezone_id="America/New_York",
+        urls_to_crawl = [EVENTS_URL]
+        crawled_urls: set[str] = set()
+        all_raw_events: list[dict] = []
+
+        while urls_to_crawl:
+            url = urls_to_crawl.pop(0)
+            if url in crawled_urls:
+                continue
+            crawled_urls.add(url)
+
+            logger.info("Fetching Atlanta Humane events: %s", url)
+            html = _fetch_page(url)
+            if not html:
+                continue
+
+            raw_events = _parse_events_from_html(html, url)
+            all_raw_events.extend(raw_events)
+            logger.info("Found %d events on %s", len(raw_events), url)
+
+            # Follow pagination if present (Tribe Events next-page link)
+            soup = BeautifulSoup(html, "html.parser")
+            next_link = soup.select_one(
+                "a.tribe-events-c-nav__next, "
+                "a[rel='next'], "
+                ".tribe-events-nav-next a"
             )
-            page = context.new_page()
-
-            urls_to_crawl = [EVENTS_URL]
-            crawled_urls: set[str] = set()
-            all_raw_events: list[dict] = []
-
-            while urls_to_crawl:
-                url = urls_to_crawl.pop(0)
-                if url in crawled_urls:
-                    continue
-                crawled_urls.add(url)
-
-                logger.info("Fetching Atlanta Humane events: %s", url)
-                page.goto(url, wait_until="domcontentloaded", timeout=60000)
-                page.wait_for_timeout(2000)
-
-                html = page.content()
-                raw_events = _parse_events_from_html(html, url)
-                all_raw_events.extend(raw_events)
-                logger.info("Found %d events on %s", len(raw_events), url)
-
-                # Follow pagination if present (Tribe Events next-page link)
-                soup = BeautifulSoup(html, "html.parser")
-                next_link = soup.select_one(
-                    "a.tribe-events-c-nav__next, "
-                    "a[rel='next'], "
-                    ".tribe-events-nav-next a"
-                )
-                if next_link and next_link.get("href"):
-                    next_url = next_link["href"]
-                    if next_url.startswith("/"):
-                        next_url = BASE_URL + next_url
-                    if next_url not in crawled_urls:
-                        urls_to_crawl.append(next_url)
-
-            browser.close()
+            if next_link and next_link.get("href"):
+                next_url = next_link["href"]
+                if next_url.startswith("/"):
+                    next_url = BASE_URL + next_url
+                if next_url not in crawled_urls:
+                    urls_to_crawl.append(next_url)
 
         # Deduplicate by title + date before inserting
         seen: set[str] = set()
