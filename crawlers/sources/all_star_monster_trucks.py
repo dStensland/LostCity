@@ -12,7 +12,8 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
@@ -126,160 +127,145 @@ def is_georgia_event(location_text: str) -> bool:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl All Star Monster Truck Tour events using Playwright."""
+    """Crawl All Star Monster Truck Tour events."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
+        # We'll create venue records dynamically per event
+        # Keep VENUE_DATA as default for Jim R. Miller Park
+
+        logger.info(f"Fetching All Star Monster Truck Tour: {EVENTS_URL}")
+        headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+        response = requests.get(EVENTS_URL, headers=headers, timeout=30)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Get the full page text
+        body_text = soup.get_text(separator="\n")
+        lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+
+        # Parse events in triplet structure: City/State, Date, Venue
+        # Structure is: City State, Date, Venue Name
+        i = 0
+        while i < len(lines) - 2:
+            # Check if this looks like a city/state line
+            city_state_line = lines[i]
+
+            # Skip navigation and common non-event lines
+            if city_state_line.lower() in ["home", "events", "faqs", "contact", "media", "skip to main content"]:
+                i += 1
+                continue
+
+            # Look for pattern like "City ST" or "City State"
+            if not re.search(r"^[A-Za-z\s]+ (GA|TN|NC|SC|AL|FL)", city_state_line):
+                i += 1
+                continue
+
+            # Next line should be a date
+            date_line = lines[i + 1] if i + 1 < len(lines) else None
+            venue_line = lines[i + 2] if i + 2 < len(lines) else None
+
+            if not date_line or not venue_line:
+                i += 1
+                continue
+
+            # Try to parse the date
+            parsed_date = parse_date(date_line)
+            if not parsed_date:
+                i += 1
+                continue
+
+            # Check if this is a Georgia event
+            if not is_georgia_event(city_state_line):
+                i += 3  # Skip to next triplet
+                continue
+
+            events_found += 1
+
+            # Use the default title
+            title = "All Star Monster Truck Tour"
+
+            # Extract city and state for venue creation
+            city_state_match = re.match(r"^(.+?)\s+(GA|TN|NC|SC|AL|FL)$", city_state_line)
+            if city_state_match:
+                city = city_state_match.group(1).strip()
+                state = city_state_match.group(2)
+            else:
+                city = city_state_line
+                state = "GA"
+
+            # Create venue data dynamically
+            venue_data = {
+                "name": venue_line,
+                "slug": re.sub(r'[^\w\s-]', '', venue_line.lower()).replace(' ', '-').strip('-'),
+                "city": city,
+                "state": state,
+                "venue_type": "event_space",
+            }
+
+            # Get or create venue
+            current_venue_id = get_or_create_venue(venue_data)
+
+            # Generate content hash
+            content_hash = generate_content_hash(
+                title,
+                venue_line,
+                parsed_date
             )
-            page = context.new_page()
 
-            # We'll create venue records dynamically per event
-            # Keep VENUE_DATA as default for Jim R. Miller Park
+            # Check for existing event
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                events_updated += 1
+                i += 3  # Skip to next triplet
+                continue
 
-            logger.info(f"Fetching All Star Monster Truck Tour: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+            # Build event record
+            event_record = {
+                "source_id": source_id,
+                "venue_id": current_venue_id,
+                "title": title,
+                "description": f"All Star Monster Truck Tour featuring monster truck racing, stunts, and entertainment at {venue_line}, {city_state_line}.",
+                "start_date": parsed_date,
+                "start_time": "19:00",  # Typical evening show time
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": "sports",
+                "subcategory": "monster_trucks",
+                "tags": [
+                    "monster-trucks",
+                    "motorsports",
+                    "all-star-monster-trucks",
+                    "family",
+                    "marietta",
+                ],
+                "price_min": None,
+                "price_max": None,
+                "price_note": "Ticket prices vary",
+                "is_free": False,
+                "source_url": EVENTS_URL,
+                "ticket_url": EVENTS_URL,
+                "image_url": None,
+                "raw_text": f"{city_state_line} - {date_line} - {venue_line}",
+                "extraction_confidence": 0.85,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
 
-            # Wait for Wix to render
-            page.wait_for_timeout(5000)
+            try:
+                insert_event(event_record)
+                events_new += 1
+                logger.info(f"Added: {title} on {parsed_date} at {venue_line}, {city_state_line}")
+            except Exception as e:
+                logger.error(f"Failed to insert: {title} on {parsed_date}: {e}")
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1500)
-
-            # Get the full page text
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            # Parse events in triplet structure: City/State, Date, Venue
-            # Structure is: City State, Date, Venue Name
-            i = 0
-            while i < len(lines) - 2:
-                # Check if this looks like a city/state line
-                city_state_line = lines[i]
-
-                # Skip navigation and common non-event lines
-                if city_state_line.lower() in ["home", "events", "faqs", "contact", "media", "skip to main content"]:
-                    i += 1
-                    continue
-
-                # Look for pattern like "City ST" or "City State"
-                if not re.search(r"^[A-Za-z\s]+ (GA|TN|NC|SC|AL|FL)", city_state_line):
-                    i += 1
-                    continue
-
-                # Next line should be a date
-                date_line = lines[i + 1] if i + 1 < len(lines) else None
-                venue_line = lines[i + 2] if i + 2 < len(lines) else None
-
-                if not date_line or not venue_line:
-                    i += 1
-                    continue
-
-                # Try to parse the date
-                parsed_date = parse_date(date_line)
-                if not parsed_date:
-                    i += 1
-                    continue
-
-                # Check if this is a Georgia event
-                if not is_georgia_event(city_state_line):
-                    i += 3  # Skip to next triplet
-                    continue
-
-                events_found += 1
-
-                # Use the default title
-                title = "All Star Monster Truck Tour"
-
-                # Extract city and state for venue creation
-                city_state_match = re.match(r"^(.+?)\s+(GA|TN|NC|SC|AL|FL)$", city_state_line)
-                if city_state_match:
-                    city = city_state_match.group(1).strip()
-                    state = city_state_match.group(2)
-                else:
-                    city = city_state_line
-                    state = "GA"
-
-                # Create venue data dynamically
-                venue_data = {
-                    "name": venue_line,
-                    "slug": re.sub(r'[^\w\s-]', '', venue_line.lower()).replace(' ', '-').strip('-'),
-                    "city": city,
-                    "state": state,
-                    "venue_type": "event_space",
-                }
-
-                # Get or create venue
-                current_venue_id = get_or_create_venue(venue_data)
-
-                # Generate content hash
-                content_hash = generate_content_hash(
-                    title,
-                    venue_line,
-                    parsed_date
-                )
-
-                # Check for existing event
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    events_updated += 1
-                    i += 3  # Skip to next triplet
-                    continue
-
-                # Build event record
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": current_venue_id,
-                    "title": title,
-                    "description": f"All Star Monster Truck Tour featuring monster truck racing, stunts, and entertainment at {venue_line}, {city_state_line}.",
-                    "start_date": parsed_date,
-                    "start_time": "19:00",  # Typical evening show time
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": "sports",
-                    "subcategory": "monster_trucks",
-                    "tags": [
-                        "monster-trucks",
-                        "motorsports",
-                        "all-star-monster-trucks",
-                        "family",
-                        "marietta",
-                    ],
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": "Ticket prices vary",
-                    "is_free": False,
-                    "source_url": EVENTS_URL,
-                    "ticket_url": EVENTS_URL,
-                    "image_url": None,
-                    "raw_text": f"{city_state_line} - {date_line} - {venue_line}",
-                    "extraction_confidence": 0.85,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
-                try:
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info(f"Added: {title} on {parsed_date} at {venue_line}, {city_state_line}")
-                except Exception as e:
-                    logger.error(f"Failed to insert: {title} on {parsed_date}: {e}")
-
-                # Move to next triplet
-                i += 3
-
-            browser.close()
+            # Move to next triplet
+            i += 3
 
         logger.info(
             f"All Star Monster Truck Tour crawl complete: {events_found} found, "
