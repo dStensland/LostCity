@@ -27,7 +27,6 @@ from datetime import datetime, date
 
 import requests
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
@@ -36,7 +35,7 @@ from date_utils import parse_human_date
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.worksourceatlanta.org"
-EVENTS_URL = f"{BASE_URL}/events"  # Will try multiple patterns
+EVENTS_URL = f"{BASE_URL}/events"
 
 VENUE_DATA = {
     "name": "WorkSource Atlanta",
@@ -130,36 +129,9 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     return category, list(set(tags)), is_free
 
 
-def try_simple_requests_first(url: str) -> Optional[BeautifulSoup]:
-    """
-    Try fetching with simple requests first (faster than Playwright).
-    Returns BeautifulSoup object if successful, None if needs Playwright.
-    """
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-        }
-        response = requests.get(url, headers=headers, timeout=20)
-        response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        # Check if we got meaningful content
-        if soup.find(string=re.compile(r'event|calendar|workshop|job fair', re.I)):
-            return soup
-
-        return None
-    except Exception as e:
-        logger.debug(f"Simple request failed, will use Playwright: {e}")
-        return None
-
-
 def crawl(source: dict) -> tuple[int, int, int]:
     """
     Crawl WorkSource Atlanta events.
-
-    First tries simple requests, falls back to Playwright if the page
-    requires JavaScript rendering.
     """
     source_id = source["id"]
     events_found = 0
@@ -169,6 +141,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
     try:
         # Create venue record
         venue_id = get_or_create_venue(VENUE_DATA)
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+        }
 
         # Try multiple URL patterns
         urls_to_try = [
@@ -183,36 +159,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         for url in urls_to_try:
             logger.info(f"Trying URL: {url}")
-            soup = try_simple_requests_first(url)
-            if soup:
-                successful_url = url
-                break
-
-        # If simple request didn't work, use Playwright on main events URL
-        if not soup:
-            logger.info(f"Fetching with Playwright: {EVENTS_URL}")
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                context = browser.new_context(
-                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                    viewport={"width": 1920, "height": 1080},
-                )
-                page = context.new_page()
-                page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(3000)
-
-                # Scroll to load any lazy-loaded content
-                for _ in range(3):
-                    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                    page.wait_for_timeout(1000)
-
-                html_content = page.content()
-                soup = BeautifulSoup(html_content, "html.parser")
-                successful_url = EVENTS_URL
-                browser.close()
+            try:
+                response = requests.get(url, headers=headers, timeout=20)
+                response.raise_for_status()
+                candidate = BeautifulSoup(response.text, "html.parser")
+                if candidate.find(string=re.compile(r'event|calendar|workshop|job fair', re.I)):
+                    soup = candidate
+                    successful_url = url
+                    break
+            except Exception as e:
+                logger.debug(f"Failed to fetch {url}: {e}")
+                continue
 
         if not soup:
-            logger.warning("Could not fetch page content")
+            logger.warning("Could not fetch any WorkSource Atlanta page with event content")
+            logger.info(f"WorkSource Atlanta venue record ensured (ID: {venue_id})")
             return 0, 0, 0
 
         # Look for event containers
@@ -403,9 +364,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
             f"{events_new} new, {events_updated} updated"
         )
 
-    except PlaywrightTimeout as e:
-        logger.error(f"Timeout fetching WorkSource Atlanta events: {e}")
-        raise
     except Exception as e:
         logger.error(f"Failed to crawl WorkSource Atlanta: {e}")
         raise
