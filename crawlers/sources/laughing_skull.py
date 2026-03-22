@@ -10,11 +10,12 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, find_existing_event_for_insert, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
+from utils import find_event_url, enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -144,6 +145,36 @@ def build_comedy_description(
     return " ".join(parts)[:1400]
 
 
+def _extract_event_links_from_soup(soup: BeautifulSoup, base_url: str) -> dict[str, str]:
+    skip_words = ["view more", "learn more", "read more", "see all", "donate", "subscribe",
+                  "sign up", "log in", "register", "contact", "about", "home", "menu", "search"]
+    event_links: dict[str, str] = {}
+    for a in soup.find_all("a", href=True):
+        href = a.get("href", "")
+        text = a.get_text(strip=True)
+        if not href or not text or len(text) < 3:
+            continue
+        if href.startswith("#") or href.startswith("javascript:"):
+            continue
+        text_lower = text.lower()
+        if any(skip in text_lower for skip in skip_words):
+            continue
+        if not href.startswith("http"):
+            href = base_url.rstrip("/") + href if href.startswith("/") else base_url.rstrip("/") + "/" + href
+        event_links[text_lower] = href
+    return event_links
+
+
+def _extract_images_from_soup(soup: BeautifulSoup) -> dict[str, str]:
+    image_map: dict[str, str] = {}
+    for img in soup.find_all("img"):
+        alt = img.get("alt") or img.get("title") or ""
+        src = img.get("src") or img.get("data-src") or ""
+        if alt and src and len(alt) > 3 and not any(x in src.lower() for x in ["logo", "icon", "sprite"]):
+            image_map[alt.strip()] = src
+    return image_map
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Laughing Skull events."""
     source_id = source["id"]
@@ -152,177 +183,166 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
+        logger.info(f"Fetching Laughing Skull: {BASE_URL}")
+        response = requests.get(
+            BASE_URL,
+            headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"},
+            timeout=30,
+        )
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Extract images from page
+        image_map = _extract_images_from_soup(soup)
+
+        # Extract event links for specific URLs
+        event_links = _extract_event_links_from_soup(soup, BASE_URL)
+
+        venue_id = get_or_create_venue(VENUE_DATA)
+
+        body_text = soup.get_text(separator="\n")
+
+        # Calendar format:
+        # TUE
+        # 13
+        # Open Mic Night Every Monday - Wednesday
+        # Tuesday, January 13, 8:00 pm
+        # Description...
+        # Get Tickets $15.00
+
+        # Split by day markers (MON, TUE, WED, etc.)
+        day_pattern = r"\n(MON|TUE|WED|THU|FRI|SAT|SUN)\n(\d{1,2})\n"
+        parts = re.split(day_pattern, body_text)
+
+        # Skip the first part (before first day marker)
+        # Then process in groups of 3: day_abbrev, day_num, content
+        i = 1
+        while i + 2 < len(parts):
+            day_abbrev = parts[i]
+            day_num = parts[i + 1]
+            content = parts[i + 2]
+            i += 3
+
+            lines = [l.strip() for l in content.split("\n") if l.strip()]
+            if not lines:
+                continue
+
+            # First line is typically the event title
+            title = lines[0]
+
+            # Skip navigation/header items and junk labels
+            skip_words = [
+                "PAST EVENT", "View All", "Select date", "Event Views",
+                "Limited Tickets Remaining", "Sold Out", "Get Tickets",
+                "Buy Tickets", "No Events",
+            ]
+            if any(w.lower() in title.lower() for w in skip_words):
+                continue
+
+            # Normalize website titles to match recurring template titles
+            # so content hashes align and dedup works
+            title_lower = title.lower().strip()
+            if "open mic" in title_lower:
+                title = "Open Mic Comedy Night"
+            elif "best of atlanta" in title_lower or "comedy showcase" in title_lower:
+                title = "Best of Atlanta Comedy Showcase"
+
+            # Look for date/time line: "Tuesday, January 13, 8:00 pm"
+            date_line = None
+            price_line = None
+            description = None
+
+            for line in lines[1:]:
+                if re.match(
+                    r"\w+,\s+\w+\s+\d+,\s+\d+:\d+\s*(am|pm)", line, re.IGNORECASE
+                ):
+                    date_line = line
+                elif "Get Tickets" in line or "$" in line:
+                    price_line = line
+                elif len(line) > 20 and not description:
+                    # Likely description
+                    description = line
+
+            if not date_line:
+                continue
+
+            start_date = parse_calendar_date(date_line)
+            if not start_date:
+                continue
+
+            start_time = parse_calendar_time(date_line)
+            price_min, price_max = parse_price(price_line or "")
+
+            events_found += 1
+
+            content_hash = generate_content_hash(
+                title, "Laughing Skull Lounge", start_date + (start_time or "")
             )
-            page = context.new_page()
 
-            logger.info(f"Fetching Laughing Skull: {BASE_URL}")
-            page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+            event_url = find_event_url(title, event_links, EVENTS_URL)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title,
+                "description": build_comedy_description(
+                    title=title,
+                    base_description=description,
+                    start_date=start_date,
+                    start_time=start_time,
+                    event_url=event_url,
+                    price_min=price_min,
+                    price_max=price_max,
+                ),
+                "start_date": start_date,
+                "start_time": start_time,
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": "comedy",
+                "subcategory": "standup",
+                "tags": ["comedy", "standup", "laughing-skull"],
+                "price_min": price_min,
+                "price_max": price_max,
+                "price_note": None,
+                "is_free": None,
+                "source_url": event_url,
+                "ticket_url": event_url if event_url != EVENTS_URL else None,
+                "image_url": image_map.get(title),
+                "raw_text": None,
+                "extraction_confidence": 0.90,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+            # Enrich from detail page
+            enrich_event_record(event_record, source_name="Laughing Skull Lounge")
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            # Determine is_free if still unknown after enrichment
+            if event_record.get("is_free") is None:
+                desc_lower = (event_record.get("description") or "").lower()
+                title_lower = event_record.get("title", "").lower()
+                combined = f"{title_lower} {desc_lower}"
+                if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
+                    event_record["is_free"] = True
+                    event_record["price_min"] = event_record.get("price_min") or 0
+                    event_record["price_max"] = event_record.get("price_max") or 0
+                else:
+                    event_record["is_free"] = False
 
-            body_text = page.inner_text("body")
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
-            # Calendar format:
-            # TUE
-            # 13
-            # Open Mic Night Every Monday - Wednesday
-            # Tuesday, January 13, 8:00 pm
-            # Description...
-            # Get Tickets $15.00
-
-            # Split by day markers (MON, TUE, WED, etc.)
-            day_pattern = r"\n(MON|TUE|WED|THU|FRI|SAT|SUN)\n(\d{1,2})\n"
-            parts = re.split(day_pattern, body_text)
-
-            # Skip the first part (before first day marker)
-            # Then process in groups of 3: day_abbrev, day_num, content
-            i = 1
-            while i + 2 < len(parts):
-                day_abbrev = parts[i]
-                day_num = parts[i + 1]
-                content = parts[i + 2]
-                i += 3
-
-                lines = [l.strip() for l in content.split("\n") if l.strip()]
-                if not lines:
-                    continue
-
-                # First line is typically the event title
-                title = lines[0]
-
-                # Skip navigation/header items and junk labels
-                skip_words = [
-                    "PAST EVENT", "View All", "Select date", "Event Views",
-                    "Limited Tickets Remaining", "Sold Out", "Get Tickets",
-                    "Buy Tickets", "No Events",
-                ]
-                if any(w.lower() in title.lower() for w in skip_words):
-                    continue
-
-                # Normalize website titles to match recurring template titles
-                # so content hashes align and dedup works
-                title_lower = title.lower().strip()
-                if "open mic" in title_lower:
-                    title = "Open Mic Comedy Night"
-                elif "best of atlanta" in title_lower or "comedy showcase" in title_lower:
-                    title = "Best of Atlanta Comedy Showcase"
-
-                # Look for date/time line: "Tuesday, January 13, 8:00 pm"
-                date_line = None
-                price_line = None
-                description = None
-
-                for line in lines[1:]:
-                    if re.match(
-                        r"\w+,\s+\w+\s+\d+,\s+\d+:\d+\s*(am|pm)", line, re.IGNORECASE
-                    ):
-                        date_line = line
-                    elif "Get Tickets" in line or "$" in line:
-                        price_line = line
-                    elif len(line) > 20 and not description:
-                        # Likely description
-                        description = line
-
-                if not date_line:
-                    continue
-
-                start_date = parse_calendar_date(date_line)
-                if not start_date:
-                    continue
-
-                start_time = parse_calendar_time(date_line)
-                price_min, price_max = parse_price(price_line or "")
-
-                events_found += 1
-
-                content_hash = generate_content_hash(
-                    title, "Laughing Skull Lounge", start_date + (start_time or "")
-                )
-
-
-                # Get specific event URL
-
-
-                event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": title,
-                    "description": build_comedy_description(
-                        title=title,
-                        base_description=description,
-                        start_date=start_date,
-                        start_time=start_time,
-                        event_url=event_url,
-                        price_min=price_min,
-                        price_max=price_max,
-                    ),
-                    "start_date": start_date,
-                    "start_time": start_time,
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": "comedy",
-                    "subcategory": "standup",
-                    "tags": ["comedy", "standup", "laughing-skull"],
-                    "price_min": price_min,
-                    "price_max": price_max,
-                    "price_note": None,
-                    "is_free": None,
-                    "source_url": event_url,
-                    "ticket_url": event_url if event_url != EVENTS_URL else None,
-                    "image_url": image_map.get(title),
-                    "raw_text": None,
-                    "extraction_confidence": 0.90,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
-                # Enrich from detail page
-                enrich_event_record(event_record, source_name="Laughing Skull Lounge")
-
-                # Determine is_free if still unknown after enrichment
-                if event_record.get("is_free") is None:
-                    desc_lower = (event_record.get("description") or "").lower()
-                    title_lower = event_record.get("title", "").lower()
-                    combined = f"{title_lower} {desc_lower}"
-                    if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
-                        event_record["is_free"] = True
-                        event_record["price_min"] = event_record.get("price_min") or 0
-                        event_record["price_max"] = event_record.get("price_max") or 0
-                    else:
-                        event_record["is_free"] = False
-
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                    continue
-
-                try:
-                    insert_event(event_record, genres=["comedy", "stand-up"])
-                    events_new += 1
-                    logger.info(f"Added: {title} on {start_date} at {start_time}")
-                except Exception as e:
-                    logger.error(f"Failed to insert: {title}: {e}")
-
-            browser.close()
+            try:
+                insert_event(event_record, genres=["comedy", "stand-up"])
+                events_new += 1
+                logger.info(f"Added: {title} on {start_date} at {start_time}")
+            except Exception as e:
+                logger.error(f"Failed to insert: {title}: {e}")
 
         logger.info(
             f"Laughing Skull website: {events_found} found, {events_new} new"

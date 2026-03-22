@@ -12,12 +12,12 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
 from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_event_links, find_event_url, normalize_time_format
+from utils import find_event_url, normalize_time_format
 
 logger = logging.getLogger(__name__)
 
@@ -130,260 +130,264 @@ def parse_time(time_text: str) -> Optional[str]:
     return None
 
 
+def _extract_event_links_from_soup(soup: BeautifulSoup, base_url: str) -> dict[str, str]:
+    skip_words = ["view more", "learn more", "read more", "see all", "donate", "subscribe",
+                  "sign up", "log in", "register", "contact", "about", "home", "menu", "search"]
+    event_links: dict[str, str] = {}
+    for a in soup.find_all("a", href=True):
+        href = a.get("href", "")
+        text = a.get_text(strip=True)
+        if not href or not text or len(text) < 3:
+            continue
+        if href.startswith("#") or href.startswith("javascript:"):
+            continue
+        text_lower = text.lower()
+        if any(skip in text_lower for skip in skip_words):
+            continue
+        if not href.startswith("http"):
+            href = base_url.rstrip("/") + href if href.startswith("/") else base_url.rstrip("/") + "/" + href
+        event_links[text_lower] = href
+    return event_links
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl All Saints' Episcopal jazz series using Playwright."""
+    """Crawl All Saints' Episcopal jazz series using requests + BeautifulSoup."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        venue_id = get_or_create_venue(VENUE_DATA)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+        logger.info(f"Fetching All Saints' Episcopal: {JAZZ_URL}")
+        response = requests.get(
+            JAZZ_URL,
+            headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"},
+            timeout=30,
+        )
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
 
-            logger.info(f"Fetching All Saints' Episcopal: {JAZZ_URL}")
+        # Extract event links
+        event_links = _extract_event_links_from_soup(soup, BASE_URL)
 
-            page.goto(JAZZ_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+        # Try to find structured jazz concert listings
+        # Common patterns: article, div with class containing "event" or "concert"
+        event_containers = soup.find_all(
+            ["article", "div", "section"],
+            class_=lambda x: x and any(w in x.lower() for w in ["event", "concert", "jazz", "performance"])
+        )
 
-            # Scroll to load all content
-            for _ in range(3):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+        # If no structured containers, parse from text
+        if not event_containers:
+            body_text = soup.get_text(separator="\n")
+            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-            # Extract event links
-            event_links = extract_event_links(page, BASE_URL)
+            i = 0
+            while i < len(lines):
+                line = lines[i]
 
-            # Get page HTML and parse with BeautifulSoup
-            html = page.content()
-            soup = BeautifulSoup(html, "html.parser")
+                # Look for date patterns
+                date_match = re.search(
+                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+(\w+)\s+(\d{1,2})",
+                    line,
+                    re.IGNORECASE
+                )
 
-            # Try to find structured jazz concert listings
-            # Common patterns: article, div with class containing "event" or "concert"
-            event_containers = soup.find_all(
-                ["article", "div", "section"],
-                class_=lambda x: x and any(w in x.lower() for w in ["event", "concert", "jazz", "performance"])
-            )
+                if date_match:
+                    start_date = parse_date(line)
 
-            # If no structured containers, parse from text
-            if not event_containers:
-                body_text = page.inner_text("body")
-                lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+                    if start_date:
+                        # Look for title and time nearby
+                        title = None
+                        start_time = None
 
-                i = 0
-                while i < len(lines):
-                    line = lines[i]
+                        # Check surrounding lines
+                        for offset in [-3, -2, -1, 1, 2, 3, 4]:
+                            idx = i + offset
+                            if 0 <= idx < len(lines):
+                                check_line = lines[idx]
 
-                    # Look for date patterns
-                    date_match = re.search(
-                        r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+(\w+)\s+(\d{1,2})",
-                        line,
-                        re.IGNORECASE
-                    )
-
-                    if date_match:
-                        start_date = parse_date(line)
-
-                        if start_date:
-                            # Look for title and time nearby
-                            title = None
-                            start_time = None
-
-                            # Check surrounding lines
-                            for offset in [-3, -2, -1, 1, 2, 3, 4]:
-                                idx = i + offset
-                                if 0 <= idx < len(lines):
-                                    check_line = lines[idx]
-
-                                    # Skip navigation/UI elements
-                                    skip_words = [
-                                        "upcoming", "calendar", "events", "navigation",
-                                        "menu", "search", "subscribe", "donate",
-                                        "home", "about", "contact", "music", "jazz at all saints"
-                                    ]
-                                    if any(w in check_line.lower() for w in skip_words):
-                                        continue
-
-                                    # Check for time
-                                    if not start_time:
-                                        time_result = parse_time(check_line)
-                                        if time_result:
-                                            start_time = time_result
-                                            continue
-
-                                    # Check for title (artist/band name)
-                                    if not title and len(check_line) > 5:
-                                        # Skip date patterns
-                                        if not re.search(r"(?:January|February|March|April|May|June|July|August|September|October|November|December)", check_line, re.IGNORECASE):
-                                            # Skip price/register patterns
-                                            if not re.search(r"(free|tickets|\$|register|admission|cost)", check_line, re.IGNORECASE):
-                                                # This is likely the artist/title
-                                                title = check_line
-                                                break
-
-                            if title:
-                                events_found += 1
-
-                                content_hash = generate_content_hash(
-                                    title, "All Saints' Episcopal Church", start_date
-                                )
-
-
-                                event_url = find_event_url(title, event_links, JAZZ_URL)
-
-                                event_record = {
-                                    "source_id": source_id,
-                                    "venue_id": venue_id,
-                                    "title": title,
-                                    "description": f"Jazz at All Saints featuring {title}. Part of the monthly jazz concert series at All Saints' Episcopal Church in Midtown Atlanta.",
-                                    "start_date": start_date,
-                                    "start_time": start_time,
-                                    "end_date": None,
-                                    "end_time": None,
-                                    "is_all_day": False,
-                                    "category": "music",
-                                    "subcategory": "concert",
-                                    "tags": ["jazz", "episcopal", "midtown", "live-music", "intimate"],
-                                    "price_min": None,
-                                    "price_max": None,
-                                    "price_note": None,
-                                    "is_free": False,
-                                    "source_url": event_url,
-                                    "ticket_url": event_url if event_url != JAZZ_URL else None,
-                                    "image_url": None,
-                                    "raw_text": f"{title} - {start_date}",
-                                    "extraction_confidence": 0.80,
-                                    "is_recurring": False,
-                                    "recurrence_rule": None,
-                                    "content_hash": content_hash,
-                                }
-
-                                existing = find_event_by_hash(content_hash)
-                                if existing:
-                                    smart_update_existing_event(existing, event_record)
-                                    events_updated += 1
-                                    i += 1
+                                # Skip navigation/UI elements
+                                skip_words = [
+                                    "upcoming", "calendar", "events", "navigation",
+                                    "menu", "search", "subscribe", "donate",
+                                    "home", "about", "contact", "music", "jazz at all saints"
+                                ]
+                                if any(w in check_line.lower() for w in skip_words):
                                     continue
 
-                                try:
-                                    insert_event(event_record)
-                                    events_new += 1
-                                    logger.info(f"Added: {title} on {start_date}")
-                                except Exception as e:
-                                    logger.error(f"Failed to insert: {title}: {e}")
+                                # Check for time
+                                if not start_time:
+                                    time_result = parse_time(check_line)
+                                    if time_result:
+                                        start_time = time_result
+                                        continue
 
-                    i += 1
+                                # Check for title (artist/band name)
+                                if not title and len(check_line) > 5:
+                                    # Skip date patterns
+                                    if not re.search(r"(?:January|February|March|April|May|June|July|August|September|October|November|December)", check_line, re.IGNORECASE):
+                                        # Skip price/register patterns
+                                        if not re.search(r"(free|tickets|\$|register|admission|cost)", check_line, re.IGNORECASE):
+                                            # This is likely the artist/title
+                                            title = check_line
+                                            break
 
-            else:
-                # Process structured event containers
-                for container in event_containers:
-                    try:
-                        # Extract title (artist/band name)
-                        title_elem = (
-                            container.find("h2") or
-                            container.find("h3") or
-                            container.find("h4") or
-                            container.find(class_=lambda x: x and "title" in x.lower())
-                        )
-                        if not title_elem:
-                            continue
+                        if title:
+                            events_found += 1
 
-                        title = title_elem.get_text(strip=True)
+                            content_hash = generate_content_hash(
+                                title, "All Saints' Episcopal Church", start_date
+                            )
 
-                        # Skip if this is just a heading/label
-                        if len(title) < 5 or title.lower() in ["jazz at all saints", "upcoming concerts", "schedule"]:
-                            continue
+                            event_url = find_event_url(title, event_links, JAZZ_URL)
 
-                        # Extract date
-                        date_elem = container.find(class_=lambda x: x and "date" in x.lower())
-                        if not date_elem:
-                            # Try to find date in text content
-                            date_elem = container
+                            event_record = {
+                                "source_id": source_id,
+                                "venue_id": venue_id,
+                                "title": title,
+                                "description": f"Jazz at All Saints featuring {title}. Part of the monthly jazz concert series at All Saints' Episcopal Church in Midtown Atlanta.",
+                                "start_date": start_date,
+                                "start_time": start_time,
+                                "end_date": None,
+                                "end_time": None,
+                                "is_all_day": False,
+                                "category": "music",
+                                "subcategory": "concert",
+                                "tags": ["jazz", "episcopal", "midtown", "live-music", "intimate"],
+                                "price_min": None,
+                                "price_max": None,
+                                "price_note": None,
+                                "is_free": False,
+                                "source_url": event_url,
+                                "ticket_url": event_url if event_url != JAZZ_URL else None,
+                                "image_url": None,
+                                "raw_text": f"{title} - {start_date}",
+                                "extraction_confidence": 0.80,
+                                "is_recurring": False,
+                                "recurrence_rule": None,
+                                "content_hash": content_hash,
+                            }
 
-                        date_text = date_elem.get_text()
-                        start_date = parse_date(date_text)
+                            existing = find_event_by_hash(content_hash)
+                            if existing:
+                                smart_update_existing_event(existing, event_record)
+                                events_updated += 1
+                                i += 1
+                                continue
 
-                        if not start_date:
-                            continue
+                            try:
+                                insert_event(event_record)
+                                events_new += 1
+                                logger.info(f"Added: {title} on {start_date}")
+                            except Exception as e:
+                                logger.error(f"Failed to insert: {title}: {e}")
 
-                        # Extract time
-                        time_text = date_text
-                        start_time = parse_time(time_text)
+                i += 1
 
-                        # Extract description
-                        desc_elem = container.find(class_=lambda x: x and ("description" in x.lower() or "excerpt" in x.lower()))
-                        description = desc_elem.get_text(strip=True) if desc_elem else f"Jazz at All Saints featuring {title}. Part of the monthly jazz concert series at All Saints' Episcopal Church in Midtown Atlanta."
-
-                        # Extract link
-                        link_elem = container.find("a", href=True)
-                        event_url = link_elem["href"] if link_elem else JAZZ_URL
-                        if event_url and not event_url.startswith("http"):
-                            event_url = BASE_URL + event_url if event_url.startswith("/") else BASE_URL + "/" + event_url
-
-                        # Extract image
-                        img_elem = container.find("img", src=True)
-                        image_url = img_elem["src"] if img_elem else None
-                        if image_url and not image_url.startswith("http"):
-                            image_url = BASE_URL + image_url if image_url.startswith("/") else None
-
-                        events_found += 1
-
-                        content_hash = generate_content_hash(
-                            title, "All Saints' Episcopal Church", start_date
-                        )
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
-
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": title,
-                            "description": description,
-                            "start_date": start_date,
-                            "start_time": start_time,
-                            "end_date": None,
-                            "end_time": None,
-                            "is_all_day": False,
-                            "category": "music",
-                            "subcategory": "concert",
-                            "tags": ["jazz", "episcopal", "midtown", "live-music", "intimate"],
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": False,
-                            "source_url": event_url,
-                            "ticket_url": event_url if event_url != JAZZ_URL else None,
-                            "image_url": image_url,
-                            "raw_text": f"{title} - {start_date}",
-                            "extraction_confidence": 0.85,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
-
-                        try:
-                            insert_event(event_record)
-                            events_new += 1
-                            logger.info(f"Added: {title} on {start_date}")
-                        except Exception as e:
-                            logger.error(f"Failed to insert: {title}: {e}")
-
-                    except Exception as e:
-                        logger.error(f"Failed to parse event container: {e}")
+        else:
+            # Process structured event containers
+            for container in event_containers:
+                try:
+                    # Extract title (artist/band name)
+                    title_elem = (
+                        container.find("h2") or
+                        container.find("h3") or
+                        container.find("h4") or
+                        container.find(class_=lambda x: x and "title" in x.lower())
+                    )
+                    if not title_elem:
                         continue
 
-            browser.close()
+                    title = title_elem.get_text(strip=True)
+
+                    # Skip if this is just a heading/label
+                    if len(title) < 5 or title.lower() in ["jazz at all saints", "upcoming concerts", "schedule"]:
+                        continue
+
+                    # Extract date
+                    date_elem = container.find(class_=lambda x: x and "date" in x.lower())
+                    if not date_elem:
+                        # Try to find date in text content
+                        date_elem = container
+
+                    date_text = date_elem.get_text()
+                    start_date = parse_date(date_text)
+
+                    if not start_date:
+                        continue
+
+                    # Extract time
+                    time_text = date_text
+                    start_time = parse_time(time_text)
+
+                    # Extract description
+                    desc_elem = container.find(class_=lambda x: x and ("description" in x.lower() or "excerpt" in x.lower()))
+                    description = desc_elem.get_text(strip=True) if desc_elem else f"Jazz at All Saints featuring {title}. Part of the monthly jazz concert series at All Saints' Episcopal Church in Midtown Atlanta."
+
+                    # Extract link
+                    link_elem = container.find("a", href=True)
+                    event_url = link_elem["href"] if link_elem else JAZZ_URL
+                    if event_url and not event_url.startswith("http"):
+                        event_url = BASE_URL + event_url if event_url.startswith("/") else BASE_URL + "/" + event_url
+
+                    # Extract image
+                    img_elem = container.find("img", src=True)
+                    image_url = img_elem["src"] if img_elem else None
+                    if image_url and not image_url.startswith("http"):
+                        image_url = BASE_URL + image_url if image_url.startswith("/") else None
+
+                    events_found += 1
+
+                    content_hash = generate_content_hash(
+                        title, "All Saints' Episcopal Church", start_date
+                    )
+
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": title,
+                        "description": description,
+                        "start_date": start_date,
+                        "start_time": start_time,
+                        "end_date": None,
+                        "end_time": None,
+                        "is_all_day": False,
+                        "category": "music",
+                        "subcategory": "concert",
+                        "tags": ["jazz", "episcopal", "midtown", "live-music", "intimate"],
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": None,
+                        "is_free": False,
+                        "source_url": event_url,
+                        "ticket_url": event_url if event_url != JAZZ_URL else None,
+                        "image_url": image_url,
+                        "raw_text": f"{title} - {start_date}",
+                        "extraction_confidence": 0.85,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        continue
+
+                    try:
+                        insert_event(event_record)
+                        events_new += 1
+                        logger.info(f"Added: {title} on {start_date}")
+                    except Exception as e:
+                        logger.error(f"Failed to insert: {title}: {e}")
+
+                except Exception as e:
+                    logger.error(f"Failed to parse event container: {e}")
+                    continue
 
         logger.info(
             f"All Saints' Episcopal crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
