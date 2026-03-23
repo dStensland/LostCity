@@ -27,10 +27,11 @@ BEGIN
         SELECT id, slug, name FROM venues
         WHERE id != canonical_id
         AND active = true
+        AND city = 'Atlanta'
         AND (
             slug LIKE 'topgolf%'
-            OR name ILIKE '%topgolf%atlanta%'
-            OR name ILIKE '%top golf%atlanta%'
+            OR name ILIKE '%topgolf%'
+            OR name ILIKE '%top golf%'
         )
     LOOP
         dupe_id := dupe_record.id;
@@ -45,9 +46,9 @@ BEGIN
         DELETE FROM venue_features WHERE venue_id = dupe_id
             AND slug IN (SELECT slug FROM venue_features WHERE venue_id = canonical_id);
         UPDATE venue_features SET venue_id = canonical_id WHERE venue_id = dupe_id;
-        -- Repoint venue_specials
+        -- Repoint venue_specials (dedup on title, venue_specials has no slug column)
         DELETE FROM venue_specials WHERE venue_id = dupe_id
-            AND slug IN (SELECT slug FROM venue_specials WHERE venue_id = canonical_id);
+            AND title IN (SELECT title FROM venue_specials WHERE venue_id = canonical_id);
         UPDATE venue_specials SET venue_id = canonical_id WHERE venue_id = dupe_id;
         -- Repoint venue_destination_details
         DELETE FROM venue_destination_details WHERE venue_id = dupe_id;
@@ -59,13 +60,12 @@ BEGIN
         DELETE FROM venue_occasions WHERE venue_id = dupe_id
             AND occasion IN (SELECT occasion FROM venue_occasions WHERE venue_id = canonical_id);
         UPDATE venue_occasions SET venue_id = canonical_id WHERE venue_id = dupe_id;
-        -- Repoint sources
-        UPDATE sources SET venue_id = canonical_id WHERE venue_id = dupe_id;
+        -- sources table has no venue_id column — skip repointing
         -- Repoint programs
         UPDATE programs SET venue_id = canonical_id WHERE venue_id = dupe_id;
 
         -- Add slug as alias on canonical record
-        UPDATE venues SET aliases = COALESCE(aliases, '[]'::jsonb) || to_jsonb(dupe_record.slug::text)
+        UPDATE venues SET aliases = array_append(COALESCE(aliases, '{}'), dupe_record.slug)
         WHERE id = canonical_id;
 
         -- Deactivate duplicate
