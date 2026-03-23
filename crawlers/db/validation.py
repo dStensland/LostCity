@@ -530,11 +530,11 @@ _CATEGORY_NORMALIZATION_MAP: dict[str, str] = {
     "government": "civic",
     "volunteering": "volunteer",
     "service": "volunteer",
-    "cultural": "community",
+    "cultural": "art",       # cultural events are arts/exhibitions
     "tours": "learning",
     "meetup": "community",
     "gaming": "community",
-    "markets": "community",
+    "markets": "food_drink",  # farmers markets, craft markets, night markets
     "haunted": "nightlife",
     "eatertainment": "nightlife",
     "entertainment": "family",

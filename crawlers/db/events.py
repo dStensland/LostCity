@@ -586,6 +586,9 @@ def _step_enrich_film(event_data: dict, ctx: InsertContext) -> dict:
             event_data["film_identity_source"] = metadata_source
         if ctx.film_metadata.genres and not ctx.genres:
             ctx.genres = ctx.film_metadata.genres
+        # Populate description from OMDB plot if event has no description
+        if ctx.film_metadata.plot and not event_data.get("description"):
+            event_data["description"] = ctx.film_metadata.plot
 
     return event_data
 
@@ -681,6 +684,27 @@ def _step_infer_category(event_data: dict, ctx: InsertContext) -> dict:
 
     if infer_is_kids_activity(event_data):
         event_data["category"] = "family"
+
+    # Tighten community: reclassify events with strong specific-category signals
+    if event_data.get("category") == "community":
+        title_lower = (event_data.get("title") or "").lower()
+        tags = event_data.get("tags") or []
+        genres = event_data.get("genres") or []
+        all_signals = set(tags + genres)
+
+        # Music signals
+        if any(s in all_signals for s in ("live-music", "concert", "dj", "open-mic", "karaoke", "jazz", "blues")):
+            event_data["category"] = "music"
+        # Comedy signals
+        elif any(s in all_signals for s in ("comedy", "stand-up", "improv", "open-mic-comedy")):
+            event_data["category"] = "comedy"
+        # Outdoor signals
+        elif any(s in all_signals for s in ("hiking", "trail", "outdoor", "nature", "kayak", "camping")):
+            event_data["category"] = "outdoors"
+        # Learning signals (from library/museum sources)
+        elif any(s in all_signals for s in ("workshop", "class", "education", "lecture", "seminar", "training")):
+            if not any(s in all_signals for s in ("volunteer", "civic", "nonprofit", "fundraiser")):
+                event_data["category"] = "learning"
 
     return event_data
 

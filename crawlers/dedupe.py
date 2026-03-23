@@ -6,6 +6,7 @@ Identifies and merges duplicate events from different sources.
 import hashlib
 import re
 import logging
+from datetime import date, timedelta
 from datetime import date as dt_date, datetime
 from typing import Optional
 from rapidfuzz import fuzz
@@ -260,3 +261,363 @@ def merge_event_data(existing: dict, new: EventData) -> dict:
         merged["ticket_url"] = new.ticket_url
 
     return merged
+
+
+# ---------------------------------------------------------------------------
+# Cross-source fuzzy deduplication (aggregator vs. venue-direct)
+# ---------------------------------------------------------------------------
+
+# Aggregator source slug prefixes — events from these are lower-priority
+# canonicals vs. venue-direct sources.
+_CROSS_SOURCE_AGGREGATOR_PREFIXES = (
+    "ticketmaster",
+    "eventbrite",
+)
+
+# Default aggregator slugs to target when no explicit list is provided.
+_DEFAULT_AGGREGATOR_SLUGS = [
+    "ticketmaster",
+    "ticketmaster-nashville",
+    "eventbrite",
+    "eventbrite-nashville",
+]
+
+# Suffixes that aggregators (and some venue crawlers) append to titles that
+# should be stripped before fuzzy comparison.
+_AGGREGATOR_TITLE_SUFFIX_RE = re.compile(
+    r"""
+    \s+@\s+.+$                                   # " @ Venue Name" (venue crawlers)
+    | \s+-\s+.+$                                  # " - Venue Name" (some crawlers)
+    | \s+\(18\s*\+\)\s*$                          # " (18+)"
+    | \s+\(all\s+ages?\)\s*$                      # " (All Ages)"
+    | \s+\(18\s+and\s+over\)\s*$                  # " (18 and Over)"
+    | \s+\(21\s*\+\)\s*$                          # " (21+)"
+    | \s+\(ages?\s+\d+\s*\+\)\s*$                # " (Ages 13+)"
+    | \s+\(sold[\s-]?out\)\s*$                    # " (Sold Out)"
+    | \s+\(rescheduled\)\s*$                      # " (Rescheduled)"
+    | \s+\(cancelled\)\s*$                        # " (Cancelled)"
+    | \s+\(postponed\)\s*$                        # " (Postponed)"
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
+
+def _strip_aggregator_title_suffixes(title: str) -> str:
+    """
+    Iteratively strip known aggregator/venue suffixes from a title until none remain.
+
+    Handles stacked suffixes like "Band Name @ Venue (18+)" -> "Band Name".
+    """
+    t = (title or "").strip()
+    # Apply repeatedly because some titles stack multiple suffixes
+    for _ in range(5):
+        stripped = _AGGREGATOR_TITLE_SUFFIX_RE.sub("", t).strip()
+        if stripped == t:
+            break
+        t = stripped
+    return t
+
+
+def _normalize_for_cross_source(title: str) -> str:
+    """
+    Full normalization pipeline for cross-source fuzzy comparison:
+    1. Strip aggregator-specific suffixes ("@ Venue", "(18+)", etc.)
+    2. Apply standard normalize_text() (lowercase, strip articles, remove punctuation)
+    """
+    stripped = _strip_aggregator_title_suffixes(title)
+    return normalize_text(stripped)
+
+
+def find_cross_source_duplicates(
+    client,
+    aggregator_slugs: list[str] = None,
+    min_similarity: float = 0.80,
+    dry_run: bool = True,
+    days_ahead: int = 60,
+) -> list[tuple[int, int]]:
+    """
+    Find events that exist from both a venue-direct source and an aggregator source
+    (Ticketmaster, Eventbrite) where the titles diverge due to appended suffixes.
+
+    Returns list of (keep_id, dupe_id) pairs where keep_id is the venue-direct
+    event and dupe_id is the aggregator copy.
+
+    Strategy:
+    1. Resolve the source IDs for the aggregator slugs.
+    2. Fetch all active future events from those aggregator sources.
+    3. For each aggregator event, query the same venue + same date from
+       non-aggregator sources.
+    4. Fuzzy-match titles after stripping known suffixes ("@ Venue", "(18+)", etc.).
+    5. If similarity >= min_similarity, mark aggregator copy as duplicate
+       (venue-direct copy is preferred canonical).
+
+    Args:
+        client:           Supabase client instance.
+        aggregator_slugs: Source slugs to treat as aggregators. Defaults to
+                          _DEFAULT_AGGREGATOR_SLUGS.
+        min_similarity:   Minimum fuzz.ratio score (0.0–1.0) to declare a match.
+                          Default 0.80 (80/100 on rapidfuzz scale).
+        dry_run:          If True, only report pairs without writing to DB.
+        days_ahead:       How many days of future events to scan. Default 60.
+
+    Returns:
+        List of (keep_id, dupe_id) tuples. keep_id is the venue-direct event;
+        dupe_id is the aggregator event that should be linked/suppressed.
+    """
+    if aggregator_slugs is None:
+        aggregator_slugs = _DEFAULT_AGGREGATOR_SLUGS
+
+    # ── Step 1: resolve aggregator source IDs ────────────────────────────────
+    agg_source_rows = (
+        client.table("sources")
+        .select("id, slug")
+        .in_("slug", aggregator_slugs)
+        .execute()
+    )
+    agg_source_id_to_slug = {
+        row["id"]: row["slug"] for row in (agg_source_rows.data or [])
+    }
+    if not agg_source_id_to_slug:
+        logger.warning(
+            "No active sources found for aggregator slugs: %s — nothing to deduplicate",
+            aggregator_slugs,
+        )
+        return []
+
+    agg_source_ids = list(agg_source_id_to_slug.keys())
+    logger.info(
+        "Scanning %d aggregator source(s): %s",
+        len(agg_source_ids),
+        list(agg_source_id_to_slug.values()),
+    )
+
+    # ── Step 2: fetch aggregator events in window ─────────────────────────────
+    today = date.today().isoformat()
+    future = (date.today() + timedelta(days=days_ahead)).isoformat()
+
+    PAGE_SIZE = 1000
+    agg_events: list[dict] = []
+    offset = 0
+    while True:
+        result = (
+            client.table("events")
+            .select("id, title, start_date, start_time, venue_id, source_id, canonical_event_id")
+            .gte("start_date", today)
+            .lte("start_date", future)
+            .eq("is_active", True)
+            .is_("canonical_event_id", "null")
+            .in_("source_id", agg_source_ids)
+            .order("start_date")
+            .range(offset, offset + PAGE_SIZE - 1)
+            .execute()
+        )
+        page = result.data or []
+        agg_events.extend(page)
+        if len(page) < PAGE_SIZE:
+            break
+        offset += PAGE_SIZE
+
+    logger.info("Loaded %d aggregator events to check", len(agg_events))
+
+    if not agg_events:
+        return []
+
+    # ── Step 3 & 4: for each aggregator event, find venue-direct matches ──────
+    # Collect all unique (venue_id, start_date) pairs to batch-fetch candidates.
+    date_venue_keys: set[tuple[int, str]] = {
+        (e["venue_id"], e["start_date"])
+        for e in agg_events
+        if e.get("venue_id") and e.get("start_date")
+    }
+
+    # Batch fetch venue-direct events for each (date, venue_id) combination.
+    # Group by date to reduce query count.
+    date_to_venue_ids: dict[str, set[int]] = {}
+    for venue_id, start_date in date_venue_keys:
+        date_to_venue_ids.setdefault(start_date, set()).add(venue_id)
+
+    # venue_direct_map: (venue_id, start_date) -> list of non-aggregator events
+    venue_direct_map: dict[tuple[int, str], list[dict]] = {}
+
+    for start_date, venue_ids in date_to_venue_ids.items():
+        venue_id_list = list(venue_ids)
+        result = (
+            client.table("events")
+            .select("id, title, start_date, start_time, venue_id, source_id, canonical_event_id")
+            .eq("start_date", start_date)
+            .eq("is_active", True)
+            .is_("canonical_event_id", "null")
+            .in_("venue_id", venue_id_list)
+            .not_.in_("source_id", agg_source_ids)
+            .execute()
+        )
+        for row in (result.data or []):
+            key = (row["venue_id"], row["start_date"])
+            venue_direct_map.setdefault(key, []).append(row)
+
+    # ── Step 5: fuzzy title matching ──────────────────────────────────────────
+    # Scale min_similarity from 0.0–1.0 to 0–100 for rapidfuzz
+    threshold_scaled = min_similarity * 100.0
+
+    pairs: list[tuple[int, int]] = []
+    seen_dupe_ids: set[int] = set()  # guard against double-reporting
+
+    for agg_event in agg_events:
+        venue_id = agg_event.get("venue_id")
+        start_date = agg_event.get("start_date")
+        agg_id = agg_event["id"]
+        agg_title = agg_event.get("title") or ""
+        agg_source_slug = agg_source_id_to_slug.get(agg_event.get("source_id"), "?")
+
+        if not venue_id or not start_date or not agg_title:
+            continue
+
+        candidates = venue_direct_map.get((venue_id, start_date), [])
+        if not candidates:
+            continue
+
+        agg_norm = _normalize_for_cross_source(agg_title)
+        if not agg_norm:
+            continue
+
+        for candidate in candidates:
+            candidate_id = candidate["id"]
+            if candidate_id in seen_dupe_ids or agg_id in seen_dupe_ids:
+                continue
+
+            cand_norm = _normalize_for_cross_source(candidate.get("title") or "")
+            if not cand_norm:
+                continue
+
+            score = fuzz.ratio(agg_norm, cand_norm)
+            if score >= threshold_scaled:
+                pairs.append((candidate_id, agg_id))
+                seen_dupe_ids.add(agg_id)
+
+                agg_title_display = agg_title[:70]
+                cand_title_display = (candidate.get("title") or "")[:70]
+                logger.info(
+                    "MATCH (%.0f%%): keep=%d '%s' | dupe=%d [%s] '%s' | date=%s venue_id=%d",
+                    score,
+                    candidate_id,
+                    cand_title_display,
+                    agg_id,
+                    agg_source_slug,
+                    agg_title_display,
+                    start_date,
+                    venue_id,
+                )
+                break  # one match per aggregator event is enough
+
+    logger.info("Found %d cross-source fuzzy duplicate pair(s)", len(pairs))
+
+    # ── Step 6: optionally write canonical_event_id links ────────────────────
+    if not dry_run and pairs:
+        from db.client import writes_enabled
+
+        if writes_enabled():
+            linked = 0
+            for keep_id, dupe_id in pairs:
+                try:
+                    client.table("events").update(
+                        {"canonical_event_id": keep_id}
+                    ).eq("id", dupe_id).execute()
+                    linked += 1
+                    logger.debug("Linked dupe=%d -> canonical=%d", dupe_id, keep_id)
+                except Exception as exc:
+                    logger.warning(
+                        "Failed to link dupe=%d -> canonical=%d: %s",
+                        dupe_id,
+                        keep_id,
+                        exc,
+                    )
+            logger.info("Wrote %d canonical_event_id link(s) to DB", linked)
+        else:
+            logger.warning(
+                "Writes not enabled — skipping DB update for %d pair(s). "
+                "Pass --execute and ensure DB write mode is active.",
+                len(pairs),
+            )
+    elif dry_run and pairs:
+        logger.info(
+            "DRY RUN — %d pair(s) found, no DB changes written. "
+            "Pass --execute to persist canonical_event_id links.",
+            len(pairs),
+        )
+
+    return pairs
+
+
+if __name__ == "__main__":
+    import argparse
+    import sys
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+
+    parser = argparse.ArgumentParser(
+        description="Cross-source fuzzy dedup: find Ticketmaster/Eventbrite events "
+        "that duplicate venue-direct entries via title suffix divergence."
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=True,
+        help="Report pairs without writing to DB (default: True)",
+    )
+    parser.add_argument(
+        "--execute",
+        action="store_true",
+        help="Write canonical_event_id links to DB (overrides --dry-run)",
+    )
+    parser.add_argument(
+        "--min-similarity",
+        type=float,
+        default=0.80,
+        help="Minimum title similarity 0.0-1.0 to declare a match (default: 0.80)",
+    )
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=60,
+        help="How many days of future events to scan (default: 60)",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable debug logging",
+    )
+    args = parser.parse_args()
+
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    from db.client import get_client
+
+    client = get_client()
+    dry_run = not args.execute
+
+    if dry_run:
+        logger.info(
+            "DRY RUN — no changes written (pass --execute to persist links)"
+        )
+    else:
+        logger.info("EXECUTE MODE — canonical_event_id links will be written to DB")
+
+    pairs = find_cross_source_duplicates(
+        client,
+        dry_run=dry_run,
+        min_similarity=args.min_similarity,
+        days_ahead=args.days,
+    )
+
+    print(f"\nFound {len(pairs)} duplicate pair(s)")
+    if pairs:
+        print(f"{'keep_id':>10}  {'dupe_id':>10}")
+        print("-" * 24)
+        for keep_id, dupe_id in pairs:
+            print(f"{keep_id:>10}  {dupe_id:>10}")
+
+    sys.exit(0)
