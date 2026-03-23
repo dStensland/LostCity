@@ -1,0 +1,144 @@
+"use client";
+
+/**
+ * NewsDigest — compact 3-headline briefing zone component.
+ *
+ * Self-fetching from /api/portals/[slug]/network-feed?limit=20.
+ * Client-side filters to culture-positive categories, deduplicates by title,
+ * and takes the first 3. Returns null when no matching headlines.
+ *
+ * Intended to sit inside CityBriefing, ~120-130px total height.
+ */
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import type { NetworkPost } from "./sections/NetworkFeedSection";
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const CULTURE_POSITIVE = ["culture", "arts", "food", "music", "community"] as const;
+
+// ── Props ─────────────────────────────────────────────────────────────────────
+
+export interface NewsDigestProps {
+  portalSlug: string;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getPostCategories(post: NetworkPost): string[] {
+  return post.categories ?? post.source?.categories ?? [];
+}
+
+function isCulturePositive(post: NetworkPost): boolean {
+  const cats = getPostCategories(post);
+  return cats.some((c) => (CULTURE_POSITIVE as readonly string[]).includes(c));
+}
+
+function formatCategory(cats: string[]): string {
+  const match = cats.find((c) => (CULTURE_POSITIVE as readonly string[]).includes(c));
+  if (!match) return "";
+  return match.charAt(0).toUpperCase() + match.slice(1);
+}
+
+// ── Sub-component: single headline row ────────────────────────────────────────
+
+function HeadlineRow({ post, isLast }: { post: NetworkPost; isLast: boolean }) {
+  const cats = getPostCategories(post);
+  const categoryLabel = formatCategory(cats);
+
+  return (
+    <a
+      href={post.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={[
+        "flex flex-col gap-0.5 py-2.5 transition-colors group",
+        !isLast && "border-b border-[var(--twilight)]/30",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <p className="text-xs font-medium text-[var(--cream)] line-clamp-1 group-hover:underline underline-offset-2">
+        {post.title}
+      </p>
+      <div className="flex items-center gap-1">
+        {post.source?.name && (
+          <span className="text-2xs text-[var(--muted)] truncate">{post.source.name}</span>
+        )}
+        {post.source?.name && categoryLabel && (
+          <span className="text-2xs text-[var(--muted)]">·</span>
+        )}
+        {categoryLabel && (
+          <span className="text-2xs text-[var(--muted)]">{categoryLabel}</span>
+        )}
+      </div>
+    </a>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
+export function NewsDigest({ portalSlug }: NewsDigestProps) {
+  const [headlines, setHeadlines] = useState<NetworkPost[]>([]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch(`/api/portals/${portalSlug}/network-feed?limit=20`, {
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data) => {
+        if (controller.signal.aborted) return;
+
+        // Deduplicate by normalized title (same pattern as TodayInAtlantaSection)
+        const seenTitles = new Set<string>();
+        const deduped = ((data.posts || []) as NetworkPost[]).filter((p) => {
+          const norm = p.title.toLowerCase().trim();
+          if (seenTitles.has(norm)) return false;
+          seenTitles.add(norm);
+          return true;
+        });
+
+        // Filter to culture-positive categories, take first 3
+        const filtered = deduped.filter(isCulturePositive).slice(0, 3);
+        setHeadlines(filtered);
+      })
+      .catch(() => {});
+
+    return () => controller.abort();
+  }, [portalSlug]);
+
+  if (headlines.length === 0) return null;
+
+  return (
+    <div className="px-5 py-3 border-b border-[var(--twilight)] feed-section-enter">
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-mono text-2xs uppercase tracking-[1.2px] text-[var(--muted)]">
+          Today in Atlanta
+        </span>
+        <Link
+          href={`/${portalSlug}/network`}
+          className="font-mono text-2xs uppercase tracking-[1.2px] text-[var(--muted)] hover:text-[var(--soft)] transition-colors"
+        >
+          All news →
+        </Link>
+      </div>
+
+      {/* Headline rows */}
+      <div>
+        {headlines.map((post, i) => (
+          <HeadlineRow
+            key={post.id}
+            post={post}
+            isLast={i === headlines.length - 1}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export type { NewsDigestProps as NewsDigestComponentProps };
