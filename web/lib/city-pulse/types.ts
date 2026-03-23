@@ -73,6 +73,19 @@ export interface PersonalizationMeta {
 }
 
 // ---------------------------------------------------------------------------
+// Card tier + editorial mentions
+// ---------------------------------------------------------------------------
+
+export type CardTier = "hero" | "featured" | "standard";
+
+export interface EditorialMention {
+  source_key: string;
+  snippet: string;
+  article_url: string;
+  guide_name?: string;
+}
+
+// ---------------------------------------------------------------------------
 // City Pulse items
 // ---------------------------------------------------------------------------
 
@@ -92,6 +105,8 @@ export interface CityPulseEventItem {
     featured?: boolean;
     is_recurring?: boolean;
     recurrence_label?: string;
+    card_tier?: CardTier;
+    editorial_mentions?: EditorialMention[];
   };
 }
 

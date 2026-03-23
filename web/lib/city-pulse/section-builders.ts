@@ -17,7 +17,12 @@ import type {
   FriendGoingInfo,
   UserSignals,
   TimeSlot,
+  EditorialMention,
 } from "./types";
+import { getCardTier } from "./tier-assignment";
+
+/** Venue-keyed map of editorial press mentions. Passed from fetch-enrichments Phase B. */
+export type EditorialMap = Record<number, EditorialMention[]>;
 import type { FeedEventData } from "@/components/EventCard";
 import type { Spot } from "@/lib/spots-constants";
 import { THINGS_TO_DO_TILES } from "@/lib/spots-constants";
@@ -55,7 +60,32 @@ function makeEventItem(
     is_recurring?: boolean;
     recurrence_label?: string;
   },
+  editorialMap?: EditorialMap,
 ): CityPulseEventItem {
+  const venueId = event.venue?.id;
+  const editorialMentions = (venueId != null && editorialMap)
+    ? editorialMap[venueId]
+    : undefined;
+  const venueHasEditorial = editorialMentions != null && editorialMentions.length > 0;
+
+  const cardTier = getCardTier(
+    {
+      is_tentpole: event.is_tentpole,
+      is_featured: (event as Record<string, unknown>).is_featured as boolean | undefined,
+      festival_id: event.festival_id,
+      image_url: event.image_url,
+      featured_blurb: event.featured_blurb,
+      importance: (event as Record<string, unknown>).importance as
+        | "flagship"
+        | "major"
+        | "standard"
+        | null
+        | undefined,
+      venue_has_editorial: venueHasEditorial,
+    },
+    opts?.friends_going?.length ?? 0,
+  );
+
   return {
     item_type: "event",
     event: {
@@ -67,6 +97,8 @@ function makeEventItem(
       featured: opts?.featured,
       is_recurring: opts?.is_recurring,
       recurrence_label: opts?.recurrence_label,
+      card_tier: cardTier,
+      editorial_mentions: editorialMentions,
     },
   };
 }
@@ -404,6 +436,7 @@ export function buildRightNowSection(
   input: RightNowInput,
   signals: UserSignals | null,
   friendsGoingMap: Record<number, FriendGoingInfo[]>,
+  editorialMap?: EditorialMap,
 ): CityPulseSection | null {
   const items: CityPulseItem[] = [];
 
@@ -437,7 +470,7 @@ export function buildRightNowSection(
         featured: true,
         is_recurring: heroEvent.is_recurring,
         recurrence_label: heroEvent.recurrence_label,
-      }),
+      }, editorialMap),
     );
   }
 
@@ -455,7 +488,7 @@ export function buildRightNowSection(
         reasons: e.reasons,
         is_recurring: e.is_recurring,
         recurrence_label: e.recurrence_label,
-      }),
+      }, editorialMap),
     );
   }
 
@@ -628,6 +661,7 @@ export function buildTonightSection(
   input: TonightInput,
   signals: UserSignals | null,
   friendsGoingMap: Record<number, FriendGoingInfo[]>,
+  editorialMap?: EditorialMap,
 ): CityPulseSection | null {
   // Only show during planning hours — once evening starts, "tonight" IS "right now"
   const planningSlots: TimeSlot[] = ["morning", "midday", "happy_hour"];
@@ -652,7 +686,7 @@ export function buildTonightSection(
       featured: idx === 0 && !!e.image_url,
       is_recurring: e.is_recurring,
       recurrence_label: e.recurrence_label,
-    }),
+    }, editorialMap),
   );
 
   // Weave in contextually relevant specials (evening-appropriate)
@@ -777,13 +811,14 @@ export interface YourPeopleInput {
 
 export function buildYourPeopleSection(
   input: YourPeopleInput,
+  editorialMap?: EditorialMap,
 ): CityPulseSection | null {
   if (input.friendRsvps.length < 2) return null;
 
   const items: CityPulseItem[] = input.friendRsvps
     .slice(0, 8)
     .map(({ event, friends }) =>
-      makeEventItem(event, { friends_going: friends }),
+      makeEventItem(event, { friends_going: friends }, editorialMap),
     );
 
   return {
@@ -803,13 +838,14 @@ export function buildYourPeopleSection(
 
 export function buildNewFromSpotsSection(
   events: FeedEventData[],
+  editorialMap?: EditorialMap,
 ): CityPulseSection | null {
   if (events.length < 2) return null;
 
   const items: CityPulseItem[] = events
     .slice(0, 8)
     .map((e) =>
-      makeEventItem(e, { contextual_label: "New from a spot you follow" }),
+      makeEventItem(e, { contextual_label: "New from a spot you follow" }, editorialMap),
     );
 
   return {
@@ -832,6 +868,7 @@ export function buildTrendingSection(
   trendingDestinations: Spot[],
   signals: UserSignals | null,
   friendsGoingMap: Record<number, FriendGoingInfo[]>,
+  editorialMap?: EditorialMap,
 ): CityPulseSection | null {
   const items: CityPulseItem[] = [];
 
@@ -843,7 +880,7 @@ export function buildTrendingSection(
         friends_going: e.friends_going,
         score: e.score,
         reasons: e.reasons,
-      }),
+      }, editorialMap),
     );
   }
 
@@ -1090,6 +1127,7 @@ export function buildExperiencesSection(
  */
 export function buildPlanningHorizonSection(
   events: FeedEventData[],
+  editorialMap?: EditorialMap,
 ): CityPulseSection | null {
   const now = new Date();
   const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -1174,7 +1212,7 @@ export function buildPlanningHorizonSection(
       urgency: getPlanningUrgency(raw),
       ticket_freshness: ticketStatusFreshness(raw.ticket_status_checked_at),
     };
-    return makeEventItem(enriched as FeedEventData);
+    return makeEventItem(enriched as FeedEventData, undefined, editorialMap);
   });
 
   return {

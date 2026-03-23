@@ -10,7 +10,7 @@
 
 import type { FeedEventData } from "@/components/EventCard";
 import type { Spot } from "@/lib/spots-constants";
-import type { CityPulseSection, CityPulseSpecialItem, FriendGoingInfo } from "@/lib/city-pulse/types";
+import type { CityPulseSection, CityPulseSpecialItem, FriendGoingInfo, EditorialMention } from "@/lib/city-pulse/types";
 import type { FeedSectionData } from "@/components/feed/FeedSection";
 import type { UserSignals } from "@/lib/city-pulse/types";
 import type { PipelineContext } from "./resolve-portal";
@@ -29,6 +29,7 @@ import {
   buildTrendingSection,
   buildPlanningHorizonSection,
   buildBrowseSection,
+  type EditorialMap,
 } from "@/lib/city-pulse/section-builders";
 import { getAllConversionPrompts } from "@/lib/city-pulse/conversion-prompts";
 import type { PersonalizationLevel } from "@/lib/city-pulse/types";
@@ -69,7 +70,7 @@ export function buildSections(
   venueTypeCounts: Record<string, number>,
 ): BuiltSections {
   const { activeSpecials, rawCuratedSections, weatherVenues, weatherFilter, userSignals } = phaseA;
-  const { socialCounts, friendsGoingMap, newFromSpots } = phaseB;
+  const { socialCounts, friendsGoingMap, newFromSpots, editorialMap } = phaseB;
   const { todayEvents, trendingEvents, horizonEvents } = pools;
 
   // Apply social proof to today and trending event pools
@@ -136,12 +137,14 @@ export function buildSections(
       { todayEvents: todayEventsWithProof, activeSpecials, openDestinations },
       userSignals,
       friendsGoingMap,
+      editorialMap,
     ),
     buildTonightSection(
       ctx.feedContext,
       { todayEvents: todayEventsWithProof, activeSpecials },
       userSignals,
       friendsGoingMap,
+      editorialMap,
     ),
     buildThemedSpecialsSection(ctx.feedContext, activeSpecials),
     buildWeatherDiscoverySection(
@@ -151,10 +154,10 @@ export function buildSections(
       weatherFilter?.subtitle ?? "",
       userSignals,
     ),
-    buildYourPeopleSection({ friendRsvps: friendRsvpEvents }),
-    buildNewFromSpotsSection(newFromSpots),
-    buildTrendingSection(trendingEventsWithProof, trendingDestinations, userSignals, friendsGoingMap),
-    buildPlanningHorizonSection(horizonEvents),
+    buildYourPeopleSection({ friendRsvps: friendRsvpEvents }, editorialMap),
+    buildNewFromSpotsSection(newFromSpots, editorialMap),
+    buildTrendingSection(trendingEventsWithProof, trendingDestinations, userSignals, friendsGoingMap, editorialMap),
+    buildPlanningHorizonSection(horizonEvents, editorialMap),
     buildBrowseSection(ctx.canonicalSlug, venueTypeCounts, allEventCategoryCounts),
   ].filter(Boolean) as CityPulseSection[];
 

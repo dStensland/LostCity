@@ -111,6 +111,8 @@ export type FeedEventData = {
   activity_type?: string;
   festival_id?: string | null;
   is_tentpole?: boolean;
+  is_featured?: boolean;
+  importance?: "flagship" | "major" | "standard" | null;
   ticket_url?: string | null;
   source_url?: string | null;
   series_id?: string | null;

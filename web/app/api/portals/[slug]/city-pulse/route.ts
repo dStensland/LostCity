@@ -327,15 +327,19 @@ export async function GET(request: NextRequest, { params }: Props) {
     fetchPhaseAEnrichments(supabase, ctx),
   ]);
 
-  // Stage 4B: social proof + friends + new-from-spots — depends on event IDs + userSignals
+  // Stage 4B: social proof + friends + new-from-spots + editorial — depends on event IDs + userSignals
   const allEvents = [...pools.todayEvents, ...pools.trendingEvents];
   const allEventIds = Array.from(new Set(allEvents.map((e) => e.id)));
+  const allVenueIds = Array.from(
+    new Set(allEvents.map((e) => e.venue?.id).filter((id): id is number => id != null)),
+  );
 
   const phaseB = await fetchPhaseBEnrichments(
     supabase,
     portalClient,
     ctx,
     allEventIds,
+    allVenueIds,
     phaseA.userSignals,
   );
 

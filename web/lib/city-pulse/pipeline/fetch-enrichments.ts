@@ -35,7 +35,7 @@ import { loadUserSignals } from "@/lib/city-pulse/user-signals";
 import { fetchSocialProofCounts } from "@/lib/social-proof";
 import { buildFriendsGoingMap } from "@/lib/city-pulse/counts";
 import { fetchNewFromSpots } from "./fetch-events";
-import type { CityPulseSpecialItem } from "@/lib/city-pulse/types";
+import type { CityPulseSpecialItem, EditorialMention } from "@/lib/city-pulse/types";
 import type { WeatherData } from "@/lib/weather-utils";
 
 // ---------------------------------------------------------------------------
@@ -221,6 +221,7 @@ export type PhaseBEnrichments = {
   socialCounts: Map<number, { going: number; interested: number }>;
   friendsGoingMap: Record<number, FriendGoingInfo[]>;
   newFromSpots: FeedEventData[];
+  editorialMap: Record<number, EditorialMention[]>;
 };
 
 /**
@@ -232,21 +233,46 @@ export async function fetchPhaseBEnrichments(
   portalClient: SupabaseClient,
   ctx: PipelineContext,
   allEventIds: number[],
+  allVenueIds: number[],
   userSignals: UserSignals | null,
 ): Promise<PhaseBEnrichments> {
-  const [socialCounts, friendsGoingMap, newFromSpots] = await Promise.all([
-    fetchSocialProofCounts(allEventIds),
-    buildFriendsGoingMap(
-      supabase,
-      allEventIds,
-      userSignals?.friendIds ?? [],
-    ),
-    fetchNewFromSpots(
-      portalClient,
-      ctx,
-      userSignals?.followedVenueIds ?? [],
-    ),
-  ]);
+  const editorialPromise: Promise<EditorialMention[]> = allVenueIds.length > 0
+    ? Promise.resolve(
+        supabase
+          .from("editorial_mentions")
+          .select("venue_id, source_key, snippet, article_url, guide_name")
+          .in("venue_id", allVenueIds),
+      ).then(({ data }) => (data ?? []) as unknown as EditorialMention[])
+    : Promise.resolve([]);
 
-  return { socialCounts, friendsGoingMap, newFromSpots };
+  const [socialCounts, friendsGoingMap, newFromSpots, editorialRows] =
+    await Promise.all([
+      fetchSocialProofCounts(allEventIds),
+      buildFriendsGoingMap(
+        supabase,
+        allEventIds,
+        userSignals?.friendIds ?? [],
+      ),
+      fetchNewFromSpots(
+        portalClient,
+        ctx,
+        userSignals?.followedVenueIds ?? [],
+      ),
+      editorialPromise,
+    ]);
+
+  // Build venue_id → EditorialMention[] lookup map
+  const editorialMap: Record<number, EditorialMention[]> = {};
+  for (const row of editorialRows as Array<EditorialMention & { venue_id: number }>) {
+    const venueId = row.venue_id;
+    if (!editorialMap[venueId]) editorialMap[venueId] = [];
+    editorialMap[venueId].push({
+      source_key: row.source_key,
+      snippet: row.snippet,
+      article_url: row.article_url,
+      guide_name: row.guide_name,
+    });
+  }
+
+  return { socialCounts, friendsGoingMap, newFromSpots, editorialMap };
 }
