@@ -12,7 +12,8 @@ import Link from "next/link";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import FeedSectionHeader from "./FeedSectionHeader";
 import ForYouOnboarding from "./ForYouOnboarding";
-import EventCard, { HeroEventCard } from "@/components/EventCard";
+import EventCard from "@/components/EventCard";
+import { HeroCard } from "@/components/feed/HeroCard";
 import { convertFriendsGoing } from "@/lib/formats";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -105,7 +106,7 @@ function ForYouSectionBlock({
       {/* Hero treatment for primary sections */}
       {config.useHeroFirst && heroEvent && (
         <div className="mb-1">
-          <HeroEventCard
+          <HeroCard
             event={heroEvent}
             portalSlug={portalSlug}
           />

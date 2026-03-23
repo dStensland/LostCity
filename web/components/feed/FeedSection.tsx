@@ -49,9 +49,9 @@ import { getSmartDateLabel } from "@/lib/card-utils";
 import {
   GridEventCard,
   CompactEventCard,
-  HeroEventCard,
   type FeedEventData,
 } from "@/components/EventCard";
+import { HeroCard } from "@/components/feed/HeroCard";
 import { trackPortalAction } from "@/lib/analytics/portal-action-tracker";
 
 /** Block javascript: and data: URLs from DB content to prevent XSS */
@@ -669,7 +669,7 @@ function HeroBanner({
   if (!event) return null;
   return (
     <section className="mb-4 sm:mb-6">
-      <HeroEventCard
+      <HeroCard
         event={event as FeedEventData}
         portalSlug={portalSlug}
         hideImages={hideImages}

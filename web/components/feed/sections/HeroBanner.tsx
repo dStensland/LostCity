@@ -1,6 +1,7 @@
 "use client";
 
-import { HeroEventCard, type FeedEventData } from "@/components/EventCard";
+import { HeroCard } from "@/components/feed/HeroCard";
+import type { FeedEventData } from "@/components/EventCard";
 import type { FeedSectionData } from "./types";
 
 export function HeroBanner({
@@ -16,7 +17,7 @@ export function HeroBanner({
   if (!event) return null;
   return (
     <section className="mb-4 sm:mb-6">
-      <HeroEventCard
+      <HeroCard
         event={event as FeedEventData}
         portalSlug={portalSlug}
         hideImages={hideImages}
