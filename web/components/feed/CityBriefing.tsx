@@ -55,6 +55,9 @@ import type {
 } from "@/lib/city-pulse/types";
 import { formatTemperature, getWeatherIconName, type ForecastDay, type WeatherData } from "@/lib/weather-utils";
 import { useFeedVisible } from "@/lib/feed-visibility";
+import { SignalStrip } from "./SignalStrip";
+import { SummaryLine } from "./SummaryLine";
+import { NewsDigest } from "./NewsDigest";
 
 // ── Icon map for quick link pills ────────────────────────────────────────────
 
@@ -72,6 +75,8 @@ export interface CityBriefingProps {
   portalSlug: string;
   portalId: string;
   quickLinks?: QuickLink[];
+  tabCounts?: { today: number; this_week: number; coming_up: number } | null;
+  categoryCounts?: { today: Record<string, number> } | null;
 }
 
 // ── Layout variant selection ──────────────────────────────────────────────────
@@ -283,6 +288,10 @@ interface LayoutProps {
   contentParallax: { weather: number; masthead: number; meta: number };
   liveCount: number | null;
   portalSlug: string;
+  context: FeedContext;
+  sportsTentpole?: ResolvedHeader["sports_tentpole"];
+  tabCounts?: { today: number; this_week: number; coming_up: number } | null;
+  categoryCounts?: { today: Record<string, number> } | null;
 }
 
 // ── Weather pill (shared across variants) ────────────────────────────────────
@@ -469,7 +478,8 @@ function HeadlineSubtitle({
 
 function CenteredLayout({
   masthead, accentColor, headline, treatment, weather, quickLinks,
-  contentParallax, liveCount, portalSlug,
+  contentParallax, liveCount, portalSlug, context, sportsTentpole,
+  tabCounts, categoryCounts,
 }: LayoutProps) {
   return (
     <div className="relative z-10 flex flex-col items-center justify-end text-center min-h-[300px] sm:min-h-[480px] px-6 pb-7 pt-5">
@@ -481,6 +491,9 @@ function CenteredLayout({
           className="animate-fade-in hero-stagger-2 will-change-transform"
           style={{ transform: `translateY(${contentParallax.masthead}px)` }}
         >
+          <div className="flex justify-center mb-2">
+            <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
+          </div>
           <h1
             className="text-[3.5rem] sm:text-[4.5rem] leading-[0.85] tracking-[0.04em] text-[var(--cream)]"
             style={{ fontFamily: "var(--font-masthead), sans-serif", textShadow: treatment.mastheadShadow }}
@@ -500,6 +513,7 @@ function CenteredLayout({
             </p>
           )}
           <HeadlineSubtitle headline={headline} bodyShadow={treatment.bodyShadow} />
+          <SummaryLine tabCounts={tabCounts} categoryCounts={categoryCounts} weather={context.weather} />
         </div>
 
         <div
@@ -515,7 +529,8 @@ function CenteredLayout({
 
 function BottomLeftLayout({
   masthead, accentColor, headline, treatment, weather, quickLinks,
-  contentParallax, liveCount, portalSlug,
+  contentParallax, liveCount, portalSlug, context, sportsTentpole,
+  tabCounts, categoryCounts,
 }: LayoutProps) {
   return (
     <div className="relative z-10 flex flex-col justify-end min-h-[300px] sm:min-h-[520px] px-6 sm:px-10 pb-8 pt-5">
@@ -527,6 +542,9 @@ function BottomLeftLayout({
           className="animate-fade-in hero-stagger-2 will-change-transform"
           style={{ transform: `translateY(${contentParallax.masthead}px)` }}
         >
+          <div className="mb-2">
+            <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
+          </div>
           <h1
             className="text-[3rem] sm:text-[4rem] leading-[0.85] tracking-[0.03em] text-[var(--cream)]"
             style={{ fontFamily: "var(--font-masthead), sans-serif", textShadow: treatment.mastheadShadow }}
@@ -546,6 +564,7 @@ function BottomLeftLayout({
             </p>
           )}
           <HeadlineSubtitle headline={headline} bodyShadow={treatment.bodyShadow} />
+          <SummaryLine tabCounts={tabCounts} categoryCounts={categoryCounts} weather={context.weather} />
         </div>
 
         <div
@@ -561,7 +580,8 @@ function BottomLeftLayout({
 
 function SplitLayout({
   masthead, accentColor, headline, treatment, weather, quickLinks,
-  contentParallax, liveCount, portalSlug,
+  contentParallax, liveCount, portalSlug, context, sportsTentpole,
+  tabCounts, categoryCounts,
 }: LayoutProps) {
   return (
     <div className="relative z-10 flex flex-col min-h-[300px] sm:min-h-[480px] px-6 pb-7 pt-6">
@@ -573,6 +593,9 @@ function SplitLayout({
           className="animate-fade-in hero-stagger-2 will-change-transform"
           style={{ transform: `translateY(${contentParallax.masthead}px)` }}
         >
+          <div className="mb-2">
+            <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
+          </div>
           <h1
             className="text-[2.5rem] sm:text-[3.25rem] leading-[0.85] tracking-[0.03em] text-[var(--cream)]"
             style={{ fontFamily: "var(--font-masthead), sans-serif", textShadow: treatment.mastheadShadow }}
@@ -603,6 +626,7 @@ function SplitLayout({
           style={{ transform: `translateY(${contentParallax.meta}px)` }}
         >
           <HeadlineSubtitle headline={headline} bodyShadow={treatment.bodyShadow} />
+          <SummaryLine tabCounts={tabCounts} categoryCounts={categoryCounts} weather={context.weather} />
           <HeroQuickLinks links={quickLinks} />
         </div>
       </div>
@@ -612,7 +636,8 @@ function SplitLayout({
 
 function EditorialLayout({
   masthead, accentColor, headline, treatment, weather, quickLinks,
-  contentParallax, liveCount, portalSlug,
+  contentParallax, liveCount, portalSlug, context, sportsTentpole,
+  tabCounts, categoryCounts,
 }: LayoutProps) {
   return (
     <div className="relative z-10 flex flex-col min-h-[300px] sm:min-h-[480px] px-6 pb-7 pt-5">
@@ -627,6 +652,9 @@ function EditorialLayout({
           className="animate-fade-in hero-stagger-2 will-change-transform"
           style={{ transform: `translateY(${contentParallax.masthead}px)` }}
         >
+          <div className="flex justify-end mb-2">
+            <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
+          </div>
           <h1
             className="text-[3rem] sm:text-[4rem] leading-[0.85] tracking-[0.04em] text-[var(--cream)]"
             style={{ fontFamily: "var(--font-masthead), sans-serif", textShadow: treatment.mastheadShadow }}
@@ -653,6 +681,7 @@ function EditorialLayout({
         style={{ transform: `translateY(${contentParallax.meta}px)` }}
       >
         <HeadlineSubtitle headline={headline} bodyShadow={treatment.bodyShadow} />
+        <SummaryLine tabCounts={tabCounts} categoryCounts={categoryCounts} weather={context.weather} />
         <HeroQuickLinks links={quickLinks} />
       </div>
     </div>
@@ -670,6 +699,8 @@ function FlagshipHeroContent({
   quickLinks,
   parallaxMasthead,
   parallaxMeta,
+  context,
+  sportsTentpole,
 }: {
   flagship: FlagshipEvent;
   weather: FeedContext["weather"];
@@ -679,6 +710,8 @@ function FlagshipHeroContent({
   quickLinks?: QuickLink[];
   parallaxMasthead: number;
   parallaxMeta: number;
+  context: FeedContext;
+  sportsTentpole?: ResolvedHeader["sports_tentpole"];
 }) {
   return (
     <div className="relative z-10 flex flex-col justify-end min-h-[300px] sm:min-h-[520px] px-6 sm:px-10 pb-8 pt-5">
@@ -695,6 +728,9 @@ function FlagshipHeroContent({
           className="animate-fade-in hero-stagger-2 will-change-transform"
           style={{ transform: `translateY(${parallaxMasthead}px)` }}
         >
+          <div className="mb-2">
+            <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
+          </div>
           {/* "HAPPENING NOW" label */}
           <span className="font-mono text-2xs uppercase tracking-[1.2px] text-[var(--gold)]"
             style={{ textShadow: "0 1px 8px rgba(0,0,0,0.8)" }}>
@@ -769,6 +805,8 @@ export default function CityBriefing({
   context,
   portalSlug,
   quickLinks,
+  tabCounts,
+  categoryCounts,
 }: CityBriefingProps) {
   const [liveCount, setLiveCount] = useState<number | null>(null);
 
@@ -867,6 +905,10 @@ export default function CityBriefing({
     contentParallax,
     liveCount,
     portalSlug,
+    context,
+    sportsTentpole: header.sports_tentpole,
+    tabCounts,
+    categoryCounts,
   };
 
   return (
@@ -934,6 +976,8 @@ export default function CityBriefing({
               quickLinks={effectiveQuickLinks}
               parallaxMasthead={contentParallax.masthead}
               parallaxMeta={contentParallax.meta}
+              context={context}
+              sportsTentpole={header.sports_tentpole}
             />
           ) : (
             <>
@@ -966,6 +1010,16 @@ export default function CityBriefing({
             <ArrowRight weight="bold" className="w-3.5 h-3.5 text-[var(--muted)] shrink-0 ml-2" />
           </Link>
         )}
+      </div>
+
+      {/* ── Zone 2: News Digest ───────────────────────────────────────────── */}
+      <NewsDigest portalSlug={portalSlug} />
+
+      {/* ── THE LINEUP boundary divider ───────────────────────────────────── */}
+      <div className="border-t border-[var(--twilight)] pt-4 mt-3 px-4">
+        <span className="font-mono text-2xs uppercase tracking-[1.2px] text-[var(--muted)]">
+          THE LINEUP
+        </span>
       </div>
 
     </section>

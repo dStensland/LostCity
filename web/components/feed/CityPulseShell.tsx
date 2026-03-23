@@ -46,7 +46,6 @@ import TheSceneSection from "./sections/TheSceneSection";
 import LazySection from "./LazySection";
 import InterestChannelsSection from "./sections/InterestChannelsSection";
 import { HangFeedSection } from "./sections/HangFeedSection";
-import { TodayInAtlantaSection } from "./sections/TodayInAtlantaSection";
 
 import SeeShowsSection from "./sections/SeeShowsSection";
 import PlanningHorizonSection from "./sections/PlanningHorizonSection";
@@ -395,6 +394,8 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
             portalSlug={portalSlug}
             portalId={portal.id}
             quickLinks={quickLinks}
+            tabCounts={tabCounts}
+            categoryCounts={categoryCounts}
           />
         </div>
       ) : (
@@ -460,13 +461,6 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
       <LazySection minHeight={280}>
         <DestinationsSection portalSlug={portalSlug} />
       </LazySection>
-
-      {/* 6. Today in Atlanta — news, culture-first, below The Lineup */}
-      {portal && (
-        <LazySection minHeight={200}>
-          <TodayInAtlantaSection portalSlug={portalSlug} portalId={portal.id} />
-        </LazySection>
-      )}
 
       {/* 6. Interest Channels — only on civic portals where groups are meaningful */}
       {portal?.settings?.vertical === "community" && (
