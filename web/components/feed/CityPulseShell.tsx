@@ -50,12 +50,14 @@ import { TodayInAtlantaSection } from "./sections/TodayInAtlantaSection";
 
 import SeeShowsSection from "./sections/SeeShowsSection";
 import PlanningHorizonSection from "./sections/PlanningHorizonSection";
+import { PortalTeasersSection } from "./sections/PortalTeasersSection";
 import FeedSectionSkeleton, { useMinSkeletonDelay } from "@/components/feed/FeedSectionSkeleton";
 
 import YonderRegionalEscapesSection from "./sections/YonderRegionalEscapesSection";
 import YonderDestinationNodeQuestsSection from "./sections/YonderDestinationNodeQuestsSection";
 import ActiveContestSection from "./sections/ActiveContestSection";
 import HolidayHero from "./HolidayHero";
+import { DestinationsSection } from "./sections/DestinationsSection";
 import FeedTimeMachine from "./FeedTimeMachine";
 import FeedPageIndex from "./FeedPageIndex";
 import type {
@@ -454,7 +456,10 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         ) : null}
       </div>
 
-      {/* 5. Today in Atlanta — news, culture-first, below The Lineup */}
+      {/* 5. Destinations — contextual venue suggestions */}
+      <DestinationsSection portalSlug={portalSlug} />
+
+      {/* 6. Today in Atlanta — news, culture-first, below The Lineup */}
       {portal && (
         <TodayInAtlantaSection portalSlug={portalSlug} portalId={portal.id} />
       )}
@@ -484,6 +489,16 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         if (hiddenBlockSet.has(blockId)) return null;
         return renderMiddleSection(blockId);
       })}
+
+      {/* Portal teasers — cross-portal headlines */}
+      <div className="mt-8">
+        <div className="h-px bg-[var(--twilight)]" />
+        <div className="pt-6">
+          <LazySection minHeight={200}>
+            <PortalTeasersSection portalSlug={portalSlug} />
+          </LazySection>
+        </div>
+      </div>
 
       {/* Planning Horizon — big future events with urgency signals */}
       {planningHorizonSection && !hiddenBlockSet.has("horizon") && (
