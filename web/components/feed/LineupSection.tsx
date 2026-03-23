@@ -30,7 +30,7 @@ import {
 } from "@/lib/city-pulse/interests";
 import { isSceneEvent } from "@/lib/city-pulse/section-builders";
 import FeedSectionHeader from "./FeedSectionHeader";
-import CompactEventRow from "./CompactEventRow";
+import { TieredEventList } from "@/components/feed/TieredEventList";
 import { useAuth } from "@/lib/auth-context";
 import {
   ArrowRight, Lightning, CalendarBlank,
@@ -654,22 +654,17 @@ export default function LineupSection({
         </button>
       )}
 
-      {/* Event grid */}
+      {/* Event list — tiered rendering */}
       {loadingTab !== activeTabId && !tabFetchError && (
         <>
-          {visibleItems.length > 0 && (
-            <div className="flex gap-3 mt-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-1">
-              {visibleItems.map((item) => (
-                <div key={`row-${item.event.id}`} className="flex-shrink-0 w-56 sm:w-64 snap-start">
-                  <CompactEventRow
-                    event={item.event as FeedEventData}
-                    portalSlug={portalSlug}
-                    vertical={vertical}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+          <TieredEventList
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            events={visibleItems.map((item) => item.event as any)}
+            portalSlug={portalSlug}
+            sectionType={activeTabId === "today" ? "tonight" : activeTabId}
+            maxHero={1}
+            maxFeatured={4}
+          />
 
           {events.length === 0 && (
             <p className="text-center text-[var(--muted)] text-sm py-8 font-mono">
