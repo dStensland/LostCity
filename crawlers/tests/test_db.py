@@ -460,7 +460,8 @@ class TestGetOrCreateVenue:
         table.update.return_value = table
         table.execute.side_effect = [
             MagicMock(data=[{"id": 42, "active": False}]),
-            MagicMock(data=[{"id": 42}]),
+            MagicMock(data=[{"id": 42}]),  # reactivate update
+            MagicMock(data=[{"id": 42}]),  # verified_at touch
         ]
 
         from db import get_or_create_venue
@@ -468,7 +469,9 @@ class TestGetOrCreateVenue:
         venue_id = get_or_create_venue({**sample_venue_data, "active": True})
 
         assert venue_id == 42
-        table.update.assert_called_once_with({"active": True})
+        # First update call is reactivation, second is verified_at touch
+        update_calls = table.update.call_args_list
+        assert any(call.args == ({"active": True},) for call in update_calls)
 
     @patch("db.venues._maybe_update_existing_venue")
     @patch("db.venues.get_client")

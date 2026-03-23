@@ -381,7 +381,7 @@ def _build_structured_description(
 
     if venue_data:
         venue_name = _clean_text(venue_data.get("name"))
-        venue_city = _clean_text(venue_data.get("city")) or "Atlanta"
+        venue_city = _clean_text(venue_data.get("city")) or ""
         venue_state = _clean_text(venue_data.get("state")) or "GA"
         if venue_name:
             parts.append(f"Location: {venue_name}, {venue_city}, {venue_state}.")
@@ -495,8 +495,8 @@ def parse_event(event_data: dict) -> Optional[dict]:
                 "name": _normalize_venue_name(v.get("name", "")),
                 "slug": slugify(_normalize_venue_name(v.get("name", ""))),
                 "address": address.get("line1"),
-                "city": city.get("name", "Atlanta"),
-                "state": state.get("stateCode", "GA"),
+                "city": city.get("name") or None,
+                "state": state.get("stateCode") or None,
                 "zip": v.get("postalCode"),
                 "venue_type": "venue",
                 "website": v.get("url"),

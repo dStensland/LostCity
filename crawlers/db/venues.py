@@ -6,7 +6,15 @@ import re
 import logging
 from typing import Optional
 
+from datetime import datetime, timezone
+
 from neighborhood_lookup import infer_neighborhood_from_coords
+from crawl_context import get_crawl_context
+from db.venue_validation import (
+    validate_venue_name,
+    validate_venue_geo_scope,
+    validate_venue_minimum_fields,
+)
 from db.client import (
     get_client,
     retry_on_network_error,
@@ -580,6 +588,17 @@ def get_or_create_venue(venue_data: dict) -> int:
         result = client.table("venues").insert(blocked_venue_data).execute()
         return result.data[0]["id"]
 
+    def _touch_verified_at(venue_id: int) -> None:
+        """Update verified_at timestamp — piggybacks on crawler lookups."""
+        if not writes_enabled():
+            return
+        try:
+            client.table("venues").update(
+                {"verified_at": datetime.now(timezone.utc).isoformat()}
+            ).eq("id", venue_id).execute()
+        except Exception:
+            pass  # Non-critical — don't fail the crawl
+
     def _maybe_reactivate_existing_venue(existing: dict) -> int:
         venue_id = existing["id"]
         if existing.get("active") is False and venue_data.get("active") is True:
@@ -591,7 +610,29 @@ def get_or_create_venue(venue_data: dict) -> int:
                     "Reactivated venue %s from explicit crawler signal",
                     venue_data.get("slug") or venue_data.get("name") or venue_id,
                 )
+        _touch_verified_at(venue_id)
         return venue_id
+
+    # ── Venue validation gate ──
+    _v_name = venue_data.get("name")
+    name_ok, name_reason = validate_venue_name(_v_name)
+    if not name_ok:
+        logger.warning("Venue name rejected: %r — %s", _v_name, name_reason)
+        return _next_temp_id()
+
+    context = get_crawl_context()
+    geo_ok, geo_reason = validate_venue_geo_scope(venue_data, context)
+    if not geo_ok:
+        logger.warning("Venue out of scope: %r — %s", _v_name, geo_reason)
+        return _next_temp_id()
+
+    min_ok, min_warnings = validate_venue_minimum_fields(venue_data)
+    if min_warnings:
+        for w in min_warnings:
+            logger.debug("Venue %r: %s", _v_name, w)
+    if not min_ok:
+        logger.warning("Venue %r fails minimum field check — skipping", _v_name)
+        return _next_temp_id()
 
     slug = venue_data.get("slug")
     if slug:
@@ -646,6 +687,7 @@ def get_or_create_venue(venue_data: dict) -> int:
                         logger.info(
                             f"Proximity dedup: reusing '{row['name']}' (id={row['id']}) for '{name}'"
                         )
+                        _touch_verified_at(row["id"])
                         _maybe_update_existing_venue(row["id"], venue_data)
                         _persist_venue_enrichment(row["id"], _enrichment_details, _enrichment_features, _enrichment_specials)
                         return row["id"]
@@ -718,7 +760,10 @@ def get_or_create_venue(venue_data: dict) -> int:
     # Auto-infer neighborhood from coordinates when not already set.
     if venue_data.get("lat") and venue_data.get("lng") and not venue_data.get("neighborhood"):
         try:
-            inferred_hood = infer_neighborhood_from_coords(venue_data["lat"], venue_data["lng"])
+            inferred_hood = infer_neighborhood_from_coords(
+                venue_data["lat"], venue_data["lng"],
+                city=venue_data.get("city", "Atlanta"),
+            )
             if inferred_hood:
                 venue_data["neighborhood"] = inferred_hood
                 logger.debug(

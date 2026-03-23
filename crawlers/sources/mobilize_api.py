@@ -504,7 +504,7 @@ def build_venue_data(location: dict, *, event_title: str = "") -> Optional[dict]
         address=address,
     )
 
-    city = (location.get("locality") or "Atlanta").strip()
+    city = (location.get("locality") or "").strip() or None
     state = (location.get("region") or "GA").strip()
     zip_code = (location.get("postal_code") or "").strip()
 
@@ -526,7 +526,7 @@ def build_venue_data(location: dict, *, event_title: str = "") -> Optional[dict]
         "zip": zip_code,
         "lat": lat,
         "lng": lng,
-        "venue_type": "community_center",
+        "venue_type": "venue",
     }
 
 

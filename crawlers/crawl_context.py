@@ -22,11 +22,22 @@ class CrawlContext:
     allowed_states: list[str] = field(default_factory=lambda: ["GA"])
     timezone: str = "America/New_York"
 
+    # Metro geometry for geo-scope validation
+    metro_center_lat: float = 33.749
+    metro_center_lng: float = -84.388
+    metro_radius_km: float = 80.0  # ~50 miles, covers Atlanta suburbs
+
     def is_valid_state(self, state: str) -> bool:
         """Check if a venue's state is allowed for this crawl context."""
         if not self.allowed_states:
             return True  # No restriction
         return (state or "").upper().strip() in self.allowed_states
+
+    def is_in_metro(self, lat: float, lng: float) -> bool:
+        """Haversine check against metro center."""
+        from neighborhood_lookup import haversine
+        distance_m = haversine(self.metro_center_lat, self.metro_center_lng, lat, lng)
+        return distance_m <= self.metro_radius_km * 1000
 
 
 # Default context — Atlanta

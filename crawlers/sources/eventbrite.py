@@ -476,10 +476,10 @@ def process_event(
                     :50
                 ],
                 "address": address.get("address_1"),
-                "city": address.get("city", "Atlanta"),
+                "city": address.get("city") or None,
                 "state": "GA",
                 "zip": address.get("postal_code"),
-                "venue_type": "event_space",
+                "venue_type": "venue",
                 "website": None,
             }
             venue_id = get_or_create_venue(venue_record)
