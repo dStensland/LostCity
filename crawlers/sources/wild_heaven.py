@@ -36,6 +36,48 @@ VENUE_DATA = {
     "spot_type": "brewery",
     "website": BASE_URL,
     "vibes": ["craft-beer", "brewery", "taproom", "avondale-estates", "patio", "live-music"],
+    "_destination_details": {
+        "commitment_tier": "hour",
+        "parking_type": "free_lot",
+        "best_time_of_day": "afternoon",
+        "family_suitability": "yes",
+        "practical_notes": "Free parking lot. Steps from Avondale Estates' walkable downtown district. Food truck rotation means the food situation changes — check ahead.",
+    },
+    "_venue_features": [
+        {
+            "slug": "20-house-beers-on-tap",
+            "title": "20+ House Beers on Tap",
+            "feature_type": "experience",
+            "description": "Wide rotating tap list of Wild Heaven house beers including flagships and seasonal releases.",
+            "is_free": False,
+            "sort_order": 1,
+        },
+        {
+            "slug": "outdoor-patio-food-trucks",
+            "title": "Outdoor Patio with Food Truck Rotation",
+            "feature_type": "experience",
+            "description": "Outdoor patio space with a rotating roster of food trucks — different vendors on different days.",
+            "is_free": True,
+            "sort_order": 2,
+        },
+        {
+            "slug": "avondale-walkable-district",
+            "title": "Walkable Avondale Estates District",
+            "feature_type": "amenity",
+            "description": "Located steps from the walkable downtown Avondale Estates district with shops and restaurants.",
+            "is_free": True,
+            "sort_order": 3,
+        },
+        {
+            "slug": "canning-line-tours",
+            "title": "Canning Line Tours",
+            "feature_type": "experience",
+            "description": "Behind-the-scenes look at the canning operation — check for scheduled tour times.",
+            "is_free": True,
+            "sort_order": 4,
+        },
+    ],
+    "_venue_specials": [],
 }
 
 
