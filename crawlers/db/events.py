@@ -6,7 +6,7 @@ import re
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field as dc_field
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -384,20 +384,41 @@ def _step_validate(event_data: dict, ctx: InsertContext) -> dict:
 
 
 def _step_check_past_date(event_data: dict, ctx: InsertContext) -> dict:
-    """Mark past events as inactive."""
-    start_date_str = event_data.get("start_date")
-    if start_date_str:
-        try:
-            event_start = date.fromisoformat(str(start_date_str)[:10])
-            if event_start < date.today():
-                logger.warning(
-                    "Past start_date %s → inserting as inactive: %s",
-                    start_date_str,
-                    (event_data.get("title") or "N/A")[:60],
-                )
-                event_data["is_active"] = False
-        except (ValueError, TypeError):
-            pass
+    """Hard-reject very stale new events; mark recent past events as inactive."""
+    start_date = event_data.get("start_date")
+    if not start_date:
+        return event_data
+    try:
+        event_date = datetime.strptime(str(start_date)[:10], "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return event_data
+
+    today = datetime.now().date()
+
+    # Hard-reject events more than 14 days old unless they are recurring/series
+    # or already exist in the DB (updates to existing events are always allowed).
+    # 14 days gives crawlers a full weekly recrawl cycle of slack.
+    if event_date < today - timedelta(days=14):
+        is_recurring = event_data.get("is_recurring", False)
+        series_id = event_data.get("series_id")
+        has_series_hint = getattr(ctx, "series_hint", None) is not None
+        content_hash = event_data.get("content_hash")
+        existing = find_event_by_hash(content_hash) if content_hash else None
+        if not is_recurring and not series_id and not has_series_hint and not existing:
+            raise ValueError(
+                f"Rejecting stale event (start_date={start_date}, "
+                f">14 days in past): {(event_data.get('title') or 'untitled')[:60]}"
+            )
+
+    # Mark yesterday/today-past as inactive (existing behavior)
+    if event_date < today:
+        logger.warning(
+            "Past start_date %s → inserting as inactive: %s",
+            start_date,
+            (event_data.get("title") or "N/A")[:60],
+        )
+        event_data["is_active"] = False
+
     return event_data
 
 
@@ -911,10 +932,16 @@ def _step_set_flags(event_data: dict, ctx: InsertContext) -> dict:
         ):
             event_data["ticket_url"] = event_data["source_url"]
 
-    if event_data.get("price_min") is not None and event_data["price_min"] > 0:
-        event_data["is_free"] = False
+    # Final is_free normalization — price_min=0 with no paid tiers is definitively free,
+    # even if the crawler explicitly said is_free=False (common crawler default bug)
+    if event_data.get("price_min") is not None:
+        pm = float(event_data["price_min"])
+        if pm == 0 and not event_data.get("price_max"):
+            event_data["is_free"] = True
+        elif pm > 0:
+            event_data["is_free"] = False
     elif event_data.get("is_free") is False and event_data.get("price_min") is None:
-        # is_free=False with no price data is semantically "unknown" — normalize to None
+        # is_free=False with no price data → unknown, not definitively paid
         event_data["is_free"] = None
 
     return event_data

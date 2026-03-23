@@ -48,28 +48,11 @@ def geocode_address(address: str, city: str, state: str) -> Optional[Tuple[float
             lng = float(results[0]["lon"])
             return (lat, lng)
 
-        # Try without full address - just venue area
-        response = requests.get(
-            NOMINATIM_URL,
-            params={
-                "q": f"{city}, {state}",
-                "format": "json",
-                "limit": 1,
-                "countrycodes": "us",
-            },
-            headers={"User-Agent": USER_AGENT},
-            timeout=10,
-        )
-        response.raise_for_status()
-
-        results = response.json()
-        if results:
-            # Return city center as fallback
-            lat = float(results[0]["lat"])
-            lng = float(results[0]["lon"])
-            logger.warning(f"Using city center for: {full_address}")
-            return (lat, lng)
-
+        # No results — do NOT fall back to city center. City-center coordinates
+        # are worse than NULL because they silently place venues at the wrong
+        # location and look valid to any downstream consumer. Leave lat/lng NULL
+        # so we can identify and re-attempt these venues later.
+        logger.warning(f"No geocoding result for: {full_address}")
         return None
 
     except Exception as e:

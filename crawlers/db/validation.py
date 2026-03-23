@@ -193,19 +193,28 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
     if end_date_str:
         try:
             end_date_obj = datetime.strptime(end_date_str, "%Y-%m-%d")
-            span_days = (end_date_obj.date() - event_date).days
-            if span_days > 30:
-                explicit_kind = str(event_data.get("content_kind") or "").strip().lower()
-                if explicit_kind not in ("event", "exhibit"):
-                    _LONG_SPAN_OK_RE = re.compile(
-                        r"(festival|conference|convention|fair|summit|expo|marathon|relay)",
-                        re.IGNORECASE,
-                    )
-                    if not _LONG_SPAN_OK_RE.search(title):
-                        warnings.append(
-                            f"Long-span event ({span_days} days) — crawler should route to exhibitions if this is an exhibit: {title}"
+            # Auto-fix impossible range: end before start
+            if end_date_obj.date() < event_date:
+                event_data["end_date"] = start_date
+                warnings.append(
+                    f"Fixed end_date < start_date: was {end_date_str}, set to {start_date}"
+                )
+                _validation_stats.record_warning("end_date_before_start_fixed")
+            else:
+                # Existing span check (only run when end_date >= start_date)
+                span_days = (end_date_obj.date() - event_date).days
+                if span_days > 30:
+                    explicit_kind = str(event_data.get("content_kind") or "").strip().lower()
+                    if explicit_kind not in ("event", "exhibit"):
+                        _LONG_SPAN_OK_RE = re.compile(
+                            r"(festival|conference|convention|fair|summit|expo|marathon|relay)",
+                            re.IGNORECASE,
                         )
-                        _validation_stats.record_warning("long_span_event_warning")
+                        if not _LONG_SPAN_OK_RE.search(title):
+                            warnings.append(
+                                f"Long-span event ({span_days} days) — crawler should route to exhibitions if this is an exhibit: {title}"
+                            )
+                            _validation_stats.record_warning("long_span_event_warning")
         except (ValueError, TypeError):
             pass
 
@@ -317,6 +326,12 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
         if sanitized_desc != description:
             event_data["description"] = sanitized_desc
             _validation_stats.record_warning("description_sanitized")
+
+        # Don't store description that's just the title repeated
+        if sanitized_desc and sanitized_desc.strip().lower() == title.strip().lower():
+            event_data["description"] = None
+            warnings.append("Cleared description identical to title")
+            _validation_stats.record_warning("description_equals_title")
 
     if "venue_name" in event_data and event_data["venue_name"]:
         sanitized_venue = sanitize_text(event_data["venue_name"])

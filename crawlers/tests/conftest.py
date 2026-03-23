@@ -60,10 +60,13 @@ def mock_supabase_client():
 @pytest.fixture
 def sample_event_data():
     """Sample event data dict for testing."""
+    # Use a relative future date so the stale-event rejection in
+    # _step_check_past_date never blocks this fixture — hardcoded past dates rot.
+    start_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
     return {
         "title": "Test Concert",
         "description": "A great show with live music",
-        "start_date": "2026-02-15",
+        "start_date": start_date,
         "start_time": "20:00",
         "end_time": "23:00",
         "venue_id": 1,
