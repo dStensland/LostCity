@@ -1,27 +1,41 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Logo from "@/components/Logo";
-import Image from "@/components/SmartImage";
+import {
+  MusicNote,
+  Palette,
+  SmileyWink,
+  ForkKnife,
+  Martini,
+  Tree,
+  Trophy,
+  UsersThree,
+  Baby,
+  BookOpen,
+} from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth-context";
-import { createClient } from "@/lib/supabase/client";
-import { OnboardingProgress } from "./components/OnboardingProgress";
-import { CategoryPicker } from "./steps/CategoryPicker";
-import { GenrePicker } from "./steps/GenrePicker";
-import type { OnboardingStep } from "@/lib/types";
 
-type Portal = {
+type Category = {
   id: string;
-  slug: string;
-  name: string;
-  branding: {
-    logo_url?: string;
-  };
-  filters?: {
-    categories?: string[];
-  } | null;
+  label: string;
+  Icon: Icon;
+  color: string;
 };
+
+const CATEGORIES: Category[] = [
+  { id: "music", label: "Music", Icon: MusicNote, color: "#FF6B7A" },
+  { id: "art", label: "Art", Icon: Palette, color: "#A78BFA" },
+  { id: "comedy", label: "Comedy", Icon: SmileyWink, color: "#FFD93D" },
+  { id: "food_drink", label: "Food & Drink", Icon: ForkKnife, color: "#FF6B7A" },
+  { id: "nightlife", label: "Nightlife", Icon: Martini, color: "#E855A0" },
+  { id: "outdoors", label: "Outdoors", Icon: Tree, color: "#00D9A0" },
+  { id: "sports", label: "Sports", Icon: Trophy, color: "#FFD93D" },
+  { id: "community", label: "Community", Icon: UsersThree, color: "#00D4E8" },
+  { id: "family", label: "Family", Icon: Baby, color: "#5E7A5E" },
+  { id: "learning", label: "Learning", Icon: BookOpen, color: "#A78BFA" },
+];
 
 function OnboardingContent() {
   const router = useRouter();
@@ -31,174 +45,57 @@ function OnboardingContent() {
     return new URLSearchParams(window.location.search);
   }, []);
   const portalSlug = searchParams.get("portal") ?? runtimeSearch?.get("portal");
-  const isPreviewMode =
-    searchParams.get("preview") === "1" || runtimeSearch?.get("preview") === "1";
-  const previewStepParam = searchParams.get("step") ?? runtimeSearch?.get("step");
-  const previewCategoriesParam =
-    searchParams.get("categories") ?? runtimeSearch?.get("categories");
   const { user, loading: authLoading } = useAuth();
-  const supabase = createClient();
 
-  const initialStep: OnboardingStep =
-    isPreviewMode && previewStepParam === "genres" ? "genres" : "categories";
-  const initialPreviewCategories =
-    isPreviewMode && previewCategoriesParam
-      ? previewCategoriesParam
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean)
-      : [];
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
 
-  // State
-  const [step, setStep] = useState<OnboardingStep>(initialStep);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialPreviewCategories);
-  const [selectedGenres, setSelectedGenres] = useState<Record<string, string[]>>({});
-  const [selectedNeeds, setSelectedNeeds] = useState<{
-    accessibility: string[];
-    dietary: string[];
-    family: string[];
-  }>({ accessibility: [], dietary: [], family: [] });
-  const [portal, setPortal] = useState<Portal | null>(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [showCelebration, setShowCelebration] = useState(false);
-
-  // Redirect if not logged in
-  useEffect(() => {
-    if (!isPreviewMode && !authLoading && !user) {
-      router.push(`/auth/login${portalSlug ? `?redirect=/onboarding?portal=${portalSlug}` : ""}`);
-    }
-  }, [authLoading, isPreviewMode, user, router, portalSlug]);
-
-  // Load portal data if specified
-  useEffect(() => {
-    async function loadPortal() {
-      if (!portalSlug) return;
-
-      const { data } = await supabase
-        .from("portals")
-        .select("id, slug, name, branding, filters")
-        .eq("slug", portalSlug)
-        .eq("status", "active")
-        .maybeSingle();
-
-      if (data) {
-        setPortal(data as Portal);
+  const toggle = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
       }
-    }
-    loadPortal();
-  }, [portalSlug, supabase]);
+      return next;
+    });
+  };
 
-  const portalCategoryFilter = useMemo(() => {
-    const categories = portal?.filters?.categories;
-    if (!Array.isArray(categories)) return undefined;
-    const valid = categories.filter((value): value is string => typeof value === "string");
-    return valid.length > 0 ? valid : undefined;
-  }, [portal?.filters?.categories]);
+  const destination = portalSlug ? `/${portalSlug}` : "/atlanta";
 
-  // Step handlers
-  const handleCategoryComplete = useCallback(
-    (categories: string[]) => {
-      setSelectedCategories(categories);
-      // Trigger smooth transition to next step
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setStep("genres");
-        setIsTransitioning(false);
-      }, 300);
-    },
-    []
-  );
-
-  const handleCategorySkip = useCallback(() => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setStep("genres");
-      setIsTransitioning(false);
-    }, 300);
-  }, []);
-
-  const handleGenreComplete = useCallback(
-    async (genres: Record<string, string[]>, needs: { accessibility: string[]; dietary: string[]; family: string[] }) => {
-      setSelectedGenres(genres);
-      setSelectedNeeds(needs);
-      // Show celebration before redirect
-      setShowCelebration(true);
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      await completeOnboarding(genres, needs);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedCategories]
-  );
-
-  const handleGenreSkip = useCallback(async () => {
-    setShowCelebration(true);
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    await completeOnboarding({}, { accessibility: [], dietary: [], family: [] });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCategories]);
-
-  // Complete onboarding and save preferences
-  const completeOnboarding = async (
-    genres: Record<string, string[]>,
-    needs: { accessibility: string[]; dietary: string[]; family: string[] }
-  ) => {
+  const handleContinue = async () => {
+    if (selected.size === 0) return;
     if (!user) {
-      if (isPreviewMode) {
-        if (portalSlug) router.push(`/${portalSlug}`);
-        else router.push("/atlanta");
-      }
+      router.push(destination);
       return;
     }
 
+    setSaving(true);
     try {
       await fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          selectedCategories,
-          selectedGenres: genres,
-          selectedNeeds: needs,
+          selectedCategories: Array.from(selected),
+          selectedGenres: {},
+          selectedNeeds: { accessibility: [], dietary: [], family: [] },
         }),
       });
     } catch (err) {
-      console.error("Failed to save onboarding data:", err);
+      console.error("Failed to save onboarding preferences:", err);
+    } finally {
+      setSaving(false);
     }
 
-    // Navigate to feed
-    if (portalSlug) {
-      router.push(`/${portalSlug}`);
-    } else {
-      router.push("/atlanta");
-    }
+    router.push(destination);
   };
 
-  // Handle exit (X button)
-  const handleExit = useCallback(() => {
-    // Save partial progress if we have any selections
-    const hasGenres = Object.values(selectedGenres).some((g) => g.length > 0);
-    const hasNeeds = Object.values(selectedNeeds).some((n) => n.length > 0);
-    if (user && (selectedCategories.length > 0 || hasGenres || hasNeeds)) {
-      fetch("/api/onboarding/complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          selectedCategories,
-          selectedGenres,
-          selectedNeeds,
-        }),
-      }).catch(console.error);
-    }
+  const handleSkip = () => {
+    router.push(destination);
+  };
 
-    // Navigate to feed
-    if (portalSlug) {
-      router.push(`/${portalSlug}`);
-    } else {
-      router.push("/atlanta");
-    }
-  }, [user, selectedCategories, selectedGenres, selectedNeeds, portalSlug, router]);
-
-  // Loading state
-  if (authLoading || (!user && !isPreviewMode)) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--void)]">
         <div className="w-8 h-8 border-2 border-[var(--coral)] border-t-transparent rounded-full animate-spin" />
@@ -207,107 +104,66 @@ function OnboardingContent() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--void)]">
-      <div className="pointer-events-none absolute inset-0 opacity-60 [background:radial-gradient(circle_at_16%_14%,rgba(0,212,232,0.12),transparent_42%),radial-gradient(circle_at_80%_12%,rgba(255,107,122,0.12),transparent_46%)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-35 [background:repeating-linear-gradient(125deg,rgba(255,255,255,0.025)_0,rgba(255,255,255,0.025)_2px,transparent_2px,transparent_11px)]" />
-      <div className="relative z-10 flex min-h-screen flex-col">
-      {/* Header */}
-      <header className="border-b border-[var(--twilight)]/45 bg-[var(--night)]/75 px-4 py-4 backdrop-blur-sm sm:px-6">
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            {portal?.branding?.logo_url ? (
-              <Image
-                src={portal.branding.logo_url}
-                alt={portal.name}
-                width={32}
-                height={32}
-                className="rounded-lg"
-              />
-            ) : (
-              <Logo />
-            )}
-            <div className="flex flex-col">
-              {portal && (
-                <span className="font-mono text-xs text-[var(--muted)]">{portal.name}</span>
-              )}
-              {isPreviewMode && (
-                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--soft)]">
-                  Preview Mode
-                </span>
-              )}
-            </div>
-          </div>
+    <div className="min-h-screen bg-[var(--void)]">
+      <div className="max-w-2xl mx-auto px-6 py-12">
+        <h1 className="text-2xl font-semibold text-[var(--cream)]">
+          Make Lost City yours
+        </h1>
+        <p className="text-sm text-[var(--soft)] mt-2">
+          Pick what interests you, or skip and explore everything
+        </p>
 
-          <div className="flex items-center gap-2">
-            <p className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--soft)] sm:block">
-              Personalized Discovery Setup
-            </p>
-
-            {/* Exit button */}
-            <button
-              onClick={handleExit}
-              className="p-2 text-[var(--muted)] transition-colors hover:text-[var(--cream)]"
-              aria-label="Exit onboarding"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Progress bar */}
-      <OnboardingProgress currentStep={step} />
-
-      {/* Main content */}
-      <main className="relative flex-1 overflow-hidden">
-        {/* Celebration overlay */}
-        {showCelebration && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--void)]/80 backdrop-blur-sm animate-fadeIn">
-            <div className="text-center animate-celebration-checkmark">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-[var(--coral)] flex items-center justify-center">
-                <svg
-                  className="w-12 h-12 text-[var(--void)]"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mt-8">
+          {CATEGORIES.map(({ id, label, Icon, color }) => {
+            const isSelected = selected.has(id);
+            return (
+              <button
+                key={id}
+                onClick={() => toggle(id)}
+                className={[
+                  "rounded-card border p-4 cursor-pointer transition-all text-left",
+                  isSelected
+                    ? "border-2"
+                    : "bg-[var(--night)] border-[var(--twilight)]",
+                ].join(" ")}
+                style={
+                  isSelected
+                    ? {
+                        borderColor: color,
+                        backgroundColor: `${color}1a`,
+                      }
+                    : undefined
+                }
+                aria-pressed={isSelected}
+              >
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: `${color}33` }}
                 >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <p className="font-mono text-xl text-[var(--cream)]">You&apos;re all set!</p>
-            </div>
-          </div>
-        )}
-
-        {/* Step transitions */}
-        <div className={isTransitioning ? "animate-step-slide-out" : ""}>
-          {step === "categories" && (
-            <div className="animate-step-slide-in">
-              <CategoryPicker
-                onComplete={handleCategoryComplete}
-                onSkip={handleCategorySkip}
-                portalCategoryFilter={portalCategoryFilter}
-              />
-            </div>
-          )}
-
-          {step === "genres" && (
-            <div className="animate-step-slide-in">
-              <GenrePicker
-                onComplete={handleGenreComplete}
-                onSkip={handleGenreSkip}
-                selectedCategories={selectedCategories}
-                portalCategoryFilter={portalCategoryFilter}
-              />
-            </div>
-          )}
+                  <Icon size={32} weight="duotone" style={{ color }} />
+                </div>
+                <p className="text-sm font-semibold text-[var(--cream)] mt-2">
+                  {label}
+                </p>
+              </button>
+            );
+          })}
         </div>
-      </main>
+
+        <button
+          onClick={handleContinue}
+          disabled={selected.size === 0 || saving}
+          className="bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium py-3 px-6 rounded-lg w-full mt-8 transition-opacity disabled:opacity-40"
+        >
+          {saving ? "Saving…" : "Continue"}
+        </button>
+
+        <button
+          onClick={handleSkip}
+          className="text-sm text-[var(--soft)] hover:text-[var(--cream)] mt-3 text-center block w-full transition-colors"
+        >
+          Skip for now →
+        </button>
       </div>
     </div>
   );
