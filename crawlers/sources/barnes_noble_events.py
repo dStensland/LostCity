@@ -271,7 +271,6 @@ def _parse_event(
     category, tags = _determine_category_and_tags(event)
 
     # B&N store events are free unless explicitly ticketed
-    is_virtual = event.get("isVirtualEvent", False)
     is_free = True  # most in-store events are free; author signings sometimes have ticket requirement
     price_note: Optional[str] = None
 
@@ -314,8 +313,6 @@ def _parse_event(
         "is_recurring": bool(is_recurring),
         "recurrence_rule": None,
         "content_hash": content_hash,
-        # Virtual events get flagged but we still ingest them
-        "is_virtual": is_virtual,
     }
     return record
 
