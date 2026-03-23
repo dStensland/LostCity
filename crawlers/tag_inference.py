@@ -891,7 +891,6 @@ SUPPORT_GROUP_SOURCES = {
     "ridgeview-institute",
     "ga-council-recovery",
     "ga-harm-reduction",
-    "nami-georgia",
     "atlanta-mission",
 }
 

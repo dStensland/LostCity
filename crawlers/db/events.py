@@ -628,7 +628,7 @@ def _step_parse_artists(event_data: dict, ctx: InsertContext) -> dict:
 def _is_volunteer_event(event_data: dict) -> bool:
     """Return True if this event is a volunteer opportunity.
 
-    Volunteer events should have their category preserved as ``community`` and
+    Volunteer events should have their category preserved as ``volunteer`` and
     must never be reclassified to ``food_drink`` or any other category by
     downstream inference rules.
     """
@@ -641,10 +641,10 @@ def _is_volunteer_event(event_data: dict) -> bool:
 
 def _step_infer_category(event_data: dict, ctx: InsertContext) -> dict:
     """Infer class/religious/support_group/kids category overrides."""
-    # Volunteer events are definitionally community events — preserve the
-    # crawler's category assignment and skip all downstream inference.
+    # Volunteer events — preserve the crawler's category as "volunteer" and
+    # skip all downstream inference.
     if _is_volunteer_event(event_data):
-        event_data["category"] = "community"
+        event_data["category"] = "volunteer"
         return event_data
 
     if not ctx.is_class_flag:

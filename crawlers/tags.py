@@ -300,6 +300,8 @@ VALID_CATEGORIES = {
     "food_drink",
     "nightlife",
     "community",
+    "civic",
+    "volunteer",
     "fitness",  # legacy alias — normalizes to "exercise"
     "exercise",
     "recreation",

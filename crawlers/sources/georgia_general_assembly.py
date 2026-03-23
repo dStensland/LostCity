@@ -195,7 +195,7 @@ def _normalize_meeting(raw: dict, today: date) -> Optional[dict]:
         "source_url": agenda_uri or livestream_url or SCHEDULE_URL,
         "ticket_url": livestream_url or agenda_uri or SCHEDULE_URL,
         "image_url": None,
-        "category": "community",
+        "category": "civic",
         "subcategory": "government",
         "tags": tags,
         "is_free": True,
