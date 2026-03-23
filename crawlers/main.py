@@ -413,6 +413,12 @@ SOURCE_OVERRIDES = {
     "henry-county-parks-rec": "sources.henry_county_parks_rec",
     # Youth sports leagues
     "i9-sports-atlanta": "sources.i9_sports_atlanta",
+    # iClassPro studio crawlers
+    "buckhead-gymnastics": "sources.buckhead_gymnastics",
+    # JackRabbit studio crawlers
+    "georgia-gymnastics-academy": "sources.georgia_gymnastics_academy",
+    "atlanta-school-of-gymnastics": "sources.atlanta_school_of_gymnastics",
+    "gwinnett-school-of-dance": "sources.gwinnett_school_of_dance",
     # Destination-first crawlers (descriptive slugs != short filenames)
     "museum-of-illusions-atlanta": "sources.museum_of_illusions",
     "topgolf-atlanta-midtown": "sources.topgolf_atlanta",
