@@ -35,8 +35,11 @@ TAG_RULES: list[tuple[str, list[str]]] = [
 VENUE_DATA = {
     "name": "Indivisible ATL",
     "slug": "indivisible-atl",
+    "address": "PO Box 14492",
     "city": "Atlanta",
     "state": "GA",
+    "lat": 33.7490,
+    "lng": -84.3880,
     "venue_type": "organization",
     "spot_type": "nonprofit",
     "website": BASE_URL,

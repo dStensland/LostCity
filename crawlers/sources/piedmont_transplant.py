@@ -34,6 +34,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30309",
+    "lat": 33.8302,
+    "lng": -84.3868,
     "venue_type": "hospital",
     "website": f"{BASE_URL}/transplant",
 }

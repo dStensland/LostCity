@@ -34,6 +34,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30342",
+    "lat": 33.8762,
+    "lng": -84.3803,
     "venue_type": "comedy_club",
     "website": BASE_URL,
 }

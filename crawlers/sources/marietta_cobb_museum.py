@@ -33,6 +33,8 @@ VENUE_DATA = {
     "city": "Marietta",
     "state": "GA",
     "zip": "30060",
+    "lat": 33.9513,
+    "lng": -84.5493,
     "venue_type": "museum",
     "website": BASE_URL,
 }

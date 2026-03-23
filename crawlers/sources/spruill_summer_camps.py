@@ -50,6 +50,8 @@ VENUE_DATA = {
     "city": "Dunwoody",
     "state": "GA",
     "zip": "30338",
+    "lat": 33.8452,
+    "lng": -84.3315,
     "neighborhood": "Dunwoody",
     "venue_type": "arts_center",
     "spot_type": "arts_center",

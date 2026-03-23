@@ -48,6 +48,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30309",
+    "lat": 33.8334,
+    "lng": -84.3835,
     "venue_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,

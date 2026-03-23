@@ -48,6 +48,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30315",
+    "lat": 33.7328,
+    "lng": -84.3696,
     "neighborhood": "Grant Park",
     "venue_type": "zoo",
     "spot_type": "zoo",

@@ -42,6 +42,8 @@ VENUE_DATA = {
     "city": "Norcross",
     "state": "GA",
     "zip": "30093",
+    "lat": 33.9397,
+    "lng": -84.2016,
     "venue_type": "community_center",
     "spot_type": "community_center",
     "website": CATALOG_URL,

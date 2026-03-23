@@ -40,6 +40,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30310",
+    "lat": 33.7303,
+    "lng": -84.4349,
     "venue_type": "park",
     "spot_type": "nature_center",
     "website": OFFICIAL_URL,

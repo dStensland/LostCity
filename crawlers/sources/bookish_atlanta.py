@@ -21,6 +21,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30316",
+    "lat": 33.7381,
+    "lng": -84.3444,
     "venue_type": "bookstore",
     "website": BASE_URL,
 }

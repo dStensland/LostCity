@@ -29,6 +29,8 @@ VENUE_DATA = {
     "city": "Woodstock",
     "state": "GA",
     "zip": "30188",
+    "lat": 34.1016,
+    "lng": -84.5194,
     "venue_type": "bookstore",
     "website": BASE_URL,
 }

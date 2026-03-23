@@ -23,6 +23,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30306",
+    "lat": 33.7879,
+    "lng": -84.3733,
     "venue_type": "park",
     "spot_type": "park",
     "website": "https://piedmontpark.org",

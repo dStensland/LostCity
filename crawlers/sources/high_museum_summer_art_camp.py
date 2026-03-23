@@ -54,6 +54,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30309",
+    "lat": 33.7901,
+    "lng": -84.3856,
     "neighborhood": "Midtown",
     "venue_type": "museum",
     "spot_type": "museum",

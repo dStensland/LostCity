@@ -25,6 +25,8 @@ VENUE_DATA = {
     "city": "Chamblee",
     "state": "GA",
     "zip": "30341",
+    "lat": 33.7484,
+    "lng": -84.3450,
     "venue_type": "bookstore",
     "website": BASE_URL,
 }

@@ -27,6 +27,8 @@ VENUE_DATA = {
     "city": "Chamblee",
     "state": "GA",
     "zip": "30341",
+    "lat": 33.8892,
+    "lng": -84.2997,
     "venue_type": "community_center",
     "spot_type": "community_center",
     "website": "https://www.chambleega.com/157/Parks-Recreation",

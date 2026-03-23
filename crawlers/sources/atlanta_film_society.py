@@ -29,6 +29,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30318",
+    "lat": 33.7730,
+    "lng": -84.4052,
     "venue_type": "cinema",
     "website": BASE_URL,
 }

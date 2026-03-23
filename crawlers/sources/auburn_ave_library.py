@@ -38,6 +38,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30303",
+    "lat": 33.7552,
+    "lng": -84.3839,
     "venue_type": "library",
     "spot_type": "library",
     "website": "https://www.afpls.org/auburn-avenue-research-library",

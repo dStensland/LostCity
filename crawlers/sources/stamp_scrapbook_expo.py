@@ -36,6 +36,8 @@ VENUE_DATA = {
     "city": "Duluth",
     "state": "GA",
     "zip": "30097",
+    "lat": 33.9748,
+    "lng": -84.1427,
     "venue_type": "convention_center",
     "spot_type": "convention_center",
     "website": "https://www.gassouthdistrict.com/events/venue/convention-center",

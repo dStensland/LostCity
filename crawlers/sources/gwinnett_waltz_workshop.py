@@ -42,6 +42,8 @@ VENUE_DATA = {
     "city": "Lawrenceville",
     "state": "GA",
     "zip": "30046",
+    "lat": 33.9555,
+    "lng": -83.9887,
     "venue_type": "historic_site",
     "spot_type": "historic_site",
     "website": CATALOG_URL,

@@ -52,6 +52,8 @@ VENUE_DATA = {
     "city": "Sandy Springs",
     "state": "GA",
     "zip": "30350",
+    "lat": 34.0056,
+    "lng": -84.3672,
     "neighborhood": "Sandy Springs",
     "venue_type": "park",
     "spot_type": "park",

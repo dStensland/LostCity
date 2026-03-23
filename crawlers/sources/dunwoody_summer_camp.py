@@ -52,6 +52,8 @@ VENUE_DATA = {
     "city": "Dunwoody",
     "state": "GA",
     "zip": "30338",
+    "lat": 33.9428,
+    "lng": -84.3227,
     "neighborhood": "Dunwoody",
     "venue_type": "nature_center",
     "spot_type": "park",

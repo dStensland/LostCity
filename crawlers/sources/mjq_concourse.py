@@ -31,6 +31,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30303",
+    "lat": 33.7738,
+    "lng": -84.3633,
     "venue_type": "nightclub",
     "website": BASE_URL,
 }

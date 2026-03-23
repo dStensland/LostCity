@@ -52,6 +52,8 @@ VENUE_DATA = {
     "city": "Norcross",
     "state": "GA",
     "zip": "30093",
+    "lat": 33.9231,
+    "lng": -84.2012,
     "neighborhood": "Norcross",
     "venue_type": "school",
     "spot_type": "school",

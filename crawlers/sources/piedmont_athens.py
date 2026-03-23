@@ -34,6 +34,8 @@ VENUE_DATA = {
     "city": "Athens",
     "state": "GA",
     "zip": "30606",
+    "lat": 33.9159,
+    "lng": -83.4651,
     "venue_type": "hospital",
     "website": f"{BASE_URL}/locations/piedmont-athens",
 }

@@ -41,6 +41,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30345",
+    "lat": 33.8174,
+    "lng": -84.2862,
     "venue_type": "event_space",
     "spot_type": "event_space",
     "website": "https://northlakemall.com/",

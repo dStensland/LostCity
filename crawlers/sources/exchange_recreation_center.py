@@ -38,6 +38,8 @@ VENUE_DATA = {
     "city": "Decatur",
     "state": "GA",
     "zip": "30034",
+    "lat": 33.7074,
+    "lng": -84.2538,
     "venue_type": "recreation",
     "spot_type": "community_center",
     "website": OFFICIAL_URL,

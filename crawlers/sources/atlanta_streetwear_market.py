@@ -39,6 +39,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30354",
+    "lat": 33.6530,
+    "lng": -84.4170,
     "venue_type": "event_space",
     "spot_type": "event_space",
     "website": "https://www.atlantaexpositioncenters.com/",

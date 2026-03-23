@@ -51,6 +51,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30327",
+    "lat": 33.8527,
+    "lng": -84.4452,
     "neighborhood": "Buckhead",
     "venue_type": "school",
     "spot_type": "school",

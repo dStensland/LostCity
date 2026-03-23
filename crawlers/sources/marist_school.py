@@ -24,6 +24,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30319",
+    "lat": 33.8633,
+    "lng": -84.3327,
     "venue_type": "institution",
     "spot_type": "education",
     "website": "https://www.marist.com/",

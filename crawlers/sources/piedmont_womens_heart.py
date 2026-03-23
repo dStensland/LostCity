@@ -35,6 +35,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30309",
+    "lat": 33.8421,
+    "lng": -84.3867,
     "venue_type": "hospital",
     "website": WOMENS_HEART_URL,
 }

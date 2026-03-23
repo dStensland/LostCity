@@ -50,6 +50,8 @@ VENUE_DATA = {
     "city": "Marietta",
     "state": "GA",
     "zip": "30062",
+    "lat": 33.9678,
+    "lng": -84.5207,
     "neighborhood": "Marietta",
     "venue_type": "institution",
     "spot_type": "education",

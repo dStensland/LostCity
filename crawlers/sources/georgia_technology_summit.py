@@ -38,6 +38,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30339",
+    "lat": 33.8842,
+    "lng": -84.4716,
     "venue_type": "convention_center",
     "spot_type": "convention_center",
     "website": "https://cobbgalleria.com/",

@@ -40,6 +40,8 @@ VENUE_DATA = {
     "city": "College Park",
     "state": "GA",
     "zip": "30337",
+    "lat": 33.6410,
+    "lng": -84.4361,
     "venue_type": "convention_center",
     "spot_type": "convention_center",
     "website": "https://www.gicc.com/",

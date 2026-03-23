@@ -24,6 +24,8 @@ VENUE_DATA = {
     "city": "Decatur",
     "state": "GA",
     "zip": "30030",
+    "lat": 33.7749,
+    "lng": -84.2961,
     "venue_type": "public_space",
     "spot_type": "public_space",
     "website": "https://www.decaturga.com/",

@@ -29,6 +29,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30339",
+    "lat": 33.8827,
+    "lng": -84.4677,
     "venue_type": "performing_arts",
     "website": "https://www.cobbenergycentre.com",
 }

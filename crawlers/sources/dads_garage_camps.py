@@ -48,6 +48,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30312",
+    "lat": 33.7609,
+    "lng": -84.3444,
     "neighborhood": "Old Fourth Ward",
     "venue_type": "arts_venue",
     "spot_type": "arts",

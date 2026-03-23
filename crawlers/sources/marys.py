@@ -24,6 +24,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30316",
+    "lat": 33.7312,
+    "lng": -84.3432,
     "venue_type": "bar",
     "website": "https://www.instagram.com/marysatl/",
 }

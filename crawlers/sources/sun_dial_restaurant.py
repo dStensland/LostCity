@@ -26,6 +26,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30303",
+    "lat": 33.7594,
+    "lng": -84.3884,
     "venue_type": "restaurant",
     "website": BASE_URL,
 }

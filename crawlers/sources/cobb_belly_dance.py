@@ -62,6 +62,8 @@ VENUE_DATA = {
     "city": "Powder Springs",
     "state": "GA",
     "zip": "30127",
+    "lat": 33.8629,
+    "lng": -84.7087,
     "venue_type": "community_center",
     "spot_type": "community_center",
     "website": CATALOG_URL,

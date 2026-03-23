@@ -37,6 +37,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30313",
+    "lat": 33.7607,
+    "lng": -84.3976,
     "venue_type": "convention_center",
     "spot_type": "convention_center",
     "website": "https://www.gwcca.org/",

@@ -49,6 +49,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30306",
+    "lat": 33.7835,
+    "lng": -84.3314,
     "neighborhood": "Druid Hills",
     "venue_type": "arts_center",
     "spot_type": "arts_center",

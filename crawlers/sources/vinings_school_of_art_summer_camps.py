@@ -48,6 +48,8 @@ VENUE_DATA = {
     "city": "Smyrna",
     "state": "GA",
     "zip": "30080",
+    "lat": 33.8598,
+    "lng": -84.4818,
     "neighborhood": "Vinings",
     "venue_type": "arts_venue",
     "spot_type": "arts",

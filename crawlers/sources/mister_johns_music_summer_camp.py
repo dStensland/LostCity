@@ -48,6 +48,8 @@ VENUE_DATA = {
     "city": "Avondale Estates",
     "state": "GA",
     "zip": "30002",
+    "lat": 33.7744,
+    "lng": -84.2666,
     "neighborhood": "Avondale Estates",
     "venue_type": "studio",
     "spot_type": "studio",

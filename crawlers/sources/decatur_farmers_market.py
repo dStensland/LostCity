@@ -29,6 +29,8 @@ VENUE_DATA = {
     "city": "Decatur",
     "state": "GA",
     "zip": "30030",
+    "lat": 33.7752,
+    "lng": -84.3002,
     "venue_type": "market",
     "website": BASE_URL,
 }

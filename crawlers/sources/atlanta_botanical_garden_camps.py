@@ -49,6 +49,8 @@ VENUE_DATA = {
     "state": "GA",
     "zip": "30309",
     "neighborhood": "Midtown",
+    "lat": 33.7901,
+    "lng": -84.3728,
     "venue_type": "garden",
     "spot_type": "garden",
     "website": "https://atlantabg.org/",

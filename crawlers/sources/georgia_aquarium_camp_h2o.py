@@ -49,6 +49,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30313",
+    "lat": 33.7634,
+    "lng": -84.3951,
     "neighborhood": "Downtown",
     "venue_type": "aquarium",
     "spot_type": "aquarium",

@@ -55,6 +55,8 @@ VENUE_DATA = {
     "city": "Roswell",
     "state": "GA",
     "zip": "30075",
+    "lat": 34.0162,
+    "lng": -84.3527,
     "neighborhood": "Roswell",
     "venue_type": "institution",
     "spot_type": "education",

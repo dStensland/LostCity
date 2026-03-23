@@ -51,6 +51,8 @@ VENUE_DATA = {
     "city": "Peachtree Corners",
     "state": "GA",
     "zip": "30092",
+    "lat": 33.9687,
+    "lng": -84.2174,
     "neighborhood": "Peachtree Corners",
     "venue_type": "institution",
     "spot_type": "education",

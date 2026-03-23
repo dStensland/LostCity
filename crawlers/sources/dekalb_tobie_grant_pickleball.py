@@ -53,6 +53,8 @@ VENUE_DATA = {
     "city": "Scottdale",
     "state": "GA",
     "zip": "30079",
+    "lat": 33.7760,
+    "lng": -84.2700,
     "venue_type": "community_center",
     "spot_type": "gymnasium",
     "website": ACTIVITY_SEARCH_URL,

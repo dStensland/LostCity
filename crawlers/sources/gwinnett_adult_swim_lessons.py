@@ -74,6 +74,8 @@ VENUE_DATA = {
     "city": "Snellville",
     "state": "GA",
     "zip": "30039",
+    "lat": 33.8019,
+    "lng": -84.0031,
     "venue_type": "aquatic_center",
     "spot_type": "aquatic_center",
     "website": CATALOG_URL,

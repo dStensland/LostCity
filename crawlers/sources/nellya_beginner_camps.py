@@ -43,6 +43,8 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30318",
+    "lat": 33.7948,
+    "lng": -84.4327,
     "neighborhood": "Upper Westside",
     "venue_type": "fitness_center",
     "spot_type": "fitness",
