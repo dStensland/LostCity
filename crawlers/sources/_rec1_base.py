@@ -64,6 +64,10 @@ _HEADERS = {
 _CATALOG_HEADERS = {
     "User-Agent": _USER_AGENT,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    # Some Rec1 tenants (e.g. forsyth-county-ga) require explicit Accept-Encoding
+    # to serve gzip-compressed responses; without it they return an empty body.
+    "Accept-Encoding": "gzip, deflate",
+    "Accept-Language": "en-US,en;q=0.9",
 }
 
 # Polite delay between API requests (seconds)
