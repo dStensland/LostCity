@@ -36,9 +36,15 @@ interface HeroCardProps {
 function getContextualLabel(
   event: FeedEventData & { card_tier?: "hero" }
 ): string | null {
+  // Only show labels that are genuinely informative to users.
+  // Never expose internal tier names (FLAGSHIP, TENTPOLE) — those are backend signals.
   if (event.festival_id) return "FESTIVAL";
-  if (event.is_tentpole) return "TENTPOLE";
-  if (event.importance === "flagship") return "FLAGSHIP";
+  if (event.is_free) return "FREE";
+  // Fall back to the event's category as a contextual label
+  if (event.category) {
+    const label = event.category.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+    return label;
+  }
   return null;
 }
 

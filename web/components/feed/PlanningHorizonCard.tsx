@@ -230,19 +230,9 @@ export const PlanningHorizonCard = memo(function PlanningHorizonCard({
           </span>
         </div>
 
-        {/* Flagship badge — bottom left */}
-        {isFlagship && (
-          <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1 rounded px-2 py-0.5 bg-[var(--gold)]/12 border border-[var(--gold)]/25">
-            <Star weight="fill" className="w-2.5 h-2.5 text-[var(--gold)]" />
-            <span className="font-mono text-2xs font-bold uppercase tracking-wider text-[var(--gold)]">
-              Flagship
-            </span>
-          </div>
-        )}
-
-        {/* Urgency badge — right if flagship present, left otherwise */}
+        {/* Urgency badge — bottom left */}
         {event.urgency && (
-          <div className={`absolute bottom-2.5 ${isFlagship ? "right-2.5" : "left-2.5"}`}>
+          <div className="absolute bottom-2.5 left-2.5">
             <UrgencyPill urgency={event.urgency} />
           </div>
         )}
