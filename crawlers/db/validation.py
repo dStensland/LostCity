@@ -510,7 +510,11 @@ def validate_event_title(title: str) -> bool:
 
 _CATEGORY_NORMALIZATION_MAP: dict[str, str] = {
     "arts": "art",
-    "activism": "community",
+    "activism": "civic",
+    "civic_engagement": "civic",
+    "government": "civic",
+    "volunteering": "volunteer",
+    "service": "volunteer",
     "cultural": "community",
     "tours": "learning",
     "meetup": "community",

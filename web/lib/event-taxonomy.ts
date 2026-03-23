@@ -8,6 +8,8 @@ export const PUBLIC_EVENT_CATEGORY_OPTIONS = [
   { id: "food_drink", label: "Food & Drink" },
   { id: "nightlife", label: "Nightlife" },
   { id: "community", label: "Community" },
+  { id: "civic", label: "Civic" },
+  { id: "volunteer", label: "Volunteer" },
   { id: "recreation", label: "Recreation" },
   { id: "exercise", label: "Exercise" },
   { id: "family", label: "Family" },
@@ -57,7 +59,11 @@ export const ADMIN_EVENT_CATEGORY_IDS = ADMIN_EVENT_CATEGORY_OPTIONS.map(
 ) as readonly AdminEventCategoryId[];
 
 export const LEGACY_EVENT_CATEGORY_ALIASES: Record<string, string> = {
-  activism: "community",
+  activism: "civic",             // CHANGED — was "community"
+  civic_engagement: "civic",     // NEW
+  government: "civic",           // NEW
+  volunteering: "volunteer",     // NEW
+  service: "volunteer",          // NEW
   arts: "art",
   class: "learning",
   cooking: "learning",
