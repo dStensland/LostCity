@@ -25,16 +25,16 @@ interface BadgeProps {
 }
 
 const VARIANT_CLASSES: Record<BadgeVariant, string> = {
-  neutral: "bg-[var(--twilight)] text-[var(--soft)] border-[var(--twilight)]",
-  success: "bg-[var(--neon-green)]/15 text-[var(--neon-green)] border-[var(--neon-green)]/30",
-  alert: "bg-[var(--coral)]/15 text-[var(--coral)] border-[var(--coral)]/30",
-  info: "bg-[var(--neon-cyan)]/15 text-[var(--neon-cyan)] border-[var(--neon-cyan)]/30",
+  neutral: "bg-[var(--twilight)] text-[var(--soft)]",
+  success: "bg-[var(--neon-green)]/15 text-[var(--neon-green)] border border-[var(--neon-green)]/30",
+  alert: "bg-[var(--coral)]/15 text-[var(--coral)] border border-[var(--coral)]/30",
+  info: "bg-[var(--neon-cyan)]/15 text-[var(--neon-cyan)] border border-[var(--neon-cyan)]/30",
   accent: "", // styled dynamically via accentColor prop
 };
 
 const SIZE_CLASSES: Record<BadgeSize, string> = {
-  sm: "px-1.5 py-0.5 text-2xs",
-  md: "px-2.5 py-0.5 text-xs",
+  sm: "px-1.5 py-1 text-2xs",
+  md: "px-2.5 py-1 text-xs",
 };
 
 export default function Badge({
@@ -44,14 +44,14 @@ export default function Badge({
   size = "md",
   className = "",
 }: BadgeProps) {
-  const baseClasses = "inline-flex items-center gap-1 rounded-full font-mono font-medium border";
+  const baseClasses = "inline-flex items-center gap-1 rounded-full font-mono font-bold tracking-[1.2px] uppercase";
   const variantClasses = variant === "accent" ? "" : VARIANT_CLASSES[variant];
   const sizeClasses = SIZE_CLASSES[size];
 
   if (variant === "accent" && accentColor) {
     return (
       <span
-        className={`${baseClasses} ${sizeClasses} ${className}`}
+        className={`${baseClasses} border ${sizeClasses} ${className}`}
         style={{
           backgroundColor: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
           color: accentColor,

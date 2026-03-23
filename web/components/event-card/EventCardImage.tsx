@@ -103,7 +103,7 @@ export function EventCardImage({
             </span>
             {period && (
               <span
-                className={`font-mono text-2xs font-medium uppercase tracking-[0.12em] ${hasRailImage ? "text-white/78" : "text-[var(--soft)]"}`}
+                className={`font-mono text-2xs font-bold uppercase tracking-[0.12em] ${hasRailImage ? "text-white/78" : "text-[var(--soft)]"}`}
               >
                 {period}
               </span>

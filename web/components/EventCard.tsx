@@ -305,10 +305,10 @@ function EventCard({
                   </span>
                 )}
               </div>
-              <span className="block text-base sm:text-base font-medium leading-[1.2] line-clamp-2 sm:line-clamp-1 text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
+              <span className="block text-base sm:text-base font-semibold leading-[1.2] line-clamp-2 sm:line-clamp-1 text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
                 {eventTitle}
               </span>
-              <div className="flex items-center gap-1.5 min-w-0 font-mono text-xs leading-[1.2] sm:text-xs text-[var(--soft)]">
+              <div className="flex items-center gap-1.5 min-w-0 text-xs leading-[1.2] sm:text-xs text-[var(--soft)]">
                 {venueName ? (
                   <>
                     <span className="truncate max-w-[62%]" title={venueName}>

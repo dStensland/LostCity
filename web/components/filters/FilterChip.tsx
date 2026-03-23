@@ -28,7 +28,7 @@ export interface FilterChipProps {
 // Variant color configurations with glow classes
 const VARIANT_STYLES: Record<FilterChipVariant, { active: string; inactive: string; glowClass: string }> = {
   default: {
-    inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--soft)]",
+    inactive: "bg-white/5 border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--soft)]",
     active: "bg-[var(--twilight)] text-[var(--cream)] border-[var(--soft)]",
     glowClass: "",
   },

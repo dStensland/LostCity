@@ -189,11 +189,11 @@ function DiscoveryCard({
                 )}
               </div>
 
-              {venue.short_description && <p className="text-xs text-[var(--soft)] mt-0.5 line-clamp-1">{venue.short_description}</p>}
+              {venue.short_description && <p className="text-sm text-[var(--soft)] mt-0.5 line-clamp-1">{venue.short_description}</p>}
 
               <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed flex-wrap">
                 {distance !== null && (
-                  <span className="text-[var(--neon-cyan)] font-mono text-xs">{formatDistanceMiles(distance)}</span>
+                  <span className="text-[var(--neon-green)] font-mono text-xs">{formatDistanceMiles(distance)}</span>
                 )}
                 {venue.neighborhood && (
                   <>

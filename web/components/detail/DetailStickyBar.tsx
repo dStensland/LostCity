@@ -115,7 +115,7 @@ export function DetailStickyBar({
         } ${ctaColorClass?.className ?? ""} ${className}`}
       >
         <div
-          className={`mx-auto bg-[var(--night)]/96 backdrop-blur-md border border-[var(--twilight)] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] safe-area-bottom ${containerClassName}`}
+          className={`mx-auto bg-[var(--void)] backdrop-blur-md border border-[var(--twilight)] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] safe-area-bottom ${containerClassName}`}
         >
           <div className="flex items-center gap-2 px-3 py-2.5">
             {/* Share button */}

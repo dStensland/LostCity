@@ -68,7 +68,7 @@ export function FeaturedCarousel({ events }: Props) {
   const [canScrollRight, setCanScrollRight] = useState(false);
 
   // Card dimensions for precise scrolling
-  const cardWidth = 320; // w-80 = 20rem = 320px
+  const cardWidth = 288; // w-72 = 18rem = 288px
   const gap = 16; // gap-4 = 1rem = 16px
 
   const displayItems = useMemo(
@@ -146,7 +146,7 @@ export function FeaturedCarousel({ events }: Props) {
           portalSlug={portal.slug}
           skipAnimation
           disableMargin
-          className="flex-shrink-0 w-80 snap-start"
+          className="flex-shrink-0 w-72 snap-start"
         />
       );
     }
@@ -159,7 +159,7 @@ export function FeaturedCarousel({ events }: Props) {
           portalSlug={portal.slug}
           skipAnimation
           disableMargin
-          className="flex-shrink-0 w-80 snap-start"
+          className="flex-shrink-0 w-72 snap-start"
         />
       );
     }
@@ -258,11 +258,11 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
     <Link
       href={`/${portalSlug}?event=${event.id}`}
       scroll={false}
-      className="group flex-shrink-0 w-80 snap-start flex flex-col rounded-2xl overflow-hidden border border-[var(--gold)]/20 transition-all hover:border-[var(--gold)]/50 bg-gradient-to-br from-[var(--night)] to-[var(--void)] relative"
+      className="group flex-shrink-0 w-72 snap-start flex flex-col rounded-xl overflow-hidden border border-[var(--twilight)]/40 transition-all hover:border-[var(--twilight)]/70 bg-gradient-to-br from-[var(--night)] to-[var(--void)] relative"
     >
       {/* Image section */}
       {showImage ? (
-        <div className="h-44 bg-[var(--twilight)] relative overflow-hidden">
+        <div className="h-32 bg-[var(--twilight)] relative overflow-hidden">
           {!imageLoaded && (
             <div className="absolute inset-0 bg-[var(--twilight)] animate-pulse" />
           )}
@@ -294,7 +294,7 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
           </div>
         </div>
       ) : (
-        <div className="h-44 relative overflow-hidden">
+        <div className="h-32 relative overflow-hidden">
           <CategoryPlaceholder category={event.category} />
           {/* Featured badge - bottom left of placeholder */}
           <div className="absolute bottom-3 left-3 z-10">
@@ -311,7 +311,7 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
       )}
 
       {/* Content */}
-      <div className="flex-1 p-4">
+      <div className="flex-1 p-3">
         {/* Title */}
         <h3 className="font-semibold text-base text-[var(--cream)] line-clamp-2 group-hover:text-[var(--gold)] transition-colors leading-snug mb-2">
           {event.title}
@@ -322,7 +322,7 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
           <svg className="w-4 h-4 text-[var(--gold)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <span className="font-mono text-xs text-[var(--soft)]">
+          <span className="text-sm text-[var(--soft)]">
             {format(parseISO(event.start_date), "EEE, MMM d")}
             {event.start_time && ` · ${formatTime(event.start_time)}`}
           </span>
@@ -335,7 +335,7 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span className="font-mono text-xs text-[var(--muted)] truncate">
+            <span className="text-sm text-[var(--muted)] truncate">
               {event.venue.name}
             </span>
           </div>

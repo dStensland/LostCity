@@ -60,7 +60,7 @@ export function DetailHero({
 
   if (effectiveMode === "fallback") {
     return (
-      <div className={`relative w-full ${aspectClass} sm:rounded-lg overflow-hidden bg-gradient-to-br from-[var(--dusk)] via-[var(--night)] to-[var(--void)] ${heroAccentClass?.className ?? ""}`}>
+      <div className={`relative w-full ${aspectClass} sm:rounded-xl overflow-hidden bg-gradient-to-br from-[var(--dusk)] via-[var(--night)] to-[var(--void)] ${heroAccentClass?.className ?? ""}`}>
         <ScopedStyles css={heroAccentClass?.css} />
         {backFallbackHref && (
           <BackButton fallbackHref={backFallbackHref} label="Back" className={BACK_BUTTON_CLASS} iconOnly />
@@ -82,7 +82,7 @@ export function DetailHero({
 
   if (effectiveMode === "poster") {
     return (
-      <div className={`relative w-full sm:rounded-lg overflow-hidden bg-[var(--night)] ${heroAccentClass?.className ?? ""}`}>
+      <div className={`relative w-full sm:rounded-xl overflow-hidden bg-[var(--night)] ${heroAccentClass?.className ?? ""}`}>
         <ScopedStyles css={heroAccentClass?.css} />
         {backFallbackHref && (
           <BackButton fallbackHref={backFallbackHref} label="Back" className={BACK_BUTTON_CLASS} iconOnly />
@@ -137,7 +137,7 @@ export function DetailHero({
 
   // Default: image mode (full-width with overlay)
   return (
-    <div className={`relative w-full ${aspectClass} sm:rounded-lg overflow-hidden ${heroAccentClass?.className ?? ""}`}>
+    <div className={`relative w-full ${aspectClass} sm:rounded-xl overflow-hidden ${heroAccentClass?.className ?? ""}`}>
       <ScopedStyles css={heroAccentClass?.css} />
       {backFallbackHref && (
         <BackButton fallbackHref={backFallbackHref} label="Back" className={BACK_BUTTON_CLASS} iconOnly />
@@ -208,7 +208,7 @@ function HeroOverlay({
         </div>
 
         <h1
-          className="text-xl sm:text-3xl md:text-[2rem] font-semibold tracking-tight text-[var(--cream)] leading-[1.06] mb-1 max-w-[22ch] line-clamp-3 detail-hero-title-shadow"
+          className="text-xl sm:text-2xl md:text-[2rem] font-semibold tracking-tight text-[var(--cream)] leading-[1.06] mb-1 max-w-[22ch] line-clamp-3 detail-hero-title-shadow"
         >
           {title}
         </h1>

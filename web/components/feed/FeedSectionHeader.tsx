@@ -73,10 +73,10 @@ export default function FeedSectionHeader({
         };
       case "secondary":
         return {
-          titleClass: "font-mono text-sm font-bold tracking-[0.1em] uppercase",
+          titleClass: "font-mono text-xs font-bold tracking-[0.1em] uppercase",
           subtitleClass: "font-mono text-xs text-[var(--soft)] mt-0.5 normal-case tracking-normal",
           containerClass: "mb-4 py-1",
-          iconSize: "w-5 h-5",
+          iconSize: "w-3.5 h-3.5",
           defaultAccent: accentColor || "var(--coral)",
           showDefaultIcon: false,
         };
@@ -132,7 +132,7 @@ export default function FeedSectionHeader({
         {/* Icon — tinted box for secondary, boxed+glow for primary */}
         {displayIcon && priority === "secondary" && (
           <div
-            className="flex items-center justify-center w-7 h-7 rounded-lg text-[var(--section-accent)] [&>svg]:w-4 [&>svg]:h-4"
+            className="flex items-center justify-center w-5 h-5 rounded-md text-[var(--section-accent)] [&>svg]:w-3.5 [&>svg]:h-3.5"
             style={{ backgroundColor: `color-mix(in srgb, var(--section-accent) 12%, transparent)` }}
           >
             {displayIcon}
