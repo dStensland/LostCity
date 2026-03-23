@@ -5,19 +5,20 @@ Cobb County has 15 library branches offering free events including:
 - Storytimes, book clubs, educational programs, kids activities
 - Computer classes, author talks, crafts, and community programs
 
-Uses Playwright to render the JavaScript-heavy Cobb County events page.
+Uses the Cobb County /api/search/events REST endpoint (department=85 = Library).
+Previously used Playwright against the JS-rendered events listing page, which only
+returned the default 7-day window. The REST API returns all events in the requested
+date range without JavaScript rendering.
 """
 
 from __future__ import annotations
 
-import json
 import logging
 import re
-from datetime import datetime
+import requests
+from datetime import datetime, timedelta
 from typing import Optional
-
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
-from bs4 import BeautifulSoup
+from zoneinfo import ZoneInfo
 
 from utils import slugify
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
@@ -35,12 +36,17 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 )
 
 BASE_URL = "https://www.cobbcounty.gov"
-# Department 85 is the Library department
+EVENTS_API = f"{BASE_URL}/api/search/events"
 EVENTS_PAGE = f"{BASE_URL}/events?department=85"
+LIBRARY_DEPARTMENT_ID = "85"
+CRAWL_DAYS = 90
 
-# Library branches - will create venue records as needed
+# Cobb County API uses US/Eastern timestamps
+EASTERN = ZoneInfo("America/New_York")
+
+# Library branches - used to resolve location titles to venue records
 LIBRARY_BRANCHES = {
-    "east-cobb": {
+    "east cobb": {
         "name": "East Cobb Library",
         "address": "4880 Lower Roswell Road",
         "city": "Marietta",
@@ -54,21 +60,21 @@ LIBRARY_BRANCHES = {
         "state": "GA",
         "zip": "30066",
     },
-    "kemp": {
+    "kemp memorial": {
         "name": "Kemp Memorial Library",
         "address": "1090 Powder Springs Street",
         "city": "Marietta",
         "state": "GA",
         "zip": "30064",
     },
-    "lewis-ray": {
+    "lewis a. ray": {
         "name": "Lewis A. Ray Library",
         "address": "1315 Kennestone Circle",
         "city": "Marietta",
         "state": "GA",
         "zip": "30066",
     },
-    "mountain-view": {
+    "mountain view": {
         "name": "Mountain View Regional Library",
         "address": "3320 Sandy Plains Road",
         "city": "Marietta",
@@ -82,7 +88,7 @@ LIBRARY_BRANCHES = {
         "state": "GA",
         "zip": "30064",
     },
-    "south-cobb": {
+    "south cobb": {
         "name": "South Cobb Regional Library",
         "address": "805 Clay Road SW",
         "city": "Mableton",
@@ -110,40 +116,47 @@ LIBRARY_BRANCHES = {
         "state": "GA",
         "zip": "30339",
     },
-    "west-cobb": {
+    "west cobb": {
         "name": "West Cobb Regional Library",
         "address": "1750 Dennis Kemp Lane",
         "city": "Kennesaw",
         "state": "GA",
         "zip": "30152",
     },
-    "sewell-mill": {
+    "sewell mill": {
         "name": "Sewell Mill Library & Cultural Center",
         "address": "2051 Lower Roswell Road",
         "city": "Marietta",
         "state": "GA",
         "zip": "30068",
     },
-    "merchants-walk": {
+    "merchants walk": {
         "name": "Merchants Walk Library",
         "address": "1550 Merchants Drive",
         "city": "Marietta",
         "state": "GA",
         "zip": "30066",
     },
-    "sweetwater-valley": {
+    "sweetwater valley": {
         "name": "Sweetwater Valley Library",
         "address": "3200 County Line Road",
         "city": "Austell",
         "state": "GA",
         "zip": "30106",
     },
-    "powder-springs": {
+    "powder springs": {
         "name": "Powder Springs Library",
         "address": "4181 Atlanta Street",
         "city": "Powder Springs",
         "state": "GA",
         "zip": "30127",
+    },
+    "north cobb": {
+        "name": "North Cobb Regional Library",
+        "address": "3535 Old 41 Highway NW",
+        "city": "Kennesaw",
+        "state": "GA",
+        "zip": "30144",
     },
 }
 
@@ -173,10 +186,42 @@ CATEGORY_MAP = {
     "draw": "art",
     "fitness": "fitness",
     "yoga": "fitness",
+    "wellness": "fitness",
     "game": "play",
     "gaming": "play",
     "lego": "play",
     "toy": "play",
+}
+
+# Cobb County API age label to age-band tags
+COBB_AGE_TAG_MAP = {
+    "babies": ["infant", "kids", "family-friendly"],
+    "toddlers": ["toddler", "kids", "family-friendly"],
+    "preschool": ["preschool", "kids", "family-friendly"],
+    "birth to five": ["infant", "toddler", "preschool", "kids", "family-friendly"],
+    "elementary": ["elementary", "kids", "family-friendly"],
+    "kids": ["elementary", "kids", "family-friendly"],
+    "children": ["elementary", "kids", "family-friendly"],
+    "tweens": ["teen", "kids", "family-friendly"],
+    "teens": ["teen"],
+    "young adults": ["teen"],
+    "adults": ["adults"],
+    "seniors": ["adults", "seniors"],
+    "all ages": ["family-friendly"],
+    "families": ["family-friendly", "kids"],
+}
+
+FAMILY_AGE_KEYWORDS = {
+    "babies",
+    "toddlers",
+    "preschool",
+    "birth to five",
+    "elementary",
+    "kids",
+    "children",
+    "tweens",
+    "families",
+    "all ages",
 }
 
 
@@ -249,433 +294,274 @@ def _build_branch_destination_envelope(venue_id: int, venue_data: dict) -> Typed
     return envelope
 
 
-def determine_category(title: str, description: str) -> str:
-    """Determine event category from title and description."""
-    text = f"{title} {description}".lower()
+def resolve_branch_venue(location_title: str) -> dict:
+    """
+    Resolve a Cobb County API location title to a venue dict.
+    Falls back to a generic Cobb County Library System record.
+    """
+    if not location_title:
+        return _default_venue()
 
+    loc_lower = location_title.lower()
+
+    for key, branch in LIBRARY_BRANCHES.items():
+        if key in loc_lower:
+            return {
+                "name": branch["name"],
+                "slug": slugify(branch["name"]),
+                "address": branch.get("address"),
+                "city": branch["city"],
+                "state": branch["state"],
+                "zip": branch.get("zip"),
+                "venue_type": "library",
+            }
+
+    # If it mentions "library", use the location title as the name
+    if "library" in loc_lower or "cultural center" in loc_lower:
+        name = location_title.strip()
+        return {
+            "name": name,
+            "slug": slugify(name),
+            "city": "Marietta",
+            "state": "GA",
+            "venue_type": "library",
+        }
+
+    return _default_venue()
+
+
+def _default_venue() -> dict:
+    return {
+        "name": "Cobb County Public Library System",
+        "slug": "cobb-county-public-library-system",
+        "city": "Marietta",
+        "state": "GA",
+        "venue_type": "library",
+    }
+
+
+def parse_cobb_datetime(time_str: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Parse a Cobb County API datetime string.
+    Format: "2026-03-23T14:00:00+00:00" (UTC offset included).
+    Returns (date, time) in local Eastern time.
+    """
+    if not time_str:
+        return None, None
+    try:
+        dt = datetime.fromisoformat(time_str)
+        dt_eastern = dt.astimezone(EASTERN)
+        return dt_eastern.strftime("%Y-%m-%d"), dt_eastern.strftime("%H:%M")
+    except Exception:
+        try:
+            clean = re.sub(r"[+-]\d{2}:\d{2}$", "", time_str).replace("Z", "")
+            dt = datetime.fromisoformat(clean)
+            return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
+        except Exception as e:
+            logger.warning(f"Failed to parse datetime '{time_str}': {e}")
+            return None, None
+
+
+def derive_age_tags_and_category(event_age: Optional[list]) -> tuple[list[str], bool]:
+    """
+    Derive age-band tags and whether to set category='family' from the
+    Cobb County API eventAge list (list of {"name": "..."} dicts).
+    """
+    if not event_age:
+        return [], False
+
+    tags: list[str] = []
+    is_family = False
+
+    for age_entry in event_age:
+        label = (age_entry.get("name") or "").lower().strip()
+        for key, tag_list in COBB_AGE_TAG_MAP.items():
+            if key in label:
+                for t in tag_list:
+                    if t not in tags:
+                        tags.append(t)
+                if key in FAMILY_AGE_KEYWORDS:
+                    is_family = True
+                break
+
+    return tags, is_family
+
+
+def determine_category(title: str, summary: str) -> str:
+    """Determine event category from title and summary text."""
+    text = f"{title} {summary}".lower()
     for keyword, category in CATEGORY_MAP.items():
         if keyword in text:
             return category
-
-    return "words"  # Default for library events
-
-
-def parse_library_name(location_text: str) -> Optional[str]:
-    """Extract library branch name from location text."""
-    if not location_text:
-        return None
-
-    # Try to match known library names
-    location_lower = location_text.lower()
-    for branch_key, branch_data in LIBRARY_BRANCHES.items():
-        branch_name = branch_data["name"].lower()
-        if branch_name in location_lower or branch_key.replace("-", " ") in location_lower:
-            return branch_data["name"]
-
-    # Check if it contains "library"
-    if "library" in location_lower:
-        return location_text.strip()
-
-    return None
+    return "words"
 
 
-def parse_event_date(date_str: str) -> Optional[tuple[str, Optional[str]]]:
+def fetch_all_events(from_date: str, to_date: str) -> list[dict]:
     """
-    Parse event date and time from various formats.
-    Returns: (date, time) tuple
+    Fetch all library events from the Cobb County REST API for the given
+    date range. Returns the raw list of event dicts from the API.
     """
-    if not date_str:
-        return None, None
+    params = {
+        "fromDate": from_date,
+        "toDate": to_date,
+        "department": LIBRARY_DEPARTMENT_ID,
+        "pageSize": "2000",
+        "search": "",
+        "category": "",
+        "age": "",
+        "location": "",
+    }
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Accept": "application/json",
+        "Referer": EVENTS_PAGE,
+    }
 
     try:
-        # Try common formats
-        # Format: "January 25, 2026 at 10:00 AM"
-        match = re.search(r'(\w+ \d+, \d{4})\s*(?:at\s*)?(\d{1,2}:\d{2}\s*[AP]M)?', date_str, re.IGNORECASE)
-        if match:
-            date_part = match.group(1)
-            time_part = match.group(2)
-
-            # Parse date
-            dt = datetime.strptime(date_part, "%B %d, %Y")
-            date = dt.strftime("%Y-%m-%d")
-
-            # Parse time if present
-            time = None
-            if time_part:
-                time_dt = datetime.strptime(time_part.strip(), "%I:%M %p")
-                time = time_dt.strftime("%H:%M")
-
-            return date, time
-
-        # Try ISO datetime format (2026-01-25T10:00:00)
-        iso_match = re.match(r'(\d{4}-\d{2}-\d{2})(?:T(\d{2}:\d{2}))?', date_str)
-        if iso_match:
-            iso_date = iso_match.group(1)
-            iso_time = iso_match.group(2) if iso_match.group(2) else None
-            return iso_date, iso_time
-
+        resp = requests.get(EVENTS_API, params=params, headers=headers, timeout=60)
+        resp.raise_for_status()
+        data = resp.json()
+        results = data.get("graphqlEventsSearchWww", {}).get("results", [])
+        logger.info(f"Cobb County API returned {len(results)} events")
+        return results
     except Exception as e:
-        logger.warning(f"Failed to parse date '{date_str}': {e}")
-
-    return None, None
-
-
-def fetch_events_from_page(url: str) -> list[dict]:
-    """
-    Fetch and parse events from the Cobb County events page using Playwright.
-    Returns list of raw event dictionaries.
-    """
-    events = []
-
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
-
-            logger.info(f"Loading page: {url}")
-            page.goto(url, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(4000)
-
-            # Wait for events to load (they're rendered client-side)
-            try:
-                page.wait_for_selector("a[href*='/events/']", timeout=10000)
-            except PlaywrightTimeout:
-                logger.warning("Timeout waiting for event links to appear")
-
-            # Get the rendered HTML
-            html = page.content()
-            browser.close()
-
-        # Parse the rendered HTML
-        soup = BeautifulSoup(html, "html.parser")
-
-        # Look for event links in the page
-        # Events typically have URLs like /events/2026-01-24event-name
-        event_links = soup.find_all("a", href=re.compile(r'/events/\d{4}-\d{2}-\d{2}'))
-
-        logger.info(f"Found {len(event_links)} event links on page")
-
-        seen_urls = set()
-        for link in event_links:
-            event_url = link.get("href")
-            if not event_url:
-                continue
-
-            # Make absolute URL
-            if not event_url.startswith("http"):
-                event_url = BASE_URL + event_url
-
-            # Skip duplicates
-            if event_url in seen_urls:
-                continue
-            seen_urls.add(event_url)
-
-            # Get title from link text or nearby heading
-            title = link.get_text(strip=True)
-
-            # Extract date from URL
-            date_match = re.search(r'/events/(\d{4}-\d{2}-\d{2})', event_url)
-            event_date = date_match.group(1) if date_match else None
-
-            if title and event_date:
-                events.append({
-                    "title": title,
-                    "url": event_url,
-                    "date": event_date,
-                })
-
-        logger.info(f"Parsed {len(events)} unique events from listing page")
-
-    except Exception as e:
-        logger.error(f"Failed to fetch events page: {e}")
-
-    return events
-
-
-def fetch_event_details(event_url: str) -> dict:
-    """Fetch detailed information for a single event using Playwright."""
-    details = {}
-
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
-
-            page.goto(event_url, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
-
-            # Get the rendered HTML
-            html = page.content()
-            browser.close()
-
-        soup = BeautifulSoup(html, "html.parser")
-
-        # Look for __NEXT_DATA__ which contains structured event data
-        next_data_script = soup.find("script", {"id": "__NEXT_DATA__"})
-        if next_data_script:
-            data = json.loads(next_data_script.string)
-
-            if "props" in data and "pageProps" in data["props"]:
-                page_props = data["props"]["pageProps"]
-
-                if "eventResource" in page_props:
-                    event_data = page_props["eventResource"]
-
-                    # Extract structured data
-                    details["title"] = event_data.get("title")
-                    details["description"] = event_data.get("body", {}).get("value", "")
-
-                    # Date/time
-                    if "field_event_date" in event_data:
-                        date_field = event_data["field_event_date"]
-                        if isinstance(date_field, dict):
-                            details["start_datetime"] = date_field.get("value")
-                            details["end_datetime"] = date_field.get("end_value")
-
-                    # Location
-                    if "field_location" in event_data:
-                        location = event_data["field_location"]
-                        if isinstance(location, dict):
-                            details["location_name"] = location.get("title")
-                        elif isinstance(location, str):
-                            details["location_name"] = location
-
-                    # Address
-                    if "field_address" in event_data:
-                        address = event_data["field_address"]
-                        if isinstance(address, dict):
-                            details["address"] = address.get("address_line1")
-                            details["city"] = address.get("locality")
-                            details["state"] = address.get("administrative_area")
-                            details["zip"] = address.get("postal_code")
-
-                    # Image
-                    if "field_event_image" in event_data:
-                        image = event_data["field_event_image"]
-                        if isinstance(image, dict) and "uri" in image:
-                            details["image_url"] = image["uri"]
-
-        # Fallback: parse HTML if no structured data
-        if not details.get("description"):
-            # Look for description in meta tags or content
-            meta_desc = soup.find("meta", {"name": "description"})
-            if meta_desc:
-                details["description"] = meta_desc.get("content", "")
-
-    except Exception as e:
-        logger.warning(f"Failed to fetch event details from {event_url}: {e}")
-
-    return details
+        logger.error(f"Cobb County API fetch failed: {e}")
+        return []
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Cobb County Public Library events."""
+    """Crawl Cobb County Public Library events via the REST API."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
-    try:
-        # Fetch events from listing page
-        raw_events = fetch_events_from_page(EVENTS_PAGE)
-        events_found = len(raw_events)
+    today = datetime.now(EASTERN)
+    end_date = today + timedelta(days=CRAWL_DAYS)
+    from_date = today.strftime("%Y-%m-%d")
+    to_date = end_date.strftime("%Y-%m-%d")
 
-        today = datetime.now().date()
-        enriched_venue_ids: set[int] = set()
+    logger.info(f"Cobb Library: fetching events {from_date} to {to_date}")
 
-        # Process each event
-        for raw_event in raw_events:
-            try:
-                event_url = raw_event["url"]
-                title = raw_event["title"]
-                event_date = raw_event["date"]
+    raw_events = fetch_all_events(from_date, to_date)
+    events_found = len(raw_events)
 
-                # Skip cancelled events
-                if "cancel" in title.lower():
-                    logger.info(f"Skipping cancelled event: {title}")
-                    continue
+    enriched_venue_ids: set[int] = set()
 
-                # Skip past events
-                try:
-                    date_obj = datetime.strptime(event_date, "%Y-%m-%d").date()
-                    if date_obj < today:
-                        continue
-                except ValueError:
-                    continue
-
-                # Fetch detailed information
-                details = fetch_event_details(event_url)
-
-                # Use details if available, otherwise use raw data
-                final_title = details.get("title") or title
-                description = details.get("description", "")
-
-                # Parse datetime
-                start_date = event_date
-                start_time = None
-                end_time = None
-
-                if details.get("start_datetime"):
-                    parsed_date, parsed_time = parse_event_date(details["start_datetime"])
-                    if parsed_date:
-                        start_date = parsed_date
-                    if parsed_time:
-                        start_time = parsed_time
-
-                if details.get("end_datetime"):
-                    _, end_time = parse_event_date(details["end_datetime"])
-
-                # Determine venue
-                location_name = details.get("location_name")
-                library_name = parse_library_name(location_name) if location_name else None
-
-                if library_name:
-                    # Find matching branch
-                    venue_data = None
-                    for branch_data in LIBRARY_BRANCHES.values():
-                        if branch_data["name"] == library_name:
-                            venue_data = {
-                                "name": branch_data["name"],
-                                "slug": slugify(branch_data["name"]),
-                                "address": branch_data.get("address"),
-                                "city": branch_data["city"],
-                                "state": branch_data["state"],
-                                "zip": branch_data.get("zip"),
-                                "venue_type": "library",
-                            }
-                            break
-
-                    if not venue_data:
-                        # Create venue from location name
-                        venue_data = {
-                            "name": library_name,
-                            "slug": slugify(library_name),
-                            "city": details.get("city", "Marietta"),
-                            "state": details.get("state", "GA"),
-                            "address": details.get("address"),
-                            "zip": details.get("zip"),
-                            "venue_type": "library",
-                        }
-                else:
-                    # Fallback to main library system
-                    venue_data = {
-                        "name": "Cobb County Public Library System",
-                        "slug": "cobb-county-public-library-system",
-                        "city": "Marietta",
-                        "state": "GA",
-                        "venue_type": "library",
-                    }
-
-                venue_id = get_or_create_venue(venue_data)
-                if venue_id and venue_id not in enriched_venue_ids:
-                    persist_typed_entity_envelope(
-                        _build_branch_destination_envelope(venue_id, venue_data)
-                    )
-                    enriched_venue_ids.add(venue_id)
-
-                # Determine category from title/description keywords
-                category = determine_category(final_title, description)
-
-                # Build tags and refine category using audience inference
-                tags = ["library", "free", "public"]
-
-                # Search both title and description for audience signals
-                search_text = f"{final_title} {description or ''}".lower()
-                title_lower = final_title.lower()
-
-                baby_words = ["baby", "infant", "toddler", "preschool", "birth to five"]
-                child_words = ["kids", "children", "storytime", "story time", "elementary"]
-                teen_words = ["teen", "tween", "young adult"]
-
-                if any(word in search_text for word in baby_words):
-                    # Add granular age-band tags for birth-to-five content
-                    if "baby" in search_text or "infant" in search_text:
-                        tags.append("infant")
-                    if "toddler" in search_text:
-                        tags.append("toddler")
-                    if "preschool" in search_text or "birth to five" in search_text:
-                        tags.append("preschool")
-                    tags += ["kids", "family-friendly"]
-                    category = "family"
-                elif any(word in search_text for word in child_words):
-                    tags += ["elementary", "kids", "family-friendly"]
-                    category = "family"
-                elif any(word in search_text for word in teen_words):
-                    tags.append("teen")
-                elif "adult" in title_lower and "young adult" not in title_lower:
-                    tags.append("adults")
-
-                # Add activity tags
-                if "book club" in title_lower:
-                    tags.append("book-club")
-                if any(word in title_lower for word in ["craft", "art", "make"]):
-                    tags.append("craft")
-                if "computer" in title_lower or "tech" in title_lower:
-                    tags.append("educational")
-
-                # Clean description HTML
-                if description:
-                    soup = BeautifulSoup(description, "html.parser")
-                    description = soup.get_text(separator=" ", strip=True)
-                    description = re.sub(r"\s+", " ", description).strip()
-                    if len(description) > 5000:
-                        description = description[:5000]
-
-                # Generate content hash
-                content_hash = generate_content_hash(final_title, venue_data["name"], start_date)
-
-                # Check if event already exists
-
-                # Create event record
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": final_title,
-                    "description": description if description else None,
-                    "start_date": start_date,
-                    "start_time": start_time,
-                    "end_date": None,
-                    "end_time": end_time,
-                    "is_all_day": False,
-                    "category": category,
-                    "subcategory": None,
-                    "tags": tags,
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": None,
-                    "is_free": True,
-                    "source_url": event_url,
-                    "ticket_url": None,
-                    "image_url": details.get("image_url"),
-                    "raw_text": None,
-                    "extraction_confidence": 0.90,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                    continue
-
-                # Insert event
-                insert_event(event_record)
-                events_new += 1
-                logger.info(f"Added: {final_title} on {start_date} at {venue_data['name']}")
-
-            except Exception as e:
-                logger.error(f"Failed to process event {raw_event.get('url', 'unknown')}: {e}")
+    for raw_event in raw_events:
+        try:
+            title = (raw_event.get("title") or "").strip()
+            if not title:
                 continue
 
-        logger.info(
-            f"Cobb County Library crawl complete: {events_found} found, "
-            f"{events_new} new, {events_updated} updated"
-        )
+            # Skip cancelled events
+            if "cancel" in title.lower():
+                logger.debug(f"Skipping cancelled event: {title}")
+                continue
 
-    except Exception as e:
-        logger.error(f"Failed to crawl Cobb County Library: {e}")
-        raise
+            # Parse dates
+            start_date, start_time = parse_cobb_datetime(
+                (raw_event.get("startDate") or {}).get("time", "")
+            )
+            end_date_str, end_time = parse_cobb_datetime(
+                (raw_event.get("endDate") or {}).get("time", "")
+            )
+
+            if not start_date:
+                logger.warning(f"Event '{title}' has no parseable start date, skipping")
+                continue
+
+            # Skip past events
+            try:
+                if datetime.strptime(start_date, "%Y-%m-%d").date() < today.date():
+                    continue
+            except ValueError:
+                continue
+
+            # Resolve venue
+            location_title = (raw_event.get("location") or {}).get("title", "")
+            venue_data = resolve_branch_venue(location_title)
+            venue_id = get_or_create_venue(venue_data)
+
+            if venue_id and venue_id not in enriched_venue_ids:
+                persist_typed_entity_envelope(
+                    _build_branch_destination_envelope(venue_id, venue_data)
+                )
+                enriched_venue_ids.add(venue_id)
+
+            # Build source URL from event path
+            path = raw_event.get("path", "")
+            event_url = f"{BASE_URL}{path}" if path else EVENTS_PAGE
+
+            # Summary / description
+            summary = (raw_event.get("summary") or "").strip()
+
+            # Category and age tags
+            event_age = raw_event.get("eventAge")
+            age_tags, is_family_audience = derive_age_tags_and_category(event_age)
+            category = determine_category(title, summary)
+            if is_family_audience:
+                category = "family"
+
+            # Build tags
+            base_tags = ["library", "free", "public"]
+            tags = base_tags + [t for t in age_tags if t not in base_tags]
+
+            # Add activity tags from title
+            title_lower = title.lower()
+            if "book club" in title_lower:
+                tags.append("book-club")
+            if any(w in title_lower for w in ["craft", "make"]):
+                tags.append("craft")
+            if "computer" in title_lower or "tech" in title_lower:
+                tags.append("educational")
+
+            content_hash = generate_content_hash(title, venue_data["name"], start_date)
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title,
+                "description": summary if summary else None,
+                "start_date": start_date,
+                "start_time": start_time,
+                "end_date": end_date_str,
+                "end_time": end_time,
+                "is_all_day": False,
+                "category": category,
+                "subcategory": None,
+                "tags": tags,
+                "price_min": None,
+                "price_max": None,
+                "price_note": None,
+                "is_free": True,
+                "source_url": event_url,
+                "ticket_url": None,
+                "image_url": None,
+                "raw_text": None,
+                "extraction_confidence": 0.92,
+                "is_recurring": bool(raw_event.get("sticky")),
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
+            insert_event(event_record)
+            events_new += 1
+            logger.debug(f"Added: {title} on {start_date} at {venue_data['name']}")
+
+        except Exception as e:
+            logger.error(f"Failed to process Cobb event '{raw_event.get('title', 'unknown')}': {e}")
+            continue
+
+    logger.info(
+        f"Cobb County Library crawl complete: {events_found} found, "
+        f"{events_new} new, {events_updated} updated"
+    )
 
     return events_found, events_new, events_updated

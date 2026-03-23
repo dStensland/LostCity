@@ -1,31 +1,38 @@
 """
 Crawler for DeKalb County Public Library System events.
-Uses Communico events platform.
+
+Uses the Communico events platform API directly.
+
+Previously used Playwright to load the list view page, which only rendered the
+default 7-day window. The underlying Communico API (/eeventcaldata) accepts
+explicit date + days parameters, returning up to 90 days of events in one call.
 """
 
 from __future__ import annotations
 
-import re
+import json
 import logging
-from datetime import datetime
+import re
+import requests
+from datetime import datetime, timedelta
 from typing import Optional
-
-from playwright.sync_api import sync_playwright
+from urllib.parse import quote
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
-from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://events.dekalblibrary.org"
-EVENTS_URL = f"{BASE_URL}/events?v=list"
+EVENTS_API = f"{BASE_URL}/eeventcaldata"
+EVENTS_PAGE = f"{BASE_URL}/events?v=list"
+CRAWL_DAYS = 90
 
 # Map branch names to venue data
 BRANCH_VENUES = {
-    "brookhaven library": {
+    "brookhaven": {
         "name": "Brookhaven Library",
         "slug": "brookhaven-library",
         "address": "1242 N. Druid Hills Road",
@@ -34,7 +41,7 @@ BRANCH_VENUES = {
         "zip": "30319",
         "venue_type": "library",
     },
-    "chamblee library": {
+    "chamblee": {
         "name": "Chamblee Library",
         "slug": "chamblee-library",
         "address": "4115 Clairmont Road",
@@ -43,7 +50,7 @@ BRANCH_VENUES = {
         "zip": "30341",
         "venue_type": "library",
     },
-    "clarkston library": {
+    "clarkston": {
         "name": "Clarkston Library",
         "slug": "clarkston-library",
         "address": "951 N. Indian Creek Drive",
@@ -52,7 +59,7 @@ BRANCH_VENUES = {
         "zip": "30021",
         "venue_type": "library",
     },
-    "county line ellenwood library": {
+    "county line": {
         "name": "County Line-Ellenwood Library",
         "slug": "county-line-ellenwood-library",
         "address": "4331 River Road",
@@ -61,7 +68,16 @@ BRANCH_VENUES = {
         "zip": "30294",
         "venue_type": "library",
     },
-    "covington library": {
+    "ellenwood": {
+        "name": "County Line-Ellenwood Library",
+        "slug": "county-line-ellenwood-library",
+        "address": "4331 River Road",
+        "city": "Ellenwood",
+        "state": "GA",
+        "zip": "30294",
+        "venue_type": "library",
+    },
+    "covington": {
         "name": "Covington Library",
         "slug": "covington-library",
         "address": "3500 Covington Highway",
@@ -80,7 +96,7 @@ BRANCH_VENUES = {
         "zip": "30030",
         "venue_type": "library",
     },
-    "doraville library": {
+    "doraville": {
         "name": "Doraville Library",
         "slug": "doraville-library",
         "address": "2421 Van Fleet Circle Suite 180",
@@ -89,7 +105,7 @@ BRANCH_VENUES = {
         "zip": "30360",
         "venue_type": "library",
     },
-    "dunwoody library": {
+    "dunwoody": {
         "name": "Dunwoody Library",
         "slug": "dunwoody-library",
         "address": "5339 Chamblee-Dunwoody Road",
@@ -98,7 +114,7 @@ BRANCH_VENUES = {
         "zip": "30338",
         "venue_type": "library",
     },
-    "embry hills library": {
+    "embry hills": {
         "name": "Embry Hills Library",
         "slug": "embry-hills-library",
         "address": "3733 Chamblee-Tucker Road",
@@ -107,7 +123,7 @@ BRANCH_VENUES = {
         "zip": "30341",
         "venue_type": "library",
     },
-    "flat shoals library": {
+    "flat shoals": {
         "name": "Flat Shoals Library",
         "slug": "flat-shoals-library",
         "address": "4022 Flat Shoals Parkway",
@@ -116,7 +132,7 @@ BRANCH_VENUES = {
         "zip": "30034",
         "venue_type": "library",
     },
-    "gresham library": {
+    "gresham": {
         "name": "Gresham Library",
         "slug": "gresham-library",
         "address": "2418 Gresham Road SE",
@@ -125,7 +141,7 @@ BRANCH_VENUES = {
         "zip": "30316",
         "venue_type": "library",
     },
-    "hairston crossing library": {
+    "hairston": {
         "name": "Hairston Crossing Library",
         "slug": "hairston-crossing-library",
         "address": "4911 Redan Road",
@@ -134,7 +150,7 @@ BRANCH_VENUES = {
         "zip": "30088",
         "venue_type": "library",
     },
-    "lithonia davidson library": {
+    "lithonia": {
         "name": "Lithonia-Davidson Library",
         "slug": "lithonia-davidson-library",
         "address": "6821 Church Street",
@@ -143,7 +159,7 @@ BRANCH_VENUES = {
         "zip": "30058",
         "venue_type": "library",
     },
-    "northlake barbara loar library": {
+    "northlake": {
         "name": "Northlake-Barbara Loar Library",
         "slug": "northlake-barbara-loar-library",
         "address": "3772 LaVista Road",
@@ -152,7 +168,7 @@ BRANCH_VENUES = {
         "zip": "30084",
         "venue_type": "library",
     },
-    "redan trotti library": {
+    "redan": {
         "name": "Redan-Trotti Library",
         "slug": "redan-trotti-library",
         "address": "1569 Wellborn Road",
@@ -161,7 +177,7 @@ BRANCH_VENUES = {
         "zip": "30058",
         "venue_type": "library",
     },
-    "salem panola library": {
+    "salem": {
         "name": "Salem-Panola Library",
         "slug": "salem-panola-library",
         "address": "5137 Salem Road",
@@ -170,7 +186,7 @@ BRANCH_VENUES = {
         "zip": "30038",
         "venue_type": "library",
     },
-    "scott candler library": {
+    "scott candler": {
         "name": "Scott Candler Library",
         "slug": "scott-candler-library",
         "address": "1917 Candler Road",
@@ -179,7 +195,7 @@ BRANCH_VENUES = {
         "zip": "30032",
         "venue_type": "library",
     },
-    "scottdale tobie grant homework center": {
+    "scottdale": {
         "name": "Scottdale-Tobie Grant Homework Center",
         "slug": "scottdale-tobie-grant-homework-center",
         "address": "593 Parkdale Drive",
@@ -188,7 +204,7 @@ BRANCH_VENUES = {
         "zip": "30079",
         "venue_type": "library",
     },
-    "stone mountain sue kellogg library": {
+    "stone mountain": {
         "name": "Stone Mountain-Sue Kellogg Library",
         "slug": "stone-mountain-sue-kellogg-library",
         "address": "952 Leon Street",
@@ -197,7 +213,7 @@ BRANCH_VENUES = {
         "zip": "30083",
         "venue_type": "library",
     },
-    "stonecrest library": {
+    "stonecrest": {
         "name": "Stonecrest Library",
         "slug": "stonecrest-library",
         "address": "3123 Klondike Road",
@@ -206,7 +222,7 @@ BRANCH_VENUES = {
         "zip": "30038",
         "venue_type": "library",
     },
-    "toco hill avis g williams library": {
+    "toco hill": {
         "name": "Toco Hill-Avis G. Williams Library",
         "slug": "toco-hill-avis-g-williams-library",
         "address": "1282 McConnell Drive",
@@ -215,7 +231,7 @@ BRANCH_VENUES = {
         "zip": "30033",
         "venue_type": "library",
     },
-    "tucker reid h cofer library": {
+    "tucker": {
         "name": "Tucker-Reid H. Cofer Library",
         "slug": "tucker-reid-h-cofer-library",
         "address": "5234 LaVista Road",
@@ -224,13 +240,20 @@ BRANCH_VENUES = {
         "zip": "30084",
         "venue_type": "library",
     },
-    "wesley chapel william c brown library": {
+    "wesley chapel": {
         "name": "Wesley Chapel-William C. Brown Library",
         "slug": "wesley-chapel-william-c-brown-library",
         "address": "2861 Wesley Chapel Road",
         "city": "Decatur",
         "state": "GA",
         "zip": "30034",
+        "venue_type": "library",
+    },
+    "virtual": {
+        "name": "DeKalb County Library (Virtual)",
+        "slug": "dekalb-county-library-virtual",
+        "city": "Decatur",
+        "state": "GA",
         "venue_type": "library",
     },
 }
@@ -308,7 +331,7 @@ def _build_branch_destination_envelope(venue_id: int, venue_data: dict) -> Typed
             "title": "Storytime and family programs",
             "feature_type": "experience",
             "description": f"{branch_name} regularly hosts free storytimes, reading events, and family-friendly branch programming.",
-            "url": EVENTS_URL,
+            "url": EVENTS_PAGE,
             "price_note": "Most branch programs are free; confirm event details on the official calendar.",
             "is_free": True,
             "sort_order": 15,
@@ -320,234 +343,305 @@ def _build_branch_destination_envelope(venue_id: int, venue_data: dict) -> Typed
 
 def find_branch_venue(location_text: str) -> dict:
     """Find matching branch venue from location text."""
-    location_lower = re.sub(r"[^a-z0-9]+", " ", location_text.lower()).strip()
+    if not location_text:
+        return DEFAULT_VENUE
+    location_lower = re.sub(r"[^a-z0-9 ]+", " ", location_text.lower()).strip()
     for key, venue in BRANCH_VENUES.items():
         if key in location_lower:
             return venue
     return DEFAULT_VENUE
 
 
-def parse_date(date_str: str) -> Optional[str]:
-    """Parse date from various formats."""
-    for fmt in ["%Y-%m-%d", "%B %d, %Y", "%b %d, %Y", "%m/%d/%Y", "%A, %B %d, %Y"]:
-        try:
-            dt = datetime.strptime(date_str.strip(), fmt)
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            continue
-
-    # Try partial formats (no year in source text)
-    current_year = datetime.now().year
-    for fmt in ["%B %d", "%b %d"]:
-        try:
-            dt = datetime.strptime(date_str.strip(), fmt)
-            dt = dt.replace(year=current_year)
-            # Only bump to next year if >60 days in the past
-            # (avoids pushing recent-past events to wrong year)
-            if (datetime.now() - dt).days > 60:
-                dt = dt.replace(year=current_year + 1)
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            continue
-
-    return None
-
-
-def parse_time(time_str: str) -> Optional[str]:
-    """Parse time from various formats."""
+def parse_communico_datetime(raw: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Parse a Communico datetime string.
+    Format: "2026-03-22 14:30:00" or "2026-03-22 00:00:00"
+    Returns (date, time) or (None, None) on failure.
+    Midnight is treated as no time (all-day or unknown).
+    """
+    if not raw:
+        return None, None
     try:
-        match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_str, re.IGNORECASE)
-        if match:
-            hour, minute, period = match.groups()
-            hour = int(hour)
-            if period.lower() == "pm" and hour != 12:
-                hour += 12
-            elif period.lower() == "am" and hour == 12:
-                hour = 0
-            return f"{hour:02d}:{minute}"
-    except Exception:
-        pass
-    return None
+        dt = datetime.strptime(raw[:19], "%Y-%m-%d %H:%M:%S")
+        date = dt.strftime("%Y-%m-%d")
+        time = None if (dt.hour == 0 and dt.minute == 0) else dt.strftime("%H:%M")
+        return date, time
+    except Exception as e:
+        logger.warning(f"Failed to parse Communico datetime '{raw}': {e}")
+        return None, None
+
+
+def derive_age_tags_and_category(ages_array: list) -> tuple[list[str], bool]:
+    """
+    Derive age-band tags and family category flag from Communico agesArray.
+    e.g. ["Teens"], ["Children"], ["Toddlers", "Babies"]
+    """
+    COMMUNICO_AGE_MAP = {
+        "babies": ["infant", "kids", "family-friendly"],
+        "toddlers": ["toddler", "kids", "family-friendly"],
+        "preschool": ["preschool", "kids", "family-friendly"],
+        "children": ["elementary", "kids", "family-friendly"],
+        "elementary": ["elementary", "kids", "family-friendly"],
+        "tweens": ["teen", "kids", "family-friendly"],
+        "teens": ["teen"],
+        "young adults": ["teen"],
+        "adults": ["adults"],
+        "seniors": ["adults", "seniors"],
+        "all ages": ["family-friendly"],
+        "families": ["family-friendly", "kids"],
+        "family": ["family-friendly", "kids"],
+    }
+    FAMILY_AUDIENCES = {
+        "babies",
+        "toddlers",
+        "preschool",
+        "children",
+        "elementary",
+        "tweens",
+        "families",
+        "family",
+        "all ages",
+    }
+
+    tags: list[str] = []
+    is_family = False
+
+    for label in ages_array:
+        label_lower = (label or "").lower().strip()
+        for key, tag_list in COMMUNICO_AGE_MAP.items():
+            if key in label_lower:
+                for t in tag_list:
+                    if t not in tags:
+                        tags.append(t)
+                if key in FAMILY_AUDIENCES:
+                    is_family = True
+                break
+
+    return tags, is_family
+
+
+def determine_category(title: str, description: str = "") -> str:
+    """Determine event category from title and description."""
+    CATEGORY_MAP = {
+        "book": "words",
+        "storytime": "words",
+        "story time": "words",
+        "author": "words",
+        "writing": "words",
+        "reading": "words",
+        "poetry": "words",
+        "computer": "learning",
+        "technology": "learning",
+        "coding": "learning",
+        "esl": "learning",
+        "class": "learning",
+        "career": "learning",
+        "music": "music",
+        "film": "film",
+        "movie": "film",
+        "craft": "art",
+        "art": "art",
+        "fitness": "fitness",
+        "yoga": "fitness",
+        "wellness": "fitness",
+        "game": "play",
+        "gaming": "play",
+    }
+    text = f"{title} {description}".lower()
+    for keyword, category in CATEGORY_MAP.items():
+        if keyword in text:
+            return category
+    return "words"
+
+
+def fetch_events(start_date: str, days: int) -> list[dict]:
+    """
+    Call the Communico eeventcaldata API and return the raw event list.
+
+    The API accepts a JSON-encoded 'req' parameter with:
+      - date: start date in YYYY-MM-DD format
+      - days: number of days to fetch (e.g. 90)
+      - private: False to exclude private events
+      - search: optional keyword filter
+    """
+    options = {
+        "date": start_date,
+        "days": days,
+        "private": False,
+        "search": "",
+    }
+    url = f"{EVENTS_API}?event_type=&req={quote(json.dumps(options))}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+        "Referer": EVENTS_PAGE,
+    }
+
+    try:
+        resp = requests.get(url, headers=headers, timeout=45)
+        resp.raise_for_status()
+        data = resp.json()
+        if not isinstance(data, list):
+            logger.error(f"DeKalb Library API returned unexpected type: {type(data)}")
+            return []
+        logger.info(f"DeKalb Library API returned {len(data)} events")
+        return data
+    except Exception as e:
+        logger.error(f"DeKalb Library API fetch failed: {e}")
+        return []
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl DeKalb County Library events using Playwright."""
+    """Crawl DeKalb County Library events via the Communico API."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-            )
-            page = context.new_page()
+    today = datetime.now()
+    start_date = today.strftime("%Y-%m-%d")
 
-            logger.info(f"Fetching DeKalb Library events: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(4000)
+    logger.info(f"DeKalb Library: fetching {CRAWL_DAYS} days from {start_date}")
+    raw_events = fetch_events(start_date, CRAWL_DAYS)
+    events_found = len(raw_events)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+    enriched_venue_ids: set[int] = set()
 
-            # Get full page text and parse events
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+    for ev in raw_events:
+        try:
+            title = (ev.get("title") or "").strip()
+            if not title:
+                continue
 
-            # Find event links for URLs
-            event_links = page.query_selector_all("a[href*='/event/']")
-            event_urls = {}
-            for link in event_links:
-                title = link.inner_text().strip()
-                href = link.get_attribute("href")
-                if title and href:
-                    event_urls[title] = href
+            # Skip cancelled events (changed=2 means cancelled in Communico)
+            if ev.get("changed") and int(ev.get("changed") or 0) == 2:
+                logger.debug(f"Skipping cancelled event: {title}")
+                continue
 
-            logger.info(f"Found {len(event_urls)} unique event titles")
+            # Parse start date/time
+            start_date_str, start_time = parse_communico_datetime(ev.get("event_start", ""))
+            if not start_date_str:
+                logger.warning(f"Event '{title}' has no parseable start date, skipping")
+                continue
 
-            seen_titles = set()
-            current_year = datetime.now().year
-            i = 0
+            # Skip past events
+            try:
+                if datetime.strptime(start_date_str, "%Y-%m-%d").date() < today.date():
+                    continue
+            except ValueError:
+                continue
 
-            while i < len(lines):
-                line = lines[i]
+            # Parse end time
+            _, end_time = parse_communico_datetime(ev.get("event_end", ""))
 
-                # Look for event titles (lines that match our URL dict)
-                if line in event_urls and line not in seen_titles:
-                    title = line
-                    seen_titles.add(title)
+            # Resolve venue from library/location field
+            library_name = ev.get("library") or ev.get("location") or ""
+            venue_data = find_branch_venue(library_name)
+            venue_id = get_or_create_venue(venue_data)
 
-                    # Next line should have date/time: "Wednesday, January 14: 9:30am - 10:00am"
-                    date_line = lines[i + 1] if i + 1 < len(lines) else ""
-                    location_line = lines[i + 2] if i + 2 < len(lines) else ""
+            if venue_id and venue_id not in enriched_venue_ids:
+                persist_typed_entity_envelope(
+                    _build_branch_destination_envelope(venue_id, venue_data)
+                )
+                enriched_venue_ids.add(venue_id)
 
-                    # Parse date - format: "Wednesday, January 14: 9:30am"
-                    date_match = re.search(r"(\w+)\s+(\d{1,2}):", date_line)
-                    if not date_match:
-                        i += 1
-                        continue
+            # Event URL
+            event_url = ev.get("url") or EVENTS_PAGE
 
-                    month_str, day = date_match.groups()
-                    start_date = parse_date(f"{month_str} {day}")
-                    if not start_date:
-                        i += 1
-                        continue
+            # Description - prefer long_description stripped of HTML
+            description = (ev.get("description") or "").strip()
+            long_desc = (ev.get("long_description") or "").strip()
+            if long_desc and len(long_desc) > len(description):
+                from bs4 import BeautifulSoup
 
-                    # Parse time
-                    time_match = re.search(
-                        r"(\d{1,2}:\d{2}\s*(am|pm))", date_line, re.I
-                    )
-                    start_time = parse_time(time_match.group()) if time_match else None
+                description = BeautifulSoup(long_desc, "html.parser").get_text(
+                    separator=" ", strip=True
+                )
+                description = re.sub(r"\s+", " ", description).strip()[:5000]
 
-                    # Get location from the line after date/time
-                    venue_data = find_branch_venue(location_line)
-                    venue_id = get_or_create_venue(venue_data)
-                    persist_typed_entity_envelope(
-                        _build_branch_destination_envelope(venue_id, venue_data)
-                    )
+            # Age tags and category
+            ages_array = ev.get("agesArray") or []
+            age_tags, is_family_audience = derive_age_tags_and_category(ages_array)
+            category = determine_category(title, description)
+            if is_family_audience:
+                category = "family"
 
-                    href = event_urls.get(title, "")
+            # Subcategory from title keywords
+            title_lower = title.lower()
+            if "book club" in title_lower or "reading group" in title_lower:
+                subcategory = "words.bookclub"
+            elif "story" in title_lower or "storytime" in title_lower:
+                subcategory = "words.storytelling"
+            elif "author" in title_lower or "signing" in title_lower:
+                subcategory = "words.reading"
+            elif "poetry" in title_lower:
+                subcategory = "words.poetry"
+            elif "writing" in title_lower or "workshop" in title_lower:
+                subcategory = "words.workshop"
+            else:
+                subcategory = None
 
-                    events_found += 1
+            base_tags = ["library", "free", "dekalb"]
+            tags = base_tags + [t for t in age_tags if t not in base_tags]
 
-                    content_hash = generate_content_hash(
-                        title, venue_data["name"], start_date
-                    )
+            # Registration check
+            has_registration = bool(ev.get("allow_reg") and str(ev.get("allow_reg")) != "0")
+            ticket_url = ev.get("reg_url") if (has_registration and ev.get("reg_url")) else None
 
+            # Image
+            image_url = None
+            if ev.get("event_image"):
+                image_url = f"{BASE_URL}/images/events/{ev['event_image']}"
 
-                    # Determine subcategory and age-band tags from title keywords
-                    title_lower = title.lower()
-                    if "book club" in title_lower or "reading group" in title_lower:
-                        subcategory = "words.bookclub"
-                    elif "story" in title_lower or "storytime" in title_lower:
-                        subcategory = "words.storytelling"
-                    elif "author" in title_lower or "signing" in title_lower:
-                        subcategory = "words.reading"
-                    elif "poetry" in title_lower:
-                        subcategory = "words.poetry"
-                    elif "writing" in title_lower or "workshop" in title_lower:
-                        subcategory = "words.workshop"
-                    else:
-                        subcategory = "words.lecture"
+            content_hash = generate_content_hash(title, venue_data["name"], start_date_str)
 
-                    # Infer age-band tags and category from title keywords
-                    tags = ["library", "free", "dekalb"]
-                    category = "words"
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title,
+                "description": description if description else None,
+                "start_date": start_date_str,
+                "start_time": start_time,
+                "end_date": None,
+                "end_time": end_time,
+                "is_all_day": False,
+                "category": category,
+                "subcategory": subcategory,
+                "tags": tags,
+                "price_min": None,
+                "price_max": None,
+                "price_note": None,
+                "is_free": True,
+                "source_url": event_url,
+                "ticket_url": ticket_url,
+                "image_url": image_url,
+                "raw_text": None,
+                "extraction_confidence": 0.90,
+                "is_recurring": bool(ev.get("recurring_id")),
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
 
-                    baby_words = ["baby", "infant", "toddler", "preschool", "birth to five"]
-                    child_words = ["storytime", "story time", "children", "kids", "elementary"]
-                    teen_words = ["teen", "tween", "young adult", "ya "]
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
-                    if any(w in title_lower for w in baby_words):
-                        tags += ["infant", "toddler", "preschool", "kids", "family-friendly"]
-                        category = "family"
-                    elif any(w in title_lower for w in child_words):
-                        tags += ["elementary", "kids", "family-friendly"]
-                        category = "family"
-                    elif any(w in title_lower for w in teen_words):
-                        tags.append("teen")
-                    elif "adult" in title_lower and "young adult" not in title_lower:
-                        tags.append("adults")
+            try:
+                insert_event(event_record)
+                events_new += 1
+                logger.debug(f"Added: {title} on {start_date_str} at {venue_data['name']}")
+            except Exception as e:
+                logger.error(f"Failed to insert '{title}': {e}")
 
-                    event_url = (
-                        f"{BASE_URL}{href}"
-                        if href and href.startswith("/")
-                        else (href or EVENTS_URL)
-                    )
+        except Exception as e:
+            logger.error(f"Failed to process DeKalb event '{ev.get('title', 'unknown')}': {e}")
+            continue
 
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": None,
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": category,
-                        "subcategory": subcategory,
-                        "tags": tags,
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": True,
-                        "source_url": event_url,
-                        "ticket_url": None,
-                        "image_url": image_map.get(title),
-                        "raw_text": None,
-                        "extraction_confidence": 0.8,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            browser.close()
-
-        logger.info(
-            f"DeKalb Library crawl complete: {events_found} found, {events_new} new"
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to crawl DeKalb Library: {e}")
-        raise
+    logger.info(
+        f"DeKalb Library crawl complete: {events_found} found, "
+        f"{events_new} new, {events_updated} updated"
+    )
 
     return events_found, events_new, events_updated

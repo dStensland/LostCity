@@ -1,28 +1,36 @@
 """
 Crawler for Gwinnett County Public Library System events.
-Uses Communico events platform (similar to DeKalb Library).
+
+Uses the Communico events platform API directly (same platform as DeKalb Library).
 Covers all 15 library branches with storytimes, book clubs, educational programs, and more.
+
+Previously used Playwright to load the list view page with lazy-loaded content via
+scroll events. The default page only rendered ~7 days of events. The underlying
+Communico API (/eeventcaldata) accepts explicit date + days parameters, returning
+up to 90 days of events in a single API call without JavaScript rendering.
 """
 
 from __future__ import annotations
 
-import re
+import json
 import logging
-from datetime import datetime
+import re
+import requests
+from datetime import datetime, timedelta
 from typing import Optional
-
-from playwright.sync_api import sync_playwright
+from urllib.parse import quote
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://gwinnettpl.libnet.info"
-EVENTS_URL = f"{BASE_URL}/events?v=list"
+EVENTS_API = f"{BASE_URL}/eeventcaldata"
+EVENTS_PAGE = f"{BASE_URL}/events?v=list"
+CRAWL_DAYS = 90
 
 # Map of Gwinnett County Public Library branches
 BRANCH_VENUES = {
@@ -152,13 +160,11 @@ BRANCH_VENUES = {
         "zip": "30024",
         "venue_type": "library",
     },
-    "five forks": {
-        "name": "Five Forks Library",
-        "slug": "five-forks-library",
-        "address": "2780 Five Forks Trickum Rd SW",
+    "virtual": {
+        "name": "Gwinnett County Public Library (Virtual)",
+        "slug": "gwinnett-county-public-library-virtual",
         "city": "Lawrenceville",
         "state": "GA",
-        "zip": "30044",
         "venue_type": "library",
     },
 }
@@ -233,7 +239,7 @@ def _build_branch_destination_envelope(venue_id: int, venue_data: dict) -> Typed
             "title": "Storytime and family programs",
             "feature_type": "experience",
             "description": f"{branch_name} regularly hosts free storytimes, reading events, and family-friendly branch programming.",
-            "url": EVENTS_URL,
+            "url": EVENTS_PAGE,
             "price_note": "Most branch programs are free; confirm event details on the official calendar.",
             "is_free": True,
             "sort_order": 15,
@@ -247,7 +253,6 @@ def find_branch_venue(location_text: str) -> dict:
     """Find matching branch venue from location text."""
     if not location_text:
         return DEFAULT_VENUE
-
     location_lower = location_text.lower()
     for key, venue in BRANCH_VENUES.items():
         if key in location_lower:
@@ -255,89 +260,106 @@ def find_branch_venue(location_text: str) -> dict:
     return DEFAULT_VENUE
 
 
-def parse_date(date_str: str) -> Optional[str]:
-    """Parse date from various formats."""
-    if not date_str:
-        return None
-
-    for fmt in ["%Y-%m-%d", "%B %d, %Y", "%b %d, %Y", "%m/%d/%Y", "%A, %B %d, %Y"]:
-        try:
-            dt = datetime.strptime(date_str.strip(), fmt)
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            continue
-
-    # Try partial formats (month day without year)
-    current_year = datetime.now().year
-    today = datetime.now().date()
-    for fmt in ["%B %d", "%b %d"]:
-        try:
-            dt = datetime.strptime(date_str.strip(), fmt)
-            dt = dt.replace(year=current_year)
-            if dt.date() < today:
-                dt = dt.replace(year=current_year + 1)
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            continue
-
-    return None
-
-
-def parse_time(time_str: str) -> Optional[str]:
-    """Parse time from various formats like '9:30am' or '2:00 PM'."""
-    if not time_str:
-        return None
-
+def parse_communico_datetime(raw: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Parse a Communico datetime string.
+    Format: "2026-03-22 14:30:00" or "2026-03-22 00:00:00"
+    Returns (date, time) or (None, None) on failure.
+    Midnight is treated as no time (all-day or unknown).
+    """
+    if not raw:
+        return None, None
     try:
-        match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_str, re.IGNORECASE)
-        if match:
-            hour, minute, period = match.groups()
-            hour = int(hour)
-            if period.lower() == "pm" and hour != 12:
-                hour += 12
-            elif period.lower() == "am" and hour == 12:
-                hour = 0
-            return f"{hour:02d}:{minute}"
-    except Exception:
-        pass
-    return None
+        dt = datetime.strptime(raw[:19], "%Y-%m-%d %H:%M:%S")
+        date = dt.strftime("%Y-%m-%d")
+        time = None if (dt.hour == 0 and dt.minute == 0) else dt.strftime("%H:%M")
+        return date, time
+    except Exception as e:
+        logger.warning(f"Failed to parse Communico datetime '{raw}': {e}")
+        return None, None
 
 
-def determine_category_and_tags(title: str, description: str = "") -> tuple[str, str, list]:
-    """Determine category, subcategory, and tags from title and description."""
+def determine_category_and_tags(
+    title: str,
+    description: str = "",
+    ages_array: Optional[list] = None,
+) -> tuple[str, Optional[str], list]:
+    """Determine category, subcategory, and tags from title, description, and ages array."""
+    ages_array = ages_array or []
     text = f"{title} {description}".lower()
 
-    tags = ["library", "free", "gwinnett"]
+    base_tags = ["library", "free", "gwinnett"]
 
-    # Add age-specific tags with granular age-band coverage
-    baby_words = ["baby", "infant", "toddler", "preschool", "birth to five"]
-    child_words = ["storytime", "story time", "children", "kids", "elementary"]
-    teen_words = ["teen", "tween", "young adult", "ya "]
+    # Communico age label to LostCity tag mapping
+    COMMUNICO_AGE_MAP = {
+        "babies": ["infant", "kids", "family-friendly"],
+        "toddlers": ["toddler", "kids", "family-friendly"],
+        "preschool": ["preschool", "kids", "family-friendly"],
+        "children": ["elementary", "kids", "family-friendly"],
+        "elementary": ["elementary", "kids", "family-friendly"],
+        "tweens": ["teen", "kids", "family-friendly"],
+        "teens": ["teen"],
+        "young adults": ["teen"],
+        "adults": ["adults"],
+        "seniors": ["adults", "seniors"],
+        "all ages": ["family-friendly"],
+        "families": ["family-friendly", "kids"],
+        "family": ["family-friendly", "kids"],
+    }
+    FAMILY_AUDIENCES = {
+        "babies",
+        "toddlers",
+        "preschool",
+        "children",
+        "elementary",
+        "tweens",
+        "families",
+        "family",
+        "all ages",
+    }
 
+    age_tags: list[str] = []
     is_family_audience = False
 
-    if any(word in text for word in baby_words):
-        # Add granular infant/toddler/preschool tags for birth-to-five content
-        if "baby" in text or "infant" in text:
-            tags.append("infant")
-        if "toddler" in text:
-            tags.append("toddler")
-        if "preschool" in text or "birth to five" in text:
-            tags.append("preschool")
-        tags += ["kids", "family-friendly"]
-        is_family_audience = True
-    elif any(word in text for word in child_words):
-        tags += ["elementary", "kids", "family-friendly"]
-        is_family_audience = True
-    elif any(word in text for word in teen_words):
-        tags.append("teen")
-    elif "adult" in text and "young adult" not in text:
-        tags.append("adults")
-    else:
-        tags.append("family-friendly")
+    for label in ages_array:
+        label_lower = (label or "").lower().strip()
+        for key, tag_list in COMMUNICO_AGE_MAP.items():
+            if key in label_lower:
+                for t in tag_list:
+                    if t not in age_tags:
+                        age_tags.append(t)
+                if key in FAMILY_AUDIENCES:
+                    is_family_audience = True
+                break
 
-    # Determine category and subcategory
-    # Override to "family" when child/family audience is detected
+    # Fall back to title/description keyword matching for age inference
+    if not age_tags:
+        baby_words = ["baby", "infant", "toddler", "preschool", "birth to five"]
+        child_words = ["storytime", "story time", "children", "kids", "elementary"]
+        teen_words = ["teen", "tween", "young adult", "ya "]
+
+        if any(w in text for w in baby_words):
+            if "baby" in text or "infant" in text:
+                age_tags.append("infant")
+            if "toddler" in text:
+                age_tags.append("toddler")
+            if "preschool" in text or "birth to five" in text:
+                age_tags.append("preschool")
+            age_tags += ["kids", "family-friendly"]
+            is_family_audience = True
+        elif any(w in text for w in child_words):
+            age_tags += ["elementary", "kids", "family-friendly"]
+            is_family_audience = True
+        elif any(w in text for w in teen_words):
+            age_tags.append("teen")
+        elif "adult" in text and "young adult" not in text:
+            age_tags.append("adults")
+        else:
+            age_tags.append("family-friendly")
+
+    tags = base_tags + [t for t in age_tags if t not in base_tags]
+
+    # Category and subcategory
     if "book club" in text or "reading group" in text or "book discussion" in text:
         cat = "family" if is_family_audience else "words"
         return cat, "words.bookclub", tags
@@ -352,206 +374,208 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     elif "writing" in text or "writer" in text:
         cat = "family" if is_family_audience else "words"
         return cat, "words.workshop", tags
-    elif any(word in text for word in ["computer", "technology", "coding", "tech", "digital"]):
+    elif any(w in text for w in ["computer", "technology", "coding", "tech", "digital"]):
         tags.append("educational")
         cat = "family" if is_family_audience else "learning"
         return cat, None, tags
-    elif any(word in text for word in ["craft", "art", "make", "create", "diy"]):
+    elif any(w in text for w in ["craft", "art", "make", "create", "diy"]):
         tags.append("hands-on")
         cat = "family" if is_family_audience else "art"
         return cat, None, tags
-    elif any(word in text for word in ["music", "concert", "sing"]):
+    elif any(w in text for w in ["music", "concert", "sing"]):
         cat = "family" if is_family_audience else "music"
         return cat, None, tags
-    elif any(word in text for word in ["film", "movie", "cinema"]):
+    elif any(w in text for w in ["film", "movie", "cinema"]):
         cat = "family" if is_family_audience else "film"
         return cat, None, tags
-    elif any(word in text for word in ["game", "gaming", "play"]):
+    elif any(w in text for w in ["game", "gaming", "play"]):
         tags.append("play")
         cat = "family" if is_family_audience else "play"
         return cat, None, tags
-    elif any(word in text for word in ["fitness", "yoga", "exercise", "wellness"]):
+    elif any(w in text for w in ["fitness", "yoga", "exercise", "wellness"]):
         cat = "family" if is_family_audience else "fitness"
         return cat, None, tags
     else:
-        # Default to words/lecture for general library programs
         tags.append("educational")
         cat = "family" if is_family_audience else "words"
         return cat, "words.lecture", tags
 
 
+def fetch_events(start_date: str, days: int) -> list[dict]:
+    """
+    Call the Communico eeventcaldata API and return the raw event list.
+
+    The API accepts a JSON-encoded 'req' parameter with:
+      - date: start date in YYYY-MM-DD format
+      - days: number of days to fetch (e.g. 90)
+      - private: False to exclude private events
+      - search: optional keyword filter
+    """
+    options = {
+        "date": start_date,
+        "days": days,
+        "private": False,
+        "search": "",
+    }
+    url = f"{EVENTS_API}?event_type=&req={quote(json.dumps(options))}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+        "Referer": EVENTS_PAGE,
+    }
+
+    try:
+        resp = requests.get(url, headers=headers, timeout=45)
+        resp.raise_for_status()
+        data = resp.json()
+        if not isinstance(data, list):
+            logger.error(f"Gwinnett Library API returned unexpected type: {type(data)}")
+            return []
+        logger.info(f"Gwinnett Library API returned {len(data)} events")
+        return data
+    except Exception as e:
+        logger.error(f"Gwinnett Library API fetch failed: {e}")
+        return []
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Gwinnett County Public Library events using Playwright."""
+    """Crawl Gwinnett County Public Library events via the Communico API."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    today = datetime.now()
+    start_date = today.strftime("%Y-%m-%d")
+
+    logger.info(f"Gwinnett Library: fetching {CRAWL_DAYS} days from {start_date}")
+    raw_events = fetch_events(start_date, CRAWL_DAYS)
+    events_found = len(raw_events)
+
+    enriched_venue_ids: set[int] = set()
+
+    for ev in raw_events:
+        try:
+            title = (ev.get("title") or "").strip()
+            if not title:
+                continue
+
+            # Skip cancelled events (changed=2 means cancelled in Communico)
+            if ev.get("changed") and int(ev.get("changed") or 0) == 2:
+                logger.debug(f"Skipping cancelled event: {title}")
+                continue
+
+            # Parse start date/time
+            start_date_str, start_time = parse_communico_datetime(ev.get("event_start", ""))
+            if not start_date_str:
+                logger.warning(f"Event '{title}' has no parseable start date, skipping")
+                continue
+
+            # Skip past events
+            try:
+                if datetime.strptime(start_date_str, "%Y-%m-%d").date() < today.date():
+                    continue
+            except ValueError:
+                continue
+
+            # Parse end time
+            _, end_time = parse_communico_datetime(ev.get("event_end", ""))
+
+            # Resolve venue from library/location field
+            library_name = ev.get("library") or ev.get("location") or ""
+            venue_data = find_branch_venue(library_name)
+            venue_id = get_or_create_venue(venue_data)
+
+            if venue_id and venue_id not in enriched_venue_ids:
+                persist_result = persist_typed_entity_envelope(
+                    _build_branch_destination_envelope(venue_id, venue_data)
+                )
+                if persist_result.skipped:
+                    logger.warning(
+                        "Gwinnett Library: skipped typed destination writes for %s: %s",
+                        venue_data["name"],
+                        persist_result.skipped,
+                    )
+                enriched_venue_ids.add(venue_id)
+
+            # Event URL
+            event_url = ev.get("url") or EVENTS_PAGE
+
+            # Description - prefer long_description stripped of HTML
+            description = (ev.get("description") or "").strip()
+            long_desc = (ev.get("long_description") or "").strip()
+            if long_desc and len(long_desc) > len(description):
+                from bs4 import BeautifulSoup
+
+                description = BeautifulSoup(long_desc, "html.parser").get_text(
+                    separator=" ", strip=True
+                )
+                description = re.sub(r"\s+", " ", description).strip()[:5000]
+
+            # Category, subcategory, and tags using ages from API + keyword fallback
+            ages_array = ev.get("agesArray") or []
+            category, subcategory, tags = determine_category_and_tags(
+                title, description, ages_array
             )
-            page = context.new_page()
 
-            logger.info(f"Fetching Gwinnett Library events: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(4000)
+            # Registration check
+            has_registration = bool(ev.get("allow_reg") and str(ev.get("allow_reg")) != "0")
+            ticket_url = ev.get("reg_url") if (has_registration and ev.get("reg_url")) else None
 
-            # Scroll down to load more events (Communico lazy-loads content)
-            for _ in range(3):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+            # Image
+            image_url = None
+            if ev.get("event_image"):
+                image_url = f"{BASE_URL}/images/events/{ev['event_image']}"
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+            content_hash = generate_content_hash(title, venue_data["name"], start_date_str)
 
-            # Get full page text and parse events
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title,
+                "description": description if description else None,
+                "start_date": start_date_str,
+                "start_time": start_time,
+                "end_date": None,
+                "end_time": end_time,
+                "is_all_day": False,
+                "category": category,
+                "subcategory": subcategory,
+                "tags": tags,
+                "price_min": None,
+                "price_max": None,
+                "price_note": None,
+                "is_free": True,
+                "source_url": event_url,
+                "ticket_url": ticket_url,
+                "image_url": image_url,
+                "raw_text": None,
+                "extraction_confidence": 0.88,
+                "is_recurring": bool(ev.get("recurring_id")),
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
 
-            # Find event links for URLs
-            event_links = page.query_selector_all("a[href*='/event/']")
-            event_urls = {}
-            for link in event_links:
-                title = link.inner_text().strip()
-                href = link.get_attribute("href")
-                if title and href:
-                    event_urls[title] = href
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
-            logger.info(f"Found {len(event_urls)} unique event titles")
+            try:
+                insert_event(event_record)
+                events_new += 1
+                logger.debug(f"Added: {title} on {start_date_str} at {venue_data['name']}")
+            except Exception as e:
+                logger.error(f"Failed to insert '{title}': {e}")
 
-            seen_titles = set()
-            i = 0
+        except Exception as e:
+            logger.error(f"Failed to process Gwinnett event '{ev.get('title', 'unknown')}': {e}")
+            continue
 
-            while i < len(lines):
-                line = lines[i]
-
-                # Look for event titles (lines that match our URL dict)
-                if line in event_urls and line not in seen_titles:
-                    title = line
-                    seen_titles.add(title)
-
-                    # Next line should have date/time format like: "Wednesday, January 29: 10:30am - 11:00am"
-                    date_line = lines[i + 1] if i + 1 < len(lines) else ""
-                    location_line = lines[i + 2] if i + 2 < len(lines) else ""
-
-                    # Parse date - format variations:
-                    # "Wednesday, January 14: 9:30am" or "January 14: 9:30am"
-                    date_match = re.search(r"(\w+)\s+(\d{1,2}):", date_line)
-                    if not date_match:
-                        i += 1
-                        continue
-
-                    month_str, day = date_match.groups()
-                    start_date = parse_date(f"{month_str} {day}")
-                    if not start_date:
-                        i += 1
-                        continue
-
-                    # Skip past events
-                    try:
-                        event_date = datetime.strptime(start_date, "%Y-%m-%d")
-                        if event_date.date() < datetime.now().date():
-                            i += 1
-                            continue
-                    except ValueError:
-                        i += 1
-                        continue
-
-                    # Parse time - format: "9:30am - 10:00am" or "2:00 PM"
-                    time_match = re.search(r"(\d{1,2}:\d{2}\s*(am|pm))", date_line, re.I)
-                    start_time = parse_time(time_match.group()) if time_match else None
-
-                    # Parse end time if present
-                    end_time_match = re.search(
-                        r"-\s*(\d{1,2}:\d{2}\s*(am|pm))", date_line, re.I
-                    )
-                    end_time = parse_time(end_time_match.group(1)) if end_time_match else None
-
-                    # Get location from the line after date/time
-                    venue_data = find_branch_venue(location_line)
-                    venue_id = get_or_create_venue(venue_data)
-                    persist_result = persist_typed_entity_envelope(
-                        _build_branch_destination_envelope(venue_id, venue_data)
-                    )
-                    if persist_result.skipped:
-                        logger.warning(
-                            "Gwinnett Library: skipped typed destination writes for %s: %s",
-                            venue_data["name"],
-                            persist_result.skipped,
-                        )
-
-                    href = event_urls.get(title, "")
-
-                    events_found += 1
-
-                    content_hash = generate_content_hash(
-                        title, venue_data["name"], start_date
-                    )
-
-
-                    # Determine category and tags
-                    category, subcategory, tags = determine_category_and_tags(title)
-
-                    event_url = (
-                        f"{BASE_URL}{href}"
-                        if href and href.startswith("/")
-                        else (href or EVENTS_URL)
-                    )
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": None,
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": end_time,
-                        "is_all_day": False,
-                        "category": category,
-                        "subcategory": subcategory,
-                        "tags": tags,
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": True,
-                        "source_url": event_url,
-                        "ticket_url": None,
-                        "image_url": image_map.get(title),
-                        "raw_text": None,
-                        "extraction_confidence": 0.85,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date} at {venue_data['name']}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            browser.close()
-
-        logger.info(
-            f"Gwinnett Library crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to crawl Gwinnett Library: {e}")
-        raise
+    logger.info(
+        f"Gwinnett Library crawl complete: {events_found} found, "
+        f"{events_new} new, {events_updated} updated"
+    )
 
     return events_found, events_new, events_updated
