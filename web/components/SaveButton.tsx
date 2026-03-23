@@ -82,7 +82,7 @@ export default function SaveButton({
 
     // Trigger pop animation
     setIsAnimating(true);
-    setTimeout(() => setIsAnimating(false), 200);
+    setTimeout(() => setIsAnimating(false), 300);
 
     // Optimistic update
     setIsSaved(!isSaved);
@@ -180,7 +180,7 @@ export default function SaveButton({
         <span className={`inline-block ${iconSizes[size]} border-2 border-current border-t-transparent rounded-full animate-spin`} />
       ) : (
         <svg
-          className={`${iconSizes[size]} transition-transform duration-200 ${isAnimating ? "scale-125" : "scale-100"}`}
+          className={`${iconSizes[size]} ${isAnimating ? "bookmark-animate" : ""}`}
           fill={isSaved ? "currentColor" : "none"}
           stroke="currentColor"
           viewBox="0 0 24 24"

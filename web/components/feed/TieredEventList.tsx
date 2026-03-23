@@ -245,7 +245,7 @@ export function TieredEventList({
 
       {/* Standard rows */}
       {standardEvents.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 card-stagger">
           {standardEvents.map((event, idx) => (
             <StandardRow
               key={`standard-${event.id}`}

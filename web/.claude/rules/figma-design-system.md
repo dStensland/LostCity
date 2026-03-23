@@ -21,6 +21,7 @@ These rules guide AI coding agents when implementing Figma designs into the Lost
 - **Shared UI components**: `web/components/ui/` — Badge, Button, CountBadge, Dot, DialogFooter, ScrollableRow, NeonSpinner
 - **Detail page components**: `web/components/detail/` — DetailHero, DescriptionTeaser, SocialProofStrip, GenreChip, InfoCard, MetadataGrid, SectionHeader, RelatedSection, DetailStickyBar
 - **Feed components**: `web/components/feed/` — FeedSectionHeader, CompactEventRow, feed section components
+- **Feed tier components**: `web/components/feed/` — HeroCard, StandardRow, TieredEventList, EditorialCallout, PressQuote, SocialProofRow
 - **Filter components**: `web/components/filters/` — FilterChip, SimpleFilterBar, MobileFilterSheet
 - **Card components**: `web/components/cards/` — EventCard, SeriesCard, FestivalCard, VenueCard
 - **Headers**: `web/components/headers/` — PlatformHeader, MinimalHeader
@@ -199,6 +200,9 @@ NEVER: <Image src={dynamicUrl}>  → USE: <SmartImage src={dynamicUrl}>
 NEVER: inline <span>·</span>    → USE: <Dot />
 NEVER: hardcoded hex colors      → USE: CSS variable tokens
 NEVER: new icon packages          → USE: Phosphor Icons
+NEVER: AI-generated editorial     → USE: editorial-templates.ts (template + data)
+NEVER: Show "0 friends going"    → USE: SocialProofRow returns null when empty
+NEVER: Same card for all events  → USE: TieredEventList with card_tier from API
 ```
 
 ## Code Connect Mappings
@@ -214,6 +218,48 @@ These map Figma components to codebase components. When `get_design_context` ret
 | Section Header | `FeedSectionHeader` | `@/components/feed/FeedSectionHeader` |
 | Detail Hero | `DetailHero` | `@/components/detail/DetailHero` |
 | Smart Image | `SmartImage` | `@/components/SmartImage` |
+
+## Feed Tier System
+
+Events are assigned a `card_tier` (hero/featured/standard) by the CityPulse pipeline based on intrinsic quality + personalized signals.
+
+### Tier Assignment (`web/lib/city-pulse/tier-assignment.ts`)
+- **Hero**: `importance = 'flagship'` OR `is_tentpole` OR `festival_id` set OR intrinsic score >= 30
+- **Featured**: `importance = 'major'` OR venue has editorial_mentions OR friends going > 0 OR intrinsic score >= 15
+- **Standard**: Everything else
+
+### Rendering (`web/components/feed/TieredEventList.tsx`)
+Sections opt into tiered rendering by using `<TieredEventList>`:
+1. Editorial callout (if template matches) — replaces section header
+2. Hero card (max 1) — full-width image, gradient, large title
+3. Featured carousel (max 4) — 288px cards in horizontal scroll
+4. Standard rows — compact single-line, staggered entrance
+
+### Editorial Voice (`web/lib/editorial-templates.ts`)
+Template-driven, never AI-generated. Three patterns:
+1. **Contextual callout**: "Atlanta's biggest food festival starts tonight."
+2. **Press attribution**: PressQuote component renders editorial_mentions snippets
+3. **Social proof**: SocialProofRow renders friend avatars + attendance
+
+### Elevation Component Reference
+
+| Component | Path | Purpose |
+|-----------|------|---------|
+| HeroCard | `web/components/feed/HeroCard.tsx` | Full-width image card for hero-tier events |
+| StandardRow | `web/components/feed/StandardRow.tsx` | Compact single-line row for standard-tier |
+| TieredEventList | `web/components/feed/TieredEventList.tsx` | Tier-aware section renderer |
+| EditorialCallout | `web/components/feed/EditorialCallout.tsx` | Gold-bordered contextual editorial aside |
+| PressQuote | `web/components/feed/PressQuote.tsx` | Inline press attribution quote |
+| SocialProofRow | `web/components/feed/SocialProofRow.tsx` | Friend avatars + attendance text |
+
+### Elevation Utilities
+
+| Utility | Path | Purpose |
+|---------|------|---------|
+| getCardTier | `web/lib/city-pulse/tier-assignment.ts` | Compute card tier from event signals |
+| generateEditorialCallout | `web/lib/editorial-templates.ts` | Template-match editorial text |
+| getContextualTimeLabel | `web/lib/time-labels.ts` | "Starts in 2 hours", "Tomorrow at 8 PM" |
+| getRaritySignal | `web/lib/rarity-signals.ts` | "One Night Only", "Closes Saturday" |
 
 ## Architectural Rules
 
@@ -286,6 +332,17 @@ To preview a component in a different portal theme, create an instance with:
 I(parent, {type: "ref", ref: "<component-id>", theme: {"portal": "arts"}})
 ```
 
+### Additional Pencil Component IDs
+
+| Component | Node ID | Tier |
+|-----------|---------|------|
+| DescriptionTeaser | 2ZOe9 | Molecule |
+| SocialProofStrip | gaiuv | Molecule |
+| ScheduleRow | t5jrF | Molecule |
+| DayOfWeekFilter | mNhjk | Molecule |
+| CalendarDayCell | RHvqs | Atom |
+| MapPin | J2l3r | Atom |
+
 ### Atlanta Portal Page Compositions
 
 | Page | Desktop ID | Mobile ID |
@@ -294,4 +351,16 @@ I(parent, {type: "ref", ref: "<component-id>", theme: {"portal": "arts"}})
 | Events View | BxHW9 | Y6t71 |
 | Places View | DFOYd | UAmLb |
 | Venue Detail | JxXPT | Kv8Oa |
+| Event Detail | neovA | wHsA6 |
+| Series Detail | dtvVK | 0BDgZ |
+| Regulars Tab | HYCT0 | DBYJ0 |
 | Neighborhoods | QwPkU | 8inW1 |
+| Neighborhood Detail | Z0gY3 | YvbKx |
+| Search Results | s7ROV | vcZOu |
+| Calendar View | AhhUW | ekxuA |
+| Map View | MFk47 | 5zLpv |
+| Profile | y1Zdz | Rs7e5 |
+| Saved | PwoI6 | z1a7U |
+| Saved (Empty State) | ykN0g | — |
+| Community | JikA8 | NcXkj |
+| Community (Groups) | nqF65 | — |
