@@ -309,7 +309,7 @@ def determine_category(title: str, description: str = "") -> str:
             "pruning",
         ]
     ):
-        return "community"
+        return "volunteer"
     if any(word in text for word in ["walk", "hike", "nature walk", "tour", "trail"]):
         return "outdoor"
     if any(

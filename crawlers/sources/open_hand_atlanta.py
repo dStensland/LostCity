@@ -55,7 +55,7 @@ def _determine_category(title: str, description: str = "") -> str:
     text = f"{title} {description}".lower()
     if any(word in text for word in ["training", "tour", "orientation"]):
         return "learning"
-    return "community"
+    return "volunteer"
 
 
 def _extract_tags(title: str, description: str = "") -> list[str]:

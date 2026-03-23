@@ -289,7 +289,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "end_date": None,
                     "end_time": None,
                     "is_all_day": False,
-                    "category": "community",
+                    "category": "civic",
                     "tags": ["government", "public-meeting", "civic-engagement", "atlanta"],
                     "price_min": None,
                     "price_max": None,

@@ -893,7 +893,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "end_date": end_date,
                     "end_time": end_time,
                     "is_all_day": False,
-                    "category": "community",
+                    "category": "civic",
                     "subcategory": "activism",
                     "tags": tags,
                     "price_min": None,

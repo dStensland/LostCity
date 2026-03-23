@@ -562,7 +562,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "end_date": None,
                 "end_time": end_time_str or None,
                 "is_all_day": False,
-                "category": "community",
+                "category": "volunteer",
                 "subcategory": "volunteer",
                 "tags": base_tags,
                 "price_min": 0,
