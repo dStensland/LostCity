@@ -86,7 +86,7 @@ interface PillProps {
 function Pill({ children, className = "" }: PillProps) {
   return (
     <span
-      className={`font-mono text-2xs px-2 py-0.5 rounded-md bg-white/[0.12] text-[var(--cream)] whitespace-nowrap ${className}`}
+      className={`font-mono text-2xs px-2 py-0.5 rounded-md bg-black/30 backdrop-blur-sm text-[var(--cream)] whitespace-nowrap ${className}`}
     >
       {children}
     </span>
@@ -103,7 +103,7 @@ function LinkPill({ href, children, className = "" }: LinkPillProps) {
   return (
     <Link
       href={href}
-      className={`font-mono text-2xs px-2 py-0.5 rounded-md bg-white/[0.12] text-[var(--cream)] whitespace-nowrap transition-opacity hover:opacity-75 ${className}`}
+      className={`font-mono text-2xs px-2 py-0.5 rounded-md bg-black/30 backdrop-blur-sm text-[var(--cream)] whitespace-nowrap transition-opacity hover:opacity-75 ${className}`}
     >
       {children}
     </Link>

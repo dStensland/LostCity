@@ -23,46 +23,35 @@ export function getEditorialHeadline(context: FeedContext): string {
     return `${active_festivals[0].name} is happening now`;
   }
 
+  // Brief, descriptive headlines — no jokes, no puns, just what's true today
   if (weather_signal === "rain") {
-    return "Rainy day — cozy spots await";
-  }
-  if (weather && weather.temperature_f >= 80) {
-    return "Hot out there — find your cool";
-  }
-  if (weather && weather.temperature_f >= 65 && weather_signal === "nice") {
-    return `${Math.round(weather.temperature_f)}° and sunny — get outside`;
+    return "Rain in Atlanta today";
   }
 
-  switch (day_theme) {
-    case "taco_tuesday":
-      return "Happy Taco Tuesday";
-    case "wine_wednesday":
-      return "Wine Wednesday vibes";
-    case "thirsty_thursday":
-      return time_slot === "happy_hour" || time_slot === "evening"
-        ? "Thirsty Thursday is here"
-        : "Thursday — weekend's almost here";
-    case "friday_night":
-      return time_slot === "evening" || time_slot === "late_night"
-        ? "Friday night in Atlanta"
-        : "It's Friday — make plans";
-    case "brunch_weekend":
-      return "Brunch time — where to?";
-    case "saturday_night":
-      return "Saturday night — the city's alive";
-    case "sunday_funday":
-      return "Sunday Funday";
+  if (active_festivals.length > 0) {
+    return `${active_festivals[0].name} is happening today`;
   }
+
+  if (active_holidays.length > 0) {
+    return active_holidays[0].title;
+  }
+
+  // Day-of-week context
+  const dayNames: Record<string, string> = {
+    monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday",
+    thursday: "Thursday", friday: "Friday", saturday: "Saturday", sunday: "Sunday",
+  };
+  const dayName = dayNames[context.day_of_week?.toLowerCase() ?? ""] ?? "";
 
   switch (time_slot) {
     case "morning":
-      return "Good morning, Atlanta";
+      return `${dayName} morning in Atlanta`;
     case "midday":
-      return "Good afternoon";
+      return `${dayName} in Atlanta`;
     case "happy_hour":
-      return "It's happy hour";
+      return `${dayName} evening in Atlanta`;
     case "evening":
-      return "Good evening";
+      return `${dayName} night in Atlanta`;
     case "late_night":
       return "Late night in Atlanta";
   }

@@ -134,27 +134,25 @@ type GradientIntensity = "light" | "standard" | "heavy";
 const GRADIENT_PRESETS: Record<GradientIntensity, string> = {
   light: [
     "linear-gradient(to bottom,",
-    "rgba(9,9,11,0.45) 0%,",
-    "rgba(9,9,11,0.35) 12%,",
-    "rgba(9,9,11,0.2) 28%,",
-    "rgba(9,9,11,0.15) 42%,",
-    "rgba(9,9,11,0.18) 55%,",
-    "rgba(9,9,11,0.35) 68%,",
-    "rgba(9,9,11,0.6) 82%,",
-    "rgba(9,9,11,0.85) 92%,",
+    "rgba(9,9,11,0.2) 0%,",
+    "rgba(9,9,11,0.1) 15%,",
+    "rgba(9,9,11,0.05) 35%,",
+    "rgba(9,9,11,0.05) 50%,",
+    "rgba(9,9,11,0.15) 65%,",
+    "rgba(9,9,11,0.45) 80%,",
+    "rgba(9,9,11,0.75) 92%,",
     "#09090b 100%)",
   ].join(" "),
   standard: [
     "linear-gradient(to bottom,",
-    "rgba(9,9,11,0.72) 0%,",
-    "rgba(9,9,11,0.55) 8%,",
-    "rgba(9,9,11,0.35) 20%,",
-    "rgba(9,9,11,0.22) 35%,",
-    "rgba(9,9,11,0.2) 45%,",
-    "rgba(9,9,11,0.3) 55%,",
-    "rgba(9,9,11,0.55) 68%,",
-    "rgba(9,9,11,0.78) 80%,",
-    "rgba(9,9,11,0.93) 92%,",
+    "rgba(9,9,11,0.35) 0%,",
+    "rgba(9,9,11,0.2) 10%,",
+    "rgba(9,9,11,0.08) 25%,",
+    "rgba(9,9,11,0.05) 40%,",
+    "rgba(9,9,11,0.1) 55%,",
+    "rgba(9,9,11,0.35) 68%,",
+    "rgba(9,9,11,0.65) 80%,",
+    "rgba(9,9,11,0.88) 92%,",
     "#09090b 100%)",
   ].join(" "),
   heavy: [
@@ -176,8 +174,8 @@ function getTreatmentStyle(treatment: TextTreatment): TreatmentStyle {
     case "clean":
       return {
         overlay: { background: GRADIENT_PRESETS.light },
-        mastheadShadow: "0 2px 16px rgba(0,0,0,0.8), 0 1px 4px rgba(0,0,0,0.95)",
-        bodyShadow: "0 1px 8px rgba(0,0,0,0.7), 0 0 3px rgba(0,0,0,0.9)",
+        mastheadShadow: "0 2px 20px rgba(0,0,0,0.9), 0 1px 6px rgba(0,0,0,1), 0 0 40px rgba(0,0,0,0.5)",
+        bodyShadow: "0 1px 12px rgba(0,0,0,0.85), 0 0 4px rgba(0,0,0,1), 0 0 30px rgba(0,0,0,0.4)",
       };
     case "frosted":
       return {
@@ -211,8 +209,8 @@ function getTreatmentStyle(treatment: TextTreatment): TreatmentStyle {
     default:
       return {
         overlay: { background: GRADIENT_PRESETS.standard },
-        mastheadShadow: "0 2px 16px rgba(0,0,0,0.85), 0 1px 4px rgba(0,0,0,0.95), 0 0 40px rgba(0,0,0,0.4)",
-        bodyShadow: "0 1px 8px rgba(0,0,0,0.75), 0 0 3px rgba(0,0,0,0.9)",
+        mastheadShadow: "0 2px 20px rgba(0,0,0,0.9), 0 1px 6px rgba(0,0,0,1), 0 0 40px rgba(0,0,0,0.5)",
+        bodyShadow: "0 1px 12px rgba(0,0,0,0.85), 0 0 4px rgba(0,0,0,1), 0 0 30px rgba(0,0,0,0.4)",
       };
   }
 }
@@ -943,10 +941,10 @@ export default function CityBriefing({
             />
           </div>
 
-          {/* Warm color wash — tames bright skies, adds atmosphere */}
+          {/* Subtle color wash — slight warmth without killing vibrancy */}
           <div
             className="absolute inset-0"
-            style={{ background: "rgba(9,9,11,0.15)", mixBlendMode: "multiply" }}
+            style={{ background: "rgba(9,9,11,0.05)", mixBlendMode: "multiply" }}
           />
 
           {/* Gradient overlay */}
@@ -956,7 +954,7 @@ export default function CityBriefing({
           <div
             className="absolute inset-0"
             style={{
-              background: "radial-gradient(ellipse at 50% 40%, transparent 50%, rgba(9,9,11,0.25) 100%)",
+              background: "radial-gradient(ellipse at 50% 40%, transparent 60%, rgba(9,9,11,0.15) 100%)",
             }}
           />
 
