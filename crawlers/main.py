@@ -407,6 +407,12 @@ SOURCE_OVERRIDES = {
     # Rec1 (CivicRec) county parks & recreation platforms
     "cobb-parks-rec": "sources.cobb_parks_rec",
     "gwinnett-parks-rec": "sources.gwinnett_parks_rec",
+    "forsyth-county-parks-rec": "sources.forsyth_county_parks_rec",
+    "cherokee-county-parks-rec": "sources.cherokee_county_parks_rec",
+    "sandy-springs-parks-rec": "sources.sandy_springs_parks_rec",
+    "henry-county-parks-rec": "sources.henry_county_parks_rec",
+    # Youth sports leagues
+    "i9-sports-atlanta": "sources.i9_sports_atlanta",
     # Destination-first crawlers (descriptive slugs != short filenames)
     "museum-of-illusions-atlanta": "sources.museum_of_illusions",
     "topgolf-atlanta-midtown": "sources.topgolf_atlanta",

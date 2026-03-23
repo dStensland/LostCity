@@ -383,15 +383,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
             guid = shift.get("guid") or ""
             register_url = f"{REGISTER_BASE}lp/{guid}" if guid else REGISTER_BASE
 
+            # Clean redundant "Volunteer: " prefix — the event category already signals this.
+            # Apply before series grouping so series titles are also prefix-free.
+            clean_shift_name = shift_name.removeprefix("Volunteer: ").removeprefix("Volunteer:").strip()
+            title = clean_shift_name
+
             # Series grouping: one series per shift-type + location
-            series_title = _series_title_for(shift_name, venue_name)
+            series_title = _series_title_for(clean_shift_name, venue_name)
             series_hint = {
                 "series_type": "recurring_show",
                 "series_title": series_title,
                 "frequency": "daily",
             }
-
-            title = f"Volunteer: {shift_name}"
             content_hash = generate_content_hash(title, venue_name, start_date)
             if content_hash in seen_hashes:
                 continue

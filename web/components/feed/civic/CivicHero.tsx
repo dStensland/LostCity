@@ -19,6 +19,8 @@ import {
 } from "@phosphor-icons/react";
 import type { CityPulseSection, CityPulseEventItem } from "@/lib/city-pulse/types";
 import { isHelpAtlSupportDirectoryEnabled } from "@/lib/helpatl-support";
+import { pickHeroItem } from "@/lib/civic-hero-priority";
+import type { HeroItem } from "@/lib/civic-hero-priority";
 
 interface CivicHeroProps {
   portalSlug: string;
@@ -32,6 +34,8 @@ interface CivicHeroProps {
   groupCount?: number;
   /** Lineup sections for deriving next-event urgency pill and civic event count */
   lineupSections?: CityPulseSection[];
+  /** Event IDs from channels the user subscribes to — boosts those events to hero */
+  subscribedChannelEventIds?: Set<number>;
 }
 
 function getFormattedDate(): string {
@@ -91,6 +95,70 @@ function getNextEventLabel(sections: CityPulseSection[]): string | null {
   return null;
 }
 
+/** Format a date string (YYYY-MM-DD) into a short readable label like "Tue, Apr 8" */
+function formatEventDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr + "T00:00:00");
+    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  } catch {
+    return dateStr;
+  }
+}
+
+/** Format a time string (HH:MM) into "6pm", "10am", "7:30pm" */
+function formatEventTime(timeStr: string): string {
+  try {
+    const [h, m] = timeStr.split(":").map(Number);
+    const period = h >= 12 ? "pm" : "am";
+    const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return m > 0 ? `${hour12}:${String(m).padStart(2, "0")}${period}` : `${hour12}${period}`;
+  } catch {
+    return timeStr;
+  }
+}
+
+/**
+ * Build the contextual hero headline lines based on the priority selection.
+ * Returns [line1, line2] where line2 renders in gradient teal.
+ */
+function buildHeadlineLines(
+  heroSelection: ReturnType<typeof pickHeroItem>,
+  weekCount: number,
+  cityName: string,
+): [string, string] {
+  if (!heroSelection) {
+    return [
+      weekCount > 0 ? `${weekCount} ways to get involved` : "Get involved",
+      `this week in ${cityName}.`,
+    ];
+  }
+
+  const { item, reason } = heroSelection;
+
+  if (reason === "election") {
+    const isVoterReg = item.tags.some((t) =>
+      t === "voter-registration" || t === "civic-deadline",
+    );
+    if (isVoterReg) {
+      const deadline = formatEventDate(item.start_date);
+      return ["Register by", `${deadline}.`];
+    }
+    const dateLabel = formatEventDate(item.start_date);
+    return [item.title, `${dateLabel}.`];
+  }
+
+  if (reason === "channel_match") {
+    const timeLabel = item.start_time ? formatEventTime(item.start_time) : null;
+    const dateLabel = formatEventDate(item.start_date);
+    const suffix = timeLabel ? `${dateLabel} at ${timeLabel}.` : `${dateLabel}.`;
+    return [item.title, suffix];
+  }
+
+  // reason === "soonest"
+  const dateLabel = formatEventDate(item.start_date);
+  return [item.title, `${dateLabel}.`];
+}
+
 export default function CivicHero({
   portalSlug,
   tabCounts,
@@ -98,6 +166,7 @@ export default function CivicHero({
   cityName,
   groupCount,
   lineupSections,
+  subscribedChannelEventIds,
 }: CivicHeroProps) {
   const dateStr = getFormattedDate();
   // Use the portal-scoped lineup section count, not tabCounts.this_week which
@@ -112,6 +181,36 @@ export default function CivicHero({
   const nextEventLabel = useMemo(
     () => (lineupSections?.length ? getNextEventLabel(lineupSections) : null),
     [lineupSections],
+  );
+
+  // Extract hero items from lineup sections and pick the priority event
+  const heroSelection = useMemo(() => {
+    if (!lineupSections?.length) return null;
+    const heroItems: HeroItem[] = [];
+    const seen = new Set<number>();
+    for (const section of lineupSections) {
+      for (const item of section.items) {
+        if (item.item_type !== "event") continue;
+        const ev = (item as CityPulseEventItem).event;
+        if (seen.has(ev.id)) continue;
+        seen.add(ev.id);
+        heroItems.push({
+          id: ev.id,
+          title: ev.title,
+          tags: ev.tags ?? [],
+          start_date: ev.start_date,
+          start_time: ev.start_time,
+          venue_name: ev.venue?.name ?? "",
+        });
+      }
+    }
+    return pickHeroItem(heroItems, subscribedChannelEventIds ?? new Set<number>());
+  }, [lineupSections, subscribedChannelEventIds]);
+
+  // Build headline: contextual when we have a priority event, fallback when not
+  const [headlineLine1, headlineLine2] = useMemo(
+    () => buildHeadlineLines(heroSelection, weekCount, cityName ?? "Atlanta"),
+    [heroSelection, weekCount, cityName],
   );
 
   return (
@@ -159,10 +258,10 @@ export default function CivicHero({
           )}
         </div>
 
-        {/* Headline — mission-forward with gradient city name */}
+        {/* Headline — contextual: election urgency, channel match, or count fallback */}
         <h1 className="mt-3">
           <span className="block text-3xl sm:text-[2.75rem] font-extrabold text-[var(--cream)] leading-[1.1] tracking-tight">
-            Get involved
+            {headlineLine1}
           </span>
           <span
             className="block text-3xl sm:text-[2.75rem] font-extrabold leading-[1.1] tracking-tight civic-gradient-text"
@@ -174,7 +273,7 @@ export default function CivicHero({
               backgroundClip: "text",
             }}
           >
-            in {cityName ?? "Atlanta"}.
+            {headlineLine2}
           </span>
         </h1>
 
