@@ -114,16 +114,20 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Failed to fetch shows" }, { status: 500 });
     }
 
-    // Post-query: filter out non-performance events
-    const filteredEvents = (events ?? []).filter(event => {
-      const title = event.title.toLowerCase();
-      // Exclude events with noise titles (bingo, trivia, language learning, etc.)
-      if (NOISE_TITLE_PATTERNS.some(p => title.includes(p))) return false;
+    // Post-query: filter to genuine live performances
+    // Two layers: (1) exclude by venue_type, (2) exclude by title pattern
+    const EXCLUDED_VENUE_TYPES = new Set(["library", "recreation", "school", "government", "religious"]);
 
-      // Exclude events at non-performance venues (libraries, rec centers)
-      const venueType = (event.venue as { venue_type?: string | null })?.venue_type ?? "";
-      const venueName = event.venue?.name?.toLowerCase() ?? "";
-      if (venueName.includes("library") || venueName.includes("recreation center")) return false;
+    const filteredEvents = (events ?? []).filter(event => {
+      const venueType = event.venue?.venue_type ?? "";
+      const title = event.title.toLowerCase();
+
+      // Layer 1: Exclude events at non-performance venue types
+      if (EXCLUDED_VENUE_TYPES.has(venueType)) return false;
+
+      // Layer 2: Exclude events whose titles indicate non-performance activity
+      // (catches noise at bars/generic venues where venue_type alone isn't enough)
+      if (NOISE_TITLE_PATTERNS.some(p => title.includes(p))) return false;
 
       return true;
     });
