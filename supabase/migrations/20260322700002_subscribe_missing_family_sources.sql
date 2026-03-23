@@ -4,7 +4,7 @@
 -- Column names: subscriber_portal_id (not portal_id), plus subscription_scope and is_active required.
 
 INSERT INTO source_subscriptions (subscriber_portal_id, source_id, subscription_scope, is_active)
-SELECT p.id, s.id, 'full', true
+SELECT p.id, s.id, 'all', true
 FROM sources s
 CROSS JOIN portals p
 WHERE p.slug = 'atlanta-families'
