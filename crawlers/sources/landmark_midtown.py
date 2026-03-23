@@ -36,6 +36,56 @@ VENUE_DATA = {
     "lng": -84.3688,
     "venue_type": "cinema",
     "website": VENUE_PAGE_URL,
+    "_destination_details": {
+        "commitment_tier": "hour",
+        "parking_type": "garage",
+        "best_time_of_day": "evening",
+        "family_suitability": "caution",
+        "practical_notes": "Colony Square garage is directly adjacent. Walkable from Piedmont Park and multiple Midtown restaurants — easy to pair with dinner. Programming skews adult; check individual film ratings.",
+    },
+    "_venue_features": [
+        {
+            "slug": "indie-arthouse-programming",
+            "title": "Indie & Art-House Film Programming",
+            "feature_type": "experience",
+            "description": "Curated selection of independent, foreign-language, and limited-release films not showing at mainstream multiplexes.",
+            "is_free": False,
+            "sort_order": 1,
+        },
+        {
+            "slug": "bar-concessions",
+            "title": "Bar & Concessions with Beer and Wine",
+            "feature_type": "amenity",
+            "description": "Full concession stand offering beer, wine, and cocktails alongside the usual popcorn and snacks — drinks allowed in the screening rooms.",
+            "is_free": False,
+            "sort_order": 2,
+        },
+        {
+            "slug": "intimate-screening-rooms",
+            "title": "Intimate Screening Rooms",
+            "feature_type": "experience",
+            "description": "Smaller, boutique-scale auditoriums designed for a close, immersive viewing experience rather than stadium-scale crowds.",
+            "is_free": False,
+            "sort_order": 3,
+        },
+    ],
+    "_venue_specials": [
+        {
+            "title": "Matinee Pricing",
+            "type": "admission",
+            "description": "Discounted ticket prices for all screenings that begin before 5:00 PM.",
+            "days_of_week": [1, 2, 3, 4, 5, 6, 7],
+            "time_end": "17:00",
+            "price_note": "Reduced matinee rate — check box office for current pricing",
+        },
+        {
+            "title": "$5 Tuesday",
+            "type": "recurring_deal",
+            "description": "All tickets discounted to $5 every Tuesday.",
+            "days_of_week": [2],
+            "price_note": "$5 all day Tuesday",
+        },
+    ],
 }
 
 

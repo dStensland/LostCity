@@ -35,6 +35,58 @@ VENUE_DATA = {
     "venue_type": "brewery",
     "spot_type": "brewery",
     "website": BASE_URL,
+    "_destination_details": {
+        "commitment_tier": "hour",
+        "parking_type": "free_lot",
+        "best_time_of_day": "evening",
+        "family_suitability": "caution",
+        "practical_notes": "Brewery atmosphere — better suited for adults. Large patio with fire pits. Wood-fired kitchen on site.",
+    },
+    "_venue_features": [
+        {
+            "slug": "belgian-ales",
+            "title": "Belgian-Style Ales & House Lagers",
+            "feature_type": "experience",
+            "description": "House-brewed Belgian-inspired ales alongside approachable lagers, brewed on site.",
+            "is_free": False,
+            "sort_order": 1,
+        },
+        {
+            "slug": "wood-fired-kitchen",
+            "title": "Wood-Fired Kitchen",
+            "feature_type": "amenity",
+            "description": "On-site wood-fired pizza kitchen serving food alongside the taproom.",
+            "is_free": False,
+            "sort_order": 2,
+        },
+        {
+            "slug": "outdoor-patio-fire-pits",
+            "title": "Expansive Outdoor Patio with Fire Pits",
+            "feature_type": "experience",
+            "description": "Large outdoor patio area with fire pits — one of the bigger brewery outdoor spaces in the city.",
+            "is_free": True,
+            "sort_order": 3,
+        },
+        {
+            "slug": "rotating-food-popups",
+            "title": "Rotating Food Pop-Ups",
+            "feature_type": "experience",
+            "description": "Guest food vendors and pop-up kitchens rotate through the taproom on event nights.",
+            "is_free": True,
+            "sort_order": 4,
+        },
+    ],
+    "_venue_specials": [
+        {
+            "title": "Happy Hour",
+            "type": "happy_hour",
+            "description": "$2 off all draft pours during weekday happy hour.",
+            "days_of_week": [1, 2, 3, 4, 5],
+            "time_start": "15:00",
+            "time_end": "18:00",
+            "price_note": "$2 off drafts",
+        },
+    ],
 }
 
 

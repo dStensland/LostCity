@@ -37,6 +37,58 @@ VENUE_DATA = {
     "spot_type": "bar",
     "website": BASE_URL,
     "vibes": ["craft-beer", "brewery", "gastropub", "historic", "inman-park"],
+    "_destination_details": {
+        "commitment_tier": "hour",
+        "parking_type": "street",
+        "best_time_of_day": "evening",
+        "family_suitability": "yes",
+        "practical_notes": "Historic 1900s Victorian mansion on Moreland Ave. Street parking. Full gastropub menu — worth the trip even without an event.",
+    },
+    "_venue_features": [
+        {
+            "slug": "victorian-mansion-setting",
+            "title": "Restored 1900s Victorian Mansion",
+            "feature_type": "experience",
+            "description": "The brewery operates inside a fully restored Victorian-era mansion — one of the most distinctive settings in Atlanta.",
+            "is_free": True,
+            "sort_order": 1,
+        },
+        {
+            "slug": "award-winning-house-beers",
+            "title": "Award-Winning House-Brewed Beers",
+            "feature_type": "experience",
+            "description": "Multiple GABF and World Beer Cup award-winning beers brewed on premises.",
+            "is_free": False,
+            "sort_order": 2,
+        },
+        {
+            "slug": "gastropub-menu",
+            "title": "Chef-Driven Gastropub Menu",
+            "feature_type": "amenity",
+            "description": "Full chef-driven menu well above standard bar food — burgers, seasonal specials, elevated pub fare.",
+            "is_free": False,
+            "sort_order": 3,
+        },
+        {
+            "slug": "basement-taproom",
+            "title": "Basement Taproom",
+            "feature_type": "experience",
+            "description": "The basement of the Victorian mansion houses a dedicated taproom alongside the main floor dining room.",
+            "is_free": True,
+            "sort_order": 4,
+        },
+    ],
+    "_venue_specials": [
+        {
+            "title": "Happy Hour",
+            "type": "happy_hour",
+            "description": "$1 off all draft beers during weekday happy hour.",
+            "days_of_week": [1, 2, 3, 4, 5],
+            "time_start": "16:00",
+            "time_end": "18:00",
+            "price_note": "$1 off drafts",
+        },
+    ],
 }
 
 WEEKLY_SCHEDULE = [

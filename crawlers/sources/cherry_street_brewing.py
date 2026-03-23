@@ -33,6 +33,58 @@ VENUE_DATA = {
     "zip": "30318",
     "venue_type": "brewery",
     "website": BASE_URL,
+    "_destination_details": {
+        "commitment_tier": "hour",
+        "parking_type": "free_lot",
+        "best_time_of_day": "afternoon",
+        "family_suitability": "yes",
+        "practical_notes": "Family-friendly taproom with games. Free parking lot. Live music stage makes weekend afternoons lively.",
+    },
+    "_venue_features": [
+        {
+            "slug": "40-rotating-taps",
+            "title": "40+ Rotating Taps",
+            "feature_type": "experience",
+            "description": "Extensive rotating tap list with 40+ beers at any given time.",
+            "is_free": False,
+            "sort_order": 1,
+        },
+        {
+            "slug": "family-friendly-taproom-games",
+            "title": "Family-Friendly Taproom with Games",
+            "feature_type": "amenity",
+            "description": "Indoor games and a welcoming atmosphere that works for all ages.",
+            "is_free": True,
+            "sort_order": 2,
+        },
+        {
+            "slug": "live-music-stage",
+            "title": "Live Music Stage",
+            "feature_type": "experience",
+            "description": "Dedicated stage for live music events throughout the week.",
+            "is_free": True,
+            "sort_order": 3,
+        },
+        {
+            "slug": "outdoor-beer-garden",
+            "title": "Outdoor Beer Garden",
+            "feature_type": "experience",
+            "description": "Outdoor beer garden seating area for warm weather visits.",
+            "is_free": True,
+            "sort_order": 4,
+        },
+    ],
+    "_venue_specials": [
+        {
+            "title": "Trivia Night",
+            "type": "event_night",
+            "description": "Weekly trivia night at the taproom.",
+            "days_of_week": [3],
+            "time_start": "19:00",
+            "time_end": None,
+            "price_note": None,
+        },
+    ],
 }
 
 

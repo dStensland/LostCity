@@ -46,6 +46,67 @@ VENUE_DATA = {
     "spot_type": "bar",
     "website": BASE_URL,
     "vibes": ["brewery", "beltline", "rooftop", "patio", "craft-beer", "live-music"],
+    "_destination_details": {
+        "commitment_tier": "hour",
+        "parking_type": "garage",
+        "best_time_of_day": "any",
+        "family_suitability": "yes",
+        "practical_notes": "Parking garage adjacent. Direct access to BeltLine Eastside Trail. Full-service restaurant makes it a complete stop.",
+    },
+    "_venue_features": [
+        {
+            "slug": "rooftop-bar-beltline-views",
+            "title": "Rooftop Bar with BeltLine Views",
+            "feature_type": "experience",
+            "description": "Rooftop bar overlooking the BeltLine Eastside Trail with skyline views.",
+            "is_free": True,
+            "sort_order": 1,
+        },
+        {
+            "slug": "full-service-restaurant",
+            "title": "Full-Service Restaurant",
+            "feature_type": "amenity",
+            "description": "On-site restaurant with a full menu — not just bar snacks.",
+            "is_free": False,
+            "sort_order": 2,
+        },
+        {
+            "slug": "on-site-brewery",
+            "title": "On-Site Brewery",
+            "feature_type": "experience",
+            "description": "Beers brewed on premises, including flagship IPA and rotating seasonal releases.",
+            "is_free": False,
+            "sort_order": 3,
+        },
+        {
+            "slug": "beltline-trail-access",
+            "title": "Direct BeltLine Eastside Trail Access",
+            "feature_type": "amenity",
+            "description": "Walk directly onto the BeltLine Eastside Trail from the brewery.",
+            "is_free": True,
+            "sort_order": 4,
+        },
+    ],
+    "_venue_specials": [
+        {
+            "title": "Happy Hour",
+            "type": "happy_hour",
+            "description": "Weekday happy hour with discounted drafts and select food items.",
+            "days_of_week": [1, 2, 3, 4, 5],
+            "time_start": "15:00",
+            "time_end": "18:00",
+            "price_note": None,
+        },
+        {
+            "title": "Weekend Brunch",
+            "type": "brunch",
+            "description": "Weekend brunch service with food and specialty drinks.",
+            "days_of_week": [6, 7],
+            "time_start": "10:00",
+            "time_end": "15:00",
+            "price_note": None,
+        },
+    ],
 }
 
 WEEKLY_SCHEDULE = [

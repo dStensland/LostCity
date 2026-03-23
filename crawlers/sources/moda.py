@@ -42,6 +42,55 @@ VENUE_DATA = {
     "lat": 33.7906,
     "lng": -84.3846,
     "website": BASE_URL,
+    "_destination_details": {
+        "commitment_tier": "hour",
+        "parking_type": "street",
+        "best_time_of_day": "afternoon",
+        "family_suitability": "yes",
+        "practical_notes": "Street parking along Peachtree St NE and surrounding Midtown blocks. MARTA accessible (Arts Center station, short walk). The only museum in the Southeast exclusively devoted to design — architecture, industrial, fashion, and graphic design all represented.",
+    },
+    "_venue_features": [
+        {
+            "slug": "rotating-design-exhibitions",
+            "title": "Rotating Design Exhibitions",
+            "feature_type": "exhibition",
+            "description": "Changing exhibitions spanning architecture, industrial design, fashion, graphic design, and digital media. The only Southeast museum with this exclusive design focus.",
+            "is_free": False,
+            "sort_order": 1,
+        },
+        {
+            "slug": "interactive-design-workshops",
+            "title": "Interactive Design Workshops",
+            "feature_type": "experience",
+            "description": "Hands-on workshops for adults, families, and kids that tie directly to current exhibitions — making, prototyping, and design-thinking activities.",
+            "is_free": False,
+            "sort_order": 2,
+        },
+        {
+            "slug": "design-gift-shop",
+            "title": "Curated Design Gift Shop",
+            "feature_type": "amenity",
+            "description": "Museum shop stocked with design books, objects, and gifts curated to complement current exhibitions.",
+            "is_free": True,
+            "sort_order": 3,
+        },
+    ],
+    "_venue_specials": [
+        {
+            "title": "Free First Saturday",
+            "type": "admission",
+            "description": "Free general admission on the first Saturday of every month — no ticket required.",
+            "days_of_week": [6],
+            "price_note": "Free admission first Saturday of each month",
+        },
+        {
+            "title": "Student Discount",
+            "type": "admission",
+            "description": "Reduced admission for students with valid student ID.",
+            "days_of_week": [1, 2, 3, 4, 5, 6, 7],
+            "price_note": "Student rate with valid ID — check moda.org for current pricing",
+        },
+    ],
 }
 
 MONTHS = {

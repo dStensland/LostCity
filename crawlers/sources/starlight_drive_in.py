@@ -35,6 +35,48 @@ VENUE_DATA = {
     "website": BASE_URL,
     "lat": 33.7072,
     "lng": -84.3492,
+    "_destination_details": {
+        "commitment_tier": "halfday",
+        "parking_type": "free_lot",
+        "best_time_of_day": "evening",
+        "family_suitability": "yes",
+        "practical_notes": "Park your car at the screen. Tune to the posted FM station for sound. Gates open at dusk; first feature starts at dark. Cash and card accepted at the box office.",
+    },
+    "_venue_features": [
+        {
+            "slug": "six-outdoor-screens",
+            "title": "6 Outdoor Screens with Double Features",
+            "feature_type": "experience",
+            "description": "Six individual drive-in screens, each running a double feature every night. One of the largest drive-in complexes still operating in metro Atlanta.",
+            "is_free": False,
+            "sort_order": 1,
+        },
+        {
+            "slug": "fm-radio-sound",
+            "title": "FM Radio In-Car Sound",
+            "feature_type": "experience",
+            "description": "Audio broadcast over a dedicated FM frequency for each screen — tune in from your car stereo for the full drive-in experience.",
+            "is_free": True,
+            "sort_order": 2,
+        },
+        {
+            "slug": "retro-concession-stand",
+            "title": "Retro Concession Stand",
+            "feature_type": "amenity",
+            "description": "Classic drive-in snack bar with hot dogs, nachos, popcorn, candy, and soft drinks. Cash and card accepted.",
+            "is_free": False,
+            "sort_order": 3,
+        },
+    ],
+    "_venue_specials": [
+        {
+            "title": "Double Feature Included",
+            "type": "admission",
+            "description": "Every ticket covers both films on the double feature bill — no separate charge for the second movie.",
+            "days_of_week": [1, 2, 3, 4, 5, 6, 7],
+            "price_note": "$10 per adult; kids under 9 free",
+        },
+    ],
 }
 
 # Crawl one week of daily routes

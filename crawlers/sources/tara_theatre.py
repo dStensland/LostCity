@@ -70,6 +70,47 @@ VENUE_DATA = {
     "lng": -84.3898,
     "venue_type": "cinema",
     "website": BASE_URL,
+    "_destination_details": {
+        "commitment_tier": "hour",
+        "parking_type": "free_lot",
+        "best_time_of_day": "evening",
+        "family_suitability": "caution",
+        "practical_notes": "Free surface lot behind the theater. One of Atlanta's last surviving neighborhood cinemas — opened in 1968. Programming focuses on independent and specialty releases; check individual film ratings before bringing children.",
+    },
+    "_venue_features": [
+        {
+            "slug": "historic-single-screen",
+            "title": "Historic Single-Screen Theater (Est. 1968)",
+            "feature_type": "experience",
+            "description": "One of Atlanta's last original neighborhood movie palaces, operating continuously since 1968. Classic single-auditorium format with a genuine movie-house atmosphere.",
+            "is_free": False,
+            "sort_order": 1,
+        },
+        {
+            "slug": "independent-specialty-programming",
+            "title": "Independent & Specialty Film Programming",
+            "feature_type": "experience",
+            "description": "Curated mix of independent releases, foreign films, cult classics, and specialty screenings not available at mainstream chains.",
+            "is_free": False,
+            "sort_order": 2,
+        },
+    ],
+    "_venue_specials": [
+        {
+            "title": "Regal Crown Club Rewards",
+            "type": "recurring_deal",
+            "description": "Earn points on every ticket and concession purchase through the Regal Crown Club loyalty program. Points redeem for free tickets and concessions.",
+            "days_of_week": [1, 2, 3, 4, 5, 6, 7],
+            "price_note": "Free loyalty program — sign up at regal.com",
+        },
+        {
+            "title": "Tuesday Discount",
+            "type": "recurring_deal",
+            "description": "Reduced admission on all Tuesday screenings.",
+            "days_of_week": [2],
+            "price_note": "Discounted Tuesday rate — check box office for current pricing",
+        },
+    ],
 }
 
 

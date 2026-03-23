@@ -46,6 +46,48 @@ VENUE_DATA = {
     "spot_type": "bar",
     "website": BASE_URL,
     "vibes": ["brewery", "craft-beer", "european-style", "rooftop", "summerhill"],
+    "_destination_details": {
+        "commitment_tier": "hour",
+        "parking_type": "street",
+        "best_time_of_day": "evening",
+        "family_suitability": "caution",
+        "practical_notes": "Lager-focused brewery with minimalist taproom. Street parking in Summerhill. Beer-to-go window for quick stops.",
+    },
+    "_venue_features": [
+        {
+            "slug": "lager-focused-brewing",
+            "title": "Lager-Focused Brewing",
+            "feature_type": "experience",
+            "description": "Specializes in Czech and German-style lagers — a rare focus in Atlanta's IPA-heavy craft beer scene.",
+            "is_free": False,
+            "sort_order": 1,
+        },
+        {
+            "slug": "minimalist-taproom",
+            "title": "Minimalist Taproom Design",
+            "feature_type": "experience",
+            "description": "Clean, stripped-down taproom aesthetic — no distractions, just good beer.",
+            "is_free": True,
+            "sort_order": 2,
+        },
+        {
+            "slug": "rotating-seasonal-releases",
+            "title": "Rotating Seasonal Releases",
+            "feature_type": "experience",
+            "description": "Regular seasonal and limited releases that change throughout the year.",
+            "is_free": False,
+            "sort_order": 3,
+        },
+        {
+            "slug": "beer-to-go-window",
+            "title": "Beer-to-Go Window",
+            "feature_type": "amenity",
+            "description": "Grab cans and crowlers to go without entering the taproom.",
+            "is_free": False,
+            "sort_order": 4,
+        },
+    ],
+    "_venue_specials": [],
 }
 
 WEEKLY_SCHEDULE = [
