@@ -399,13 +399,13 @@ export async function fetchEventPools(
           .limit(20);
       })(),
 
-      // Planning horizon: flagship/major events, 7–180 days ahead
+      // Planning horizon: tentpoles, festivals, and flagship events, 7–180 days ahead
       // NOTE: This pool has its own category exclusions — do not modify them here.
       (() => {
         let q = portalClient
           .from("events")
           .select(EVENT_SELECT)
-          .in("importance", ["flagship", "major"])
+          .or("is_tentpole.eq.true,festival_id.not.is.null,importance.eq.flagship")
           .gte("start_date", ctx.horizonStart)
           .lte("start_date", ctx.horizonEnd)
           .eq("is_active", true)

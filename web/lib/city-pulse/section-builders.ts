@@ -1112,13 +1112,19 @@ export function buildExperiencesSection(
 }
 
 // ---------------------------------------------------------------------------
-// Planning Horizon section (7+ days out, flagship + major events only)
+// Planning Horizon section (7+ days out, tentpoles / festivals / multi-day events only)
 // ---------------------------------------------------------------------------
 
 /**
  * Build a "On the Horizon" section for events more than 7 days away.
- * Only includes flagship and major importance events.
- * Requires minimum 3 items — returns null when insufficient data.
+ * Quality-gated to genuinely plan-ahead events:
+ *   - is_tentpole = true
+ *   - festival_id is set (multi-day festival)
+ *   - end_date differs from start_date (multi-day event)
+ *   - importance = 'flagship'
+ * Single-day recurring events (open mics, weekly bar nights) are excluded
+ * even if they have importance = 'major'.
+ * Returns null when fewer than 2 qualifying events remain after filtering.
  *
  * This builder reads from the same events pool already fetched for the feed,
  * so no extra DB round-trip is needed. The `importance` field is included in
@@ -1134,11 +1140,16 @@ export function buildPlanningHorizonSection(
   const weekFromNowStr = weekFromNow.toISOString().split("T")[0];
 
   const horizonEvents = events.filter((e) => {
-    const importance = (e as Record<string, unknown>).importance as string | undefined;
-    return (
-      (importance === "flagship" || importance === "major") &&
-      e.start_date >= weekFromNowStr
-    );
+    const raw = e as Record<string, unknown>;
+    const importance = raw.importance as string | undefined;
+    // Accept tentpoles, festival sub-events, multi-day events, and flagships
+    const qualifies =
+      raw.is_tentpole ||
+      raw.festival_id ||
+      importance === "flagship" ||
+      importance === "major" ||
+      (e.end_date && e.end_date !== e.start_date);
+    return qualifies && e.start_date >= weekFromNowStr;
   });
 
   if (horizonEvents.length < 2) return null;
@@ -1186,12 +1197,29 @@ export function buildPlanningHorizonSection(
     return true;
   });
 
-  // Flagships first, then majors, chronological within each tier.
+  // Quality gate: only genuinely plan-ahead events.
+  // The pool query is already filtered to tentpoles/festivals/flagships, but
+  // the section builder also receives events from other pools (e.g. trending).
+  // This gate ensures no single-day recurring events slip through either path.
+  const qualityFiltered = deduped.filter((e) => {
+    const raw = e as Record<string, unknown>;
+    // Always include tentpoles and festival sub-events
+    if (raw.is_tentpole) return true;
+    if (raw.festival_id) return true;
+    // Include multi-day events (end_date differs from start_date)
+    if (e.end_date && e.end_date !== e.start_date) return true;
+    // Include flagship importance
+    if ((e as any).importance === "flagship") return true; // eslint-disable-line @typescript-eslint/no-explicit-any
+    // Exclude everything else (single-day non-tentpole events)
+    return false;
+  });
+
+  // Flagships first, then remainder, chronological within each tier.
   // Dedup + curation keeps the list clean — no artificial per-month caps.
-  const flagships = deduped.filter(
+  const flagships = qualityFiltered.filter(
     (e) => (e as Record<string, unknown>).importance === "flagship",
   );
-  const majors = deduped.filter(
+  const majors = qualityFiltered.filter(
     (e) => (e as Record<string, unknown>).importance !== "flagship",
   );
   const capped = [...flagships, ...majors].slice(0, 40);
