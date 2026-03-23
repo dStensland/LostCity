@@ -28,7 +28,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 // ============================================================================
 // Seed Users — fixed UUIDs for idempotency
-// UUID prefix: 00000000-seed-elev-0000-
+// UUID prefix: 00000000-5eed-e1e0-0000-
 // ============================================================================
 
 interface SeedUser {
@@ -44,7 +44,7 @@ interface SeedUser {
 
 const SEED_USERS: SeedUser[] = [
   {
-    id: "00000000-seed-elev-0000-000000000001",
+    id: "00000000-5eed-e1e0-0000-000000000001",
     username: "sarahchen",
     display_name: "Sarah Chen",
     bio: "Chasing live music and late nights across Atlanta.",
@@ -54,7 +54,7 @@ const SEED_USERS: SeedUser[] = [
     neighborhoods: ["Midtown", "Buckhead"],
   },
   {
-    id: "00000000-seed-elev-0000-000000000002",
+    id: "00000000-5eed-e1e0-0000-000000000002",
     username: "mikej",
     display_name: "Mike Johnson",
     bio: "Weekend hiker, craft beer enthusiast, and Falcons season ticket holder.",
@@ -64,7 +64,7 @@ const SEED_USERS: SeedUser[] = [
     neighborhoods: ["Decatur", "East Atlanta"],
   },
   {
-    id: "00000000-seed-elev-0000-000000000003",
+    id: "00000000-5eed-e1e0-0000-000000000003",
     username: "lisapark",
     display_name: "Lisa Park",
     bio: "Gallery hopper and food explorer, always hunting for the next hidden gem.",
@@ -74,7 +74,7 @@ const SEED_USERS: SeedUser[] = [
     neighborhoods: ["Old Fourth Ward", "West Midtown"],
   },
   {
-    id: "00000000-seed-elev-0000-000000000004",
+    id: "00000000-5eed-e1e0-0000-000000000004",
     username: "jamesw",
     display_name: "James Williams",
     bio: "Jazz aficionado, blues history buff, dive bar connoisseur.",
@@ -84,7 +84,7 @@ const SEED_USERS: SeedUser[] = [
     neighborhoods: ["Virginia-Highland", "East Atlanta"],
   },
   {
-    id: "00000000-seed-elev-0000-000000000005",
+    id: "00000000-5eed-e1e0-0000-000000000005",
     username: "anar",
     display_name: "Ana Rodriguez",
     bio: "Latin dance instructor by night, festival devotee every weekend.",
@@ -94,7 +94,7 @@ const SEED_USERS: SeedUser[] = [
     neighborhoods: ["Midtown", "Downtown"],
   },
   {
-    id: "00000000-seed-elev-0000-000000000006",
+    id: "00000000-5eed-e1e0-0000-000000000006",
     username: "davidk",
     display_name: "David Kim",
     bio: "Tech meetups, stand-up comedy, and tabletop gaming — that's my Atlanta.",
@@ -104,7 +104,7 @@ const SEED_USERS: SeedUser[] = [
     neighborhoods: ["Buckhead", "Midtown"],
   },
   {
-    id: "00000000-seed-elev-0000-000000000007",
+    id: "00000000-5eed-e1e0-0000-000000000007",
     username: "emmat",
     display_name: "Emma Thompson",
     bio: "Theatre subscriber, museum member, and classical music devotee.",
@@ -114,7 +114,7 @@ const SEED_USERS: SeedUser[] = [
     neighborhoods: ["Midtown", "Buckhead"],
   },
   {
-    id: "00000000-seed-elev-0000-000000000008",
+    id: "00000000-5eed-e1e0-0000-000000000008",
     username: "chrisj",
     display_name: "Chris Jackson",
     bio: "Hip-hop head, sports bar regular, and West End local.",
@@ -124,7 +124,7 @@ const SEED_USERS: SeedUser[] = [
     neighborhoods: ["Downtown", "West End"],
   },
   {
-    id: "00000000-seed-elev-0000-000000000009",
+    id: "00000000-5eed-e1e0-0000-000000000009",
     username: "mayap",
     display_name: "Maya Patel",
     bio: "Morning yoga, long brunches, and afternoon farmers markets.",
@@ -134,7 +134,7 @@ const SEED_USERS: SeedUser[] = [
     neighborhoods: ["Decatur", "Morningside"],
   },
   {
-    id: "00000000-seed-elev-0000-000000000010",
+    id: "00000000-5eed-e1e0-0000-000000000010",
     username: "tylerb",
     display_name: "Tyler Brooks",
     bio: "Rock and punk at EAV dive bars — loud shows, cheap beer, good times.",
@@ -144,7 +144,7 @@ const SEED_USERS: SeedUser[] = [
     neighborhoods: ["East Atlanta", "Little Five Points"],
   },
   {
-    id: "00000000-seed-elev-0000-000000000011",
+    id: "00000000-5eed-e1e0-0000-000000000011",
     username: "zoec",
     display_name: "Zoe Carter",
     bio: "Street photographer and mural hunter obsessed with Atlanta's hidden corners.",
@@ -154,7 +154,7 @@ const SEED_USERS: SeedUser[] = [
     neighborhoods: ["Old Fourth Ward", "Cabbagetown"],
   },
   {
-    id: "00000000-seed-elev-0000-000000000012",
+    id: "00000000-5eed-e1e0-0000-000000000012",
     username: "jordanl",
     display_name: "Jordan Lee",
     bio: "Farmers market regular, food truck chaser, and weekend cook.",
@@ -165,7 +165,7 @@ const SEED_USERS: SeedUser[] = [
   },
 ];
 
-const SEED_UUID_PREFIX = "00000000-seed-elev-0000-";
+const SEED_UUID_PREFIX = "00000000-5eed-e1e0-0000-";
 const SEED_IDS = SEED_USERS.map((u) => u.id);
 
 // ============================================================================
@@ -300,11 +300,11 @@ async function seed() {
     if (existingIds.has(user.id)) continue;
 
     const { error } = await supabase.auth.admin.createUser({
-      user_id: user.id,
+      id: user.id,
       email: user.email,
       password: "seed-password-123",
       email_confirm: true,
-    } as Parameters<typeof supabase.auth.admin.createUser>[0]);
+    } as never);
 
     if (error && !error.message.includes("already exists")) {
       console.error(`  Error creating auth user ${user.username}:`, error.message);
@@ -324,6 +324,7 @@ async function seed() {
       privacy_mode: "social",
       is_public: true,
       created_at: new Date().toISOString(),
+      calendar_feed_secret: crypto.randomUUID(),
     })
   );
 
@@ -412,7 +413,7 @@ async function seed() {
 
   const { data: upcomingEvents, error: eventsError } = await supabase
     .from("events")
-    .select("id, title, start_date, category, venue_id, image_url")
+    .select("id, title, start_date, category_id, venue_id, image_url")
     .gte("start_date", today)
     .lte("start_date", twoWeeksOut)
     .eq("is_active", true)

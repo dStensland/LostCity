@@ -1,0 +1,792 @@
+{
+  "version": "2.8",
+  "children": [
+    {
+      "type": "frame",
+      "id": "QtstG",
+      "x": 0,
+      "y": 0,
+      "name": "Font Test",
+      "width": 500,
+      "fill": "#09090B",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "bln3r",
+          "name": "t1",
+          "fill": "#F5F5F3",
+          "content": "Outfit Regular — The quick brown fox",
+          "fontFamily": "Outfit",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "ydfVK",
+          "name": "t2",
+          "fill": "#F5F5F3",
+          "content": "Outfit Bold — The quick brown fox",
+          "fontFamily": "Outfit",
+          "fontSize": 20,
+          "fontWeight": "700"
+        },
+        {
+          "type": "text",
+          "id": "riGHe",
+          "name": "t3",
+          "fill": "#FF6B7A",
+          "content": "JetBrains Mono — console.log('hello')",
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 16,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "HiZDE",
+          "name": "t4",
+          "fill": "#C9874F",
+          "content": "Space Grotesk — LOST ARTS",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 24,
+          "fontWeight": "700"
+        },
+        {
+          "type": "text",
+          "id": "5hvYH",
+          "name": "t5",
+          "fill": "#F5F5F3",
+          "content": "Playfair Display Italic — Exhibition Title",
+          "fontFamily": "Playfair Display",
+          "fontSize": 22,
+          "fontWeight": "normal",
+          "fontStyle": "italic"
+        },
+        {
+          "type": "text",
+          "id": "8yxFL",
+          "name": "t6",
+          "fill": "#F5F5F3",
+          "content": "IBM Plex Mono — metadata::label",
+          "fontFamily": "IBM Plex Mono",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "VcjDt",
+          "name": "t7",
+          "fill": "#5E7A5E",
+          "content": "Plus Jakarta Sans — Family Portal",
+          "fontFamily": "Plus Jakarta Sans",
+          "fontSize": 20,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "Fh6V7",
+          "name": "t8",
+          "fill": "#F5F5F3",
+          "content": "Inter (system) — Baseline comparison",
+          "fontFamily": "Inter",
+          "fontSize": 16,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "W5ZYe",
+      "x": 0,
+      "y": 400,
+      "name": "Badge",
+      "reusable": true,
+      "fill": "$accent/coral",
+      "cornerRadius": 9999,
+      "gap": 4,
+      "padding": [
+        4,
+        10
+      ],
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "text",
+          "id": "gmuEU",
+          "name": "badgeText",
+          "fill": "$surface/void",
+          "content": "BADGE",
+          "fontFamily": "IBM Plex Mono",
+          "fontSize": 10,
+          "fontWeight": "700",
+          "letterSpacing": 0.5
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "vouL1",
+      "x": 0,
+      "y": 500,
+      "name": "Theme Test",
+      "width": 300,
+      "fill": "#1A1A1A",
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "9pUUI",
+          "name": "label1",
+          "fill": "#999999",
+          "content": "Atlanta (default):",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "id": "b2PaO",
+          "type": "ref",
+          "ref": "W5ZYe",
+          "theme": {
+            "portal": "atlanta"
+          },
+          "name": "b1",
+          "x": 24,
+          "y": 51
+        },
+        {
+          "type": "text",
+          "id": "1BhNF",
+          "name": "label2",
+          "fill": "#999999",
+          "content": "Arts portal:",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "id": "S48DA",
+          "type": "ref",
+          "ref": "W5ZYe",
+          "theme": {
+            "portal": "arts"
+          },
+          "name": "b2",
+          "x": 24,
+          "y": 111
+        },
+        {
+          "type": "text",
+          "id": "Oz4Rp",
+          "name": "label3",
+          "fill": "#999999",
+          "content": "Citizen portal:",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "id": "zW6b3",
+          "type": "ref",
+          "ref": "W5ZYe",
+          "theme": {
+            "portal": "citizen"
+          },
+          "name": "b3",
+          "x": 24,
+          "y": 171
+        },
+        {
+          "type": "text",
+          "id": "PL4OO",
+          "name": "label4",
+          "fill": "#999999",
+          "content": "Adventure portal:",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "id": "JAXX5",
+          "type": "ref",
+          "ref": "W5ZYe",
+          "theme": {
+            "portal": "adventure"
+          },
+          "name": "b4",
+          "x": 24,
+          "y": 231
+        },
+        {
+          "type": "text",
+          "id": "1n8Yg",
+          "name": "label5",
+          "fill": "#999999",
+          "content": "Family portal:",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "id": "4fZwD",
+          "type": "ref",
+          "ref": "W5ZYe",
+          "theme": {
+            "portal": "family"
+          },
+          "name": "b5",
+          "x": 24,
+          "y": 291
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "fhTVq",
+      "x": 0,
+      "y": 850,
+      "name": "Font Variable Test",
+      "width": 400,
+      "fill": "#09090B",
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "mPG6l",
+          "name": "fv1",
+          "fill": "#F5F5F3",
+          "content": "Display font via variable",
+          "fontFamily": "$font/display",
+          "fontSize": 20,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "YRvJq",
+          "name": "fv2",
+          "fill": "#FF6B7A",
+          "content": "Mono font via variable",
+          "fontFamily": "$font/mono",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "id": "IsTas",
+          "type": "ref",
+          "ref": "W5ZYe",
+          "theme": {
+            "portal": "arts"
+          },
+          "name": "fv3",
+          "width": "fit_content",
+          "x": 24,
+          "y": 91,
+          "descendants": {
+            "gmuEU": {
+              "content": "ARTS BADGE"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "39z97",
+      "x": 0,
+      "y": 1000,
+      "name": "Font Theme Test",
+      "width": 800,
+      "fill": "#09090B",
+      "gap": 24,
+      "padding": 24,
+      "children": [
+        {
+          "type": "frame",
+          "id": "jLKD9",
+          "name": "col1",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "K3Ahm",
+              "name": "l1",
+              "fill": "#666666",
+              "content": "Atlanta:",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "oP69y",
+              "name": "ft1",
+              "theme": {
+                "portal": "atlanta"
+              },
+              "fill": "$accent/coral",
+              "content": "Display Font Test",
+              "fontFamily": "$font/display",
+              "fontSize": 18,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "OeXA5",
+          "name": "col2",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "cb0y7",
+              "name": "l2",
+              "fill": "#666666",
+              "content": "Arts:",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "8swnM",
+              "name": "ft2",
+              "theme": {
+                "portal": "arts"
+              },
+              "fill": "$accent/coral",
+              "content": "Display Font Test",
+              "fontFamily": "$font/display",
+              "fontSize": 18,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "EJqVg",
+          "name": "col3",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "gDMEn",
+              "name": "l3",
+              "fill": "#666666",
+              "content": "Adventure:",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "kAXbL",
+              "name": "ft3",
+              "theme": {
+                "portal": "adventure"
+              },
+              "fill": "$accent/coral",
+              "content": "Display Font Test",
+              "fontFamily": "$font/display",
+              "fontSize": 18,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "CKczW",
+          "name": "col4",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "k1cfD",
+              "name": "l4",
+              "fill": "#666666",
+              "content": "Family:",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "yZdxT",
+              "name": "ft4",
+              "theme": {
+                "portal": "family"
+              },
+              "fill": "$accent/coral",
+              "content": "Display Font Test",
+              "fontFamily": "$font/display",
+              "fontSize": 18,
+              "fontWeight": "600"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "tlpGe",
+      "x": 0,
+      "y": 1100,
+      "name": "Radius Variable Test",
+      "width": 600,
+      "fill": "#09090B",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "frame",
+          "id": "nsehG",
+          "name": "r1",
+          "theme": {
+            "portal": "atlanta"
+          },
+          "width": 100,
+          "height": 60,
+          "fill": "$accent/coral",
+          "cornerRadius": "$radius/card",
+          "children": [
+            {
+              "type": "text",
+              "id": "G0QtI",
+              "name": "r1l",
+              "fill": "#000000",
+              "content": "ATL r:12",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "vSwo2",
+          "name": "r2",
+          "theme": {
+            "portal": "arts"
+          },
+          "width": 100,
+          "height": 60,
+          "fill": "$accent/coral",
+          "cornerRadius": "$radius/card",
+          "children": [
+            {
+              "type": "text",
+              "id": "9MW93",
+              "name": "r2l",
+              "fill": "#000000",
+              "content": "Arts r:0",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "4TXG0",
+          "name": "r3",
+          "theme": {
+            "portal": "adventure"
+          },
+          "width": 100,
+          "height": 60,
+          "fill": "$accent/coral",
+          "cornerRadius": "$radius/card",
+          "children": [
+            {
+              "type": "text",
+              "id": "ipDhW",
+              "name": "r3l",
+              "fill": "#000000",
+              "content": "Adv r:0",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "CNKsd",
+          "name": "r4",
+          "theme": {
+            "portal": "family"
+          },
+          "width": 100,
+          "height": 60,
+          "fill": "$accent/coral",
+          "cornerRadius": "$radius/card",
+          "children": [
+            {
+              "type": "text",
+              "id": "gLMA2",
+              "name": "r4l",
+              "fill": "#000000",
+              "content": "Fam r:16",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "xnMtS",
+      "x": 0,
+      "y": 1250,
+      "name": "Spacing Variable Test",
+      "width": 300,
+      "fill": "#09090B",
+      "gap": "$spacing/gap-sm",
+      "padding": 16,
+      "children": [
+        {
+          "type": "frame",
+          "id": "K8CWl",
+          "name": "s1",
+          "width": 40,
+          "height": 40,
+          "fill": "$accent/coral",
+          "cornerRadius": 4
+        },
+        {
+          "type": "frame",
+          "id": "rq2OA",
+          "name": "s2",
+          "width": 40,
+          "height": 40,
+          "fill": "$accent/coral",
+          "cornerRadius": 4
+        },
+        {
+          "type": "frame",
+          "id": "h2lGH",
+          "name": "s3",
+          "width": 40,
+          "height": 40,
+          "fill": "$accent/coral",
+          "cornerRadius": 4
+        }
+      ]
+    }
+  ],
+  "themes": {
+    "portal": [
+      "atlanta",
+      "arts",
+      "citizen",
+      "adventure",
+      "family"
+    ]
+  },
+  "variables": {
+    "accent/coral": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FF6B7A"
+        },
+        {
+          "value": "#FF6B7A",
+          "theme": {
+            "portal": "atlanta"
+          }
+        },
+        {
+          "value": "#C9874F",
+          "theme": {
+            "portal": "arts"
+          }
+        },
+        {
+          "value": "#2D6A4F",
+          "theme": {
+            "portal": "citizen"
+          }
+        },
+        {
+          "value": "#C45A3B",
+          "theme": {
+            "portal": "adventure"
+          }
+        },
+        {
+          "value": "#5E7A5E",
+          "theme": {
+            "portal": "family"
+          }
+        }
+      ]
+    },
+    "surface/night": {
+      "type": "color",
+      "value": "#0F0F14"
+    },
+    "surface/void": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#09090B"
+        },
+        {
+          "value": "#09090B",
+          "theme": {
+            "portal": "atlanta"
+          }
+        },
+        {
+          "value": "#141210",
+          "theme": {
+            "portal": "arts"
+          }
+        },
+        {
+          "value": "#F8F6F0",
+          "theme": {
+            "portal": "citizen"
+          }
+        },
+        {
+          "value": "#F5F2ED",
+          "theme": {
+            "portal": "adventure"
+          }
+        },
+        {
+          "value": "#F0EDE4",
+          "theme": {
+            "portal": "family"
+          }
+        }
+      ]
+    },
+    "text/cream": {
+      "type": "color",
+      "value": "#F5F5F3"
+    },
+    "font/display": {
+      "type": "string",
+      "value": [
+        {
+          "value": "Outfit"
+        },
+        {
+          "value": "Outfit",
+          "theme": {
+            "portal": "atlanta"
+          }
+        },
+        {
+          "value": "Space Grotesk",
+          "theme": {
+            "portal": "arts"
+          }
+        },
+        {
+          "value": "Outfit",
+          "theme": {
+            "portal": "citizen"
+          }
+        },
+        {
+          "value": "Space Grotesk",
+          "theme": {
+            "portal": "adventure"
+          }
+        },
+        {
+          "value": "Plus Jakarta Sans",
+          "theme": {
+            "portal": "family"
+          }
+        }
+      ]
+    },
+    "font/mono": {
+      "type": "string",
+      "value": [
+        {
+          "value": "JetBrains Mono"
+        },
+        {
+          "value": "JetBrains Mono",
+          "theme": {
+            "portal": "atlanta"
+          }
+        },
+        {
+          "value": "IBM Plex Mono",
+          "theme": {
+            "portal": "arts"
+          }
+        }
+      ]
+    },
+    "radius/card": {
+      "type": "number",
+      "value": [
+        {
+          "value": 12
+        },
+        {
+          "value": 12,
+          "theme": {
+            "portal": "atlanta"
+          }
+        },
+        {
+          "value": 0,
+          "theme": {
+            "portal": "arts"
+          }
+        },
+        {
+          "value": 12,
+          "theme": {
+            "portal": "citizen"
+          }
+        },
+        {
+          "value": 0,
+          "theme": {
+            "portal": "adventure"
+          }
+        },
+        {
+          "value": 16,
+          "theme": {
+            "portal": "family"
+          }
+        }
+      ]
+    },
+    "radius/pill": {
+      "type": "number",
+      "value": 9999
+    },
+    "spacing/gap-sm": {
+      "type": "number",
+      "value": 8
+    }
+  }
+}

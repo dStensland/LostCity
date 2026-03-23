@@ -1,0 +1,234 @@
+<h2>Feed Architecture: Editorial Guide with Index Fallback</h2>
+<p class="subtitle">The feed curates ~25-40 events worth seeing. "See all 273" is always one tap away.</p>
+
+<div class="section">
+  <h3>The key principle: the feed is a vertical scroll, not a horizontal carousel</h3>
+  <p>The current Lineup uses horizontal scroll — every card is the same size, position doesn't communicate importance. The redesigned feed is <strong>vertical</strong>: scroll position = importance. Big things are big. Small things are small. You don't need to scroll sideways through 100 identical cards to find the good stuff.</p>
+</div>
+
+<div class="section">
+  <h3>Proposed Section Order</h3>
+  <p>Each section earns its position by answering a question the user has at that point in their scroll.</p>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">Feed Anatomy — What the user sees, top to bottom</div>
+  <div class="mockup-body" style="background:#09090B;padding:0;font-family:system-ui;max-width:500px;margin:0 auto">
+
+    <!-- 1. CONTEXTUAL HERO -->
+    <div style="position:relative;height:200px;background:linear-gradient(135deg,#2a1830,#1a2535);overflow:hidden;display:flex;align-items:flex-end;padding:20px">
+      <div style="position:absolute;top:12px;left:12px">
+        <div style="font-family:monospace;font-size:9px;color:#FFD93D;text-transform:uppercase;letter-spacing:2px;font-weight:700">HAPPENING NOW</div>
+      </div>
+      <div>
+        <div style="color:#F5F5F3;font-size:22px;font-weight:700;line-height:1.2">Cherry Blossom Festival</div>
+        <div style="color:#A1A1AA;font-size:13px;margin-top:4px">Piedmont Park · All Day · Free</div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <span style="font-size:10px;font-family:monospace;color:#09090B;background:#FFD93D;padding:2px 8px;border-radius:99px;font-weight:700">GET TICKETS</span>
+          <span style="font-size:10px;font-family:monospace;color:#A1A1AA;border:1px solid #252530;padding:2px 8px;border-radius:99px">MAP IT</span>
+        </div>
+      </div>
+      <div style="position:absolute;top:0;right:0;bottom:0;left:0;background:linear-gradient(to top, #09090B 0%, transparent 60%);pointer-events:none"></div>
+      <div style="position:absolute;bottom:0;left:0;right:0;z-index:1;padding:20px">
+        <!-- content renders here via z-index -->
+      </div>
+    </div>
+    <div style="padding:4px 16px 0;font-family:monospace;font-size:9px;color:#8B8B94;text-align:right">
+      ↑ SECTION 1: Contextual Hero — responds to what's happening TODAY
+    </div>
+
+    <!-- 2. QUICK LINKS -->
+    <div style="padding:12px 16px;display:flex;gap:8px;overflow:hidden">
+      <span style="font-size:11px;font-family:monospace;color:#F5F5F3;background:#ffffff0d;border:1px solid #25253060;padding:6px 12px;border-radius:99px;white-space:nowrap">Tonight</span>
+      <span style="font-size:11px;font-family:monospace;color:#F5F5F3;background:#ffffff0d;border:1px solid #25253060;padding:6px 12px;border-radius:99px;white-space:nowrap">Free</span>
+      <span style="font-size:11px;font-family:monospace;color:#F5F5F3;background:#ffffff0d;border:1px solid #25253060;padding:6px 12px;border-radius:99px;white-space:nowrap">Music</span>
+      <span style="font-size:11px;font-family:monospace;color:#F5F5F3;background:#ffffff0d;border:1px solid #25253060;padding:6px 12px;border-radius:99px;white-space:nowrap">Comedy</span>
+      <span style="font-size:11px;font-family:monospace;color:#F5F5F3;background:#ffffff0d;border:1px solid #25253060;padding:6px 12px;border-radius:99px;white-space:nowrap">Art</span>
+      <span style="font-size:11px;font-family:monospace;color:#F5F5F3;background:#ffffff0d;border:1px solid #25253060;padding:6px 12px;border-radius:99px;white-space:nowrap">Food</span>
+    </div>
+    <div style="padding:0 16px;font-family:monospace;font-size:9px;color:#8B8B94;text-align:right">
+      ↑ SECTION 2: Category shortcuts — for users who arrive with intent
+    </div>
+
+    <!-- 3. TONIGHT'S PICKS (editorial curated) -->
+    <div style="padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-family:monospace;font-size:10px;color:#FF6B7A;text-transform:uppercase;letter-spacing:1.5px;font-weight:700">TONIGHT'S PICKS</div>
+        <div style="font-size:10px;font-family:monospace;color:#FF6B7A">See all 47 →</div>
+      </div>
+
+      <!-- Editorial callout -->
+      <div style="border-left:3px solid #FFD93D;padding:8px 12px;margin-bottom:12px;background:#FFD93D08;border-radius:0 6px 6px 0">
+        <span style="font-size:13px;color:#FFD93D;font-weight:600">Cherry Blossom Festival wraps tonight.</span>
+        <span style="font-size:13px;color:#A1A1AA"> Plus 14 live music events across the city.</span>
+      </div>
+
+      <!-- HERO event -->
+      <div style="background:linear-gradient(135deg,#1a1525,#0F0F14);border-radius:12px;margin-bottom:10px;overflow:hidden;border:1px solid #252530">
+        <div style="height:100px;background:linear-gradient(to bottom right,#2a1a30,#1a2530);display:flex;align-items:flex-end;padding:12px">
+          <div>
+            <div style="font-family:monospace;font-size:9px;color:#FFD93D;text-transform:uppercase;letter-spacing:1.5px;font-weight:700">MUSIC · TONIGHT</div>
+            <div style="color:#F5F5F3;font-size:18px;font-weight:700;line-height:1.2">Walter Trout</div>
+            <div style="color:#A1A1AA;font-size:12px;margin-top:2px">City Winery · Ponce City Market · 7pm</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Featured row -->
+      <div style="display:flex;gap:8px;margin-bottom:10px;overflow:hidden">
+        <div style="flex:1;min-width:0;background:#18181F;border-radius:10px;padding:10px;border:1px solid #252530">
+          <div style="height:44px;background:#252530;border-radius:6px;margin-bottom:6px"></div>
+          <div style="color:#F5F5F3;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Pat Metheny</div>
+          <div style="color:#8B8B94;font-size:10px">Symphony Hall · 7:30pm</div>
+        </div>
+        <div style="flex:1;min-width:0;background:#18181F;border-radius:10px;padding:10px;border:1px solid #252530">
+          <div style="height:44px;background:#252530;border-radius:6px;margin-bottom:6px"></div>
+          <div style="color:#F5F5F3;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">LUNA Pop Up</div>
+          <div style="color:#8B8B94;font-size:10px">Commune · 6pm</div>
+        </div>
+        <div style="flex:1;min-width:0;background:#18181F;border-radius:10px;padding:10px;border:1px solid #252530">
+          <div style="height:44px;background:#252530;border-radius:6px;margin-bottom:6px"></div>
+          <div style="color:#F5F5F3;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Comedy Night</div>
+          <div style="color:#8B8B94;font-size:10px">Laughing Skull · 8pm</div>
+        </div>
+      </div>
+
+      <!-- Standard rows -->
+      <div style="background:#18181F;border-radius:8px;padding:8px 12px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;border-left:2px solid #A78BFA">
+        <div>
+          <div style="color:#F5F5F3;font-size:12px;font-weight:500">Joy Deficit: Live Performance</div>
+          <div style="color:#8B8B94;font-size:10px">Red Light Cafe · 7:30pm</div>
+        </div>
+        <div style="color:#00D9A0;font-size:9px;font-family:monospace;background:#00D9A012;padding:2px 6px;border-radius:99px">FREE</div>
+      </div>
+      <div style="background:#18181F;border-radius:8px;padding:8px 12px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;border-left:2px solid #FF6B7A">
+        <div>
+          <div style="color:#F5F5F3;font-size:12px;font-weight:500">Muela at The Masquerade</div>
+          <div style="color:#8B8B94;font-size:10px">The Masquerade · 7pm</div>
+        </div>
+      </div>
+      <div style="background:#18181F;border-radius:8px;padding:8px 12px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;border-left:2px solid #FF6B7A">
+        <div>
+          <div style="color:#F5F5F3;font-size:12px;font-weight:500">Placeholders at 529</div>
+          <div style="color:#8B8B94;font-size:10px">529 · East Atlanta · 8pm</div>
+        </div>
+      </div>
+      <div style="text-align:center;padding:8px">
+        <span style="font-size:11px;font-family:monospace;color:#FF6B7A">See all 47 tonight →</span>
+      </div>
+    </div>
+    <div style="padding:0 16px;font-family:monospace;font-size:9px;color:#8B8B94;text-align:right">
+      ↑ SECTION 3: Tonight's Picks — tiered (hero → featured → standard), editorial callout, "See all" to full index
+    </div>
+
+    <!-- 4. REGULAR HANGS -->
+    <div style="padding:16px;border-top:1px solid #252530">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-family:monospace;font-size:10px;color:#A78BFA;text-transform:uppercase;letter-spacing:1.5px;font-weight:700">REGULAR HANGS</div>
+        <div style="font-size:10px;font-family:monospace;color:#A78BFA">See all →</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;overflow:hidden">
+        <span style="font-size:10px;font-family:monospace;color:#F5F5F3;background:#A78BFA20;border:1px solid #A78BFA30;padding:4px 10px;border-radius:99px">Trivia 85</span>
+        <span style="font-size:10px;font-family:monospace;color:#A1A1AA;background:#ffffff08;border:1px solid #25253060;padding:4px 10px;border-radius:99px">Karaoke 28</span>
+        <span style="font-size:10px;font-family:monospace;color:#A1A1AA;background:#ffffff08;border:1px solid #25253060;padding:4px 10px;border-radius:99px">Comedy 17</span>
+      </div>
+      <div style="color:#8B8B94;font-size:11px;font-style:italic;padding:4px 0">
+        Existing Regular Hangs section — already well-designed, keep as-is
+      </div>
+    </div>
+    <div style="padding:0 16px;font-family:monospace;font-size:9px;color:#8B8B94;text-align:right">
+      ↑ SECTION 4: Regular Hangs — unchanged, already excellent
+    </div>
+
+    <!-- 5. NOW SHOWING -->
+    <div style="padding:16px;border-top:1px solid #252530">
+      <div style="font-family:monospace;font-size:10px;color:#E855A0;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:8px">NOW SHOWING</div>
+      <div style="color:#8B8B94;font-size:11px;font-style:italic;padding:4px 0">
+        Existing cinema section — keep as-is
+      </div>
+    </div>
+    <div style="padding:0 16px;font-family:monospace;font-size:9px;color:#8B8B94;text-align:right">
+      ↑ SECTION 5: Now Showing — unchanged
+    </div>
+
+    <!-- 6. ON THE HORIZON -->
+    <div style="padding:16px;border-top:1px solid #252530">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-family:monospace;font-size:10px;color:#FFD93D;text-transform:uppercase;letter-spacing:1.5px;font-weight:700">ON THE HORIZON</div>
+        <div style="font-size:10px;font-family:monospace;color:#FFD93D">All big events →</div>
+      </div>
+      <div style="color:#A1A1AA;font-size:11px;margin-bottom:10px">
+        Only festivals, tentpoles, and multi-day events. No weekly open mics.
+      </div>
+      <div style="display:flex;gap:8px;overflow:hidden">
+        <div style="min-width:200px;background:#18181F;border-radius:10px;overflow:hidden;border:1px solid #252530">
+          <div style="height:80px;background:linear-gradient(135deg,#2a2020,#1a2535)"></div>
+          <div style="padding:10px">
+            <div style="font-family:monospace;font-size:9px;color:#FFD93D;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">APR 4 · FESTIVAL</div>
+            <div style="color:#F5F5F3;font-size:13px;font-weight:600">404 Day 2026</div>
+            <div style="color:#8B8B94;font-size:10px">Piedmont Park · Free</div>
+          </div>
+        </div>
+        <div style="min-width:200px;background:#18181F;border-radius:10px;overflow:hidden;border:1px solid #252530">
+          <div style="height:80px;background:linear-gradient(135deg,#201a2a,#152535)"></div>
+          <div style="padding:10px">
+            <div style="font-family:monospace;font-size:9px;color:#FFD93D;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">APR 10-12 · FESTIVAL</div>
+            <div style="color:#F5F5F3;font-size:13px;font-weight:600">Dogwood Festival</div>
+            <div style="color:#8B8B94;font-size:10px">Piedmont Park · Free</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:0 16px 16px;font-family:monospace;font-size:9px;color:#8B8B94;text-align:right">
+      ↑ SECTION 6: On the Horizon — ONLY tentpoles/festivals/multi-day. Quality-gated.
+    </div>
+
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px">
+  <h3>What changed vs. current feed</h3>
+</div>
+
+<div class="options" data-multiselect>
+  <div class="option" data-choice="hero" onclick="toggleSelect(this)">
+    <div class="letter">1</div>
+    <div class="content">
+      <h3>Contextual Hero binds to the biggest event today</h3>
+      <p>Cherry Blossom Festival IS the hero, not a tiny marquee strip. When no flagship event exists, falls back to atmospheric time-of-day hero. The hero responds to reality.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="no-news" onclick="toggleSelect(this)">
+    <div class="letter">2</div>
+    <div class="content">
+      <h3>News module removed from default feed</h3>
+      <p>Local news (crime, civic admin) moved to a dedicated "Today in Atlanta" page accessible from nav. The feed's job is to inspire going out, not inform about shootings.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="vertical" onclick="toggleSelect(this)">
+    <div class="letter">3</div>
+    <div class="content">
+      <h3>Tonight's Picks is vertical + tiered, not horizontal carousel</h3>
+      <p>Hero card (full-width) → featured row (3 cards) → standard rows (compact). Visual weight = importance. "See all 47" links to the full unfiltered index. Shows ~15-20 curated picks, not 273.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="noise" onclick="toggleSelect(this)">
+    <div class="letter">4</div>
+    <div class="content">
+      <h3>Noise filtered from the editorial feed (but accessible via "See all")</h3>
+      <p>Rec center programming, YMCA classes, library tax help filtered from the curated picks. Still accessible via "See all 273" — never hidden, just not featured. The editorial feed shows ~25-40 events worth going to.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="horizon" onclick="toggleSelect(this)">
+    <div class="letter">5</div>
+    <div class="content">
+      <h3>Planning Horizon quality-gated to festivals/tentpoles only</h3>
+      <p>No more weekly open mics in "On the Horizon." Only events that are: tentpole, festival, multi-day, or importance=flagship. A section called "big events coming up" should only contain big events.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;padding:16px;border-left:3px solid #00D9A0;background:#00D9A008;border-radius:0 8px 8px 0">
+  <h3 style="margin-top:0;color:#00D9A0">What stays the same</h3>
+  <p style="color:#A1A1AA">Regular Hangs (already great), Now Showing (clean), the visual design system, all existing components. This is a reorganization of information hierarchy, not a visual redesign.</p>
+</div>

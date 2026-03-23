@@ -1,0 +1,181 @@
+<h2>Design System Elevation: The Full Picture</h2>
+<p class="subtitle">Three interconnected changes that transform Lost City from "functional event app" to "Atlanta's cultural companion"</p>
+
+<div class="section">
+  <h3>1. Tiered Content Hierarchy</h3>
+  <p>Events and venues get visual weight proportional to their significance. Three tiers, driven by existing scoring data.</p>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">Three Card Tiers — Same data, different presentation</div>
+  <div class="mockup-body" style="background:#0F0F14;padding:24px;font-family:system-ui">
+    <!-- HERO -->
+    <div style="margin-bottom:6px;font-family:monospace;font-size:9px;color:#8B8B94;text-transform:uppercase;letter-spacing:1.5px">HERO — Score 90+ or editorial signal (festivals, major concerts, citywide events)</div>
+    <div style="background:linear-gradient(135deg,#1a1520,#0F0F14);border-radius:12px;margin-bottom:20px;overflow:hidden;border:1px solid #252530">
+      <div style="height:120px;background:linear-gradient(to bottom right,#2a1a30,#1a2530);display:flex;align-items:flex-end;padding:16px">
+        <div style="flex:1">
+          <div style="font-family:monospace;font-size:9px;color:#FFD93D;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:4px">CITYWIDE · 50,000 EXPECTED</div>
+          <div style="color:#F5F5F3;font-size:20px;font-weight:700;line-height:1.2">Atlanta Food & Wine Festival</div>
+          <div style="color:#A1A1AA;font-size:13px;margin-top:4px">Piedmont Park · All Day · $45+</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FEATURED -->
+    <div style="margin-bottom:6px;font-family:monospace;font-size:9px;color:#8B8B94;text-transform:uppercase;letter-spacing:1.5px">FEATURED — Score 60-89 or social signal (popular shows, trending venues)</div>
+    <div style="display:flex;gap:10px;margin-bottom:20px">
+      <div style="flex:1;background:#18181F;border-radius:10px;padding:10px;border:1px solid #252530">
+        <div style="height:50px;background:#252530;border-radius:6px;margin-bottom:8px"></div>
+        <div style="color:#F5F5F3;font-size:13px;font-weight:600">Jazz at Blind Willie's</div>
+        <div style="color:#8B8B94;font-size:11px;margin-top:2px">9pm · $12</div>
+      </div>
+      <div style="flex:1;background:#18181F;border-radius:10px;padding:10px;border:1px solid #252530">
+        <div style="height:50px;background:#252530;border-radius:6px;margin-bottom:8px"></div>
+        <div style="color:#F5F5F3;font-size:13px;font-weight:600">Comedy at Laughing Skull</div>
+        <div style="color:#8B8B94;font-size:11px;margin-top:2px">8pm · $15</div>
+      </div>
+    </div>
+
+    <!-- STANDARD -->
+    <div style="margin-bottom:6px;font-family:monospace;font-size:9px;color:#8B8B94;text-transform:uppercase;letter-spacing:1.5px">STANDARD — Everything else (compact, scannable, still accessible)</div>
+    <div style="background:#18181F;border-radius:8px;padding:8px 12px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="color:#F5F5F3;font-size:13px">Open Mic at Eddie's Attic</div>
+        <div style="color:#8B8B94;font-size:11px">Decatur · 8pm</div>
+      </div>
+      <div style="color:#00D9A0;font-size:9px;font-family:monospace;background:#00D9A012;padding:2px 6px;border-radius:99px">FREE</div>
+    </div>
+    <div style="background:#18181F;border-radius:8px;padding:8px 12px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="color:#F5F5F3;font-size:13px">Tuesday Trivia</div>
+        <div style="color:#8B8B94;font-size:11px">Neighbor's Pub · 7pm</div>
+      </div>
+      <div style="color:#00D9A0;font-size:9px;font-family:monospace;background:#00D9A012;padding:2px 6px;border-radius:99px">FREE</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:32px">
+  <h3>2. Editorial Voice Layer</h3>
+  <p>Template-driven, data-backed. No AI generation. Three voice patterns:</p>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">Voice Patterns — assembled from real data, never invented</div>
+  <div class="mockup-body" style="background:#0F0F14;padding:24px;font-family:system-ui">
+
+    <!-- Pattern 1: Contextual callout -->
+    <div style="margin-bottom:6px;font-family:monospace;font-size:9px;color:#A78BFA;text-transform:uppercase;letter-spacing:1.5px">PATTERN 1: CONTEXTUAL CALLOUT</div>
+    <div style="border-left:3px solid #FFD93D;padding:10px 14px;margin-bottom:20px;background:#FFD93D06;border-radius:0 8px 8px 0">
+      <div style="font-size:14px;color:#F5F5F3;line-height:1.5">
+        <span style="color:#FFD93D;font-weight:600">Atlanta's biggest food festival starts today.</span>
+        <span style="color:#A1A1AA"> 50,000 people expected at Piedmont Park.</span>
+      </div>
+      <div style="font-family:monospace;font-size:10px;color:#8B8B94;margin-top:8px">
+        Template: "[City]'s biggest [category] [type] [timing_verb] [timing]."<br>
+        Data: event.score &gt; 90 + event.expected_attendance + event.category
+      </div>
+    </div>
+
+    <!-- Pattern 2: Press mention -->
+    <div style="margin-bottom:6px;font-family:monospace;font-size:9px;color:#A78BFA;text-transform:uppercase;letter-spacing:1.5px">PATTERN 2: PRESS ATTRIBUTION</div>
+    <div style="padding:10px 14px;margin-bottom:20px;display:flex;gap:8px;align-items:flex-start">
+      <div style="color:#FFD93D;font-size:16px;line-height:1;margin-top:2px">"</div>
+      <div>
+        <div style="font-size:13px;color:#A1A1AA;font-style:italic;line-height:1.5">One of Atlanta's last real jazz rooms</div>
+        <div style="font-size:11px;color:#8B8B94;margin-top:4px">— Eater Atlanta</div>
+      </div>
+      <div style="font-family:monospace;font-size:10px;color:#8B8B94;margin-left:auto;max-width:200px">
+        Source: editorial_mentions table<br>
+        193 rows, 4 publications
+      </div>
+    </div>
+
+    <!-- Pattern 3: Social proof -->
+    <div style="margin-bottom:6px;font-family:monospace;font-size:9px;color:#A78BFA;text-transform:uppercase;letter-spacing:1.5px">PATTERN 3: SOCIAL PROOF</div>
+    <div style="padding:10px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:center">
+      <div style="display:flex;margin-right:-8px">
+        <div style="width:24px;height:24px;border-radius:99px;background:#252530;border:2px solid #0F0F14"></div>
+        <div style="width:24px;height:24px;border-radius:99px;background:#353530;border:2px solid #0F0F14;margin-left:-8px"></div>
+        <div style="width:24px;height:24px;border-radius:99px;background:#454540;border:2px solid #0F0F14;margin-left:-8px"></div>
+      </div>
+      <div>
+        <div style="font-size:13px;color:#F5F5F3">Sarah and 4 friends are going</div>
+        <div style="font-size:11px;color:#8B8B94;margin-top:1px">You went to 3 events here this month</div>
+      </div>
+      <div style="font-family:monospace;font-size:10px;color:#8B8B94;margin-left:auto;max-width:200px">
+        Source: RSVPs + hangs + friends<br>
+        Requires social layer (exists)
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:32px">
+  <h3>3. Emotional Moments</h3>
+  <p>Belonging → Discovery → Urgency. Small design touches that create feeling.</p>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">Moment Design — micro-interactions that create connection</div>
+  <div class="mockup-body" style="background:#0F0F14;padding:24px;font-family:system-ui">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <!-- Belonging -->
+      <div style="background:#18181F;border-radius:12px;padding:16px;border:1px solid #252530">
+        <div style="font-family:monospace;font-size:9px;color:#FF6B7A;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">BELONGING</div>
+        <div style="color:#F5F5F3;font-size:13px;font-weight:600;margin-bottom:8px">Friend Activity Pulse</div>
+        <div style="color:#A1A1AA;font-size:12px;line-height:1.6">
+          • "Sarah just checked in at Ponce City Market"<br>
+          • Friend avatars on event cards they're attending<br>
+          • "Your crew's favorite spot" badge on regular venues<br>
+          • Gentle nudge: "Mike is going tonight — join?"
+        </div>
+      </div>
+
+      <!-- Discovery -->
+      <div style="background:#18181F;border-radius:12px;padding:16px;border:1px solid #252530">
+        <div style="font-family:monospace;font-size:9px;color:#00D9A0;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">DISCOVERY</div>
+        <div style="color:#F5F5F3;font-size:13px;font-weight:600;margin-bottom:8px">Hidden Gems & Surprises</div>
+        <div style="color:#A1A1AA;font-size:12px;line-height:1.6">
+          • "Only 3 events today at this gallery" rarity signal<br>
+          • "New venue" badge for places open &lt; 6 months<br>
+          • "Wildcard" section — random high-quality event you wouldn't search for<br>
+          • "First time on Lost City" badge for newly crawled events
+        </div>
+      </div>
+
+      <!-- Urgency -->
+      <div style="background:#18181F;border-radius:12px;padding:16px;border:1px solid #252530">
+        <div style="font-family:monospace;font-size:9px;color:#FFD93D;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">URGENCY (light touch)</div>
+        <div style="color:#F5F5F3;font-size:13px;font-weight:600;margin-bottom:8px">Time-Aware Signals</div>
+        <div style="color:#A1A1AA;font-size:12px;line-height:1.6">
+          • "Starts in 2 hours" on tonight's events<br>
+          • "Last night" for closing exhibitions<br>
+          • "Selling fast" from ticket platform data<br>
+          • Time-of-day transitions (afternoon → evening → late night)
+        </div>
+      </div>
+
+      <!-- Motion -->
+      <div style="background:#18181F;border-radius:12px;padding:16px;border:1px solid #252530">
+        <div style="font-family:monospace;font-size:9px;color:#A78BFA;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">CRAFT</div>
+        <div style="color:#F5F5F3;font-size:13px;font-weight:600;margin-bottom:8px">Motion & Polish</div>
+        <div style="color:#A1A1AA;font-size:12px;line-height:1.6">
+          • Staggered card enter animations<br>
+          • Save bookmark animation (heart fills)<br>
+          • Smooth page transitions between feed → detail<br>
+          • Pull-to-refresh with city skyline animation
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:32px;padding:20px;border-left:3px solid #FF6B7A;background:rgba(255,107,122,0.05);border-radius:0 8px 8px 0">
+  <h3 style="margin-top:0">What makes this "elite" vs. "good"</h3>
+  <div style="color:#A1A1AA;font-size:14px;line-height:1.8">
+    <strong style="color:#F5F5F3">Good:</strong> Consistent tokens, matching components, proper spacing. (What we'd get from just fixing drift.)<br>
+    <strong style="color:#F5F5F3">Elite:</strong> The design <em>communicates</em>. Big things look big. The city has a voice. Your friends are woven in. You discover things you didn't know existed. The app makes you <em>want to go out</em> — not just <em>know what's out there</em>.
+  </div>
+</div>

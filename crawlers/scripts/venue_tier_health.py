@@ -6,16 +6,16 @@ Each venue type has a TARGET tier (how much data it should have).
 This tool measures how many venues meet their target.
 
 Target tiers:
-  Tier 3 (Premium):      museums, zoos, aquariums, theme parks, arenas
-  Tier 2 (Destination):   breweries, cinemas, entertainment, food halls, nightlife
-  Tier 1 (Discoverable):  restaurants, bars, parks, galleries, hotels
-  Tier 0 (Floor):         organizations, churches, festivals, catch-all
+  Tier 3 (Premium):      museums, zoos, aquariums, theme parks, arenas, stadiums
+  Tier 2 (Destination):   breweries, cinemas, entertainment, food halls, nightlife, attractions
+  Tier 1 (Discoverable):  restaurants, bars, parks, galleries, hotels, landmarks
+  Tier 0 (Floor):         organizations, churches, event spaces, community centers, catch-all
 
 Data requirements:
   Tier 0: name + slug + coords + city/state + venue_type + active
   Tier 1: + image + description (real) + neighborhood
-  Tier 2: + destination_details + 2 venue_features
-  Tier 3: + 3/5 of: specials, editorial, 3+ occasions, hours, vibes
+  Tier 2: + destination_details + 2 venue_features + vibes
+  Tier 3: + 3/6 of: specials, editorial, 3+ occasions, hours, vibes, highlights
 
 Usage:
     python3 scripts/venue_tier_health.py                 # Full compliance report
@@ -57,21 +57,30 @@ TIER_LABELS = {0: "Floor", 1: "Discoverable", 2: "Destination", 3: "Premium"}
 
 TARGET_TIER_3 = {
     "museum", "zoo", "aquarium", "theme_park", "arena", "convention_center",
+    "stadium",
 }
 
 TARGET_TIER_2 = {
     "brewery", "distillery", "winery", "cinema", "entertainment", "bowling",
     "arcade", "food_hall", "farmers_market", "sports_bar", "comedy_club",
     "nightclub", "music_venue", "rooftop",
+    # Experiential destinations
+    "attraction", "escape_room", "games", "gaming", "club", "amphitheater",
+    "lounge", "wine_bar", "cocktail_bar", "pool_hall", "karaoke",
 }
 
 TARGET_TIER_1 = {
     "restaurant", "bar", "coffee_shop", "gallery", "theater", "bookstore",
     "record_store", "library", "park", "garden", "fitness_center", "studio",
-    "hotel", "community_center", "rec_center", "event_space",
+    "hotel", "rec_center",
+    # Cultural and discoverable landmarks
+    "arts_center", "recreation", "dance_studio", "cafe", "nature_center",
+    "cooking_school", "outdoor_venue", "historic_site", "landmark",
 }
 
-# Everything else is Tier 0
+# Everything else is Tier 0 (event containers, orgs, churches, etc.)
+# Explicitly includes: organization, church, venue, festival, college,
+# university, hospital, event_space, community_center, and all others.
 
 
 def target_tier_for(venue_type: Optional[str]) -> int:
@@ -102,6 +111,11 @@ def _is_real_description(desc: Optional[str]) -> bool:
     return not any(lower.startswith(p) for p in BOILERPLATE_STARTS)
 
 
+def _has_vibes(venue: dict) -> bool:
+    vibes = venue.get("vibes")
+    return bool(vibes and isinstance(vibes, list) and len(vibes) > 0)
+
+
 def actual_tier(venue: dict, enrichment: dict) -> int:
     """What tier does this venue's data actually meet?"""
     # Tier 0 checks
@@ -129,8 +143,10 @@ def actual_tier(venue: dict, enrichment: dict) -> int:
         return 1
     if enrichment.get("feature_count", 0) < 2:
         return 1
+    if not _has_vibes(venue):
+        return 1
 
-    # Tier 3 checks
+    # Tier 3 checks — need 3/6 premium signals
     premium = 0
     if enrichment.get("special_count", 0) >= 1:
         premium += 1
@@ -140,8 +156,10 @@ def actual_tier(venue: dict, enrichment: dict) -> int:
         premium += 1
     if venue.get("hours"):
         premium += 1
-    vibes = venue.get("vibes")
-    if vibes and isinstance(vibes, list) and len(vibes) > 0:
+    # vibes already required at T2, so this is always 1 for T3-eligible venues
+    if _has_vibes(venue):
+        premium += 1
+    if enrichment.get("highlight_count", 0) >= 1:
         premium += 1
     if premium < 3:
         return 2
@@ -172,6 +190,8 @@ def tier_gaps(venue: dict, enrichment: dict, target: int) -> list[str]:
         fc = enrichment.get("feature_count", 0)
         if fc < 2:
             missing.append(f"features ({fc}/2)")
+        if not _has_vibes(venue):
+            missing.append("vibes")
 
     # Need Tier 3?
     if current < 3 and target >= 3:
@@ -183,9 +203,10 @@ def tier_gaps(venue: dict, enrichment: dict, target: int) -> list[str]:
             missing.append(f"occasions ({enrichment.get('occasion_count', 0)}/3)")
         if not venue.get("hours"):
             missing.append("hours")
-        vibes = venue.get("vibes")
-        if not vibes or not isinstance(vibes, list) or len(vibes) == 0:
+        if not _has_vibes(venue):
             missing.append("vibes")
+        if enrichment.get("highlight_count", 0) < 1:
+            missing.append("highlights")
 
     return missing
 
@@ -218,6 +239,7 @@ def fetch_enrichment_counts(client, venue_ids: list[int]) -> dict[int, dict]:
         "special_count": 0,
         "editorial_count": 0,
         "occasion_count": 0,
+        "highlight_count": 0,
     })
     if not venue_ids:
         return enrichment
@@ -233,6 +255,7 @@ def fetch_enrichment_counts(client, venue_ids: list[int]) -> dict[int, dict]:
         ("venue_specials", "special_count"),
         ("editorial_mentions", "editorial_count"),
         ("venue_occasions", "occasion_count"),
+        ("venue_highlights", "highlight_count"),
     ]:
         for offset in range(0, len(venue_ids), 500):
             batch = venue_ids[offset:offset + 500]
@@ -255,6 +278,98 @@ def _compliance_color(pct: float) -> str:
 def _bar(pct: float, width: int = 20) -> str:
     filled = int(pct / 100 * width)
     return f"{C.D}{'#' * filled}{'.' * (width - filled)}{C.END}"
+
+
+def print_field_gaps(venues: list[dict], enrichment: dict):
+    """Show per-field gap breakdown for each target tier."""
+
+    print(f"\n{C.BOLD}Per-Field Gap Breakdown{C.END}")
+    print(f"{'─' * 70}")
+
+    # T1 gaps (all venues with target >= 1)
+    t1_venues = [v for v in venues if target_tier_for(v.get("venue_type")) >= 1]
+    if t1_venues:
+        no_desc = sum(1 for v in t1_venues if not _is_real_description(v.get("description")))
+        no_hood = sum(1 for v in t1_venues if not v.get("neighborhood"))
+        no_img = sum(1 for v in t1_venues if not v.get("image_url"))
+        total = len(t1_venues)
+
+        t1_gaps = sorted([
+            ("description", no_desc),
+            ("neighborhood", no_hood),
+            ("image", no_img),
+        ], key=lambda x: -x[1])
+
+        t1_pass = sum(1 for v in t1_venues
+                      if actual_tier(v, enrichment.get(v["id"], {})) >= 1)
+        t1_pct = t1_pass / total * 100 if total else 0
+
+        print(f"\n  {C.BOLD}T1 Field Gaps{C.END} {C.D}({total} venues with target >= T1, {t1_pct:.0f}% meet T1){C.END}")
+        for i, (field, count) in enumerate(t1_gaps):
+            pct = count / total * 100 if total else 0
+            marker = f"  {C.R}<- #1 blocker{C.END}" if i == 0 and count > 0 else ""
+            print(f"    Missing {field:<20} {count:>5} ({pct:.0f}%){marker}")
+
+    # T2 gaps (all venues with target >= 2)
+    t2_venues = [v for v in venues if target_tier_for(v.get("venue_type")) >= 2]
+    if t2_venues:
+        total = len(t2_venues)
+        no_dest = sum(1 for v in t2_venues if not enrichment.get(v["id"], {}).get("has_destination_details"))
+        no_feat = sum(1 for v in t2_venues if enrichment.get(v["id"], {}).get("feature_count", 0) < 2)
+        no_vibes = sum(1 for v in t2_venues if not _has_vibes(v))
+        t1_prereq_fail = sum(1 for v in t2_venues
+                             if actual_tier(v, enrichment.get(v["id"], {})) < 1)
+
+        t2_pass = sum(1 for v in t2_venues
+                      if actual_tier(v, enrichment.get(v["id"], {})) >= 2)
+        t2_pct = t2_pass / total * 100 if total else 0
+
+        t2_gaps = sorted([
+            ("destination_details", no_dest),
+            ("2+ features", no_feat),
+            ("vibes", no_vibes),
+        ], key=lambda x: -x[1])
+
+        print(f"\n  {C.BOLD}T2 Field Gaps{C.END} {C.D}({total} venues with target >= T2, {t2_pct:.0f}% meet T2){C.END}")
+        for field, count in t2_gaps:
+            pct = count / total * 100 if total else 0
+            print(f"    Missing {field:<20} {count:>5} ({pct:.0f}%)")
+        pct = t1_prereq_fail / total * 100 if total else 0
+        print(f"    {C.D}T1 prerequisite fail    {t1_prereq_fail:>5} ({pct:.0f}%){C.END}")
+
+    # T3 premium signal gaps (all venues with target >= 3)
+    t3_venues = [v for v in venues if target_tier_for(v.get("venue_type")) >= 3]
+    if t3_venues:
+        total = len(t3_venues)
+        no_specials = sum(1 for v in t3_venues if enrichment.get(v["id"], {}).get("special_count", 0) < 1)
+        no_editorial = sum(1 for v in t3_venues if enrichment.get(v["id"], {}).get("editorial_count", 0) < 1)
+        no_occasions = sum(1 for v in t3_venues if enrichment.get(v["id"], {}).get("occasion_count", 0) < 3)
+        no_hours = sum(1 for v in t3_venues if not v.get("hours"))
+        no_vibes = sum(1 for v in t3_venues if not _has_vibes(v))
+        no_highlights = sum(1 for v in t3_venues if enrichment.get(v["id"], {}).get("highlight_count", 0) < 1)
+
+        t3_pass = sum(1 for v in t3_venues
+                      if actual_tier(v, enrichment.get(v["id"], {})) >= 3)
+        t3_pct = t3_pass / total * 100 if total else 0
+
+        t2_prereq_fail = sum(1 for v in t3_venues
+                             if actual_tier(v, enrichment.get(v["id"], {})) < 2)
+
+        t3_gaps = sorted([
+            ("specials", no_specials),
+            ("editorial", no_editorial),
+            ("3+ occasions", no_occasions),
+            ("hours", no_hours),
+            ("vibes", no_vibes),
+            ("highlights", no_highlights),
+        ], key=lambda x: -x[1])
+
+        print(f"\n  {C.BOLD}T3 Premium Signal Gaps{C.END} {C.D}({total} venues with target >= T3, {t3_pct:.0f}% meet T3, need 3/6){C.END}")
+        for field, count in t3_gaps:
+            pct = count / total * 100 if total else 0
+            print(f"    No {field:<22} {count:>5} ({pct:.0f}%)")
+        pct = t2_prereq_fail / total * 100 if total else 0
+        print(f"    {C.D}T2 prerequisite fail    {t2_prereq_fail:>5} ({pct:.0f}%){C.END}")
 
 
 def print_report(venues: list[dict], enrichment: dict, *, show_gaps: bool = False, as_json: bool = False):
@@ -297,6 +412,7 @@ def print_report(venues: list[dict], enrichment: dict, *, show_gaps: bool = Fals
             "compliance_pct": round(compliance_pct, 1),
             "by_target_tier": {},
             "by_type": {},
+            "field_gaps": {},
         }
         for tier in range(4):
             group = by_target.get(tier, [])
@@ -314,8 +430,35 @@ def print_report(venues: list[dict], enrichment: dict, *, show_gaps: bool = Fals
                 "compliant": met,
                 "pct": round(met / len(group) * 100, 1) if group else 0,
             }
+
+        # Field gaps in JSON
+        for tier_level, tier_key in [(1, "t1"), (2, "t2"), (3, "t3")]:
+            tier_venues = [v for v in venues if target_tier_for(v.get("venue_type")) >= tier_level]
+            if not tier_venues:
+                continue
+            tier_total = len(tier_venues)
+            gap_data = {"total": tier_total}
+
+            if tier_level >= 1:
+                gap_data["missing_description"] = sum(1 for v in tier_venues if not _is_real_description(v.get("description")))
+                gap_data["missing_neighborhood"] = sum(1 for v in tier_venues if not v.get("neighborhood"))
+                gap_data["missing_image"] = sum(1 for v in tier_venues if not v.get("image_url"))
+
+            if tier_level >= 2:
+                gap_data["missing_destination_details"] = sum(1 for v in tier_venues if not enrichment.get(v["id"], {}).get("has_destination_details"))
+                gap_data["missing_features"] = sum(1 for v in tier_venues if enrichment.get(v["id"], {}).get("feature_count", 0) < 2)
+                gap_data["missing_vibes"] = sum(1 for v in tier_venues if not _has_vibes(v))
+
+            if tier_level >= 3:
+                gap_data["missing_specials"] = sum(1 for v in tier_venues if enrichment.get(v["id"], {}).get("special_count", 0) < 1)
+                gap_data["missing_editorial"] = sum(1 for v in tier_venues if enrichment.get(v["id"], {}).get("editorial_count", 0) < 1)
+                gap_data["missing_occasions"] = sum(1 for v in tier_venues if enrichment.get(v["id"], {}).get("occasion_count", 0) < 3)
+                gap_data["missing_hours"] = sum(1 for v in tier_venues if not v.get("hours"))
+                gap_data["missing_highlights"] = sum(1 for v in tier_venues if enrichment.get(v["id"], {}).get("highlight_count", 0) < 1)
+
+            output["field_gaps"][tier_key] = gap_data
+
         if show_gaps:
-            # Venues not meeting target, sorted by gap count (easiest first)
             failing = [r for r in results if not r["meets_target"] and r["target_tier"] >= 1]
             failing.sort(key=lambda r: (len(r["gaps"]), -r["target_tier"]))
             output["underperformers"] = failing[:30]
@@ -348,7 +491,7 @@ def print_report(venues: list[dict], enrichment: dict, *, show_gaps: bool = Fals
         print(f"  Tier {tier} ({TIER_LABELS[tier]:<12})         {len(group):>6} {met:>6} {fail:>6} {color}{pct:>5.0f}%{C.END}  {_bar(pct)}")
 
     # ── By venue type (worst compliance first, only types with target >= 1) ──
-    print(f"\n{C.BOLD}Compliance by Venue Type{C.END} {C.D}(target tier >= 1, sorted worst→best){C.END}")
+    print(f"\n{C.BOLD}Compliance by Venue Type{C.END} {C.D}(target tier >= 1, sorted worst->best){C.END}")
     print(f"{'─' * 70}")
     print(f"  {'Type':<22} {'Target':>6} {'Count':>6} {'Pass':>6} {'Rate':>7}")
     print(f"  {'─' * 22} {'─' * 6} {'─' * 5} {'─' * 5} {'─' * 6}")
@@ -367,6 +510,9 @@ def print_report(venues: list[dict], enrichment: dict, *, show_gaps: bool = Fals
     for vtype, target, count, met, pct in type_rows:
         color = _compliance_color(pct)
         print(f"  {vtype:<22} T{target:>5} {count:>6} {met:>6} {color}{pct:>5.0f}%{C.END}  {_bar(pct)}")
+
+    # ── Per-field gap breakdown ──
+    print_field_gaps(venues, enrichment)
 
     # ── Gap analysis ──
     if show_gaps:

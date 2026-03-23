@@ -1,0 +1,303 @@
+<h2>Complete Feed Architecture</h2>
+<p class="subtitle">Events + Destinations + Portal Teasers — the full city front page</p>
+
+<div class="mockup">
+  <div class="mockup-header">Full Feed Scroll — every section, in order</div>
+  <div class="mockup-body" style="background:#09090B;padding:0;font-family:system-ui;max-width:520px;margin:0 auto">
+
+    <!-- 1. CONTEXTUAL HERO -->
+    <div style="position:relative;height:180px;background:linear-gradient(135deg,#2a1830,#1a2535);display:flex;align-items:flex-end;padding:20px">
+      <div style="position:absolute;top:0;right:0;bottom:0;left:0;background:linear-gradient(to top, #09090B 0%, transparent 60%);pointer-events:none"></div>
+      <div style="position:relative;z-index:1">
+        <div style="font-family:monospace;font-size:9px;color:#FFD93D;text-transform:uppercase;letter-spacing:2px;font-weight:700">HAPPENING NOW</div>
+        <div style="color:#F5F5F3;font-size:20px;font-weight:700;line-height:1.2;margin-top:4px">Cherry Blossom Festival</div>
+        <div style="color:#A1A1AA;font-size:12px;margin-top:4px">Piedmont Park · All Day · Free</div>
+      </div>
+    </div>
+    <div style="background:#0F0F14;margin:0 12px;padding:6px 12px;border-radius:8px;font-size:11px;color:#8B8B94;border-left:3px solid #FFD93D;margin-top:-4px;position:relative;z-index:2">
+      <span style="color:#FFD93D;font-weight:600">1. CONTEXTUAL HERO</span> — Flagship event owns this. Falls back to atmospheric time-of-day when nothing major is happening.
+    </div>
+
+    <!-- 2. QUICK LINKS -->
+    <div style="padding:14px 16px 6px;display:flex;gap:6px;overflow:hidden;flex-wrap:nowrap">
+      <span style="font-size:10px;font-family:monospace;color:#F5F5F3;background:#ffffff0d;border:1px solid #25253080;padding:6px 12px;border-radius:99px;white-space:nowrap">Tonight</span>
+      <span style="font-size:10px;font-family:monospace;color:#F5F5F3;background:#ffffff0d;border:1px solid #25253080;padding:6px 12px;border-radius:99px;white-space:nowrap">Free</span>
+      <span style="font-size:10px;font-family:monospace;color:#F5F5F3;background:#ffffff0d;border:1px solid #25253080;padding:6px 12px;border-radius:99px;white-space:nowrap">Music</span>
+      <span style="font-size:10px;font-family:monospace;color:#F5F5F3;background:#ffffff0d;border:1px solid #25253080;padding:6px 12px;border-radius:99px;white-space:nowrap">Comedy</span>
+      <span style="font-size:10px;font-family:monospace;color:#F5F5F3;background:#ffffff0d;border:1px solid #25253080;padding:6px 12px;border-radius:99px;white-space:nowrap">Art</span>
+      <span style="font-size:10px;font-family:monospace;color:#F5F5F3;background:#ffffff0d;border:1px solid #25253080;padding:6px 12px;border-radius:99px;white-space:nowrap">Date Night</span>
+    </div>
+    <div style="margin:4px 12px 0;padding:6px 12px;font-size:11px;color:#8B8B94;border-left:3px solid #A1A1AA">
+      <span style="color:#A1A1AA;font-weight:600">2. QUICK LINKS</span> — Category + occasion shortcuts. "Date Night" links to destination finder, not events.
+    </div>
+
+    <!-- 3. THE LINEUP -->
+    <div style="padding:16px 16px 0">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-family:monospace;font-size:10px;color:#FF6B7A;text-transform:uppercase;letter-spacing:1.5px;font-weight:700">THE LINEUP</div>
+        <div style="font-size:10px;font-family:monospace;color:#FF6B7A">See all →</div>
+      </div>
+      <!-- Tabs -->
+      <div style="display:flex;gap:16px;margin-bottom:10px;border-bottom:1px solid #252530;padding-bottom:8px">
+        <span style="font-size:12px;font-weight:600;color:#F5F5F3;border-bottom:2px solid #FF6B7A;padding-bottom:6px">TODAY</span>
+        <span style="font-size:12px;color:#8B8B94">THIS WEEK</span>
+        <span style="font-size:12px;color:#8B8B94">COMING UP</span>
+      </div>
+      <!-- Interest chips -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;overflow:hidden">
+        <span style="font-size:10px;font-family:monospace;color:#F5F5F3;background:#FF6B7A20;border:1px solid #FF6B7A40;padding:4px 10px;border-radius:99px">All 26</span>
+        <span style="font-size:10px;font-family:monospace;color:#A1A1AA;background:#ffffff08;border:1px solid #25253060;padding:4px 10px;border-radius:99px">Music 14</span>
+        <span style="font-size:10px;font-family:monospace;color:#A1A1AA;background:#ffffff08;border:1px solid #25253060;padding:4px 10px;border-radius:99px">Art 10</span>
+        <span style="font-size:10px;font-family:monospace;color:#A1A1AA;background:#ffffff08;border:1px solid #25253060;padding:4px 10px;border-radius:99px">Comedy 4</span>
+      </div>
+
+      <!-- Tiered events (vertical) -->
+      <div style="background:linear-gradient(135deg,#1a1525,#0F0F14);border-radius:12px;margin-bottom:8px;overflow:hidden;border:1px solid #252530">
+        <div style="height:80px;background:linear-gradient(to bottom right,#2a1a30,#1a2530);display:flex;align-items:flex-end;padding:12px">
+          <div>
+            <div style="font-family:monospace;font-size:9px;color:#FFD93D;text-transform:uppercase;letter-spacing:1.2px;font-weight:700">MUSIC · 7PM</div>
+            <div style="color:#F5F5F3;font-size:16px;font-weight:700">Walter Trout</div>
+            <div style="color:#A1A1AA;font-size:11px;margin-top:2px">City Winery · Ponce City Market</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <div style="flex:1;background:#18181F;border-radius:8px;padding:8px;border:1px solid #252530">
+          <div style="height:36px;background:#252530;border-radius:4px;margin-bottom:4px"></div>
+          <div style="color:#F5F5F3;font-size:11px;font-weight:600">Pat Metheny</div>
+          <div style="color:#8B8B94;font-size:9px">Symphony Hall · 7:30</div>
+        </div>
+        <div style="flex:1;background:#18181F;border-radius:8px;padding:8px;border:1px solid #252530">
+          <div style="height:36px;background:#252530;border-radius:4px;margin-bottom:4px"></div>
+          <div style="color:#F5F5F3;font-size:11px;font-weight:600">LUNA Pop Up</div>
+          <div style="color:#8B8B94;font-size:9px">Commune · 6pm</div>
+        </div>
+        <div style="flex:1;background:#18181F;border-radius:8px;padding:8px;border:1px solid #252530">
+          <div style="height:36px;background:#252530;border-radius:4px;margin-bottom:4px"></div>
+          <div style="color:#F5F5F3;font-size:11px;font-weight:600">Muela</div>
+          <div style="color:#8B8B94;font-size:9px">Masquerade · 7pm</div>
+        </div>
+      </div>
+      <div style="background:#18181F;border-radius:6px;padding:7px 10px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;border-left:2px solid #A78BFA">
+        <div><div style="color:#F5F5F3;font-size:11px">Joy Deficit: Live Performance</div><div style="color:#8B8B94;font-size:9px">Red Light Cafe · 7:30pm</div></div>
+        <div style="color:#00D9A0;font-size:8px;font-family:monospace;background:#00D9A012;padding:2px 6px;border-radius:99px">FREE</div>
+      </div>
+      <div style="background:#18181F;border-radius:6px;padding:7px 10px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;border-left:2px solid #FF6B7A">
+        <div><div style="color:#F5F5F3;font-size:11px">Placeholders at 529</div><div style="color:#8B8B94;font-size:9px">529 · East Atlanta · 8pm</div></div>
+      </div>
+      <div style="background:#18181F;border-radius:6px;padding:7px 10px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;border-left:2px solid #00D4E8">
+        <div><div style="color:#F5F5F3;font-size:11px">Code Night at The Eagle</div><div style="color:#8B8B94;font-size:9px">Atlanta Eagle · OFW · 9pm</div></div>
+      </div>
+      <div style="text-align:center;padding:10px 0">
+        <span style="font-size:11px;font-family:monospace;color:#FF6B7A">See all 47 tonight →</span>
+      </div>
+    </div>
+    <div style="margin:0 12px;padding:6px 12px;font-size:11px;color:#8B8B94;border-left:3px solid #FF6B7A">
+      <span style="color:#FF6B7A;font-weight:600">3. THE LINEUP</span> — Same tabs/filters as current. Internal rendering changes from horizontal carousel → vertical tiered list. ~15-25 curated picks shown, "See all" to full index.
+    </div>
+
+    <!-- 4. DESTINATIONS -->
+    <div style="padding:16px;border-top:1px solid #252530;margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-family:monospace;font-size:10px;color:#00D9A0;text-transform:uppercase;letter-spacing:1.5px;font-weight:700">WORTH CHECKING OUT</div>
+        <div style="font-size:10px;font-family:monospace;color:#00D9A0">Explore →</div>
+      </div>
+      <div style="color:#A1A1AA;font-size:11px;margin-bottom:10px">
+        Contextual — responds to time, weather, occasion
+      </div>
+
+      <!-- Contextual destination cards -->
+      <div style="display:flex;gap:8px;overflow:hidden">
+        <div style="min-width:180px;background:#18181F;border-radius:10px;overflow:hidden;border:1px solid #252530">
+          <div style="height:70px;background:linear-gradient(135deg,#1a2520,#0F1410)"></div>
+          <div style="padding:10px">
+            <div style="font-family:monospace;font-size:8px;color:#00D9A0;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">OPEN NOW · 0.3 MI</div>
+            <div style="color:#F5F5F3;font-size:12px;font-weight:600">Chattahoochee Food Works</div>
+            <div style="color:#8B8B94;font-size:10px">West Midtown · Food Hall</div>
+            <div style="color:#8B8B94;font-size:9px;font-style:italic;margin-top:4px">"Atlanta's most exciting food hall" — Eater</div>
+          </div>
+        </div>
+        <div style="min-width:180px;background:#18181F;border-radius:10px;overflow:hidden;border:1px solid #252530">
+          <div style="height:70px;background:linear-gradient(135deg,#201a15,#0F0F14)"></div>
+          <div style="padding:10px">
+            <div style="font-family:monospace;font-size:8px;color:#00D9A0;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">PERFECT FOR DATE NIGHT</div>
+            <div style="color:#F5F5F3;font-size:12px;font-weight:600">Bacchanalia</div>
+            <div style="color:#8B8B94;font-size:10px">Westside · Fine Dining</div>
+            <div style="color:#8B8B94;font-size:9px;font-style:italic;margin-top:4px">"Still Atlanta's best restaurant" — Infatuation</div>
+          </div>
+        </div>
+        <div style="min-width:180px;background:#18181F;border-radius:10px;overflow:hidden;border:1px solid #252530">
+          <div style="height:70px;background:linear-gradient(135deg,#15201a,#0F140F)"></div>
+          <div style="padding:10px">
+            <div style="font-family:monospace;font-size:8px;color:#00D9A0;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">OPEN NOW · ROOFTOP</div>
+            <div style="color:#F5F5F3;font-size:12px;font-weight:600">Hotel Clermont Roof</div>
+            <div style="color:#8B8B94;font-size:10px">Poncey-Highland · Bar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin:0 12px;padding:6px 12px;font-size:11px;color:#8B8B94;border-left:3px solid #00D9A0">
+      <span style="color:#00D9A0;font-weight:600">4. DESTINATIONS</span> — Contextual venue suggestions from occasion/editorial data. "Open now", "Perfect for date night", "Rainy day pick." Carousel of 4-6 venues. Links to spots finder for more.
+      <br><br>
+      <strong>Data sources:</strong> venue_occasions (4,431 rows), editorial_mentions (193 rows), hours, weather, time of day. All exist today.
+    </div>
+
+    <!-- 5. TODAY IN ATLANTA (news) -->
+    <div style="padding:16px;border-top:1px solid #252530;margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-family:monospace;font-size:10px;color:#A1A1AA;text-transform:uppercase;letter-spacing:1.5px;font-weight:700">TODAY IN ATLANTA</div>
+        <div style="font-size:10px;font-family:monospace;color:#A1A1AA">All news →</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;overflow:hidden">
+        <span style="font-size:9px;font-family:monospace;color:#F5F5F3;background:#A1A1AA20;border:1px solid #A1A1AA30;padding:3px 8px;border-radius:99px">Culture</span>
+        <span style="font-size:9px;font-family:monospace;color:#A1A1AA;background:#ffffff08;border:1px solid #25253060;padding:3px 8px;border-radius:99px">Arts</span>
+        <span style="font-size:9px;font-family:monospace;color:#A1A1AA;background:#ffffff08;border:1px solid #25253060;padding:3px 8px;border-radius:99px">Food</span>
+        <span style="font-size:9px;font-family:monospace;color:#A1A1AA;background:#ffffff08;border:1px solid #25253060;padding:3px 8px;border-radius:99px">All</span>
+      </div>
+      <div style="padding:8px 0;border-bottom:1px solid #18181F">
+        <div style="color:#F5F5F3;font-size:12px;font-weight:500">Cherry Blossom Festival draws record crowds to Macon</div>
+        <div style="color:#8B8B94;font-size:10px;margin-top:2px">Rough Draft Atlanta · Culture · 2h ago</div>
+      </div>
+      <div style="padding:8px 0;border-bottom:1px solid #18181F">
+        <div style="color:#F5F5F3;font-size:12px;font-weight:500">New food hall concept coming to Krog Street Market</div>
+        <div style="color:#8B8B94;font-size:10px;margin-top:2px">Eater Atlanta · Food · 5h ago</div>
+      </div>
+    </div>
+    <div style="margin:0 12px;padding:6px 12px;font-size:11px;color:#8B8B94;border-left:3px solid #A1A1AA">
+      <span style="color:#A1A1AA;font-weight:600">5. TODAY IN ATLANTA</span> — News, defaulting to Culture/Arts/Food. Crime/Civic accessible via "All" tab but not the default. Reinforces "city front page" positioning.
+    </div>
+
+    <!-- 6. REGULAR HANGS -->
+    <div style="padding:16px;border-top:1px solid #252530;margin-top:12px">
+      <div style="font-family:monospace;font-size:10px;color:#A78BFA;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:4px">REGULAR HANGS</div>
+      <div style="color:#8B8B94;font-size:11px;font-style:italic">Unchanged — already excellent</div>
+    </div>
+    <div style="margin:0 12px;padding:6px 12px;font-size:11px;color:#8B8B94;border-left:3px solid #A78BFA">
+      <span style="color:#A78BFA;font-weight:600">6. REGULAR HANGS</span> — Keep as-is
+    </div>
+
+    <!-- 7. NOW SHOWING -->
+    <div style="padding:16px;border-top:1px solid #252530;margin-top:12px">
+      <div style="font-family:monospace;font-size:10px;color:#E855A0;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:4px">NOW SHOWING</div>
+      <div style="color:#8B8B94;font-size:11px;font-style:italic">Unchanged — cinema section</div>
+    </div>
+    <div style="margin:0 12px;padding:6px 12px;font-size:11px;color:#8B8B94;border-left:3px solid #E855A0">
+      <span style="color:#E855A0;font-weight:600">7. NOW SHOWING</span> — Keep as-is
+    </div>
+
+    <!-- 8. PORTAL TEASERS -->
+    <div style="padding:16px;border-top:1px solid #252530;margin-top:12px">
+      <div style="font-family:monospace;font-size:10px;color:#00D4E8;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:10px">AROUND THE CITY</div>
+
+      <div style="display:flex;gap:8px;overflow:hidden">
+        <!-- Civic teaser -->
+        <div style="min-width:220px;background:#18181F;border-radius:10px;padding:14px;border:1px solid #252530;border-left:3px solid #2D6A4F">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <div style="width:20px;height:20px;border-radius:4px;background:#2D6A4F30;display:flex;align-items:center;justify-content:center">
+              <div style="width:10px;height:10px;border-radius:2px;background:#2D6A4F"></div>
+            </div>
+            <div style="font-family:monospace;font-size:9px;color:#2D6A4F;text-transform:uppercase;letter-spacing:1px;font-weight:700">LOST CITIZEN</div>
+          </div>
+          <div style="color:#F5F5F3;font-size:12px;font-weight:600;line-height:1.3;margin-bottom:4px">City Council votes on BeltLine funding Tuesday</div>
+          <div style="color:#8B8B94;font-size:10px">3 agenda items · Public comment open</div>
+          <div style="margin-top:8px;font-size:10px;font-family:monospace;color:#2D6A4F">See details →</div>
+        </div>
+
+        <!-- Arts teaser -->
+        <div style="min-width:220px;background:#18181F;border-radius:10px;padding:14px;border:1px solid #252530;border-left:3px solid #C9874F">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <div style="width:20px;height:20px;border-radius:4px;background:#C9874F30;display:flex;align-items:center;justify-content:center">
+              <div style="width:10px;height:10px;border-radius:2px;background:#C9874F"></div>
+            </div>
+            <div style="font-family:monospace;font-size:9px;color:#C9874F;text-transform:uppercase;letter-spacing:1px;font-weight:700">LOST ARTS</div>
+          </div>
+          <div style="color:#F5F5F3;font-size:12px;font-weight:600;line-height:1.3;margin-bottom:4px">3 new exhibitions opening this week</div>
+          <div style="color:#8B8B94;font-size:10px">High Museum · MOCA GA · Atlanta Contemporary</div>
+          <div style="margin-top:8px;font-size:10px;font-family:monospace;color:#C9874F">Explore arts →</div>
+        </div>
+
+        <!-- Family teaser -->
+        <div style="min-width:220px;background:#18181F;border-radius:10px;padding:14px;border:1px solid #252530;border-left:3px solid #5E7A5E">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <div style="width:20px;height:20px;border-radius:4px;background:#5E7A5E30;display:flex;align-items:center;justify-content:center">
+              <div style="width:10px;height:10px;border-radius:2px;background:#5E7A5E"></div>
+            </div>
+            <div style="font-family:monospace;font-size:9px;color:#5E7A5E;text-transform:uppercase;letter-spacing:1px;font-weight:700">LOST YOUTH</div>
+          </div>
+          <div style="color:#F5F5F3;font-size:12px;font-weight:600;line-height:1.3;margin-bottom:4px">Spring Break starts Friday</div>
+          <div style="color:#8B8B94;font-size:10px">47 kid-friendly events this week</div>
+          <div style="margin-top:8px;font-size:10px;font-family:monospace;color:#5E7A5E">Plan with kids →</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin:0 12px;padding:6px 12px;font-size:11px;color:#8B8B94;border-left:3px solid #00D4E8">
+      <span style="color:#00D4E8;font-weight:600">8. AROUND THE CITY</span> — Portal teasers. Each card shows the most relevant headline from another portal. Civic: upcoming meetings. Arts: new exhibitions. Family: school calendar + programs. Adventure: trail conditions. Each links to the full portal.
+      <br><br>
+      <strong>Data source:</strong> Each portal's feed API, one headline per portal. Cross-portal federation — the network effect becomes visible.
+    </div>
+
+    <!-- 9. ON THE HORIZON -->
+    <div style="padding:16px;border-top:1px solid #252530;margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-family:monospace;font-size:10px;color:#FFD93D;text-transform:uppercase;letter-spacing:1.5px;font-weight:700">ON THE HORIZON</div>
+        <div style="font-size:10px;font-family:monospace;color:#FFD93D">All big events →</div>
+      </div>
+      <div style="display:flex;gap:8px;overflow:hidden">
+        <div style="min-width:180px;background:#18181F;border-radius:10px;overflow:hidden;border:1px solid #252530">
+          <div style="height:70px;background:linear-gradient(135deg,#2a2020,#1a2535)"></div>
+          <div style="padding:10px">
+            <div style="font-family:monospace;font-size:8px;color:#FFD93D;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">APR 4 · FESTIVAL</div>
+            <div style="color:#F5F5F3;font-size:12px;font-weight:600">404 Day 2026</div>
+            <div style="color:#8B8B94;font-size:10px">Piedmont Park · Free</div>
+          </div>
+        </div>
+        <div style="min-width:180px;background:#18181F;border-radius:10px;overflow:hidden;border:1px solid #252530">
+          <div style="height:70px;background:linear-gradient(135deg,#201a2a,#152535)"></div>
+          <div style="padding:10px">
+            <div style="font-family:monospace;font-size:8px;color:#FFD93D;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">APR 24-26 · FESTIVAL</div>
+            <div style="color:#F5F5F3;font-size:12px;font-weight:600">Inman Park Festival</div>
+            <div style="color:#8B8B94;font-size:10px">Inman Park · Free</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin:0 12px;padding:6px 12px;font-size:11px;color:#8B8B94;border-left:3px solid #FFD93D">
+      <span style="color:#FFD93D;font-weight:600">9. ON THE HORIZON</span> — Quality-gated: only tentpoles, festivals, and multi-day events. No weekly open mics.
+    </div>
+
+    <!-- FOOTER -->
+    <div style="padding:32px 16px;text-align:center;border-top:1px solid #252530;margin-top:12px">
+      <div style="color:#F5F5F3;font-size:14px;font-weight:700;letter-spacing:2px">LOST CITY</div>
+      <div style="color:#8B8B94;font-size:11px;margin-top:4px">do your own thing</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px">
+  <h3>The two new sections</h3>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="destinations" onclick="toggleSelect(this)">
+    <div class="letter">4</div>
+    <div class="content">
+      <h3>WORTH CHECKING OUT — Contextual Destinations</h3>
+      <p><strong>What it shows:</strong> 4-6 venue cards that respond to context — time of day, weather, day of week, occasion. Monday morning → coffee spots. Friday evening → date night restaurants. Rainy Saturday → museums and galleries.</p>
+      <p><strong>Data sources (all exist):</strong> venue_occasions (4,431 rows), editorial_mentions (193 rows), hours (open now filter), weather API, time of day.</p>
+      <p><strong>Editorial voice:</strong> Each card shows an occasion tag ("OPEN NOW", "PERFECT FOR DATE NIGHT", "RAINY DAY PICK") plus press quote if available.</p>
+      <p><strong>Position:</strong> After The Lineup, before news. Answers "where should I go?" after "what's happening?"</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="portals" onclick="toggleSelect(this)">
+    <div class="letter">8</div>
+    <div class="content">
+      <h3>AROUND THE CITY — Portal Teasers</h3>
+      <p><strong>What it shows:</strong> One headline card per active portal — the most relevant thing happening in each vertical. Civic: next council meeting. Arts: new exhibitions this week. Family: school calendar event. Adventure: trail conditions.</p>
+      <p><strong>Design:</strong> Each card branded with portal accent color (teal for Citizen, copper for Arts, sage for Family). Left accent border matches portal identity. Compact — title + one line context + "See details →" link.</p>
+      <p><strong>Position:</strong> Below the fold, after Regular Hangs + Now Showing. For users who scroll deep — "here's what else is going on in Atlanta beyond events."</p>
+      <p><strong>Implementation:</strong> Each portal exposes a "headline" endpoint returning its top item. The Atlanta feed fetches these in parallel. Degrades gracefully — if a portal has nothing notable, its card doesn't show.</p>
+    </div>
+  </div>
+</div>

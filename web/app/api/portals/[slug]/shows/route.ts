@@ -88,7 +88,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     query = excludeSensitiveEvents(query);
     query = applyPortalCategoryFilters(query, portalContentFilters);
 
-    const { data: events, error: queryError } = await query;
+    const { data: rawEvents, error: queryError } = await query;
+    const events = rawEvents as { id: number; title: string; start_time: string | null; price_min: number | null; image_url: string | null; is_free: boolean; venue: { id: number; name: string; slug: string; neighborhood: string; image_url: string | null } }[] | null;
 
     if (queryError) {
       logger.error("Error fetching shows:", queryError);
@@ -116,7 +117,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const venueMap = new Map<number, { venue: VenueRow; shows: ShowRow[] }>();
 
     for (const event of events ?? []) {
-      const venue = event.venue as unknown as VenueRow | null;
+      const venue = event.venue as VenueRow | null;
       if (!venue?.id) continue;
 
       if (!venueMap.has(venue.id)) {
@@ -126,10 +127,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
       venueMap.get(venue.id)!.shows.push({
         id: event.id,
         title: event.title,
-        start_time: event.start_time ?? null,
-        price_min: (event.price_min as number | null) ?? null,
-        image_url: event.image_url ?? null,
-        is_free: event.is_free ?? false,
+        start_time: event.start_time,
+        price_min: event.price_min,
+        image_url: event.image_url,
+        is_free: event.is_free,
       });
     }
 

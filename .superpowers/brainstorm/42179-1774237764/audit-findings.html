@@ -1,0 +1,61 @@
+<h2>Design System Audit: Where We Are vs. Where We Could Be</h2>
+<p class="subtitle">Pencil design spec vs. live code — 8 components audited, 10 cross-cutting issues found</p>
+
+<div class="section">
+  <h3>The Three Layers of Drift</h3>
+  <p>The gaps fall into three categories with different fix strategies:</p>
+</div>
+
+<div class="options" data-multiselect>
+  <div class="option" data-choice="precision" onclick="toggleSelect(this)">
+    <div class="letter">1</div>
+    <div class="content">
+      <h3>Precision Drift (quick fixes, high impact)</h3>
+      <p style="margin-bottom:12px">Individual properties that don't match the spec. Wrong font weight, wrong color, wrong padding. Each is a 1-3 line fix.</p>
+      <div style="font-family:monospace;font-size:13px;color:#A1A1AA;line-height:1.8">
+        Badge: font-medium → font-bold, +tracking, +uppercase<br>
+        VenueCard: distance cyan → green<br>
+        FilterChip: +bg-white/5 on inactive<br>
+        FeaturedCard: 320px → 288px, 16px radius → 12px<br>
+        DetailHero: title 20/30px → 24px<br>
+        EventCard AM/PM: font-medium → font-bold<br>
+        <strong style="color:#FF6B7A">~20 line changes total across 8 files</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="philosophy" onclick="toggleSelect(this)">
+    <div class="letter">2</div>
+    <div class="content">
+      <h3>Philosophy Drift (needs a design decision)</h3>
+      <p style="margin-bottom:12px">Structural choices where code diverged from the design intent. These need a call on which direction is right — the Pencil spec might be wrong too.</p>
+      <div style="font-family:monospace;font-size:13px;color:#A1A1AA;line-height:1.8">
+        DetailStickyBar: floating pill w/ blur vs. flat bar (design says flat)<br>
+        Body font vs mono: code over-applies monospace where design uses Outfit<br>
+        FeaturedCard: completely different proportions (bloated vs. tight)<br>
+        VenueCard: different image layouts (rail vs. thumbnail)<br>
+        <strong style="color:#FFD93D">These are design decisions, not just fixes</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="elevation" onclick="toggleSelect(this)">
+    <div class="letter">3</div>
+    <div class="content">
+      <h3>Elevation Opportunities (beyond fixing drift)</h3>
+      <p style="margin-bottom:12px">The Pencil spec itself may not be ambitious enough. "Elite design" means going beyond matching what we drew — it means making the design system itself better.</p>
+      <div style="font-family:monospace;font-size:13px;color:#A1A1AA;line-height:1.8">
+        Motion/animation system (hover, transitions, page enter)<br>
+        Empty/error/loading states designed consistently<br>
+        Micro-interactions (save animation, RSVP confirmation)<br>
+        Dark mode refinement (current token values vs. ideal contrast)<br>
+        Mobile-first gesture patterns (swipe, pull-to-refresh)<br>
+        <strong style="color:#00D9A0">This is where "elite" lives — beyond consistency into craft</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:32px;padding:20px;border-left:3px solid #FF6B7A;background:rgba(255,107,122,0.05);border-radius:0 8px 8px 0">
+  <p style="color:#F5F5F3;font-size:15px;margin:0"><strong>The question:</strong> Do you want to fix the drift first (layer 1+2), then elevate (layer 3)? Or skip straight to rethinking the design system at a higher level and fix drift as part of the rebuild?</p>
+</div>
