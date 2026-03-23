@@ -135,7 +135,7 @@ def determine_category(text: str) -> str:
     """Determine category from event text."""
     text_lower = text.lower()
     for keyword, category in CATEGORY_MAP.items():
-        if keyword in text_lower:
+        if re.search(r'\b' + re.escape(keyword) + r'\b', text_lower):
             return category
     return "community"
 

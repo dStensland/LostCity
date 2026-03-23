@@ -130,7 +130,7 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
 
     # Check each program type
     for keyword, (category, subcategory, tags) in PROGRAM_TYPES.items():
-        if keyword in text:
+        if re.search(r'\b' + re.escape(keyword) + r'\b', text):
             return category, subcategory, tags
 
     # Default to wellness

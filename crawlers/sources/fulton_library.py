@@ -45,6 +45,7 @@ CATEGORY_MAP = {
     "movie": "film",
     "craft": "art",
     "art": "art",
+    "arts": "art",
     "fitness": "fitness",
     "yoga": "fitness",
     "game": "play",
@@ -226,7 +227,7 @@ def determine_category(title: str, description: str, type_ids: list) -> str:
     text = f"{title} {description}".lower()
 
     for keyword, category in CATEGORY_MAP.items():
-        if keyword in text:
+        if re.search(r'\b' + re.escape(keyword) + r'\b', text):
             return category
 
     return "words"  # Default for library events

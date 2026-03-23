@@ -31,13 +31,15 @@ Places people plan trips around. High decision complexity — users need parking
 
 Places worth a dedicated outing. Users need to understand what they'll do there and practical logistics.
 
-**venue_types:** `brewery`, `distillery`, `winery`, `cinema`, `entertainment`, `bowling`, `arcade`, `food_hall`, `farmers_market`, `sports_bar`, `comedy_club`, `nightclub`, `music_venue`, `rooftop`, `attraction`, `escape_room`, `games`, `gaming`, `club`, `amphitheater`, `lounge`, `wine_bar`, `cocktail_bar`, `pool_hall`, `karaoke`
+**venue_types:** `brewery`, `distillery`, `winery`, `cinema`, `entertainment`, `bowling`, `arcade`, `food_hall`, `farmers_market`, `sports_bar`, `comedy_club`, `nightclub`, `music_venue`, `rooftop`, `attraction`, `escape_room`, `games`, `gaming`, `club`, `amphitheater`, `lounge`, `wine_bar`, `cocktail_bar`, `pool_hall`, `karaoke`, `theater`, `gallery`, `historic_site`, `landmark`, `garden`, `arts_center`
+
+**Why theaters, galleries, landmarks, etc. are T2:** These are dedicated-outing destinations where users need to know what's showing, what exhibits are up, or what they'll experience. Venue features capture exhibits, shows, and activities — the data that helps someone decide to go.
 
 ### Tier 1: Discoverable Venues
 
 Places that host events or are worth browsing. Users need a photo, description, and location — enough to decide "do I want to learn more?"
 
-**venue_types:** `restaurant`, `bar`, `coffee_shop`, `gallery`, `theater`, `bookstore`, `record_store`, `library`, `park`, `garden`, `fitness_center`, `studio`, `hotel`, `rec_center`, `arts_center`, `recreation`, `dance_studio`, `cafe`, `nature_center`, `cooking_school`, `outdoor_venue`, `historic_site`, `landmark`
+**venue_types:** `restaurant`, `bar`, `coffee_shop`, `bookstore`, `record_store`, `library`, `park`, `fitness_center`, `studio`, `hotel`, `rec_center`, `recreation`, `dance_studio`, `cafe`, `nature_center`, `cooking_school`, `outdoor_venue`
 
 ### Tier 0: Event Containers
 

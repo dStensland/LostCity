@@ -51,7 +51,7 @@ def is_public_event(title: str, description: str = "") -> bool:
     text = f"{title} {description}".lower()
 
     for keyword in STUDENT_ONLY_KEYWORDS:
-        if keyword in text:
+        if re.search(r'\b' + re.escape(keyword) + r'\b', text):
             return False
 
     return True

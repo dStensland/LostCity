@@ -7,8 +7,8 @@ This tool measures how many venues meet their target.
 
 Target tiers:
   Tier 3 (Premium):      museums, zoos, aquariums, theme parks, arenas, stadiums
-  Tier 2 (Destination):   breweries, cinemas, entertainment, food halls, nightlife, attractions
-  Tier 1 (Discoverable):  restaurants, bars, parks, galleries, hotels, landmarks
+  Tier 2 (Destination):   breweries, cinemas, entertainment, theaters, galleries, landmarks, nightlife
+  Tier 1 (Discoverable):  restaurants, bars, parks, hotels, bookstores, libraries
   Tier 0 (Floor):         organizations, churches, event spaces, community centers, catch-all
 
 Data requirements:
@@ -67,15 +67,15 @@ TARGET_TIER_2 = {
     # Experiential destinations
     "attraction", "escape_room", "games", "gaming", "club", "amphitheater",
     "lounge", "wine_bar", "cocktail_bar", "pool_hall", "karaoke",
+    # Cultural destinations — dedicated outings with exhibits/activities
+    "theater", "gallery", "historic_site", "landmark", "garden", "arts_center",
 }
 
 TARGET_TIER_1 = {
-    "restaurant", "bar", "coffee_shop", "gallery", "theater", "bookstore",
-    "record_store", "library", "park", "garden", "fitness_center", "studio",
-    "hotel", "rec_center",
-    # Cultural and discoverable landmarks
-    "arts_center", "recreation", "dance_studio", "cafe", "nature_center",
-    "cooking_school", "outdoor_venue", "historic_site", "landmark",
+    "restaurant", "bar", "coffee_shop", "bookstore", "record_store", "library",
+    "park", "fitness_center", "studio", "hotel", "rec_center",
+    "recreation", "dance_studio", "cafe", "nature_center", "cooking_school",
+    "outdoor_venue",
 }
 
 # Everything else is Tier 0 (event containers, orgs, churches, etc.)

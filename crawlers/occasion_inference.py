@@ -97,12 +97,21 @@ OCCASION_RULES: dict[str, dict] = {
             "brewery",
             "eatertainment",
             "arcade",
+            "museum",
+            "zoo",
+            "aquarium",
+            "theme_park",
+            "arena",
+            "stadium",
+            "convention_center",
+            "entertainment",
+            "escape_room",
         ],
         "confidence": 0.7,
     },
     "solo": {
         "vibes_match": ["intimate"],
-        "venue_type_match": ["coffee_shop", "bar", "bookstore", "library"],
+        "venue_type_match": ["coffee_shop", "bar", "bookstore", "library", "museum", "gallery", "cinema"],
         "confidence": 0.6,
     },
     "outdoor_dining": {
@@ -124,6 +133,7 @@ OCCASION_RULES: dict[str, dict] = {
     "special_occasion": {
         "price_level_min": 4,
         "service_style_match": ["tasting_menu"],
+        "venue_type_match": ["convention_center", "arena", "stadium"],
         # reservation_recommended = true also signals this
         "confidence": 0.7,
     },
@@ -153,6 +163,10 @@ OCCASION_RULES: dict[str, dict] = {
             "bowling",
             "arcade",
             "science_center",
+            "arena",
+            "stadium",
+            "theme_park",
+            "convention_center",
         ],
         "confidence": 0.7,
     },
@@ -162,7 +176,7 @@ OCCASION_RULES: dict[str, dict] = {
     },
     "live_music": {
         "vibes_match": ["live-music"],
-        "venue_type_match": ["music_venue", "amphitheater"],
+        "venue_type_match": ["music_venue", "amphitheater", "arena", "stadium"],
         "confidence": 0.8,
     },
     "dancing": {
@@ -368,6 +382,10 @@ def infer_occasions(venue: dict, min_confidence: float = 0.5) -> list[dict]:
             # reservation recommended
             if reservation_recommended:
                 signals_fired += 1
+            # venue type (large event venues host special occasions)
+            so_type_matches: list[str] = rule.get("venue_type_match", [])
+            if venue_type in so_type_matches:
+                signals_fired += 1
 
         else:
             # ── Generic multi-signal rules ───────────────────────────────────
@@ -439,24 +457,32 @@ def infer_occasions(venue: dict, min_confidence: float = 0.5) -> list[dict]:
 
 
 def load_venues(venue_id: Optional[int] = None) -> list[dict]:
-    """Fetch active Atlanta venues with all occasion-relevant columns."""
+    """Fetch all active venues with all occasion-relevant columns."""
     client = get_client()
-    query = (
-        client.table("venues")
-        .select(
-            "id, name, slug, venue_type, vibes, price_level, hours, "
-            "service_style, reservation_recommended, beltline_adjacent, lat, lng"
+    all_venues: list[dict] = []
+    offset = 0
+    while True:
+        query = (
+            client.table("venues")
+            .select(
+                "id, name, slug, venue_type, vibes, price_level, hours, "
+                "service_style, reservation_recommended, beltline_adjacent, lat, lng"
+            )
+            .eq("active", True)
+            .order("id")
+            .range(offset, offset + 999)
         )
-        .eq("city", "Atlanta")
-        .eq("active", True)
-    )
-    if venue_id is not None:
-        query = query.eq("id", venue_id)
+        if venue_id is not None:
+            query = query.eq("id", venue_id)
 
-    result = query.execute()
-    if not result.data:
-        return []
-    return result.data
+        result = query.execute()
+        if not result.data:
+            break
+        all_venues.extend(result.data)
+        if len(result.data) < 1000:
+            break
+        offset += 1000
+    return all_venues
 
 
 def load_existing_occasions(venue_ids: list[int]) -> dict[tuple[int, str], dict]:

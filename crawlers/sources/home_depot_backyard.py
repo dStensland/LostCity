@@ -146,7 +146,7 @@ def categorize_event(title: str, url: str) -> dict:
 
     # Fitness/wellness classes (check specific types)
     for keyword, cat_info in FITNESS_KEYWORDS.items():
-        if keyword in title_lower:
+        if re.search(r'\b' + re.escape(keyword) + r'\b', title_lower):
             base_tags = ["outdoor", "free", "community", "all-ages"]
             return {
                 "category": "fitness",

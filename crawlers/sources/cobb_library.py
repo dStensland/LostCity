@@ -182,6 +182,7 @@ CATEGORY_MAP = {
     "movie": "film",
     "craft": "art",
     "art": "art",
+    "arts": "art",
     "paint": "art",
     "draw": "art",
     "fitness": "fitness",
@@ -391,7 +392,9 @@ def determine_category(title: str, summary: str) -> str:
     """Determine event category from title and summary text."""
     text = f"{title} {summary}".lower()
     for keyword, category in CATEGORY_MAP.items():
-        if keyword in text:
+        # Word-boundary match to avoid substring false positives
+        # (e.g. "art" matching inside "partnering", "start", "party")
+        if re.search(r'\b' + re.escape(keyword) + r'\b', text):
             return category
     return "words"
 

@@ -329,7 +329,7 @@ TEMPLATES = {
         "destination_details": {
             "commitment_tier": "halfday",
             "parking_type": "paid_lot",
-            "best_time_of_day": "varies",
+            "best_time_of_day": "any",
             "family_suitability": "yes",
         },
         "venue_features": [
@@ -587,6 +587,131 @@ TEMPLATES = {
                 "slug": "tournaments",
                 "title": "Tournaments & Events",
                 "feature_type": "experience",
+            },
+        ],
+    },
+    "theater": {
+        "destination_details": {
+            "commitment_tier": "halfday",
+            "parking_type": "street",
+            "best_time_of_day": "evening",
+            "family_suitability": "yes",
+        },
+        "venue_features": [
+            {
+                "slug": "live-performances",
+                "title": "Live Performances",
+                "feature_type": "experience",
+                "description": "Theater, musicals, dance, and live performances",
+            },
+            {
+                "slug": "box-office",
+                "title": "Box Office",
+                "feature_type": "amenity",
+            },
+        ],
+    },
+    "gallery": {
+        "destination_details": {
+            "commitment_tier": "hour",
+            "parking_type": "street",
+            "best_time_of_day": "afternoon",
+            "family_suitability": "yes",
+        },
+        "venue_features": [
+            {
+                "slug": "exhibitions",
+                "title": "Rotating Exhibitions",
+                "feature_type": "exhibition",
+                "description": "Curated art exhibitions with regular rotation",
+            },
+            {
+                "slug": "gallery-space",
+                "title": "Gallery Space",
+                "feature_type": "amenity",
+            },
+        ],
+    },
+    "historic_site": {
+        "destination_details": {
+            "commitment_tier": "hour",
+            "parking_type": "free_lot",
+            "best_time_of_day": "morning",
+            "family_suitability": "yes",
+        },
+        "venue_features": [
+            {
+                "slug": "historic-grounds",
+                "title": "Historic Grounds & Structures",
+                "feature_type": "attraction",
+                "description": "Preserved historic buildings, monuments, and grounds",
+            },
+            {
+                "slug": "interpretive-exhibits",
+                "title": "Interpretive Exhibits",
+                "feature_type": "collection",
+            },
+        ],
+    },
+    "landmark": {
+        "destination_details": {
+            "commitment_tier": "hour",
+            "parking_type": "street",
+            "best_time_of_day": "any",
+            "family_suitability": "yes",
+        },
+        "venue_features": [
+            {
+                "slug": "landmark-experience",
+                "title": "Landmark Experience",
+                "feature_type": "attraction",
+            },
+            {
+                "slug": "visitor-info",
+                "title": "Visitor Information",
+                "feature_type": "amenity",
+            },
+        ],
+    },
+    "garden": {
+        "destination_details": {
+            "commitment_tier": "halfday",
+            "parking_type": "paid_lot",
+            "best_time_of_day": "morning",
+            "family_suitability": "yes",
+        },
+        "venue_features": [
+            {
+                "slug": "garden-displays",
+                "title": "Garden Displays",
+                "feature_type": "attraction",
+                "description": "Curated garden collections and seasonal displays",
+            },
+            {
+                "slug": "walking-paths",
+                "title": "Walking Paths",
+                "feature_type": "amenity",
+            },
+        ],
+    },
+    "arts_center": {
+        "destination_details": {
+            "commitment_tier": "halfday",
+            "parking_type": "free_lot",
+            "best_time_of_day": "afternoon",
+            "family_suitability": "yes",
+        },
+        "venue_features": [
+            {
+                "slug": "exhibitions-programs",
+                "title": "Exhibitions & Programs",
+                "feature_type": "experience",
+                "description": "Rotating exhibitions, classes, and cultural programming",
+            },
+            {
+                "slug": "studio-spaces",
+                "title": "Studio Spaces",
+                "feature_type": "amenity",
             },
         ],
     },

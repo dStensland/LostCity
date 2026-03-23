@@ -8,7 +8,7 @@
  *   - Each chip shows count for that category in the active date tab.
  *   - Counts update when switching date tabs.
  *   - Chip selection persists for auth'd users.
- *   - Max 8 events shown, then expand to see more.
+ *   - ~8 events shown initially, then "Show more" to expand.
  *
  * "Free" chip is a cross-cut filter on top of the active union.
  */
@@ -49,8 +49,6 @@ import {
 import type { ComponentType } from "react";
 import type { IconProps } from "@phosphor-icons/react";
 import { triggerHaptic } from "@/lib/haptics";
-
-// All events shown — horizontal scroll handles discovery
 
 // ---------------------------------------------------------------------------
 // Icon resolver — maps iconName string → Phosphor component
@@ -455,7 +453,6 @@ export default function LineupSection({
     return counts;
   }, [tabDateEvents, unionMatcher]);
 
-  // Horizontal scroll handles discovery — show all filtered events
   const visibleItems = events;
 
   // If no sections have any events at all, hide entirely

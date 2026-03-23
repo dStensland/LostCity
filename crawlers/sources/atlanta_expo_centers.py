@@ -189,7 +189,7 @@ def infer_tags(title: str) -> list[str]:
     text = title.lower()
     tags = ["atlanta-expo-centers", "expo-center"]
     for keyword, tag in TAG_KEYWORDS.items():
-        if keyword in text and tag not in tags:
+        if re.search(r'\b' + re.escape(keyword) + r'\b', text) and tag not in tags:
             tags.append(tag)
     return tags
 

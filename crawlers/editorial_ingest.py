@@ -111,6 +111,31 @@ EDITORIAL_SOURCES: dict[str, dict] = {
         "method": "rss",
         "display_name": "ATL Bucket List",
     },
+    # ── Non-food sources (museums, attractions, arts, experiences) ──
+    "artsatl": {
+        "method": "sitemap_index",
+        "sitemap_index_url": "https://www.artsatl.org/sitemap.xml",
+        "display_name": "ArtsATL",
+        "sitemap_pattern": "post-sitemap",  # filter to article sitemaps only
+        "max_sub_sitemaps": 3,  # post-sitemap1 (recent) through post-sitemap3
+    },
+    "secret_atlanta": {
+        "method": "sitemap_index",
+        "sitemap_index_url": "https://secretatlanta.co/sitemap_index.xml",
+        "display_name": "Secret Atlanta",
+        "sitemap_pattern": "posts_v2-sitemap",  # English posts only (skip posts-es)
+        "max_sub_sitemaps": 3,
+    },
+    "secret_nashville": {
+        "feed_url": "https://secretnashville.co/feed/",
+        "method": "rss",
+        "display_name": "Secret Nashville",
+    },
+    "atlanta_parent": {
+        "feed_url": "https://www.atlantaparent.com/feed/",
+        "method": "rss",
+        "display_name": "Atlanta Parent",
+    },
     # TODO: atlantadowntown_blog — site returns 403 on all RSS/feed endpoints.
     # Blog content exists at /downtown-blog/ but needs Playwright scraping or
     # sitemap discovery. Defer until we add a page-scraping method.
@@ -118,6 +143,12 @@ EDITORIAL_SOURCES: dict[str, dict] = {
     # TODO: visit_roswell_blog — Craft CMS site with no RSS feeds enabled.
     # Blog at /blog/ has 112+ posts but no feed endpoints. Needs sitemap
     # or page-scraping method.
+    #
+    # TODO: nashville_lifestyles — RSS at /api/rss/content.rss works.
+    # ~50% food, ~50% entertainment/culture. Medium value.
+    #
+    # TODO: creative_loafing — sitemap exists but content is noisy
+    # (astrology, giveaways). Lower priority.
 }
 
 # Sitemaps use this namespace
@@ -812,9 +843,13 @@ def fetch_sitemap_index_entries(
         return []
 
     # Filter to article entry sitemaps only (skip /groups, /authors, /video, /google_news)
-    entry_urls = [u for u in all_sub_urls if "/entries/" in u]
+    sitemap_pattern = source_config.get("sitemap_pattern")
+    if sitemap_pattern:
+        entry_urls = [u for u in all_sub_urls if sitemap_pattern in u]
+    else:
+        entry_urls = [u for u in all_sub_urls if "/entries/" in u]
     if not entry_urls:
-        # Fallback: use all URLs if none match /entries/ pattern
+        # Fallback: use all URLs if none match the filter pattern
         entry_urls = all_sub_urls
 
     # Eater lists newest first — take the first N

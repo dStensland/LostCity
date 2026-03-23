@@ -19,7 +19,7 @@ import {
   type FindFilterSnapshot,
 } from "@/lib/analytics/find-tracking";
 
-const ShowtimesView = dynamic(() => import("@/components/find/ShowtimesView"), {
+const WhatsOnView = dynamic(() => import("@/components/find/WhatsOnView"), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading showtimes...</div>,
 });
 const RegularsView = dynamic(() => import("@/components/find/RegularsView"), {
@@ -395,7 +395,7 @@ function HappeningViewInner({
       )}
 
       {contentType === "showtimes" && (
-        <ShowtimesView
+        <WhatsOnView
           portalId={portalId}
           portalSlug={portalSlug}
         />

@@ -277,7 +277,7 @@ def categorize_event(title: str, description: str) -> tuple[str, Optional[str], 
 
     # Check against known event types
     for keyword, metadata in EVENT_KEYWORDS.items():
-        if keyword in text:
+        if re.search(r'\b' + re.escape(keyword) + r'\b', text):
             tags = base_tags + metadata["tags"]
             return metadata["category"], metadata.get("subcategory"), tags
 

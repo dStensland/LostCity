@@ -199,7 +199,7 @@ def infer_tags(title: str, venue_label: str) -> list[str]:
     text = f"{title} {venue_label}".lower()
     tags = ["gas-south", "duluth"]
     for keyword, tag in TAG_KEYWORDS.items():
-        if keyword in text and tag not in tags:
+        if re.search(r'\b' + re.escape(keyword) + r'\b', text) and tag not in tags:
             tags.append(tag)
     normalized_venue = normalize_venue_label(venue_label)
     if "arena" in normalized_venue:

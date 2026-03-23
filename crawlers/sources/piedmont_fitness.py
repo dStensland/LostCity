@@ -107,7 +107,7 @@ def get_class_category(class_name: str) -> dict:
     name_lower = class_name.lower()
 
     for keyword, cat_info in CLASS_CATEGORIES.items():
-        if keyword in name_lower:
+        if re.search(r'\b' + re.escape(keyword) + r'\b', name_lower):
             return cat_info
 
     # Default fitness class

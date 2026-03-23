@@ -146,7 +146,7 @@ def infer_category(title: str, description: str = "") -> str:
 
     for category, keywords in CATEGORY_KEYWORDS.items():
         for keyword in keywords:
-            if keyword in text:
+            if re.search(r'\b' + re.escape(keyword) + r'\b', text):
                 return category
 
     # Check for festival/parade patterns

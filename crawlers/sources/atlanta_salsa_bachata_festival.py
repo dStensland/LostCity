@@ -113,7 +113,7 @@ def infer_style_tags(text: str) -> list[str]:
     text_lower = text.lower()
     found = set()
     for keyword, tag in STYLE_KEYWORDS.items():
-        if keyword in text_lower:
+        if re.search(r'\b' + re.escape(keyword) + r'\b', text_lower):
             found.add(tag)
     return sorted(found)
 

@@ -71,12 +71,12 @@ def is_public_event(title: str, description: str = "") -> bool:
     text = f"{title} {description}".lower()
 
     for keyword in STUDENT_ONLY_KEYWORDS:
-        if keyword in text:
+        if re.search(r'\b' + re.escape(keyword) + r'\b', text):
             return False
 
     title_lower = (title or "").lower()
     for keyword in NON_EVENT_CALENDAR_KEYWORDS:
-        if keyword in title_lower:
+        if re.search(r'\b' + re.escape(keyword) + r'\b', title_lower):
             return False
 
     return True

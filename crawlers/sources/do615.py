@@ -139,12 +139,12 @@ def determine_category(text: str, do615_category: str = None) -> str:
     if do615_category:
         cat_lower = do615_category.lower()
         for keyword, category in CATEGORY_MAP.items():
-            if keyword in cat_lower:
+            if re.search(r'\b' + re.escape(keyword) + r'\b', cat_lower):
                 return category
 
     text_lower = text.lower()
     for keyword, category in CATEGORY_MAP.items():
-        if keyword in text_lower:
+        if re.search(r'\b' + re.escape(keyword) + r'\b', text_lower):
             return category
 
     return "community"

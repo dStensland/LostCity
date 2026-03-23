@@ -12,7 +12,7 @@
  * a tentpole/festival or high-density category signal.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import type { FeedEventData } from "@/components/EventCard";
 import type { CardTier, EditorialMention, FriendGoingInfo } from "@/lib/city-pulse/types";
@@ -55,6 +55,9 @@ interface TieredEventListProps {
   seeAllHref?: string;
   /** "See all" link label */
   seeAllLabel?: string;
+  /** Max total visible items before "Show more" collapse (default: 8).
+   *  Hero + featured count toward the cap; standard rows fill the remainder. */
+  maxVisible?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -166,7 +169,14 @@ export function TieredEventList({
   maxFeatured = 4,
   seeAllHref,
   seeAllLabel = "See all",
+  maxVisible = 8,
 }: TieredEventListProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Collapse when the event list changes (tab/chip switch)
+  const eventFingerprint = events.length > 0 ? `${events[0].id}-${events.length}` : "empty";
+  useEffect(() => { setExpanded(false); }, [eventFingerprint]);
+
   // Split events into tiers
   const { heroEvents, featuredEvents, standardEvents } = useMemo(() => {
     const hero: TieredFeedEvent[] = [];
@@ -243,19 +253,39 @@ export function TieredEventList({
         </div>
       )}
 
-      {/* Standard rows */}
-      {standardEvents.length > 0 && (
-        <div className="space-y-1.5 card-stagger">
-          {standardEvents.map((event, idx) => (
-            <StandardRow
-              key={`standard-${event.id}`}
-              event={event as FeedEventData & { card_tier?: "standard" }}
-              portalSlug={portalSlug}
-              index={heroEvents.length + featuredEvents.length + idx}
-            />
-          ))}
-        </div>
-      )}
+      {/* Standard rows — capped at maxVisible total, expandable */}
+      {standardEvents.length > 0 && (() => {
+        const usedSlots = heroEvents.length + featuredEvents.length;
+        const standardCap = Math.max(maxVisible - usedSlots, 2);
+        const visibleStandard = expanded
+          ? standardEvents
+          : standardEvents.slice(0, standardCap);
+        const hiddenCount = standardEvents.length - standardCap;
+
+        return (
+          <>
+            <div className="space-y-1.5 card-stagger">
+              {visibleStandard.map((event, idx) => (
+                <StandardRow
+                  key={`standard-${event.id}`}
+                  event={event as FeedEventData & { card_tier?: "standard" }}
+                  portalSlug={portalSlug}
+                  index={usedSlots + idx}
+                />
+              ))}
+            </div>
+            {!expanded && hiddenCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setExpanded(true)}
+                className="w-full py-2.5 text-center font-mono text-xs font-medium text-[var(--soft)] hover:text-[var(--cream)] transition-colors border border-[var(--twilight)]/40 rounded-lg hover:border-[var(--twilight)]/70 hover:bg-white/[0.02] active:scale-[0.99]"
+              >
+                Show {hiddenCount} more event{hiddenCount !== 1 ? "s" : ""}
+              </button>
+            )}
+          </>
+        );
+      })()}
 
       {/* See all */}
       {seeAllHref && (
