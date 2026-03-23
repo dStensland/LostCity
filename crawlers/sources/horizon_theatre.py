@@ -2,16 +2,28 @@
 Crawler for Horizon Theatre Company (horizontheatre.com).
 Intimate theater in Little Five Points known for contemporary plays and world premieres.
 
-Site structure: Shows listed at /plays/ with individual show pages at /plays/[slug]/
+Site structure:
+  Shows: /plays/ with individual show pages at /plays/[slug]/ (Playwright).
+  Education: /education-and-community/young-playwrights/ — the New South Young
+    Playwrights Festival is the only education program with parseable dates on
+    the Horizon site. Youth classes (Camp StarDust, acting classes) are fully
+    outsourced to Atlanta Children's Theatre Company and appear only on
+    atlantachildrenstheatre.com, not on horizontheatre.com.
+
+Education pass (static HTTP):
+  - New South Young Playwrights Festival (annual, typically June, 1 week)
+  - Apprentice Company: currently paused — no active dates to crawl.
 """
 
 from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
+import requests
+from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
@@ -22,6 +34,16 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.horizontheatre.com"
 PLAYS_URL = f"{BASE_URL}/plays/"
+YOUNG_PLAYWRIGHTS_URL = f"{BASE_URL}/education-and-community/young-playwrights/"
+
+EDUCATION_REQUEST_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml",
+}
 
 VENUE_DATA = {
     "name": "Horizon Theatre",
@@ -81,9 +103,9 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
 
     # Pattern: "Month Day - Month Day, Year" or "Month Day-Day, Year"
     range_match = re.search(
-        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-–—]\s*(?:(January|February|March|April|May|June|July|August|September|October|November|December)\s+)?(\d{1,2}),?\s*(\d{4})",
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-\u2013\u2014]\s*(?:(January|February|March|April|May|June|July|August|September|October|November|December)\s+)?(\d{1,2}),?\s*(\d{4})",
         date_text,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
 
     if range_match:
@@ -104,7 +126,7 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
     single_match = re.search(
         r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s*(\d{4})",
         date_text,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
 
     if single_match:
@@ -118,8 +140,183 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
     return None, None
 
 
+# ── education crawler ──────────────────────────────────────────────────────────
+
+
+def _crawl_horizon_education(source_id: int, venue_id: int) -> tuple[int, int, int]:
+    """
+    Crawl the New South Young Playwrights Festival from the Horizon education page.
+
+    The page lists past and current festival years with dates. We parse the most
+    recent upcoming festival and emit it as an education event. The festival
+    typically runs for one week in June.
+
+    Note: Youth classes (Camp StarDust, acting classes) are outsourced to
+    atlantachildrenstheatre.com and are NOT crawled from Horizon's site.
+    """
+    found = new = updated = 0
+
+    try:
+        resp = requests.get(YOUNG_PLAYWRIGHTS_URL, headers=EDUCATION_REQUEST_HEADERS, timeout=20)
+        resp.raise_for_status()
+    except Exception as exc:
+        logger.warning("[horizon-theatre] Failed to fetch young playwrights page: %s", exc)
+        return 0, 0, 0
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    text = soup.get_text(separator="\n")
+    lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
+
+    current_year = date.today().year
+    festival_year: Optional[int] = None
+    festival_dates_str: Optional[str] = None
+
+    for i, line in enumerate(lines):
+        year_m = re.match(r"(\d{4})\s+FESTIVAL", line, re.IGNORECASE)
+        if year_m:
+            yr = int(year_m.group(1))
+            if yr >= current_year:
+                festival_year = yr
+                # Look for dates in the next few lines
+                for j in range(i, min(i + 5, len(lines))):
+                    # "JUNE 1-7" or ": JUNE 1-7" patterns
+                    date_m = re.search(
+                        r":?\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{1,2})\s*[-\u2013]\s*(\d{1,2})",
+                        lines[j],
+                        re.IGNORECASE,
+                    )
+                    if date_m:
+                        festival_dates_str = lines[j]
+                        break
+                break
+
+    if not festival_year:
+        logger.info("[horizon-theatre] No upcoming Young Playwrights Festival found")
+        return 0, 0, 0
+
+    # Parse festival dates
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+
+    if festival_dates_str:
+        m = re.search(
+            r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{1,2})\s*[-\u2013]\s*(\d{1,2})",
+            festival_dates_str,
+            re.IGNORECASE,
+        )
+        if m:
+            month_abbr = m.group(1)
+            s_day = int(m.group(2))
+            e_day = int(m.group(3))
+            try:
+                s_dt = datetime.strptime(f"{month_abbr} {s_day} {festival_year}", "%b %d %Y")
+                e_dt = datetime.strptime(f"{month_abbr} {e_day} {festival_year}", "%b %d %Y")
+                start_date = s_dt.strftime("%Y-%m-%d")
+                end_date = e_dt.strftime("%Y-%m-%d")
+            except ValueError:
+                pass
+
+    # Fallback placeholder if date parse fails
+    if not start_date:
+        start_date = f"{festival_year}-06-01"
+        end_date = f"{festival_year}-06-07"
+        logger.debug(
+            "[horizon-theatre] Using placeholder dates for %d Young Playwrights Festival",
+            festival_year,
+        )
+
+    # Skip if in the past
+    try:
+        if datetime.strptime(end_date, "%Y-%m-%d").date() < date.today():
+            logger.info(
+                "[horizon-theatre] %d Young Playwrights Festival is past, skipping",
+                festival_year,
+            )
+            return 0, 0, 0
+    except ValueError:
+        pass
+
+    found = 1
+    title = f"New South Young Playwrights Festival {festival_year}"
+    content_hash = generate_content_hash(title, "Horizon Theatre", start_date)
+
+    description = (
+        f"Every year, Horizon Theatre hosts the New South Young Playwrights Festival — "
+        f"a week-long event for high school and college-aged aspiring playwrights in Atlanta. "
+        f"20-25 playwrights are selected to participate in readings and workshops at Horizon's "
+        f"Little Five Points home. Free to attend as an audience member. "
+        f"Submissions and festival info at {YOUNG_PLAYWRIGHTS_URL}."
+    )
+
+    series_hint = {
+        "series_type": "recurring_show",
+        "series_title": "New South Young Playwrights Festival",
+        "frequency": "yearly",
+        "description": description,
+    }
+
+    event_record = {
+        "source_id": source_id,
+        "venue_id": venue_id,
+        "title": title,
+        "description": description,
+        "start_date": start_date,
+        "end_date": end_date,
+        "start_time": None,
+        "end_time": None,
+        "is_all_day": True,
+        "category": "theater",
+        "subcategory": "performance",
+        "tags": [
+            "horizon-theatre", "theater", "little-five-points", "l5p",
+            "education", "playwriting", "teen", "youth", "festival", "free",
+        ],
+        "age_min": 14,
+        "age_max": None,
+        "is_free": True,
+        "price_min": 0,
+        "price_max": 0,
+        "price_note": "Free to attend as audience. Participation by application.",
+        "source_url": YOUNG_PLAYWRIGHTS_URL,
+        "ticket_url": YOUNG_PLAYWRIGHTS_URL,
+        "image_url": None,
+        "raw_text": f"{title}|Horizon Theatre|{start_date}",
+        "extraction_confidence": 0.85,
+        "is_recurring": True,
+        "recurrence_rule": "FREQ=YEARLY",
+        "content_hash": content_hash,
+    }
+
+    existing = find_event_by_hash(content_hash)
+    if existing:
+        smart_update_existing_event(existing, event_record)
+        updated = 1
+        logger.debug("[horizon-theatre] Updated: %s on %s", title, start_date)
+    else:
+        try:
+            insert_event(event_record, series_hint=series_hint)
+            new = 1
+            logger.info("[horizon-theatre] Added: %s on %s", title, start_date)
+        except Exception as exc:
+            logger.error("[horizon-theatre] Failed to insert %s: %s", title, exc)
+
+    return found, new, updated
+
+
+# ── main crawl entrypoint ──────────────────────────────────────────────────────
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Horizon Theatre shows using Playwright with DOM-based parsing."""
+    """
+    Crawl Horizon Theatre — mainstage shows AND education programs.
+
+    Pass 1 (static HTTP): Fetch the Young Playwrights Festival page and emit
+      the current/upcoming festival as an event. Youth classes are outsourced
+      to Atlanta Children's Theatre Company (not crawlable from Horizon's site).
+
+    Pass 2 (Playwright): Navigate /plays/ and visit each show page to extract
+      title, dates, description, and image.
+    """
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -136,6 +333,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
+            # Pass 1: Education programs (static HTTP)
+            logger.info("[horizon-theatre] Crawling education programs")
+            try:
+                edu_found, edu_new, edu_updated = _crawl_horizon_education(source_id, venue_id)
+                events_found += edu_found
+                events_new += edu_new
+                events_updated += edu_updated
+                logger.info(
+                    "[horizon-theatre] Education: %d found, %d new, %d updated",
+                    edu_found, edu_new, edu_updated,
+                )
+            except Exception as exc:
+                logger.error("[horizon-theatre] Education crawl failed: %s", exc)
+
+            # Pass 2: Mainstage shows (Playwright)
             logger.info(f"Fetching Horizon Theatre: {PLAYS_URL}")
             page.goto(PLAYS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)  # Wait for JS instead of networkidle
@@ -194,7 +406,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         date_match = re.search(
                             r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}.*?\d{4}",
                             body_text,
-                            re.IGNORECASE
+                            re.IGNORECASE,
                         )
                         if date_match:
                             date_text = date_match.group(0)
@@ -236,7 +448,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     event_start_time = "20:00"
                     hash_key = f"{start_date}|{event_start_time}"
                     content_hash = generate_content_hash(title, "Horizon Theatre", hash_key)
-
 
                     # Create series hint for the show run
                     series_hint = None
@@ -312,7 +523,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             browser.close()
 
         logger.info(
-            f"Horizon Theatre crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            "[horizon-theatre] Crawl complete: %d found, %d new, %d updated (shows + education)",
+            events_found, events_new, events_updated,
         )
 
     except Exception as e:
