@@ -296,6 +296,13 @@ export interface ResolvedHeader {
   boosted_event_ids: number[];
   /** Tentpole or festival event happening today with an image — owns the hero when present */
   flagship_event?: FlagshipEvent | null;
+  /** Tentpole sports event today — surfaced in the signal strip (e.g. "Braves vs Mets · 7:20") */
+  sports_tentpole?: {
+    title: string;
+    start_time: string | null;
+    venue_name?: string;
+    href: string;
+  } | null;
 }
 
 // ---------------------------------------------------------------------------

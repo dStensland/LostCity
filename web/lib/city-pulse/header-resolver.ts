@@ -122,6 +122,9 @@ export async function resolveHeader(opts: ResolveHeaderOpts): Promise<ResolvedHe
   // 6. Identify flagship event — tentpole or festival event with an image
   const flagshipEvent = resolveFlagshipEvent(todayEvents, portalSlug);
 
+  // 7. Identify sports tentpole — for signal strip display (e.g. "Braves vs Mets · 7:20")
+  const sportsTentpole = resolveSportsTentpole(todayEvents, portalSlug);
+
   return {
     config_id: winner?.id ?? null,
     config_slug: winner?.slug ?? null,
@@ -138,6 +141,7 @@ export async function resolveHeader(opts: ResolveHeaderOpts): Promise<ResolvedHe
     suppressed_event_ids: suppressedEventIds,
     boosted_event_ids: boostedEventIds,
     flagship_event: flagshipEvent,
+    sports_tentpole: sportsTentpole,
   };
 }
 
@@ -197,6 +201,45 @@ function resolveFlagshipEvent(
     venue_name: best.venue?.name ?? null,
     start_time: best.start_time ?? null,
     price_info: priceInfo,
+    href: `/${portalSlug}/events/${best.id}`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Sports tentpole selection
+// ---------------------------------------------------------------------------
+
+/**
+ * Find the highest-priority sports tentpole event today.
+ * Used by the signal strip to surface game-day context (e.g. "Braves vs Mets · 7:20").
+ *
+ * Picks the first is_tentpole event in the "sports" category, ordered by start_time.
+ * Returns null when none exists.
+ */
+function resolveSportsTentpole(
+  todayEvents: FeedEventData[] | undefined,
+  portalSlug: string,
+): ResolvedHeader["sports_tentpole"] {
+  if (!todayEvents || todayEvents.length === 0) return null;
+
+  const candidates = todayEvents.filter(
+    (e) => e.is_tentpole && e.category === "sports",
+  );
+
+  if (candidates.length === 0) return null;
+
+  // Pick the earliest game of the day
+  candidates.sort((a, b) => {
+    const ta = a.start_time ?? "";
+    const tb = b.start_time ?? "";
+    return ta < tb ? -1 : ta > tb ? 1 : 0;
+  });
+
+  const best = candidates[0];
+  return {
+    title: best.title,
+    start_time: best.start_time ?? null,
+    venue_name: best.venue?.name,
     href: `/${portalSlug}/events/${best.id}`,
   };
 }
