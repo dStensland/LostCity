@@ -189,7 +189,7 @@ def test_build_election_day_event_structure() -> None:
     assert event["end_time"] == "19:00"
     assert event["is_all_day"] is False
     assert event["is_free"] is True
-    assert event["category"] == "community"
+    assert event["category"] == "civic"
     assert event["source_url"] == SOURCE_URL
     assert "election" in event["tags"]
     assert "election-day" in event["tags"]
@@ -242,7 +242,7 @@ def test_build_registration_deadline_event_structure() -> None:
     assert event["is_all_day"] is True
     assert event["start_time"] is None
     assert event["is_free"] is True
-    assert event["category"] == "community"
+    assert event["category"] == "civic"
     assert event["source_url"] == SOURCE_URL
     assert "voter-registration" in event["tags"]
     assert "civic-deadline" in event["tags"]
