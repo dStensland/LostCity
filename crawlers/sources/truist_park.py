@@ -16,6 +16,8 @@ import requests
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +39,14 @@ VENUE_DATA = {
     "spot_type": "stadium",
     "website": BASE_URL,
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -130,6 +140,93 @@ def _fetch_schedule(start: date, end: date) -> list[dict]:
     return games
 
 
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "stadium",
+        "commitment_tier": "halfday",
+        "primary_activity": "Atlanta Braves MLB games and The Battery entertainment district",
+        "best_seasons": ["spring", "summer", "fall"],
+        "weather_fit_tags": ["outdoor", "partially-covered"],
+        "parking_type": "paid_lot",
+        "best_time_of_day": "any",
+        "practical_notes": (
+            "The Battery Atlanta entertainment district surrounds the stadium with restaurants, bars, "
+            "and shops open year-round regardless of game schedule. Battery garages fill up on game days "
+            "— arrive early or consider rideshare. The park itself is best experienced during baseball season."
+        ),
+        "accessibility_notes": "Fully ADA accessible. Companion seating available in all sections.",
+        "family_suitability": "yes",
+        "reservation_required": True,
+        "permit_required": False,
+        "fee_note": "Game tickets vary. The Battery district is free to visit.",
+        "source_url": BASE_URL,
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "stadium", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "battery-atlanta-district",
+        "title": "The Battery Atlanta entertainment district",
+        "feature_type": "attraction",
+        "description": "A walkable mixed-use district with 30+ restaurants, bars, and shops surrounding the ballpark — active year-round, not just on game days.",
+        "url": "https://batteryatl.com",
+        "is_free": True,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "braves-museum-monument-garden",
+        "title": "Braves museum and Monument Garden",
+        "feature_type": "experience",
+        "description": "The Braves' on-site museum and Monument Garden celebrating franchise history with statues, memorabilia, and interactive displays.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "ballpark-tours",
+        "title": "Ballpark tours",
+        "feature_type": "experience",
+        "description": "Guided tours of Truist Park including dugout access, press box, and behind-the-scenes areas on non-game days.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 30,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "battery-restaurants-taproom",
+        "title": "Terrapin Taproom, Antico Pizza, and Battery restaurants",
+        "feature_type": "amenity",
+        "description": "The Battery offers a range of dining from Terrapin Taproom's craft beer to Antico Pizza's wood-fired pies.",
+        "url": "https://batteryatl.com",
+        "is_free": False,
+        "sort_order": 40,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "the-sandlot-kids-area",
+        "title": "The Sandlot kids' play area",
+        "feature_type": "amenity",
+        "description": "Interactive kids' play area at The Battery for families attending games or visiting the district.",
+        "url": "https://batteryatl.com",
+        "is_free": True,
+        "sort_order": 50,
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "truist-park-ballpark-tours",
+        "title": "Truist Park ballpark tours",
+        "description": "Guided ballpark tours available on non-game days with access to the dugout, press box, and more.",
+        "price_note": "Tour tickets sold separately from game tickets.",
+        "is_free": False,
+        "source_url": BASE_URL,
+        "category": "recurring_deal",
+    })
+    return envelope
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Truist Park home games via MLB schedule API."""
     source_id = source["id"]
@@ -139,6 +236,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
+        persist_typed_entity_envelope(_build_destination_envelope(venue_id))
         today = datetime.now().date()
         end_date = today + timedelta(days=240)
         games = _fetch_schedule(today, end_date)

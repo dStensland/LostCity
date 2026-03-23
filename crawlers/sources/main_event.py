@@ -1,12 +1,10 @@
 """
-Destination-first crawler for SkyView Atlanta.
+Destination-first crawler for Main Event Alpharetta.
 
-SkyView is a Ferris wheel attraction at 168 Luckie St NW, Downtown Atlanta.
-It has no event calendar — the value is in the fully enriched venue record.
+Entertainment center with bowling, laser tag, arcade, and dining.
+No event calendar — the enriched venue record is the deliverable.
 
-Returns (0, 0, 0) because there are no events to crawl. The venue
-record — including og:image and og:description fetched fresh from the
-homepage on every run — is the deliverable.
+Returns (0, 0, 0) because there are no events to crawl.
 """
 
 from __future__ import annotations
@@ -23,39 +21,32 @@ from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
-HOMEPAGE = "https://skyviewatlanta.com/"
+HOMEPAGE = "https://www.mainevent.com/location/alpharetta"
 
 VENUE_DATA = {
-    "name": "SkyView Atlanta",
-    "slug": "skyview-atlanta",
-    "address": "168 Luckie St NW",
-    "neighborhood": "Downtown",
-    "city": "Atlanta",
+    "name": "Main Event Alpharetta",
+    "slug": "main-event-alpharetta",
+    "address": "2105 N Point Pkwy",
+    "neighborhood": "Alpharetta",
+    "city": "Alpharetta",
     "state": "GA",
-    "zip": "30303",
-    "lat": 33.7601,
-    "lng": -84.3926,
-    "venue_type": "attraction",
-    "spot_type": "attraction",
+    "zip": "30009",
+    "lat": 34.0655,
+    "lng": -84.2742,
+    "venue_type": "entertainment",
+    "spot_type": "entertainment",
     "website": HOMEPAGE,
-    # Hours verified 2026-03-11 against skyviewatlanta.com
+    # Hours verified 2026-03-22 against mainevent.com
     "hours": {
-        "monday": "12:00-21:00",
-        "tuesday": "12:00-21:00",
-        "wednesday": "12:00-21:00",
-        "thursday": "12:00-21:00",
-        "friday": "12:00-22:00",
-        "saturday": "10:00-22:00",
-        "sunday": "10:00-21:00",
+        "monday": "11:00-00:00",
+        "tuesday": "11:00-00:00",
+        "wednesday": "11:00-00:00",
+        "thursday": "11:00-00:00",
+        "friday": "11:00-01:00",
+        "saturday": "10:00-01:00",
+        "sunday": "10:00-00:00",
     },
-    "vibes": [
-        "tourist",
-        "family-friendly",
-        "downtown",
-        "date-night",
-        "views",
-        "landmark",
-    ],
+    "vibes": ["bowling", "laser-tag", "arcade", "family-friendly", "groups", "entertainment"],
 }
 
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
@@ -70,75 +61,81 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
         "venue_id": venue_id,
-        "destination_type": "attraction",
-        "commitment_tier": "hour",
-        "primary_activity": "Ferris wheel ride with downtown Atlanta skyline views",
+        "destination_type": "entertainment",
+        "commitment_tier": "halfday",
+        "primary_activity": "Bowling, laser tag, arcade, and family dining",
         "best_seasons": ["spring", "summer", "fall", "winter"],
-        "weather_fit_tags": ["outdoor", "climate-controlled-gondola"],
-        "parking_type": "paid_lot",
+        "weather_fit_tags": ["indoor", "rainy-day", "climate-controlled"],
+        "parking_type": "free_lot",
         "best_time_of_day": "evening",
         "practical_notes": (
-            "Best experienced at sunset or after dark for skyline views and city lights. "
-            "Downtown parking garages nearby. Adjacent to Centennial Olympic Park. "
-            "The ride itself takes about 15 minutes — plan an hour total with waiting and photos."
+            "Free parking. Walk-ins welcome. "
+            "All-you-can-play packages are the best value for families. "
+            "Indoor climate-controlled throughout."
         ),
-        "accessibility_notes": "Wheelchair-accessible gondolas available. ADA accessible.",
+        "accessibility_notes": "ADA accessible throughout.",
         "family_suitability": "yes",
         "reservation_required": False,
         "permit_required": False,
-        "fee_note": "Standard and VIP gondola tickets available. Online purchase saves vs. walk-up.",
+        "fee_note": "Pay-per-activity or all-you-can-play packages. Full restaurant and bar on-site.",
         "source_url": HOMEPAGE,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "attraction", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "entertainment", "city": "atlanta"},
     })
     envelope.add("venue_features", {
         "venue_id": venue_id,
-        "slug": "200-foot-ferris-wheel",
-        "title": "200-foot Ferris wheel with climate-controlled gondolas",
-        "feature_type": "attraction",
-        "description": "A 20-story observation wheel with fully enclosed, climate-controlled gondolas offering 360-degree views of downtown Atlanta.",
+        "slug": "bowling-cosmic-bowling",
+        "title": "Bowling with cosmic bowling option",
+        "feature_type": "experience",
+        "description": "Multiple bowling lanes with standard and cosmic (blacklight) bowling options.",
         "url": HOMEPAGE,
         "is_free": False,
         "sort_order": 10,
     })
     envelope.add("venue_features", {
         "venue_id": venue_id,
-        "slug": "vip-gondola-experience",
-        "title": "VIP gondola with glass floor",
+        "slug": "laser-tag-arena",
+        "title": "Laser tag arena",
         "feature_type": "experience",
-        "description": "Upgraded VIP gondola with transparent glass floor, leather seating, and a longer ride time.",
+        "description": "Multi-level laser tag arena with team-based and free-for-all game modes.",
         "url": HOMEPAGE,
         "is_free": False,
         "sort_order": 20,
     })
     envelope.add("venue_features", {
         "venue_id": venue_id,
-        "slug": "centennial-park-skyline-views",
-        "title": "Centennial Park and downtown skyline panorama",
+        "slug": "arcade-and-prizes",
+        "title": "Arcade games and prizes",
         "feature_type": "experience",
-        "description": "Panoramic views of Centennial Olympic Park, the Georgia Aquarium, CNN Center, and the Atlanta skyline from the top.",
+        "description": "Large arcade floor with video games, redemption games, and a prize center.",
         "url": HOMEPAGE,
         "is_free": False,
         "sort_order": 30,
     })
-    envelope.add("venue_specials", {
+    envelope.add("venue_features", {
         "venue_id": venue_id,
-        "slug": "vip-gondola-upgrade",
-        "title": "VIP gondola upgrade",
-        "description": "Premium upgrade with glass floor, longer ride, and leather seating for a more exclusive experience.",
-        "price_note": "VIP pricing available at ticket counter or online.",
+        "slug": "full-restaurant-bar",
+        "title": "Full restaurant and bar",
+        "feature_type": "amenity",
+        "description": (
+            "Full-service restaurant with a bar, serving a menu of American favorites "
+            "and shareable plates."
+        ),
+        "url": HOMEPAGE,
         "is_free": False,
-        "source_url": HOMEPAGE,
-        "category": "admission",
+        "sort_order": 40,
     })
     envelope.add("venue_specials", {
         "venue_id": venue_id,
-        "slug": "online-ticket-discount",
-        "title": "Online ticket discount",
-        "description": "Save by purchasing tickets online in advance vs. walk-up pricing at the ticket window.",
-        "price_note": "Online tickets discounted vs. walk-up price.",
+        "slug": "all-you-can-play-packages",
+        "title": "All-you-can-play packages",
+        "description": (
+            "Unlimited access to bowling, laser tag, and arcade for a flat rate "
+            "— the best value for families."
+        ),
+        "price_note": "Flat-rate unlimited play packages available.",
         "is_free": False,
         "source_url": HOMEPAGE,
-        "category": "admission",
+        "category": "recurring_deal",
     })
     return envelope
 
@@ -167,9 +164,9 @@ def _extract_og_meta(html: str) -> tuple[Optional[str], Optional[str]]:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Ensure SkyView Atlanta has a fully enriched venue record.
+    """Ensure Main Event Alpharetta has a fully enriched venue record.
 
-    No events are crawled — the attraction is open daily with no scheduled
+    No events are crawled — the venue is open daily with no separate event
     calendar. The crawler's sole job is to upsert the venue and refresh
     image/description from the live homepage on each run.
     """
@@ -189,7 +186,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         if og_desc:
             venue_data["description"] = og_desc
     except Exception as exc:
-        logger.warning("SkyView Atlanta: og: enrichment failed: %s", exc)
+        logger.warning("Main Event Alpharetta: og: enrichment failed: %s", exc)
 
     venue_id = get_or_create_venue(venue_data)
     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
@@ -204,9 +201,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
         try:
             get_client().table("venues").update(update).eq("id", venue_id).execute()
         except Exception as exc:
-            logger.warning("SkyView Atlanta: venue update failed: %s", exc)
+            logger.warning("Main Event Alpharetta: venue update failed: %s", exc)
 
     logger.info(
-        "SkyView Atlanta: venue record enriched (destination-first, no events)"
+        "Main Event Alpharetta: venue record enriched (destination-first, no events)"
     )
     return 0, 0, 0

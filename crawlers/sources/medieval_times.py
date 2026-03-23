@@ -1,10 +1,8 @@
 """
-Destination-first crawler for Andretti Indoor Karting & Games Atlanta.
+Destination-first crawler for Medieval Times Atlanta (Lawrenceville).
 
-Andretti is a large-format entertainment complex at 1255 Roswell Rd,
-Marietta, GA. It features indoor karting, arcade games, bowling, laser
-tag, and a full-service restaurant. No discrete event calendar — the
-enriched venue record is the deliverable.
+Dinner theater with live jousting tournaments. No event calendar needed —
+shows run on a fixed schedule. The enriched venue record is the deliverable.
 
 Returns (0, 0, 0) because there are no events to crawl.
 """
@@ -23,40 +21,27 @@ from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
-HOMEPAGE = "https://www.andrettikarting.com/atlanta/"
+HOMEPAGE = "https://www.medievaltimes.com/plan-your-trip/atlanta-ga"
 
 VENUE_DATA = {
-    "name": "Andretti Indoor Karting & Games",
-    "slug": "andretti-indoor-karting-atlanta",
-    "address": "1255 Roswell Rd",
-    "neighborhood": "Marietta",
-    "city": "Marietta",
+    "name": "Medieval Times Atlanta",
+    "slug": "medieval-times-atlanta",
+    "address": "5900 Sugarloaf Pkwy",
+    "neighborhood": "Lawrenceville",
+    "city": "Lawrenceville",
     "state": "GA",
-    "zip": "30062",
-    "lat": 33.9530,
-    "lng": -84.5200,
+    "zip": "30043",
+    "lat": 33.9595,
+    "lng": -84.0722,
     "venue_type": "entertainment",
     "spot_type": "entertainment",
     "website": HOMEPAGE,
-    # Hours verified 2026-03-11 against andrettikarting.com/atlanta/
-    "hours": {
-        "monday": "12:00-22:00",
-        "tuesday": "12:00-22:00",
-        "wednesday": "12:00-22:00",
-        "thursday": "12:00-22:00",
-        "friday": "12:00-00:00",
-        "saturday": "10:00-00:00",
-        "sunday": "10:00-22:00",
-    },
-    "vibes": [
-        "groups",
-        "corporate",
-        "family-friendly",
-        "interactive",
-        "date-night",
-        "karting",
-        "arcade",
-    ],
+    "vibes": ["family-friendly", "dinner-theater", "unique-experience", "interactive", "groups"],
+    "description": (
+        "Medieval Times is an interactive dinner theater where guests feast on a four-course meal "
+        "while watching a live jousting tournament with six competing knights. Located in Lawrenceville, "
+        "the castle also features a Hall of Arms exhibit and falcon demonstrations before the show."
+    ),
 }
 
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
@@ -71,81 +56,85 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
         "venue_id": venue_id,
-        "destination_type": "entertainment_complex",
+        "destination_type": "dinner_theater",
         "commitment_tier": "halfday",
-        "primary_activity": "Indoor go-karts, arcade, bowling, laser tag, and dining",
+        "primary_activity": "Live jousting tournament dinner show",
         "best_seasons": ["spring", "summer", "fall", "winter"],
         "weather_fit_tags": ["indoor", "rainy-day", "climate-controlled"],
         "parking_type": "free_lot",
-        "best_time_of_day": "any",
-        "practical_notes": "Large free parking lot. All activities are indoors and climate-controlled. Walk-ins welcome; reservations recommended for groups and karting on weekends.",
-        "accessibility_notes": "ADA accessible throughout. Height/weight requirements apply for go-karts.",
+        "best_time_of_day": "evening",
+        "practical_notes": (
+            "Free parking at Sugarloaf Mills. Arrive 75 minutes early for the Hall of Arms "
+            "pre-show experience and bar access. You eat with your hands — no utensils! "
+            "Shows run on a fixed schedule, typically evenings and weekend matinees. "
+            "Book online for best pricing."
+        ),
+        "accessibility_notes": "ADA accessible seating available. Contact venue in advance for specific accommodations.",
         "family_suitability": "yes",
-        "reservation_required": False,
+        "reservation_required": True,
         "permit_required": False,
-        "fee_note": "Pay-per-activity or buy activity packages. Full-service restaurant and bar on-site.",
+        "fee_note": "All-inclusive ticket covers show and four-course dinner. Upgrades available.",
         "source_url": HOMEPAGE,
         "metadata": {"source_type": "venue_enrichment", "venue_type": "entertainment", "city": "atlanta"},
     })
     envelope.add("venue_features", {
         "venue_id": venue_id,
-        "slug": "indoor-go-kart-racing",
-        "title": "Indoor go-kart racing",
+        "slug": "live-jousting-tournament",
+        "title": "Live jousting tournament with 6 knights",
         "feature_type": "experience",
-        "description": "Multi-level indoor karting track with electric karts reaching speeds up to 35 mph.",
+        "description": (
+            "A 2-hour live show featuring six knights on horseback competing in jousting, "
+            "sword fights, and horsemanship — performed in an 11th-century-style arena."
+        ),
         "url": HOMEPAGE,
         "is_free": False,
         "sort_order": 10,
     })
     envelope.add("venue_features", {
         "venue_id": venue_id,
-        "slug": "arcade-floor",
-        "title": "Arcade floor with 200+ games",
-        "feature_type": "experience",
-        "description": "Massive arcade floor with over 200 games including racing simulators, redemption games, and VR experiences.",
+        "slug": "four-course-dinner",
+        "title": "Four-course dinner — eat with your hands",
+        "feature_type": "amenity",
+        "description": (
+            "A four-course feast of garlic bread, tomato bisque, roasted chicken, corn, and pastry "
+            "— all eaten medieval-style without utensils."
+        ),
         "url": HOMEPAGE,
         "is_free": False,
         "sort_order": 20,
     })
     envelope.add("venue_features", {
         "venue_id": venue_id,
-        "slug": "bowling-lanes",
-        "title": "Bowling lanes",
+        "slug": "hall-of-arms-falcons",
+        "title": "Pre-show Hall of Arms and falcon demonstrations",
         "feature_type": "experience",
-        "description": "Full-size bowling lanes with lane-side food and drink service.",
+        "description": (
+            "Arrive early to explore the Hall of Arms museum exhibit and watch live falcon "
+            "demonstrations before the tournament begins."
+        ),
         "url": HOMEPAGE,
         "is_free": False,
         "sort_order": 30,
     })
-    envelope.add("venue_features", {
-        "venue_id": venue_id,
-        "slug": "laser-tag-arena",
-        "title": "Laser tag arena",
-        "feature_type": "experience",
-        "description": "Multi-level laser tag arena for groups and walk-in play.",
-        "url": HOMEPAGE,
-        "is_free": False,
-        "sort_order": 40,
-    })
-    envelope.add("venue_features", {
-        "venue_id": venue_id,
-        "slug": "full-service-restaurant-bar",
-        "title": "Full-service restaurant and bar",
-        "feature_type": "amenity",
-        "description": "On-site restaurant and full bar with a menu designed for sharing while playing.",
-        "url": HOMEPAGE,
-        "is_free": False,
-        "sort_order": 50,
-    })
     envelope.add("venue_specials", {
         "venue_id": venue_id,
-        "slug": "weekday-activity-packages",
-        "title": "Weekday activity packages",
-        "description": "Discounted activity packages available Monday through Thursday.",
-        "price_note": "Mon-Thu packages discounted vs. weekend pricing.",
+        "slug": "birthday-celebration-packages",
+        "title": "Birthday celebration packages",
+        "description": "Special birthday packages with recognition during the show and commemorative items.",
+        "price_note": "Birthday packages available as add-on to standard tickets.",
         "is_free": False,
         "source_url": HOMEPAGE,
         "category": "recurring_deal",
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "royalty-upgrade",
+        "title": "Royalty upgrade — premium seating",
+        "description": "Upgrade to front-row seating with a commemorative crown, program, and champagne toast.",
+        "price_note": "Premium upgrade pricing on top of standard ticket.",
+        "is_free": False,
+        "source_url": HOMEPAGE,
+        "category": "admission",
     })
     return envelope
 
@@ -174,12 +163,11 @@ def _extract_og_meta(html: str) -> tuple[Optional[str], Optional[str]]:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Ensure Andretti Indoor Karting Atlanta has a fully enriched venue record.
+    """Ensure Medieval Times Atlanta has a fully enriched venue record.
 
-    No events are crawled — the venue is open daily for walk-in play with
-    no discrete programmed calendar. The crawler's sole job is to upsert
-    the venue and refresh image/description from the live homepage on
-    each run.
+    No events are crawled — shows run on a fixed schedule with no separate
+    event calendar to parse. The crawler's sole job is to upsert the venue
+    and refresh image/description from the live homepage on each run.
     """
     venue_data = dict(VENUE_DATA)
 
@@ -197,9 +185,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         if og_desc:
             venue_data["description"] = og_desc
     except Exception as exc:
-        logger.warning(
-            "Andretti Indoor Karting Atlanta: og: enrichment failed: %s", exc
-        )
+        logger.warning("Medieval Times Atlanta: og: enrichment failed: %s", exc)
 
     venue_id = get_or_create_venue(venue_data)
     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
@@ -214,12 +200,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
         try:
             get_client().table("venues").update(update).eq("id", venue_id).execute()
         except Exception as exc:
-            logger.warning(
-                "Andretti Indoor Karting Atlanta: venue update failed: %s", exc
-            )
+            logger.warning("Medieval Times Atlanta: venue update failed: %s", exc)
 
     logger.info(
-        "Andretti Indoor Karting Atlanta: venue record enriched"
-        " (destination-first, no events)"
+        "Medieval Times Atlanta: venue record enriched (destination-first, no events)"
     )
     return 0, 0, 0

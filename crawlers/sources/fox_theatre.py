@@ -18,6 +18,8 @@ from playwright.sync_api import sync_playwright
 from db import get_or_create_venue, get_client, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +65,14 @@ VENUE_DATA = {
     ),
 }
 
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
+
 
 def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
     """
@@ -104,6 +114,73 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
             pass
 
     return None, None
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "historic_theater",
+        "commitment_tier": "halfday",
+        "primary_activity": "Broadway shows, concerts, and performing arts in a National Historic Landmark",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["indoor", "rainy-day", "date-night"],
+        "parking_type": "garage",
+        "best_time_of_day": "evening",
+        "practical_notes": (
+            "Plan for the full evening — most shows run 2-3 hours. The North Avenue MARTA station "
+            "is a short walk away, or use Fox-validated parking lots on Ponce de Leon Ave. "
+            "Pre-show dining in Midtown is easy within a few blocks."
+        ),
+        "accessibility_notes": "Fully ADA accessible. Assistive listening devices available at the box office.",
+        "family_suitability": "caution",
+        "reservation_required": True,
+        "permit_required": False,
+        "fee_note": "Ticket prices vary by show. Building tours available separately.",
+        "source_url": BASE_URL,
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "theater", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "moorish-egyptian-architecture",
+        "title": "Moorish-Egyptian architecture",
+        "feature_type": "attraction",
+        "description": "A National Historic Landmark and one of the most magnificent examples of Moorish-Egyptian architecture in the world, built in 1929.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "behind-the-scenes-tours",
+        "title": "Behind-the-scenes tours",
+        "feature_type": "experience",
+        "description": "60-minute guided tours exploring the Fox Theatre's history, architecture, and backstage areas.",
+        "url": f"{BASE_URL}/tours",
+        "is_free": False,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "egyptian-ballroom-grand-salon",
+        "title": "Egyptian Ballroom and Grand Salon",
+        "feature_type": "amenity",
+        "description": "Historic event spaces available for private events, adding to the building's versatility beyond performances.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 30,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "marquee-club-vip",
+        "title": "Marquee Club VIP experience",
+        "feature_type": "amenity",
+        "description": "Premium VIP lounge with exclusive access, craft cocktails, and pre-show dining for select performances.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 40,
+    })
+    return envelope
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -157,6 +234,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     logger.info("Fox Theatre: enriched venue record from homepage og: metadata")
             except Exception as _upd_exc:
                 logger.warning("Fox Theatre: venue update failed: %s", _upd_exc)
+
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Fox Theatre: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

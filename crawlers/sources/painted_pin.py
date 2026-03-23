@@ -16,6 +16,8 @@ from playwright.sync_api import sync_playwright
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,87 @@ VENUE_DATA = {
     },
     "vibes": ["bowling", "bocce", "cocktails", "upscale", "bar-games", "buckhead", "date-night"],
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "entertainment",
+        "commitment_tier": "halfday",
+        "primary_activity": "Upscale bowling, bocce, shuffleboard, and craft cocktails",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["indoor", "rainy-day", "date-night"],
+        "parking_type": "free_lot",
+        "best_time_of_day": "evening",
+        "practical_notes": "Free parking. Upscale atmosphere — more cocktail bar than bowling alley. Reservations recommended for weekend evenings. The vibe skews adult; not a typical family entertainment spot.",
+        "accessibility_notes": "ADA accessible ground floor with bowling and main bar areas.",
+        "family_suitability": "caution",
+        "reservation_required": False,
+        "permit_required": False,
+        "fee_note": "Lane and game rentals priced hourly. Full craft cocktail and food menu.",
+        "source_url": BASE_URL,
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "entertainment", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "boutique-bowling",
+        "title": "Boutique bowling — duckpin and full-size",
+        "feature_type": "experience",
+        "description": "Both duckpin (small ball, no finger holes) and standard bowling lanes in an upscale setting with leather seating.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "bocce-courts",
+        "title": "Bocce courts",
+        "feature_type": "experience",
+        "description": "Indoor bocce courts for casual play or league competition.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "shuffleboard-classic-games",
+        "title": "Shuffleboard and classic games",
+        "feature_type": "experience",
+        "description": "Shuffleboard tables and curated classic bar games beyond the typical pool table.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 30,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "craft-cocktail-bar-chef-menu",
+        "title": "Craft cocktail bar and chef-driven menu",
+        "feature_type": "amenity",
+        "description": "Full craft cocktail program and a chef-driven food menu that elevates the experience beyond typical entertainment fare.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 40,
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "happy-hour-specials",
+        "title": "Happy hour specials",
+        "description": "Discounted drinks and appetizers during weekday happy hour.",
+        "price_note": "Weekday happy hour pricing on select cocktails and food.",
+        "is_free": False,
+        "source_url": BASE_URL,
+        "category": "happy_hour",
+    })
+    return envelope
 
 
 def determine_event_type(title: str) -> tuple[str, Optional[str]]:
@@ -134,6 +217,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching The Painted Pin: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

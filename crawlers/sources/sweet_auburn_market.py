@@ -16,6 +16,8 @@ from playwright.sync_api import sync_playwright
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
+from entity_lanes import TypedEntityEnvelope, SourceEntityCapabilities
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,65 @@ VENUE_DATA = {
     "spot_type": "market",
     "website": BASE_URL,
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destination_details=True,
+    venue_features=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "food_hall",
+        "commitment_tier": "hour",
+        "primary_activity": "Historic municipal market with local food vendors since 1924",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["indoor", "rainy-day"],
+        "parking_type": "street",
+        "best_time_of_day": "afternoon",
+        "practical_notes": "Street parking and nearby lots. Located in the Sweet Auburn district — combine with a visit to the Martin Luther King Jr. National Historic Site nearby. Best for lunch. Some vendors are cash-only.",
+        "accessibility_notes": "ADA accessible main floor.",
+        "family_suitability": "yes",
+        "reservation_required": False,
+        "permit_required": False,
+        "fee_note": "Free to enter. Pay vendors individually.",
+        "source_url": "https://sweetauburnmarket.com",
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "food_hall", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "historic-market-since-1924",
+        "title": "Historic municipal market since 1924",
+        "feature_type": "attraction",
+        "description": "One of Atlanta's oldest continuously operating municipal markets, a living piece of the city's history in the Sweet Auburn district.",
+        "url": "https://sweetauburnmarket.com",
+        "is_free": True,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "local-food-vendors",
+        "title": "Diverse local food vendors",
+        "feature_type": "amenity",
+        "description": "A mix of meat markets, produce stalls, and prepared food vendors representing Atlanta's diverse food cultures.",
+        "url": "https://sweetauburnmarket.com",
+        "is_free": False,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "sweet-auburn-neighborhood",
+        "title": "Sweet Auburn historic district",
+        "feature_type": "experience",
+        "description": "Located in the Sweet Auburn historic district, steps from the Martin Luther King Jr. National Historic Site.",
+        "url": "https://sweetauburnmarket.com",
+        "is_free": True,
+        "sort_order": 30,
+    })
+    return envelope
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -69,6 +130,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Sweet Auburn Curb Market: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

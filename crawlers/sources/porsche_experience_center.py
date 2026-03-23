@@ -18,6 +18,8 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import get_client, get_or_create_venue
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,13 @@ VENUE_DATA = {
     ],
 }
 
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
+
 
 def _extract_og_meta(html: str) -> tuple[Optional[str], Optional[str]]:
     """Return (og:image, og:description) from page HTML.
@@ -78,6 +87,83 @@ def _extract_og_meta(html: str) -> tuple[Optional[str], Optional[str]]:
             break
 
     return og_image, og_desc
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "driving_experience",
+        "commitment_tier": "halfday",
+        "primary_activity": "Porsche track driving experiences, heritage gallery, and fine dining",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["outdoor", "indoor-gallery", "rain-cancellation-possible"],
+        "parking_type": "free_lot",
+        "best_time_of_day": "morning",
+        "practical_notes": (
+            "Located near Hartsfield-Jackson Airport. Driving experiences require advance reservation — "
+            "book well ahead for weekend slots. Heritage gallery and Restaurant 356 are open to visitors "
+            "without a driving reservation. Minimum age requirements apply for driving and passenger experiences."
+        ),
+        "accessibility_notes": "Gallery and restaurant ADA accessible. Track experiences have physical requirements.",
+        "family_suitability": "caution",
+        "reservation_required": True,
+        "permit_required": False,
+        "fee_note": "Track experience packages start at several hundred dollars. Gallery and restaurant visits are free.",
+        "source_url": HOMEPAGE,
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "attraction", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "track-driving-experience",
+        "title": "Track driving experience",
+        "feature_type": "experience",
+        "description": "Drive the latest Porsche models on a 1.6-mile track with professional coaching. Multiple experience levels from introductory to advanced.",
+        "url": HOMEPAGE,
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "heritage-gallery",
+        "title": "Heritage gallery and historic vehicles",
+        "feature_type": "collection",
+        "description": "Curated collection of historic Porsche vehicles tracing the brand's racing and engineering heritage.",
+        "url": HOMEPAGE,
+        "is_free": True,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "restaurant-356",
+        "title": "Restaurant 356",
+        "feature_type": "amenity",
+        "description": "Fine dining restaurant on-site with views of the track. Open for lunch to all visitors, not just driving guests.",
+        "url": HOMEPAGE,
+        "is_free": False,
+        "sort_order": 30,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "simulator-lab-off-road",
+        "title": "Simulator lab and off-road course",
+        "feature_type": "experience",
+        "description": "Racing simulators and a dedicated off-road course for Cayenne experiences, expanding beyond the main track.",
+        "url": HOMEPAGE,
+        "is_free": False,
+        "sort_order": 40,
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "track-experience-packages",
+        "title": "Track experience packages",
+        "description": "Multiple experience tiers from 90-minute introductory drives to full-day advanced programs.",
+        "price_note": "Packages range from introductory to premium multi-hour experiences.",
+        "is_free": False,
+        "source_url": HOMEPAGE,
+        "category": "admission",
+    })
+    return envelope
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -107,6 +193,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         )
 
     venue_id = get_or_create_venue(venue_data)
+    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     update: dict = {}
     if venue_data.get("image_url"):

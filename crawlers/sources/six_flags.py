@@ -20,6 +20,8 @@ from playwright.sync_api import sync_playwright
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +59,14 @@ VENUE_DATA_WHITEWATER = {
     "spot_type": "water_park",
     "website": "https://www.sixflags.com/whitewater",
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
 
 # Event categorization keywords
 EVENT_KEYWORDS = {
@@ -101,6 +111,161 @@ EVENT_KEYWORDS = {
         "tags": ["labor-day", "holiday", "summer", "seasonal"],
     },
 }
+
+
+def _build_sixflags_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "theme_park",
+        "commitment_tier": "fullday",
+        "primary_activity": "Roller coasters, water rides, seasonal festivals, and family attractions",
+        "best_seasons": ["spring", "summer", "fall"],
+        "weather_fit_tags": ["outdoor", "rain-closes-rides"],
+        "parking_type": "paid_lot",
+        "best_time_of_day": "morning",
+        "practical_notes": (
+            "Arrive early to beat crowds — the park is busiest on weekends and holidays. "
+            "Paid parking on-site. Season passes include parking and are the best value for repeat visits. "
+            "Fright Fest (fall) and Holiday in the Park (winter) are the marquee seasonal events. "
+            "Bring sunscreen and comfortable shoes — it's a full-day outdoor experience."
+        ),
+        "accessibility_notes": "Wheelchair accessible pathways throughout. Accessibility passes available at Guest Relations.",
+        "family_suitability": "yes",
+        "reservation_required": False,
+        "permit_required": False,
+        "fee_note": "Park admission required for all attractions. Season passes and single-day tickets available.",
+        "source_url": BASE_URL,
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "theme_park", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "roller-coasters",
+        "title": "Roller coasters — Goliath, Twisted Cyclone, Superman, and more",
+        "feature_type": "attraction",
+        "description": "Over a dozen roller coasters including Goliath (200-ft drop), Twisted Cyclone (hybrid wood-steel), and Superman Ultimate Flight.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "water-rides-splash",
+        "title": "Water rides and splash areas",
+        "feature_type": "attraction",
+        "description": "Log flumes, rapids rides, and splash pads for cooling off during summer months.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "seasonal-festivals",
+        "title": "Seasonal festivals — Fright Fest, Holiday in the Park, July 4th",
+        "feature_type": "experience",
+        "description": "Major seasonal events transform the park: Fright Fest (haunted attractions), Holiday in the Park (millions of lights), and special holiday celebrations.",
+        "url": f"{BASE_URL}/events",
+        "is_free": False,
+        "sort_order": 30,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "dining-food-stands",
+        "title": "Dining and food stands throughout park",
+        "feature_type": "amenity",
+        "description": "Multiple dining locations from quick-service stands to sit-down restaurants throughout the park.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 40,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "kids-area",
+        "title": "Kids' area — Bugs Bunny World and DC Super Friends",
+        "feature_type": "attraction",
+        "description": "Dedicated kids' areas with age-appropriate rides and character meet-and-greets for younger visitors.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 50,
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "season-pass-pricing",
+        "title": "Season pass pricing",
+        "description": "Season passes include unlimited visits, free parking, and discounts on food and merchandise.",
+        "price_note": "Season passes start at less than the cost of two single-day tickets.",
+        "is_free": False,
+        "source_url": f"{BASE_URL}/tickets-passes",
+        "category": "admission",
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "bring-a-friend-free-days",
+        "title": "Bring-a-friend free days",
+        "description": "Season pass holders can bring friends for free on select promotional days throughout the season.",
+        "price_note": "Available to season pass holders on select dates.",
+        "is_free": True,
+        "source_url": f"{BASE_URL}/tickets-passes",
+        "category": "recurring_deal",
+    })
+    return envelope
+
+
+def _build_whitewater_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "water_park",
+        "commitment_tier": "fullday",
+        "primary_activity": "Water slides, wave pools, and lazy rivers",
+        "best_seasons": ["summer"],
+        "weather_fit_tags": ["outdoor", "rain-closes-rides", "hot-weather"],
+        "parking_type": "paid_lot",
+        "best_time_of_day": "morning",
+        "practical_notes": (
+            "Seasonal operation — open late May through Labor Day weekend. "
+            "Arrive early to beat crowds. Paid parking on-site. "
+            "Bring sunscreen and water shoes. Lockers and cabana rentals available."
+        ),
+        "accessibility_notes": "Wheelchair accessible pathways. Accessibility passes at Guest Relations.",
+        "family_suitability": "yes",
+        "reservation_required": False,
+        "permit_required": False,
+        "fee_note": "Park admission required. Season passes and single-day tickets available.",
+        "source_url": "https://www.sixflags.com/whitewater",
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "water_park", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "water-slides-and-attractions",
+        "title": "Water slides and attractions",
+        "feature_type": "attraction",
+        "description": "Dozens of water slides from family-friendly to extreme thrill rides, plus a wave pool and lazy river.",
+        "url": "https://www.sixflags.com/whitewater",
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "kids-splash-areas",
+        "title": "Kids' splash areas",
+        "feature_type": "attraction",
+        "description": "Dedicated splash zones and shallow-water play areas designed for younger children.",
+        "url": "https://www.sixflags.com/whitewater",
+        "is_free": False,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "cabana-rentals",
+        "title": "Cabana rentals",
+        "feature_type": "amenity",
+        "description": "Private cabanas available for rent with shade, seating, and dedicated service.",
+        "url": "https://www.sixflags.com/whitewater",
+        "is_free": False,
+        "sort_order": 30,
+    })
+    return envelope
 
 
 def categorize_event(title: str, description: str) -> tuple[str, Optional[str], list[str]]:
@@ -201,6 +366,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
         # Get or create venues
         venue_id_sixflags = get_or_create_venue(VENUE_DATA_SIXFLAGS)
         venue_id_whitewater = get_or_create_venue(VENUE_DATA_WHITEWATER)
+        persist_typed_entity_envelope(_build_sixflags_destination_envelope(venue_id_sixflags))
+        persist_typed_entity_envelope(_build_whitewater_destination_envelope(venue_id_whitewater))
 
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)

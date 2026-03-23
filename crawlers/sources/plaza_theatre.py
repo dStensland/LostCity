@@ -37,6 +37,8 @@ from playwright.sync_api import sync_playwright, Page
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
 from dedupe import generate_content_hash
 from sources.plaza_letterboxd import get_letterboxd_movies, enrich_movie_data
+from entity_lanes import TypedEntityEnvelope, SourceEntityCapabilities
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +52,77 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30306",
+    "lat": 33.7758,
+    "lng": -84.3534,
     "venue_type": "cinema",
+    "spot_type": "cinema",
     "website": BASE_URL,
+    "vibes": ["independent", "cult-cinema", "repertory", "historic", "date-night", "late-night"],
+    "description": (
+        "Atlanta's last independent movie theater, operating since 1939. "
+        "The Plaza screens cult classics, independent films, repertory favorites, "
+        "and special events you won't find at chain theaters."
+    ),
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destination_details=True,
+    venue_features=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "cinema",
+        "commitment_tier": "hour",
+        "primary_activity": "Atlanta's last independent cinema — cult, indie, and repertory programming",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["indoor", "rainy-day", "date-night"],
+        "parking_type": "free_lot",
+        "best_time_of_day": "evening",
+        "practical_notes": "Free parking lot. Located on Ponce de Leon Ave near the Ponce City Market / Beltline corridor. Single-screen theater with a curated programming calendar — check schedule in advance.",
+        "accessibility_notes": "ADA accessible.",
+        "family_suitability": "caution",
+        "reservation_required": False,
+        "permit_required": False,
+        "fee_note": "Standard movie ticket pricing. Special events and screenings may have different pricing.",
+        "source_url": "https://plazaatlanta.com",
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "cinema", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "atlantas-last-independent-cinema",
+        "title": "Atlanta's last independent cinema",
+        "feature_type": "attraction",
+        "description": "The last remaining independent movie theater in Atlanta, operating since 1939 with a focus on non-mainstream programming.",
+        "url": "https://plazaatlanta.com",
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "cult-indie-repertory",
+        "title": "Cult, indie, and repertory programming",
+        "feature_type": "experience",
+        "description": "Curated calendar of cult classics, independent films, repertory screenings, and special events not shown at chain theaters.",
+        "url": "https://plazaatlanta.com",
+        "is_free": False,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "beer-wine-concessions",
+        "title": "Beer, wine, and concessions",
+        "feature_type": "amenity",
+        "description": "Full concession stand with beer and wine alongside traditional movie snacks.",
+        "url": "https://plazaatlanta.com",
+        "is_free": False,
+        "sort_order": 30,
+    })
+    return envelope
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -707,6 +777,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
             today = datetime.now().date()
 
             # Fetch Letterboxd RSS for enrichment

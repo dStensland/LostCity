@@ -16,6 +16,8 @@ from playwright.sync_api import sync_playwright
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,97 @@ VENUE_DATA = {
     "spot_type": "eatertainment",
     "website": BASE_URL,
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "entertainment",
+        "commitment_tier": "halfday",
+        "primary_activity": "Bowling, arcade, karaoke, and scratch kitchen dining at The Battery",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["indoor", "rainy-day"],
+        "parking_type": "garage",
+        "best_time_of_day": "evening",
+        "practical_notes": "Located at The Battery Atlanta adjacent to Truist Park. Battery garage parking available. Combines well with a Braves game or Battery district outing.",
+        "accessibility_notes": "ADA accessible.",
+        "family_suitability": "caution",
+        "reservation_required": False,
+        "permit_required": False,
+        "fee_note": "Activities priced per game/hour. Full restaurant and bar menu.",
+        "source_url": BASE_URL,
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "entertainment", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "bowling-lanes",
+        "title": "Bowling lanes",
+        "feature_type": "experience",
+        "description": "Multiple bowling lanes with a social, non-competitive atmosphere.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "retro-arcade-ping-pong",
+        "title": "Retro arcade, ping pong, and board games",
+        "feature_type": "experience",
+        "description": "Classic arcade games, ping pong tables, board game library, and other social games throughout the space.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "karaoke-rooms",
+        "title": "Karaoke rooms",
+        "feature_type": "experience",
+        "description": "Private karaoke rooms available for groups.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 30,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "scratch-kitchen-craft-cocktails",
+        "title": "Scratch kitchen and craft cocktails",
+        "feature_type": "amenity",
+        "description": "From-scratch kitchen with a full food menu and creative craft cocktail program.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 40,
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "weekday-happy-hour",
+        "title": "Weekday happy hour",
+        "description": "Discounted drinks and appetizers during weekday happy hour.",
+        "price_note": "Happy hour pricing on select items.",
+        "is_free": False,
+        "source_url": BASE_URL,
+        "category": "happy_hour",
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "weekend-brunch-games",
+        "title": "Weekend brunch and games",
+        "description": "Weekend brunch service with games available — combine food and fun.",
+        "price_note": "Brunch menu available weekends.",
+        "is_free": False,
+        "source_url": BASE_URL,
+        "category": "brunch",
+    })
+    return envelope
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -69,6 +162,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Punch Bowl Social: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

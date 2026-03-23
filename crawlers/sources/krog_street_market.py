@@ -30,6 +30,8 @@ from db import (
     remove_stale_source_events,
 )
 from dedupe import generate_content_hash
+from entity_lanes import TypedEntityEnvelope, SourceEntityCapabilities
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +129,65 @@ WEEKLY_SCHEDULE = [
 
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destination_details=True,
+    venue_features=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "food_hall",
+        "commitment_tier": "hour",
+        "primary_activity": "Beltline food hall with local vendors and restaurants",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["indoor", "outdoor-patio"],
+        "parking_type": "garage",
+        "best_time_of_day": "any",
+        "practical_notes": "Paid parking garage on-site. Direct Beltline Eastside Trail access — walk or bike from Inman Park or Old Fourth Ward. Mix of quick-service stalls and sit-down restaurants.",
+        "accessibility_notes": "ADA accessible throughout. Elevator access to all levels.",
+        "family_suitability": "yes",
+        "reservation_required": False,
+        "permit_required": False,
+        "fee_note": "Free to enter. Pay-as-you-go at individual vendors.",
+        "source_url": "https://krogstreetmarket.com",
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "food_hall", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "local-vendor-stalls",
+        "title": "Local vendor stalls and restaurants",
+        "feature_type": "amenity",
+        "description": "A curated mix of Atlanta-based food vendors, from craft butchers to poke bowls to artisanal ice cream.",
+        "url": "https://krogstreetmarket.com",
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "beltline-trail-access",
+        "title": "Beltline Eastside Trail access",
+        "feature_type": "experience",
+        "description": "Steps from the Beltline Eastside Trail — the anchor food destination on Atlanta's most popular walking path.",
+        "url": "https://krogstreetmarket.com",
+        "is_free": True,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "indoor-outdoor-seating",
+        "title": "Indoor and outdoor seating",
+        "feature_type": "amenity",
+        "description": "Spacious indoor food hall seating plus an outdoor patio facing the Beltline.",
+        "url": "https://krogstreetmarket.com",
+        "is_free": True,
+        "sort_order": 30,
+    })
+    return envelope
 
 
 def _get_next_weekday(start_date: datetime, weekday: int) -> datetime:
@@ -240,6 +301,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
     venue_ids: dict[str, int] = {}
     for vdata in [VENUE_DATA, BREWDOG_VENUE_DATA, GUAC_Y_MARGYS_VENUE_DATA]:
         venue_ids[vdata["slug"]] = get_or_create_venue(vdata)
+
+    persist_typed_entity_envelope(_build_destination_envelope(venue_ids[VENUE_DATA["slug"]]))
 
     try:
         with sync_playwright() as p:

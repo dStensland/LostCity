@@ -17,6 +17,8 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import get_client, get_or_create_venue
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +56,86 @@ VENUE_DATA = {
         "japanese",
     ],
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "entertainment",
+        "commitment_tier": "halfday",
+        "primary_activity": "Japanese arcade imports, bowling, karaoke, and billiards",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["indoor", "rainy-day", "climate-controlled"],
+        "parking_type": "free_lot",
+        "best_time_of_day": "evening",
+        "practical_notes": "Free mall parking at North Point Mall. All activities are indoors. Late-night hours on weekends (until 2 AM). Great selection of Japanese arcade imports not found elsewhere in Atlanta.",
+        "accessibility_notes": "ADA accessible via mall entrance.",
+        "family_suitability": "yes",
+        "reservation_required": False,
+        "permit_required": False,
+        "fee_note": "Pay-per-play arcade. Bowling, karaoke, and billiards charged per game/hour.",
+        "source_url": HOMEPAGE,
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "entertainment", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "japanese-arcade-imports",
+        "title": "Japanese arcade imports",
+        "feature_type": "experience",
+        "description": "Extensive collection of rhythm games, crane machines, and Japanese arcade exclusives not available at other Atlanta entertainment venues.",
+        "url": HOMEPAGE,
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "bowling-lanes",
+        "title": "Bowling lanes",
+        "feature_type": "experience",
+        "description": "Full-size bowling lanes with scoring systems and lane-side refreshments.",
+        "url": HOMEPAGE,
+        "is_free": False,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "private-karaoke-rooms",
+        "title": "Private karaoke rooms",
+        "feature_type": "experience",
+        "description": "Private karaoke rooms with extensive song libraries in English, Japanese, Korean, and more.",
+        "url": HOMEPAGE,
+        "is_free": False,
+        "sort_order": 30,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "food-and-drink-bar",
+        "title": "Food and drink bar",
+        "feature_type": "amenity",
+        "description": "On-site food counter and bar serving snacks, drinks, and Japanese-inspired menu items.",
+        "url": HOMEPAGE,
+        "is_free": False,
+        "sort_order": 40,
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "weekday-early-play-discount",
+        "title": "Weekday early-play discount",
+        "description": "Discounted rates for bowling and select activities during early weekday hours.",
+        "price_note": "Discounted weekday rates before evening.",
+        "is_free": False,
+        "source_url": HOMEPAGE,
+        "category": "recurring_deal",
+    })
+    return envelope
 
 
 def _extract_og_meta(html: str) -> tuple[Optional[str], Optional[str]]:
@@ -104,6 +186,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.warning("Round 1 Arcade Alpharetta: og: enrichment failed: %s", exc)
 
     venue_id = get_or_create_venue(venue_data)
+    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     update: dict = {}
     if venue_data.get("image_url"):

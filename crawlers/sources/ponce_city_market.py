@@ -16,6 +16,8 @@ from playwright.sync_api import sync_playwright
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, find_existing_event_for_insert
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +67,14 @@ VENUE_DATA = {
     "website": BASE_URL,
 }
 
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
+
 WEEKS_AHEAD = 6
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -91,6 +101,103 @@ RECURRING_SCHEDULE = [
         "is_free": True,
     },
 ]
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "food_hall",
+        "commitment_tier": "halfday",
+        "primary_activity": "Food hall, rooftop amusements, shopping, and Beltline access",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["indoor", "outdoor-indoor-mix", "rainy-day"],
+        "parking_type": "garage",
+        "best_time_of_day": "any",
+        "practical_notes": (
+            "On-site paid parking garage. Direct access to the Beltline Eastside Trail — "
+            "walk or bike from the building. Skyline Park rooftop is seasonal and weather-dependent. "
+            "The Central Food Hall has 20+ vendors, so plan for browsing."
+        ),
+        "accessibility_notes": "Elevator access to all floors including Skyline Park rooftop. ADA accessible throughout.",
+        "family_suitability": "yes",
+        "reservation_required": False,
+        "permit_required": False,
+        "fee_note": "Free to enter. Skyline Park rooftop games are pay-per-play. Food hall is pay-as-you-go.",
+        "source_url": BASE_URL,
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "food_hall", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "skyline-park-rooftop",
+        "title": "Skyline Park rooftop amusements",
+        "feature_type": "attraction",
+        "description": "Rooftop carnival games, mini golf, and a slide with panoramic Atlanta views. Seasonal hours.",
+        "url": f"{BASE_URL}/skyline-park",
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "central-food-hall",
+        "title": "Central Food Hall",
+        "feature_type": "amenity",
+        "description": "Over 20 food vendors offering everything from ramen to wood-fired pizza in the historic Sears building.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "beltline-eastside-trail-access",
+        "title": "Beltline Eastside Trail access",
+        "feature_type": "experience",
+        "description": "Direct connection to the Beltline Eastside Trail for walking, biking, and exploring adjacent neighborhoods.",
+        "url": BASE_URL,
+        "is_free": True,
+        "sort_order": 30,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "retail-local-boutiques",
+        "title": "Retail shops and local boutiques",
+        "feature_type": "amenity",
+        "description": "A curated mix of local and national retailers across multiple floors of the historic building.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 40,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "historic-sears-architecture",
+        "title": "Historic Sears building architecture",
+        "feature_type": "attraction",
+        "description": "The restored 1926 Sears, Roebuck & Co. building — one of Atlanta's most iconic adaptive reuse projects on the Beltline.",
+        "url": BASE_URL,
+        "is_free": True,
+        "sort_order": 50,
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "skyline-park-admission",
+        "title": "Skyline Park rooftop admission",
+        "description": "Rooftop carnival games, mini golf, and rides. Pay-per-activity or buy an all-access wristband.",
+        "price_note": "Individual game tickets or all-access wristband available.",
+        "is_free": False,
+        "source_url": f"{BASE_URL}/skyline-park",
+        "category": "admission",
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "free-beltline-access",
+        "title": "Free Beltline access",
+        "description": "Walk or bike directly onto the Beltline Eastside Trail from the building — no fee, no barrier.",
+        "price_note": "Free",
+        "is_free": True,
+        "source_url": BASE_URL,
+        "category": "admission",
+    })
+    return envelope
 
 
 def _get_next_weekday(start_date: datetime, weekday: int) -> datetime:
@@ -205,6 +312,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Ponce City Market: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

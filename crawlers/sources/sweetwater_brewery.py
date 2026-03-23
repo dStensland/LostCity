@@ -17,6 +17,8 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import TypedEntityEnvelope, SourceEntityCapabilities
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +59,85 @@ WEEKLY_SCHEDULE = [
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destination_details=True,
+    venue_features=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "brewery",
+        "commitment_tier": "hour",
+        "primary_activity": "Atlanta's flagship brewery with taproom, tours, and outdoor space",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["indoor", "outdoor-patio"],
+        "parking_type": "free_lot",
+        "best_time_of_day": "afternoon",
+        "practical_notes": "Free parking. The taproom has 20+ beers on tap including seasonal and limited releases. Brewery tours available on select days. Large outdoor space with food trucks on weekends.",
+        "accessibility_notes": "ADA accessible taproom. Tour route has stairs.",
+        "family_suitability": "caution",
+        "reservation_required": False,
+        "permit_required": False,
+        "fee_note": "Free to visit taproom. Beer and food priced individually. Tour tickets sold separately.",
+        "source_url": "https://sweetwaterbrew.com",
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "brewery", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "taproom-20-plus-beers",
+        "title": "Taproom with 20+ beers on tap",
+        "feature_type": "experience",
+        "description": "SweetWater's flagship taproom with their full lineup plus seasonal and experimental brews available nowhere else.",
+        "url": "https://sweetwaterbrew.com",
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "outdoor-space-food-trucks",
+        "title": "Outdoor space and food trucks",
+        "feature_type": "amenity",
+        "description": "Large outdoor patio and green space with rotating food trucks, especially active on weekends.",
+        "url": "https://sweetwaterbrew.com",
+        "is_free": True,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "brewery-tours",
+        "title": "Brewery tours",
+        "feature_type": "experience",
+        "description": "Guided tours of the brewing facility with tastings included.",
+        "url": "https://sweetwaterbrew.com",
+        "is_free": False,
+        "sort_order": 30,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "live-music-events",
+        "title": "Live music and events",
+        "feature_type": "experience",
+        "description": "Regular live music in the taproom and outdoor space, plus the annual 420 Fest — SweetWater's flagship music festival.",
+        "url": "https://sweetwaterbrew.com",
+        "is_free": False,
+        "sort_order": 40,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "dog-friendly-patio",
+        "title": "Dog-friendly patio",
+        "feature_type": "amenity",
+        "description": "Dogs welcome in the outdoor space — a staple of Atlanta brewery culture.",
+        "url": "https://sweetwaterbrew.com",
+        "is_free": True,
+        "sort_order": 50,
+    })
+    return envelope
+
 
 def get_next_weekday(start_date: datetime, weekday: int) -> datetime:
     days_ahead = weekday - start_date.weekday()
@@ -73,6 +154,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     venue_id = get_or_create_venue(VENUE_DATA)
+    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
     logger.info(f"SweetWater Brewing venue record ensured (ID: {venue_id})")
 
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)

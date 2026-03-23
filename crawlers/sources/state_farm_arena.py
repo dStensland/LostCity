@@ -24,6 +24,8 @@ from db import (
 )
 from dedupe import generate_content_hash
 from utils import extract_event_links, find_event_url, extract_images_from_page, enrich_event_record
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +52,14 @@ VENUE_DATA = {
     ),
     "vibes": ["sports", "concerts", "downtown", "nba", "entertainment"],
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
 
 
 def parse_date(date_text: str) -> Optional[str]:
@@ -185,6 +195,63 @@ def build_event_record(
     }
 
 
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "arena",
+        "commitment_tier": "halfday",
+        "primary_activity": "NBA games, concerts, and major arena events",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["indoor", "climate-controlled"],
+        "parking_type": "paid_lot",
+        "best_time_of_day": "evening",
+        "practical_notes": (
+            "GWCC lots and Vine City/OMNI MARTA stations are the closest transit options. "
+            "Connected to the Georgia World Congress Center campus. "
+            "Plan to arrive 30-45 minutes early for security screening."
+        ),
+        "accessibility_notes": "Fully ADA accessible with wheelchair seating throughout all levels.",
+        "family_suitability": "yes",
+        "reservation_required": True,
+        "permit_required": False,
+        "fee_note": "Ticket prices vary by event.",
+        "source_url": BASE_URL,
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "arena", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "hawks-games-concerts-events",
+        "title": "Hawks games, concerts, and special events",
+        "feature_type": "experience",
+        "description": "Home of the Atlanta Hawks NBA team. Hosts major concerts, comedy shows, wrestling, family events, and conventions year-round.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "levy-restaurants-food-program",
+        "title": "Levy Restaurants food program",
+        "feature_type": "amenity",
+        "description": "Local chef partnerships through Levy Restaurants bring Atlanta dining into the arena with elevated food options.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "club-suite-levels",
+        "title": "Club and suite levels",
+        "feature_type": "amenity",
+        "description": "Premium seating options including club seats and luxury suites with dedicated service.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 30,
+    })
+    return envelope
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl State Farm Arena events using semantic HTML structure.
 
@@ -205,6 +272,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching State Farm Arena: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

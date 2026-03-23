@@ -17,6 +17,8 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import get_client, get_or_create_venue
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +56,86 @@ VENUE_DATA = {
         "interactive",
     ],
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "entertainment",
+        "commitment_tier": "halfday",
+        "primary_activity": "Tech-driven golf entertainment with food, drinks, and games",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["outdoor", "climate-controlled-bays", "heated-bays"],
+        "parking_type": "free_lot",
+        "best_time_of_day": "evening",
+        "practical_notes": "Free parking. Climate-controlled hitting bays on 3 levels — playable in any weather. Walk-ins welcome; bays can be reserved online. Weekend evenings are busiest.",
+        "accessibility_notes": "ADA accessible. Bays on all levels via elevator.",
+        "family_suitability": "yes",
+        "reservation_required": False,
+        "permit_required": False,
+        "fee_note": "Hourly bay rental pricing. Food and drinks ordered per bay. Half-price play during off-peak hours.",
+        "source_url": HOMEPAGE,
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "entertainment", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "climate-controlled-hitting-bays",
+        "title": "Climate-controlled hitting bays on 3 levels",
+        "feature_type": "experience",
+        "description": "Three levels of hitting bays with climate control — heated in winter, cooled in summer. Each bay has comfortable seating and a TV.",
+        "url": HOMEPAGE,
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "interactive-golf-games",
+        "title": "Interactive point-scoring golf games",
+        "feature_type": "experience",
+        "description": "Microchipped balls and targets make golf social and competitive — no skill required. Multiple game modes for all levels.",
+        "url": HOMEPAGE,
+        "is_free": False,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "full-bar-food-every-bay",
+        "title": "Full bar and food menu at every bay",
+        "feature_type": "amenity",
+        "description": "Full food and drink service delivered directly to your bay — no need to leave your spot.",
+        "url": HOMEPAGE,
+        "is_free": False,
+        "sort_order": 30,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "rooftop-terrace",
+        "title": "Rooftop terrace",
+        "feature_type": "amenity",
+        "description": "Open-air rooftop terrace area for drinks and socializing above the driving range.",
+        "url": HOMEPAGE,
+        "is_free": False,
+        "sort_order": 40,
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "half-price-play",
+        "title": "Half-price play during off-peak hours",
+        "description": "Bay rental at half price during early weekday hours before the evening rush.",
+        "price_note": "Half-price before peak hours on weekdays.",
+        "is_free": False,
+        "source_url": HOMEPAGE,
+        "category": "recurring_deal",
+    })
+    return envelope
 
 
 def _extract_og_meta(html: str) -> tuple[Optional[str], Optional[str]]:
@@ -106,6 +188,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.warning("Topgolf Atlanta Midtown: og: enrichment failed: %s", exc)
 
     venue_id = get_or_create_venue(venue_data)
+    persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     # Push the freshest image/description back onto the existing venue row.
     update: dict = {}

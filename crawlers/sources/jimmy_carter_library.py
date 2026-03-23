@@ -15,6 +15,8 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,91 @@ VENUE_DATA = {
         "sunday": {"open": "12:00", "close": "16:45"},
     },
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "presidential_library",
+        "commitment_tier": "halfday",
+        "primary_activity": "Presidential museum, rotating exhibitions, and Japanese gardens",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["indoor", "outdoor-indoor-mix"],
+        "parking_type": "free_lot",
+        "best_time_of_day": "morning",
+        "practical_notes": (
+            "Free parking on-site. The museum and grounds sit on 35 acres in Old Fourth Ward — "
+            "allow 2-3 hours for the museum plus time to walk the Japanese gardens. "
+            "Easy to combine with a Freedom Park Trail walk or Beltline connection."
+        ),
+        "accessibility_notes": "Fully ADA accessible. Wheelchair available at front desk.",
+        "family_suitability": "yes",
+        "reservation_required": False,
+        "permit_required": False,
+        "fee_note": "Admission charged for adults. Children 15 and under free.",
+        "source_url": BASE_URL,
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "museum", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "presidential-museum-permanent-exhibits",
+        "title": "Presidential museum permanent exhibits",
+        "feature_type": "collection",
+        "description": "Permanent collection documenting the Carter presidency, human rights work, and global peace initiatives.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "oval-office-replica",
+        "title": "Oval Office replica",
+        "feature_type": "attraction",
+        "description": "A full-scale replica of the Oval Office as it appeared during the Carter presidency.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "japanese-garden-grounds",
+        "title": "Japanese garden and grounds",
+        "feature_type": "amenity",
+        "description": "35 acres of landscaped grounds including a serene Japanese garden, cherry trees, and walking paths.",
+        "url": BASE_URL,
+        "is_free": True,
+        "sort_order": 30,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "rotating-special-exhibitions",
+        "title": "Rotating special exhibitions",
+        "feature_type": "experience",
+        "description": "Regularly changing special exhibitions on topics ranging from presidential history to human rights and global affairs.",
+        "url": f"{BASE_URL}/exhibitions",
+        "is_free": False,
+        "sort_order": 40,
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "children-15-and-under-free",
+        "title": "Children 15 and under free",
+        "description": "Free admission for all visitors age 15 and under, making it a family-friendly museum destination.",
+        "price_note": "Children 15 and under admitted free.",
+        "is_free": True,
+        "source_url": BASE_URL,
+        "category": "admission",
+    })
+    return envelope
 
 
 def parse_event_date(date_str: str) -> Tuple[Optional[str], Optional[str]]:
@@ -175,6 +262,7 @@ def crawl(source: dict) -> Tuple[int, int, int]:
 
         # Get or create venue
         venue_id = get_or_create_venue(venue_data)
+        persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
         # Fetch events page
         logger.info(f"Fetching events from {EVENTS_URL}")

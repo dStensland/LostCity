@@ -17,6 +17,8 @@ from db import get_or_create_venue, insert_event, find_event_by_hash, smart_upda
 from dedupe import generate_content_hash
 from source_destination_sync import refresh_venue_specials_from_website
 from utils import extract_images_from_page, extract_event_links, find_event_url
+from entity_lanes import TypedEntityEnvelope, SourceEntityCapabilities
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +36,65 @@ VENUE_DATA = {
     "venue_type": "brewery",
     "website": BASE_URL,
 }
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destination_details=True,
+    venue_features=True,
+)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "brewery",
+        "commitment_tier": "hour",
+        "primary_activity": "Craft brewery taproom with rotating taps and community events",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["indoor", "outdoor-patio"],
+        "parking_type": "free_lot",
+        "best_time_of_day": "evening",
+        "practical_notes": "Free parking at West Midtown location (The Garage). Multiple locations across Atlanta — West Midtown, Westside, and Lee + White on the Beltline Westside Trail.",
+        "accessibility_notes": "ADA accessible taproom.",
+        "family_suitability": "caution",
+        "reservation_required": False,
+        "permit_required": False,
+        "fee_note": "Free to visit. Beer priced per pour or flight.",
+        "source_url": "https://mondaynightbrewing.com",
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "brewery", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "craft-taproom-rotating-taps",
+        "title": "Craft taproom with rotating taps",
+        "feature_type": "experience",
+        "description": "Full taproom with rotating seasonal and limited-release beers alongside core lineup.",
+        "url": "https://mondaynightbrewing.com",
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "outdoor-patio-space",
+        "title": "Outdoor patio and gathering space",
+        "feature_type": "amenity",
+        "description": "Spacious outdoor area with picnic tables, games, and a dog-friendly atmosphere.",
+        "url": "https://mondaynightbrewing.com",
+        "is_free": True,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "multiple-atlanta-locations",
+        "title": "Multiple Atlanta locations",
+        "feature_type": "amenity",
+        "description": "Three taprooms: The Garage (West Midtown), Westside, and Lee + White (Beltline Westside Trail).",
+        "url": "https://mondaynightbrewing.com",
+        "is_free": True,
+        "sort_order": 30,
+    })
+    return envelope
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -67,6 +128,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
             refresh_venue_specials_from_website(venue_id)
 
             logger.info(f"Fetching Monday Night Brewing: {EVENTS_URL}")

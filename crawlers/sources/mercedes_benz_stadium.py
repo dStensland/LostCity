@@ -18,6 +18,8 @@ from playwright.sync_api import sync_playwright
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +49,14 @@ VENUE_DATA = {
     ),
 }
 
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
+
 
 def parse_time(time_text: str) -> Optional[str]:
     """Parse time from '7:00 PM' format."""
@@ -71,6 +81,103 @@ def should_skip_official_match(title: str) -> bool:
     if lowered.startswith("18th match - usmnt"):
         return True
     return False
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "stadium",
+        "commitment_tier": "halfday",
+        "primary_activity": "NFL, MLS, concerts, and major events in a world-class stadium",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["indoor", "retractable-roof", "climate-controlled"],
+        "parking_type": "paid_lot",
+        "best_time_of_day": "any",
+        "practical_notes": (
+            "GWCC lots and Vine City MARTA station are the best options. "
+            "Fan-first pricing means concessions are genuinely affordable — among the lowest in pro sports. "
+            "Allow extra time for security screening on event days."
+        ),
+        "accessibility_notes": "Fully ADA accessible with wheelchair seating in all levels. Service elevators available.",
+        "family_suitability": "yes",
+        "reservation_required": True,
+        "permit_required": False,
+        "fee_note": "Ticket prices vary by event. Stadium tours available on non-event days.",
+        "source_url": BASE_URL,
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "stadium", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "retractable-roof-oculus",
+        "title": "Retractable roof and oculus design",
+        "feature_type": "attraction",
+        "description": "Eight-panel retractable roof with a unique pinwheel design that opens to the Atlanta sky, creating an open-air stadium experience.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "stadium-tours",
+        "title": "Stadium tours",
+        "feature_type": "experience",
+        "description": "Guided tours available on non-event days exploring the stadium's architecture, locker rooms, and field-level access.",
+        "url": f"{BASE_URL}/stadium-tours",
+        "is_free": False,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "fan-first-pricing",
+        "title": "Fan-first concession pricing",
+        "feature_type": "amenity",
+        "description": "Industry-leading affordable concessions — a deliberate break from stadium pricing norms. Hot dogs, sodas, and beers well below typical pro sports venue prices.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 30,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "100-yard-bar-molly-bs",
+        "title": "100-yard bar and Molly B's restaurant",
+        "feature_type": "amenity",
+        "description": "A 100-yard-long bar on the 300 level and Molly B's full-service restaurant offer premium dining and drink options.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 40,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "halo-video-board",
+        "title": "Halo video board",
+        "feature_type": "attraction",
+        "description": "The world's largest LED video board wraps 360 degrees around the stadium, spanning over 63,000 square feet.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 50,
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "fan-first-concessions",
+        "title": "Fan-first concession pricing",
+        "description": "Permanently discounted food and drinks at every event — among the lowest concession prices in professional sports.",
+        "price_note": "Concessions priced well below typical pro sports venues.",
+        "is_free": False,
+        "source_url": BASE_URL,
+        "category": "daily_special",
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "mbs-stadium-tours",
+        "title": "Mercedes-Benz Stadium tours",
+        "description": "Guided tours available on non-event days with field access, locker rooms, and behind-the-scenes areas.",
+        "price_note": "Tour tickets sold separately.",
+        "is_free": False,
+        "source_url": f"{BASE_URL}/stadium-tours",
+        "category": "recurring_deal",
+    })
+    return envelope
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -106,6 +213,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(venue_data)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Mercedes-Benz Stadium: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

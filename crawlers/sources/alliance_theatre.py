@@ -15,6 +15,8 @@ from playwright.sync_api import sync_playwright
 from db import get_or_create_venue, get_client, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
+from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
+from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -59,12 +61,107 @@ VENUE_DATA = {
     ),
 }
 
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    destinations=True,
+    destination_details=True,
+    venue_features=True,
+    venue_specials=True,
+)
+
 # Date pattern: MM/DD/YYYY – MM/DD/YYYY or MM/DD/YYYY
 DATE_PATTERN = re.compile(r"(\d{2}/\d{2}/\d{4})\s*[–-]\s*(\d{2}/\d{2}/\d{4})")
 SINGLE_DATE_PATTERN = re.compile(r"(\d{2}/\d{2}/\d{4})")
 
 # Stage patterns to identify venue lines
 STAGE_PATTERN = re.compile(r"on the\s+(.+(?:STAGE|THEATRE|ANYWHERE))", re.IGNORECASE)
+
+
+def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
+    envelope = TypedEntityEnvelope()
+    envelope.add("destination_details", {
+        "venue_id": venue_id,
+        "destination_type": "theater",
+        "commitment_tier": "halfday",
+        "primary_activity": "Tony Award-winning regional theater productions",
+        "best_seasons": ["spring", "summer", "fall", "winter"],
+        "weather_fit_tags": ["indoor", "rainy-day", "date-night"],
+        "parking_type": "garage",
+        "best_time_of_day": "evening",
+        "practical_notes": (
+            "Arts Center MARTA station is directly adjacent. Woodruff Arts Center parking garage available. "
+            "Shares campus with the High Museum of Art and Atlanta Symphony Orchestra — "
+            "easy to combine with a museum visit or pre-show dining in Midtown."
+        ),
+        "accessibility_notes": "Fully ADA accessible. Audio description and ASL interpreted performances available for select shows.",
+        "family_suitability": "caution",
+        "reservation_required": True,
+        "permit_required": False,
+        "fee_note": "Ticket prices vary by production. Rush tickets and student discounts available for select performances.",
+        "source_url": BASE_URL,
+        "metadata": {"source_type": "venue_enrichment", "venue_type": "theater", "city": "atlanta"},
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "tony-award-winning-theater",
+        "title": "Tony Award-winning regional theater",
+        "feature_type": "experience",
+        "description": "One of the most celebrated regional theaters in America, with multiple Tony Awards for excellence in new works and musical theater.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 10,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "theatre-for-young-audiences",
+        "title": "Alliance Theatre for Young Audiences",
+        "feature_type": "experience",
+        "description": "Dedicated programming for children and families in the intimate Hertz Stage and other spaces.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 20,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "woodruff-arts-center-campus",
+        "title": "Shared Woodruff Arts Center campus",
+        "feature_type": "amenity",
+        "description": "Located on the same campus as the High Museum of Art and Atlanta Symphony Orchestra — a true arts district anchor.",
+        "url": "https://www.woodruffcenter.org",
+        "is_free": True,
+        "sort_order": 30,
+    })
+    envelope.add("venue_features", {
+        "venue_id": venue_id,
+        "slug": "pre-show-dining-midtown",
+        "title": "Pre-show dining options at Woodruff",
+        "feature_type": "amenity",
+        "description": "Multiple dining options within walking distance in Midtown, plus on-campus catering for select events.",
+        "url": BASE_URL,
+        "is_free": False,
+        "sort_order": 40,
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "rush-tickets-student-discounts",
+        "title": "Rush tickets and student discounts",
+        "description": "Day-of rush tickets and student pricing available for select performances.",
+        "price_note": "Rush and student tickets available at box office for select shows.",
+        "is_free": False,
+        "source_url": BASE_URL,
+        "category": "recurring_deal",
+    })
+    envelope.add("venue_specials", {
+        "venue_id": venue_id,
+        "slug": "family-series-pricing",
+        "title": "Family series pricing",
+        "description": "Special pricing for Alliance Theatre for Young Audiences productions and family-oriented shows.",
+        "price_note": "Family-friendly pricing for youth productions.",
+        "is_free": False,
+        "source_url": BASE_URL,
+        "category": "recurring_deal",
+    })
+    return envelope
 
 
 def parse_date(date_str: str) -> Optional[str]:
@@ -181,6 +278,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     logger.info("Alliance Theatre: enriched venue record from homepage og: metadata")
             except Exception as _upd_exc:
                 logger.warning("Alliance Theatre: venue update failed: %s", _upd_exc)
+
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Alliance Theatre: {SHOWS_URL}")
             page.goto(SHOWS_URL, wait_until="domcontentloaded", timeout=30000)
