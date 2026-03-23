@@ -7,6 +7,7 @@ import type { FestivalSession, FestivalProgram } from "@/lib/festivals";
 import type { FestivalLayout } from "@/lib/festival-layout";
 import { getCategoryAccentColor } from "@/lib/moments-utils";
 import { decodeHtmlEntities } from "@/lib/formats";
+import { MapPin, CaretRight, CalendarBlank, ArrowRight, CaretDown } from "@phosphor-icons/react";
 import RSVPButton from "@/components/RSVPButton";
 import AddToCalendar from "@/components/AddToCalendar";
 
@@ -286,10 +287,7 @@ export default function FestivalSchedule({
                 href={`/${portalSlug}/spots/${session.venue.slug}`}
                 className="text-[11px] sm:text-xs text-[var(--soft)] hover:text-[var(--coral)] transition-colors inline-flex items-center gap-1"
               >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+                <MapPin className="w-3 h-3" weight="duotone" aria-hidden="true" />
                 {session.venue.name}
               </Link>
             )}
@@ -327,9 +325,7 @@ export default function FestivalSchedule({
           />
         </div>
         <div className="sm:hidden shrink-0 text-[var(--muted)] pt-1">
-          <svg className="w-4 h-4 group-hover:text-[var(--soft)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+          <CaretRight className="w-4 h-4 group-hover:text-[var(--soft)] transition-colors" weight="bold" aria-hidden="true" />
         </div>
       </div>
     );
@@ -339,9 +335,7 @@ export default function FestivalSchedule({
     <div id="schedule">
       <div className="flex items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-semibold text-[var(--cream)] flex items-center gap-2">
-          <svg className="w-5 h-5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
+          <CalendarBlank className="w-5 h-5 text-[var(--muted)]" weight="duotone" aria-hidden="true" />
           {layout.scheduleTitle}
           <span className="text-sm font-normal text-[var(--muted)]">
             ({filtered.length} session{filtered.length !== 1 ? "s" : ""})
@@ -353,9 +347,7 @@ export default function FestivalSchedule({
             className="inline-flex items-center gap-1 text-xs sm:text-sm text-accent hover:text-[var(--cream)] transition-colors whitespace-nowrap"
           >
             {fullScheduleLabel}
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
+            <ArrowRight className="w-4 h-4" weight="bold" aria-hidden="true" />
           </Link>
         )}
       </div>
@@ -638,14 +630,11 @@ export default function FestivalSchedule({
               className="w-full py-2.5 text-sm font-medium text-accent hover:text-[var(--cream)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--card-bg-hover)] transition-colors flex items-center justify-center gap-2"
             >
               {expanded ? "Show fewer sessions" : `See all ${filtered.length} sessions`}
-              <svg
+              <CaretDown
                 className={`w-4 h-4 transition-transform ${expanded ? "rotate-180" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+                weight="bold"
+                aria-hidden="true"
+              />
             </button>
           )}
         </div>

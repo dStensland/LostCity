@@ -222,7 +222,7 @@ function EventDateBadge({
     >
       <span
         className="text-2xs font-mono font-bold uppercase tracking-widest"
-        style={{ color: "rgba(255,255,255,0.7)" }}
+        style={{ color: "#ffffff" }}
       >
         {dayName}
       </span>
@@ -360,7 +360,7 @@ export default async function GroupDetailPage({ params }: Props) {
           <button
             type="button"
             aria-label="Share this group"
-            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors hover:bg-black/5"
             style={{ color: T.TEXT_PRIMARY }}
           >
             <ShareNetwork size={20} weight="bold" />
@@ -403,14 +403,12 @@ export default async function GroupDetailPage({ params }: Props) {
               </h1>
 
               {/* Description */}
-              {channel.description && (
-                <p
-                  className="text-sm leading-relaxed"
-                  style={{ color: T.TEXT_SECONDARY }}
-                >
-                  {channel.description}
-                </p>
-              )}
+              <p
+                className={`text-sm leading-relaxed ${!channel.description ? "italic" : ""}`}
+                style={{ color: T.TEXT_SECONDARY }}
+              >
+                {channel.description || "Follow this channel to stay updated"}
+              </p>
             </div>
 
             {/* Subscribe action */}

@@ -486,7 +486,7 @@ export default function FestivalDetailView({
                 className="w-full flex items-center justify-center gap-2 min-h-[44px] rounded-lg text-sm font-medium transition-all focus-ring hover:brightness-110"
                 style={{
                   background: "var(--accent-color)",
-                  color: "#09090B",
+                  color: "var(--void)",
                 }}
               >
                 <Ticket size={16} weight="bold" aria-hidden="true" />
@@ -522,7 +522,7 @@ export default function FestivalDetailView({
             </p>
             {singleVenue.nearest_marta_station && singleVenue.marta_walk_minutes != null && singleVenue.marta_walk_minutes <= 15 && (
               <div className="flex items-center gap-2">
-                <Train size={13} weight="fill" style={{ color: "#A78BFA" }} aria-hidden="true" className="flex-shrink-0" />
+                <Train size={13} weight="fill" style={{ color: "var(--vibe)" }} aria-hidden="true" className="flex-shrink-0" />
                 <span className="text-xs text-[var(--soft)]">
                   {singleVenue.nearest_marta_station}
                   {singleVenue.marta_walk_minutes != null && ` · ${singleVenue.marta_walk_minutes} min walk`}
@@ -539,7 +539,7 @@ export default function FestivalDetailView({
             )}
             {singleVenue.beltline_adjacent && (
               <div className="flex items-center gap-2">
-                <Path size={13} weight="bold" style={{ color: "#00D9A0" }} aria-hidden="true" className="flex-shrink-0" />
+                <Path size={13} weight="bold" style={{ color: "var(--neon-green)" }} aria-hidden="true" className="flex-shrink-0" />
                 <span className="text-xs text-[var(--soft)]">
                   Near BeltLine
                   {singleVenue.beltline_segment && ` · ${singleVenue.beltline_segment}`}
@@ -703,12 +703,8 @@ export default function FestivalDetailView({
                             </span>
                             <span className="min-w-0 flex-1 flex items-center gap-2">
                               <span
-                                className="truncate block"
-                                style={{
-                                  fontSize: isHeadliner ? "14px" : "13px",
-                                  fontWeight: isHeadliner ? 600 : 500,
-                                  color: "var(--cream)",
-                                }}
+                                className={`truncate block ${isHeadliner ? "text-sm font-semibold" : "text-sm font-medium"}`}
+                                style={{ color: "var(--cream)" }}
                               >
                                 {sessionTitle}
                               </span>
@@ -765,7 +761,7 @@ export default function FestivalDetailView({
                   <div className="px-4 border-t border-[var(--twilight)]/20">
                     <button
                       onClick={() => handleProgramClick(program.slug)}
-                      className="min-h-[44px] text-xs font-mono text-[var(--muted)] hover:text-[var(--soft)] transition-colors flex items-center gap-1 focus-ring"
+                      className="min-h-[44px] text-xs font-mono text-[var(--soft)] hover:text-[var(--cream)] transition-colors flex items-center gap-1 focus-ring"
                     >
                       View full program
                       <CaretRight size={11} weight="bold" />

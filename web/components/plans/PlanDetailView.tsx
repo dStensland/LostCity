@@ -218,6 +218,9 @@ export function PlanDetailView({ planId, onBack, portalSlug = "atlanta" }: PlanD
     return (
       <div className="text-center py-16">
         <p className="font-mono text-sm text-[var(--muted)]">Plan not found.</p>
+        <Link href="/plans" className="font-mono text-xs text-[var(--coral)] hover:underline mt-4 inline-block">
+          ← View all plans
+        </Link>
       </div>
     );
   }

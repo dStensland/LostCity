@@ -19,38 +19,40 @@ export default function AccountPanel() {
 
       <div className="space-y-4">
         {/* Email */}
-        <div className="p-4 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]">
-          <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1">
-            Email
-          </label>
-          <p className="font-mono text-sm text-[var(--cream)]">{user.email}</p>
+        <div>
+          <p className="font-mono text-xs tracking-[0.12em] uppercase text-[var(--muted)] mb-2">Account Email</p>
+          <div className="p-4 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]">
+            <p className="font-mono text-sm text-[var(--cream)]">{user.email}</p>
+          </div>
         </div>
 
         {/* Member Since */}
-        <div className="p-4 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]">
-          <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1">
-            Member Since
-          </label>
-          <p className="font-mono text-sm text-[var(--cream)]">
-            {format(new Date(user.created_at), "MMMM d, yyyy")}
-          </p>
+        <div>
+          <p className="font-mono text-xs tracking-[0.12em] uppercase text-[var(--muted)] mb-2">Member Since</p>
+          <div className="p-4 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]">
+            <p className="font-mono text-sm text-[var(--cream)]">
+              {format(new Date(user.created_at), "MMMM d, yyyy")}
+            </p>
+          </div>
         </div>
 
         {/* Auth Provider */}
-        <div className="p-4 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]">
-          <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1">
-            Sign-in Method
-          </label>
-          <p className="font-mono text-sm text-[var(--cream)] capitalize">
-            {user.app_metadata?.provider || "Email"}
-          </p>
+        <div>
+          <p className="font-mono text-xs tracking-[0.12em] uppercase text-[var(--muted)] mb-2">Sign-In Method</p>
+          <div className="p-4 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]">
+            <p className="font-mono text-sm text-[var(--cream)] capitalize">
+              {user.app_metadata?.provider || "Email"}
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Sign Out */}
       <div className="pt-4 border-t border-[var(--twilight)]">
         <button
-          onClick={signOut}
+          onClick={() => {
+            if (confirm("Sign out of Lost City?")) signOut();
+          }}
           className="px-6 py-2.5 rounded-lg border border-[var(--coral)]/30 text-[var(--coral)] font-mono text-sm hover:bg-[var(--coral)]/10 transition-colors"
         >
           Sign Out

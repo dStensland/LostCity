@@ -218,7 +218,7 @@ export default function ExploreTrackList() {
           className="explore-display-heading text-[30px] md:text-[38px] tracking-[-0.03em] leading-[1.05] pl-4"
           style={{ color: "var(--cream)" }}
         >
-          Explore Atlanta
+          Explore {portal?.name ?? "the City"}
         </h2>
         <p
           className="text-xs md:text-[13px] font-mono mt-1.5 pl-4"
@@ -238,7 +238,7 @@ export default function ExploreTrackList() {
           className="text-sm md:text-[15px] mt-3 pl-4 leading-relaxed"
           style={{ color: "var(--muted)" }}
         >
-          Curated collections to help you explore Atlanta. Browse themed guides, neighborhood
+          Curated collections to help you explore {portal?.name ?? "the city"}. Browse themed guides, neighborhood
           deep-dives, and hand-picked recommendations.
         </p>
       </div>
