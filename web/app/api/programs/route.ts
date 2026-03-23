@@ -114,9 +114,99 @@ export async function GET(request: NextRequest) {
       .toISOString()
       .split("T")[0];
 
-    let programsQuery = serviceClient
-      .from("programs")
-      .select(
+    // Helper: apply all shared filters to any query (data or count).
+    // Returns the query with all filters applied except .select(), .order(), and .range().
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    function applyProgramFilters(q: any) {
+      q = q
+        .or(programsScopeFilter)
+        .eq("status", "active")
+        // Temporal gate:
+        // - Programs with a future or present session_end → included
+        // - Programs with null session_end AND session_start within last 2 years → included (ongoing)
+        // - Programs with null session_end AND null session_start → included (no date info)
+        // - Programs with null session_end AND session_start older than 2 years → excluded (stale)
+        .or(
+          `session_end.gte.${today},and(session_end.is.null,or(session_start.is.null,session_start.gte.${twoYearsAgo}))`
+        )
+        // Exclude programs explicitly tagged as adults-only (AARP, adult leagues, etc.)
+        .not("tags", "cs", "{adults-only}");
+
+      if (typeFilter && isValidString(typeFilter, 1, 50)) {
+        q = q.eq("program_type", typeFilter);
+      }
+
+      if (seasonFilter && isValidString(seasonFilter, 1, 50)) {
+        q = q.eq("season", seasonFilter);
+      }
+
+      if (ageFilter !== null) {
+        q = q
+          .or(`age_min.is.null,age_min.lte.${ageFilter}`)
+          .or(`age_max.is.null,age_max.gte.${ageFilter}`);
+      }
+
+      if (activeOnly) {
+        // session_end filter is already applied unconditionally above.
+        // Exclude adult-only programs: age_min > 17 means no one under 18 qualifies,
+        // age_max > 60 means the program spans well into adult range (not family-focused)
+        q = q.or(`age_min.is.null,age_min.lte.17`);
+        q = q.or(`age_max.is.null,age_max.lte.60`);
+        // Freshness guard: exclude programs whose session_start is more than 1 year
+        // in the past AND session_end is NULL (stale data with no explicit end date).
+        // Programs with no session_start at all are kept (they have no staleness signal).
+        const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0];
+        q = q.or(
+          `session_start.is.null,session_start.gte.${oneYearAgo},session_end.not.is.null`
+        );
+      }
+
+      if (registrationFilter && isValidString(registrationFilter, 1, 100)) {
+        const statuses = registrationFilter
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (statuses.length > 0) {
+          q = q.in("registration_status", statuses);
+        }
+      }
+
+      if (costMaxFilter !== null) {
+        const costMax = parseFloat(costMaxFilter);
+        if (!isNaN(costMax)) {
+          q = q.or(`cost_amount.is.null,cost_amount.lte.${costMax}`);
+        }
+      }
+
+      if (dayFilter !== null && dayFilter >= 1 && dayFilter <= 7) {
+        q = q.contains("schedule_days", [dayFilter]);
+      }
+
+      if (qFilter && isValidString(qFilter, 1, 200)) {
+        const escaped = escapeSQLPattern(qFilter);
+        q = q.or(`name.ilike.%${escaped}%,description.ilike.%${escaped}%`);
+      }
+
+      // tag filter: array containment — programs whose tags include the requested activity tag
+      const VALID_ACTIVITY_TAGS = new Set([
+        "sports", "arts", "stem", "nature", "swimming", "coding",
+        "theater", "dance", "gymnastics", "music", "cooking", "general",
+      ]);
+      if (tagFilter && isValidString(tagFilter, 1, 30) && VALID_ACTIVITY_TAGS.has(tagFilter)) {
+        q = q.contains("tags", [tagFilter]);
+      }
+
+      return q;
+    }
+
+    // Run data query and count query in parallel.
+    // The count query has identical filters but uses head:true to avoid fetching rows.
+    // Note: post-query JS filters (ADULT_TITLE_RE, PAST_SCHOOL_YEAR_RE, environmentFilter)
+    // cannot be reflected in the DB count, so total is a slight overcount — acceptable and standard.
+    let dataQuery = applyProgramFilters(
+      serviceClient.from("programs").select(
         `
         id,
         portal_id,
@@ -149,127 +239,57 @@ export async function GET(request: NextRequest) {
         venue:venues(id, name, neighborhood, address, city, lat, lng, image_url, indoor_outdoor)
       `
       )
-      .or(programsScopeFilter)
-      .eq("status", "active")
-      // Temporal gate:
-      // - Programs with a future or present session_end → included
-      // - Programs with null session_end AND session_start within last 2 years → included (ongoing)
-      // - Programs with null session_end AND null session_start → included (no date info)
-      // - Programs with null session_end AND session_start older than 2 years → excluded (stale)
-      .or(
-        `session_end.gte.${today},and(session_end.is.null,or(session_start.is.null,session_start.gte.${twoYearsAgo}))`
-      )
-      // Exclude programs explicitly tagged as adults-only (AARP, adult leagues, etc.)
-      .not("tags", "cs", "{adults-only}");
+    );
 
-    if (typeFilter && isValidString(typeFilter, 1, 50)) {
-      programsQuery = programsQuery.eq("program_type", typeFilter);
-    }
-
-    if (seasonFilter && isValidString(seasonFilter, 1, 50)) {
-      programsQuery = programsQuery.eq("season", seasonFilter);
-    }
-
-    if (ageFilter !== null) {
-      programsQuery = programsQuery
-        .or(`age_min.is.null,age_min.lte.${ageFilter}`)
-        .or(`age_max.is.null,age_max.gte.${ageFilter}`);
-    }
-
-    if (activeOnly) {
-      // session_end filter is already applied unconditionally above.
-      // Exclude adult-only programs: age_min > 17 means no one under 18 qualifies,
-      // age_max > 60 means the program spans well into adult range (not family-focused)
-      programsQuery = programsQuery.or(`age_min.is.null,age_min.lte.17`);
-      programsQuery = programsQuery.or(`age_max.is.null,age_max.lte.60`);
-      // Freshness guard: exclude programs whose session_start is more than 1 year
-      // in the past AND session_end is NULL (stale data with no explicit end date).
-      // Programs with no session_start at all are kept (they have no staleness signal).
-      const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0];
-      programsQuery = programsQuery.or(
-        `session_start.is.null,session_start.gte.${oneYearAgo},session_end.not.is.null`
-      );
-    }
-
-    if (registrationFilter && isValidString(registrationFilter, 1, 100)) {
-      const statuses = registrationFilter
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      if (statuses.length > 0) {
-        programsQuery = programsQuery.in("registration_status", statuses);
-      }
-    }
-
-    if (costMaxFilter !== null) {
-      const costMax = parseFloat(costMaxFilter);
-      if (!isNaN(costMax)) {
-        programsQuery = programsQuery.or(
-          `cost_amount.is.null,cost_amount.lte.${costMax}`
-        );
-      }
-    }
-
-    if (dayFilter !== null && dayFilter >= 1 && dayFilter <= 7) {
-      programsQuery = programsQuery.contains("schedule_days", [dayFilter]);
-    }
-
-    if (qFilter && isValidString(qFilter, 1, 200)) {
-      const escaped = escapeSQLPattern(qFilter);
-      programsQuery = programsQuery.or(
-        `name.ilike.%${escaped}%,description.ilike.%${escaped}%`
-      );
-    }
-
-    // tag filter: array containment — programs whose tags include the requested activity tag
-    const VALID_ACTIVITY_TAGS = new Set([
-      "sports", "arts", "stem", "nature", "swimming", "coding",
-      "theater", "dance", "gymnastics", "music", "cooking", "general",
-    ]);
-    if (tagFilter && isValidString(tagFilter, 1, 30) && VALID_ACTIVITY_TAGS.has(tagFilter)) {
-      programsQuery = programsQuery.contains("tags", [tagFilter]);
-    }
+    const countQuery = applyProgramFilters(
+      serviceClient.from("programs").select("id", { count: "exact", head: true })
+    );
 
     // environment filter: uses the venue's indoor_outdoor classification
     // We filter post-query (client-side) since Supabase doesn't support filtering
     // on nested joins via query builder. The index on venues.indoor_outdoor still
     // speeds up the DB read; we just do the final filter in JS.
 
-    // Apply sort
+    // Apply sort to data query only
     switch (sortParam) {
       case "session_start":
-        programsQuery = programsQuery.order("session_start", {
+        dataQuery = dataQuery.order("session_start", {
           ascending: true,
           nullsFirst: false,
         });
         break;
       case "cost":
-        programsQuery = programsQuery.order("cost_amount", {
+        dataQuery = dataQuery.order("cost_amount", {
           ascending: true,
           nullsFirst: true,
         });
         break;
       case "registration_urgency":
         // open first, then waitlist, then upcoming — DB will sort by inserted value
-        programsQuery = programsQuery.order("registration_status", {
+        dataQuery = dataQuery.order("registration_status", {
           ascending: true,
         });
         break;
       default:
-        programsQuery = programsQuery.order("session_start", {
+        dataQuery = dataQuery.order("session_start", {
           ascending: true,
           nullsFirst: false,
         });
     }
 
-    programsQuery = programsQuery.range(offset, offset + limit - 1);
+    dataQuery = dataQuery.range(offset, offset + limit - 1);
 
-    const { data: programsData, error: programsError } = await programsQuery;
+    const [
+      { data: programsData, error: programsError },
+      { count: totalCount, error: countError },
+    ] = await Promise.all([dataQuery, countQuery]);
 
     if (programsError) {
       return errorResponse(programsError, "GET /api/programs");
+    }
+
+    if (countError) {
+      return errorResponse(countError, "GET /api/programs (count)");
     }
 
     type ProgramRow = {
@@ -430,7 +450,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         programs,
-        total: programs.length,
+        total: totalCount ?? programs.length,
         offset,
         limit,
         source: "programs",
