@@ -108,7 +108,12 @@ def parse_time(time_text: str) -> Optional[str]:
 
 
 def extract_movies_for_date(
-    page: Page, target_date: datetime, source_id: int, venue_id: int, image_map: dict = None
+    page: Page,
+    target_date: datetime,
+    source_id: int,
+    venue_id: int,
+    image_map: dict = None,
+    seen_showtimes: set = None,
 ) -> tuple[int, int, int]:
     """Extract movies and showtimes for a specific date.
 
@@ -120,10 +125,18 @@ def extract_movies_for_date(
     - Content advisory, Genre, Cast info
     - "Today, January 23" date marker
     - Showtimes concatenated: "1:10PM4:00PM7:00PM10:00PM"
+
+    Args:
+        seen_showtimes: Caller-owned set of (title, date_str, start_time) tuples already
+            processed in this crawl run.  Guards against within-run duplicates when the
+            page's date navigation silently stays on the same day.
     """
     events_found = 0
     events_new = 0
     events_updated = 0
+
+    if seen_showtimes is None:
+        seen_showtimes = set()
 
     date_str = target_date.strftime("%Y-%m-%d")
 
@@ -247,6 +260,17 @@ def extract_movies_for_date(
 
             # Create one event per showtime (matches chain cinema model)
             for start_time in showtimes:
+                # In-process dedup guard: skip if this exact showtime was already
+                # processed in this crawl run (catches silent date-nav failures
+                # where the page stays on the same day's content).
+                showtime_key = (movie["title"], date_str, start_time)
+                if showtime_key in seen_showtimes:
+                    logger.debug(
+                        f"Skipping already-seen showtime: {movie['title']} at {start_time} on {date_str}"
+                    )
+                    continue
+                seen_showtimes.add(showtime_key)
+
                 events_found += 1
 
                 # Content hash includes time — each showtime is a distinct event
@@ -411,6 +435,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
             venue_id = get_or_create_venue(VENUE_DATA)
             today = datetime.now().date()
 
+            # Shared set tracks every (title, date, time) processed this run so that
+            # silent date-navigation failures don't re-insert the same showtime.
+            seen_showtimes: set = set()
+
             # Load the showtimes page
             logger.info(f"Fetching Landmark showtimes: {SHOWTIMES_URL}")
             page.goto(SHOWTIMES_URL, wait_until="domcontentloaded", timeout=30000)
@@ -432,7 +460,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Extract today's showtimes (already showing by default)
             logger.info(f"Scraping Today ({today.strftime('%Y-%m-%d')})")
             found, new, updated = extract_movies_for_date(
-                page, datetime.combine(today, datetime.min.time()), source_id, venue_id, image_map
+                page,
+                datetime.combine(today, datetime.min.time()),
+                source_id,
+                venue_id,
+                image_map,
+                seen_showtimes,
             )
             total_found += found
             total_new += new
@@ -472,6 +505,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         source_id,
                         venue_id,
                         image_map,
+                        seen_showtimes,
                     )
                     total_found += found
                     total_new += new
