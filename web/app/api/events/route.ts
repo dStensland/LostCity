@@ -107,6 +107,9 @@ export async function GET(request: Request) {
       portal_city: portalCity,
       importance: importance && importance.length > 0 ? importance : undefined,
       time_after: timeAfter,
+      exclude_categories: portalContext.filters.exclude_categories?.length
+        ? portalContext.filters.exclude_categories
+        : undefined,
     };
 
     const pageSize = safeParseInt(searchParams.get("pageSize"), 20, 1, 500);

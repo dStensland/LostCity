@@ -236,6 +236,9 @@ export async function GET(request: Request) {
       portal_exclusive: portalExclusive,
       source_ids: sourceAccess?.sourceIds.length ? sourceAccess.sourceIds : undefined,
       exclude_classes: true,
+      exclude_categories: portalContext.filters.exclude_categories?.length
+        ? portalContext.filters.exclude_categories
+        : undefined,
     };
 
     const pageSize = 20;
