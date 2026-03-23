@@ -88,9 +88,9 @@ def step1_address_as_name(client, venues: list[dict], *, write: bool = False) ->
     return len(flagged)
 
 
-def step2_out_of_metro(client, venues: list[dict], *, write: bool = False) -> int:
-    """Flag and deactivate venues outside Atlanta metro."""
-    print("\n=== Step 2: Out-of-Metro Venues ===")
+def step2_out_of_state(client, venues: list[dict], *, write: bool = False) -> int:
+    """Flag and deactivate venues outside allowed states."""
+    print("\n=== Step 2: Out-of-State Venues ===")
     flagged = []
 
     allowed_states = {"GA"}
@@ -100,16 +100,16 @@ def step2_out_of_metro(client, venues: list[dict], *, write: bool = False) -> in
         lat = v.get("lat")
         lng = v.get("lng")
 
-        # State check — skip if state is GA or empty
+        # State check — reject if state is set and not GA
         if state and state not in allowed_states:
             flagged.append((v, f"state={state}"))
             continue
 
-        # Coordinate check
-        if lat and lng:
+        # No state + coords far from Atlanta = leaked venue
+        if not state and lat and lng:
             dist_m = haversine(ATLANTA_CENTER_LAT, ATLANTA_CENTER_LNG, lat, lng)
             if dist_m > METRO_RADIUS_KM * 1000:
-                flagged.append((v, f"coords {dist_m/1000:.0f}km from Atlanta center"))
+                flagged.append((v, f"no state, coords {dist_m/1000:.0f}km from Atlanta center"))
 
     print(f"Found {len(flagged)} venues outside Atlanta metro")
     for v, reason in flagged[:20]:
@@ -215,7 +215,7 @@ def main():
     print(f"{'=' * 60}")
 
     bad_names = step1_address_as_name(client, venues, write=write)
-    out_of_metro = step2_out_of_metro(client, venues, write=write)
+    out_of_metro = step2_out_of_state(client, venues, write=write)
     hood_fixes = step3_neighborhood_normalization(client, venues, write=write)
     dupe_pairs = step4_duplicate_candidates(client, venues, write=write)
 

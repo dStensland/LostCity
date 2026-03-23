@@ -34,9 +34,7 @@ _JUNK_NAMES = {
 }
 
 _JUNK_PATTERNS = [
-    re.compile(r"^\d+$"),                    # Pure numeric
     re.compile(r"^[a-zA-Z]$"),               # Single character
-    re.compile(r"^https?://", re.IGNORECASE), # URL as name
 ]
 
 
@@ -59,8 +57,9 @@ def validate_venue_name(name: Optional[str]) -> tuple[bool, Optional[str]]:
     if cleaned.lower() in _JUNK_NAMES:
         return False, f"known junk name: {cleaned!r}"
 
-    # Pure numeric
-    if cleaned.isdigit():
+    # Pure numeric — but allow short numbers that could be real venue names
+    # (e.g., "529" is 529 Bar in EAV, "40 Watt" would pass other checks)
+    if cleaned.isdigit() and len(cleaned) > 4:
         return False, f"pure numeric name: {cleaned!r}"
 
     # URL as name
@@ -83,39 +82,38 @@ def validate_venue_name(name: Optional[str]) -> tuple[bool, Optional[str]]:
 
 def validate_venue_geo_scope(venue_data: dict, context) -> tuple[bool, Optional[str]]:
     """
-    Reject venues outside the crawl context's metro area.
+    Reject venues outside the crawl context's allowed geography.
 
-    Checks (in order):
-    1. If lat/lng present, verify within metro radius
-    2. If state present, verify in allowed_states
-    3. If city present, verify against known city names for the metro
+    Logic:
+    - State is the primary gate: venues in allowed_states pass.
+    - Coordinates are secondary: used to reject venues in allowed states but
+      clearly in a different region (e.g., coords in Michigan with state="GA"
+      defaulted by a crawler). Only rejects if coords are WAY outside — the
+      metro_radius is for neighborhood inference, not venue rejection.
+    - Venues with no state and no coords are ambiguous but allowed through
+      (name validation is the gatekeeper for those).
 
     Returns (is_valid, rejection_reason).
     """
     lat = venue_data.get("lat")
     lng = venue_data.get("lng")
     state = venue_data.get("state")
-    city = venue_data.get("city")
-    name = venue_data.get("name", "unknown")
 
-    # Check 1: Coordinate-based radius check (most precise)
-    if lat and lng:
-        if not context.is_in_metro(lat, lng):
-            return False, (
-                f"coords ({lat:.3f}, {lng:.3f}) outside {context.metro_radius_km}km "
-                f"radius of {context.city}"
-            )
-        # If coords are in metro, it's valid regardless of state/city fields
-        return True, None
-
-    # Check 2: State check (catches Michigan community centers, etc.)
+    # Check 1: State check (primary gate)
     if state:
         if not context.is_valid_state(state):
             return False, f"state {state!r} not in allowed states {context.allowed_states}"
+        # State is valid — trust it. Macon/Athens/Savannah are fine.
+        return True, None
 
-    # Check 3: No coords and no state — venue is too ambiguous, but don't
-    # reject outright since many venues legitimately lack coords at creation.
-    # The name validation + state check are sufficient gatekeepers.
+    # Check 2: No state provided — use coords if available to catch
+    # out-of-state venues that leaked in without a state field
+    if lat and lng:
+        if not context.is_in_metro(lat, lng):
+            return False, (
+                f"no state provided and coords ({lat:.3f}, {lng:.3f}) outside "
+                f"{context.metro_radius_km}km radius of {context.city}"
+            )
 
     return True, None
 
