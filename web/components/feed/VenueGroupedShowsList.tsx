@@ -5,7 +5,6 @@ import Link from "next/link";
 import { MusicNote, Ticket } from "@phosphor-icons/react";
 import { formatTime } from "@/lib/formats";
 import SmartImage from "@/components/SmartImage";
-import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -112,16 +111,13 @@ export function VenueGroupedShowsList({
 
   // ── Render gates ─────────────────────────────────────────────────
 
-  if (loading) {
-    return (
-      <FeedSectionSkeleton accentColor="var(--neon-magenta)" minHeight={280} />
-    );
-  }
+  // While loading, return null — SeeShowsSection's LazySection holds space
+  if (loading) return null;
 
   if (failed || venues.length === 0) return null;
 
   return (
-    <div className="relative">
+    <div className="relative feed-section-enter">
       <div
         ref={scrollRef}
         className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory scroll-smooth"

@@ -28,24 +28,6 @@ interface PortalTeasersSectionProps {
   portalSlug: string;
 }
 
-// ── Skeleton ───────────────────────────────────────────────────────
-
-function TeaserCardSkeleton() {
-  return (
-    <div className="flex-shrink-0 w-60 rounded-card bg-[var(--night)] border border-[var(--twilight)] p-4 animate-pulse">
-      {/* Badge */}
-      <div className="h-3 w-24 bg-[var(--twilight)] rounded mb-3" />
-      {/* Headline lines */}
-      <div className="h-4 w-full bg-[var(--twilight)] rounded mb-1.5" />
-      <div className="h-4 w-4/5 bg-[var(--twilight)] rounded mb-3" />
-      {/* Context */}
-      <div className="h-3 w-3/5 bg-[var(--twilight)] rounded mb-3" />
-      {/* Link */}
-      <div className="h-3 w-24 bg-[var(--twilight)] rounded" />
-    </div>
-  );
-}
-
 // ── Card ───────────────────────────────────────────────────────────
 
 function PortalTeaserCard({ item }: { item: PortalHeadline }) {
@@ -129,13 +111,14 @@ export function PortalTeasersSection({ portalSlug }: PortalTeasersSectionProps) 
     gcTime: 5 * 60 * 1000,
   });
 
-  // Graceful degradation: no section if no headlines and not loading
-  if (!isLoading && (!data?.headlines || data.headlines.length === 0)) {
-    return null;
-  }
+  // While loading, return null — LazySection holds space with minHeight
+  if (isLoading) return null;
+
+  // Graceful degradation: no section if no headlines
+  if (!data?.headlines || data.headlines.length === 0) return null;
 
   return (
-    <section className="pb-2">
+    <section className="pb-2 feed-section-enter">
       <FeedSectionHeader
         title="Around the City"
         priority="secondary"
@@ -145,20 +128,11 @@ export function PortalTeasersSection({ portalSlug }: PortalTeasersSectionProps) 
 
       {/* Horizontal carousel */}
       <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1 -mx-4 px-4">
-        {isLoading ? (
-          // Skeleton cards — show 3 placeholders
-          <>
-            <TeaserCardSkeleton />
-            <TeaserCardSkeleton />
-            <TeaserCardSkeleton />
-          </>
-        ) : (
-          data?.headlines.map((item) => (
-            <div key={item.portal.slug} className="snap-start">
-              <PortalTeaserCard item={item} />
-            </div>
-          ))
-        )}
+        {data.headlines.map((item) => (
+          <div key={item.portal.slug} className="snap-start">
+            <PortalTeaserCard item={item} />
+          </div>
+        ))}
       </div>
     </section>
   );

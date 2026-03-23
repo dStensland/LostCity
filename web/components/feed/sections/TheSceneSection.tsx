@@ -15,7 +15,6 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import type { CityPulseEventItem } from "@/lib/city-pulse/types";
 import {
   SCENE_ACTIVITY_TYPES,
@@ -29,7 +28,6 @@ import { SceneEventRow, SceneChip, getActivityIcon, WeekdayRow, getDayKeyFromDat
 import {
   ArrowRight, MicrophoneStage, ListBullets, Plus, X, Check, WarningCircle,
 } from "@phosphor-icons/react";
-import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 
 /** Map from activity ID → config for O(1) lookup */
@@ -240,20 +238,8 @@ export default function TheSceneSection({ portalSlug }: Props) {
     });
   }, []);
 
-  // Loading state — themed cityscape skeleton
-  if (isLoading) {
-    return (
-      <section>
-        <FeedSectionHeader
-          title="Regular Hangs"
-          priority="secondary"
-          accentColor="var(--vibe)"
-          icon={<MicrophoneStage weight="duotone" className="w-5 h-5" />}
-        />
-        <FeedSectionSkeleton accentColor="var(--vibe)" minHeight={360} />
-      </section>
-    );
-  }
+  // While loading, return null — LazySection holds space with minHeight
+  if (isLoading) return null;
 
   // Error state — subtle, doesn't break feed
   if (isError) {
@@ -277,7 +263,7 @@ export default function TheSceneSection({ portalSlug }: Props) {
   if (allEvents.length === 0) return null;
 
   return (
-    <section>
+    <section className="feed-section-enter">
       {/* Section header */}
       <FeedSectionHeader
         title="Regular Hangs"

@@ -43,7 +43,6 @@ import {
 } from "@/lib/my-theaters";
 import { useAuth } from "@/lib/auth-context";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
-import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -246,7 +245,8 @@ export default function NowShowingSection({ portalSlug }: NowShowingSectionProps
 
   // ── Render gates ───────────────────────────────────────────────────
 
-  if (loading) return <FeedSectionSkeleton accentColor="var(--vibe)" minHeight={320} />;
+  // While loading, return null — SeeShowsSection's LazySection holds space
+  if (loading) return null;
   if (failed) return null;
 
   // Hide if no indie theaters have showtimes (and user hasn't added any chains)
@@ -258,7 +258,7 @@ export default function NowShowingSection({ portalSlug }: NowShowingSectionProps
   if (!hasIndieShowtimes && myTheaterSlugs.length === 0) return null;
 
   return (
-      <section className="pb-2">
+    <section className="pb-2 feed-section-enter">
       {/* Section header */}
       <FeedSectionHeader
         title="Now Showing"

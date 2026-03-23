@@ -38,24 +38,6 @@ export interface DestinationsSectionProps {
 const CARD_WIDTH = 220;
 const GAP = 12;
 
-// ── Skeleton ───────────────────────────────────────────────────────────────────
-
-function DestinationCardSkeleton() {
-  return (
-    <div
-      className="flex-shrink-0 rounded-card overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/40 animate-pulse"
-      style={{ width: CARD_WIDTH }}
-    >
-      <div className="h-28 bg-[var(--twilight)]/40" />
-      <div className="p-3 space-y-2">
-        <div className="h-2 w-20 rounded bg-[var(--twilight)]/60" />
-        <div className="h-3.5 w-36 rounded bg-[var(--twilight)]/50" />
-        <div className="h-2.5 w-24 rounded bg-[var(--twilight)]/40" />
-      </div>
-    </div>
-  );
-}
-
 // ── Destination card ───────────────────────────────────────────────────────────
 
 interface DestinationCardProps {
@@ -192,13 +174,16 @@ export function DestinationsSection({ portalSlug }: DestinationsSectionProps) {
     };
   }, [updateScrollState]);
 
+  // While loading, return null — LazySection holds the space with minHeight
+  if (loading) return null;
+
   // Graceful degradation: don't render section if no data after load
-  if (!loading && destinations.length < 2) return null;
+  if (destinations.length < 2) return null;
 
   const showDots = destinations.length > 1;
 
   return (
-    <section className="pb-2">
+    <section className="pb-2 feed-section-enter">
       <FeedSectionHeader
         title="Worth Checking Out"
         priority="secondary"
@@ -214,25 +199,17 @@ export function DestinationsSection({ portalSlug }: DestinationsSectionProps) {
         className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-3 -mx-4 px-4 scrollbar-none"
         style={{ scrollSnapType: "x mandatory" }}
       >
-        {loading ? (
-          <>
-            <DestinationCardSkeleton />
-            <DestinationCardSkeleton />
-            <DestinationCardSkeleton />
-          </>
-        ) : (
-          destinations.map((item) => (
-            <DestinationCard
-              key={item.venue.id}
-              item={item}
-              portalSlug={portalSlug}
-            />
-          ))
-        )}
+        {destinations.map((item) => (
+          <DestinationCard
+            key={item.venue.id}
+            item={item}
+            portalSlug={portalSlug}
+          />
+        ))}
       </div>
 
       {/* Mobile dot indicators */}
-      {!loading && showDots && (
+      {showDots && (
         <div className="flex justify-center gap-1.5 mt-2">
           {destinations.map((_, i) => (
             <div

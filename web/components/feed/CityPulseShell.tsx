@@ -456,12 +456,16 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         ) : null}
       </div>
 
-      {/* 5. Destinations — contextual venue suggestions */}
-      <DestinationsSection portalSlug={portalSlug} />
+      {/* 5. Destinations — contextual venue suggestions, lazy-loaded */}
+      <LazySection minHeight={280}>
+        <DestinationsSection portalSlug={portalSlug} />
+      </LazySection>
 
       {/* 6. Today in Atlanta — news, culture-first, below The Lineup */}
       {portal && (
-        <TodayInAtlantaSection portalSlug={portalSlug} portalId={portal.id} />
+        <LazySection minHeight={200}>
+          <TodayInAtlantaSection portalSlug={portalSlug} portalId={portal.id} />
+        </LazySection>
       )}
 
       {/* 6. Interest Channels — only on civic portals where groups are meaningful */}

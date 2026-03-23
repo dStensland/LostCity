@@ -113,33 +113,6 @@ function NewsRow({ post, isLast }: { post: NetworkPost; isLast: boolean }) {
   );
 }
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-
-function NewsSkeleton() {
-  return (
-    <div className="mt-4">
-      <div className="h-3 w-28 rounded bg-[var(--twilight)]/40 animate-pulse mb-3" />
-      <div className="rounded-card bg-[var(--night)] border border-[var(--twilight)]/20 p-3 space-y-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex items-start gap-3">
-            <div className="w-7 h-7 rounded-lg bg-[var(--twilight)]/30 animate-pulse flex-shrink-0" />
-            <div className="flex-1 space-y-1.5">
-              <div
-                className="h-4 w-4/5 rounded bg-[var(--twilight)]/25 animate-pulse"
-                style={{ animationDelay: `${i * 80}ms` }}
-              />
-              <div
-                className="h-3 w-2/5 rounded bg-[var(--twilight)]/15 animate-pulse"
-                style={{ animationDelay: `${i * 80 + 40}ms` }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export function TodayInAtlantaSection({ portalSlug }: TodayInAtlantaSectionProps) {
@@ -204,11 +177,12 @@ export function TodayInAtlantaSection({ portalSlug }: TodayInAtlantaSectionProps
 
   // ── Loading / empty guards ────────────────────────────────────────────────
 
-  if (loading) return <NewsSkeleton />;
+  // While loading, return null — LazySection holds space with minHeight
+  if (loading) return null;
   if (posts.length === 0) return null;
 
   return (
-    <div className="mt-4">
+    <div className="mt-4 feed-section-enter">
       {/* Section header */}
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-1.5">

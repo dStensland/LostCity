@@ -14,7 +14,6 @@ import {
 } from "@/lib/hooks/useHangs";
 import { ActiveHangBanner } from "@/components/hangs/ActiveHangBanner";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
-import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 import type { HotVenue, FriendHang, HangVisibility } from "@/lib/types/hangs";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -214,15 +213,13 @@ export const HangFeedSection = memo(function HangFeedSection({
   );
 
   // ── Loading state ────────────────────────────────────────────────────────
-  // Show skeleton only while auth is still resolving — avoids flash.
+  // Return null while loading — LazySection holds space with minHeight.
   const isLoading =
     !authResolved ||
     (isAuthenticated && (myHangs.isLoading || friendHangs.isLoading)) ||
     hotVenues.isLoading;
 
-  if (isLoading) {
-    return <FeedSectionSkeleton accentColor={ACCENT} minHeight={120} />;
-  }
+  if (isLoading) return null;
 
   // ── Data ─────────────────────────────────────────────────────────────────
   const activeHang = myHangs.data?.active ?? null;
@@ -244,7 +241,7 @@ export const HangFeedSection = memo(function HangFeedSection({
   }
 
   return (
-    <section className="pb-2">
+    <section className="pb-2 feed-section-enter">
       <FeedSectionHeader
         title="Hangs"
         priority="secondary"
