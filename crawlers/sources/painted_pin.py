@@ -52,6 +52,59 @@ VENUE_DATA = {
         "sunday": {"open": "12:00", "close": "22:00"},
     },
     "vibes": ["bowling", "bocce", "cocktails", "upscale", "bar-games", "buckhead", "date-night"],
+    "_destination_details": {
+        "commitment_tier": "halfday",
+        "parking_type": "free_lot",
+        "best_time_of_day": "evening",
+        "family_suitability": "caution",
+        "practical_notes": "Free parking. Upscale atmosphere — more cocktail bar than bowling alley. Reservations recommended for weekend evenings. The vibe skews adult; not a typical family entertainment spot.",
+        "primary_activity": "Upscale bowling, bocce, shuffleboard, and craft cocktails",
+        "destination_type": "entertainment",
+    },
+    "_venue_features": [
+        {
+            "title": "Boutique bowling — duckpin and full-size",
+            "feature_type": "experience",
+            "description": "Both duckpin (small ball, no finger holes) and standard bowling lanes in an upscale setting with leather seating.",
+            "is_free": False,
+            "sort_order": 10,
+        },
+        {
+            "title": "Bocce courts",
+            "feature_type": "experience",
+            "description": "Indoor bocce courts for casual play or league competition.",
+            "is_free": False,
+            "sort_order": 20,
+        },
+        {
+            "title": "Shuffleboard and classic games",
+            "feature_type": "experience",
+            "description": "Shuffleboard tables and curated classic bar games beyond the typical pool table.",
+            "is_free": False,
+            "sort_order": 30,
+        },
+        {
+            "title": "Craft cocktail bar and chef-driven menu",
+            "feature_type": "amenity",
+            "description": "Full craft cocktail program and a chef-driven food menu that elevates the experience beyond typical entertainment fare.",
+            "is_free": False,
+            "sort_order": 40,
+        },
+    ],
+    "_venue_specials": [
+        {
+            "title": "Happy hour specials",
+            "type": "happy_hour",
+            "description": "Discounted drinks and appetizers during weekday happy hour.",
+            "price_note": "Weekday happy hour pricing on select cocktails and food.",
+            "days_of_week": "{1,2,3,4,5}",
+        },
+        {
+            "title": "League nights and tournaments",
+            "type": "event_night",
+            "description": "Regular bowling and bocce league nights plus occasional tournaments open to individuals and teams.",
+        },
+    ],
 }
 
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(

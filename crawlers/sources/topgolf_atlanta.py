@@ -55,6 +55,60 @@ VENUE_DATA = {
         "sports",
         "interactive",
     ],
+    "_destination_details": {
+        "commitment_tier": "halfday",
+        "parking_type": "free_lot",
+        "best_time_of_day": "evening",
+        "family_suitability": "yes",
+        "practical_notes": "Free parking. Climate-controlled hitting bays on 3 levels — playable in any weather. Walk-ins welcome; bays can be reserved online. Weekend evenings are busiest.",
+        "primary_activity": "Tech-driven golf entertainment with food, drinks, and games",
+        "destination_type": "entertainment",
+    },
+    "_venue_features": [
+        {
+            "title": "Climate-controlled hitting bays on 3 levels",
+            "feature_type": "experience",
+            "description": "Three levels of hitting bays with climate control — heated in winter, cooled in summer. Each bay has comfortable seating and a TV.",
+            "is_free": False,
+            "sort_order": 10,
+        },
+        {
+            "title": "Interactive point-scoring golf games",
+            "feature_type": "experience",
+            "description": "Microchipped balls and targets make golf social and competitive — no skill required. Multiple game modes for all levels.",
+            "is_free": False,
+            "sort_order": 20,
+        },
+        {
+            "title": "Full bar and food menu at every bay",
+            "feature_type": "amenity",
+            "description": "Full food and drink service delivered directly to your bay — no need to leave your spot.",
+            "is_free": False,
+            "sort_order": 30,
+        },
+        {
+            "title": "Rooftop terrace",
+            "feature_type": "amenity",
+            "description": "Open-air rooftop terrace area for drinks and socializing above the driving range.",
+            "is_free": False,
+            "sort_order": 40,
+        },
+    ],
+    "_venue_specials": [
+        {
+            "title": "Half-price play during off-peak hours",
+            "type": "recurring_deal",
+            "description": "Bay rental at half price during early weekday hours before the evening rush.",
+            "price_note": "Half-price before peak hours on weekdays.",
+            "days_of_week": "{1,2,3,4,5}",
+        },
+        {
+            "title": "Weekend brunch specials",
+            "type": "brunch",
+            "description": "Brunch food and drink specials available Saturday and Sunday during daytime hours.",
+            "days_of_week": "{6,7}",
+        },
+    ],
 }
 
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(

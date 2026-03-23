@@ -55,6 +55,54 @@ VENUE_DATA = {
         "groups",
         "japanese",
     ],
+    "_destination_details": {
+        "commitment_tier": "halfday",
+        "parking_type": "free_lot",
+        "best_time_of_day": "evening",
+        "family_suitability": "yes",
+        "practical_notes": "Free mall parking at North Point Mall. All activities are indoors. Late-night hours on weekends (until 2 AM). Great selection of Japanese arcade imports not found elsewhere in Atlanta.",
+        "primary_activity": "Japanese arcade imports, bowling, karaoke, and billiards",
+        "destination_type": "entertainment",
+    },
+    "_venue_features": [
+        {
+            "title": "Japanese arcade imports",
+            "feature_type": "experience",
+            "description": "Extensive collection of rhythm games, crane machines, and Japanese arcade exclusives not available at other Atlanta entertainment venues.",
+            "is_free": False,
+            "sort_order": 10,
+        },
+        {
+            "title": "Bowling lanes",
+            "feature_type": "experience",
+            "description": "Full-size bowling lanes with scoring systems and lane-side refreshments.",
+            "is_free": False,
+            "sort_order": 20,
+        },
+        {
+            "title": "Private karaoke rooms",
+            "feature_type": "experience",
+            "description": "Private karaoke rooms with extensive song libraries in English, Japanese, Korean, and more.",
+            "is_free": False,
+            "sort_order": 30,
+        },
+        {
+            "title": "Food and drink bar",
+            "feature_type": "amenity",
+            "description": "On-site food counter and bar serving snacks, drinks, and Japanese-inspired menu items.",
+            "is_free": False,
+            "sort_order": 40,
+        },
+    ],
+    "_venue_specials": [
+        {
+            "title": "Weekday early-play discount",
+            "type": "recurring_deal",
+            "description": "Discounted rates for bowling and select activities during early weekday hours.",
+            "price_note": "Discounted weekday rates before evening.",
+            "days_of_week": "{1,2,3,4,5}",
+        },
+    ],
 }
 
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(

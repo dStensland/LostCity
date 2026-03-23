@@ -63,6 +63,56 @@ VENUE_DATA = {
         "The Plaza screens cult classics, independent films, repertory favorites, "
         "and special events you won't find at chain theaters."
     ),
+    "_destination_details": {
+        "commitment_tier": "hour",
+        "parking_type": "street",
+        "best_time_of_day": "evening",
+        "family_suitability": "caution",
+        "practical_notes": (
+            "Street parking on Ponce de Leon Ave and surrounding blocks. "
+            "Single-screen theater — check the schedule in advance, especially for "
+            "midnight and special programming which may have age restrictions or mature content."
+        ),
+        "primary_activity": "Independent, cult, and repertory cinema at Atlanta's oldest surviving movie house",
+        "destination_type": "cinema",
+    },
+    "_venue_features": [
+        {
+            "title": "Historic single-screen cinema",
+            "feature_type": "attraction",
+            "description": "Operating since 1939, the Plaza is Atlanta's oldest and last remaining independent movie theater, preserving the classic single-screen experience.",
+            "is_free": False,
+            "sort_order": 10,
+        },
+        {
+            "title": "Cult and repertory programming",
+            "feature_type": "experience",
+            "description": "Curated calendar of midnight movies, sing-alongs, themed screenings, and repertory classics not shown at chain theaters.",
+            "is_free": False,
+            "sort_order": 20,
+        },
+        {
+            "title": "Beer and wine bar",
+            "feature_type": "amenity",
+            "description": "Full lobby bar serving beer and wine alongside traditional movie concessions.",
+            "is_free": False,
+            "sort_order": 30,
+        },
+    ],
+    "_venue_specials": [
+        {
+            "title": "Bargain matinee pricing",
+            "type": "admission",
+            "description": "Discounted ticket pricing for matinee screenings earlier in the day.",
+            "price_note": "Check current pricing at plazaatlanta.com",
+        },
+        {
+            "title": "Midnight movie series",
+            "type": "event_night",
+            "description": "Recurring late-night screenings of cult classics and themed films, typically on weekend nights.",
+            "days_of_week": "{6,7}",
+        },
+    ],
 }
 
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(

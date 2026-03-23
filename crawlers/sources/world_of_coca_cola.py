@@ -54,6 +54,63 @@ VENUE_DATA = {
         "downtown",
         "centennial-park",
     ],
+    "_destination_details": {
+        "commitment_tier": "halfday",
+        "parking_type": "paid_lot",
+        "best_time_of_day": "morning",
+        "family_suitability": "yes",
+        "practical_notes": (
+            "Pemberton Place garage is the closest paid parking option, shared with the Georgia Aquarium. "
+            "Arriving in the morning avoids peak afternoon crowds. "
+            "Budget 2-3 hours for the full experience including the tasting room."
+        ),
+        "primary_activity": "Interactive museum exploring Coca-Cola history with global beverage tasting",
+        "destination_type": "museum",
+    },
+    "_venue_features": [
+        {
+            "title": "Taste It! — 100+ beverages from around the world",
+            "feature_type": "experience",
+            "description": "Sample over 100 Coca-Cola beverages from countries around the world in the self-serve tasting room, a highlight of the visit.",
+            "is_free": False,
+            "sort_order": 10,
+        },
+        {
+            "title": "4D Theater experience",
+            "feature_type": "experience",
+            "description": "Immersive 4D theater show with sensory effects included with admission.",
+            "is_free": False,
+            "sort_order": 20,
+        },
+        {
+            "title": "Vault of the Secret Formula",
+            "feature_type": "exhibition",
+            "description": "Interactive exhibit centered on the mythologized secret formula for Coca-Cola, with theatrical storytelling.",
+            "is_free": False,
+            "sort_order": 30,
+        },
+        {
+            "title": "Pop culture gallery and memorabilia",
+            "feature_type": "collection",
+            "description": "Extensive collection of Coca-Cola memorabilia, vintage advertising, and pop culture artifacts spanning over a century.",
+            "is_free": False,
+            "sort_order": 40,
+        },
+    ],
+    "_venue_specials": [
+        {
+            "title": "Online ticket discount",
+            "type": "admission",
+            "description": "Purchase tickets online in advance for a discount versus walk-up pricing at the door.",
+            "price_note": "Save vs. walk-up price; check worldofcoca-cola.com for current rates",
+        },
+        {
+            "title": "Combo tickets with Georgia Aquarium",
+            "type": "recurring_deal",
+            "description": "Discounted combo tickets available for both World of Coca-Cola and the adjacent Georgia Aquarium.",
+            "price_note": "Check georgiaaquarium.org or worldofcoca-cola.com for current combo pricing",
+        },
+    ],
 }
 
 

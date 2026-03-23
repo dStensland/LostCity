@@ -51,6 +51,14 @@ VENUE_DATA = {
         "major concerts, sporting events, and family shows."
     ),
     "vibes": ["sports", "concerts", "downtown", "nba", "entertainment"],
+    "_venue_specials": [
+        {
+            "title": "Hawks family pack deals",
+            "type": "recurring_deal",
+            "description": "Family four-packs and value game nights available for select Hawks games throughout the season.",
+            "price_note": "Starting at $60 for 4 tickets + concessions",
+        },
+    ],
 }
 
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(

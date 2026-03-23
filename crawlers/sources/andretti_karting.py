@@ -57,6 +57,66 @@ VENUE_DATA = {
         "karting",
         "arcade",
     ],
+    "_destination_details": {
+        "commitment_tier": "halfday",
+        "parking_type": "free_lot",
+        "best_time_of_day": "any",
+        "family_suitability": "yes",
+        "practical_notes": "Large free parking lot. All activities are indoors and climate-controlled. Walk-ins welcome; reservations recommended for groups and karting on weekends.",
+        "primary_activity": "Indoor go-karts, arcade, bowling, laser tag, and dining",
+        "destination_type": "entertainment_complex",
+    },
+    "_venue_features": [
+        {
+            "title": "Indoor go-kart racing",
+            "feature_type": "experience",
+            "description": "Multi-level indoor karting track with electric karts reaching speeds up to 35 mph.",
+            "is_free": False,
+            "sort_order": 10,
+        },
+        {
+            "title": "Arcade floor with 200+ games",
+            "feature_type": "experience",
+            "description": "Massive arcade floor with over 200 games including racing simulators, redemption games, and VR experiences.",
+            "is_free": False,
+            "sort_order": 20,
+        },
+        {
+            "title": "Bowling lanes",
+            "feature_type": "experience",
+            "description": "Full-size bowling lanes with lane-side food and drink service.",
+            "is_free": False,
+            "sort_order": 30,
+        },
+        {
+            "title": "Laser tag arena",
+            "feature_type": "experience",
+            "description": "Multi-level laser tag arena for groups and walk-in play.",
+            "is_free": False,
+            "sort_order": 40,
+        },
+        {
+            "title": "Full-service restaurant and bar",
+            "feature_type": "amenity",
+            "description": "On-site restaurant and full bar with a menu designed for sharing while playing.",
+            "is_free": False,
+            "sort_order": 50,
+        },
+    ],
+    "_venue_specials": [
+        {
+            "title": "Weekday activity packages",
+            "type": "recurring_deal",
+            "description": "Discounted activity packages available Monday through Thursday.",
+            "price_note": "Mon-Thu packages discounted vs. weekend pricing.",
+            "days_of_week": "{1,2,3,4}",
+        },
+        {
+            "title": "Group and birthday party packages",
+            "type": "recurring_deal",
+            "description": "Custom group packages for birthdays, corporate outings, and private events — includes reserved lanes, karting heats, and catering options.",
+        },
+    ],
 }
 
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(

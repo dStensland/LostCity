@@ -87,6 +87,70 @@ VENUE_DATA = {
         "sunday": "12:00-17:30",
     },
     "vibes": ["historic", "family-friendly", "all-ages", "educational", "gardens"],
+    "_destination_details": {
+        "commitment_tier": "halfday",
+        "parking_type": "free_lot",
+        "best_time_of_day": "morning",
+        "family_suitability": "yes",
+        "practical_notes": (
+            "Free on-site parking lot. Plan for a half-day — the 33-acre campus includes the "
+            "museum building, Swan House, Smith Family Farm, and garden trails. "
+            "Allow extra time if visiting with children; the Goizueta Children's Experience is a popular stop."
+        ),
+        "primary_activity": "History museum campus with historic houses, gardens, and the Cyclorama",
+        "destination_type": "history_museum",
+    },
+    "_venue_features": [
+        {
+            "title": "Swan House",
+            "feature_type": "attraction",
+            "description": "An elegant 1928 mansion with formal gardens, one of Atlanta's most photographed historic homes.",
+            "is_free": False,
+            "sort_order": 10,
+        },
+        {
+            "title": "Smith Family Farm",
+            "feature_type": "experience",
+            "description": "An 1860s living history site where interpreters demonstrate 19th-century farm life.",
+            "is_free": False,
+            "sort_order": 20,
+        },
+        {
+            "title": "Cyclorama",
+            "feature_type": "collection",
+            "description": "The restored 1886 Battle of Atlanta cyclorama painting — the largest oil painting in the world at 42 feet tall and 358 feet in circumference.",
+            "is_free": False,
+            "sort_order": 30,
+        },
+        {
+            "title": "Historic gardens and nature trails",
+            "feature_type": "attraction",
+            "description": "Thirty-three acres of historic gardens, woodland trails, and landscaped grounds connecting the campus buildings.",
+            "is_free": False,
+            "sort_order": 40,
+        },
+        {
+            "title": "Rotating history exhibitions",
+            "feature_type": "exhibition",
+            "description": "Changing gallery exhibitions exploring Atlanta and American history, alongside permanent collections.",
+            "is_free": False,
+            "sort_order": 50,
+        },
+    ],
+    "_venue_specials": [
+        {
+            "title": "Free second Tuesday admission",
+            "type": "admission",
+            "description": "General admission is free on the second Tuesday of every month.",
+            "days_of_week": "{2}",
+        },
+        {
+            "title": "Children under 5 free",
+            "type": "admission",
+            "description": "Children age 4 and under are always admitted free with a paying adult.",
+            "price_note": "Free for ages 4 and under",
+        },
+    ],
 }
 
 
