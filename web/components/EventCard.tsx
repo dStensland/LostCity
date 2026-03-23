@@ -39,6 +39,8 @@ import { EventCardMetadata } from "./event-card/EventCardMetadata";
 import { EventCardActions } from "./event-card/EventCardActions";
 import { EventCardSocialProof } from "./event-card/EventCardSocialProof";
 import type { FriendGoing } from "./event-card/types";
+import { PressQuote } from "@/components/feed/PressQuote";
+import type { EditorialMention } from "@/lib/city-pulse/types";
 
 // Re-export FriendGoing so external consumers don't need to change imports
 export type { FriendGoing };
@@ -153,6 +155,8 @@ interface Props {
   density?: "comfortable" | "compact";
   /** Portal vertical — used for civic routing (e.g. "community") */
   vertical?: string | null;
+  /** Editorial press mentions to show below venue name */
+  editorialMentions?: EditorialMention[];
 }
 
 function EventCard({
@@ -165,6 +169,7 @@ function EventCard({
   contextType,
   density = "comfortable",
   vertical,
+  editorialMentions,
 }: Props) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   // Use exhibition date formatting for multi-week exhibitions (>7 day duration with end_date)
@@ -531,6 +536,19 @@ function EventCard({
                 portalSlug={portalSlug}
                 hasFriendsGoing={friendsGoing.length > 0}
               />
+
+              {/* Editorial press quote — shown when venue/event has been covered */}
+              {editorialMentions && editorialMentions.length > 0 && (
+                <div className="mt-1.5">
+                  <PressQuote
+                    snippet={editorialMentions[0].snippet}
+                    source={editorialMentions[0].source_key
+                      .replace(/_/g, " ")
+                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                    articleUrl={editorialMentions[0].article_url}
+                  />
+                </div>
+              )}
 
               {/* Social proof — friends going + aggregate counts */}
               <EventCardSocialProof

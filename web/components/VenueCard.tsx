@@ -11,6 +11,8 @@ import LazyImage from "./LazyImage";
 import { OpenStatusBadge } from "./HoursSection";
 import { EventsBadge } from "./Badge";
 import Dot from "@/components/ui/Dot";
+import { PressQuote } from "@/components/feed/PressQuote";
+import type { EditorialMention } from "@/lib/city-pulse/types";
 
 function formatEventDate(dateStr: string): string {
   const today = new Date();
@@ -59,6 +61,8 @@ interface VenueCardProps {
   showDistance?: { lat: number; lng: number };
   /** Stagger index for animation */
   index?: number;
+  /** Editorial press mentions to show on the discovery card */
+  editorialMentions?: EditorialMention[];
 }
 
 // ---------------------------------------------------------------------------
@@ -90,10 +94,12 @@ function DiscoveryCard({
   venue,
   portalSlug,
   showDistance,
+  editorialMentions,
 }: {
   venue: Spot;
   portalSlug: string;
   showDistance?: { lat: number; lng: number };
+  editorialMentions?: EditorialMention[];
 }) {
   const [imageError, setImageError] = useState(false);
   const hasImage = venue.image_url && !imageError;
@@ -190,6 +196,19 @@ function DiscoveryCard({
               </div>
 
               {venue.short_description && <p className="text-sm text-[var(--soft)] mt-0.5 line-clamp-1">{venue.short_description}</p>}
+
+              {/* Editorial press quote */}
+              {editorialMentions && editorialMentions.length > 0 && (
+                <div className="mt-1">
+                  <PressQuote
+                    snippet={editorialMentions[0].snippet}
+                    source={editorialMentions[0].source_key
+                      .replace(/_/g, " ")
+                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                    articleUrl={editorialMentions[0].article_url}
+                  />
+                </div>
+              )}
 
               <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed flex-wrap">
                 {distance !== null && (
@@ -389,6 +408,7 @@ function VenueCard({
   tags: _tags,
   showDistance,
   index,
+  editorialMentions,
 }: VenueCardProps) {
   if (variant === "compact") {
     return (
@@ -404,7 +424,14 @@ function VenueCard({
     );
   }
 
-  return <DiscoveryCard venue={venue} portalSlug={portalSlug} showDistance={showDistance} />;
+  return (
+    <DiscoveryCard
+      venue={venue}
+      portalSlug={portalSlug}
+      showDistance={showDistance}
+      editorialMentions={editorialMentions}
+    />
+  );
 }
 
 export default React.memo(VenueCard);

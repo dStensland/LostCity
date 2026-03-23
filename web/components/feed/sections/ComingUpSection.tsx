@@ -3,16 +3,16 @@
 /**
  * Coming Up section — events in the next few days.
  *
- * Simple list: section header + compact event rows.
- * Links to the full Find view for this week.
+ * Renders events using TieredEventList when card_tier data is available,
+ * falling back to compact rows otherwise. Hero events get full-width
+ * treatment; featured events scroll horizontally; standard events are
+ * compact rows.
  */
 
-import Link from "next/link";
 import type { CityPulseSection, CityPulseEventItem } from "@/lib/city-pulse/types";
-import type { FeedEventData } from "@/components/EventCard";
-import CompactEventRow from "../CompactEventRow";
-import { Confetti, ArrowRight } from "@phosphor-icons/react";
+import { Confetti } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import { TieredEventList, type TieredFeedEvent } from "@/components/feed/TieredEventList";
 
 interface Props {
   section: CityPulseSection;
@@ -20,11 +20,16 @@ interface Props {
 }
 
 export default function ComingUpSection({ section, portalSlug }: Props) {
-  const events = section.items.filter(
+  const eventItems = section.items.filter(
     (i): i is CityPulseEventItem => i.item_type === "event",
   );
 
-  if (events.length === 0) return null;
+  if (eventItems.length === 0) return null;
+
+  // Map CityPulseEventItem → TieredFeedEvent (card_tier + editorial_mentions included)
+  const events = eventItems.map((i) => i.event as TieredFeedEvent);
+
+  const seeAllHref = `/${portalSlug}?view=happening&date=next_7_days`;
 
   return (
     <section>
@@ -34,31 +39,18 @@ export default function ComingUpSection({ section, portalSlug }: Props) {
         priority="secondary"
         accentColor="var(--neon-green)"
         icon={<Confetti weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=happening&date=next_7_days`}
+        seeAllHref={seeAllHref}
         seeAllLabel="This week"
       />
 
-      {/* Compact event rows */}
-      <div className="rounded-xl overflow-hidden border border-[var(--twilight)]/40 bg-[var(--night)]">
-        {events.slice(0, 6).map((item, idx) => (
-          <CompactEventRow
-            key={`coming-${item.event.id}`}
-            event={item.event as FeedEventData}
-            portalSlug={portalSlug}
-            isLast={idx === Math.min(events.length, 6) - 1}
-          />
-        ))}
-      </div>
-
-      {events.length > 6 && (
-        <Link
-          href={`/${portalSlug}?view=happening&date=next_7_days`}
-          className="mt-2 w-full flex items-center justify-center gap-1.5 text-xs font-mono font-medium py-2 rounded-lg transition-all hover:bg-white/[0.02] text-[var(--neon-green)]"
-        >
-          +{events.length - 6} more this week
-          <ArrowRight className="w-3 h-3" />
-        </Link>
-      )}
+      {/* Tiered event list */}
+      <TieredEventList
+        events={events}
+        portalSlug={portalSlug}
+        sectionType="coming_up"
+        seeAllHref={events.length > 8 ? seeAllHref : undefined}
+        seeAllLabel={`+${events.length - 8} more this week`}
+      />
     </section>
   );
 }
