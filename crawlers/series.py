@@ -392,6 +392,23 @@ def get_or_create_series(
     if series_hint.get("genres"):
         series_data["genres"] = series_hint["genres"]
 
+    # Venue image fallback — if no image from hint or event, use the venue's image
+    if not series_data.get("image_url") and hint_venue_id:
+        try:
+            venue_result = (
+                client.table("venues")
+                .select("image_url")
+                .eq("id", hint_venue_id)
+                .maybe_single()
+                .execute()
+            )
+            venue_image = (venue_result.data or {}).get("image_url")
+            if venue_image:
+                series_data["image_url"] = venue_image
+                logger.debug(f"Using venue image as series fallback for venue_id={hint_venue_id}")
+        except Exception as exc:
+            logger.debug(f"Could not fetch venue image for series fallback: {exc}")
+
     new_series = create_series(client, series_data)
     return new_series["id"]
 

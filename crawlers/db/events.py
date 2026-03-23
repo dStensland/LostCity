@@ -791,12 +791,71 @@ def _step_infer_content_kind(event_data: dict, ctx: InsertContext) -> dict:
     return event_data
 
 
+_FREE_ADMISSION_RE = re.compile(
+    r"\bfree\s+(admission|entry|event|and\s+open|to\s+the\s+public|to\s+attend|tickets?)\b"
+    r"|\bno\s+(charge|cost|fee|admission)\b"
+    r"|\bfree\s+community\s+event\b"
+    r"|\bopen\s+to\s+(?:the\s+)?public\s+(?:and\s+)?free\b",
+    re.IGNORECASE,
+)
+
+
+def _infer_is_free(event_data: dict) -> Optional[bool]:
+    """Infer is_free from price fields and description text.
+
+    Returns the inferred bool, or None if genuinely unknown.
+    Does not mutate event_data.
+    """
+    # Already explicitly set by crawler — respect it
+    if event_data.get("is_free") is not None:
+        return event_data["is_free"]
+
+    # price_min == 0 → free; price_min > 0 → paid
+    price_min = event_data.get("price_min")
+    if price_min is not None:
+        try:
+            val = float(price_min)
+            if val == 0:
+                return True
+            if val > 0:
+                return False
+        except (ValueError, TypeError):
+            pass
+
+    # price_note contains free or paid signals
+    price_note = (event_data.get("price_note") or "").lower()
+    free_signals = ("free", "no charge", "no cost", "complimentary", "no fee")
+    if any(signal in price_note for signal in free_signals):
+        return True
+    paid_signals = ("$", "per person", "per ticket")
+    if any(signal in price_note for signal in paid_signals):
+        return False
+
+    # Description / title text patterns
+    desc = event_data.get("description") or ""
+    title = event_data.get("title") or ""
+    if _FREE_ADMISSION_RE.search(desc) or _FREE_ADMISSION_RE.search(title):
+        return True
+
+    return None  # genuinely unknown
+
+
 def _step_set_flags(event_data: dict, ctx: InsertContext) -> dict:
     """Set is_active, is_class, is_sensitive, portal_id, ticket_url, and is_free."""
     from description_quality import is_likely_truncated_description
 
     series_hint = ctx.series_hint
     genres = ctx.genres
+
+    # Infer is_free from price fields and text before anything else reads it
+    inferred_free = _infer_is_free(event_data)
+    if inferred_free is not None and event_data.get("is_free") is None:
+        logger.debug(
+            "is_free inferred as %s for '%s'",
+            inferred_free,
+            event_data.get("title", "")[:60],
+        )
+        event_data["is_free"] = inferred_free
 
     if events_support_is_active_column():
         event_data["is_active"] = not ctx.venue_inactive_or_closed
@@ -995,6 +1054,21 @@ def _step_finalize(event_data: dict, ctx: InsertContext) -> dict:
                     except (ValueError, IndexError):
                         pass
 
+    # Promote event image_url to the series record (fills the 97.4% imageless series gap).
+    series_id = event_data.get("series_id")
+    event_image = event_data.get("image_url")
+    if (
+        series_id
+        and event_image
+        and series_hint
+        and series_hint.get("series_type") != "film"
+        and writes_enabled()
+    ):
+        logger.debug(
+            f"Promoting image to series {series_id} from event '{event_data.get('title', '')}'"
+        )
+        update_series_metadata(ctx.client, series_id, {"image_url": event_image})
+
     # category → category_id rename
     if "category" in event_data and "category_id" not in event_data:
         event_data["category_id"] = event_data.pop("category")
@@ -1026,9 +1100,9 @@ INSERT_PIPELINE = [
     _step_infer_category,
     _step_resolve_series,
     _step_infer_genres,
+    _step_set_flags,
     _step_infer_tags,
     _step_infer_content_kind,
-    _step_set_flags,
     _step_show_signals,
     _step_field_metadata,
     _step_data_quality,

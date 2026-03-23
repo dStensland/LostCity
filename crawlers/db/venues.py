@@ -6,6 +6,7 @@ import re
 import logging
 from typing import Optional
 
+from neighborhood_lookup import infer_neighborhood_from_coords
 from db.client import (
     get_client,
     retry_on_network_error,
@@ -40,6 +41,11 @@ VIRTUAL_VENUE_DATA = {
 }
 
 _EVENT_ONLY_VENUE_FIELDS = {
+    # Underscore-prefixed enrichment keys — popped at top of get_or_create_venue
+    # before any DB write; listed here as a belt-and-suspenders safety net.
+    "_destination_details",
+    "_venue_features",
+    "_venue_specials",
     "age_max",
     "age_min",
     "age_policy",
@@ -250,13 +256,20 @@ def infer_location_designator(venue_data: dict) -> str:
     return "standard"
 
 
-def _fetch_venue_description(url: str) -> Optional[str]:
-    """Quick meta description extraction for new venues. Non-blocking, short timeout."""
+def _fetch_venue_web_metadata(url: str) -> dict:
+    """
+    Fetch description and og:image from a venue website in a single HTTP request.
+
+    Returns a dict with keys:
+        - "description": str or None
+        - "og_image": str or None
+    """
+    result: dict = {"description": None, "og_image": None}
     try:
         validate_url(url)
     except ValueError as e:
-        logger.debug(f"Skipping venue description fetch (SSRF check): {e}")
-        return None
+        logger.debug(f"Skipping venue web metadata fetch (SSRF check): {e}")
+        return result
     try:
         import requests
         from bs4 import BeautifulSoup
@@ -268,8 +281,10 @@ def _fetch_venue_description(url: str) -> Optional[str]:
             headers={"User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"},
         )
         if resp.status_code != 200:
-            return None
+            return result
         soup = BeautifulSoup(resp.text, "html.parser")
+
+        # Description — first good meta tag wins
         for attr_key, attr_val in [
             ("name", "description"),
             ("property", "og:description"),
@@ -287,10 +302,31 @@ def _fetch_venue_description(url: str) -> Optional[str]:
                         ]
                     ):
                         continue
-                    return desc[:500]
+                    result["description"] = desc[:500]
+                    break
+
+        # og:image
+        og_img_tag = soup.find("meta", attrs={"property": "og:image"})
+        if og_img_tag is None:
+            og_img_tag = soup.find("meta", attrs={"name": "twitter:image"})
+        if og_img_tag:
+            og_image = (og_img_tag.get("content") or "").strip()
+            if og_image:
+                result["og_image"] = og_image
+                logger.debug("Auto-fetched og:image for %s", url)
+
     except Exception:
         pass
-    return None
+    return result
+
+
+def _fetch_venue_description(url: str) -> Optional[str]:
+    """
+    Backward-compatible wrapper — returns description string or None.
+
+    Prefer _fetch_venue_web_metadata() for new call sites.
+    """
+    return _fetch_venue_web_metadata(url).get("description")
 
 
 def _sanitize_venue_payload(venue_data: dict) -> dict:
@@ -400,6 +436,54 @@ def _maybe_update_existing_venue(venue_id: int, venue_data: dict) -> None:
     )
 
 
+# ===== ENRICHMENT HELPER =====
+
+def _persist_venue_enrichment(
+    venue_id: int,
+    details: Optional[dict],
+    features: Optional[list],
+    specials: Optional[list],
+) -> None:
+    """
+    Persist underscore-prefixed enrichment payloads embedded in VENUE_DATA.
+
+    Called after a real venue_id is resolved (create or existing).
+    All failures are logged and swallowed — enrichment is never critical path.
+    """
+    if details:
+        try:
+            from db.destination_details import upsert_venue_destination_details
+            upsert_venue_destination_details(venue_id, details)
+            logger.debug("_persist_venue_enrichment: destination_details for venue_id=%s", venue_id)
+        except Exception:
+            logger.exception("_persist_venue_enrichment: destination_details failed for venue_id=%s", venue_id)
+
+    if features:
+        try:
+            for feature in features:
+                upsert_venue_feature(venue_id, feature)
+            logger.debug(
+                "_persist_venue_enrichment: %d feature(s) for venue_id=%s",
+                len(features),
+                venue_id,
+            )
+        except Exception:
+            logger.exception("_persist_venue_enrichment: features failed for venue_id=%s", venue_id)
+
+    if specials:
+        try:
+            from db.venue_specials import upsert_venue_special
+            for special in specials:
+                upsert_venue_special(venue_id, special)
+            logger.debug(
+                "_persist_venue_enrichment: %d special(s) for venue_id=%s",
+                len(specials),
+                venue_id,
+            )
+        except Exception:
+            logger.exception("_persist_venue_enrichment: specials failed for venue_id=%s", venue_id)
+
+
 # ===== VENUE CRUD =====
 
 def get_or_create_virtual_venue() -> int:
@@ -424,6 +508,13 @@ def get_or_create_virtual_venue() -> int:
 def get_or_create_venue(venue_data: dict) -> int:
     """Get existing venue or create new one. Returns venue ID."""
     client = get_client()
+
+    # Pop underscore-prefixed enrichment payloads before any DB write.
+    # These are never stored in the venues table; they route to separate tables
+    # via _persist_venue_enrichment() after a real venue_id is resolved.
+    _enrichment_details = venue_data.pop("_destination_details", None)
+    _enrichment_features = venue_data.pop("_venue_features", None)
+    _enrichment_specials = venue_data.pop("_venue_specials", None)
 
     def _venue_name_aliases(value: Optional[str]) -> list[str]:
         if not value:
@@ -508,6 +599,7 @@ def get_or_create_venue(venue_data: dict) -> int:
         if result.data and len(result.data) > 0:
             venue_id = _maybe_reactivate_existing_venue(result.data[0])
             _maybe_update_existing_venue(venue_id, venue_data)
+            _persist_venue_enrichment(venue_id, _enrichment_details, _enrichment_features, _enrichment_specials)
             return venue_id
 
     name = venue_data.get("name")
@@ -516,6 +608,7 @@ def get_or_create_venue(venue_data: dict) -> int:
         if result.data and len(result.data) > 0:
             venue_id = _maybe_reactivate_existing_venue(result.data[0])
             _maybe_update_existing_venue(venue_id, venue_data)
+            _persist_venue_enrichment(venue_id, _enrichment_details, _enrichment_features, _enrichment_specials)
             return venue_id
 
         for alias in _venue_name_aliases(name):
@@ -528,6 +621,7 @@ def get_or_create_venue(venue_data: dict) -> int:
                 )
                 venue_id = _maybe_reactivate_existing_venue(result.data[0])
                 _maybe_update_existing_venue(venue_id, venue_data)
+                _persist_venue_enrichment(venue_id, _enrichment_details, _enrichment_features, _enrichment_specials)
                 return venue_id
 
     lat = venue_data.get("lat")
@@ -553,17 +647,25 @@ def get_or_create_venue(venue_data: dict) -> int:
                             f"Proximity dedup: reusing '{row['name']}' (id={row['id']}) for '{name}'"
                         )
                         _maybe_update_existing_venue(row["id"], venue_data)
+                        _persist_venue_enrichment(row["id"], _enrichment_details, _enrichment_features, _enrichment_specials)
                         return row["id"]
         except Exception as e:
             logger.debug(f"Proximity dedup check failed: {e}")
 
-    if venue_data.get("website") and not venue_data.get("description"):
+    if venue_data.get("website") and (
+        not venue_data.get("description") or not venue_data.get("image_url")
+    ):
         try:
-            desc = _fetch_venue_description(venue_data["website"])
-            if desc:
-                venue_data["description"] = desc
+            web_meta = _fetch_venue_web_metadata(venue_data["website"])
+            if web_meta.get("description") and not venue_data.get("description"):
+                venue_data["description"] = web_meta["description"]
                 logger.debug(
                     "Auto-fetched description for %s", venue_data.get("name", "unknown")
+                )
+            if web_meta.get("og_image") and not venue_data.get("image_url"):
+                venue_data["image_url"] = web_meta["og_image"]
+                logger.debug(
+                    "Auto-fetched og:image for %s", venue_data.get("name", "unknown")
                 )
         except Exception:
             pass
@@ -613,6 +715,20 @@ def get_or_create_venue(venue_data: dict) -> int:
             "location_designator", infer_location_designator(venue_data)
         )
 
+    # Auto-infer neighborhood from coordinates when not already set.
+    if venue_data.get("lat") and venue_data.get("lng") and not venue_data.get("neighborhood"):
+        try:
+            inferred_hood = infer_neighborhood_from_coords(venue_data["lat"], venue_data["lng"])
+            if inferred_hood:
+                venue_data["neighborhood"] = inferred_hood
+                logger.debug(
+                    "Auto-inferred neighborhood '%s' for %s",
+                    inferred_hood,
+                    venue_data.get("name", "unknown"),
+                )
+        except Exception:
+            pass
+
     _has_address = bool(venue_data.get("address"))
     _has_coords = bool(venue_data.get("lat") and venue_data.get("lng"))
 
@@ -635,7 +751,9 @@ def get_or_create_venue(venue_data: dict) -> int:
         _log_write_skip(f"insert venues name={venue_data.get('name', 'unknown')}")
         return _next_temp_id()
     result = client.table("venues").insert(venue_data).execute()
-    return result.data[0]["id"]
+    new_venue_id = result.data[0]["id"]
+    _persist_venue_enrichment(new_venue_id, _enrichment_details, _enrichment_features, _enrichment_specials)
+    return new_venue_id
 
 
 @retry_on_network_error(max_retries=3, base_delay=0.5)

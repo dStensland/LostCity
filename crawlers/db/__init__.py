@@ -84,6 +84,8 @@ from db.venues import (
     _lock_closed_venue_record,
     infer_location_designator,
     _fetch_venue_description,
+    _fetch_venue_web_metadata,
+    _persist_venue_enrichment,
     get_or_create_virtual_venue,
     get_or_create_venue,
     get_venue_by_id,
