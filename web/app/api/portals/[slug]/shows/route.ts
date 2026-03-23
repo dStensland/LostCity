@@ -75,11 +75,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
       "tax aide", "tax help", "story time",
     ];
 
+    // Fetch today's shows for display + this week's count for the "N more this week" note
+    const weekEnd = new Date();
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    const weekEndStr = weekEnd.toISOString().split("T")[0];
+
     let query = portalClient
       .from("events")
       .select(`
         id,
         title,
+        start_date,
         start_time,
         end_time,
         price_min,
@@ -89,10 +95,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
         venue:venues!inner(id, name, slug, neighborhood, image_url, venue_type)
       `)
       .in("category_id", categories)
-      .eq("start_date", today)
+      .gte("start_date", today)
+      .lte("start_date", weekEndStr)
       .eq("is_active", true)
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
+      .order("start_date", { ascending: true })
       .order("start_time", { ascending: true });
 
     query = applyFeedGate(query);
@@ -107,7 +115,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // query = applyPortalCategoryFilters(query, portalContentFilters);
 
     const { data: rawEvents, error: queryError } = await query;
-    const events = rawEvents as { id: number; title: string; start_time: string | null; price_min: number | null; image_url: string | null; is_free: boolean; venue: { id: number; name: string; slug: string; neighborhood: string; image_url: string | null; venue_type: string | null } }[] | null;
+    const events = rawEvents as { id: number; title: string; start_date: string; start_time: string | null; price_min: number | null; image_url: string | null; is_free: boolean; venue: { id: number; name: string; slug: string; neighborhood: string; image_url: string | null; venue_type: string | null } }[] | null;
 
     if (queryError) {
       logger.error("Error fetching shows:", queryError);
@@ -132,7 +140,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return true;
     });
 
-    // Group by venue
+    // Split into today vs rest of week
+    const todayEvents = filteredEvents.filter(e => e.start_date === today);
+    const weekEvents = filteredEvents;
+
+    // Group today's events by venue
     type VenueRow = {
       id: number;
       name: string;
@@ -152,7 +164,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const venueMap = new Map<number, { venue: VenueRow; shows: ShowRow[] }>();
 
-    for (const event of filteredEvents) {
+    for (const event of todayEvents) {
       const venue = event.venue as VenueRow | null;
       if (!venue?.id) continue;
 
@@ -175,8 +187,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
       (a, b) => b.shows.length - a.shows.length,
     );
 
+    // Count unique shows this week (dedup by title to avoid recurrence inflation)
+    const weekTitles = new Set(weekEvents.map(e => e.title));
+    const thisWeekCount = weekTitles.size;
+    const todayCount = new Set(todayEvents.map(e => e.title)).size;
+
     return NextResponse.json(
-      { venues },
+      {
+        venues,
+        today_count: todayCount,
+        this_week_count: thisWeekCount,
+      },
       {
         headers: {
           "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",

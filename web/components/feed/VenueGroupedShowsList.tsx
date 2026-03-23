@@ -30,6 +30,8 @@ interface ShowVenueData {
 
 interface ShowsApiResponse {
   venues: ShowVenueData[];
+  today_count?: number;
+  this_week_count?: number;
 }
 
 export interface VenueGroupedShowsListProps {
@@ -50,6 +52,8 @@ export function VenueGroupedShowsList({
   categories,
 }: VenueGroupedShowsListProps) {
   const [venues, setVenues] = useState<ShowVenueData[]>([]);
+  const [todayCount, setTodayCount] = useState(0);
+  const [thisWeekCount, setThisWeekCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
 
@@ -71,6 +75,8 @@ export function VenueGroupedShowsList({
       .then((data) => {
         if (controller.signal.aborted) return;
         setVenues(data.venues ?? []);
+        setTodayCount(data.today_count ?? 0);
+        setThisWeekCount(data.this_week_count ?? 0);
         setLoading(false);
       })
       .catch((err) => {
@@ -114,7 +120,28 @@ export function VenueGroupedShowsList({
   // While loading, return null — SeeShowsSection's LazySection holds space
   if (loading) return null;
 
-  if (failed || venues.length === 0) return null;
+  // If no shows today but shows this week, show a "this week" note instead of empty
+  const restOfWeekCount = thisWeekCount - todayCount;
+
+  if (failed) return null;
+
+  if (venues.length === 0 && restOfWeekCount > 0) {
+    return (
+      <div className="feed-section-enter px-1 py-4">
+        <p className="text-sm text-[var(--soft)]">
+          No shows tonight ·{" "}
+          <Link
+            href={`/${portalSlug}?view=happening&content=showtimes`}
+            className="text-[var(--neon-magenta)] hover:underline font-mono text-xs"
+          >
+            {restOfWeekCount} more this week →
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
+  if (venues.length === 0) return null;
 
   return (
     <div className="relative feed-section-enter">
@@ -130,6 +157,18 @@ export function VenueGroupedShowsList({
           />
         ))}
       </div>
+
+      {/* "N more this week" note */}
+      {restOfWeekCount > 0 && (
+        <div className="mt-2 px-1">
+          <Link
+            href={`/${portalSlug}?view=happening&content=showtimes`}
+            className="text-xs font-mono text-[var(--neon-magenta)] hover:underline"
+          >
+            {todayCount} tonight · {restOfWeekCount} more this week →
+          </Link>
+        </div>
+      )}
 
       {/* Mobile dot indicators */}
       {totalCards > 1 && (
