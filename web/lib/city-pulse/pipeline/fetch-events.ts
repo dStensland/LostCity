@@ -239,6 +239,11 @@ export function mergeEventPools(
 /**
  * Base event query: date-bounded, feed-gated, portal-scoped.
  * Ordered by start_date → data_quality → start_time.
+ *
+ * @param excludeSourceIds  Optional list of source IDs to exclude from the
+ *   curated feed (e.g. YMCA branches whose events are classes/programming that
+ *   haven't been tagged with is_class=true yet). Short-term bridge until the
+ *   upstream crawlers set is_class correctly.
  */
 export function buildEventQuery(
   portalClient: SupabaseClient,
@@ -246,6 +251,7 @@ export function buildEventQuery(
   start: string,
   end: string,
   limit: number,
+  excludeSourceIds: number[] = [],
 ) {
   let q = portalClient
     .from("events")
@@ -255,7 +261,11 @@ export function buildEventQuery(
     .is("canonical_event_id", null)
     .or("is_class.eq.false,is_class.is.null")
     .or("is_sensitive.eq.false,is_sensitive.is.null")
-    .neq("category_id", "film");
+    .neq("category_id", "film")
+    .not("category_id", "in", "(recreation,unknown)");
+  if (excludeSourceIds.length > 0) {
+    q = q.not("source_id", "in", `(${excludeSourceIds.join(",")})`);
+  }
   q = applyFeedGate(q);
   q = ctx.applyPortalScope(q);
   return q
@@ -268,12 +278,15 @@ export function buildEventQuery(
 /**
  * Per-interest supplemental queries — 6 events per active interest chip.
  * Returns an array of promises (one per active chip with a valid config).
+ *
+ * @param excludeSourceIds  Source IDs to suppress (mirrors buildEventQuery).
  */
 export function buildInterestQueries(
   portalClient: SupabaseClient,
   ctx: PipelineContext,
   start: string,
   end: string,
+  excludeSourceIds: number[] = [],
 ): Array<Promise<{ data: FeedEventData[] | null }>> {
   const PER_INTEREST_LIMIT = 6;
   const queries: Array<Promise<{ data: FeedEventData[] | null }>> = [];
@@ -288,7 +301,11 @@ export function buildInterestQueries(
       .lte("start_date", end)
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
-      .or("is_sensitive.eq.false,is_sensitive.is.null");
+      .or("is_sensitive.eq.false,is_sensitive.is.null")
+      .not("category_id", "in", "(recreation,unknown)");
+    if (excludeSourceIds.length > 0) {
+      q = q.not("source_id", "in", `(${excludeSourceIds.join(",")})`);
+    }
 
     if (config.type === "category") {
       q = q.eq("category_id", config.categoryId);
@@ -320,10 +337,22 @@ export async function fetchEventPools(
   portalClient: SupabaseClient,
   ctx: PipelineContext,
 ): Promise<EventPools> {
+  // Look up YMCA source IDs to exclude from the curated feed.
+  // The YMCA crawler produces fitness/sports events that are really scheduled
+  // classes — not public events worth surfacing in discovery. This is a
+  // short-term bridge until the crawler sets is_class=true on these events.
+  const { data: ymcaSourceRows } = await portalClient
+    .from("sources")
+    .select("id")
+    .ilike("slug", "ymca%");
+  const ymcaSourceIds: number[] = (ymcaSourceRows ?? []).map(
+    (r: { id: number }) => r.id,
+  );
+
   const [todayResult, eveningResult, trendingResult, horizonResult] =
     await Promise.all([
       // Main today pool (up to 300 events covering all categories)
-      buildEventQuery(portalClient, ctx, ctx.today, ctx.today, 300),
+      buildEventQuery(portalClient, ctx, ctx.today, ctx.today, 300, ymcaSourceIds),
 
       // Evening supplemental: ensures Tonight section has events even when
       // the main today query's LIMIT is filled by morning/afternoon events
@@ -335,7 +364,11 @@ export async function fetchEventPools(
           .gte("start_time", "17:00:00")
           .is("canonical_event_id", null)
           .or("is_class.eq.false,is_class.is.null")
-          .or("is_sensitive.eq.false,is_sensitive.is.null");
+          .or("is_sensitive.eq.false,is_sensitive.is.null")
+          .not("category_id", "in", "(recreation,unknown)");
+        if (ymcaSourceIds.length > 0) {
+          q = q.not("source_id", "in", `(${ymcaSourceIds.join(",")})`);
+        }
         q = ctx.applyPortalScope(q);
         return q
           .order("start_time", { ascending: true })
@@ -352,7 +385,11 @@ export async function fetchEventPools(
           .lte("start_date", ctx.twoWeeksAhead)
           .is("canonical_event_id", null)
           .or("is_class.eq.false,is_class.is.null")
-          .or("is_sensitive.eq.false,is_sensitive.is.null");
+          .or("is_sensitive.eq.false,is_sensitive.is.null")
+          .not("category_id", "in", "(recreation,unknown)");
+        if (ymcaSourceIds.length > 0) {
+          q = q.not("source_id", "in", `(${ymcaSourceIds.join(",")})`);
+        }
         q = ctx.applyPortalScope(q);
         return q
           .order("is_featured", { ascending: false, nullsFirst: false })
@@ -363,6 +400,7 @@ export async function fetchEventPools(
       })(),
 
       // Planning horizon: flagship/major events, 7–180 days ahead
+      // NOTE: This pool has its own category exclusions — do not modify them here.
       (() => {
         let q = portalClient
           .from("events")
@@ -426,9 +464,18 @@ export async function fetchTabEventPool(
   tabStart: string,
   tabEnd: string,
 ): Promise<FeedEventData[]> {
+  // Mirror the YMCA exclusion from fetchEventPools so tab views are consistent.
+  const { data: ymcaSourceRows } = await portalClient
+    .from("sources")
+    .select("id")
+    .ilike("slug", "ymca%");
+  const ymcaSourceIds: number[] = (ymcaSourceRows ?? []).map(
+    (r: { id: number }) => r.id,
+  );
+
   const [baseResult, interestResults] = await Promise.all([
-    buildEventQuery(portalClient, ctx, tabStart, tabEnd, 500),
-    Promise.all(buildInterestQueries(portalClient, ctx, tabStart, tabEnd)),
+    buildEventQuery(portalClient, ctx, tabStart, tabEnd, 500, ymcaSourceIds),
+    Promise.all(buildInterestQueries(portalClient, ctx, tabStart, tabEnd, ymcaSourceIds)),
   ]);
 
   const base = (baseResult.data || []) as unknown as FeedEventData[];
