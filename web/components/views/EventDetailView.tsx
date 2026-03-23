@@ -55,6 +55,24 @@ import Dot from "@/components/ui/Dot";
 import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
 import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
 
+// ─── Description cleaner ─────────────────────────────────────────────────────
+
+/**
+ * Strip crawler extraction artifacts from event descriptions.
+ * Some crawlers produce descriptions like "Event name [title] Description [body]"
+ * — raw key-value pairs that should never reach the user.
+ */
+function cleanDescription(desc: string | null | undefined): string | null {
+  if (!desc) return null;
+  let cleaned = desc
+    // Strip "Event name [anything] Description " prefix from crawler key-value artifacts
+    .replace(/^Event name\s+.+?\s+Description\s+/i, "")
+    // Strip trailing "[...]\n" truncation markers
+    .replace(/\[\.\.\.\]\s*\\n/g, "")
+    .trim();
+  return cleaned || null;
+}
+
 type EventData = {
   id: number;
   title: string;
@@ -334,7 +352,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
       )
     : null;
 
-  const descriptionText = event.display_description || event.description;
+  const descriptionText = cleanDescription(event.display_description || event.description);
   const lineupGenreFallback = inferLineupGenreFallback(event.genres, event.tags, event.category);
   const derivedSignals = deriveShowSignals({
     title: event.title,

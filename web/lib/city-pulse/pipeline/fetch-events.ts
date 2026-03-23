@@ -49,11 +49,32 @@ export type EventPools = {
 // Shared helpers
 // ---------------------------------------------------------------------------
 
-/** Standard post-processing: dedupe → filter inactive venues → suppress bad images */
+/**
+ * Filter out registration-code events (USTA/ALTA tennis league entries).
+ *
+ * These events have titles like "USTA Adult5 Lines (BFP26103)" — league
+ * registration entries that sneak through category filters because they're
+ * tagged as "sports". They're not public events worth surfacing in discovery.
+ */
+const REGISTRATION_TITLE_PATTERNS = [
+  /\([A-Z0-9]{5,}\)/, // Parenthetical codes like (BFP26103)
+  /^USTA\s/,          // USTA league entries
+  /^ALTA\s/,          // ALTA league entries
+];
+
+function filterRegistrationEvents(events: FeedEventData[]): FeedEventData[] {
+  return events.filter(
+    (e) => !REGISTRATION_TITLE_PATTERNS.some((p) => p.test(e.title)),
+  );
+}
+
+/** Standard post-processing: dedupe → filter inactive venues → suppress bad images → filter registration noise */
 export function postProcessEvents(raw: FeedEventData[]): FeedEventData[] {
-  return dedupeEventsById(
-    filterOutInactiveVenueEvents(
-      suppressEventImagesIfVenueFlagged(raw) as FeedEventData[],
+  return filterRegistrationEvents(
+    dedupeEventsById(
+      filterOutInactiveVenueEvents(
+        suppressEventImagesIfVenueFlagged(raw) as FeedEventData[],
+      ),
     ),
   );
 }

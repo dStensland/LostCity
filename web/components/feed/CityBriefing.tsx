@@ -1013,13 +1013,6 @@ export default function CityBriefing({
       {/* ── Zone 2: News Digest ───────────────────────────────────────────── */}
       <NewsDigest portalSlug={portalSlug} />
 
-      {/* ── THE LINEUP boundary divider ───────────────────────────────────── */}
-      <div className="border-t border-[var(--twilight)] pt-4 mt-3 px-4">
-        <span className="font-mono text-2xs uppercase tracking-[1.2px] text-[var(--muted)]">
-          THE LINEUP
-        </span>
-      </div>
-
     </section>
   );
 }

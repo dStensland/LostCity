@@ -261,9 +261,24 @@ export async function fetchPhaseBEnrichments(
       editorialPromise,
     ]);
 
+  // Quality filter for editorial snippets — reject catalog intros and generic boilerplate
+  const LOW_QUALITY_SNIPPET_PATTERNS = [
+    /^in addition to/i,
+    /^the following/i,
+    /listed below/i,
+    /^here are/i,
+    /^check out/i,
+    /^see (the|our|more)/i,
+  ];
+
+  function isQualitySnippet(snippet: string): boolean {
+    return !LOW_QUALITY_SNIPPET_PATTERNS.some((p) => p.test(snippet));
+  }
+
   // Build venue_id → EditorialMention[] lookup map
   const editorialMap: Record<number, EditorialMention[]> = {};
   for (const row of editorialRows as Array<EditorialMention & { venue_id: number }>) {
+    if (!row.snippet || !isQualitySnippet(row.snippet)) continue;
     const venueId = row.venue_id;
     if (!editorialMap[venueId]) editorialMap[venueId] = [];
     editorialMap[venueId].push({

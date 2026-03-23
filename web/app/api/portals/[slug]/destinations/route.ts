@@ -88,6 +88,21 @@ function getContextualLabel(occasion: string): string {
   return labels[occasion] ?? "WORTH CHECKING OUT";
 }
 
+// ── Editorial snippet quality filter ──────────────────────────────────────────
+
+const LOW_QUALITY_SNIPPET_PATTERNS = [
+  /^in addition to/i,
+  /^the following/i,
+  /listed below/i,
+  /^here are/i,
+  /^check out/i,
+  /^see (the|our|more)/i,
+];
+
+function isQualitySnippet(snippet: string): boolean {
+  return !LOW_QUALITY_SNIPPET_PATTERNS.some((p) => p.test(snippet));
+}
+
 // ── Source key → readable name ────────────────────────────────────────────────
 
 function formatSourceName(sourceKey: string): string {
@@ -182,8 +197,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
       if (mentionRows) {
         for (const row of mentionRows) {
-          // Keep first mention per venue
-          if (!mentionByVenue.has(row.venue_id) && row.snippet) {
+          // Keep first quality mention per venue
+          if (!mentionByVenue.has(row.venue_id) && row.snippet && isQualitySnippet(row.snippet)) {
             mentionByVenue.set(row.venue_id, { snippet: row.snippet, source_key: row.source_key });
           }
         }
@@ -230,7 +245,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return aPriority - bPriority;
     });
 
-    destinations = destinations.slice(0, 6);
+    // Enforce occasion diversity — cap any single occasion at 3 of 6 slots
+    const seenOccasions: Record<string, number> = {};
+    const diverseDestinations = destinations.filter((d) => {
+      const occ = d.occasion || "default";
+      seenOccasions[occ] = (seenOccasions[occ] || 0) + 1;
+      return seenOccasions[occ] <= 3;
+    });
+
+    destinations = diverseDestinations.slice(0, 6);
 
     // Step 5: fallback — if < 3 results, fill with top editorial-mentioned venues
     if (destinations.length < 3) {
@@ -262,10 +285,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
             };
 
           if (fallbackVenues) {
-            // Build mention map for fallback venues
+            // Build mention map for fallback venues (quality-filtered)
             const fallbackMentionMap = new Map<number, { snippet: string; source_key: string }>();
             for (const row of fallbackMentions) {
-              if (!fallbackMentionMap.has(row.venue_id) && row.snippet) {
+              if (!fallbackMentionMap.has(row.venue_id) && row.snippet && isQualitySnippet(row.snippet)) {
                 fallbackMentionMap.set(row.venue_id, { snippet: row.snippet, source_key: row.source_key });
               }
             }

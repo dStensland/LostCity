@@ -121,6 +121,7 @@ function TicketCTA({ event }: { event: PlanningHorizonCardProps["event"] }) {
 
   // Stale ticket data or no ticket URL: muted CTA
   if (stale || !ticket_url) {
+    const effectivelyFreeForMuted = is_free === true || ticket_status === "free";
     return (
       <div className="mt-auto pt-3">
         <button
@@ -128,7 +129,7 @@ function TicketCTA({ event }: { event: PlanningHorizonCardProps["event"] }) {
           onClick={openExternal}
           className="block w-full min-h-[44px] flex items-center justify-center text-center rounded-lg font-mono text-xs font-medium bg-transparent text-[var(--soft)] border border-[var(--soft)]/30 hover:text-[var(--cream)] hover:border-[var(--soft)]/50 transition-colors cursor-pointer"
         >
-          {stale ? "Get Tickets" : "See Details"}
+          {effectivelyFreeForMuted ? "See Details" : stale ? "Get Tickets" : "See Details"}
         </button>
       </div>
     );
@@ -144,7 +145,7 @@ function TicketCTA({ event }: { event: PlanningHorizonCardProps["event"] }) {
           onClick={openExternal}
           className="block w-full min-h-[44px] flex items-center justify-center text-center rounded-lg font-mono text-xs font-medium bg-[var(--neon-green)]/15 text-[var(--neon-green)] border border-[var(--neon-green)]/30 hover:bg-[var(--neon-green)]/25 transition-colors cursor-pointer"
         >
-          Get Tickets (Free)
+          Get Details
         </button>
       </div>
     );
