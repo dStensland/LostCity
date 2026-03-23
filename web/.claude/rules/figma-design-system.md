@@ -229,11 +229,28 @@ Events are assigned a `card_tier` (hero/featured/standard) by the CityPulse pipe
 - **Standard**: Everything else
 
 ### Rendering (`web/components/feed/TieredEventList.tsx`)
-Sections opt into tiered rendering by using `<TieredEventList>`:
+LineupSection uses `<TieredEventList>` for vertical tiered rendering:
 1. Editorial callout (if template matches) — replaces section header
 2. Hero card (max 1) — full-width image, gradient, large title
 3. Featured carousel (max 4) — 288px cards in horizontal scroll
 4. Standard rows — compact single-line, staggered entrance
+
+### Feed Section Order (CityPulseShell)
+1. **Contextual Hero** (CityBriefing) — binds to flagship events when present
+2. **The Lineup** (LineupSection) — tabbed, filtered, vertical tiered rendering
+3. **Worth Checking Out** (DestinationsSection) — contextual venues from occasion + editorial data
+4. **Today in Atlanta** (TodayInAtlantaSection) — news, defaults to Culture/Arts/Food
+5. **Regular Hangs** (HangFeedSection) — unchanged
+6. **See Shows** (SeeShowsSection) — Film/Music/Stage tabs
+7. **Around the City** (PortalTeasersSection) — cross-portal headlines
+8. **On the Horizon** (PlanningHorizonSection) — quality-gated: tentpoles, festivals, multi-day only
+9. **Browse** — category grid
+
+### Noise Filtering
+The curated feed excludes `category_id IN (recreation, unknown)` and YMCA sources from the pipeline query (`fetch-events.ts`). Filtered events remain accessible via "See all" links to the Find view.
+
+### Planning Horizon Quality Gate
+Only: `is_tentpole = true` OR `festival_id IS NOT NULL` OR multi-day OR `importance = 'flagship'`. No weekly recurring events.
 
 ### Editorial Voice (`web/lib/editorial-templates.ts`)
 Template-driven, never AI-generated. Three patterns:
