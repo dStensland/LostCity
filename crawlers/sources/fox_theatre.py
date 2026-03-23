@@ -28,7 +28,7 @@ EVENTS_URL = f"{BASE_URL}/events"
 
 VENUE_DATA = {
     "name": "Fox Theatre",
-    "slug": "fox-theatre",
+    "slug": "fox-theatre-atlanta",
     "address": "660 Peachtree St NE",
     "neighborhood": "Midtown",
     "city": "Atlanta",
