@@ -86,7 +86,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
       sourceColumn: "source_id",
     });
     query = excludeSensitiveEvents(query);
-    query = applyPortalCategoryFilters(query, portalContentFilters);
+    // Skip portal category filters — we already filter by the user's requested categories
+    // applyPortalCategoryFilters would add a second .in("category_id") that conflicts
+    // query = applyPortalCategoryFilters(query, portalContentFilters);
 
     const { data: rawEvents, error: queryError } = await query;
     const events = rawEvents as { id: number; title: string; start_time: string | null; price_min: number | null; image_url: string | null; is_free: boolean; venue: { id: number; name: string; slug: string; neighborhood: string; image_url: string | null } }[] | null;
