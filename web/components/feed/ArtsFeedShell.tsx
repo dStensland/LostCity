@@ -210,7 +210,7 @@ export default function ArtsFeedShell({ portalSlug }: ArtsFeedShellProps) {
             title="fresh on the walls"
             priority="secondary"
             accentColor={accentCopper}
-            seeAllHref={`/${portalSlug}/find?category=art&sort=newest`}
+            seeAllHref={`/${portalSlug}?view=happening&category=art&sort=newest`}
             seeAllLabel="all exhibitions"
           />
           <div className="space-y-2">
@@ -234,7 +234,7 @@ export default function ArtsFeedShell({ portalSlug }: ArtsFeedShellProps) {
             subtitle="closing soon"
             priority="secondary"
             accentColor={accentPink}
-            seeAllHref={`/${portalSlug}/find?category=art&sort=ending_soon`}
+            seeAllHref={`/${portalSlug}?view=happening&category=art&sort=ending_soon`}
             seeAllLabel="all closing soon"
           />
           <div className="space-y-2">
@@ -258,7 +258,7 @@ export default function ArtsFeedShell({ portalSlug }: ArtsFeedShellProps) {
             title="happening this week"
             priority="secondary"
             accentColor={accentYellow}
-            seeAllHref={`/${portalSlug}/find?date=this_week`}
+            seeAllHref={`/${portalSlug}?view=happening&date=this_week`}
             seeAllLabel="full calendar"
           />
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
@@ -282,7 +282,7 @@ export default function ArtsFeedShell({ portalSlug }: ArtsFeedShellProps) {
             subtitle="learn from local artists"
             priority="secondary"
             accentColor={accentCopper}
-            seeAllHref={`/${portalSlug}/find?tags=class,workshop`}
+            seeAllHref={`/${portalSlug}?view=happening&tags=class,workshop`}
             seeAllLabel="all classes"
           />
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">

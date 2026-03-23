@@ -153,7 +153,7 @@ OCCASION_RULES: dict[str, dict] = {
         "confidence": 0.6,
     },
     "family_friendly": {
-        "vibes_match": ["family-friendly", "all-ages", "kid-friendly"],
+        "vibes_match": ["family-friendly", "kid-friendly"],
         "venue_type_match": [
             "museum",
             "park",
@@ -260,7 +260,7 @@ def _is_brunch(venue: dict) -> bool:
         if not open_time:
             continue
         minutes = _parse_time_hhmm(str(open_time))
-        if minutes is not None and minutes < 720:  # before 12:00 PM
+        if minutes is not None and 480 <= minutes < 720:  # 8am–noon only
             return True
     return False
 
@@ -365,6 +365,40 @@ def infer_occasions(venue: dict, min_confidence: float = 0.5) -> list[dict]:
             # If not near a stadium, pre_game never fires (location is mandatory)
             if signals_fired == 0:
                 continue
+
+        elif occasion == "quick_bite":
+            # price_level only counts when there is food context; without it
+            # the signal tags libraries, boutiques, and galleries incorrectly.
+            _FOOD_TYPES = {
+                "restaurant", "cafe", "coffee_shop", "food_truck",
+                "food_hall", "bar", "brewery", "bakery",
+            }
+            _FOOD_STYLES = {"quick_service", "coffee_dessert", "counter_service"}
+            has_food_context = (
+                venue_type in _FOOD_TYPES
+                or service_style in _FOOD_STYLES
+            )
+            if not has_food_context:
+                continue
+
+            # service_style signal
+            style_matches = rule.get("service_style_match", [])
+            if service_style and service_style in style_matches:
+                signals_fired += 1
+
+            # venue_type signal
+            type_matches = rule.get("venue_type_match", [])
+            if venue_type and venue_type in type_matches:
+                signals_fired += 1
+
+            # price_level_max signal — only fires with food context (already gated)
+            price_max = rule.get("price_level_max")
+            if price_max is not None and price_level is not None:
+                try:
+                    if int(price_level) <= int(price_max):
+                        signals_fired += 1
+                except (TypeError, ValueError):
+                    pass
 
         elif occasion == "special_occasion":
             # price_level
@@ -611,6 +645,63 @@ def upsert_occasions(
     return created, updated
 
 
+def delete_stale_occasions(
+    venue_ids: list[int],
+    inferred_occasions: list[dict],
+    existing: dict[tuple[int, str], dict],
+) -> int:
+    """Delete inferred occasion rows that the current rules no longer produce.
+
+    Only deletes rows with source='inferred'. Never touches 'manual' or
+    'editorial' rows.
+
+    Returns the number of rows deleted.
+    """
+    # Build a set of (venue_id, occasion) keys that the current run produced.
+    current_keys: set[tuple[int, str]] = {
+        (o["venue_id"], o["occasion"]) for o in inferred_occasions
+    }
+
+    # Collect existing inferred rows that are no longer in the current set.
+    stale_ids: list[int] = []
+    for key, row in existing.items():
+        venue_id, _occasion = key
+        if venue_id not in set(venue_ids):
+            continue  # Outside our processing scope — leave alone
+        if row["source"] != "inferred":
+            continue  # Protected row — never delete
+        if key not in current_keys:
+            stale_ids.append(row["id"])
+            logger.debug(
+                "STALE: venue_id=%s %s (row id=%s) — no longer inferred",
+                row["venue_id"],
+                row["occasion"],
+                row["id"],
+            )
+
+    if not stale_ids:
+        return 0
+
+    if not writes_enabled():
+        logger.info("DRY RUN: would delete %d stale inferred rows", len(stale_ids))
+        return 0
+
+    client = get_client()
+    deleted = 0
+    # Delete in batches of 200 to stay under Supabase URL limits.
+    batch_size = 200
+    for i in range(0, len(stale_ids), batch_size):
+        batch = stale_ids[i : i + batch_size]
+        try:
+            client.table("venue_occasions").delete().in_("id", batch).execute()
+            deleted += len(batch)
+        except Exception as exc:
+            logger.warning("Failed to delete stale occasion rows %s: %s", batch, exc)
+
+    logger.info("Deleted %d stale inferred occasion rows", deleted)
+    return deleted
+
+
 # ---------------------------------------------------------------------------
 # Summary reporting
 # ---------------------------------------------------------------------------
@@ -621,6 +712,7 @@ def _log_summary(
     all_occasions: list[dict],
     created: int,
     updated: int,
+    deleted: int,
     dry_run: bool,
 ) -> None:
     """Log a structured summary of inference results."""
@@ -630,12 +722,13 @@ def _log_summary(
     mode = "DRY RUN" if dry_run else "LIVE"
     logger.info("")
     logger.info("=== Venue Occasion Inference (%s) ===", mode)
-    logger.info("  Venues processed:  %d", venue_count)
+    logger.info("  Venues processed:   %d", venue_count)
     logger.info(
-        "  Occasions inferred: %d across %d venues", total_inferred, venue_count
+        "  Occasions inferred:  %d across %d venues", total_inferred, venue_count
     )
-    logger.info("  DB rows created:   %d", created)
-    logger.info("  DB rows updated:   %d", updated)
+    logger.info("  DB rows created:    %d", created)
+    logger.info("  DB rows updated:    %d", updated)
+    logger.info("  DB rows deleted:    %d  (stale inferred rows removed)", deleted)
     logger.info("")
     logger.info("Distribution by occasion:")
     for occasion in sorted(OCCASION_RULES.keys()):
@@ -676,6 +769,13 @@ def main() -> None:
         metavar="FLOAT",
         help="Only write occasions at or above this confidence threshold (default: 0.5)",
     )
+    parser.add_argument(
+        "--allow-production-writes",
+        "--allow-prod-writes",
+        action="store_true",
+        dest="allow_production_writes",
+        help="Required to perform write operations against the production DB",
+    )
     args = parser.parse_args()
 
     log_level = logging.DEBUG if args.verbose else logging.INFO
@@ -685,9 +785,12 @@ def main() -> None:
         logger.error("--min-confidence must be between 0.0 and 1.0")
         sys.exit(1)
 
+    # Writes are enabled only when explicitly requested (either --allow-production-writes
+    # or the legacy --dry-run=False path). Default to read-only when neither flag is set.
+    should_write = args.allow_production_writes and not args.dry_run
     configure_write_mode(
-        enable_writes=not args.dry_run,
-        reason="dry-run flag set" if args.dry_run else "",
+        enable_writes=should_write,
+        reason="" if should_write else "pass --allow-production-writes to write",
     )
 
     # ── 1. Load venues ──────────────────────────────────────────────────────
@@ -727,12 +830,16 @@ def main() -> None:
     # ── 4. Write to database ────────────────────────────────────────────────
     created, updated = upsert_occasions(all_occasions, existing)
 
+    # ── 4b. Remove stale inferred rows ──────────────────────────────────────
+    deleted = delete_stale_occasions(venue_ids, all_occasions, existing)
+
     # ── 5. Summary ──────────────────────────────────────────────────────────
     _log_summary(
         venue_count=len(venues),
         all_occasions=all_occasions,
         created=created,
         updated=updated,
+        deleted=deleted,
         dry_run=args.dry_run,
     )
 

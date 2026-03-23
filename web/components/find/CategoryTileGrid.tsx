@@ -104,7 +104,7 @@ export default function CategoryTileGrid({ spots, onCategorySelect, loading }: C
             <ScopedStyles css={colorClass?.css} />
             <button
               onClick={() => onCategorySelect([...tile.venueTypes])}
-              className={`relative w-full aspect-[4/3] rounded-card overflow-hidden shadow-card-sm hover-lift focus-ring transition-transform active:scale-[0.97] ${colorClass?.className ?? ""}`}
+              className={`relative w-full aspect-[4/3] rounded-card overflow-hidden shadow-card-sm hover-lift focus-ring transition-transform active:scale-[0.97] bg-[var(--night)] ${colorClass?.className ?? ""}`}
             >
               {/* Image or gradient fallback */}
               {tile.imageUrl ? (
@@ -119,7 +119,7 @@ export default function CategoryTileGrid({ spots, onCategorySelect, loading }: C
                 <div
                   className="absolute inset-0"
                   style={{
-                    background: `linear-gradient(135deg, ${tile.color}20, ${tile.color}08)`,
+                    background: `linear-gradient(135deg, ${tile.color}40, ${tile.color}18)`,
                   }}
                 />
               )}

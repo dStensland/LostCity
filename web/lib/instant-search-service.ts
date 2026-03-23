@@ -340,6 +340,7 @@ export async function buildInstantSearchPayload(options: {
   const suggestionFastPathEligible =
     trimmedQuery.length <= 24 &&
     !includeOrganizers &&
+    findType !== "destinations" &&
     instantTypes.every((type) => type === "event" || type === "venue");
 
   const result = await timing.measure("instant_search", async () => {

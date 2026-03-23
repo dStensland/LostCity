@@ -748,6 +748,8 @@ export default function VenueFilterBar({
       },
       () => {
         setGeoLoading(false);
+        try { localStorage.removeItem("userLocation"); } catch { /* quota */ }
+        handleLocationChange(null);
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
     );

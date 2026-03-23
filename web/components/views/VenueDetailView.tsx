@@ -32,6 +32,7 @@ import {
   ShareNetwork,
 } from "@phosphor-icons/react";
 import SmartImage from "@/components/SmartImage";
+import { HIGHLIGHT_CONFIG, type HighlightType } from "@/lib/venue-highlights";
 import { formatDateRange } from "@/lib/types/exhibitions";
 import { SectionHeader } from "@/components/detail/SectionHeader";
 import { QuickActionLink } from "@/components/detail/QuickActionLink";
@@ -586,13 +587,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
   // Step 4: Plan Your Visit — only render if there's visit planning data
   const hasVisitPlanningData = spot.typical_price_min != null || spot.typical_duration_minutes != null || spot.indoor_outdoor || typedSpecials.length > 0 || spot.library_pass?.eligible;
 
-  const HIGHLIGHT_TYPE_LABELS: Record<string, string> = {
-    viewpoint: "Viewpoint",
-    architecture: "Architecture",
-    photo_spot: "Photo Spot",
-    signature: "Signature",
-    hidden_gem: "Hidden Gem",
-  };
+  // Highlight type labels — use canonical config from venue-highlights.ts
 
   const INDOOR_OUTDOOR_LABELS: Record<string, string> = {
     indoor: "Indoor",
@@ -731,7 +726,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
                     {h.title}
                   </h4>
                   <Badge variant="accent" accentColor="var(--gold)" size="sm">
-                    {HIGHLIGHT_TYPE_LABELS[h.highlight_type] || h.highlight_type.replace(/_/g, " ")}
+                    {HIGHLIGHT_CONFIG[h.highlight_type as HighlightType]?.label ?? h.highlight_type.replace(/_/g, " ")}
                   </Badge>
                 </div>
                 {h.description && (
@@ -769,7 +764,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
     if (filteredOccasions.length === 0) return null;
     return (
       <div className="flex flex-wrap gap-1.5">
-        {filteredOccasions.map((o) => (
+        {filteredOccasions.slice(0, 4).map((o) => (
           <Badge key={o.occasion} variant="accent" accentColor="var(--gold)" size="sm">
             {OCCASION_LABELS[o.occasion] || o.occasion.replace(/_/g, " ")}
           </Badge>
