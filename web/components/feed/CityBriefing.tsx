@@ -1,17 +1,16 @@
 "use client";
 
 /**
- * CityBriefing — unified city overview with full-bleed cinematic hero +
- * briefing card (Coming Up festivals, local news).
+ * CityBriefing — full-bleed cinematic hero for the Atlanta feed.
  *
  * Zone 1: Full-viewport-bleed hero (parallax, Ken Burns, layout variants,
- *         weather pill, live badge, quick links) — stolen from GreetingBar.
- * Zone 2: Briefing card (Coming Up + News) — sits below the hero.
+ *         weather pill, live badge, quick links).
  *
- * Self-fetching (parallel):
- *   - /api/festivals/upcoming     → festivals + standalone tentpoles
- *   - /api/portals/[slug]/network-feed → local news posts
- *   - /api/portals/[slug]/happening-now?countOnly=true → live count
+ * News ("Today in Atlanta") has been extracted to TodayInAtlantaSection
+ * and is rendered below The Lineup in CityPulseShell.
+ *
+ * Self-fetching:
+ *   - /api/portals/[slug]/happening-now?countOnly=true → live count badge
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -19,7 +18,6 @@ import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
 import {
   ArrowRight,
-  Broadcast,
   Sun,
   Cloud,
   CloudRain,
@@ -46,9 +44,6 @@ import {
   PaintBrush,
   type Icon as PhosphorIcon,
 } from "@phosphor-icons/react";
-import Dot from "@/components/ui/Dot";
-import type { NetworkPost } from "./sections/NetworkFeedSection";
-import { getCategoryColor, CATEGORY_COLORS, CATEGORY_ICONS, FILTER_CATEGORIES } from "./sections/NetworkFeedSection";
 import type {
   FeedContext,
   ResolvedHeader,
@@ -767,170 +762,6 @@ function FlagshipHeroContent({
   );
 }
 
-// ── Briefing card sub-components ──────────────────────────────────────────────
-
-function timeAgo(dateStr: string | null): string {
-  if (!dateStr) return "";
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const hours = Math.floor(diff / 3600000);
-  if (hours < 1) return "just now";
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "yesterday";
-  if (days < 7) return `${days}d ago`;
-  return `${Math.floor(days / 7)}w ago`;
-}
-
-function NewsRow({ post, isLast }: { post: NetworkPost; isLast: boolean }) {
-  const cats = post.categories ?? post.source?.categories ?? [];
-  const catColor = getCategoryColor(cats);
-  const CatIcon = CATEGORY_ICONS[cats[0] || "news"] || CATEGORY_ICONS.news;
-  const catLabel = (cats[0] || "news").replace(/_/g, " ");
-
-  return (
-    <a
-      href={post.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={[
-        "flex items-start gap-3 py-3 px-2 transition-colors group",
-        "hover:bg-[var(--dusk)]/40 rounded-lg",
-        !isLast && "border-b border-[var(--twilight)]/20",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      {/* Category icon */}
-      <div
-        className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center mt-0.5"
-        style={{ backgroundColor: `${catColor}18` }}
-      >
-        <CatIcon weight="duotone" className="w-3.5 h-3.5" style={{ color: catColor }} />
-      </div>
-
-      {/* Headline + source */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-[var(--cream)] leading-snug line-clamp-2 group-hover:underline underline-offset-2">
-          {post.title}
-        </p>
-        <div className="flex items-center gap-1.5 mt-1">
-          {post.source?.name && (
-            <span className="text-2xs text-[var(--soft)] font-medium truncate">{post.source.name}</span>
-          )}
-          {post.source?.name && <Dot className="text-[var(--muted)]" />}
-          <span className="text-2xs text-[var(--muted)] flex-shrink-0">{timeAgo(post.published_at)}</span>
-          {catLabel !== "news" && (
-            <>
-              <Dot className="text-[var(--muted)]" />
-              <span className="text-2xs font-mono uppercase tracking-wider" style={{ color: catColor }}>{catLabel}</span>
-            </>
-          )}
-        </div>
-      </div>
-    </a>
-  );
-}
-
-// ── Today in Atlanta (news with filter tabs) ──────────────────────────────────
-
-function TodayInAtlantaSection({ posts, portalSlug }: { posts: NetworkPost[]; portalSlug: string }) {
-  const [activeFilter, setActiveFilter] = useState("all");
-
-  // Determine which categories actually have posts
-  const availableCategories = useMemo(() => {
-    const catSet = new Set<string>();
-    for (const post of posts) {
-      const cats = post.categories ?? post.source?.categories ?? [];
-      for (const c of cats) catSet.add(c);
-    }
-    return FILTER_CATEGORIES.filter(
-      (cat) => cat.id === "all" || catSet.has(cat.id),
-    );
-  }, [posts]);
-
-  // Client-side filtering — 3 per category to keep it compact
-  const filteredPosts = useMemo(() => {
-    if (activeFilter === "all") return posts;
-    return posts.filter((p) => {
-      const cats = p.categories ?? p.source?.categories ?? [];
-      return cats.includes(activeFilter);
-    });
-  }, [posts, activeFilter]);
-
-  const displayPosts = filteredPosts.slice(0, 3);
-
-  return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2.5">
-        <div className="flex items-center gap-1.5">
-          <Broadcast
-            weight="duotone"
-            className="w-3.5 h-3.5 text-[var(--neon-cyan)]"
-          />
-          <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--neon-cyan)]">
-            Today in Atlanta
-          </span>
-        </div>
-        <Link
-          href={`/${portalSlug}/network`}
-          className="flex items-center gap-0.5 text-xs font-mono text-[var(--neon-cyan)] opacity-70 hover:opacity-100 transition-opacity"
-        >
-          All local news
-          <ArrowRight weight="bold" className="w-2.5 h-2.5" />
-        </Link>
-      </div>
-
-      {/* Category filter pills */}
-      {availableCategories.length > 2 && (
-        <div className="flex items-center gap-1.5 mb-3 overflow-x-auto scrollbar-none -mx-1 px-1">
-          {availableCategories.map((cat) => {
-            const isActive = activeFilter === cat.id;
-            const color =
-              cat.id === "all" ? "#00D4E8" : CATEGORY_COLORS[cat.id] || "#00D4E8";
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setActiveFilter(cat.id)}
-                className={[
-                  "shrink-0 px-2.5 py-1 rounded-full font-mono text-2xs font-medium tracking-wide transition-all whitespace-nowrap",
-                  isActive
-                    ? "border"
-                    : "text-[var(--muted)] hover:text-[var(--soft)] border border-transparent hover:border-[var(--twilight)]/40",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                style={
-                  isActive
-                    ? {
-                        color: color,
-                        backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
-                        borderColor: `color-mix(in srgb, ${color} 30%, transparent)`,
-                      }
-                    : undefined
-                }
-              >
-                {cat.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Posts list */}
-      <div className="rounded-card bg-[var(--night)] border border-[var(--twilight)]/30 px-3 py-1">
-        {displayPosts.length > 0 ? (
-          displayPosts.map((post, i) => (
-            <NewsRow key={post.id} post={post} isLast={i === displayPosts.length - 1} />
-          ))
-        ) : (
-          <p className="py-4 text-center text-sm text-[var(--muted)]">No stories in this category</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function CityBriefing({
@@ -939,37 +770,11 @@ export default function CityBriefing({
   portalSlug,
   quickLinks,
 }: CityBriefingProps) {
-  const [posts, setPosts] = useState<NetworkPost[]>([]);
   const [liveCount, setLiveCount] = useState<number | null>(null);
 
-  const dedupedPosts = useMemo(() => {
-    const seenTitles = new Set<string>();
-    return posts.filter((p) => {
-      const norm = p.title.toLowerCase().trim();
-      if (seenTitles.has(norm)) return false;
-      seenTitles.add(norm);
-      return true;
-    });
-  }, [posts]);
-  const [loading, setLoading] = useState(true);
-
-  // ── Fetch news + live count in parallel ──────────────────────────────────
+  // ── Fetch live count ──────────────────────────────────────────────────────
   useEffect(() => {
     const controller = new AbortController();
-    let newsDone = false;
-    let liveDone = false;
-    const checkDone = () => {
-      if (newsDone && liveDone) setLoading(false);
-    };
-
-    fetch(`/api/portals/${portalSlug}/network-feed?limit=20`, { signal: controller.signal })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
-      .then((data) => {
-        if (controller.signal.aborted) return;
-        setPosts((data.posts || []) as NetworkPost[]);
-      })
-      .catch(() => {})
-      .finally(() => { newsDone = true; checkDone(); });
 
     fetch(`/api/portals/${portalSlug}/happening-now?countOnly=true`, { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
@@ -978,8 +783,7 @@ export default function CityBriefing({
         const count = (data.eventCount || 0) + (data.spotCount || 0);
         setLiveCount(count);
       })
-      .catch(() => {})
-      .finally(() => { liveDone = true; checkDone(); });
+      .catch(() => {});
 
     return () => controller.abort();
   }, [portalSlug]);
@@ -1044,13 +848,12 @@ export default function CityBriefing({
   const initialHeroUrl = flagship?.image_url ?? atmosphericImageUrl;
   const [heroImageUrl, setHeroImageUrl] = useState(initialHeroUrl);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHeroImageUrl(flagship?.image_url ?? atmosphericImageUrl);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flagship?.image_url, atmosphericImageUrl]);
 
   // ── Derived state ────────────────────────────────────────────────────────
   const effectiveQuickLinks = quickLinks ?? header.quick_links ?? [];
-  const hasBriefingContent = !loading && posts.length > 0;
   const hasFestival = context.active_festivals.length > 0;
   const hasHoliday = context.active_holidays.length > 0;
 
@@ -1165,31 +968,6 @@ export default function CityBriefing({
         )}
       </div>
 
-      {/* ── Zone 2: News briefing ────────────────────────────────────────── */}
-      {loading && (
-        <div className="mt-4">
-          <div className="h-3 w-28 rounded bg-[var(--twilight)]/40 animate-pulse mb-3" />
-          <div className="rounded-card bg-[var(--night)] border border-[var(--twilight)]/20 p-3 space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-lg bg-[var(--twilight)]/30 animate-pulse flex-shrink-0" />
-                <div className="flex-1 space-y-1.5">
-                  <div className="h-4 w-4/5 rounded bg-[var(--twilight)]/25 animate-pulse" style={{ animationDelay: `${i * 80}ms` }} />
-                  <div className="h-3 w-2/5 rounded bg-[var(--twilight)]/15 animate-pulse" style={{ animationDelay: `${i * 80 + 40}ms` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {hasBriefingContent && (
-        <div className="mt-4">
-          <TodayInAtlantaSection
-            posts={dedupedPosts}
-            portalSlug={portalSlug}
-          />
-        </div>
-      )}
     </section>
   );
 }
