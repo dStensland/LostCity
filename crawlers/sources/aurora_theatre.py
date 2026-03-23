@@ -1,17 +1,26 @@
 """
 Crawler for Aurora Theatre (auroratheatre.com).
-Professional theater in Lawrenceville with mainstage productions and family shows.
+Professional theater in Lawrenceville with mainstage productions, family shows,
+and the Aurora Academy summer camps and education programs.
 
-Site structure: Shows at /productions-and-programs/ with /view/[slug]/ pattern.
+Site structure:
+  Shows: /productions-and-programs/ with /view/[slug]/ pattern (Playwright).
+  Education/camps: /classes-camps/ — static HTML, tabbed layout with one table
+    per camp. Each table row contains: title (red bold span), ages/dates/price
+    (left column), and description (right column). Parsed with BeautifulSoup.
+
+Education page URL: https://www.auroratheatre.com/classes-camps/
 """
 
 from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
+import requests
+from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
@@ -21,6 +30,16 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.auroratheatre.com"
 PRODUCTIONS_URL = f"{BASE_URL}/productions-and-programs/"
+CLASSES_CAMPS_URL = f"{BASE_URL}/classes-camps/"
+
+EDUCATION_REQUEST_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml",
+}
 
 VENUE_DATA = {
     "name": "Aurora Theatre",
@@ -75,7 +94,7 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
 
     # Pattern: "Mon Day, Year-Mon Day, Year" (e.g., "Jan 22, 2026-Feb 15, 2026")
     full_range_match = re.search(
-        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),\s*(\d{4})\s*[-–—]\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),\s*(\d{4})",
+        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),\s*(\d{4})\s*[-\u2013\u2014]\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),\s*(\d{4})",
         date_text,
         re.IGNORECASE
     )
@@ -90,14 +109,13 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
 
     # Pattern: "Mon Day - Mon Day, Year" (different months, same year)
     range_match = re.search(
-        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-–—]\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s*(\d{4})",
+        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-\u2013\u2014]\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s*(\d{4})",
         date_text,
         re.IGNORECASE
     )
     if range_match:
         start_month, start_day, end_month, end_day, year = range_match.groups()
         try:
-            # Handle abbreviated months
             fmt = "%b %d %Y" if len(start_month) <= 3 else "%B %d %Y"
             start_dt = datetime.strptime(f"{start_month} {start_day} {year}", fmt)
             fmt = "%b %d %Y" if len(end_month) <= 3 else "%B %d %Y"
@@ -108,7 +126,7 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
 
     # Pattern: Same month range "Jan 12 - 15, 2026"
     same_month_match = re.search(
-        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-–—]\s*(\d{1,2}),?\s*(\d{4})",
+        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-\u2013\u2014]\s*(\d{1,2}),?\s*(\d{4})",
         date_text,
         re.IGNORECASE
     )
@@ -177,8 +195,358 @@ def extract_price_info(body_text: str) -> tuple[Optional[float], Optional[float]
     return price_min, price_max, price_note
 
 
+# ── education / classes-camps parser ──────────────────────────────────────────
+
+
+def _parse_aurora_education_date(date_text: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Parse Aurora Academy date strings like:
+      "Monday-Friday | Apr. 6, 2026 – Apr. 10, 2026"
+      "Monday – Friday | Jun. 1, 2026 – Jun. 5, 2026"
+
+    Returns (start_date, end_date) in YYYY-MM-DD format.
+    """
+    if not date_text:
+        return None, None
+
+    # Remove day-of-week prefix before the pipe
+    if "|" in date_text:
+        date_text = date_text.split("|", 1)[1].strip()
+
+    # Normalize: remove trailing periods from month abbreviations
+    date_text = re.sub(r"\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.", r"\1", date_text, flags=re.IGNORECASE)
+
+    # Normalize em-dashes to hyphens and collapse whitespace
+    date_text = re.sub(r"\s*[\u2013\u2014\u2012]\s*", " - ", date_text)
+    date_text = re.sub(r"\s+", " ", date_text).strip()
+
+    # Find all date instances: "Apr 6, 2026" or "Apr 6 2026" or "Apr 10 , 2026" (space before comma)
+    date_pattern = r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})\s*,?\s*(\d{4})"
+    matches = re.findall(date_pattern, date_text, re.IGNORECASE)
+
+    if len(matches) >= 2:
+        try:
+            s = datetime.strptime(f"{matches[0][0]} {matches[0][1]} {matches[0][2]}", "%b %d %Y")
+            e = datetime.strptime(f"{matches[1][0]} {matches[1][1]} {matches[1][2]}", "%b %d %Y")
+            return s.strftime("%Y-%m-%d"), e.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+    elif len(matches) == 1:
+        try:
+            s = datetime.strptime(f"{matches[0][0]} {matches[0][1]} {matches[0][2]}", "%b %d %Y")
+            return s.strftime("%Y-%m-%d"), s.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    return None, None
+
+
+def _parse_camp_from_title_span(title_span: BeautifulSoup, tab_label: str) -> Optional[dict]:
+    """
+    Parse one Aurora camp entry given its red title span.
+
+    Page structure (nested inline tables from WordPress editor):
+      <table>
+        <tbody>
+          <tr><td><span style="color: #ff0000; font-size: x-large;">TITLE</span></td></tr>
+          <tr><td>
+            <table>  ← inner detail table
+              <tbody>
+                <tr>
+                  <td>Ages: N-M\nDay | Date\nTime\nPrice: $N</td>
+                  <td>description text</td>
+                </tr>
+              </tbody>
+            </table>
+          </td></tr>
+        </tbody>
+      </table>
+
+    We find the outer table by walking up from the span, then grab the detail inner
+    table from the following row.
+    """
+    # Extract title text
+    title = re.sub(r"\s+", " ", title_span.get_text(separator=" ", strip=True)).strip()
+    if not title or len(title) < 3:
+        return None
+
+    # Walk up: span → td → tr → tbody → table (outer camp table)
+    outer_table = title_span.find_parent("table")
+    if not outer_table:
+        return None
+
+    # All rows in the outer table (recursive=True needed — tbody is implicit layer)
+    all_rows = outer_table.find_all("tr")
+    if len(all_rows) < 2:
+        return None
+
+    # Row 0 contains the title; row 1 contains the detail inner table
+    detail_row = all_rows[1]
+    detail_cell = detail_row.find("td")
+    if not detail_cell:
+        return None
+
+    inner_table = detail_cell.find("table")
+    if not inner_table:
+        return None
+
+    inner_rows = inner_table.find_all("tr")
+    if not inner_rows:
+        return None
+
+    inner_cells = inner_rows[0].find_all("td")
+    if len(inner_cells) >= 2:
+        left_text = inner_cells[0].get_text(separator="\n", strip=True)
+        desc_text = inner_cells[1].get_text(separator=" ", strip=True)
+    elif len(inner_cells) == 1:
+        left_text = inner_cells[0].get_text(separator="\n", strip=True)
+        desc_text = ""
+    else:
+        return None
+
+    left_lines = [ln.strip() for ln in left_text.split("\n") if ln.strip()]
+
+    # The date range can be split across 2-3 lines, e.g.:
+    #   "Monday-Friday | Apr. 6, 2026"
+    #   "– Apr. 10"
+    #   ", 2026"
+    # Merge all date-region lines into one string before parsing.
+    ages_str = time_str = price_str = ""
+    date_parts: list[str] = []
+    in_date_region = False
+    for line in left_lines:
+        if re.match(r"ages?:", line, re.IGNORECASE):
+            ages_str = line
+            in_date_region = False
+        elif re.search(r"\d{1,2}:\d{2}\s*[AP]M", line, re.IGNORECASE):
+            time_str = line
+            in_date_region = False
+        elif re.match(r"price:", line, re.IGNORECASE):
+            price_str = line
+            in_date_region = False
+        elif re.search(r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)", line, re.IGNORECASE):
+            # Start of a date region
+            date_parts.append(line)
+            in_date_region = True
+        elif in_date_region and re.search(r"[\u2013\u2014-]|,\s*\d{4}", line):
+            # Continuation line: em-dash fragment "– Apr. 10" or ", 2026"
+            date_parts.append(line)
+        else:
+            in_date_region = False
+
+    date_str = " ".join(date_parts)
+
+    # Parse ages
+    age_min: Optional[int] = None
+    age_max: Optional[int] = None
+    age_tags: list[str] = []
+    m_age = re.search(r"ages?:\s*(\d+)\s*[-\u2013]\s*(\d+)", ages_str, re.IGNORECASE)
+    if m_age:
+        age_min = int(m_age.group(1))
+        age_max = int(m_age.group(2))
+        if age_min <= 10:
+            age_tags.append("elementary")
+        if age_min <= 13 and age_max >= 10:
+            age_tags.append("tween")
+        if age_max >= 13:
+            age_tags.append("teen")
+
+    start_date, end_date = _parse_aurora_education_date(date_str)
+    if not start_date:
+        return None
+
+    # Parse times "10:00AM – 4:00PM"
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    tm = re.search(
+        r"(\d{1,2}:\d{2})\s*([AP]M)\s*[\u2013\u2014-]\s*(\d{1,2}:\d{2})\s*([AP]M)",
+        time_str,
+        re.IGNORECASE,
+    )
+    if tm:
+        try:
+            start_time = datetime.strptime(f"{tm.group(1)}{tm.group(2).upper()}", "%I:%M%p").strftime("%H:%M")
+            end_time = datetime.strptime(f"{tm.group(3)}{tm.group(4).upper()}", "%I:%M%p").strftime("%H:%M")
+        except ValueError:
+            pass
+
+    # Parse price
+    price_val: Optional[float] = None
+    price_note: Optional[str] = None
+    pm = re.search(r"\$(\d+)", price_str)
+    if pm:
+        price_val = float(pm.group(1))
+        price_note = f"${int(price_val)} per session"
+
+    # Enroll link — look anywhere within the outer table
+    ticket_url: Optional[str] = None
+    enroll_link = outer_table.find("a", href=True)
+    if enroll_link:
+        href = enroll_link.get("href", "")
+        if href.startswith("http"):
+            ticket_url = href
+
+    return {
+        "title": title,
+        "description": desc_text[:800] if desc_text else f"{title} at Aurora Theatre.",
+        "start_date": start_date,
+        "end_date": end_date,
+        "start_time": start_time or "10:00",
+        "end_time": end_time or "16:00",
+        "age_min": age_min,
+        "age_max": age_max,
+        "age_tags": age_tags,
+        "price_min": price_val,
+        "price_max": price_val,
+        "price_note": price_note,
+        "ticket_url": ticket_url,
+        "tab_label": tab_label,
+    }
+
+
+def _crawl_aurora_education(source_id: int, venue_id: int) -> tuple[int, int, int]:
+    """
+    Crawl Aurora Academy /classes-camps/ page and insert future programs.
+    Returns (found, new, updated).
+    """
+    found = new = updated = 0
+
+    try:
+        resp = requests.get(CLASSES_CAMPS_URL, headers=EDUCATION_REQUEST_HEADERS, timeout=20)
+        resp.raise_for_status()
+    except Exception as exc:
+        logger.warning("[aurora-theatre] Failed to fetch education page: %s", exc)
+        return 0, 0, 0
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    # Each bootstrap tab-pane contains one or more camp tables
+    tab_panes = soup.find_all("div", class_="tab-pane")
+    if not tab_panes:
+        logger.warning("[aurora-theatre] No tab panes found on education page")
+        return 0, 0, 0
+
+    all_camps: list[dict] = []
+    # Track which outer tables we've already parsed to avoid double-counting
+    # (inner tables also contain red spans in some layouts)
+    seen_tables: set[int] = set()
+
+    for pane in tab_panes:
+        tab_id = pane.get("id", "")
+        tab_label = tab_id.replace("-", " ").title()
+
+        # Discover camps by finding red title spans, then walking up to their table.
+        # This avoids the recursive=False / implicit-tbody bug where
+        # table.find_all("tr", recursive=False) always returns [].
+        for span in pane.find_all("span"):
+            style = span.get("style", "") or ""
+            if "color: #ff0000" not in style or "font-size: x-large" not in style:
+                continue
+
+            # Make sure this span's parent table hasn't been parsed already
+            outer_table = span.find_parent("table")
+            if outer_table is None:
+                continue
+            table_id = id(outer_table)
+            if table_id in seen_tables:
+                continue
+            seen_tables.add(table_id)
+
+            camp = _parse_camp_from_title_span(span, tab_label)
+            if camp:
+                all_camps.append(camp)
+
+    logger.info("[aurora-theatre] Education page: %d camp records parsed", len(all_camps))
+
+    today = date.today()
+    for camp in all_camps:
+        end_check = camp.get("end_date") or camp.get("start_date")
+        if end_check:
+            try:
+                if datetime.strptime(end_check, "%Y-%m-%d").date() < today:
+                    continue
+            except ValueError:
+                pass
+
+        found += 1
+        title = camp["title"]
+        start_date = camp["start_date"]
+        end_date = camp.get("end_date")
+        age_tags = camp.pop("age_tags", [])
+        camp.pop("tab_label", None)
+
+        content_hash = generate_content_hash(f"{title}|education", "Aurora Theatre", start_date)
+
+        tags = ["aurora-theatre", "theater", "lawrenceville", "gwinnett", "camp", "education"]
+        tags.extend(age_tags)
+        if camp.get("age_max") and camp["age_max"] <= 10:
+            tags.append("kids")
+        if camp.get("age_min") and camp["age_min"] >= 13:
+            tags.append("teen")
+
+        series_hint = None
+        if end_date and end_date != start_date:
+            series_hint = {"series_type": "class_series", "series_title": title}
+
+        event_record = {
+            "source_id": source_id,
+            "venue_id": venue_id,
+            "title": f"{title} — Aurora Academy",
+            "description": camp["description"],
+            "start_date": start_date,
+            "end_date": end_date,
+            "start_time": camp.get("start_time", "10:00"),
+            "end_time": camp.get("end_time", "16:00"),
+            "is_all_day": False,
+            "category": "education",
+            "subcategory": "education.performing-arts",
+            "tags": list(set(tags)),
+            "age_min": camp.get("age_min"),
+            "age_max": camp.get("age_max"),
+            "is_free": False,
+            "price_min": camp.get("price_min"),
+            "price_max": camp.get("price_max"),
+            "price_note": camp.get("price_note"),
+            "source_url": CLASSES_CAMPS_URL,
+            "ticket_url": camp.get("ticket_url") or CLASSES_CAMPS_URL,
+            "image_url": None,
+            "raw_text": f"{title}|Aurora Theatre|{start_date}",
+            "extraction_confidence": 0.90,
+            "is_recurring": False,
+            "recurrence_rule": None,
+            "content_hash": content_hash,
+        }
+
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            updated += 1
+            logger.debug("[aurora-theatre] Updated education: %s on %s", title, start_date)
+            continue
+
+        try:
+            insert_event(event_record, series_hint=series_hint)
+            new += 1
+            logger.info("[aurora-theatre] Added education: %s on %s", title, start_date)
+        except Exception as exc:
+            logger.error("[aurora-theatre] Failed to insert education %s: %s", title, exc)
+
+    return found, new, updated
+
+
+# ── main crawl entrypoint ──────────────────────────────────────────────────────
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Aurora Theatre productions."""
+    """
+    Crawl Aurora Theatre — mainstage productions AND Aurora Academy education programs.
+
+    Pass 1 (static HTTP): Fetch /classes-camps/ and parse summer camps / education
+      programs with BeautifulSoup. No Playwright needed — page is server-rendered.
+
+    Pass 2 (Playwright): Navigate /productions-and-programs/ and visit each
+      /view/[slug]/ show page to extract title, dates, description, and pricing.
+    """
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -195,6 +563,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
+            # Pass 1: Education programs (static HTTP — no Playwright needed)
+            logger.info("[aurora-theatre] Crawling education programs at %s", CLASSES_CAMPS_URL)
+            try:
+                edu_found, edu_new, edu_updated = _crawl_aurora_education(source_id, venue_id)
+                events_found += edu_found
+                events_new += edu_new
+                events_updated += edu_updated
+                logger.info(
+                    "[aurora-theatre] Education: %d found, %d new, %d updated",
+                    edu_found, edu_new, edu_updated,
+                )
+            except Exception as exc:
+                logger.error("[aurora-theatre] Education crawl failed: %s", exc)
+
+            # Pass 2: Mainstage productions (Playwright)
             logger.info(f"Fetching Aurora Theatre: {PRODUCTIONS_URL}")
             page.goto(PRODUCTIONS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(4000)
@@ -266,11 +649,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     body_text = page.inner_text("body")
                     price_min, price_max, price_note = extract_price_info(body_text)
 
-                    # Look for text after "ABOUT" heading — anchor to line start to avoid nav prefixes
-                    about_match = re.search(r'(?:^|\n)ABOUT\n+(.*?)(?:Buy Tickets|MEDIA|January|February|March|April|May|June|July|August|September|October|November|December|\n\n\n)', body_text, re.DOTALL)
+                    # Look for text after "ABOUT" heading
+                    about_match = re.search(
+                        r'(?:^|\n)ABOUT\n+(.*?)(?:Buy Tickets|MEDIA|January|February|March|April|May|June|July|August|September|October|November|December|\n\n\n)',
+                        body_text,
+                        re.DOTALL,
+                    )
                     if about_match:
                         desc = about_match.group(1).strip()
-                        # Remove program/runtime details and nav boilerplate
                         desc = re.sub(r'(Metro Waterproofing Main Stage|Runtime:.*|Content Advisory:.*)', '', desc, flags=re.DOTALL)
                         desc = re.sub(r'^(FAQ|BUY TICKETS|DONATE|SUBSCRIBE|SEASON|HOME|ABOUT)\s*', '', desc, flags=re.IGNORECASE | re.MULTILINE)
                         desc = desc.strip()
@@ -283,7 +669,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     for img in imgs:
                         src = img.get_attribute("src") or img.get_attribute("data-src")
                         if src and "logo" not in src.lower() and "Program_WebButton" not in src:
-                            # Prefer scaled.jpeg or large production images
                             if "scaled" in src or any(word in src for word in ["/PTGW-", "/Flat", "/Heights", "/Initiative"]):
                                 image_url = src if src.startswith("http") else BASE_URL + src
                                 break
@@ -311,7 +696,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     events_found += 1
 
                     content_hash = generate_content_hash(title, "Aurora Theatre", start_date)
-
 
                     # Build series hint for show runs
                     series_hint = None
@@ -372,7 +756,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             browser.close()
 
         logger.info(
-            f"Aurora Theatre crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            "[aurora-theatre] Crawl complete: %d found, %d new, %d updated (shows + education)",
+            events_found, events_new, events_updated,
         )
 
     except Exception as e:
