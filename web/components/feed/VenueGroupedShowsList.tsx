@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
-import { MusicNote, Ticket } from "@phosphor-icons/react";
+import { MusicNote, MaskHappy, Ticket } from "@phosphor-icons/react";
 import { formatTime } from "@/lib/formats";
 import SmartImage from "@/components/SmartImage";
 
@@ -51,6 +51,7 @@ export function VenueGroupedShowsList({
   portalSlug,
   categories,
 }: VenueGroupedShowsListProps) {
+  const vertical = categories === "music" ? "music" : "stage";
   const [venues, setVenues] = useState<ShowVenueData[]>([]);
   const [todayCount, setTodayCount] = useState(0);
   const [thisWeekCount, setThisWeekCount] = useState(0);
@@ -131,7 +132,7 @@ export function VenueGroupedShowsList({
         <p className="text-sm text-[var(--soft)]">
           No shows tonight ·{" "}
           <Link
-            href={`/${portalSlug}?view=happening&content=showtimes`}
+            href={`/${portalSlug}?view=happening&content=showtimes&vertical=${vertical}`}
             className="text-[var(--neon-magenta)] hover:underline font-mono text-xs"
           >
             {restOfWeekCount} more this week →
@@ -154,6 +155,7 @@ export function VenueGroupedShowsList({
             key={item.venue.id}
             item={item}
             portalSlug={portalSlug}
+            vertical={vertical}
           />
         ))}
       </div>
@@ -162,7 +164,7 @@ export function VenueGroupedShowsList({
       {restOfWeekCount > 0 && (
         <div className="mt-2 px-1">
           <Link
-            href={`/${portalSlug}?view=happening&content=showtimes`}
+            href={`/${portalSlug}?view=happening&content=showtimes&vertical=${vertical}`}
             className="text-xs font-mono text-[var(--neon-magenta)] hover:underline"
           >
             {todayCount} tonight · {restOfWeekCount} more this week →
@@ -203,9 +205,11 @@ export function VenueGroupedShowsList({
 function VenueShowCard({
   item,
   portalSlug,
+  vertical,
 }: {
   item: ShowVenueData;
   portalSlug: string;
+  vertical: "music" | "stage";
 }) {
   const { venue, shows } = item;
   const displayShows = shows.slice(0, MAX_SHOWS_PER_CARD);
@@ -228,10 +232,17 @@ function VenueShowCard({
           </>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <MusicNote
-              weight="duotone"
-              className="w-10 h-10 text-[var(--neon-magenta)]/30"
-            />
+            {vertical === "music" ? (
+              <MusicNote
+                weight="duotone"
+                className="w-10 h-10 text-[var(--neon-magenta)]/30"
+              />
+            ) : (
+              <MaskHappy
+                weight="duotone"
+                className="w-10 h-10 text-[var(--neon-magenta)]/30"
+              />
+            )}
           </div>
         )}
         {/* Show count pill */}

@@ -5,12 +5,13 @@ import {
   RATE_LIMITS,
   getClientIdentifier,
 } from "@/lib/rate-limit";
-import { getLocalDateString } from "@/lib/formats";
+import { getLocalDateString, addDaysToDateString } from "@/lib/formats";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 import { applyFeedGate } from "@/lib/feed-gate";
 import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 import { applyFederatedPortalScopeToQuery, isVenueCityInScope } from "@/lib/portal-scope";
 import { getPortalSourceAccess } from "@/lib/federation";
+import { isNoiseEvent } from "@/lib/show-noise-filter";
 
 // ISR: revalidate every 5 minutes
 export const revalidate = 300;
@@ -29,12 +30,6 @@ function isStageCategory(value: string | null): value is StageCategory {
   return STAGE_CATEGORIES.includes(value as StageCategory);
 }
 
-function addDaysToDateString(date: string, days: number): string {
-  const parsed = new Date(`${date}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return date;
-  parsed.setDate(parsed.getDate() + days);
-  return getLocalDateString(parsed);
-}
 
 type StageVenue = {
   id: number;
@@ -45,6 +40,7 @@ type StageVenue = {
   image_url: string | null;
   lat: number | null;
   lng: number | null;
+  venue_type: string | null;
 };
 
 type StageSeries = {
@@ -186,7 +182,8 @@ export async function GET(request: NextRequest) {
             city,
             image_url,
             lat,
-            lng
+            lng,
+            venue_type
           ),
           series:series!events_series_id_fkey(
             id,
@@ -222,9 +219,10 @@ export async function GET(request: NextRequest) {
 
       const typedEvents = (events as unknown as StageEvent[] | null) ?? [];
 
-      // Filter: must have venue, venue must be in portal city scope
+      // Filter: must have venue, venue must be in portal city scope, exclude noise
       const shows: StageShow[] = typedEvents
         .filter((e) => isVenueInScope(e.venue, portalCity))
+        .filter((e) => !isNoiseEvent(e.title, e.venue?.venue_type ?? null))
         .map(toShow);
 
       const responsePayload: Record<string, unknown> = { date, shows };

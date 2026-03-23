@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import { FilmSlate, MusicNote, MaskHappy } from "@phosphor-icons/react";
 
 const ShowtimesView = dynamic(() => import("./ShowtimesView"));
 const MusicListingsView = dynamic(() => import("./MusicListingsView"));
@@ -14,6 +15,12 @@ interface WhatsOnViewProps {
   portalId: string;
   portalSlug: string;
 }
+
+const VERTICALS: { key: WhatsOnVertical; label: string; icon: ReactNode }[] = [
+  { key: "film", label: "Film", icon: <FilmSlate weight="duotone" className="w-4 h-4" /> },
+  { key: "music", label: "Music", icon: <MusicNote weight="duotone" className="w-4 h-4" /> },
+  { key: "stage", label: "Stage", icon: <MaskHappy weight="duotone" className="w-4 h-4" /> },
+];
 
 export default function WhatsOnView({ portalId, portalSlug }: WhatsOnViewProps) {
   const searchParams = useSearchParams();
@@ -29,44 +36,48 @@ export default function WhatsOnView({ portalId, portalSlug }: WhatsOnViewProps) 
     window.history.replaceState({}, "", url.toString());
   }, []);
 
-  const verticals: { key: WhatsOnVertical; label: string }[] = [
-    { key: "film", label: "Film" },
-    { key: "music", label: "Music" },
-    { key: "stage", label: "Stage" },
-  ];
-
   return (
     <div>
-      {/* Sub-tab bar */}
-      <div className="flex items-center gap-4 px-4 pt-3 pb-0">
-        {verticals.map(({ key, label }) => {
+      {/* Vertical tab bar */}
+      <div role="tablist" className="flex items-center gap-1.5 px-3 sm:px-0 pt-3 pb-3">
+        {VERTICALS.map(({ key, label, icon }) => {
           const isActive = activeVertical === key;
           return (
             <button
               key={key}
+              id={`tab-${key}`}
+              role="tab"
               onClick={() => handleVerticalChange(key)}
-              className={`px-0 pb-2.5 font-mono text-xs font-semibold tracking-[0.08em] transition-colors ${
+              aria-selected={isActive}
+              aria-controls={`panel-${key}`}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-mono text-xs font-medium border transition-all ${
                 isActive
-                  ? "text-[var(--coral)] border-b-2 border-[var(--coral)]"
-                  : "text-[var(--muted)] hover:text-[var(--cream)]"
+                  ? "bg-[var(--neon-magenta)]/15 text-[var(--neon-magenta)] border-[var(--neon-magenta)]/30"
+                  : "text-[var(--muted)] hover:text-[var(--soft)] hover:bg-[var(--twilight)]/40 border border-transparent"
               }`}
             >
+              {icon}
               {label}
             </button>
           );
         })}
       </div>
-      <div className="border-b border-[var(--twilight)]" />
 
       {/* Tab content */}
       {activeVertical === "film" && (
-        <ShowtimesView portalId={portalId} portalSlug={portalSlug} />
+        <div id="panel-film" role="tabpanel" aria-labelledby="tab-film">
+          <ShowtimesView portalId={portalId} portalSlug={portalSlug} />
+        </div>
       )}
       {activeVertical === "music" && (
-        <MusicListingsView portalId={portalId} portalSlug={portalSlug} />
+        <div id="panel-music" role="tabpanel" aria-labelledby="tab-music">
+          <MusicListingsView portalId={portalId} portalSlug={portalSlug} />
+        </div>
       )}
       {activeVertical === "stage" && (
-        <StageListingsView portalId={portalId} portalSlug={portalSlug} />
+        <div id="panel-stage" role="tabpanel" aria-labelledby="tab-stage">
+          <StageListingsView portalId={portalId} portalSlug={portalSlug} />
+        </div>
       )}
     </div>
   );

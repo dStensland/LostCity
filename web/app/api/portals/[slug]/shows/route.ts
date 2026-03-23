@@ -13,6 +13,7 @@ import {
 } from "@/lib/portal-scope";
 import { buildPortalManifest } from "@/lib/portal-manifest";
 import { getPortalSourceAccess } from "@/lib/federation";
+import { isNoiseEvent } from "@/lib/show-noise-filter";
 import { applyFeedGate } from "@/lib/feed-gate";
 
 type RouteContext = {
@@ -68,13 +69,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
       "art_gallery", "community_arts_center", "event_space",
     ];
 
-    // Title patterns that indicate non-performance events despite music category
-    const NOISE_TITLE_PATTERNS = [
-      "bingo", "trivia", "game night", "language learning",
-      "book club", "pop up", "pop-up", "popup",
-      "tax aide", "tax help", "story time",
-    ];
-
     // Fetch today's shows for display + this week's count for the "N more this week" note
     const weekEnd = new Date();
     weekEnd.setDate(weekEnd.getDate() + 7);
@@ -123,22 +117,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     // Post-query: filter to genuine live performances
-    // Two layers: (1) exclude by venue_type, (2) exclude by title pattern
-    const EXCLUDED_VENUE_TYPES = new Set(["library", "recreation", "school", "government", "religious"]);
-
-    const filteredEvents = (events ?? []).filter(event => {
-      const venueType = event.venue?.venue_type ?? "";
-      const title = event.title.toLowerCase();
-
-      // Layer 1: Exclude events at non-performance venue types
-      if (EXCLUDED_VENUE_TYPES.has(venueType)) return false;
-
-      // Layer 2: Exclude events whose titles indicate non-performance activity
-      // (catches noise at bars/generic venues where venue_type alone isn't enough)
-      if (NOISE_TITLE_PATTERNS.some(p => title.includes(p))) return false;
-
-      return true;
-    });
+    const filteredEvents = (events ?? []).filter(event =>
+      !isNoiseEvent(event.title, event.venue?.venue_type ?? null)
+    );
 
     // Split into today vs rest of week
     const todayEvents = filteredEvents.filter(e => e.start_date === today);

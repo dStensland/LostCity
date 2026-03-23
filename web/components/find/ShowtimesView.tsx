@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
 import { useSearchParams } from "next/navigation";
-import { formatTimeSplit } from "@/lib/formats";
 import CategoryIcon from "@/components/CategoryIcon";
 import { CalendarBlank } from "@phosphor-icons/react";
 import {
@@ -12,6 +11,7 @@ import {
   trackFindZeroResults,
 } from "@/lib/analytics/find-tracking";
 import Dot from "@/components/ui/Dot";
+import { prefetchEventDetail, formatShowtime, toLocalIsoDate } from "@/lib/show-card-utils";
 
 interface ShowtimesViewProps {
   portalId: string;
@@ -59,10 +59,6 @@ interface ShowtimesMeta {
   available_films: { title: string; series_id: string | null; series_slug: string | null; image_url: string | null }[];
 }
 
-function toLocalIsoDate(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
 function resolveDateParam(raw: string | null): string | null {
   if (!raw) return null;
   const value = raw.trim().toLowerCase();
@@ -90,30 +86,6 @@ function formatDatePill(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   const date = new Date(y, m - 1, d);
   return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-}
-
-function formatShowtime(time: string): string {
-  const parts = formatTimeSplit(time);
-  return `${parts.time}${parts.period ? ` ${parts.period}` : ""}`;
-}
-
-// Prefetch event detail on pointer-down so data loads before navigation completes
-// NOTE: prefetchedUrls is intentionally module-scoped so it persists across
-// component re-mounts, but is bounded to 50 entries to prevent unbounded growth.
-const MAX_PREFETCH_CACHE = 50;
-const prefetchedUrlsModule = new Set<string>();
-function prefetchEventDetail(eventId: number, portalId?: string) {
-  const url = portalId ? `/api/events/${eventId}?portal_id=${portalId}` : `/api/events/${eventId}`;
-  if (prefetchedUrlsModule.has(url)) return;
-  // Evict oldest entry when at capacity
-  if (prefetchedUrlsModule.size >= MAX_PREFETCH_CACHE) {
-    const first = prefetchedUrlsModule.values().next().value;
-    if (first !== undefined) prefetchedUrlsModule.delete(first);
-  }
-  prefetchedUrlsModule.add(url);
-  fetch(url, { priority: "low" } as RequestInit).catch(() => {
-    prefetchedUrlsModule.delete(url);
-  });
 }
 
 // --------------- Shared sub-components ---------------

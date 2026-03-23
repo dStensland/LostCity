@@ -371,6 +371,17 @@ export function getLocalDateStringOffset(days: number): string {
   return getLocalDateString(date);
 }
 
+/**
+ * Add N days to a YYYY-MM-DD date string and return a new YYYY-MM-DD string.
+ * Used by whats-on API routes for lookahead date windows.
+ */
+export function addDaysToDateString(date: string, days: number): string {
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return date;
+  parsed.setDate(parsed.getDate() + days);
+  return getLocalDateString(parsed);
+}
+
 // ============================================================================
 // TEXT UTILITIES
 // ============================================================================

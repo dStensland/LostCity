@@ -5,9 +5,8 @@ import { memo } from "react";
 import SmartImage from "@/components/SmartImage";
 import CategoryIcon from "@/components/CategoryIcon";
 import { MaskHappy, Microphone } from "@phosphor-icons/react";
-import { formatTimeSplit } from "@/lib/formats";
-import { MAPBOX_TOKEN } from "@/lib/map-config";
 import Dot from "@/components/ui/Dot";
+import { prefetchEventDetail, venueMapUrl, formatShowtime } from "@/lib/show-card-utils";
 
 export interface StageShow {
   event_id: number;
@@ -33,27 +32,10 @@ export interface StageShow {
   };
 }
 
-function venueMapUrl(lat: number, lng: number): string {
-  return `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/pin-s+ff6b7a(${lng},${lat})/${lng},${lat},15,0/160x240@2x?access_token=${MAPBOX_TOKEN}`;
-}
-
 export interface StageShowCardProps {
   show: StageShow;
   portalSlug: string;
   portalId?: string;
-}
-
-// Prefetch event detail on pointer-down so data loads before navigation completes
-const prefetchedUrls = new Set<string>();
-function prefetchEventDetail(eventId: number, portalId?: string) {
-  const url = portalId
-    ? `/api/events/${eventId}?portal_id=${portalId}`
-    : `/api/events/${eventId}`;
-  if (prefetchedUrls.has(url)) return;
-  prefetchedUrls.add(url);
-  fetch(url, { priority: "low" } as RequestInit).catch(() => {
-    prefetchedUrls.delete(url);
-  });
 }
 
 const MONTH_ABBR = [
@@ -72,13 +54,6 @@ function isRunBadgeVisible(show: StageShow): boolean {
   const start = new Date(show.start_date + "T00:00:00");
   const end = new Date(show.end_date + "T00:00:00");
   return end > start;
-}
-
-function formatShowtime(time: string | null): string {
-  if (!time) return "TBA";
-  const parts = formatTimeSplit(time);
-  if (parts.time === "TBA") return "TBA";
-  return `${parts.time}${parts.period ? ` ${parts.period}` : ""}`;
 }
 
 const isComedy = (show: StageShow) =>
@@ -119,7 +94,7 @@ export const StageShowCard = memo(function StageShowCard({
       href={href}
       scroll={false}
       onPointerDown={() => prefetchEventDetail(show.event_id, portalId)}
-      className={`group block rounded-[10px] border ${borderClass} bg-[var(--night)]/45 overflow-hidden hover:border-[var(--coral)]/40 transition-colors`}
+      className={`group block rounded-xl border ${borderClass} bg-[var(--night)]/45 overflow-hidden hover:border-[var(--coral)]/40 transition-colors`}
     >
       <div className="flex items-stretch">
         {/* Venue image rail */}
@@ -202,18 +177,18 @@ export const StageShowCard = memo(function StageShowCard({
               {displayGenres.map((genre) => (
                 <span
                   key={genre}
-                  className="px-2 py-0.5 rounded-full bg-[var(--twilight)]/80 font-mono text-2xs font-medium text-[var(--muted)]"
+                  className="px-2 py-0.5 rounded-full bg-[var(--twilight)]/80 border border-[var(--twilight)] font-mono text-xs font-medium text-[var(--muted)]"
                 >
                   {genre}
                 </span>
               ))}
               {show.is_free && (
-                <span className="px-2 py-0.5 rounded-full bg-[var(--neon-green)]/15 font-mono text-2xs font-medium text-[var(--neon-green)]">
+                <span className="inline-flex px-2 py-0.5 rounded-full bg-[var(--neon-green)]/15 border border-[var(--neon-green)]/30 font-mono text-2xs font-semibold uppercase tracking-[0.08em] text-[var(--neon-green)]">
                   free
                 </span>
               )}
               {isAllAges && (
-                <span className="px-2 py-0.5 rounded-full bg-[var(--neon-green)]/15 font-mono text-2xs font-medium text-[var(--neon-green)]">
+                <span className="inline-flex px-2 py-0.5 rounded-full bg-[var(--neon-green)]/15 border border-[var(--neon-green)]/30 font-mono text-2xs font-semibold uppercase tracking-[0.08em] text-[var(--neon-green)]">
                   all-ages
                 </span>
               )}

@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { CalendarBlank } from "@phosphor-icons/react";
 import Dot from "@/components/ui/Dot";
+import { toLocalIsoDate } from "@/lib/show-card-utils";
 
 export interface DatePillStripProps {
   dates: string[]; // YYYY-MM-DD strings
@@ -11,10 +12,6 @@ export interface DatePillStripProps {
   todayLabel?: string; // "Today" for film, "Tonight" for music
   summaryItems?: { label: string; value: string | number }[];
   maxVisible?: number; // default 5
-}
-
-function toLocalIsoDate(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function formatDatePill(dateStr: string, todayLabel: string): string {

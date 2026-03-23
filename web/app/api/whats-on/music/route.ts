@@ -5,12 +5,13 @@ import {
   RATE_LIMITS,
   getClientIdentifier,
 } from "@/lib/rate-limit";
-import { getLocalDateString } from "@/lib/formats";
+import { getLocalDateString, addDaysToDateString } from "@/lib/formats";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 import { applyFeedGate } from "@/lib/feed-gate";
 import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-query-context";
 import { applyFederatedPortalScopeToQuery, isVenueCityInScope } from "@/lib/portal-scope";
 import { getPortalSourceAccess } from "@/lib/federation";
+import { isNoiseEvent } from "@/lib/show-noise-filter";
 
 // ISR: revalidate every 5 minutes
 export const revalidate = 300;
@@ -22,12 +23,6 @@ const MUSIC_EVENT_LIMIT = 200;
 const MUSIC_META_DATE_LIMIT = 1000;
 const MUSIC_META_LOOKAHEAD_DAYS = 30;
 
-function addDaysToDateString(date: string, days: number): string {
-  const parsed = new Date(`${date}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return date;
-  parsed.setDate(parsed.getDate() + days);
-  return getLocalDateString(parsed);
-}
 
 type MusicVenue = {
   id: number;
@@ -38,6 +33,7 @@ type MusicVenue = {
   image_url: string | null;
   lat: number | null;
   lng: number | null;
+  venue_type: string | null;
 };
 
 type MusicArtist = {
@@ -65,6 +61,7 @@ type ShowShape = {
   start_time: string | null;
   is_free: boolean;
   tags: string[];
+  genres: string[];
   age_policy: string | null;
   artists: {
     name: string;
@@ -98,6 +95,7 @@ function toShow(event: MusicEvent): ShowShape {
     start_time: event.start_time,
     is_free: event.is_free ?? false,
     tags: event.tags ?? [],
+    genres: event.genres ?? [],
     age_policy: event.age_policy,
     artists: artists.map((a) => ({
       name: a.name,
@@ -165,6 +163,7 @@ export async function GET(request: NextRequest) {
           start_time,
           is_free,
           tags,
+          genres,
           age_policy,
           venue:venues!events_venue_id_fkey(
             id,
@@ -174,7 +173,8 @@ export async function GET(request: NextRequest) {
             city,
             image_url,
             lat,
-            lng
+            lng,
+            venue_type
           ),
           event_artists(
             name,
@@ -204,9 +204,10 @@ export async function GET(request: NextRequest) {
 
       const typedEvents = (events as unknown as MusicEvent[] | null) ?? [];
 
-      // Filter: must have venue, venue must be in portal city scope
+      // Filter: must have venue, venue must be in portal city scope, exclude noise
       const shows: ShowShape[] = typedEvents
         .filter((e) => isVenueInScope(e.venue, portalCity))
+        .filter((e) => !isNoiseEvent(e.title, e.venue?.venue_type ?? null))
         .map(toShow);
 
       const responsePayload: Record<string, unknown> = { date, shows };

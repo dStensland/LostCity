@@ -4,9 +4,8 @@ import Link from "next/link";
 import { memo } from "react";
 import SmartImage from "@/components/SmartImage";
 import CategoryIcon from "@/components/CategoryIcon";
-import { formatTimeSplit } from "@/lib/formats";
-import { MAPBOX_TOKEN } from "@/lib/map-config";
 import Dot from "@/components/ui/Dot";
+import { prefetchEventDetail, venueMapUrl, formatShowtime, toLocalIsoDate } from "@/lib/show-card-utils";
 
 export interface MusicShow {
   event_id: number;
@@ -14,6 +13,7 @@ export interface MusicShow {
   start_time: string | null;
   is_free: boolean;
   tags: string[];
+  genres: string[];
   age_policy: string | null;
   artists: {
     name: string;
@@ -38,26 +38,6 @@ export interface MusicShowCardProps {
   selectedDate: string;
 }
 
-// Prefetch event detail on pointer-down so data loads before navigation completes
-const prefetchedUrls = new Set<string>();
-function prefetchEventDetail(eventId: number, portalId?: string) {
-  const url = portalId
-    ? `/api/events/${eventId}?portal_id=${portalId}`
-    : `/api/events/${eventId}`;
-  if (prefetchedUrls.has(url)) return;
-  prefetchedUrls.add(url);
-  fetch(url, { priority: "low" } as RequestInit).catch(() => {
-    prefetchedUrls.delete(url);
-  });
-}
-
-function toLocalIsoDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function venueMapUrl(lat: number, lng: number): string {
-  return `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/pin-s+ff6b7a(${lng},${lat})/${lng},${lat},15,0/160x240@2x?access_token=${MAPBOX_TOKEN}`;
-}
 
 function isShowLive(startTime: string | null, selectedDate: string): boolean {
   if (!startTime) return false;
@@ -79,13 +59,6 @@ function isShowLive(startTime: string | null, selectedDate: string): boolean {
   return diffMinutes >= 0 && diffMinutes <= 120;
 }
 
-function formatShowtime(time: string | null): string {
-  if (!time) return "TBA";
-  const parts = formatTimeSplit(time);
-  if (parts.time === "TBA") return "TBA";
-  return `${parts.time}${parts.period ? ` ${parts.period}` : ""}`;
-}
-
 export const MusicShowCard = memo(function MusicShowCard({
   show,
   portalSlug,
@@ -94,7 +67,7 @@ export const MusicShowCard = memo(function MusicShowCard({
 }: MusicShowCardProps) {
   const headliner =
     show.artists.find((a) => a.is_headliner) ||
-    show.artists.sort((a, b) => (a.billing_order ?? 99) - (b.billing_order ?? 99))[0] ||
+    show.artists.toSorted((a, b) => (a.billing_order ?? 99) - (b.billing_order ?? 99))[0] ||
     null;
 
   const heroText = headliner?.name ?? show.title;
@@ -170,7 +143,7 @@ export const MusicShowCard = memo(function MusicShowCard({
             <p className="text-xs text-[var(--soft)] mt-0.5 truncate">
               w/{" "}
               {supportingActs
-                .sort((a, b) => (a.billing_order ?? 99) - (b.billing_order ?? 99))
+                .toSorted((a, b) => (a.billing_order ?? 99) - (b.billing_order ?? 99))
                 .map((a) => a.name)
                 .join(", ")}
             </p>
@@ -191,9 +164,9 @@ export const MusicShowCard = memo(function MusicShowCard({
             )}
           </div>
 
-          {/* Badges row */}
-          {(show.is_free || isAllAges) && (
-            <div className="flex items-center gap-1.5 mt-2">
+          {/* Badges + genre row */}
+          {(show.is_free || isAllAges || show.genres.length > 0) && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
               {show.is_free && (
                 <span className="inline-flex px-2 py-0.5 rounded-full bg-[var(--neon-green)]/15 border border-[var(--neon-green)]/30 font-mono text-2xs font-semibold uppercase tracking-[0.08em] text-[var(--neon-green)]">
                   free
@@ -204,6 +177,14 @@ export const MusicShowCard = memo(function MusicShowCard({
                   all-ages
                 </span>
               )}
+              {show.genres.slice(0, 3).map((genre) => (
+                <span
+                  key={genre}
+                  className="px-2 py-0.5 rounded-full bg-[var(--twilight)]/80 border border-[var(--twilight)] font-mono text-xs font-medium text-[var(--muted)]"
+                >
+                  {genre}
+                </span>
+              ))}
             </div>
           )}
         </div>
