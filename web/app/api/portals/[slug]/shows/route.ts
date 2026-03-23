@@ -60,6 +60,21 @@ export async function GET(request: NextRequest, context: RouteContext) {
       sourceIds: sourceAccess.sourceIds,
     });
 
+    // Venue types that host live performances (music, comedy, theater)
+    const PERFORMANCE_VENUE_TYPES = [
+      "music_venue", "concert_hall", "bar_live_music", "theater",
+      "comedy_club", "performing_arts_center", "arena", "amphitheater",
+      "nightclub", "bar", "lounge", "restaurant_live_music",
+      "art_gallery", "community_arts_center", "event_space",
+    ];
+
+    // Title patterns that indicate non-performance events despite music category
+    const NOISE_TITLE_PATTERNS = [
+      "bingo", "trivia", "game night", "language learning",
+      "book club", "pop up", "pop-up", "popup",
+      "tax aide", "tax help", "story time",
+    ];
+
     let query = portalClient
       .from("events")
       .select(`
@@ -71,12 +86,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
         price_max,
         image_url,
         is_free,
-        venue:venues!inner(id, name, slug, neighborhood, image_url)
+        venue:venues!inner(id, name, slug, neighborhood, image_url, venue_type)
       `)
       .in("category_id", categories)
       .eq("start_date", today)
       .eq("is_active", true)
       .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null")
       .order("start_time", { ascending: true });
 
     query = applyFeedGate(query);
@@ -91,12 +107,26 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // query = applyPortalCategoryFilters(query, portalContentFilters);
 
     const { data: rawEvents, error: queryError } = await query;
-    const events = rawEvents as { id: number; title: string; start_time: string | null; price_min: number | null; image_url: string | null; is_free: boolean; venue: { id: number; name: string; slug: string; neighborhood: string; image_url: string | null } }[] | null;
+    const events = rawEvents as { id: number; title: string; start_time: string | null; price_min: number | null; image_url: string | null; is_free: boolean; venue: { id: number; name: string; slug: string; neighborhood: string; image_url: string | null; venue_type: string | null } }[] | null;
 
     if (queryError) {
       logger.error("Error fetching shows:", queryError);
       return NextResponse.json({ error: "Failed to fetch shows" }, { status: 500 });
     }
+
+    // Post-query: filter out non-performance events
+    const filteredEvents = (events ?? []).filter(event => {
+      const title = event.title.toLowerCase();
+      // Exclude events with noise titles (bingo, trivia, language learning, etc.)
+      if (NOISE_TITLE_PATTERNS.some(p => title.includes(p))) return false;
+
+      // Exclude events at non-performance venues (libraries, rec centers)
+      const venueType = (event.venue as { venue_type?: string | null })?.venue_type ?? "";
+      const venueName = event.venue?.name?.toLowerCase() ?? "";
+      if (venueName.includes("library") || venueName.includes("recreation center")) return false;
+
+      return true;
+    });
 
     // Group by venue
     type VenueRow = {
@@ -118,7 +148,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const venueMap = new Map<number, { venue: VenueRow; shows: ShowRow[] }>();
 
-    for (const event of events ?? []) {
+    for (const event of filteredEvents) {
       const venue = event.venue as VenueRow | null;
       if (!venue?.id) continue;
 
