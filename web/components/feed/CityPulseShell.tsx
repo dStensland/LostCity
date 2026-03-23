@@ -19,7 +19,7 @@
  *  5. TheSceneSection (Regular Hangs) — self-fetching, lazy-loaded
  *  6. FestivalsSection — self-fetching, lazy-loaded
  *  7. NetworkFeedSection — self-fetching, lazy-loaded
- *  8. NowShowingSection — self-fetching, lazy-loaded
+ *  8. SeeShowsSection — Film/Music/Stage tabs, self-fetching, lazy-loaded
  *  9. Browse by Category — orderedSections (user-customizable order)
  *
  * Section visibility and order are controlled by FeedLayout preferences.
@@ -46,8 +46,9 @@ import TheSceneSection from "./sections/TheSceneSection";
 import LazySection from "./LazySection";
 import InterestChannelsSection from "./sections/InterestChannelsSection";
 import { HangFeedSection } from "./sections/HangFeedSection";
+import { TodayInAtlantaSection } from "./sections/TodayInAtlantaSection";
 
-import NowShowingSection from "./sections/NowShowingSection";
+import SeeShowsSection from "./sections/SeeShowsSection";
 import PlanningHorizonSection from "./sections/PlanningHorizonSection";
 import FeedSectionSkeleton, { useMinSkeletonDelay } from "@/components/feed/FeedSectionSkeleton";
 
@@ -342,14 +343,14 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
             key="city-pulse-cinema"
             id="city-pulse-cinema"
             data-feed-anchor="true"
-            data-index-label="Now Showing"
+            data-index-label="See Shows"
             data-block-id="cinema"
             className="mt-8 scroll-mt-28"
           >
             <div className="h-px bg-[var(--twilight)]" />
             <div className="pt-6">
               <LazySection minHeight={300}>
-                <NowShowingSection portalSlug={portalSlug} />
+                <SeeShowsSection portalSlug={portalSlug} />
               </LazySection>
             </div>
           </div>
@@ -453,7 +454,12 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         ) : null}
       </div>
 
-      {/* 5. Interest Channels — only on civic portals where groups are meaningful */}
+      {/* 5. Today in Atlanta — news, culture-first, below The Lineup */}
+      {portal && (
+        <TodayInAtlantaSection portalSlug={portalSlug} portalId={portal.id} />
+      )}
+
+      {/* 6. Interest Channels — only on civic portals where groups are meaningful */}
       {portal?.settings?.vertical === "community" && (
         <InterestChannelsSection portalSlug={portalSlug} onSubscriptionChange={refresh} compact />
       )}
