@@ -346,7 +346,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Stage 5: Section assembly
   const allEventCategoryCounts = buildAllWindowCategoryCounts(counts.precomputedRows);
 
-  const { sections, curatedSections, personalizationLevel, trendingEventsWithProof } =
+  const { sections, curatedSections, personalizationLevel, trendingEventsWithProof, todayEventsWithProof } =
     buildSections(ctx, pools, phaseA, phaseB, allEventCategoryCounts, counts.venueTypeCounts);
 
   // Resolve feed header (CMS override layer)
@@ -370,6 +370,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     user: phaseA.userProfile,
     supabase,
     portalCity: ctx.portalCity,
+    todayEvents: todayEventsWithProof,
   });
 
   // Stage 6: Final response assembly

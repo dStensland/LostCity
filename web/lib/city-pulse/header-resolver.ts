@@ -11,6 +11,7 @@ import { getLocalDateString } from "@/lib/formats";
 import { sanitizeCssColor } from "@/lib/css-utils";
 import { getEditorialHeadline, getCityPhoto, getDefaultAccentColor, getTimeLabel } from "./header-defaults";
 import { getDashboardCards } from "./dashboard-cards";
+import type { FeedEventData } from "@/components/EventCard";
 import type {
   FeedContext,
   FeedHeaderRow,
@@ -18,6 +19,7 @@ import type {
   FeedHeaderCardConfig,
   FeedHeaderCardQuery,
   ResolvedHeader,
+  FlagshipEvent,
   DashboardCard,
   QuickLink,
   EventsPulse,
@@ -38,12 +40,15 @@ export interface ResolveHeaderOpts {
   user?: { display_name: string | null; username: string | null } | null;
   supabase: SupabaseClient;
   portalCity?: string;
+  /** Today's events (with social proof) — used to identify the flagship hero event */
+  todayEvents?: FeedEventData[];
 }
 
 export async function resolveHeader(opts: ResolveHeaderOpts): Promise<ResolvedHeader> {
   const {
     candidates, context, portalSlug, portalName,
     eventsPulse, now, user, supabase, portalCity, portalId,
+    todayEvents,
   } = opts;
 
   // 1. Find first matching candidate
@@ -114,6 +119,9 @@ export async function resolveHeader(opts: ResolveHeaderOpts): Promise<ResolvedHe
   // 5. Resolve quick links
   const quickLinks: QuickLink[] = winner?.quick_links ?? defaultQuickLinks;
 
+  // 6. Identify flagship event — tentpole or festival event with an image
+  const flagshipEvent = resolveFlagshipEvent(todayEvents, portalSlug);
+
   return {
     config_id: winner?.id ?? null,
     config_slug: winner?.slug ?? null,
@@ -129,6 +137,67 @@ export async function resolveHeader(opts: ResolveHeaderOpts): Promise<ResolvedHe
     events_pulse: eventsPulse,
     suppressed_event_ids: suppressedEventIds,
     boosted_event_ids: boostedEventIds,
+    flagship_event: flagshipEvent,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Flagship event selection
+// ---------------------------------------------------------------------------
+
+/**
+ * Find the best flagship event from today's pool — a tentpole or festival
+ * event that has an image and can own the hero area.
+ *
+ * Priority order:
+ *  1. importance === "flagship"
+ *  2. is_tentpole
+ *  3. festival_id set
+ *
+ * Returns null when no qualifying event with an image exists.
+ */
+function resolveFlagshipEvent(
+  todayEvents: FeedEventData[] | undefined,
+  portalSlug: string,
+): FlagshipEvent | null {
+  if (!todayEvents || todayEvents.length === 0) return null;
+
+  const candidates = todayEvents.filter(
+    (e) =>
+      (e.importance === "flagship" || e.is_tentpole || !!e.festival_id) &&
+      !!e.image_url,
+  );
+
+  if (candidates.length === 0) return null;
+
+  // Sort: flagship importance first, then tentpole, then festival
+  const priority = (e: FeedEventData): number => {
+    if (e.importance === "flagship") return 0;
+    if (e.is_tentpole) return 1;
+    return 2;
+  };
+  candidates.sort((a, b) => priority(a) - priority(b));
+
+  const best = candidates[0];
+  if (!best.image_url) return null;
+
+  const priceInfo =
+    best.is_free
+      ? "Free"
+      : best.price_min != null
+        ? best.price_min === 0
+          ? "Free"
+          : `$${best.price_min}+`
+        : null;
+
+  return {
+    id: best.id,
+    title: best.title,
+    image_url: best.image_url,
+    venue_name: best.venue?.name ?? null,
+    start_time: best.start_time ?? null,
+    price_info: priceInfo,
+    href: `/${portalSlug}/events/${best.id}`,
   };
 }
 

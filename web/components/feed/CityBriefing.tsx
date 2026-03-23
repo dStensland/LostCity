@@ -52,6 +52,7 @@ import { getCategoryColor, CATEGORY_COLORS, CATEGORY_ICONS, FILTER_CATEGORIES } 
 import type {
   FeedContext,
   ResolvedHeader,
+  FlagshipEvent,
   TimeSlot,
   LayoutVariant,
   TextTreatment,
@@ -663,6 +664,109 @@ function EditorialLayout({
   );
 }
 
+// ── Flagship event hero content ───────────────────────────────────────────────
+
+function FlagshipHeroContent({
+  flagship,
+  weather,
+  parallaxWeather,
+  liveCount,
+  portalSlug,
+  quickLinks,
+  parallaxMasthead,
+  parallaxMeta,
+}: {
+  flagship: FlagshipEvent;
+  weather: FeedContext["weather"];
+  parallaxWeather: number;
+  liveCount: number | null;
+  portalSlug: string;
+  quickLinks?: QuickLink[];
+  parallaxMasthead: number;
+  parallaxMeta: number;
+}) {
+  return (
+    <div className="relative z-10 flex flex-col justify-end min-h-[300px] sm:min-h-[520px] px-6 sm:px-10 pb-8 pt-5">
+      <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
+      <WeatherPill
+        weather={weather}
+        parallaxY={parallaxWeather}
+        position="top-right"
+        portalSlug={portalSlug}
+      />
+
+      <div className="mt-auto">
+        <div
+          className="animate-fade-in hero-stagger-2 will-change-transform"
+          style={{ transform: `translateY(${parallaxMasthead}px)` }}
+        >
+          {/* "HAPPENING NOW" label */}
+          <span className="font-mono text-2xs uppercase tracking-[1.2px] text-[var(--gold)]"
+            style={{ textShadow: "0 1px 8px rgba(0,0,0,0.8)" }}>
+            HAPPENING NOW
+          </span>
+
+          {/* Event title replaces time-of-day masthead */}
+          <Link href={flagship.href}>
+            <h1
+              className="text-[2.25rem] sm:text-[3rem] leading-[0.92] tracking-[0.01em] text-white mt-1 hover:opacity-90 transition-opacity line-clamp-2"
+              style={{
+                textShadow: "0 2px 16px rgba(0,0,0,0.85), 0 1px 4px rgba(0,0,0,0.95)",
+                fontFamily: "var(--font-masthead), sans-serif",
+              }}
+            >
+              {flagship.title}
+            </h1>
+          </Link>
+
+          {/* Venue + time + price metadata */}
+          {(flagship.venue_name || flagship.start_time || flagship.price_info) && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {flagship.venue_name && (
+                <span
+                  className="text-sm text-[var(--cream)]/80"
+                  style={{ textShadow: "0 1px 8px rgba(0,0,0,0.75)" }}
+                >
+                  {flagship.venue_name}
+                </span>
+              )}
+              {flagship.venue_name && flagship.start_time && (
+                <span className="text-[var(--cream)]/50 text-sm">·</span>
+              )}
+              {flagship.start_time && (
+                <span
+                  className="font-mono text-sm text-[var(--cream)]/80"
+                  style={{ textShadow: "0 1px 8px rgba(0,0,0,0.75)" }}
+                >
+                  {flagship.start_time}
+                </span>
+              )}
+              {flagship.price_info && (
+                <>
+                  <span className="text-[var(--cream)]/50 text-sm">·</span>
+                  <span
+                    className="font-mono text-sm text-[var(--neon-green)]"
+                    style={{ textShadow: "0 1px 8px rgba(0,0,0,0.75)" }}
+                  >
+                    {flagship.price_info}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div
+          className="animate-fade-in hero-stagger-3 mt-3 will-change-transform"
+          style={{ transform: `translateY(${parallaxMeta}px)` }}
+        >
+          <HeroQuickLinks links={quickLinks} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Briefing card sub-components ──────────────────────────────────────────────
 
 function timeAgo(dateStr: string | null): string {
@@ -931,10 +1035,18 @@ export default function CityBriefing({
     return () => window.removeEventListener("scroll", handleScroll);
   }, [feedVisible]);
 
+  // ── Flagship event binding ────────────────────────────────────────────────
+  const flagship = header.flagship_event ?? null;
+
   // ── Hero image with fallback ─────────────────────────────────────────────
-  const [heroImageUrl, setHeroImageUrl] = useState(header.hero_image_url);
-  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
-  useEffect(() => { setHeroImageUrl(header.hero_image_url); }, [header.hero_image_url]);
+  // When a flagship event is present, use its image as the hero.
+  const atmosphericImageUrl = header.hero_image_url;
+  const initialHeroUrl = flagship?.image_url ?? atmosphericImageUrl;
+  const [heroImageUrl, setHeroImageUrl] = useState(initialHeroUrl);
+  useEffect(() => {
+    setHeroImageUrl(flagship?.image_url ?? atmosphericImageUrl);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flagship?.image_url, atmosphericImageUrl]);
 
   // ── Derived state ────────────────────────────────────────────────────────
   const effectiveQuickLinks = quickLinks ?? header.quick_links ?? [];
@@ -982,7 +1094,7 @@ export default function CityBriefing({
               className="object-cover hero-ken-burns"
               style={{ objectPosition: "center 70%" }}
               sizes="100vw"
-              onError={() => setHeroImageUrl("/portals/atlanta/jackson-st-bridge.jpg")}
+              onError={() => setHeroImageUrl(flagship ? atmosphericImageUrl : "/portals/atlanta/jackson-st-bridge.jpg")}
             />
           </div>
 
@@ -1008,11 +1120,26 @@ export default function CityBriefing({
             <div className="absolute inset-0" style={treatment.vignette} />
           )}
 
-          {/* Layout variant content */}
-          {variant === "centered" && <CenteredLayout {...layoutProps} />}
-          {variant === "bottom-left" && <BottomLeftLayout {...layoutProps} />}
-          {variant === "split" && <SplitLayout {...layoutProps} />}
-          {variant === "editorial" && <EditorialLayout {...layoutProps} />}
+          {/* Layout variant content — flagship event owns the hero when present */}
+          {flagship ? (
+            <FlagshipHeroContent
+              flagship={flagship}
+              weather={context.weather}
+              parallaxWeather={contentParallax.weather}
+              liveCount={liveCount}
+              portalSlug={portalSlug}
+              quickLinks={effectiveQuickLinks}
+              parallaxMasthead={contentParallax.masthead}
+              parallaxMeta={contentParallax.meta}
+            />
+          ) : (
+            <>
+              {variant === "centered" && <CenteredLayout {...layoutProps} />}
+              {variant === "bottom-left" && <BottomLeftLayout {...layoutProps} />}
+              {variant === "split" && <SplitLayout {...layoutProps} />}
+              {variant === "editorial" && <EditorialLayout {...layoutProps} />}
+            </>
+          )}
         </div>
 
         {/* Festival alert ribbon */}

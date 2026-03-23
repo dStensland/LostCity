@@ -267,6 +267,17 @@ export interface FeedHeaderCta {
   style?: "primary" | "ghost";
 }
 
+/** Minimal flagship event shape — subset of FeedEventData */
+export interface FlagshipEvent {
+  id: number;
+  title: string;
+  image_url: string;
+  venue_name?: string | null;
+  start_time?: string | null;
+  price_info?: string | null;
+  href: string;
+}
+
 /** Server-resolved header sent to the client */
 export interface ResolvedHeader {
   config_id: string | null;
@@ -283,6 +294,8 @@ export interface ResolvedHeader {
   events_pulse: EventsPulse;
   suppressed_event_ids: number[];
   boosted_event_ids: number[];
+  /** Tentpole or festival event happening today with an image — owns the hero when present */
+  flagship_event?: FlagshipEvent | null;
 }
 
 // ---------------------------------------------------------------------------
