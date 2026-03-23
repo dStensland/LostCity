@@ -6,10 +6,73 @@ to reject junk venues before they enter the database.
 """
 
 import re
+import math
 import logging
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+# ===== COORDINATE SANITY CHECK =====
+
+# Known geocoder default/fallback points.  These are coordinates that geocoders
+# return when they cannot resolve an address to a specific building.  Any venue
+# pinned here is almost certainly wrong — the geocoder gave up and returned a
+# city-level centroid or a known "default point" for its dataset.
+#
+# The `exact` entries are specific fallback coordinates observed in production
+# data (e.g. Nominatim's Atlanta fallback).  The `centroid` entries are city
+# centres that both Google Places and Nominatim use as last-resort fallbacks.
+#
+# Radius (metres): within this distance a result is treated as suspicious.
+_SUSPICIOUS_POINTS = [
+    # Specific Nominatim Atlanta fallback observed in production
+    {"lat": 33.7544657, "lng": -84.3898151, "radius_m": 50,   "label": "Nominatim Atlanta fallback"},
+    # City centroids — larger radius because some real venues are close
+    {"lat": 33.7490,    "lng": -84.3880,    "radius_m": 500,  "label": "Atlanta centroid"},
+    {"lat": 36.1620,    "lng": -86.7810,    "radius_m": 500,  "label": "Nashville centroid"},
+]
+
+
+def _haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Return distance in metres between two lat/lng points (Haversine)."""
+    R = 6_371_000.0
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlam = math.radians(lng2 - lng1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlam / 2) ** 2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def is_suspicious_coordinate(lat: float, lng: float) -> tuple[bool, Optional[str]]:
+    """
+    Return (True, reason) if (lat, lng) is suspiciously close to a known
+    geocoder default/fallback point; (False, None) otherwise.
+
+    Used by get_or_create_venue() and post-crawl auditing to catch venues
+    that were silently pinned at a city centroid because the geocoder couldn't
+    resolve their address.
+
+    Args:
+        lat: Latitude of the coordinate to check.
+        lng: Longitude of the coordinate to check.
+
+    Returns:
+        (is_suspicious, reason_string)
+        is_suspicious is True if the coordinate matches a known bad point.
+        reason_string is a human-readable explanation (or None when not suspicious).
+    """
+    if lat is None or lng is None:
+        return False, None
+
+    for point in _SUSPICIOUS_POINTS:
+        dist = _haversine_m(lat, lng, point["lat"], point["lng"])
+        if dist <= point["radius_m"]:
+            return True, (
+                f"coordinate ({lat}, {lng}) is {dist:.0f}m from {point['label']} "
+                f"(threshold: {point['radius_m']}m) — likely a geocoder fallback"
+            )
+    return False, None
+
 
 # ===== NAME VALIDATION =====
 

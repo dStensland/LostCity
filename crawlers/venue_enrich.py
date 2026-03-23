@@ -449,6 +449,61 @@ Website Content:
         return None
 
 
+# ── Known geocoder default/fallback points ──────────────────────────────────
+# Any geocoding result within a point's `radius_m` is treated as a failure
+# (the geocoder gave up and returned a default pin) unless the venue address
+# explicitly confirms it really belongs there.
+# Default rejection radius used when a point doesn't specify its own.
+_CENTROID_REJECT_RADIUS_M = 500  # metres
+
+_KNOWN_CENTROIDS = [
+    # Specific Nominatim Atlanta fallback point — not at the centroid but clusters badly
+    {"label": "Nominatim Atlanta fallback", "lat": 33.7544657, "lng": -84.3898151, "radius_m": 50},
+    # City centroids — larger radius, genuine downtown venues can be close
+    {"label": "Atlanta centroid",           "lat": 33.749,     "lng": -84.388,     "radius_m": 500},
+    {"label": "Nashville centroid",         "lat": 36.162,     "lng": -86.781,     "radius_m": 500},
+]
+
+# Street-address fragments that genuinely belong at or very near the centroid.
+# If the venue address contains any of these tokens (case-insensitive) we allow
+# a centroid-adjacent result through.
+_CENTROID_DOWNTOWN_TOKENS = frozenset([
+    "downtown",
+    # Atlanta Downtown street addresses close to the centroid
+    "peachtree center", "centennial olympic", "marietta st nw",
+    "forsyth st sw", "ted turner dr",
+    # Nashville Downtown (both spelled-out and abbreviated forms)
+    "broadway", "second ave", "2nd ave", "lower broadway", "1st ave n",
+])
+
+
+def _is_centroid_fallback(lat: float, lng: float, venue_address: str) -> bool:
+    """
+    Return True when a geocoding result is suspiciously close to a known city
+    centroid AND the venue address doesn't explicitly place it downtown.
+
+    Google Places (and Nominatim) return city-centroid coordinates when they
+    cannot resolve a specific address. Accepting those silently creates map
+    clusters that look valid but are wrong. Better to leave lat/lng null.
+    """
+    addr_lower = (venue_address or "").lower()
+
+    for centroid in _KNOWN_CENTROIDS:
+        reject_radius = centroid.get("radius_m", _CENTROID_REJECT_RADIUS_M)
+        dist = haversine_distance(lat, lng, centroid["lat"], centroid["lng"])
+        if dist <= reject_radius:
+            # For the tight-radius exact fallback point: always reject —
+            # no real venue should be within 50m of the Nominatim default pin.
+            if reject_radius <= 50:
+                return True
+            # For broader centroid zones: allow if address confirms downtown.
+            if any(token in addr_lower for token in _CENTROID_DOWNTOWN_TOKENS):
+                return False  # Address explicitly Downtown-ish — allow it
+            return True  # Centroid fallback detected
+
+    return False
+
+
 def enrich_venue(venue_id: int, google_place: dict, dry_run: bool = False) -> dict:
     """
     Enrich a venue with Google Places data.
@@ -462,6 +517,23 @@ def enrich_venue(venue_id: int, google_place: dict, dry_run: bool = False) -> di
     neighborhood = None
     if lat and lng:
         neighborhood = determine_neighborhood(lat, lng)
+
+    # Guard against geocoder centroid fallbacks.  Google Places (and Nominatim)
+    # sometimes return city-centroid coordinates when they can't resolve a
+    # specific address.  Those look valid but are wrong — they'd pin 50+ venues
+    # at a single map point.  Null the coords out so the venue can be
+    # re-attempted later via a more targeted query.
+    venue_address = google_place.get("formattedAddress") or ""
+    if lat and lng and _is_centroid_fallback(lat, lng, venue_address):
+        logger.warning(
+            "venue_id=%s: geocoding result (%s, %s) is within %dm of a known "
+            "city centroid and the address %r doesn't confirm downtown placement "
+            "— treating as geocoding failure, leaving lat/lng null",
+            venue_id, lat, lng, _CENTROID_REJECT_RADIUS_M, venue_address,
+        )
+        lat = None
+        lng = None
+        neighborhood = None
 
     google_types = google_place.get("types", [])
 
