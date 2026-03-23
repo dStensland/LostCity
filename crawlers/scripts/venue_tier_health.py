@@ -2,18 +2,27 @@
 """
 Venue Enrichment Tier Health Report
 
-Measures every venue against the platform tier contract (prds/040):
-  Tier 0: Floor       — name, slug, coords, city/state, venue_type, active
-  Tier 1: Discoverable — + image, description (real), neighborhood
-  Tier 2: Destination  — + destination_details + 2 features
-  Tier 3: Premium      — + 3/5 of: specials, editorial, 3+ occasions, hours, vibes
+Each venue type has a TARGET tier (how much data it should have).
+This tool measures how many venues meet their target.
+
+Target tiers:
+  Tier 3 (Premium):      museums, zoos, aquariums, theme parks, arenas
+  Tier 2 (Destination):   breweries, cinemas, entertainment, food halls, nightlife
+  Tier 1 (Discoverable):  restaurants, bars, parks, galleries, hotels
+  Tier 0 (Floor):         organizations, churches, festivals, catch-all
+
+Data requirements:
+  Tier 0: name + slug + coords + city/state + venue_type + active
+  Tier 1: + image + description (real) + neighborhood
+  Tier 2: + destination_details + 2 venue_features
+  Tier 3: + 3/5 of: specials, editorial, 3+ occasions, hours, vibes
 
 Usage:
-    python3 scripts/venue_tier_health.py                    # Full report
-    python3 scripts/venue_tier_health.py --city Atlanta     # Filter by city
-    python3 scripts/venue_tier_health.py --type brewery     # Filter by venue_type
-    python3 scripts/venue_tier_health.py --gaps             # Show easiest upgrade targets
-    python3 scripts/venue_tier_health.py --json             # Machine-readable output
+    python3 scripts/venue_tier_health.py                 # Full compliance report
+    python3 scripts/venue_tier_health.py --city Atlanta   # Filter by city
+    python3 scripts/venue_tier_health.py --type brewery   # Filter by venue_type
+    python3 scripts/venue_tier_health.py --gaps           # Show underperformers
+    python3 scripts/venue_tier_health.py --json           # Machine-readable output
 """
 
 import argparse
@@ -32,29 +41,50 @@ logger = logging.getLogger(__name__)
 
 # ── Terminal colors ──
 class C:
-    G = "\033[92m"  # green
-    Y = "\033[93m"  # yellow
-    R = "\033[91m"  # red
-    B = "\033[94m"  # blue
-    W = "\033[97m"  # white
-    D = "\033[90m"  # dim
+    G = "\033[92m"
+    Y = "\033[93m"
+    R = "\033[91m"
+    B = "\033[94m"
+    D = "\033[90m"
     BOLD = "\033[1m"
     END = "\033[0m"
 
 
-TIER_COLORS = {0: C.R, 1: C.Y, 2: C.G, 3: C.B}
 TIER_LABELS = {0: "Floor", 1: "Discoverable", 2: "Destination", 3: "Premium"}
 
-# ── Venue types considered "destinations" (worth enriching to Tier 2+) ──
-DESTINATION_TYPES = {
-    "museum", "gallery", "park", "garden", "brewery", "distillery", "winery",
-    "cinema", "music_venue", "comedy_club", "nightclub", "arena", "food_hall",
-    "farmers_market", "convention_center", "event_space", "entertainment",
-    "bowling", "arcade", "theater", "zoo", "aquarium", "theme_park",
-    "sports_bar", "rec_center", "community_center", "library", "bookstore",
-    "record_store", "studio", "fitness_center", "restaurant", "bar",
-    "coffee_shop", "hotel", "rooftop",
+# ── Target tier per venue_type ──
+# "What level of data should this type of venue have?"
+
+TARGET_TIER_3 = {
+    "museum", "zoo", "aquarium", "theme_park", "arena", "convention_center",
 }
+
+TARGET_TIER_2 = {
+    "brewery", "distillery", "winery", "cinema", "entertainment", "bowling",
+    "arcade", "food_hall", "farmers_market", "sports_bar", "comedy_club",
+    "nightclub", "music_venue", "rooftop",
+}
+
+TARGET_TIER_1 = {
+    "restaurant", "bar", "coffee_shop", "gallery", "theater", "bookstore",
+    "record_store", "library", "park", "garden", "fitness_center", "studio",
+    "hotel", "community_center", "rec_center", "event_space",
+}
+
+# Everything else is Tier 0
+
+
+def target_tier_for(venue_type: Optional[str]) -> int:
+    if not venue_type:
+        return 0
+    if venue_type in TARGET_TIER_3:
+        return 3
+    if venue_type in TARGET_TIER_2:
+        return 2
+    if venue_type in TARGET_TIER_1:
+        return 1
+    return 0
+
 
 BOILERPLATE_STARTS = [
     "welcome to", "just another", "coming soon", "page not found",
@@ -63,7 +93,6 @@ BOILERPLATE_STARTS = [
 
 
 def _is_real_description(desc: Optional[str]) -> bool:
-    """Return True if description is non-null, non-boilerplate, >30 chars."""
     if not desc or not isinstance(desc, str):
         return False
     desc = desc.strip()
@@ -73,115 +102,116 @@ def _is_real_description(desc: Optional[str]) -> bool:
     return not any(lower.startswith(p) for p in BOILERPLATE_STARTS)
 
 
-def assess_tier(venue: dict, enrichment: dict) -> tuple[int, dict]:
-    """
-    Assess a venue's tier (0-3) and return (tier, gap_info).
-
-    gap_info has keys for each tier with missing fields.
-    """
-    gaps: dict[int, list[str]] = {0: [], 1: [], 2: [], 3: []}
-
-    # ── Tier 0 checks ──
-    if not venue.get("name"):
-        gaps[0].append("name")
-    if not venue.get("slug"):
-        gaps[0].append("slug")
+def actual_tier(venue: dict, enrichment: dict) -> int:
+    """What tier does this venue's data actually meet?"""
+    # Tier 0 checks
+    if not venue.get("name") or not venue.get("slug"):
+        return -1
     if not venue.get("lat") or not venue.get("lng"):
-        gaps[0].append("coords")
+        return -1
     if not venue.get("city") or not venue.get("state"):
-        gaps[0].append("city/state")
+        return -1
     if not venue.get("venue_type"):
-        gaps[0].append("venue_type")
+        return -1
     if venue.get("active") is not True:
-        gaps[0].append("active")
+        return -1
 
-    if gaps[0]:
-        return 0, gaps
-
-    # ── Tier 1 checks ──
+    # Tier 1 checks
     if not venue.get("image_url"):
-        gaps[1].append("image_url")
+        return 0
     if not _is_real_description(venue.get("description")):
-        gaps[1].append("description")
+        return 0
     if not venue.get("neighborhood"):
-        gaps[1].append("neighborhood")
+        return 0
 
-    if gaps[1]:
-        return 0, gaps
-
-    # ── Tier 2 checks ──
+    # Tier 2 checks
     if not enrichment.get("has_destination_details"):
-        gaps[2].append("destination_details")
+        return 1
     if enrichment.get("feature_count", 0) < 2:
-        gaps[2].append(f"venue_features (have {enrichment.get('feature_count', 0)}, need 2)")
+        return 1
 
-    if gaps[2]:
-        return 1, gaps
-
-    # ── Tier 3 checks (need 3/5 premium signals) ──
-    premium_signals = 0
-    premium_missing = []
-
+    # Tier 3 checks
+    premium = 0
     if enrichment.get("special_count", 0) >= 1:
-        premium_signals += 1
-    else:
-        premium_missing.append("specials")
-
+        premium += 1
     if enrichment.get("editorial_count", 0) >= 1:
-        premium_signals += 1
-    else:
-        premium_missing.append("editorial_mentions")
-
+        premium += 1
     if enrichment.get("occasion_count", 0) >= 3:
-        premium_signals += 1
-    else:
-        premium_missing.append(f"occasions (have {enrichment.get('occasion_count', 0)}, need 3)")
-
+        premium += 1
     if venue.get("hours"):
-        premium_signals += 1
-    else:
-        premium_missing.append("hours")
-
+        premium += 1
     vibes = venue.get("vibes")
     if vibes and isinstance(vibes, list) and len(vibes) > 0:
-        premium_signals += 1
-    else:
-        premium_missing.append("vibes")
+        premium += 1
+    if premium < 3:
+        return 2
 
-    if premium_signals < 3:
-        gaps[3] = premium_missing
-        return 2, gaps
+    return 3
 
-    return 3, gaps
+
+def tier_gaps(venue: dict, enrichment: dict, target: int) -> list[str]:
+    """What's missing to reach the target tier?"""
+    current = actual_tier(venue, enrichment)
+    if current >= target:
+        return []
+
+    missing = []
+    # Need Tier 1?
+    if current < 1 and target >= 1:
+        if not venue.get("image_url"):
+            missing.append("image")
+        if not _is_real_description(venue.get("description")):
+            missing.append("description")
+        if not venue.get("neighborhood"):
+            missing.append("neighborhood")
+
+    # Need Tier 2?
+    if current < 2 and target >= 2:
+        if not enrichment.get("has_destination_details"):
+            missing.append("destination_details")
+        fc = enrichment.get("feature_count", 0)
+        if fc < 2:
+            missing.append(f"features ({fc}/2)")
+
+    # Need Tier 3?
+    if current < 3 and target >= 3:
+        if enrichment.get("special_count", 0) < 1:
+            missing.append("specials")
+        if enrichment.get("editorial_count", 0) < 1:
+            missing.append("editorial")
+        if enrichment.get("occasion_count", 0) < 3:
+            missing.append(f"occasions ({enrichment.get('occasion_count', 0)}/3)")
+        if not venue.get("hours"):
+            missing.append("hours")
+        vibes = venue.get("vibes")
+        if not vibes or not isinstance(vibes, list) or len(vibes) == 0:
+            missing.append("vibes")
+
+    return missing
 
 
 def fetch_venues(client, *, city: Optional[str] = None, venue_type: Optional[str] = None) -> list[dict]:
-    """Fetch all venues with relevant fields."""
     fields = "id,name,slug,lat,lng,city,state,venue_type,active,image_url,description,neighborhood,website,hours,vibes"
     all_venues = []
     offset = 0
-    batch_size = 1000
-
     while True:
         q = client.table("venues").select(fields).eq("active", True)
         if city:
             q = q.eq("city", city)
         if venue_type:
             q = q.eq("venue_type", venue_type)
-        q = q.order("id").range(offset, offset + batch_size - 1)
+        q = q.order("id").range(offset, offset + 999)
         r = q.execute()
         if not r.data:
             break
         all_venues.extend(r.data)
-        if len(r.data) < batch_size:
+        if len(r.data) < 1000:
             break
-        offset += batch_size
-
+        offset += 1000
     return all_venues
 
 
 def fetch_enrichment_counts(client, venue_ids: list[int]) -> dict[int, dict]:
-    """Batch-fetch enrichment entity counts for a set of venue IDs."""
     enrichment: dict[int, dict] = defaultdict(lambda: {
         "has_destination_details": False,
         "feature_count": 0,
@@ -189,172 +219,187 @@ def fetch_enrichment_counts(client, venue_ids: list[int]) -> dict[int, dict]:
         "editorial_count": 0,
         "occasion_count": 0,
     })
-
     if not venue_ids:
         return enrichment
 
-    # Destination details — just need existence
-    offset = 0
-    while True:
-        batch_ids = venue_ids[offset:offset + 500]
-        if not batch_ids:
-            break
-        r = client.table("venue_destination_details").select("venue_id").in_("venue_id", batch_ids).execute()
+    for offset in range(0, len(venue_ids), 500):
+        batch = venue_ids[offset:offset + 500]
+        r = client.table("venue_destination_details").select("venue_id").in_("venue_id", batch).execute()
         for row in (r.data or []):
             enrichment[row["venue_id"]]["has_destination_details"] = True
-        offset += 500
 
-    # Features — count per venue
-    _count_enrichment(client, "venue_features", venue_ids, enrichment, "feature_count")
-    # Specials
-    _count_enrichment(client, "venue_specials", venue_ids, enrichment, "special_count")
-    # Editorial mentions
-    _count_enrichment(client, "editorial_mentions", venue_ids, enrichment, "editorial_count")
-    # Occasions
-    _count_enrichment(client, "venue_occasions", venue_ids, enrichment, "occasion_count")
+    for table, key in [
+        ("venue_features", "feature_count"),
+        ("venue_specials", "special_count"),
+        ("editorial_mentions", "editorial_count"),
+        ("venue_occasions", "occasion_count"),
+    ]:
+        for offset in range(0, len(venue_ids), 500):
+            batch = venue_ids[offset:offset + 500]
+            r = client.table(table).select("venue_id").in_("venue_id", batch).execute()
+            counts: Counter = Counter(row["venue_id"] for row in (r.data or []))
+            for vid, count in counts.items():
+                enrichment[vid][key] = count
 
     return enrichment
 
 
-def _count_enrichment(client, table: str, venue_ids: list[int], enrichment: dict, key: str):
-    """Count rows per venue_id for an enrichment table."""
-    offset = 0
-    while True:
-        batch_ids = venue_ids[offset:offset + 500]
-        if not batch_ids:
-            break
-        r = client.table(table).select("venue_id").in_("venue_id", batch_ids).execute()
-        counts: Counter = Counter()
-        for row in (r.data or []):
-            counts[row["venue_id"]] += 1
-        for vid, count in counts.items():
-            enrichment[vid][key] = count
-        offset += 500
+def _compliance_color(pct: float) -> str:
+    if pct >= 70:
+        return C.G
+    if pct >= 40:
+        return C.Y
+    return C.R
+
+
+def _bar(pct: float, width: int = 20) -> str:
+    filled = int(pct / 100 * width)
+    return f"{C.D}{'#' * filled}{'.' * (width - filled)}{C.END}"
 
 
 def print_report(venues: list[dict], enrichment: dict, *, show_gaps: bool = False, as_json: bool = False):
-    """Print the tier health report."""
-    tier_counts: Counter = Counter()
-    type_tiers: dict[str, Counter] = defaultdict(Counter)
-    gap_candidates: list[dict] = []
-
+    # Assess every venue
+    results = []
     for v in venues:
-        tier, gaps = assess_tier(v, enrichment.get(v["id"], {}))
-        tier_counts[tier] += 1
         vtype = v.get("venue_type", "unknown")
-        type_tiers[vtype][tier] += 1
+        target = target_tier_for(vtype)
+        current = actual_tier(v, enrichment.get(v["id"], {}))
+        meets_target = current >= target
+        gaps = tier_gaps(v, enrichment.get(v["id"], {}), target)
+        results.append({
+            "id": v["id"],
+            "name": v["name"],
+            "venue_type": vtype,
+            "target_tier": target,
+            "actual_tier": current,
+            "meets_target": meets_target,
+            "gaps": gaps,
+        })
 
-        # Track venues closest to upgrading
-        if tier < 3:
-            next_tier = tier + 1
-            missing = gaps.get(next_tier, [])
-            gap_candidates.append({
-                "id": v["id"],
-                "name": v["name"],
-                "venue_type": vtype,
-                "current_tier": tier,
-                "next_tier": next_tier,
-                "missing": missing,
-                "missing_count": len(missing),
-            })
+    total = len(results)
+    compliant = sum(1 for r in results if r["meets_target"])
+    compliance_pct = compliant / total * 100 if total else 0
 
-    total = len(venues)
+    # Group by target tier
+    by_target: dict[int, list[dict]] = defaultdict(list)
+    for r in results:
+        by_target[r["target_tier"]].append(r)
+
+    # Group by venue_type
+    by_type: dict[str, list[dict]] = defaultdict(list)
+    for r in results:
+        by_type[r["venue_type"]].append(r)
 
     if as_json:
-        result = {
+        output = {
             "total_venues": total,
-            "tier_distribution": {f"tier_{t}": tier_counts.get(t, 0) for t in range(4)},
-            "tier_percentages": {f"tier_{t}": round(tier_counts.get(t, 0) / total * 100, 1) if total else 0 for t in range(4)},
-            "by_type": {
-                vtype: {f"tier_{t}": counts.get(t, 0) for t in range(4)}
-                for vtype, counts in sorted(type_tiers.items(), key=lambda x: -sum(x[1].values()))
-            },
+            "compliant": compliant,
+            "compliance_pct": round(compliance_pct, 1),
+            "by_target_tier": {},
+            "by_type": {},
         }
+        for tier in range(4):
+            group = by_target.get(tier, [])
+            met = sum(1 for r in group if r["meets_target"])
+            output["by_target_tier"][f"tier_{tier}"] = {
+                "count": len(group),
+                "compliant": met,
+                "pct": round(met / len(group) * 100, 1) if group else 0,
+            }
+        for vtype, group in sorted(by_type.items(), key=lambda x: -len(x[1])):
+            met = sum(1 for r in group if r["meets_target"])
+            output["by_type"][vtype] = {
+                "count": len(group),
+                "target_tier": target_tier_for(vtype),
+                "compliant": met,
+                "pct": round(met / len(group) * 100, 1) if group else 0,
+            }
         if show_gaps:
-            # Top 20 easiest upgrades
-            gap_candidates.sort(key=lambda x: (x["missing_count"], -x["current_tier"]))
-            result["easiest_upgrades"] = gap_candidates[:20]
-        print(json.dumps(result, indent=2))
+            # Venues not meeting target, sorted by gap count (easiest first)
+            failing = [r for r in results if not r["meets_target"] and r["target_tier"] >= 1]
+            failing.sort(key=lambda r: (len(r["gaps"]), -r["target_tier"]))
+            output["underperformers"] = failing[:30]
+        print(json.dumps(output, indent=2))
         return
 
-    # ── Header ──
+    # ── Print report ──
     print(f"\n{C.BOLD}{C.B}{'=' * 70}{C.END}")
-    print(f"{C.BOLD}{C.B}{'VENUE ENRICHMENT TIER HEALTH':^70}{C.END}")
-    print(f"{C.BOLD}{C.B}{'=' * 70}{C.END}\n")
+    print(f"{C.BOLD}{C.B}{'VENUE ENRICHMENT HEALTH':^70}{C.END}")
+    print(f"{C.BOLD}{C.B}{'=' * 70}{C.END}")
 
-    # ── Overall distribution ──
-    print(f"{C.BOLD}Tier Distribution ({total} venues){C.END}")
-    print(f"{'-' * 70}")
-    for tier in range(4):
-        count = tier_counts.get(tier, 0)
-        pct = count / total * 100 if total else 0
-        color = TIER_COLORS[tier]
-        bar = "#" * int(pct / 2)
-        label = TIER_LABELS[tier]
-        print(f"  {color}Tier {tier} ({label:>12}){C.END}: {count:>5} ({pct:5.1f}%) {C.D}{bar}{C.END}")
+    # Overall compliance
+    color = _compliance_color(compliance_pct)
+    print(f"\n  {C.BOLD}Overall:{C.END} {color}{compliant}/{total} venues meet their target tier ({compliance_pct:.0f}%){C.END}")
 
-    # ── Destination venues breakdown ──
-    dest_venues = [v for v in venues if v.get("venue_type") in DESTINATION_TYPES]
-    dest_tiers: Counter = Counter()
-    for v in dest_venues:
-        tier, _ = assess_tier(v, enrichment.get(v["id"], {}))
-        dest_tiers[tier] += 1
+    # ── By target tier ──
+    print(f"\n{C.BOLD}Compliance by Target Tier{C.END}")
+    print(f"{'─' * 70}")
+    print(f"  {'Target Tier':<30} {'Total':>6} {'Pass':>6} {'Fail':>6} {'Rate':>7}")
+    print(f"  {'─' * 26}  {'─' * 5} {'─' * 5} {'─' * 5} {'─' * 6}")
 
-    print(f"\n{C.BOLD}Destination Venues Only ({len(dest_venues)} venues){C.END}")
-    print(f"{'-' * 70}")
-    for tier in range(4):
-        count = dest_tiers.get(tier, 0)
-        pct = count / len(dest_venues) * 100 if dest_venues else 0
-        color = TIER_COLORS[tier]
-        bar = "#" * int(pct / 2)
-        label = TIER_LABELS[tier]
-        print(f"  {color}Tier {tier} ({label:>12}){C.END}: {count:>5} ({pct:5.1f}%) {C.D}{bar}{C.END}")
+    for tier in [3, 2, 1, 0]:
+        group = by_target.get(tier, [])
+        if not group:
+            continue
+        met = sum(1 for r in group if r["meets_target"])
+        fail = len(group) - met
+        pct = met / len(group) * 100 if group else 0
+        color = _compliance_color(pct)
+        print(f"  Tier {tier} ({TIER_LABELS[tier]:<12})         {len(group):>6} {met:>6} {fail:>6} {color}{pct:>5.0f}%{C.END}  {_bar(pct)}")
 
-    # ── By venue type (top 15) ──
-    print(f"\n{C.BOLD}By Venue Type (top 15){C.END}")
-    print(f"{'-' * 70}")
-    print(f"  {'Type':<25} {'T0':>5} {'T1':>5} {'T2':>5} {'T3':>5} {'Total':>6} {'%T2+':>6}")
-    print(f"  {'-'*25} {'-'*5} {'-'*5} {'-'*5} {'-'*5} {'-'*6} {'-'*6}")
+    # ── By venue type (worst compliance first, only types with target >= 1) ──
+    print(f"\n{C.BOLD}Compliance by Venue Type{C.END} {C.D}(target tier >= 1, sorted worst→best){C.END}")
+    print(f"{'─' * 70}")
+    print(f"  {'Type':<22} {'Target':>6} {'Count':>6} {'Pass':>6} {'Rate':>7}")
+    print(f"  {'─' * 22} {'─' * 6} {'─' * 5} {'─' * 5} {'─' * 6}")
 
-    sorted_types = sorted(type_tiers.items(), key=lambda x: -sum(x[1].values()))
-    for vtype, counts in sorted_types[:15]:
-        t0 = counts.get(0, 0)
-        t1 = counts.get(1, 0)
-        t2 = counts.get(2, 0)
-        t3 = counts.get(3, 0)
-        type_total = t0 + t1 + t2 + t3
-        pct_t2plus = (t2 + t3) / type_total * 100 if type_total else 0
-        color = C.G if pct_t2plus >= 50 else (C.Y if pct_t2plus >= 20 else C.R)
-        print(f"  {vtype:<25} {t0:>5} {t1:>5} {t2:>5} {t3:>5} {type_total:>6} {color}{pct_t2plus:>5.0f}%{C.END}")
+    type_rows = []
+    for vtype, group in by_type.items():
+        target = target_tier_for(vtype)
+        if target < 1:
+            continue
+        met = sum(1 for r in group if r["meets_target"])
+        pct = met / len(group) * 100 if group else 0
+        type_rows.append((vtype, target, len(group), met, pct))
+
+    type_rows.sort(key=lambda r: (r[4], -r[2]))  # worst compliance first, then by count
+
+    for vtype, target, count, met, pct in type_rows:
+        color = _compliance_color(pct)
+        print(f"  {vtype:<22} T{target:>5} {count:>6} {met:>6} {color}{pct:>5.0f}%{C.END}  {_bar(pct)}")
 
     # ── Gap analysis ──
     if show_gaps:
-        print(f"\n{C.BOLD}Easiest Tier Upgrades (closest to next tier){C.END}")
-        print(f"{'-' * 70}")
+        print(f"\n{C.BOLD}Venues Not Meeting Target{C.END} {C.D}(easiest fixes first, target tier >= 2){C.END}")
+        print(f"{'─' * 70}")
 
-        # Group by upgrade path
-        for target_tier in [1, 2, 3]:
-            candidates = [g for g in gap_candidates if g["next_tier"] == target_tier and g["missing_count"] <= 2]
-            candidates.sort(key=lambda x: x["missing_count"])
-            if not candidates:
-                continue
+        failing = [r for r in results if not r["meets_target"] and r["target_tier"] >= 2]
+        failing.sort(key=lambda r: (len(r["gaps"]), -r["target_tier"]))
 
-            color = TIER_COLORS[target_tier]
-            print(f"\n  {color}{C.BOLD}→ Tier {target_tier} ({TIER_LABELS[target_tier]}) — {len(candidates)} venues within reach{C.END}")
-            for g in candidates[:10]:
-                missing_str = ", ".join(g["missing"])
-                print(f"    {g['name']:<35} {C.D}({g['venue_type']}){C.END} needs: {C.Y}{missing_str}{C.END}")
+        for r in failing[:25]:
+            gap_str = ", ".join(r["gaps"][:4])
+            print(f"  {r['name']:<35} {C.D}T{r['target_tier']} {r['venue_type']:<15}{C.END} needs: {C.Y}{gap_str}{C.END}")
 
     # ── Summary ──
-    t2plus = tier_counts.get(2, 0) + tier_counts.get(3, 0)
-    t2plus_pct = t2plus / total * 100 if total else 0
-    print(f"\n{C.BOLD}Summary{C.END}")
-    print(f"{'-' * 70}")
-    print(f"  Tier 2+ (Destination-ready): {t2plus} venues ({t2plus_pct:.1f}%)")
+    t2plus_types = TARGET_TIER_2 | TARGET_TIER_3
+    high_value = [r for r in results if r["venue_type"] in t2plus_types]
+    hv_met = sum(1 for r in high_value if r["meets_target"])
+    hv_pct = hv_met / len(high_value) * 100 if high_value else 0
 
-    dest_t2plus = dest_tiers.get(2, 0) + dest_tiers.get(3, 0)
-    dest_t2plus_pct = dest_t2plus / len(dest_venues) * 100 if dest_venues else 0
-    print(f"  Destination venues at Tier 2+: {dest_t2plus} / {len(dest_venues)} ({dest_t2plus_pct:.1f}%)")
+    print(f"\n{C.BOLD}Summary{C.END}")
+    print(f"{'─' * 70}")
+    print(f"  High-value venues (T2/T3 targets): {_compliance_color(hv_pct)}{hv_met}/{len(high_value)} compliant ({hv_pct:.0f}%){C.END}")
+
+    t1_types = TARGET_TIER_1
+    t1_venues = [r for r in results if r["venue_type"] in t1_types]
+    t1_met = sum(1 for r in t1_venues if r["meets_target"])
+    t1_pct = t1_met / len(t1_venues) * 100 if t1_venues else 0
+    print(f"  Discoverable venues (T1 targets):  {_compliance_color(t1_pct)}{t1_met}/{len(t1_venues)} compliant ({t1_pct:.0f}%){C.END}")
+
+    t0_venues = [r for r in results if target_tier_for(r["venue_type"]) == 0]
+    t0_met = sum(1 for r in t0_venues if r["meets_target"])
+    t0_pct = t0_met / len(t0_venues) * 100 if t0_venues else 0
+    print(f"  Event containers (T0 targets):     {_compliance_color(t0_pct)}{t0_met}/{len(t0_venues)} compliant ({t0_pct:.0f}%){C.END}")
     print()
 
 
@@ -362,22 +407,18 @@ def main():
     parser = argparse.ArgumentParser(description="Venue Enrichment Tier Health Report")
     parser.add_argument("--city", help="Filter by city")
     parser.add_argument("--type", dest="venue_type", help="Filter by venue_type")
-    parser.add_argument("--gaps", action="store_true", help="Show easiest upgrade targets")
+    parser.add_argument("--gaps", action="store_true", help="Show underperforming venues")
     parser.add_argument("--json", action="store_true", help="Machine-readable JSON output")
     args = parser.parse_args()
 
     client = get_client()
-
-    logger.info("Fetching venues...") if not args.json else None
     venues = fetch_venues(client, city=args.city, venue_type=args.venue_type)
     if not venues:
-        logger.info("No venues found matching filters.")
+        print("No venues found.")
         return
 
-    logger.info(f"Fetching enrichment data for {len(venues)} venues...") if not args.json else None
     venue_ids = [v["id"] for v in venues]
     enrichment = fetch_enrichment_counts(client, venue_ids)
-
     print_report(venues, enrichment, show_gaps=args.gaps, as_json=args.json)
 
 
