@@ -17,7 +17,7 @@ import { resolvePortalQueryContext, getVerticalFromRequest } from "@/lib/portal-
 import {
   applyFederatedPortalScopeToQuery,
   excludeSensitiveEvents,
-  filterByPortalCity,
+  expandCityFilterForMetro,
 } from "@/lib/portal-scope";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { getLocalDateString } from "@/lib/formats";
@@ -121,6 +121,18 @@ export async function GET(request: NextRequest) {
 
   query = excludeSensitiveEvents(query);
 
+  // Push city filter to Postgres via the joined venues relation.
+  // expandCityFilterForMetro handles the Atlanta case: "Atlanta" expands to
+  // Atlanta + 23 metro cities so Decatur, Marietta, etc. are included.
+  if (portalCity) {
+    const expandedCities = expandCityFilterForMetro([portalCity]);
+    query = (query as unknown as { filter: (col: string, op: string, val: string) => typeof query }).filter(
+      "venues.city",
+      "in",
+      `(${expandedCities.join(",")})`,
+    ) as typeof query;
+  }
+
   // Optional weekday filtering — compute target dates
   if (weekdayParam) {
     const targetDates = computeWeekdayDates(weekdayParam, today, weekAhead);
@@ -151,11 +163,6 @@ export async function GET(request: NextRequest) {
     [key: string]: unknown;
   };
   let events = (rawEvents ?? []) as EventRow[];
-
-  // Filter by portal city if needed
-  if (portalCity) {
-    events = filterByPortalCity(events, portalCity) as EventRow[];
-  }
 
   // Dedup & health
   events = dedupeEventsById(events);
