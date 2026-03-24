@@ -3,6 +3,9 @@
 /**
  * LazySection — defers rendering of below-fold feed sections until
  * they're within rootMargin of the viewport. Reduces initial DOM size.
+ *
+ * Uses a CSS opacity transition instead of hard-swapping DOM nodes,
+ * preventing layout shift when content arrives.
  */
 
 import { useRef, useState, useEffect, type ReactNode } from "react";
@@ -22,6 +25,7 @@ export default function LazySection({
 }: LazySectionProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [hasTransitioned, setHasTransitioned] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -41,15 +45,25 @@ export default function LazySection({
     return () => observer.disconnect();
   }, [rootMargin]);
 
-  if (isVisible) {
-    return <div className="animate-fade-in">{children}</div>;
-  }
+  // After the fade-in transition completes, drop the minHeight so the
+  // container can shrink to its natural size (e.g. when child returns null).
+  useEffect(() => {
+    if (!isVisible) return;
+    const t = setTimeout(() => setHasTransitioned(true), 500);
+    return () => clearTimeout(t);
+  }, [isVisible]);
 
   return (
     <div
       ref={ref}
-      style={{ minHeight }}
-      aria-hidden
-    />
+      style={{
+        minHeight: hasTransitioned ? undefined : minHeight,
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? "translateY(0)" : "translateY(8px)",
+        transition: "opacity 0.4s ease-out, transform 0.4s ease-out",
+      }}
+    >
+      {isVisible ? children : null}
+    </div>
   );
 }

@@ -991,7 +991,7 @@ export default function CityBriefing({
         {hasFestival && !hasHoliday && (
           <Link
             href={`/${portalSlug}?view=happening&series=${context.active_festivals[0].slug}`}
-            className="w-full flex items-center px-4 py-2.5 border text-left transition-colors hover:bg-[var(--dusk)] mt-2"
+            className="w-full flex items-center px-4 py-2.5 border text-left transition-colors hover:bg-[var(--dusk)] mt-2 animate-fade-in"
             style={{
               borderColor: `color-mix(in srgb, ${header.accent_color} 30%, var(--twilight))`,
               backgroundColor: `color-mix(in srgb, ${header.accent_color} 4%, var(--night))`,

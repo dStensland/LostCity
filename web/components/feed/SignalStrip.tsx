@@ -134,8 +134,8 @@ export function SignalStrip({ context, sportsTentpole, portalSlug = "atlanta" }:
   return (
     <div className="flex gap-1.5 flex-wrap" role="region" aria-label="City context">
 
-      {/* 1. Weather — always present */}
-      {context.weather && (
+      {/* 1. Weather — placeholder when loading, real data when ready */}
+      {context.weather ? (
         <LinkPill
           href={happeningHref}
           className={rain ? "!bg-[var(--neon-cyan)]/15 !text-[var(--neon-cyan)]" : ""}
@@ -144,6 +144,8 @@ export function SignalStrip({ context, sportsTentpole, portalSlug = "atlanta" }:
           {Math.round(context.weather.temperature_f)}°{" "}
           {context.weather.condition}
         </LinkPill>
+      ) : (
+        <span className="inline-flex h-[26px] w-32 rounded-full skeleton-shimmer" style={{ opacity: 0.12 }} />
       )}
 
       {/* 2. Sunset — afternoon/evening only */}

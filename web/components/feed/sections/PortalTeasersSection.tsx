@@ -111,8 +111,26 @@ export function PortalTeasersSection({ portalSlug }: PortalTeasersSectionProps) 
     gcTime: 5 * 60 * 1000,
   });
 
-  // While loading, return null — LazySection holds space with minHeight
-  if (isLoading) return null;
+  // Show skeleton while loading — prevents layout pop
+  if (isLoading) {
+    return (
+      <section className="pb-2">
+        <div className="h-5 w-36 rounded skeleton-shimmer mb-3" style={{ opacity: 0.2 }} />
+        <div className="flex gap-3 overflow-hidden -mx-4 px-4">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="flex-shrink-0 w-64 rounded-card bg-[var(--night)] border border-[var(--twilight)]/40 p-4 space-y-2"
+            >
+              <div className="h-3 w-20 rounded skeleton-shimmer" style={{ opacity: 0.15, animationDelay: `${i * 0.1}s` }} />
+              <div className="h-4 w-48 rounded skeleton-shimmer" style={{ opacity: 0.2 }} />
+              <div className="h-3 w-36 rounded skeleton-shimmer" style={{ opacity: 0.12 }} />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   // Graceful degradation: no section if no headlines
   if (!data?.headlines || data.headlines.length === 0) return null;

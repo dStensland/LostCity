@@ -120,7 +120,13 @@ function buildSummary(
 
 export function SummaryLine({ tabCounts, categoryCounts, weather }: SummaryLineProps) {
   const summary = buildSummary(tabCounts, categoryCounts, weather);
-  if (!summary) return null;
+
+  // Reserve the line height even when no data yet — prevents layout shift
+  // when event counts arrive from the API
+  if (!summary) {
+    return <p className="text-sm mt-1 h-5" aria-hidden />;
+  }
+
   return <p className="text-sm text-[var(--soft)] mt-1">{summary}</p>;
 }
 

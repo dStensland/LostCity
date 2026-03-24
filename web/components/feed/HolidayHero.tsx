@@ -424,7 +424,7 @@ export default function HolidayHero({ portalSlug, position = 1, eventCount: pref
   if (hasQuickLinks) {
     return (
       <div
-        className="relative rounded-2xl overflow-hidden"
+        className="relative rounded-2xl overflow-hidden mt-4 animate-fade-in"
         style={{
           background: holiday.gradient,
           border: `1px solid color-mix(in srgb, ${holiday.glowColor} 35%, transparent)`,
@@ -439,7 +439,7 @@ export default function HolidayHero({ portalSlug, position = 1, eventCount: pref
   // Standard cards: HolidayCard contains its own Link, so outer is a div
   return (
     <div
-      className="block relative rounded-2xl overflow-hidden group"
+      className="block relative rounded-2xl overflow-hidden group mt-4 animate-fade-in"
       style={{ background: holiday.gradient }}
     >
       <HolidayCard holiday={holiday} eventCount={eventCount} portalSlug={portalSlug} />

@@ -68,7 +68,7 @@ export default function ActiveContestSection({ portalSlug }: ActiveContestSectio
   if (!data) return null;
 
   return (
-    <div className="mt-6 px-4 sm:px-0">
+    <div className="mt-6 px-4 sm:px-0 animate-fade-in">
       <ContestFeedCard
         contest={data.contest}
         leader={data.leader}

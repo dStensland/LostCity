@@ -174,8 +174,30 @@ export function DestinationsSection({ portalSlug }: DestinationsSectionProps) {
     };
   }, [updateScrollState]);
 
-  // While loading, return null — LazySection holds the space with minHeight
-  if (loading) return null;
+  // Show skeleton cards while loading — prevents layout pop when content arrives
+  if (loading) {
+    return (
+      <section className="pb-2">
+        <div className="h-5 w-40 rounded skeleton-shimmer mb-3" style={{ opacity: 0.2 }} />
+        <div className="flex gap-3 overflow-hidden -mx-4 px-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex-shrink-0 rounded-card overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/40"
+              style={{ width: CARD_WIDTH }}
+            >
+              <div className="h-28 skeleton-shimmer" style={{ opacity: 0.15, animationDelay: `${i * 0.1}s` }} />
+              <div className="p-3 space-y-2">
+                <div className="h-2.5 w-16 rounded skeleton-shimmer" style={{ opacity: 0.15 }} />
+                <div className="h-3.5 w-32 rounded skeleton-shimmer" style={{ opacity: 0.2 }} />
+                <div className="h-2.5 w-24 rounded skeleton-shimmer" style={{ opacity: 0.12 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   // Graceful degradation: don't render section if no data after load
   if (destinations.length < 2) return null;

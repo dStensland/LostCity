@@ -238,8 +238,30 @@ export default function TheSceneSection({ portalSlug }: Props) {
     });
   }, []);
 
-  // While loading, return null — LazySection holds space with minHeight
-  if (isLoading) return null;
+  // Show skeleton while loading — prevents layout pop
+  if (isLoading) {
+    return (
+      <section>
+        <div className="h-5 w-36 rounded skeleton-shimmer mb-3" style={{ opacity: 0.2 }} />
+        <div className="flex gap-2 mb-4 overflow-hidden">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-8 rounded-full skeleton-shimmer flex-shrink-0" style={{ width: 80, opacity: 0.15, animationDelay: `${i * 0.08}s` }} />
+          ))}
+        </div>
+        <div className="space-y-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3 py-2">
+              <div className="w-2 h-2 rounded-full skeleton-shimmer" style={{ opacity: 0.2 }} />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3 rounded skeleton-shimmer" style={{ width: `${65 - i * 8}%`, opacity: 0.18, animationDelay: `${i * 0.06}s` }} />
+                <div className="h-2.5 rounded skeleton-shimmer" style={{ width: `${45 - i * 5}%`, opacity: 0.12 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   // Error state — subtle, doesn't break feed
   if (isError) {

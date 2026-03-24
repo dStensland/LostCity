@@ -362,10 +362,14 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
     }
   };
 
-  const lineupDataLoading = !lineupSections.length && isLoading;
+  const hasAnyTabEvents = tabCounts && (tabCounts.today > 0 || tabCounts.this_week > 0 || tabCounts.coming_up > 0);
+  const hasLineupContent = lineupSections.length > 0 || hasAnyTabEvents;
+  // Show skeleton while data is loading OR while we have no content yet (still fetching)
+  const lineupDataLoading = !hasLineupContent && isLoading;
   // Enforce minimum skeleton display time to prevent jarring flash-in/out
   const lineupLoading = useMinSkeletonDelay(lineupDataLoading, 400);
-  const hasAnyTabEvents = tabCounts && (tabCounts.today > 0 || tabCounts.this_week > 0 || tabCounts.coming_up > 0);
+  // Content is ready to show = we have data AND the min skeleton time has passed
+  const showLineupContent = hasLineupContent && !lineupLoading;
 
   // After initial load failure with no data at all, show error
   if (error && !data && !isLoading) {
@@ -409,7 +413,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
       )}
       {/* CTA (if present — only from CMS override, so only after API loads) */}
       {header.cta && (
-        <div className="mt-2.5">
+        <div className="mt-2.5 animate-fade-in">
           <Link
             href={header.cta.href}
             className={`block w-full text-center rounded-xl px-4 py-3 font-mono text-sm font-medium transition-colors ${
@@ -423,24 +427,29 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         </div>
       )}
 
-      {/* 3. Holiday Hero — seasonal card (self-gating, renders null when inactive) */}
-      <div className="mt-4">
-        <HolidayHero portalSlug={portalSlug} />
-      </div>
+      {/* 3. Holiday Hero — seasonal card (self-gating, renders null when inactive).
+           No wrapper margin — HolidayHero manages its own spacing when active. */}
+      <HolidayHero portalSlug={portalSlug} />
 
-      {/* 4. LineupSection — shows spinner until events arrive */}
+      {/* 4. LineupSection — crossfade skeleton → content */}
       <div
         id="city-pulse-events"
         data-feed-anchor="true"
         data-index-label="The Lineup"
         data-block-id="events"
         className="mt-4 scroll-mt-28"
-        style={{ minHeight: lineupLoading ? 400 : undefined }}
+        style={{ minHeight: showLineupContent ? undefined : 400 }}
       >
-        {lineupLoading ? (
+        {!showLineupContent ? (
           <FeedSectionSkeleton accentColor="var(--coral)" minHeight={400} onRetry={refresh} />
-        ) : lineupSections.length > 0 || hasAnyTabEvents ? (
-          <div>
+        ) : (
+          <div
+            style={{
+              opacity: 1,
+              transform: "translateY(0)",
+              transition: "opacity 0.4s ease-out, transform 0.4s ease-out",
+            }}
+          >
             <LineupSection
               sections={lineupSections}
               portalSlug={portalSlug}
@@ -454,7 +463,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
               vertical={portal?.settings?.vertical}
             />
           </div>
-        ) : null}
+        )}
       </div>
 
       {/* 5. Destinations — contextual venue suggestions, lazy-loaded */}

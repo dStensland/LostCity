@@ -81,6 +81,7 @@ function HeadlineRow({ post, isLast }: { post: NetworkPost; isLast: boolean }) {
 
 export function NewsDigest({ portalSlug }: NewsDigestProps) {
   const [headlines, setHeadlines] = useState<NetworkPost[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -104,16 +105,37 @@ export function NewsDigest({ portalSlug }: NewsDigestProps) {
         // Filter to culture-positive categories, take first 3
         const filtered = deduped.filter(isCulturePositive).slice(0, 3);
         setHeadlines(filtered);
+        setLoading(false);
       })
-      .catch(() => {});
+      .catch(() => setLoading(false));
 
     return () => controller.abort();
   }, [portalSlug]);
 
+  // Skeleton placeholder — reserves the same ~130px while loading
+  if (loading) {
+    return (
+      <div className="px-5 py-3 border-b border-[var(--twilight)]">
+        <div className="flex items-center justify-between mb-2">
+          <div className="h-2.5 w-28 rounded skeleton-shimmer" style={{ opacity: 0.15 }} />
+          <div className="h-2.5 w-16 rounded skeleton-shimmer" style={{ opacity: 0.1 }} />
+        </div>
+        <div className="space-y-0">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="py-2.5" style={i < 2 ? { borderBottom: "1px solid color-mix(in srgb, var(--twilight) 30%, transparent)" } : undefined}>
+              <div className="h-3 rounded skeleton-shimmer mb-1" style={{ width: `${80 - i * 12}%`, opacity: 0.15, animationDelay: `${i * 0.08}s` }} />
+              <div className="h-2 w-28 rounded skeleton-shimmer" style={{ opacity: 0.1 }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (headlines.length === 0) return null;
 
   return (
-    <div className="px-5 py-3 border-b border-[var(--twilight)] feed-section-enter">
+    <div className="px-5 py-3 border-b border-[var(--twilight)] animate-fade-in">
       {/* Header row */}
       <div className="flex items-center justify-between mb-2">
         <span className="font-mono text-2xs uppercase tracking-[1.2px] text-[var(--muted)]">
