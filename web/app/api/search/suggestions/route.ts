@@ -5,7 +5,10 @@ import {
 } from "@/lib/search-suggestions";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import {
+  getCachedPortalQueryContext,
+  resolvePortalQueryContext,
+} from "@/lib/portal-query-context";
 import { logger } from "@/lib/logger";
 
 // Helper to safely parse integers with validation
@@ -61,9 +64,11 @@ export async function GET(request: NextRequest) {
     const limit = safeParseInt(searchParams.get("limit"), 8, 1, 20);
     const includeCorrections = searchParams.get("corrections") === "true";
 
-    // Resolve portal context for city scoping
+    // Resolve portal context for city scoping (cached to avoid per-keystroke DB hits)
     const supabase = await createClient();
-    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    const portalContext =
+      (await getCachedPortalQueryContext(searchParams)) ??
+      (await resolvePortalQueryContext(supabase, searchParams));
     const city = searchParams.get("city") || portalContext.filters.city || undefined;
 
     // Get suggestions, optionally with corrections
