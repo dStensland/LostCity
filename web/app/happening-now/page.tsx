@@ -118,23 +118,41 @@ export default function HappeningNowPage() {
     };
   }, [fetchAroundMe, initialized]);
 
-  // Periodic refetch for freshness
+  // Periodic refetch for freshness — pauses when tab is hidden
   useEffect(() => {
     if (!initialized) return;
-    if (refetchTimerRef.current) clearInterval(refetchTimerRef.current);
 
-    refetchTimerRef.current = setInterval(async () => {
-      try {
-        const data = await fetchAroundMe();
-        setItems(data.items);
-        setCounts(data.counts);
-      } catch {
-        // Silent fail on background refetch
+    const startInterval = () => {
+      if (refetchTimerRef.current) clearInterval(refetchTimerRef.current);
+      refetchTimerRef.current = setInterval(async () => {
+        try {
+          const data = await fetchAroundMe();
+          setItems(data.items);
+          setCounts(data.counts);
+        } catch {
+          // Silent fail on background refetch
+        }
+      }, REFETCH_INTERVAL);
+    };
+
+    const stopInterval = () => {
+      if (refetchTimerRef.current) {
+        clearInterval(refetchTimerRef.current);
+        refetchTimerRef.current = null;
       }
-    }, REFETCH_INTERVAL);
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) stopInterval();
+      else startInterval();
+    };
+
+    startInterval();
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
-      if (refetchTimerRef.current) clearInterval(refetchTimerRef.current);
+      stopInterval();
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [fetchAroundMe, initialized]);
 

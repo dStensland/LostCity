@@ -166,10 +166,15 @@ export function DestinationsSection({ portalSlug }: DestinationsSectionProps) {
     if (!el) return;
     updateScrollState();
     el.addEventListener("scroll", updateScrollState, { passive: true });
-    const ro = new ResizeObserver(updateScrollState);
+    let resizeTimer: ReturnType<typeof setTimeout>;
+    const ro = new ResizeObserver(() => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(updateScrollState, 150);
+    });
     ro.observe(el);
     return () => {
       el.removeEventListener("scroll", updateScrollState);
+      clearTimeout(resizeTimer);
       ro.disconnect();
     };
   }, [updateScrollState]);

@@ -63,6 +63,7 @@ export function useInfiniteActivities(options: UseInfiniteActivitiesOptions = {}
     },
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
+    maxPages: 5, // Cap at 5 pages (~150 items) to prevent unbounded memory growth
     enabled: enabled && !!user,
     staleTime: 30 * 1000, // Consider fresh for 30s
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes

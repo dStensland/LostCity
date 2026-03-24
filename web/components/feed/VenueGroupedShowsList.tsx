@@ -107,11 +107,16 @@ export function VenueGroupedShowsList({
     const el = scrollRef.current;
     el.addEventListener("scroll", updateScrollState, { passive: true });
 
-    const resizeObserver = new ResizeObserver(updateScrollState);
+    let resizeTimer: ReturnType<typeof setTimeout>;
+    const resizeObserver = new ResizeObserver(() => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(updateScrollState, 150);
+    });
     resizeObserver.observe(el);
 
     return () => {
       el.removeEventListener("scroll", updateScrollState);
+      clearTimeout(resizeTimer);
       resizeObserver.disconnect();
     };
   }, [updateScrollState]);
