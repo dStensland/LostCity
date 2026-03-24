@@ -18,6 +18,7 @@ export type PrecomputedCountRow = {
   dimension: string;
   value: string;
   cnt: number;
+  updated_at?: string;
 };
 
 export type FeedCounts = {
@@ -131,7 +132,7 @@ export async function fetchFeedCounts(
     // Pre-computed category/tab counts (refreshed after each crawl run)
     supabase
       .from("feed_category_counts")
-      .select("window, dimension, value, cnt")
+      .select("window, dimension, value, cnt, updated_at")
       .eq("portal_id", ctx.portalData.id) as unknown as Promise<{
       data: PrecomputedCountRow[] | null;
       error: unknown;
@@ -147,8 +148,17 @@ export async function fetchFeedCounts(
 
   let precomputedRows = (precomputedResult.data || []) as PrecomputedCountRow[];
 
-  // Fallback: if precomputed table is empty/missing, compute from live queries
-  if (precomputedRows.length === 0) {
+  // Staleness check: fall back if counts are older than 6 hours.
+  // The refresh_feed_counts() RPC sets updated_at on all rows after each crawl.
+  // If the post-crawl maintenance script failed, counts go stale indefinitely.
+  const STALE_THRESHOLD_MS = 6 * 60 * 60 * 1000;
+  const isStale =
+    precomputedRows.length > 0 &&
+    precomputedRows[0].updated_at != null &&
+    Date.now() - new Date(precomputedRows[0].updated_at).getTime() > STALE_THRESHOLD_MS;
+
+  // Fallback: if precomputed table is empty/missing or counts are stale, compute from live queries
+  if (precomputedRows.length === 0 || isStale) {
     const [todayResult, weekResult, comingResult] = await Promise.all([
       buildCountCategoryQuery(scopedClient, ctx, ctx.today, ctx.today),
       buildCountCategoryQuery(scopedClient, ctx, ctx.tomorrow, ctx.weekAhead),
