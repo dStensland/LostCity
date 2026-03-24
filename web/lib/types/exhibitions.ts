@@ -39,6 +39,7 @@ export interface ExhibitionArtist {
   exhibition_id: string;
   artist_name: string;
   artist_url: string | null;
+  artist_id: string | null;
   role: ArtistRole;
 }
 

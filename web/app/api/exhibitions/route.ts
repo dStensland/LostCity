@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at,
         venue:venues(id, name, slug, neighborhood, address, city, lat, lng, image_url),
-        artists:exhibition_artists(exhibition_id, artist_name, artist_url, role)
+        artists:exhibition_artists(exhibition_id, artist_name, artist_url, artist_id, role)
       `
       )
       .eq("is_active", true);

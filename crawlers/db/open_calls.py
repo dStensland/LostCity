@@ -68,7 +68,7 @@ _OPEN_CALL_COLUMNS = {
     "slug", "organization_id", "venue_id", "source_id", "portal_id", "title",
     "description", "deadline", "application_url", "fee", "eligibility",
     "medium_requirements", "call_type", "status", "source_url", "tags",
-    "metadata", "is_active",
+    "metadata", "confidence_tier", "is_active",
 }
 
 

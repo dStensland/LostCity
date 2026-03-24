@@ -1,5 +1,7 @@
 // Open Call entity types — maps to open_calls table
 
+export type ConfidenceTier = "verified" | "aggregated" | "discovered";
+
 export type CallType =
   | "submission"
   | "residency"
@@ -28,6 +30,7 @@ export interface OpenCall {
   source_url: string | null;
   tags: string[] | null;
   metadata: Record<string, unknown>;
+  confidence_tier: ConfidenceTier;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -102,3 +105,15 @@ export function formatFee(fee: number | null): string {
   if (fee === null || fee === 0) return "No fee";
   return `$${fee % 1 === 0 ? fee : fee.toFixed(2)} fee`;
 }
+
+export const CONFIDENCE_TIER_LABELS: Record<ConfidenceTier, string> = {
+  verified: "Verified",
+  aggregated: "Aggregated",
+  discovered: "Discovered",
+};
+
+export const CONFIDENCE_TIER_DESCRIPTIONS: Record<ConfidenceTier, string> = {
+  verified: "Crawled directly from the issuing organization",
+  aggregated: "Found on a reputable aggregator like CaFE or EntryThingy",
+  discovered: "Found via social media, newsletters, or community posts",
+};

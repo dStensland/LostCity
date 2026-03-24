@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
   const offset = Math.max(parseIntParam(searchParams.get("offset")) ?? 0, 0);
   const typeFilter = searchParams.get("type");
   const statusFilter = searchParams.get("status") ?? "open";
+  const tierFilter = searchParams.get("tier");
   const portalExclusive = searchParams.get("portal_exclusive") === "true";
   const venueId = parseIntParam(searchParams.get("venue_id"));
   const qFilter = searchParams.get("q");
@@ -81,6 +82,10 @@ export async function GET(request: NextRequest) {
       countQuery = countQuery.eq("call_type", typeFilter);
     }
 
+    if (tierFilter && isValidString(tierFilter, 1, 20)) {
+      countQuery = countQuery.eq("confidence_tier", tierFilter);
+    }
+
     if (venueId !== null) {
       countQuery = countQuery.eq("venue_id", venueId);
     }
@@ -115,6 +120,7 @@ export async function GET(request: NextRequest) {
         source_url,
         tags,
         metadata,
+        confidence_tier,
         is_active,
         created_at,
         updated_at,
@@ -139,6 +145,10 @@ export async function GET(request: NextRequest) {
 
     if (typeFilter && isValidString(typeFilter, 1, 50)) {
       query = query.eq("call_type", typeFilter);
+    }
+
+    if (tierFilter && isValidString(tierFilter, 1, 20)) {
+      query = query.eq("confidence_tier", tierFilter);
     }
 
     if (venueId !== null) {

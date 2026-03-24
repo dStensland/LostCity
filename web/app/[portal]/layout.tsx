@@ -7,7 +7,7 @@ import CannyWidget from "@/components/CannyWidget";
 import PortalFooter from "@/components/PortalFooter";
 import { PortalTracker } from "./_components/PortalTracker";
 import { NavigationProgress } from "@/components/ui/NavigationProgress";
-import { Cormorant_Garamond, DM_Sans, Inter, Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
+import { Cormorant_Garamond, DM_Sans, IBM_Plex_Mono, Inter, Playfair_Display, Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import { Suspense } from "react";
 import { isPCMDemoPortal } from "@/lib/marketplace-art";
 import { applyPreset } from "@/lib/apply-preset";
@@ -59,6 +59,24 @@ const spaceGrotesk = Space_Grotesk({
   weight: ["400", "500", "600", "700"],
   variable: "--font-space-grotesk",
   subsets: ["latin"],
+  display: "swap",
+  preload: false,
+});
+
+// Arts vertical fonts — IBM Plex Mono (labels/nav/metadata) + Playfair Display italic (exhibition titles)
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-ibm-plex-mono",
+  display: "swap",
+  preload: false,
+});
+
+const playfairDisplay = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-playfair-display",
   display: "swap",
   preload: false,
 });
@@ -140,6 +158,7 @@ export default async function PortalLayout({ children, params }: Props) {
   const isHotel = vertical === "hotel";
   const isFamily = vertical === "family";
   const isAdventure = vertical === "adventure";
+  const isArts = vertical === "arts";
   const isDog = vertical === "dog";
   const isFilm = isFilmPortalVertical(vertical);
   const resolvedBranding = applyPreset((portal.branding || {}) as PortalBranding);
@@ -169,6 +188,7 @@ export default async function PortalLayout({ children, params }: Props) {
           isHotel ? `${cormorantGaramond.variable} ${inter.variable}` : "",
           isFamily ? `${plusJakartaSans.variable} ${dmSans.variable}` : "",
           isAdventure ? spaceGrotesk.variable : "",
+          isArts ? `${ibmPlexMono.variable} ${playfairDisplay.variable}` : "",
         ].filter(Boolean).join(" ")}
       >
         <NavigationProgress />
