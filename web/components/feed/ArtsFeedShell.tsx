@@ -5,6 +5,7 @@ import FeedSectionHeader from "./FeedSectionHeader";
 import LazySection from "./LazySection";
 import ExhibitionCard from "./ExhibitionCard";
 import CompactEventRow from "./CompactEventRow";
+import { ArtsSecondaryNav } from "@/components/arts/ArtsSecondaryNav";
 import { usePortal } from "@/lib/portal-context";
 import type { FeedEventData } from "@/components/EventCard";
 
@@ -202,7 +203,11 @@ export default function ArtsFeedShell({ portalSlug }: ArtsFeedShellProps) {
     feedData.classes.length === 0;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-10 sm:space-y-14">
+    <>
+      {/* Secondary nav — sticky below portal header, desktop only */}
+      <ArtsSecondaryNav portalSlug={portalSlug} />
+
+      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-10 sm:space-y-14">
       {/* Section 1: Fresh on the Walls — exhibition cards, stacked */}
       {feedData.openingThisWeek.length > 0 && (
         <section>
@@ -210,7 +215,7 @@ export default function ArtsFeedShell({ portalSlug }: ArtsFeedShellProps) {
             title="fresh on the walls"
             priority="secondary"
             accentColor={accentCopper}
-            seeAllHref={`/${portalSlug}?view=happening&category=art&sort=newest`}
+            seeAllHref={`/${portalSlug}/exhibitions`}
             seeAllLabel="all exhibitions"
           />
           <div className="space-y-2">
@@ -307,6 +312,7 @@ export default function ArtsFeedShell({ portalSlug }: ArtsFeedShellProps) {
         </div>
       )}
     </div>
+    </>
   );
 }
 

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import { getOpenCalls } from "@/lib/open-calls";
 import { OpenCallsBoard } from "@/components/arts/OpenCallsBoard";
+import { ArtsSecondaryNav } from "@/components/arts/ArtsSecondaryNav";
 import type { Metadata } from "next";
 
 export const revalidate = 60;
@@ -45,6 +46,7 @@ export default async function OpenCallsPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
+      <ArtsSecondaryNav portalSlug={portalSlug} />
       <main className="max-w-3xl mx-auto px-4 py-6 pb-16">
         {/* Page header — Underground Gallery style */}
         <header className="mb-8">

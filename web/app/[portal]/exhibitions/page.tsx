@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCachedPortalBySlug } from "@/lib/portal";
 import { ExhibitionFeed } from "@/components/arts/ExhibitionFeed";
+import { ArtsSecondaryNav } from "@/components/arts/ArtsSecondaryNav";
 import type { Metadata } from "next";
 import type { ExhibitionWithVenue } from "@/lib/exhibitions-utils";
 
@@ -69,6 +70,7 @@ export default async function ExhibitionsPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
+      <ArtsSecondaryNav portalSlug={portalSlug} />
       <main className="max-w-3xl mx-auto px-4 py-6 pb-16">
         {/* Page header — Underground Gallery style */}
         <header className="mb-8">
