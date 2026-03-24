@@ -2,6 +2,7 @@ import { getCachedPortalBySlug, getCachedPortalByVerticalAndCity, getPortalVerti
 import { headers } from "next/headers";
 import { getCityPhoto } from "@/lib/city-pulse/header-defaults";
 import { getTimeSlot, getDayOfWeek } from "@/lib/city-pulse/time-slots";
+import { getServerFeedData } from "@/lib/city-pulse/server-feed";
 import { AmbientBackground } from "@/components/ambient";
 import HappeningView from "@/components/find/HappeningView";
 import type { HappeningContent } from "@/components/find/HappeningView";
@@ -55,6 +56,41 @@ function AmbientSuppression() {
       .rain-overlay { display: none !important; }
       .cursor-glow { display: none !important; }
     `}</style>
+  );
+}
+
+/**
+ * Async RSC wrapper for the default city-portal template.
+ * Fetches city-pulse data server-side so the HTML already contains real events —
+ * the client's initial fetch is eliminated entirely.
+ *
+ * Kept as a separate component (not inlined in PortalPage) to:
+ *  1. Keep the async `await getServerFeedData` isolated from the rest of PortalPage's
+ *     synchronous branching logic.
+ *  2. Make it easy to Suspense-wrap independently in the future.
+ */
+async function DefaultCityTemplate({
+  portal,
+  serverHeroUrl,
+}: {
+  portal: Parameters<typeof DefaultTemplate>[0]["portal"];
+  serverHeroUrl: string;
+}) {
+  const feedData = await getServerFeedData(portal.slug);
+  return (
+    <>
+      {/* Preload the hero image server-side so the browser fetches it
+          during HTML parse, before JS hydrates. Shifts LCP from
+          "after hydration" to "during parse". Only emitted for city
+          (default) portals since other templates don't use this image. */}
+      <link
+        rel="preload"
+        as="image"
+        href={serverHeroUrl}
+        fetchPriority="high"
+      />
+      <DefaultTemplate portal={portal} serverHeroUrl={serverHeroUrl} serverFeedData={feedData} />
+    </>
   );
 }
 
@@ -433,19 +469,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
                           <TimelineTemplate portal={portal} />
                         ) : (
                           /* Default template for backwards compatibility */
-                          <>
-                            {/* Preload the hero image server-side so the browser fetches it
-                                during HTML parse, before JS hydrates. Shifts LCP from
-                                "after hydration" to "during parse". Only emitted for city
-                                (default) portals since other templates don't use this image. */}
-                            <link
-                              rel="preload"
-                              as="image"
-                              href={serverHeroUrl}
-                              fetchPriority="high"
-                            />
-                            <DefaultTemplate portal={portal} serverHeroUrl={serverHeroUrl} />
-                          </>
+                          <DefaultCityTemplate portal={portal} serverHeroUrl={serverHeroUrl} />
                         )
                       )}
                     </Suspense>

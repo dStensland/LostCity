@@ -27,10 +27,16 @@ interface UseCityPulseFeedOptions {
   dayOverride?: string;
   /** Active interest chip IDs — drives per-category server queries (6 each) */
   interests?: string[];
+  /**
+   * Server-side pre-fetched data to seed the React Query cache on first render.
+   * When provided, the initial client fetch is skipped entirely — data renders
+   * immediately from HTML. A background refetch fires after staleTime (2 min).
+   */
+  initialData?: CityPulseResponse;
 }
 
 export function useCityPulseFeed(options: UseCityPulseFeedOptions) {
-  const { portalSlug, enabled = true, timeSlotOverride, dayOverride, interests } = options;
+  const { portalSlug, enabled = true, timeSlotOverride, dayOverride, interests, initialData } = options;
   const [timeSlot, setTimeSlot] = useState(() =>
     getTimeSlot(new Date().getHours()),
   );
@@ -91,6 +97,9 @@ export function useCityPulseFeed(options: UseCityPulseFeedOptions) {
       }
     },
     enabled,
+    // When server pre-fetched data is provided, seed the cache so the first render
+    // shows real events immediately and the initial client fetch is skipped.
+    initialData,
     // Keep showing old data while refetching with a new key (e.g. interests change).
     // Prevents skeleton flash on key transitions.
     placeholderData: keepPreviousData,
@@ -124,6 +133,32 @@ export function useCityPulseFeed(options: UseCityPulseFeedOptions) {
       clearTimeout(timeoutId);
     }
   }, [portalSlug, timeSlotOverride, dayOverride]);
+
+  // Keep a stable ref to fetchTab so the prefetch effect doesn't re-run
+  // when the callback identity changes (e.g. after overrides are set).
+  const fetchTabRef = useRef(fetchTab);
+  useEffect(() => { fetchTabRef.current = fetchTab; }, [fetchTab]);
+
+  // Background prefetch for "This Week" and "Coming Up" tabs.
+  // Fires once after initial data resolves — makes tab switching instant
+  // since data is already in-flight (or cached) before the user clicks.
+  const prefetchedRef = useRef(false);
+  useEffect(() => {
+    if (!query.data || prefetchedRef.current) return;
+    prefetchedRef.current = true;
+
+    const prefetch = () => {
+      fetchTabRef.current("this_week").catch(() => {});
+      fetchTabRef.current("coming_up").catch(() => {});
+    };
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      (window as Window & { requestIdleCallback: (cb: () => void) => void })
+        .requestIdleCallback(prefetch);
+    } else {
+      setTimeout(prefetch, 2000);
+    }
+  }, [query.data]);
 
   return {
     data: query.data ?? null,

@@ -4,11 +4,17 @@ import ArtsFeedShell from "@/components/feed/ArtsFeedShell";
 import { AdventureFeed } from "@/components/adventure";
 import type { Portal } from "@/lib/portal-context";
 import { getPortalVertical } from "@/lib/portal";
+import type { CityPulseResponse } from "@/lib/city-pulse/types";
 
 interface DefaultTemplateProps {
   portal: Portal;
   /** Server-computed hero image URL for LCP preload optimization. */
   serverHeroUrl?: string;
+  /**
+   * Server-side pre-fetched city-pulse feed data.
+   * Only used by the default city-portal path — not community/adventure/arts.
+   */
+  serverFeedData?: CityPulseResponse | null;
 }
 
 /**
@@ -22,6 +28,7 @@ interface DefaultTemplateProps {
 export async function DefaultTemplate({
   portal,
   serverHeroUrl,
+  serverFeedData,
 }: DefaultTemplateProps) {
   const vertical = getPortalVertical(portal);
 
@@ -48,6 +55,7 @@ export async function DefaultTemplate({
     <CityPulseShell
       portalSlug={portal.slug}
       serverHeroUrl={serverHeroUrl}
+      serverFeedData={serverFeedData}
     />
   );
 }

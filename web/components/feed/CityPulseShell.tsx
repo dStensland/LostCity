@@ -60,6 +60,7 @@ import type {
   TimeSlot,
   FeedContext,
   ResolvedHeader,
+  CityPulseResponse,
 } from "@/lib/city-pulse/types";
 import { DEFAULT_FEED_ORDER, ALWAYS_VISIBLE_BLOCKS, FIXED_LAST_BLOCKS } from "@/lib/city-pulse/types";
 import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
@@ -168,6 +169,12 @@ interface CityPulseShellProps {
   portalSlug: string;
   /** Server-computed hero image URL — preloaded in HTML, passed to CityBriefing as initial state. */
   serverHeroUrl?: string;
+  /**
+   * Server-side pre-fetched city-pulse data.
+   * When provided, the initial client fetch is eliminated — events render
+   * directly from SSR HTML. Background refetch fires after staleTime (2 min).
+   */
+  serverFeedData?: CityPulseResponse | null;
 }
 
 function FeedError({ onRetry }: { onRetry: () => void }) {
@@ -186,7 +193,7 @@ function FeedError({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-export default function CityPulseShell({ portalSlug, serverHeroUrl }: CityPulseShellProps) {
+export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedData }: CityPulseShellProps) {
   const searchParams = useSearchParams();
   const showTimeMachine = searchParams.get("admin") !== null;
   const { user } = useAuth();
@@ -226,6 +233,7 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl }: CityPulseS
     timeSlotOverride,
     dayOverride,
     interests: savedInterests,
+    initialData: serverFeedData ?? undefined,
   });
 
   // Client-side defaults — computed once, zero API calls
