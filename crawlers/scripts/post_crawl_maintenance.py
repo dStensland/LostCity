@@ -871,6 +871,44 @@ def main() -> int:
         print("\n== Refresh feed category counts ==")
         print("[SKIP] dry-run — skipping refresh_feed_counts RPC calls")
 
+    # --- Refresh pre-computed feed events (feed_events_ready table) ---
+    # Calls refresh_feed_events_ready(portal_id) for every active portal so the
+    # feed endpoint can read a single flat table instead of 4+ parallel joins.
+    if not args.dry_run:
+        try:
+            from db import get_client
+
+            client = get_client()
+            print("\n== Refresh feed events ready ==")
+            portal_rows = (
+                client.table("portals")
+                .select("id,slug")
+                .eq("status", "active")
+                .execute()
+                .data
+                or []
+            )
+            refreshed = 0
+            for portal in portal_rows:
+                pid = portal.get("id")
+                pslug = portal.get("slug", pid)
+                if not pid:
+                    continue
+                try:
+                    client.rpc("refresh_feed_events_ready", {"p_portal_id": pid}).execute()
+                    print(f"  [OK] portal={pslug}")
+                    refreshed += 1
+                except Exception as exc_inner:
+                    print(f"  [WARN] portal={pslug}: {exc_inner}")
+                    best_effort_failures += 1
+            print(f"[OK] Refreshed feed events ready for {refreshed}/{len(portal_rows)} portals.")
+        except Exception as exc:
+            print(f"[WARN] Feed events ready refresh failed: {exc}")
+            best_effort_failures += 1
+    else:
+        print("\n== Refresh feed events ready ==")
+        print("[SKIP] dry-run — skipping refresh_feed_events_ready RPC calls")
+
     launch_check = [
         py,
         str(SCRIPTS / "launch_health_check.py"),
