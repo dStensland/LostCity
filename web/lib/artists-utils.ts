@@ -17,6 +17,10 @@ export interface Artist {
   spotify_id: string | null;
   musicbrainz_id: string | null;
   wikidata_id: string | null;
+  instagram: string | null;
+  claimed_by: string | null;
+  claimed_at: string | null;
+  is_verified: boolean;
   created_at: string;
 }
 

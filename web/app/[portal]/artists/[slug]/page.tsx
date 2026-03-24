@@ -5,10 +5,13 @@ import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getArtistBySlug,
   getArtistEvents,
+  getArtistExhibitions,
   getArtistFestivals,
   getDisciplineColor,
   getDisciplineLabel,
 } from "@/lib/artists";
+import { ArtistExhibitionTimeline } from "@/components/arts/ArtistExhibitionTimeline";
+import { ArtistClaimBanner } from "@/components/arts/ArtistClaimBanner";
 import {
   DetailHero,
   InfoCard,
@@ -143,9 +146,10 @@ export default async function PortalArtistPage({ params }: Props) {
   const activePortalSlug = portal?.slug || portalSlug;
   const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
 
-  const [upcomingEvents, festivals] = await Promise.all([
+  const [upcomingEvents, festivals, exhibitions] = await Promise.all([
     getArtistEvents(artist.id, true),
     getArtistFestivals(artist.id),
+    getArtistExhibitions(artist.id),
   ]);
 
   const accentColor = getDisciplineColor(artist.discipline);
@@ -183,6 +187,14 @@ export default async function PortalArtistPage({ params }: Props) {
                 {getDisciplineLabel(artist.discipline)}
               </span>
             }
+          />
+
+          {/* Claim Banner */}
+          <ArtistClaimBanner
+            artistId={artist.id}
+            artistName={artist.name}
+            isClaimed={!!artist.claimed_by}
+            isVerified={!!artist.is_verified}
           />
 
           {/* Info Card */}
@@ -263,6 +275,17 @@ export default async function PortalArtistPage({ params }: Props) {
                 );
               })}
             </RelatedSection>
+          )}
+
+          {/* Exhibition History — Living CV */}
+          {exhibitions.length > 0 && (
+            <InfoCard accentColor={accentColor}>
+              <SectionHeader title="Exhibition History" count={exhibitions.length} />
+              <ArtistExhibitionTimeline
+                exhibitions={exhibitions}
+                portalSlug={activePortalSlug}
+              />
+            </InfoCard>
           )}
 
           {/* Festival Appearances */}

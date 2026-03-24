@@ -61,7 +61,7 @@ export async function getArtistBySlug(slug: string): Promise<Artist | null> {
 
   const { data, error } = await supabase
     .from("artists")
-    .select("id, name, slug, discipline, bio, image_url, genres, hometown, website, spotify_id, musicbrainz_id, wikidata_id, created_at")
+    .select("id, name, slug, discipline, bio, image_url, genres, hometown, website, spotify_id, musicbrainz_id, wikidata_id, instagram, claimed_by, claimed_at, is_verified, created_at")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -238,6 +238,87 @@ export async function getArtistEvents(
       is_headliner: row.is_headliner,
     }))
     .sort((a, b) => a.start_date.localeCompare(b.start_date));
+}
+
+// --- Exhibition history for Living CV ---
+
+export type ArtistExhibition = {
+  id: string;
+  title: string;
+  slug: string;
+  opening_date: string | null;
+  closing_date: string | null;
+  exhibition_type: string | null;
+  image_url: string | null;
+  venue: {
+    id: number;
+    name: string;
+    slug: string;
+    neighborhood: string | null;
+  } | null;
+  role: string;
+};
+
+export async function getArtistExhibitions(
+  artistId: string
+): Promise<ArtistExhibition[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("exhibition_artists")
+    .select(
+      `
+      role,
+      exhibitions (
+        id, title, slug, opening_date, closing_date, exhibition_type, image_url,
+        venue:venues(id, name, slug, neighborhood)
+      )
+    `
+    )
+    .eq("artist_id", artistId);
+
+  if (error || !data) {
+    return [];
+  }
+
+  type RawRow = {
+    role: string;
+    exhibitions: {
+      id: string;
+      title: string;
+      slug: string;
+      opening_date: string | null;
+      closing_date: string | null;
+      exhibition_type: string | null;
+      image_url: string | null;
+      venue: {
+        id: number;
+        name: string;
+        slug: string;
+        neighborhood: string | null;
+      } | null;
+    } | null;
+  };
+
+  return (data as RawRow[])
+    .filter((row) => row.exhibitions != null)
+    .map((row) => ({
+      id: row.exhibitions!.id,
+      title: row.exhibitions!.title,
+      slug: row.exhibitions!.slug,
+      opening_date: row.exhibitions!.opening_date,
+      closing_date: row.exhibitions!.closing_date,
+      exhibition_type: row.exhibitions!.exhibition_type,
+      image_url: row.exhibitions!.image_url,
+      venue: row.exhibitions!.venue,
+      role: row.role,
+    }))
+    .sort((a, b) => {
+      // Sort by opening_date descending (newest first)
+      const aDate = a.opening_date ?? "";
+      const bDate = b.opening_date ?? "";
+      return bDate.localeCompare(aDate);
+    });
 }
 
 export async function getArtistFestivals(artistId: string): Promise<ArtistFestival[]> {

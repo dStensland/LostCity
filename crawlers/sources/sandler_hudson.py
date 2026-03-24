@@ -1,212 +1,437 @@
 """
-Crawler for Sandler Hudson Gallery (sandlerhudson.com).
+Exhibition crawler for Sandler Hudson Gallery (sandlerhudson.com).
 
-Site uses JavaScript rendering - must use Playwright.
+Sandler Hudson is a leading contemporary gallery in West Midtown, established 1989.
+Their site runs on Squarespace. The home page IS the current exhibition — each
+exhibition gets its own full-page Squarespace layout with title, artist, dates,
+and description. Navigation pages like /atl-airport represent offsite exhibitions.
+
+The archive at /archive lists past exhibitions with links — we use this to discover
+all current pages, then filter by date.
+
+Strategy:
+1. Fetch / (home page) as ?format=json to get the current exhibition title + content.
+2. Fetch /archive?format=json to discover all exhibition page slugs with titles.
+3. For each slug that appears to be a current or upcoming exhibition, fetch its JSON.
+4. Parse title, artist name, date range, description, and image from content.
+5. Skip past exhibitions (closing date < today).
+
+The Squarespace ?format=json API returns:
+  collection.title — page title (often the exhibition title)
+  mainContent — HTML body of the page
+
+Date format in content: "Exhibition Dates: February 13 - March 28, 2026"
+or plain date ranges like "February 13 - March 28, 2026"
 """
 
 from __future__ import annotations
 
-import re
 import logging
-from datetime import datetime
+import re
+from datetime import date
 from typing import Optional
+from urllib.parse import urljoin
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
-from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
+from db import get_or_create_venue, insert_exhibition
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://sandlerhudson.com"
-EVENTS_URL = f"{BASE_URL}/exhibitions"
+BASE_URL = "https://www.sandlerhudson.com"
+EXHIBITIONS_URL = BASE_URL
+USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+)
+REQUEST_TIMEOUT = 20
 
 VENUE_DATA = {
     "name": "Sandler Hudson Gallery",
-    "slug": "sandler-hudson",
+    "slug": "sandler-hudson-gallery",
     "address": "1009 Marietta St NW",
-    "neighborhood": "Westside",
+    "neighborhood": "West Midtown",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30318",
+    "lat": 33.7738,
+    "lng": -84.4064,
     "venue_type": "gallery",
+    "spot_type": "gallery",
     "website": BASE_URL,
+    "description": (
+        "Sandler Hudson Gallery is one of Atlanta's foremost contemporary art galleries, "
+        "established in 1989 with a commitment to emerging and established artists. "
+        "Located in West Midtown at the heart of Atlanta's gallery district."
+    ),
+    "vibes": [
+        "contemporary-art",
+        "west-midtown",
+        "gallery",
+        "established",
+        "emerging-artists",
+        "painting",
+        "sculpture",
+    ],
 }
 
+MONTHS = {
+    "january": 1,
+    "jan": 1,
+    "february": 2,
+    "feb": 2,
+    "march": 3,
+    "mar": 3,
+    "april": 4,
+    "apr": 4,
+    "may": 5,
+    "june": 6,
+    "jun": 6,
+    "july": 7,
+    "jul": 7,
+    "august": 8,
+    "aug": 8,
+    "september": 9,
+    "sep": 9,
+    "sept": 9,
+    "october": 10,
+    "oct": 10,
+    "november": 11,
+    "nov": 11,
+    "december": 12,
+    "dec": 12,
+}
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
+# Matches "Month D - Month D, YYYY" or "Month D, YYYY - Month D, YYYY"
+# Squarespace galleries often use "February 13 - March 28, 2026"
+DATE_RANGE_RE = re.compile(
+    r"(?P<m1>[A-Za-z]+)\s+(?P<d1>\d{1,2}),?\s*(?P<y1>\d{4})?"
+    r"\s*[-–—]\s*"
+    r"(?:(?P<m2>[A-Za-z]+)\s+)?(?P<d2>\d{1,2}),?\s*(?P<y2>\d{4})",
+    re.IGNORECASE,
+)
+
+# Pages that are not exhibitions (navigation, contact, archive, etc.)
+_NON_EXHIBITION_SLUGS = frozenset(
+    {
+        "archive",
+        "artists",
+        "contact-us",
+        "news-events",
+        "about-1",
+        "cart",
+        "atl-airport",  # offsite exhibition, include separately
+    }
+)
+
+# Typical patterns for "curator by" line in Squarespace content
+_CURATOR_RE = re.compile(r"[Cc]urated\s+by\s+([A-Z][A-Za-z\s.]+)", re.IGNORECASE)
+_EXHIBITION_DATES_RE = re.compile(
+    r"[Ee]xhibition\s+[Dd]ates?:\s*(.+?)(?:\n|$|[A-Z]{2,})", re.DOTALL
+)
+
+
+def _clean(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "").replace("\xa0", " ")).strip()
+
+
+def _parse_date_range(text: str) -> tuple[Optional[date], Optional[date]]:
+    """Parse a date range string, returning (opening, closing) or (None, None)."""
+    normalized = _clean(text)
+    m = DATE_RANGE_RE.search(normalized)
+    if not m:
+        return None, None
+
+    month1 = MONTHS.get(m.group("m1").lower())
+    month2 = MONTHS.get((m.group("m2") or m.group("m1")).lower())
+    if not month1 or not month2:
+        return None, None
+
+    day1, day2 = int(m.group("d1")), int(m.group("d2"))
+    year2 = int(m.group("y2")) if m.group("y2") else date.today().year
+    year1 = int(m.group("y1")) if m.group("y1") else year2
+    if not m.group("y1") and month1 > month2:
+        year1 = year2 - 1
+
+    try:
+        return date(year1, month1, day1), date(year2, month2, day2)
+    except ValueError:
+        return None, None
+
+
+def _session() -> requests.Session:
+    s = requests.Session()
+    s.headers["User-Agent"] = USER_AGENT
+    return s
+
+
+def _fetch_squarespace_page(session: requests.Session, url: str) -> Optional[dict]:
+    """
+    Fetch a Squarespace page via the ?format=json API.
+    Returns the parsed JSON dict or None on failure.
+    """
+    json_url = url if "?format=json" in url else f"{url}?format=json"
+    try:
+        resp = session.get(json_url, timeout=REQUEST_TIMEOUT)
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as exc:
+        logger.debug("Could not fetch %s: %s", json_url, exc)
+        return None
+
+
+def _parse_exhibition_from_squarespace(
+    page_json: dict,
+    page_url: str,
+    today: date,
+) -> Optional[dict]:
+    """
+    Parse exhibition data from a Squarespace page JSON response.
+
+    Returns an exhibition dict or None if the page is not a valid current exhibition.
+    """
+    collection = page_json.get("collection", {})
+    title = _clean(collection.get("title", ""))
+    if not title:
+        return None
+
+    main_content = page_json.get("mainContent", "")
+    if not isinstance(main_content, str):
+        return None
+
+    soup = BeautifulSoup(main_content, "html.parser")
+    content_text = _clean(soup.get_text(" "))
+
+    # Extract image — first <img> in the content
+    img = soup.find("img")
+    image_url = None
+    if img:
+        image_url = img.get("src") or img.get("data-src")
+        # Remove Squarespace size format params to get the largest available
+        if image_url:
+            image_url = re.sub(r"\?format=\d+w$", "", image_url)
+
+    # Parse date range
+    # Try "Exhibition Dates: ..." pattern first
+    opening: Optional[date] = None
+    closing: Optional[date] = None
+
+    dates_match = _EXHIBITION_DATES_RE.search(content_text)
+    if dates_match:
+        opening, closing = _parse_date_range(dates_match.group(1))
+
+    if not closing:
+        # Fallback: scan full content for any date range
+        opening, closing = _parse_date_range(content_text)
+
+    # Skip past exhibitions
+    if closing and closing < today:
+        return None
+
+    # Extract description: skip title and dates, take first substantial paragraph
+    description = None
+    paragraphs = soup.find_all("p")
+    desc_parts = []
+    for p in paragraphs:
+        text = _clean(p.get_text(" "))
+        # Skip date lines, title lines, short fragments, and "OPENING:" lines
+        if not text or len(text) < 40:
+            continue
+        if re.match(
+            r"^(?:OPENING|Artist\s+talk|Curator|Exhibition\s+Dates?)",
+            text,
+            re.IGNORECASE,
+        ):
+            continue
+        if DATE_RANGE_RE.search(text):
+            continue
+        desc_parts.append(text)
+        if len(" ".join(desc_parts)) > 400:
+            break
+
+    if desc_parts:
+        description = " ".join(desc_parts)[:800]
+
+    # Extract artist name from title or "Curated by" line
+    # Pattern: "Artist Name | Exhibition Title" or "Artist Name: Exhibition Title"
+    # Also check the "Curated by" line
+    artist_name: Optional[str] = None
+    artists: list[dict] = []
+
+    # Try "Artist Name | Title" or "Artist Name: Title" patterns
+    title_split = re.split(r"\s*[|:]\s*", title, maxsplit=1)
+    if len(title_split) == 2:
+        artist_candidate = title_split[0].strip()
+        # Validate: should be 1-4 words, look like a name
+        if 1 <= len(artist_candidate.split()) <= 4:
+            # Check if it's not a generic word
+            generic = {"group", "summer", "selections", "special", "show", "exhibition"}
+            if artist_candidate.lower() not in generic:
+                artist_name = artist_candidate
+
+    # Also look for "Curated by" in content for curator credits
+    curator_match = _CURATOR_RE.search(content_text)
+    curator_name: Optional[str] = None
+    if curator_match:
+        curator_name = _clean(curator_match.group(1)).rstrip(".")
+
+    # Build artists list
+    if artist_name:
+        artists.append({"artist_name": artist_name, "role": "artist"})
+    if curator_name and curator_name != artist_name:
+        artists.append({"artist_name": curator_name, "role": "curator"})
+
+    # Infer type
+    if len(artists) == 1 and artists[0]["role"] == "artist":
+        exhibition_type = "solo"
+    elif not artists:
+        # Check if content mentions group show indicators
+        if any(
+            w in content_text.lower()
+            for w in ("ten artists", "group", "selections", "group show")
+        ):
+            exhibition_type = "group"
+        else:
+            exhibition_type = "solo"
+    else:
+        exhibition_type = "group"
+
+    return {
+        "title": title,
+        "artist_name": artist_name,
+        "opening_date": opening.isoformat() if opening else None,
+        "closing_date": closing.isoformat() if closing else None,
+        "description": description,
+        "image_url": image_url,
+        "source_url": page_url,
+        "exhibition_type": exhibition_type,
+        "artists": artists,
+    }
+
+
+def _get_exhibition_slugs(session: requests.Session) -> list[str]:
+    """
+    Fetch the nav pages from the home page JSON to discover exhibition slugs.
+    Returns a list of relative URL paths to fetch.
+    """
+    home_json = _fetch_squarespace_page(session, BASE_URL)
+    if not home_json:
+        return []
+
+    # Home page itself is always the current exhibition
+    slugs = ["/"]
+
+    # Check the archive page for additional active exhibition slugs
+    archive_json = _fetch_squarespace_page(session, f"{BASE_URL}/archive")
+    if archive_json:
+        main = archive_json.get("mainContent", "")
+        if isinstance(main, str):
+            soup = BeautifulSoup(main, "html.parser")
+            for a in soup.find_all("a", href=True):
+                href = a.get("href", "")
+                # Only include gallery exhibition pages (not the archive itself)
+                slug = href.strip("/")
+                if (
+                    slug
+                    and slug not in _NON_EXHIBITION_SLUGS
+                    and not slug.startswith("http")
+                ):
+                    slugs.append(f"/{slug}")
+
+    # Also include known offsite exhibition pages from nav
+    main_content = home_json.get("mainContent", "")
+    if isinstance(main_content, str):
+        soup = BeautifulSoup(main_content, "html.parser")
+
+    return slugs
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Sandler Hudson Gallery events using Playwright."""
     source_id = source["id"]
-    events_found = 0
-    events_new = 0
-    events_updated = 0
+    today = date.today()
+    found = new = updated = 0
 
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+    venue_id = get_or_create_venue(VENUE_DATA)
+    session = _session()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+    # Always fetch the home page — it IS the current exhibition
+    slugs = ["/"]
 
-            logger.info(f"Fetching Sandler Hudson Gallery: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+    # Also try the atl-airport offsite exhibition page
+    slugs.append("/atl-airport")
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
-
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
+    # Fetch archive to discover additional exhibition pages
+    archive_json = _fetch_squarespace_page(session, f"{BASE_URL}/archive")
+    if archive_json:
+        main = archive_json.get("mainContent", "")
+        if isinstance(main, str):
+            soup = BeautifulSoup(main, "html.parser")
+            for a in soup.find_all("a", href=True):
+                href = a.get("href", "").strip()
+                if not href or href.startswith("http"):
                     continue
+                slug = href.strip("/")
+                if slug and slug not in _NON_EXHIBITION_SLUGS:
+                    page_path = f"/{slug}"
+                    if page_path not in slugs:
+                        slugs.append(page_path)
 
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
+    seen_titles: set[str] = set()
 
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
+    for slug in slugs:
+        page_url = urljoin(BASE_URL, slug)
+        page_json = _fetch_squarespace_page(session, page_url)
+        if not page_json:
+            continue
 
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
+        exhibition = _parse_exhibition_from_squarespace(page_json, page_url, today)
+        if not exhibition:
+            continue
 
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
+        title = exhibition["title"]
+        if title.lower() in seen_titles:
+            continue
+        seen_titles.add(title.lower())
 
-                    if not title:
-                        i += 1
-                        continue
+        record = {
+            "title": title,
+            "venue_id": venue_id,
+            "source_id": source_id,
+            "_venue_name": VENUE_DATA["name"],
+            "opening_date": exhibition["opening_date"],
+            "closing_date": exhibition["closing_date"],
+            "description": exhibition.get("description"),
+            "image_url": exhibition.get("image_url"),
+            "source_url": exhibition["source_url"],
+            "exhibition_type": exhibition["exhibition_type"],
+            "admission_type": "free",
+            "tags": ["west-midtown", "contemporary-art", "gallery", "painting"],
+            "is_active": True,
+        }
 
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
-
-                    events_found += 1
-
-                    content_hash = generate_content_hash(title, "Sandler Hudson Gallery", start_date)
-
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Event at Sandler Hudson Gallery",
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "community",
-                        "subcategory": None,
-                        "tags": ["event"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            browser.close()
+        found += 1
+        result = insert_exhibition(record, artists=exhibition.get("artists") or [])
+        if result:
+            new += 1
+        else:
+            updated += 1
 
         logger.info(
-            f"Sandler Hudson Gallery crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            "Sandler Hudson exhibition: %r (open=%s close=%s type=%s artists=%s)",
+            title,
+            exhibition["opening_date"] or "unknown",
+            exhibition["closing_date"] or "unknown",
+            exhibition["exhibition_type"],
+            [a["artist_name"] for a in (exhibition.get("artists") or [])],
         )
 
-    except Exception as e:
-        logger.error(f"Failed to crawl Sandler Hudson Gallery: {e}")
-        raise
-
-    return events_found, events_new, events_updated
+    logger.info(
+        "Sandler Hudson crawl complete: %s found, %s new, %s updated",
+        found,
+        new,
+        updated,
+    )
+    return found, new, updated
