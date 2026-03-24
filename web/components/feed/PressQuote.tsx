@@ -27,17 +27,32 @@ export function PressQuote({ snippet, source, articleUrl }: PressQuoteProps) {
     </span>
   );
 
+  // Use a <span> instead of <a> to avoid nested-link hydration errors
+  // when PressQuote is rendered inside a card that's already a <Link>.
+  // The articleUrl opens in a new tab via click handler with stopPropagation
+  // so it doesn't trigger the parent card's navigation.
   if (articleUrl) {
     return (
-      <a
-        href={articleUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block hover:text-[var(--soft)] transition-colors duration-150"
+      <span
+        role="link"
+        tabIndex={0}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          window.open(articleUrl, "_blank", "noopener,noreferrer");
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            window.open(articleUrl, "_blank", "noopener,noreferrer");
+          }
+        }}
+        className="block hover:text-[var(--soft)] transition-colors duration-150 cursor-pointer"
         aria-label={`Read press coverage from ${source}`}
       >
         {inner}
-      </a>
+      </span>
     );
   }
 
