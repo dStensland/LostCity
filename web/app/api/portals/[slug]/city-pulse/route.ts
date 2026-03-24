@@ -42,6 +42,7 @@ import {
   buildAllWindowCategoryCounts,
   buildCountCategoryQuery,
   fetchTabEventPool,
+  fetchDestinations,
 } from "@/lib/city-pulse/pipeline";
 import { isSceneEvent } from "@/lib/city-pulse/section-builders";
 import type {
@@ -320,11 +321,12 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Full load mode — stages 2–6 run in parallel where possible
   // ---------------------------------------------------------------------------
 
-  // Stage 2 (events) + Stage 3 (counts) + Stage 4A (enrichments) — all parallel
-  const [pools, counts, phaseA] = await Promise.all([
+  // Stage 2 (events) + Stage 3 (counts) + Stage 4A (enrichments) + destinations — all parallel
+  const [pools, counts, phaseA, destinations] = await Promise.all([
     fetchEventPools(portalClient, ctx),
     fetchFeedCounts(supabase, ctx, portalClient),
     fetchPhaseAEnrichments(supabase, ctx),
+    fetchDestinations(supabase, canonicalSlug),
   ]);
 
   // Stage 4B: social proof + friends + new-from-spots + editorial — depends on event IDs + userSignals
@@ -383,6 +385,12 @@ export async function GET(request: NextRequest, { params }: Props) {
     counts,
     personalizationLevel,
   );
+
+  // Attach destinations — fetched in parallel with Phase A, embedded to avoid
+  // a separate client-side network round-trip for the carousel.
+  if (destinations.length > 0) {
+    response.destinations = destinations;
+  }
 
   // ---------------------------------------------------------------------------
   // Cache + return

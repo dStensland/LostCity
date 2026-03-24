@@ -45,3 +45,6 @@ export { buildSections } from "./build-sections";
 export type { BuiltSections } from "./build-sections";
 
 export { assembleResponse } from "./assemble-response";
+
+export { fetchDestinations } from "./fetch-destinations";
+export type { DestinationItem } from "./fetch-destinations";

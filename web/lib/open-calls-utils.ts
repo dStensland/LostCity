@@ -29,6 +29,7 @@ export const CALL_TYPE_FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: "submission", label: "Submission" },
   { value: "residency", label: "Residency" },
   { value: "grant", label: "Grant" },
+  { value: "fellowship", label: "Fellowship" },
   { value: "commission", label: "Commission" },
   { value: "exhibition_proposal", label: "Proposal" },
 ];

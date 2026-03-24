@@ -16,6 +16,7 @@ export interface OpenCallsFilters {
   type?: string;
   tier?: string;
   status?: string;
+  scope?: "local" | "national";
   limit?: number;
   offset?: number;
 }
@@ -40,6 +41,7 @@ export async function getOpenCalls(
   if (filters.type) params.set("type", filters.type);
   if (filters.tier) params.set("tier", filters.tier);
   if (filters.status) params.set("status", filters.status);
+  if (filters.scope) params.set("scope", filters.scope);
   if (filters.limit !== undefined) params.set("limit", String(filters.limit));
   if (filters.offset !== undefined) params.set("offset", String(filters.offset));
 

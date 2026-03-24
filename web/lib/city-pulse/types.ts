@@ -11,6 +11,7 @@ import type { Spot } from "@/lib/spots-constants";
 import type { FeedSectionData } from "@/components/feed/FeedSection";
 import type { WeatherData } from "@/lib/weather-utils";
 import type { RecommendationReason } from "@/components/ReasonBadge";
+import type { DestinationItem } from "@/lib/city-pulse/pipeline/fetch-destinations";
 
 // ---------------------------------------------------------------------------
 // Time slots
@@ -329,7 +330,12 @@ export interface CityPulseResponse {
     this_week: Record<string, number>;
     coming_up: Record<string, number>;
   };
+  /** Contextual destination suggestions — embedded to avoid a separate network round-trip */
+  destinations?: DestinationItem[];
 }
+
+// Re-export for consumer convenience
+export type { DestinationItem };
 
 // ---------------------------------------------------------------------------
 // Friend info (used across scoring + social sections)

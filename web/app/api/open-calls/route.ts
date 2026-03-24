@@ -13,7 +13,58 @@ import { applyFederatedPortalScopeToQuery, filterByPortalCity } from "@/lib/port
 
 export const dynamic = "force-dynamic";
 
-// GET /api/open-calls?portal=arts&type=submission&status=open
+// Source slug lists for scope-based filtering
+const LOCAL_SOURCE_SLUGS = [
+  "open-calls-burnaway",
+  "open-calls-cafe",
+  "open-calls-south-arts",
+  "open-calls-ga-arts",
+  "open-calls-fulton-arts",
+  "open-calls-bakery-atl",
+  "open-calls-hambidge",
+];
+
+const NATIONAL_SOURCE_SLUGS = [
+  "open-calls-nyfa",
+  "open-calls-pw",
+  "open-calls-craft-council",
+  "open-calls-nea",
+  "open-calls-fca",
+  "open-calls-art-deadlines",
+  "open-calls-artconnect",
+  "open-calls-entrythingy",
+  "open-calls-artrabbit",
+  "open-calls-artist-communities",
+  "open-calls-artwork-archive",
+  "open-calls-hyperallergic",
+  "open-calls-creative-capital",
+  "open-calls-creative-capital-dir",
+  "open-calls-macdowell",
+  "open-calls-yaddo",
+  "open-calls-usa-fellowships",
+  "open-calls-submittable",
+  "open-calls-eflux",
+  "open-calls-transartists",
+  "open-calls-forecast",
+  "open-calls-colossal",
+  "open-calls-curatorspace",
+  "open-calls-wooloo",
+  "open-calls-resartis",
+  "open-calls-culture360",
+  "open-calls-artquest",
+  "open-calls-codaworx",
+  "open-calls-retitle",
+  "open-calls-springboard",
+  "open-calls-photocontestinsider",
+  "open-calls-artshow",
+];
+
+const SCOPE_SLUG_MAP: Record<string, string[]> = {
+  local: LOCAL_SOURCE_SLUGS,
+  national: NATIONAL_SOURCE_SLUGS,
+};
+
+// GET /api/open-calls?portal=arts&type=submission&status=open&scope=local
 export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(
     request,
@@ -31,7 +82,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const limit = Math.min(parseIntParam(searchParams.get("limit")) ?? 20, 100);
+  const limit = Math.min(parseIntParam(searchParams.get("limit")) ?? 20, 500);
   const offset = Math.max(parseIntParam(searchParams.get("offset")) ?? 0, 0);
   const typeFilter = searchParams.get("type");
   const statusFilter = searchParams.get("status") ?? "open";
@@ -39,6 +90,7 @@ export async function GET(request: NextRequest) {
   const portalExclusive = searchParams.get("portal_exclusive") === "true";
   const venueId = parseIntParam(searchParams.get("venue_id"));
   const qFilter = searchParams.get("q");
+  const scopeFilter = searchParams.get("scope"); // "local" | "national"
 
   try {
     const supabase = await createClient();
@@ -59,11 +111,27 @@ export async function GET(request: NextRequest) {
     const sourceAccess = await getPortalSourceAccess(portalId, { entityFamily: "open_calls" });
     const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
+    // Resolve scope to source IDs if provided
+    let scopeSourceIds: number[] | null = null;
+    if (scopeFilter && SCOPE_SLUG_MAP[scopeFilter]) {
+      const { data: scopeSources } = await supabase
+        .from("sources")
+        .select("id")
+        .in("slug", SCOPE_SLUG_MAP[scopeFilter]);
+      if (scopeSources && scopeSources.length > 0) {
+        scopeSourceIds = scopeSources.map((s: { id: number }) => s.id);
+      }
+    }
+
+    // Exclude past-deadline calls regardless of status field
+    const todayStr = new Date().toISOString().split("T")[0];
+
     // Count query — same filters as data query, no pagination
     let countQuery = portalClient
       .from("open_calls")
       .select("*", { count: "exact", head: true })
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .or(`deadline.gte.${todayStr},deadline.is.null`);
 
     countQuery = applyFederatedPortalScopeToQuery(countQuery, {
       portalId,
@@ -73,6 +141,10 @@ export async function GET(request: NextRequest) {
       sourceIds: sourceAccess.sourceIds,
       sourceColumn: "source_id",
     });
+
+    if (scopeSourceIds) {
+      countQuery = countQuery.in("source_id", scopeSourceIds);
+    }
 
     if (statusFilter && isValidString(statusFilter, 1, 50)) {
       countQuery = countQuery.eq("status", statusFilter);
@@ -128,7 +200,8 @@ export async function GET(request: NextRequest) {
         venue:venues(id, name, slug, neighborhood, city)
       `
       )
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .or(`deadline.gte.${todayStr},deadline.is.null`);
 
     query = applyFederatedPortalScopeToQuery(query, {
       portalId,
@@ -138,6 +211,10 @@ export async function GET(request: NextRequest) {
       sourceIds: sourceAccess.sourceIds,
       sourceColumn: "source_id",
     });
+
+    if (scopeSourceIds) {
+      query = query.in("source_id", scopeSourceIds);
+    }
 
     if (statusFilter && isValidString(statusFilter, 1, 50)) {
       query = query.eq("status", statusFilter);

@@ -39,10 +39,12 @@ export default async function OpenCallsPage({ params }: Props) {
     notFound();
   }
 
-  const { open_calls: openCalls, total } = await getOpenCalls(portalSlug, {
-    status: "open",
-    limit: 100,
-  });
+  const [localResult, nationalResult] = await Promise.all([
+    getOpenCalls(portalSlug, { status: "open", scope: "local", limit: 200 }),
+    getOpenCalls(portalSlug, { status: "open", scope: "national", limit: 500 }),
+  ]);
+
+  const totalCount = localResult.total + nationalResult.total;
 
   return (
     <div className="min-h-screen">
@@ -57,8 +59,8 @@ export default async function OpenCallsPage({ params }: Props) {
             Opportunities for Artists
           </h1>
           <p className="text-sm text-[var(--soft)]">
-            {total > 0
-              ? `${total} open call${total !== 1 ? "s" : ""} — submissions, residencies, grants, and commissions`
+            {totalCount > 0
+              ? `${totalCount} open call${totalCount !== 1 ? "s" : ""} — submissions, residencies, grants, and commissions`
               : "Submissions, residencies, grants, and commissions for Atlanta artists"}
           </p>
         </header>
@@ -68,7 +70,8 @@ export default async function OpenCallsPage({ params }: Props) {
 
         {/* Interactive board — owns filter state */}
         <OpenCallsBoard
-          initialCalls={openCalls}
+          localCalls={localResult.open_calls}
+          nationalCalls={nationalResult.open_calls}
           portalSlug={portalSlug}
         />
       </main>

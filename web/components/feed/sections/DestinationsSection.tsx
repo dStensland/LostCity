@@ -31,6 +31,9 @@ interface DestinationsResponse {
 
 export interface DestinationsSectionProps {
   portalSlug: string;
+  /** Pre-fetched destinations from the city-pulse response. When provided,
+   *  skips the self-fetch and renders immediately with no loading state. */
+  initialData?: DestinationItem[];
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -122,15 +125,18 @@ function DestinationCard({ item, portalSlug }: DestinationCardProps) {
 
 // ── Main section ───────────────────────────────────────────────────────────────
 
-export function DestinationsSection({ portalSlug }: DestinationsSectionProps) {
-  const [destinations, setDestinations] = useState<DestinationItem[]>([]);
-  const [loading, setLoading] = useState(true);
+export function DestinationsSection({ portalSlug, initialData }: DestinationsSectionProps) {
+  // When initialData is provided (embedded in city-pulse response), skip the self-fetch.
+  const [destinations, setDestinations] = useState<DestinationItem[]>(initialData ?? []);
+  const [loading, setLoading] = useState(!initialData);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
-  // Fetch destinations
+  // Self-fetch only when no initialData was supplied
   useEffect(() => {
+    if (initialData !== undefined) return;
+
     const controller = new AbortController();
 
     fetch(`/api/portals/${portalSlug}/destinations`, {
@@ -151,7 +157,7 @@ export function DestinationsSection({ portalSlug }: DestinationsSectionProps) {
       });
 
     return () => controller.abort();
-  }, [portalSlug]);
+  }, [portalSlug, initialData]);
 
   // Carousel scroll tracking
   const updateScrollState = useCallback(() => {

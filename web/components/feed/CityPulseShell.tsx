@@ -469,9 +469,14 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl }: CityPulseS
         )}
       </div>
 
-      {/* 5. Destinations — contextual venue suggestions, lazy-loaded */}
+      {/* 5. Destinations — contextual venue suggestions.
+           When city-pulse embeds destinations, renders immediately with no extra fetch.
+           Falls back to self-fetch when initialData is undefined (e.g. cache miss). */}
       <LazySection minHeight={280}>
-        <DestinationsSection portalSlug={portalSlug} />
+        <DestinationsSection
+          portalSlug={portalSlug}
+          initialData={data?.destinations}
+        />
       </LazySection>
 
       {/* 6. Interest Channels — only on civic portals where groups are meaningful */}

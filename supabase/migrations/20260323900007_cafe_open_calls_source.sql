@@ -1,20 +1,17 @@
 -- Register CaFE (Call For Entry) as an open calls source for the Arts portal.
---
--- CaFE is the dominant national platform for artist open calls. This source
--- is filtered to the Southeast region (AL, AR, DE, FL, GA, KY, MD, MS, NC,
--- SC, TN, WV) to surface regionally relevant opportunities for Georgia artists.
---
--- Confidence tier: "aggregated" — CaFE is an aggregator, not a primary source.
--- Crawl module: open_calls_cafe
+-- CaFE is the dominant national platform for artist open calls. Filtered to
+-- Southeast region to surface regionally relevant opportunities.
 
-INSERT INTO sources (name, slug, source_type, url, is_active, owner_portal_id, crawl_module)
-SELECT
-  'CaFE - Call For Entry (Georgia)',
+INSERT INTO sources (name, slug, source_type, url, is_active, crawl_frequency, owner_portal_id)
+VALUES (
+  'CaFE - Call For Entry (Southeast)',
   'open-calls-cafe',
-  'aggregator',
+  'scrape',
   'https://artist.callforentry.org/festivals.php',
   true,
-  id,
-  'open_calls_cafe'
-FROM portals WHERE slug = 'arts-atlanta'
-ON CONFLICT (slug) DO NOTHING;
+  'weekly',
+  (SELECT id FROM portals WHERE slug = 'arts-atlanta')
+)
+ON CONFLICT (slug) DO UPDATE SET
+  is_active = true,
+  url = EXCLUDED.url;

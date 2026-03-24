@@ -6,6 +6,7 @@ export type CallType =
   | "submission"
   | "residency"
   | "grant"
+  | "fellowship"
   | "commission"
   | "exhibition_proposal";
 
@@ -57,6 +58,7 @@ export const CALL_TYPE_LABELS: Record<CallType, string> = {
   submission: "Open Submission",
   residency: "Residency",
   grant: "Grant",
+  fellowship: "Fellowship",
   commission: "Commission",
   exhibition_proposal: "Exhibition Proposal",
 };
