@@ -626,7 +626,7 @@ def parse_event_for_pipeline(event_data: dict) -> dict | None:
             venue_dict = {
                 "name": venue_name,
                 "address": address.get("address_1"),
-                "city": address.get("city", "Atlanta"),
+                "city": address.get("city") or "",
                 "state": "GA",
                 "zip": address.get("postal_code"),
             }
