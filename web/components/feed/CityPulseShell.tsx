@@ -45,7 +45,10 @@ import LineupSection from "./LineupSection";
 import CityPulseSection from "./CityPulseSection";
 import LazySection from "./LazySection";
 import InterestChannelsSection from "./sections/InterestChannelsSection";
-import { HangFeedSection } from "./sections/HangFeedSection";
+const HangFeedSection = dynamic(
+  () => import("./sections/HangFeedSection").then(m => ({ default: m.HangFeedSection })),
+  { ssr: false },
+);
 import FeedSectionSkeleton, { useMinSkeletonDelay } from "@/components/feed/FeedSectionSkeleton";
 import ActiveContestSection from "./sections/ActiveContestSection";
 import HolidayHero from "./HolidayHero";
@@ -325,7 +328,9 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl }: CityPulseS
             data-block-id="hangs"
             className="mt-6 scroll-mt-28"
           >
-            <HangFeedSection portalSlug={portalSlug} />
+            <LazySection minHeight={200}>
+              <HangFeedSection portalSlug={portalSlug} />
+            </LazySection>
           </div>
         ) : null;
 

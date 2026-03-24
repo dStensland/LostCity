@@ -5,7 +5,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-lim
 import { parseIntParam } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
 import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { getCachedPortalQueryContext, resolvePortalQueryContext } from "@/lib/portal-query-context";
 import type { HotVenue } from "@/lib/types/hangs";
 
 const DEFAULT_LIMIT = 8;
@@ -40,8 +40,9 @@ export async function GET(request: NextRequest) {
   const serviceClient = createServiceClient();
 
   try {
-    // Resolve portal context for scoping
-    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    // Resolve portal context for scoping (cache-first to avoid per-request DB hit)
+    const portalContext = await getCachedPortalQueryContext(searchParams)
+      ?? await resolvePortalQueryContext(supabase, searchParams);
     const portalId = portalContext.portalId ?? null;
 
     // Call RPC — returns venues ordered by active hang count desc
@@ -143,7 +144,7 @@ export async function GET(request: NextRequest) {
       { venues, total_active: totalActive },
       {
         headers: {
-          "Cache-Control": "public, max-age=60",
+          "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300",
         },
       }
     );
