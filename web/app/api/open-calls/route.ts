@@ -68,6 +68,9 @@ const NATIONAL_SOURCE_SLUGS = [
   "open-calls-cafe-national",
   "open-calls-showsubmit",
   "open-calls-artcall",
+  "open-calls-submission-grinder",
+  "open-calls-festhome",
+  "open-calls-dancing-opportunities",
 ];
 
 const SCOPE_SLUG_MAP: Record<string, string[]> = {
