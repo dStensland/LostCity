@@ -285,7 +285,6 @@ interface LayoutProps {
   treatment: TreatmentStyle;
   weather: FeedContext["weather"];
   quickLinks?: QuickLink[];
-  contentParallax: { weather: number; masthead: number; meta: number };
   liveCount: number | null;
   portalSlug: string;
   context: FeedContext;
@@ -298,12 +297,10 @@ interface LayoutProps {
 
 function WeatherPill({
   weather,
-  parallaxY,
   position = "top-right",
   portalSlug,
 }: {
   weather: FeedContext["weather"];
-  parallaxY: number;
   position?: "top-right" | "top-left" | "inline";
   portalSlug: string;
 }) {
@@ -352,8 +349,8 @@ function WeatherPill({
   return (
     <div
       ref={ref}
-      className={`${posClass} animate-fade-in hero-stagger-1 will-change-transform`}
-      style={{ transform: `translateY(${parallaxY}px)` }}
+      className={`${posClass} animate-fade-in hero-stagger-1`}
+      style={{ transform: "translateY(var(--parallax-weather, 0px))" }}
     >
       <button
         onClick={() => setOpen(!open)}
@@ -478,18 +475,18 @@ function HeadlineSubtitle({
 
 function CenteredLayout({
   masthead, accentColor, headline, treatment, weather, quickLinks,
-  contentParallax, liveCount, portalSlug, context, sportsTentpole,
+  liveCount, portalSlug, context, sportsTentpole,
   tabCounts, categoryCounts,
 }: LayoutProps) {
   return (
     <div className="relative z-10 flex flex-col items-center justify-end text-center min-h-[300px] sm:min-h-[480px] px-6 pb-7 pt-5">
       <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
-      <WeatherPill weather={weather} parallaxY={contentParallax.weather} position="top-right" portalSlug={portalSlug} />
+      <WeatherPill weather={weather} position="top-right" portalSlug={portalSlug} />
 
       <div className={`mt-auto mb-1 ${treatment.contentClass || ""}`} style={treatment.contentStyle}>
         <div
-          className="animate-fade-in hero-stagger-2 will-change-transform"
-          style={{ transform: `translateY(${contentParallax.masthead}px)` }}
+          className="animate-fade-in hero-stagger-2"
+          style={{ transform: "translateY(var(--parallax-masthead, 0px))" }}
         >
           <div className="flex justify-center mb-2">
             <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
@@ -517,8 +514,8 @@ function CenteredLayout({
         </div>
 
         <div
-          className="animate-fade-in hero-stagger-3 will-change-transform flex justify-center"
-          style={{ transform: `translateY(${contentParallax.meta}px)` }}
+          className="animate-fade-in hero-stagger-3 flex justify-center"
+          style={{ transform: "translateY(var(--parallax-meta, 0px))" }}
         >
           <HeroQuickLinks links={quickLinks} />
         </div>
@@ -529,18 +526,18 @@ function CenteredLayout({
 
 function BottomLeftLayout({
   masthead, accentColor, headline, treatment, weather, quickLinks,
-  contentParallax, liveCount, portalSlug, context, sportsTentpole,
+  liveCount, portalSlug, context, sportsTentpole,
   tabCounts, categoryCounts,
 }: LayoutProps) {
   return (
     <div className="relative z-10 flex flex-col justify-end min-h-[300px] sm:min-h-[520px] px-6 sm:px-10 pb-8 pt-5">
       <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
-      <WeatherPill weather={weather} parallaxY={contentParallax.weather} position="top-right" portalSlug={portalSlug} />
+      <WeatherPill weather={weather} position="top-right" portalSlug={portalSlug} />
 
       <div className={`mt-auto ${treatment.contentClass || ""}`} style={treatment.contentStyle}>
         <div
-          className="animate-fade-in hero-stagger-2 will-change-transform"
-          style={{ transform: `translateY(${contentParallax.masthead}px)` }}
+          className="animate-fade-in hero-stagger-2"
+          style={{ transform: "translateY(var(--parallax-masthead, 0px))" }}
         >
           <div className="mb-2">
             <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
@@ -568,8 +565,8 @@ function BottomLeftLayout({
         </div>
 
         <div
-          className="animate-fade-in hero-stagger-3 mt-3 will-change-transform"
-          style={{ transform: `translateY(${contentParallax.meta}px)` }}
+          className="animate-fade-in hero-stagger-3 mt-3"
+          style={{ transform: "translateY(var(--parallax-meta, 0px))" }}
         >
           <HeroQuickLinks links={quickLinks} />
         </div>
@@ -580,7 +577,7 @@ function BottomLeftLayout({
 
 function SplitLayout({
   masthead, accentColor, headline, treatment, weather, quickLinks,
-  contentParallax, liveCount, portalSlug, context, sportsTentpole,
+  liveCount, portalSlug, context, sportsTentpole,
   tabCounts, categoryCounts,
 }: LayoutProps) {
   return (
@@ -590,8 +587,8 @@ function SplitLayout({
       {/* Top: masthead + weather side-by-side (pr-14 clears any floating ToC button) */}
       <div className="flex items-start justify-between pr-14">
         <div
-          className="animate-fade-in hero-stagger-2 will-change-transform"
-          style={{ transform: `translateY(${contentParallax.masthead}px)` }}
+          className="animate-fade-in hero-stagger-2"
+          style={{ transform: "translateY(var(--parallax-masthead, 0px))" }}
         >
           <div className="mb-2">
             <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
@@ -615,15 +612,15 @@ function SplitLayout({
             </p>
           )}
         </div>
-        <WeatherPill weather={weather} parallaxY={contentParallax.weather} position="inline" portalSlug={portalSlug} />
+        <WeatherPill weather={weather} position="inline" portalSlug={portalSlug} />
       </div>
 
       <div className="flex-1" />
 
       <div className={treatment.contentClass || ""} style={treatment.contentStyle}>
         <div
-          className="animate-fade-in hero-stagger-3 will-change-transform"
-          style={{ transform: `translateY(${contentParallax.meta}px)` }}
+          className="animate-fade-in hero-stagger-3"
+          style={{ transform: "translateY(var(--parallax-meta, 0px))" }}
         >
           <HeadlineSubtitle headline={headline} bodyShadow={treatment.bodyShadow} />
           <SummaryLine tabCounts={tabCounts} categoryCounts={categoryCounts} weather={context.weather} />
@@ -636,21 +633,21 @@ function SplitLayout({
 
 function EditorialLayout({
   masthead, accentColor, headline, treatment, weather, quickLinks,
-  contentParallax, liveCount, portalSlug, context, sportsTentpole,
+  liveCount, portalSlug, context, sportsTentpole,
   tabCounts, categoryCounts,
 }: LayoutProps) {
   return (
     <div className="relative z-10 flex flex-col min-h-[300px] sm:min-h-[480px] px-6 pb-7 pt-5">
       <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
-      <WeatherPill weather={weather} parallaxY={contentParallax.weather} position="top-right" portalSlug={portalSlug} />
+      <WeatherPill weather={weather} position="top-right" portalSlug={portalSlug} />
 
       <div className="flex-1" />
 
       {/* Bottom: right-aligned masthead */}
       <div className={`text-right ${treatment.contentClass || ""}`} style={treatment.contentStyle}>
         <div
-          className="animate-fade-in hero-stagger-2 will-change-transform"
-          style={{ transform: `translateY(${contentParallax.masthead}px)` }}
+          className="animate-fade-in hero-stagger-2"
+          style={{ transform: "translateY(var(--parallax-masthead, 0px))" }}
         >
           <div className="flex justify-end mb-2">
             <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
@@ -677,8 +674,8 @@ function EditorialLayout({
       </div>
 
       <div
-        className="animate-fade-in hero-stagger-3 mt-3 will-change-transform"
-        style={{ transform: `translateY(${contentParallax.meta}px)` }}
+        className="animate-fade-in hero-stagger-3 mt-3"
+        style={{ transform: "translateY(var(--parallax-meta, 0px))" }}
       >
         <HeadlineSubtitle headline={headline} bodyShadow={treatment.bodyShadow} />
         <SummaryLine tabCounts={tabCounts} categoryCounts={categoryCounts} weather={context.weather} />
@@ -693,23 +690,17 @@ function EditorialLayout({
 function FlagshipHeroContent({
   flagship,
   weather,
-  parallaxWeather,
   liveCount,
   portalSlug,
   quickLinks,
-  parallaxMasthead,
-  parallaxMeta,
   context,
   sportsTentpole,
 }: {
   flagship: FlagshipEvent;
   weather: FeedContext["weather"];
-  parallaxWeather: number;
   liveCount: number | null;
   portalSlug: string;
   quickLinks?: QuickLink[];
-  parallaxMasthead: number;
-  parallaxMeta: number;
   context: FeedContext;
   sportsTentpole?: ResolvedHeader["sports_tentpole"];
 }) {
@@ -718,15 +709,14 @@ function FlagshipHeroContent({
       <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
       <WeatherPill
         weather={weather}
-        parallaxY={parallaxWeather}
         position="top-right"
         portalSlug={portalSlug}
       />
 
       <div className="mt-auto">
         <div
-          className="animate-fade-in hero-stagger-2 will-change-transform"
-          style={{ transform: `translateY(${parallaxMasthead}px)` }}
+          className="animate-fade-in hero-stagger-2"
+          style={{ transform: "translateY(var(--parallax-masthead, 0px))" }}
         >
           <div className="mb-2">
             <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
@@ -788,8 +778,8 @@ function FlagshipHeroContent({
         </div>
 
         <div
-          className="animate-fade-in hero-stagger-3 mt-3 will-change-transform"
-          style={{ transform: `translateY(${parallaxMeta}px)` }}
+          className="animate-fade-in hero-stagger-3 mt-3"
+          style={{ transform: "translateY(var(--parallax-meta, 0px))" }}
         >
           <HeroQuickLinks links={quickLinks} />
         </div>
@@ -844,9 +834,6 @@ export default function CityBriefing({
 
   // ── Parallax scroll ──────────────────────────────────────────────────────
   const heroRef = useRef<HTMLDivElement>(null);
-  const [parallaxY, setParallaxY] = useState(0);
-  const [contentParallax, setContentParallax] = useState({ weather: 0, masthead: 0, meta: 0 });
-
   useEffect(() => {
     if (!feedVisible) return;
 
@@ -863,12 +850,10 @@ export default function CityBriefing({
         const rect = el.getBoundingClientRect();
         if (rect.bottom > 0) {
           const offset = -rect.top;
-          setParallaxY(offset * 0.4);
-          setContentParallax({
-            weather: offset * 0.15,
-            masthead: offset * 0.08,
-            meta: offset * 0.04,
-          });
+          el.style.setProperty("--parallax-bg", `${offset * 0.4}px`);
+          el.style.setProperty("--parallax-weather", `${offset * 0.15}px`);
+          el.style.setProperty("--parallax-masthead", `${offset * 0.08}px`);
+          el.style.setProperty("--parallax-meta", `${offset * 0.04}px`);
         }
         ticking = false;
       });
@@ -905,7 +890,6 @@ export default function CityBriefing({
     treatment,
     weather: context.weather,
     quickLinks: effectiveQuickLinks,
-    contentParallax,
     liveCount,
     portalSlug,
     context,
@@ -929,7 +913,7 @@ export default function CityBriefing({
           <div
             className="absolute inset-0 will-change-transform"
             style={{
-              transform: `translateY(${parallaxY}px)`,
+              transform: "translateY(var(--parallax-bg, 0px))",
               top: "-15%",
               bottom: "-15%",
             }}
@@ -973,12 +957,9 @@ export default function CityBriefing({
             <FlagshipHeroContent
               flagship={flagship}
               weather={context.weather}
-              parallaxWeather={contentParallax.weather}
               liveCount={liveCount}
               portalSlug={portalSlug}
               quickLinks={effectiveQuickLinks}
-              parallaxMasthead={contentParallax.masthead}
-              parallaxMeta={contentParallax.meta}
               context={context}
               sportsTentpole={header.sports_tentpole}
             />
