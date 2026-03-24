@@ -59,6 +59,12 @@ const NATIONAL_SOURCE_SLUGS = [
   "open-calls-artshow",
   "open-calls-artjobs",
   "open-calls-zapp",
+  "open-calls-graphic-competitions",
+  "open-calls-artcallentry",
+  "open-calls-competitions-archi",
+  "open-calls-play-submissions",
+  "open-calls-artinfoland",
+  "open-calls-musical-chairs",
 ];
 
 const SCOPE_SLUG_MAP: Record<string, string[]> = {
