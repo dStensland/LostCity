@@ -37,27 +37,19 @@ import { getFeedThemeVars } from "@/lib/city-pulse/theme";
 import { useAuth } from "@/lib/auth-context";
 import { usePortal } from "@/lib/portal-context";
 import { getVisualPreset } from "@/lib/visual-presets";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import CityBriefing from "./CityBriefing";
 import GreetingBar from "./GreetingBar";
 import LineupSection from "./LineupSection";
 import CityPulseSection from "./CityPulseSection";
-import TheSceneSection from "./sections/TheSceneSection";
 import LazySection from "./LazySection";
 import InterestChannelsSection from "./sections/InterestChannelsSection";
 import { HangFeedSection } from "./sections/HangFeedSection";
-
-import SeeShowsSection from "./sections/SeeShowsSection";
-import PlanningHorizonSection from "./sections/PlanningHorizonSection";
-import { PortalTeasersSection } from "./sections/PortalTeasersSection";
 import FeedSectionSkeleton, { useMinSkeletonDelay } from "@/components/feed/FeedSectionSkeleton";
-
-import YonderRegionalEscapesSection from "./sections/YonderRegionalEscapesSection";
-import YonderDestinationNodeQuestsSection from "./sections/YonderDestinationNodeQuestsSection";
 import ActiveContestSection from "./sections/ActiveContestSection";
 import HolidayHero from "./HolidayHero";
 import { DestinationsSection } from "./sections/DestinationsSection";
-import FeedTimeMachine from "./FeedTimeMachine";
 import FeedPageIndex from "./FeedPageIndex";
 import type {
   FeedBlockId,
@@ -74,6 +66,22 @@ import { getDayOfWeek, getDayTheme } from "@/lib/city-pulse/time-slots";
 import { getEditorialHeadline, getCityPhoto, getDefaultAccentColor } from "@/lib/city-pulse/header-defaults";
 import { getDashboardCards } from "@/lib/city-pulse/dashboard-cards";
 import { getContextualQuickLinks } from "@/lib/city-pulse/quick-links";
+
+// Below-fold sections: dynamically imported so their JS is in separate chunks
+// loaded on demand when LazySection triggers (not bundled in the main feed chunk).
+const TheSceneSection = dynamic(() => import("./sections/TheSceneSection"), { ssr: false });
+const SeeShowsSection = dynamic(() => import("./sections/SeeShowsSection"), { ssr: false });
+const PlanningHorizonSection = dynamic(() => import("./sections/PlanningHorizonSection"), { ssr: false });
+const PortalTeasersSection = dynamic(
+  () => import("./sections/PortalTeasersSection").then((m) => ({ default: m.PortalTeasersSection })),
+  { ssr: false }
+);
+const FeedTimeMachine = dynamic(() => import("./FeedTimeMachine"), { ssr: false });
+const YonderRegionalEscapesSection = dynamic(() => import("./sections/YonderRegionalEscapesSection"), { ssr: false });
+const YonderDestinationNodeQuestsSection = dynamic(
+  () => import("./sections/YonderDestinationNodeQuestsSection"),
+  { ssr: false }
+);
 
 /** Section types that LineupSection absorbs */
 const TIMELINE_SECTION_TYPES = new Set<CityPulseSectionType>([
