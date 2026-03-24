@@ -50,14 +50,16 @@ export async function POST(request: NextRequest) {
       return errorResponse(findError, "POST /api/artists/claim (find)");
     }
 
-    if (!artist) {
+    const artistData = artist as { id: string; name: string; claimed_by: string | null } | null;
+
+    if (!artistData) {
       return NextResponse.json(
         { error: "Artist not found" },
         { status: 404 }
       );
     }
 
-    if (artist.claimed_by) {
+    if (artistData.claimed_by) {
       return NextResponse.json(
         { error: "This artist profile has already been claimed" },
         { status: 409 }
@@ -74,7 +76,7 @@ export async function POST(request: NextRequest) {
     if (existingClaim) {
       return NextResponse.json(
         {
-          error: `You have already claimed the profile for ${existingClaim.name}. Each user can claim one artist profile.`,
+          error: `You have already claimed the profile for ${(existingClaim as { name: string }).name}. Each user can claim one artist profile.`,
         },
         { status: 409 }
       );
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `You've claimed the profile for ${artist.name}. An admin will review for verification.`,
+      message: `You've claimed the profile for ${artistData.name}. An admin will review for verification.`,
     });
   } catch (error) {
     return errorResponse(error, "POST /api/artists/claim");

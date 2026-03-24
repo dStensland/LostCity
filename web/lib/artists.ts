@@ -29,6 +29,10 @@ type RawEventArtist = {
     spotify_id: string | null;
     musicbrainz_id: string | null;
     wikidata_id: string | null;
+    instagram: string | null;
+    claimed_by: string | null;
+    claimed_at: string | null;
+    is_verified: boolean;
     created_at: string;
   } | null;
 };
@@ -86,7 +90,7 @@ export async function getEventArtists(eventId: number): Promise<EventArtist[]> {
       is_headliner,
       artists (
         id, name, slug, discipline, bio, image_url, genres, hometown, website,
-        spotify_id, musicbrainz_id, wikidata_id, created_at
+        spotify_id, musicbrainz_id, wikidata_id, instagram, claimed_by, claimed_at, is_verified, created_at
       )
     `)
     .eq("event_id", eventId)
@@ -152,7 +156,7 @@ export async function getFestivalArtists(festivalId: string): Promise<EventArtis
       is_headliner,
       artists (
         id, name, slug, discipline, bio, image_url, genres, hometown, website,
-        spotify_id, musicbrainz_id, wikidata_id, created_at
+        spotify_id, musicbrainz_id, wikidata_id, instagram, claimed_by, claimed_at, is_verified, created_at
       )
     `)
     .in("event_id", eventIds)
