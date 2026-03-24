@@ -13,3 +13,7 @@ export const ENABLE_CITY_MOMENTS =
 export const ENABLE_GROUPS_V1 =
   process.env.NEXT_PUBLIC_ENABLE_GROUPS_V1 === "true" ||
   process.env.ENABLE_GROUPS_V1 === "true";
+// Server-only flag: read event pools from the pre-computed feed_events_ready table
+// instead of the 4+ complex parallel queries. Set USE_FEED_READY_TABLE=true to enable.
+export const USE_FEED_READY_TABLE =
+  process.env.USE_FEED_READY_TABLE === "true";

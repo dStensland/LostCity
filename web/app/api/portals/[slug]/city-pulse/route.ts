@@ -12,6 +12,7 @@
  */
 
 import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { NextRequest, NextResponse } from "next/server";
 import {
   applyRateLimit,
@@ -49,6 +50,8 @@ import type {
   CityPulseResponse,
   TimeSlot,
 } from "@/lib/city-pulse/types";
+import { USE_FEED_READY_TABLE } from "@/lib/launch-flags";
+import { fetchEventPoolsFromReady } from "@/lib/city-pulse/pipeline/fetch-feed-ready";
 
 // ---------------------------------------------------------------------------
 // Cache configuration
@@ -322,8 +325,16 @@ export async function GET(request: NextRequest, { params }: Props) {
   // ---------------------------------------------------------------------------
 
   // Stage 2 (events) + Stage 3 (counts) + Stage 4A (enrichments) + destinations — all parallel
+  //
+  // When USE_FEED_READY_TABLE is enabled, events are read from the pre-computed
+  // feed_events_ready table via the service client (no RLS needed — the table
+  // is already portal-scoped). This replaces 4+ complex parallel queries with
+  // a single flat SELECT per pool.
+  const serviceClient = USE_FEED_READY_TABLE ? createServiceClient() : null;
   const [pools, counts, phaseA, destinations] = await Promise.all([
-    fetchEventPools(portalClient, ctx),
+    USE_FEED_READY_TABLE
+      ? fetchEventPoolsFromReady(serviceClient!, ctx)
+      : fetchEventPools(portalClient, ctx),
     fetchFeedCounts(supabase, ctx, portalClient),
     fetchPhaseAEnrichments(supabase, ctx),
     fetchDestinations(supabase, canonicalSlug),

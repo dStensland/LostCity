@@ -48,3 +48,5 @@ export { assembleResponse } from "./assemble-response";
 
 export { fetchDestinations } from "./fetch-destinations";
 export type { DestinationItem } from "./fetch-destinations";
+
+export { fetchEventPoolsFromReady } from "./fetch-feed-ready";
