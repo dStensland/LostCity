@@ -60,6 +60,7 @@ Fee extraction:
 import html as _html
 import logging
 import re
+from datetime import date
 from typing import Optional
 
 import requests
@@ -311,9 +312,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     logger.info("CaFE: fetched %d raw results from Southeast filter", len(raw_results))
 
+    today = date.today().isoformat()
+
     for result in raw_results:
         call_data = _result_to_call(result, source_id)
         if not call_data:
+            continue
+
+        # Skip past-deadline calls
+        if call_data.get("deadline") and call_data["deadline"] < today:
+            logger.debug("CaFE: skipping past-deadline call %r (deadline=%s)", call_data["title"], call_data["deadline"])
             continue
 
         found += 1
