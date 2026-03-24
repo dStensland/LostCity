@@ -104,7 +104,7 @@ export type FeedEventData = {
   genres?: string[] | null;
   image_url: string | null;
   blurhash?: string | null;
-  description: string | null;
+  description?: string | null;
   featured_blurb?: string | null;
   going_count?: number;
   interested_count?: number;
