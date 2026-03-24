@@ -73,6 +73,8 @@ const NATIONAL_SOURCE_SLUGS = [
   "open-calls-dancing-opportunities",
   "open-calls-rhizome",
   "open-calls-artenda",
+  "open-calls-infodesigners",
+  "open-calls-contest-watchers",
 ];
 
 const SCOPE_SLUG_MAP: Record<string, string[]> = {
