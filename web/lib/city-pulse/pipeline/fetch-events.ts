@@ -464,6 +464,21 @@ export async function fetchEventPools(
       })(),
     ]);
 
+  // Log query errors — these were previously silently swallowed, causing
+  // the entire lineup to disappear with no indication of what went wrong.
+  if (todayResult.error) {
+    console.error("[city-pulse] todayEvents query failed:", todayResult.error.message, todayResult.error.code);
+  }
+  if (eveningResult.error) {
+    console.error("[city-pulse] eveningEvents query failed:", eveningResult.error.message, eveningResult.error.code);
+  }
+  if (trendingResult.error) {
+    console.error("[city-pulse] trendingEvents query failed:", trendingResult.error.message, trendingResult.error.code);
+  }
+  if (horizonResult.error) {
+    console.error("[city-pulse] horizonEvents query failed:", horizonResult.error.message, horizonResult.error.code);
+  }
+
   // Merge today + evening, deduplicating by ID
   const todayRaw = (todayResult.data || []) as unknown as FeedEventData[];
   const eveningRaw = (eveningResult.data || []) as unknown as FeedEventData[];
