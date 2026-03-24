@@ -3,9 +3,8 @@
 /**
  * NewsDigest — compact 3-headline briefing zone component.
  *
- * Self-fetching from /api/portals/[slug]/network-feed?limit=20.
- * Client-side filters to culture-positive categories, deduplicates by title,
- * and takes the first 3. Returns null when no matching headlines.
+ * Fetches from /api/portals/[slug]/network-feed with server-side category
+ * filtering and title deduplication. Returns null when no headlines found.
  *
  * Intended to sit inside CityBriefing, ~120-130px total height.
  */
@@ -16,7 +15,7 @@ import type { NetworkPost } from "./sections/NetworkFeedSection";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CULTURE_POSITIVE = ["culture", "arts", "food", "music", "community"] as const;
+const CULTURE_POSITIVE_PARAM = "culture,arts,food,music,community";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -30,13 +29,10 @@ function getPostCategories(post: NetworkPost): string[] {
   return post.categories ?? post.source?.categories ?? [];
 }
 
-function isCulturePositive(post: NetworkPost): boolean {
-  const cats = getPostCategories(post);
-  return cats.some((c) => (CULTURE_POSITIVE as readonly string[]).includes(c));
-}
+const CULTURE_POSITIVE_SET = new Set(["culture", "arts", "food", "music", "community"]);
 
 function formatCategory(cats: string[]): string {
-  const match = cats.find((c) => (CULTURE_POSITIVE as readonly string[]).includes(c));
+  const match = cats.find((c) => CULTURE_POSITIVE_SET.has(c));
   if (!match) return "";
   return match.charAt(0).toUpperCase() + match.slice(1);
 }
@@ -86,25 +82,14 @@ export function NewsDigest({ portalSlug }: NewsDigestProps) {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch(`/api/portals/${portalSlug}/network-feed?limit=20`, {
-      signal: controller.signal,
-    })
+    fetch(
+      `/api/portals/${portalSlug}/network-feed?limit=3&categories=${CULTURE_POSITIVE_PARAM}`,
+      { signal: controller.signal },
+    )
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => {
         if (controller.signal.aborted) return;
-
-        // Deduplicate by normalized title (same pattern as TodayInAtlantaSection)
-        const seenTitles = new Set<string>();
-        const deduped = ((data.posts || []) as NetworkPost[]).filter((p) => {
-          const norm = p.title.toLowerCase().trim();
-          if (seenTitles.has(norm)) return false;
-          seenTitles.add(norm);
-          return true;
-        });
-
-        // Filter to culture-positive categories, take first 3
-        const filtered = deduped.filter(isCulturePositive).slice(0, 3);
-        setHeadlines(filtered);
+        setHeadlines((data.posts ?? []) as NetworkPost[]);
         setLoading(false);
       })
       .catch(() => setLoading(false));

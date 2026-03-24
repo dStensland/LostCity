@@ -64,14 +64,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "15") || 15, 1), 100);
   const offset = Math.max(parseInt(searchParams.get("offset") || "0") || 0, 0);
   const category = searchParams.get("category") || null;
+  // `categories` accepts a comma-separated list for multi-category OR filtering.
+  const categoriesParam = searchParams.get("categories") || null;
+  const categoriesFilter: string[] | null = categoriesParam
+    ? categoriesParam.split(",").map((c) => c.trim()).filter(Boolean)
+    : null;
   const includeSources = searchParams.get("include_sources") === "true";
   const sourceScope = searchParams.get("source_scope") || "all";
   const civicFilter = searchParams.get("civic_filter") === "true";
 
-  // When civic filtering is active, fetch more rows so we have enough after
-  // server-side keyword filtering. The caller's requested limit is applied
+  // When civic or categories filtering is active, fetch more rows so we have
+  // enough after server-side filtering. The caller's requested limit is applied
   // after filtering.
-  const fetchLimit = civicFilter ? Math.min(limit * 4, 100) : limit;
+  const fetchLimit = (civicFilter || categoriesFilter) ? Math.min(limit * 4, 100) : limit;
 
   try {
     const portal = await getPortalBySlug(slug);
@@ -185,6 +190,31 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (civicFilter) {
       posts = filterCivicPosts(posts).slice(0, limit);
     }
+
+    // Multi-category OR filter: keep posts whose post-level categories (or
+    // source-level categories as fallback) overlap with the requested set.
+    if (categoriesFilter && categoriesFilter.length > 0) {
+      posts = posts.filter((post) => {
+        const postCats = (post.categories as string[] | null) ?? null;
+        const source = post.source as { categories?: string[] | null } | null;
+        const sourceCats = source?.categories ?? null;
+        const effective = postCats ?? sourceCats ?? [];
+        return effective.some((c) => categoriesFilter.includes(c));
+      });
+    }
+
+    // Deduplicate by normalized title (case-insensitive, whitespace-trimmed).
+    // Preserves the first occurrence (most recent, given ORDER BY published_at DESC).
+    const seenTitles = new Set<string>();
+    posts = posts.filter((post) => {
+      const norm = ((post.title as string) || "").toLowerCase().trim();
+      if (!norm || seenTitles.has(norm)) return false;
+      seenTitles.add(norm);
+      return true;
+    });
+
+    // Apply the caller-requested limit after all in-process filtering.
+    posts = posts.slice(0, limit);
 
     const responseBody: Record<string, unknown> = {
       posts,
