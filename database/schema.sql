@@ -69,7 +69,8 @@ CREATE TABLE venues (
   aliases TEXT[],
   last_verified_at TIMESTAMPTZ,
   library_pass JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Venue specials: time-sensitive offerings (happy hours, daily specials, recurring deals)
@@ -208,6 +209,12 @@ CREATE INDEX idx_events_content_hash ON events(content_hash);
 CREATE INDEX idx_events_source_id ON events(source_id);
 CREATE INDEX idx_events_is_active ON events(is_active);
 CREATE INDEX idx_events_active_start_date ON events(start_date) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_events_series_id
+  ON events (series_id) WHERE series_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_events_festival_id
+  ON events (festival_id) WHERE festival_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_events_organization_id
+  ON events (organization_id) WHERE organization_id IS NOT NULL;
 CREATE INDEX idx_events_spot_counts_portal_start_venue
 ON events(portal_id, start_date, venue_id)
 WHERE venue_id IS NOT NULL
@@ -279,8 +286,14 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+-- Trigger to auto-update updated_at on venues
+CREATE TRIGGER set_venues_updated_at
+  BEFORE UPDATE ON venues
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
 -- Trigger to auto-update updated_at on events
-CREATE TRIGGER update_events_updated_at
+CREATE TRIGGER set_events_updated_at
   BEFORE UPDATE ON events
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
@@ -1691,6 +1704,9 @@ CREATE TABLE IF NOT EXISTS venue_occasions (
 
 CREATE INDEX IF NOT EXISTS idx_venue_occasions_occasion
   ON venue_occasions(occasion);
+
+CREATE INDEX IF NOT EXISTS idx_venue_occasions_occasion_confidence
+  ON venue_occasions (occasion, confidence DESC);
 
 CREATE INDEX IF NOT EXISTS idx_venue_occasions_venue
   ON venue_occasions(venue_id);
