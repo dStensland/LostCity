@@ -16,6 +16,7 @@ import {
   filterOutInactiveVenueEvents,
 } from "@/lib/event-feed-health";
 import { suppressEventImagesIfVenueFlagged } from "@/lib/image-quality-suppression";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 // ---------------------------------------------------------------------------
 // Shared event SELECT (mirrors the route constant — single source of truth)
@@ -347,6 +348,32 @@ export function buildInterestQueries(
 }
 
 // ---------------------------------------------------------------------------
+// YMCA source ID cache
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns YMCA source IDs, cached for 1 hour.
+ *
+ * YMCA source IDs are stable configuration data — they only change when a new
+ * YMCA branch source is added (very rare). Caching eliminates a serial DB hop
+ * before every cold feed load and every tab fetch.
+ */
+async function getYmcaSourceIds(supabase: SupabaseClient): Promise<number[]> {
+  return getOrSetSharedCacheJson<number[]>(
+    "feed-config",
+    "ymca-source-ids",
+    60 * 60 * 1000, // 1 hour TTL
+    async () => {
+      const { data } = await supabase
+        .from("sources")
+        .select("id")
+        .ilike("slug", "ymca%");
+      return (data ?? []).map((r: { id: number }) => r.id);
+    },
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Full load stage
 // ---------------------------------------------------------------------------
 
@@ -362,13 +389,7 @@ export async function fetchEventPools(
   // The YMCA crawler produces fitness/sports events that are really scheduled
   // classes — not public events worth surfacing in discovery. This is a
   // short-term bridge until the crawler sets is_class=true on these events.
-  const { data: ymcaSourceRows } = await portalClient
-    .from("sources")
-    .select("id")
-    .ilike("slug", "ymca%");
-  const ymcaSourceIds: number[] = (ymcaSourceRows ?? []).map(
-    (r: { id: number }) => r.id,
-  );
+  const ymcaSourceIds = await getYmcaSourceIds(portalClient);
 
   const [todayResult, eveningResult, trendingResult, horizonResult] =
     await Promise.all([
@@ -486,13 +507,7 @@ export async function fetchTabEventPool(
   tabEnd: string,
 ): Promise<FeedEventData[]> {
   // Mirror the YMCA exclusion from fetchEventPools so tab views are consistent.
-  const { data: ymcaSourceRows } = await portalClient
-    .from("sources")
-    .select("id")
-    .ilike("slug", "ymca%");
-  const ymcaSourceIds: number[] = (ymcaSourceRows ?? []).map(
-    (r: { id: number }) => r.id,
-  );
+  const ymcaSourceIds = await getYmcaSourceIds(portalClient);
 
   const [baseResult, interestResults] = await Promise.all([
     buildEventQuery(portalClient, ctx, tabStart, tabEnd, 500, ymcaSourceIds),
