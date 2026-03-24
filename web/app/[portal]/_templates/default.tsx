@@ -7,6 +7,8 @@ import { getPortalVertical } from "@/lib/portal";
 
 interface DefaultTemplateProps {
   portal: Portal;
+  /** Server-computed hero image URL for LCP preload optimization. */
+  serverHeroUrl?: string;
 }
 
 /**
@@ -19,6 +21,7 @@ interface DefaultTemplateProps {
  */
 export async function DefaultTemplate({
   portal,
+  serverHeroUrl,
 }: DefaultTemplateProps) {
   const vertical = getPortalVertical(portal);
 
@@ -44,6 +47,7 @@ export async function DefaultTemplate({
   return (
     <CityPulseShell
       portalSlug={portal.slug}
+      serverHeroUrl={serverHeroUrl}
     />
   );
 }

@@ -77,6 +77,8 @@ export interface CityBriefingProps {
   quickLinks?: QuickLink[];
   tabCounts?: { today: number; this_week: number; coming_up: number } | null;
   categoryCounts?: { today: Record<string, number> } | null;
+  /** Server-computed hero URL — available before JS hydrates, used as initial state. */
+  serverHeroUrl?: string;
 }
 
 // ── Layout variant selection ──────────────────────────────────────────────────
@@ -805,6 +807,7 @@ export default function CityBriefing({
   quickLinks,
   tabCounts,
   categoryCounts,
+  serverHeroUrl,
 }: CityBriefingProps) {
   const [liveCount, setLiveCount] = useState<number | null>(null);
 
@@ -881,7 +884,9 @@ export default function CityBriefing({
   // ── Hero image with fallback ─────────────────────────────────────────────
   // When a flagship event is present, use its image as the hero.
   const atmosphericImageUrl = header.hero_image_url;
-  const initialHeroUrl = flagship?.image_url ?? atmosphericImageUrl;
+  // serverHeroUrl is the server-computed atmospheric URL — available before hydration.
+  // Use it as the initial state so the browser can preload it and avoid a blank hero frame.
+  const initialHeroUrl = flagship?.image_url ?? serverHeroUrl ?? atmosphericImageUrl;
   const [heroImageUrl, setHeroImageUrl] = useState(initialHeroUrl);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

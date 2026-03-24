@@ -1,5 +1,7 @@
 import { getCachedPortalBySlug, getCachedPortalByVerticalAndCity, getPortalVertical } from "@/lib/portal";
 import { headers } from "next/headers";
+import { getCityPhoto } from "@/lib/city-pulse/header-defaults";
+import { getTimeSlot, getDayOfWeek } from "@/lib/city-pulse/time-slots";
 import { AmbientBackground } from "@/components/ambient";
 import HappeningView from "@/components/find/HappeningView";
 import type { HappeningContent } from "@/components/find/HappeningView";
@@ -174,6 +176,11 @@ export default async function PortalPage({ params, searchParams }: Props) {
   // Check vertical type for hotel/specialty portals
   const vertical = getPortalVertical(portal);
   const isHotel = vertical === "hotel";
+
+  // Server-side hero URL computation for LCP preload.
+  // Only used by the default (city) template path — pure + cheap, no async needed.
+  const now = new Date();
+  const serverHeroUrl = getCityPhoto(getTimeSlot(now.getHours()), undefined, getDayOfWeek(now));
   const isFilm = isFilmPortalVertical(vertical);
   const isMarketplace = vertical === "marketplace" || isPCMDemoPortal(portal.slug);
   const isCommunity = vertical === "community";
@@ -426,7 +433,19 @@ export default async function PortalPage({ params, searchParams }: Props) {
                           <TimelineTemplate portal={portal} />
                         ) : (
                           /* Default template for backwards compatibility */
-                          <DefaultTemplate portal={portal} />
+                          <>
+                            {/* Preload the hero image server-side so the browser fetches it
+                                during HTML parse, before JS hydrates. Shifts LCP from
+                                "after hydration" to "during parse". Only emitted for city
+                                (default) portals since other templates don't use this image. */}
+                            <link
+                              rel="preload"
+                              as="image"
+                              href={serverHeroUrl}
+                              fetchPriority="high"
+                            />
+                            <DefaultTemplate portal={portal} serverHeroUrl={serverHeroUrl} />
+                          </>
                         )
                       )}
                     </Suspense>

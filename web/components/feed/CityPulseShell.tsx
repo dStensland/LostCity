@@ -155,6 +155,8 @@ function buildDefaultHeader(
 
 interface CityPulseShellProps {
   portalSlug: string;
+  /** Server-computed hero image URL — preloaded in HTML, passed to CityBriefing as initial state. */
+  serverHeroUrl?: string;
 }
 
 function FeedError({ onRetry }: { onRetry: () => void }) {
@@ -173,7 +175,7 @@ function FeedError({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
+export default function CityPulseShell({ portalSlug, serverHeroUrl }: CityPulseShellProps) {
   const searchParams = useSearchParams();
   const showTimeMachine = searchParams.get("admin") !== null;
   const { user } = useAuth();
@@ -400,6 +402,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
             quickLinks={quickLinks}
             tabCounts={tabCounts}
             categoryCounts={categoryCounts}
+            serverHeroUrl={serverHeroUrl}
           />
         </div>
       ) : (
