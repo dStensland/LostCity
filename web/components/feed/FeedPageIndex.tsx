@@ -128,31 +128,42 @@ export default function FeedPageIndex({
     });
   }, []);
 
-  /* ── MutationObserver: detect lazy sections appearing/disappearing ── */
+  // Counter to force re-evaluation of legacy DOM availability
+  const [legacyScanTick, setLegacyScanTick] = useState(0);
+
+  /* ── Single debounced MutationObserver for both modes ── */
   useEffect(() => {
-    // Pause DOM observation while feed is hidden behind a detail view —
-    // detail view DOM mutations would trigger pointless re-scans.
-    if (loading || isLegacyMode || !feedVisible) return;
+    if (loading || !feedVisible) return;
 
     // Initial scan after two rAFs (let lazy sections mount)
     const raf = requestAnimationFrame(() => {
-      requestAnimationFrame(refreshEntries);
+      requestAnimationFrame(() => {
+        if (!isLegacyMode) refreshEntries();
+        else setLegacyScanTick((t) => t + 1);
+      });
     });
 
-    const observer = new MutationObserver(refreshEntries);
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
+    // Debounced observer — fires at most once per 300ms instead of on
+    // every DOM mutation. Single observer replaces the previous two.
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const observer = new MutationObserver(() => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (!isLegacyMode) refreshEntries();
+        else setLegacyScanTick((t) => t + 1);
+      }, 300);
     });
+
+    // Observe the feed container if available, else fall back to body
+    const feedContainer = document.querySelector("[data-block-id='events']")?.parentElement ?? document.body;
+    observer.observe(feedContainer, { childList: true, subtree: true });
 
     return () => {
       cancelAnimationFrame(raf);
+      if (debounceTimer) clearTimeout(debounceTimer);
       observer.disconnect();
     };
   }, [loading, isLegacyMode, refreshEntries, feedVisible]);
-
-  // Counter to force re-evaluation of legacy DOM availability
-  const [legacyScanTick, setLegacyScanTick] = useState(0);
 
   // Unified view entries: DOM-sourced for CityPulse, legacy prop for CuratedContent
   const viewEntries: DomEntry[] = useMemo(() => {
@@ -163,22 +174,6 @@ export default function FeedPageIndex({
       .map((e) => ({ id: e.id, label: e.label, blockId: e.blockId ?? ("events" as FeedBlockId) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLegacyMode, legacyEntries, domEntries, legacyScanTick]);
-
-  // For legacy mode, re-scan on DOM changes to update available entries
-  useEffect(() => {
-    if (!isLegacyMode || loading || !feedVisible) return;
-    const raf = requestAnimationFrame(() => {
-      requestAnimationFrame(() => setLegacyScanTick((t) => t + 1));
-    });
-    const observer = new MutationObserver(() => {
-      setLegacyScanTick((t) => t + 1);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => {
-      cancelAnimationFrame(raf);
-      observer.disconnect();
-    };
-  }, [isLegacyMode, loading, feedVisible]);
 
   /* ── IntersectionObserver: track which section is in view ── */
   useEffect(() => {

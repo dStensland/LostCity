@@ -67,9 +67,16 @@ export function useLiveEvents(portalSlug?: string): UseLiveEventsResult {
     // Initial fetch
     fetchLiveEvents(signal);
 
+    // Clean up any existing channel before subscribing (prevents duplicates
+    // if effect re-fires before cleanup runs, e.g. during StrictMode)
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     // Subscribe to real-time updates for is_live changes
     channelRef.current = supabase
-      .channel("all-live-events")
+      .channel(`live-events-${portalSlug ?? "all"}`)
       .on(
         "postgres_changes",
         {
