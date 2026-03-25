@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import GoblinMovieCard, { type GoblinMovie } from "./GoblinMovieCard";
 
 interface Props {
@@ -130,10 +130,82 @@ export default function GoblinDayPage({ initialMovies }: Props) {
     { key: "watched" as const, label: "WATCHED", active: "bg-zinc-800 text-emerald-400 border-emerald-500" },
   ];
 
+  // Matrix rain of ancient/occult symbols
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Ancient/occult Unicode symbols — alchemical, runic, cuneiform, occult
+    const symbols = [
+      // Alchemical
+      "\u{1F700}","\u{1F701}","\u{1F702}","\u{1F703}","\u{1F704}","\u{1F705}","\u{1F706}","\u{1F707}",
+      "\u{1F708}","\u{1F709}","\u{1F70A}","\u{1F70B}","\u{1F70C}","\u{1F70D}","\u{1F70E}","\u{1F70F}",
+      "\u{1F710}","\u{1F711}","\u{1F712}","\u{1F713}","\u{1F714}","\u{1F715}","\u{1F716}","\u{1F717}",
+      "\u{1F718}","\u{1F719}","\u{1F71A}","\u{1F71B}","\u{1F71C}","\u{1F71D}","\u{1F71E}","\u{1F71F}",
+      // Elder Futhark runes
+      "\u16A0","\u16A1","\u16A2","\u16A3","\u16A4","\u16A5","\u16A6","\u16A7","\u16A8",
+      "\u16A9","\u16AA","\u16AB","\u16AC","\u16AD","\u16AE","\u16AF","\u16B0","\u16B1",
+      // Misc occult / astrological
+      "\u2720","\u2721","\u2625","\u2626","\u262D","\u262E","\u262F","\u2638","\u263D","\u263E",
+      "\u2640","\u2642","\u2643","\u2644","\u2645","\u2646","\u2647","\u2648","\u2649",
+      "\u264A","\u264B","\u264C","\u264D","\u264E","\u264F","\u2650","\u2651","\u2652","\u2653",
+      // Pentagrams / crosses
+      "\u26E4","\u26E5","\u26E6","\u26E7","\u2628","\u2629",
+    ];
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const fontSize = 14;
+    const columns = Math.floor(canvas.width / fontSize);
+    const drops: number[] = new Array(columns).fill(0).map(() => Math.random() * -100);
+
+    const draw = () => {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.06)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.font = `${fontSize}px monospace`;
+
+      for (let i = 0; i < drops.length; i++) {
+        const char = symbols[Math.floor(Math.random() * symbols.length)];
+        const x = i * fontSize;
+        const y = drops[i] * fontSize;
+
+        // Dark red, very subtle
+        const alpha = 0.08 + Math.random() * 0.07;
+        ctx.fillStyle = `rgba(127, 29, 29, ${alpha})`;
+        ctx.fillText(char, x, y);
+
+        if (y > canvas.height && Math.random() > 0.985) {
+          drops[i] = 0;
+        }
+        drops[i] += 0.3 + Math.random() * 0.2;
+      }
+    };
+
+    const interval = setInterval(draw, 80);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-black text-white font-mono">
+    <div className="min-h-screen bg-black text-white font-mono relative">
+      {/* Matrix rain background */}
+      <canvas
+        ref={canvasRef}
+        className="fixed inset-0 pointer-events-none z-0"
+      />
       {/* Scrolling Marquee */}
-      <div className="overflow-hidden bg-black select-none border-b-4 border-red-800">
+      <div className="overflow-hidden bg-black/90 select-none border-b-4 border-red-800 relative z-10">
         <div className="flex items-center whitespace-nowrap animate-marquee">
           {marqueeStrip}
           {marqueeStrip}
@@ -141,7 +213,7 @@ export default function GoblinDayPage({ initialMovies }: Props) {
       </div>
 
       {/* Tabs — brutalist rectangles */}
-      <div className="flex flex-wrap justify-center gap-0 border-b-2 border-zinc-800">
+      <div className="flex flex-wrap justify-center gap-0 border-b-2 border-zinc-800 relative z-10 bg-black/90">
         {TAB_CONFIG.map(({ key, label, active }) => (
           <button
             key={key}
@@ -162,7 +234,7 @@ export default function GoblinDayPage({ initialMovies }: Props) {
 
       {/* Sort Bar (contenders only) */}
       {activeTab === "contenders" && (
-        <div className="flex justify-center gap-0 border-b border-zinc-800">
+        <div className="flex justify-center gap-0 border-b border-zinc-800 relative z-10 bg-black/90">
           {SORT_OPTIONS.map(({ key, label }) => (
             <button
               key={key}
@@ -180,7 +252,7 @@ export default function GoblinDayPage({ initialMovies }: Props) {
       )}
 
       {/* Movie Grid */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6 pb-16">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6 pb-16 relative z-10">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
           {filteredMovies.map((movie) => (
             <GoblinMovieCard
