@@ -11,7 +11,7 @@
  * the visual language matches the dashboard Regular Hangs section.
  */
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   SCENE_ACTIVITY_TYPES,
@@ -21,6 +21,7 @@ import {
 import { SceneEventRow, SceneChip, getActivityIcon, WeekdayRow, getDayKeyFromDate, buildNext7Days } from "@/components/feed/SceneEventRow";
 import { triggerHaptic } from "@/lib/haptics";
 import { ListBullets, Repeat } from "@phosphor-icons/react";
+import { TransitionContainer } from "@/components/ui/TransitionContainer";
 import type { CityPulseEventItem } from "@/lib/city-pulse/types";
 import type { FeedEventData } from "@/components/EventCard";
 
@@ -50,6 +51,8 @@ const ACTIVITY_MAP = new Map(SCENE_ACTIVITY_TYPES.map((a) => [a.id, a]));
 
 export default function RegularsView({ portalId, portalSlug }: RegularsViewProps) {
   const searchParams = useSearchParams();
+
+  const [isPending, startTransition] = useTransition();
 
   const [events, setEvents] = useState<RegularEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -194,38 +197,42 @@ export default function RegularsView({ portalId, portalSlug }: RegularsViewProps
   const handleActivityTap = useCallback(
     (actId: string) => {
       triggerHaptic("selection");
-      setActiveActivities((prev) => {
-        let next: string[];
-        if (actId === "all") {
-          next = [];
-        } else {
-          const current = new Set(prev);
-          if (current.has(actId)) {
-            current.delete(actId);
+      startTransition(() => {
+        setActiveActivities((prev) => {
+          let next: string[];
+          if (actId === "all") {
+            next = [];
           } else {
-            current.add(actId);
+            const current = new Set(prev);
+            if (current.has(actId)) {
+              current.delete(actId);
+            } else {
+              current.add(actId);
+            }
+            next = Array.from(current);
           }
-          next = Array.from(current);
-        }
-        syncUrl(next, activeWeekdays);
-        return next;
+          syncUrl(next, activeWeekdays);
+          return next;
+        });
       });
     },
-    [activeWeekdays, syncUrl],
+    [activeWeekdays, syncUrl, startTransition],
   );
 
   // Weekday toggle handlers
   const handleWeekdayToggle = useCallback(
     (day: string) => {
       triggerHaptic("selection");
-      setActiveWeekdays((prev) => {
-        // Single-select: tap to select, tap again to deselect (show all)
-        const next = prev.length === 1 && prev[0] === day ? [] : [day];
-        syncUrl(activeActivities, next);
-        return next;
+      startTransition(() => {
+        setActiveWeekdays((prev) => {
+          // Single-select: tap to select, tap again to deselect (show all)
+          const next = prev.length === 1 && prev[0] === day ? [] : [day];
+          syncUrl(activeActivities, next);
+          return next;
+        });
       });
     },
-    [activeActivities, syncUrl],
+    [activeActivities, syncUrl, startTransition],
   );
 
   // Convert API event to CityPulseEventItem for SceneEventRow
@@ -281,63 +288,65 @@ export default function RegularsView({ portalId, portalSlug }: RegularsViewProps
         onToggle={handleWeekdayToggle}
       />
 
-      {/* Loading skeleton */}
-      {loading && <RegularsSkeleton />}
+      <TransitionContainer isPending={isPending}>
+        {/* Loading skeleton */}
+        {loading && <RegularsSkeleton />}
 
-      {/* Error */}
-      {error && !loading && (
-        <div className="py-8 text-center">
-          <p className="font-mono text-xs text-[var(--coral)]">{error}</p>
-        </div>
-      )}
+        {/* Error */}
+        {error && !loading && (
+          <div className="py-8 text-center">
+            <p className="font-mono text-xs text-[var(--coral)]">{error}</p>
+          </div>
+        )}
 
-      {/* Results grouped by date */}
-      {!loading && !error && groupedByDate.length > 0 && (
-        <div className="space-y-4">
-          {groupedByDate.map(([date, dateEvents]) => (
-            <div key={date}>
-              {/* Day header */}
-              <h3 className="font-mono text-xs font-bold uppercase tracking-[0.12em] text-[var(--soft)] mb-2">
-                {formatDayHeader(date)}
-                <span className="ml-2 font-normal text-[var(--muted)]">
-                  {dateEvents.length}
-                </span>
-              </h3>
-              {/* Event list */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {dateEvents.map((event) => {
-                  const actId = classifiedEvents.get(event.id);
-                  const act = actId ? ACTIVITY_MAP.get(actId) : undefined;
-                  return (
-                    <SceneEventRow
-                      key={event.id}
-                      item={toEventItem(event)}
-                      activity={act}
-                      ActivityIcon={act ? getActivityIcon(act) : undefined}
-                      portalSlug={portalSlug}
-                    />
-                  );
-                })}
+        {/* Results grouped by date */}
+        {!loading && !error && groupedByDate.length > 0 && (
+          <div className="space-y-4">
+            {groupedByDate.map(([date, dateEvents]) => (
+              <div key={date}>
+                {/* Day header */}
+                <h3 className="font-mono text-xs font-bold uppercase tracking-[0.12em] text-[var(--soft)] mb-2">
+                  {formatDayHeader(date)}
+                  <span className="ml-2 font-normal text-[var(--muted)]">
+                    {dateEvents.length}
+                  </span>
+                </h3>
+                {/* Event list */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {dateEvents.map((event) => {
+                    const actId = classifiedEvents.get(event.id);
+                    const act = actId ? ACTIVITY_MAP.get(actId) : undefined;
+                    return (
+                      <SceneEventRow
+                        key={event.id}
+                        item={toEventItem(event)}
+                        activity={act}
+                        ActivityIcon={act ? getActivityIcon(act) : undefined}
+                        portalSlug={portalSlug}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      {/* Empty state */}
-      {!loading && !error && groupedByDate.length === 0 && (
-        <div className="py-12 text-center">
-          <Repeat weight="duotone" className="w-8 h-8 text-[var(--muted)] mx-auto mb-3" />
-          <p className="font-mono text-sm text-[var(--muted)]">
-            No recurring events found
-          </p>
-          <p className="font-mono text-xs text-[var(--muted)] mt-1 opacity-60">
-            {activeWeekdays.length > 0 || activeActivities.length > 0
-              ? "Try adjusting your filters"
-              : "Check back soon"}
-          </p>
-        </div>
-      )}
+        {/* Empty state */}
+        {!loading && !error && groupedByDate.length === 0 && (
+          <div className="py-12 text-center">
+            <Repeat weight="duotone" className="w-8 h-8 text-[var(--muted)] mx-auto mb-3" />
+            <p className="font-mono text-sm text-[var(--muted)]">
+              No recurring events found
+            </p>
+            <p className="font-mono text-xs text-[var(--muted)] mt-1 opacity-60">
+              {activeWeekdays.length > 0 || activeActivities.length > 0
+                ? "Try adjusting your filters"
+                : "Check back soon"}
+            </p>
+          </div>
+        )}
+      </TransitionContainer>
     </div>
   );
 }
