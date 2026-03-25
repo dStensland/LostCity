@@ -11,9 +11,9 @@ type Tab = "next" | "contenders" | "upcoming" | "watched";
 type SortKey = "date" | "critics" | "audience" | "alpha";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "date", label: "Release Date" },
-  { key: "critics", label: "Critics Score" },
-  { key: "audience", label: "Audience Score" },
+  { key: "date", label: "DATE" },
+  { key: "critics", label: "CRITICS" },
+  { key: "audience", label: "AUDIENCE" },
   { key: "alpha", label: "A-Z" },
 ];
 
@@ -88,14 +88,12 @@ export default function GoblinDayPage({ initialMovies }: Props) {
       setMovies((prev) =>
         prev.map((m) => (m.id === id ? { ...m, [field]: value } : m))
       );
-
       try {
-        const res = await fetch(`/api/goblin-day/${id}`, {
+        const res = await fetch(`/api/goblinday/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ [field]: value }),
         });
-
         if (!res.ok) {
           setMovies((prev) =>
             prev.map((m) => (m.id === id ? { ...m, [field]: !value } : m))
@@ -115,54 +113,48 @@ export default function GoblinDayPage({ initialMovies }: Props) {
       key={`img-${i}`}
       src={img.src}
       alt={img.alt}
-      className="h-20 w-28 object-cover flex-shrink-0"
+      className="h-24 w-32 object-cover flex-shrink-0 grayscale contrast-125 mix-blend-luminosity"
     />,
     <span
       key={`txt-${i}`}
-      className="flex-shrink-0 px-6 text-2xl sm:text-3xl font-black tracking-widest text-red-600 drop-shadow-[0_0_8px_rgba(220,38,38,0.5)]"
+      className="flex-shrink-0 px-8 text-3xl sm:text-4xl font-black tracking-[0.2em] text-red-600 font-mono uppercase drop-shadow-[0_0_12px_rgba(220,38,38,0.6)]"
     >
       {ZALGO_TEXT}
     </span>,
   ]);
 
+  const TAB_CONFIG = [
+    { key: "next" as const, label: "NEXT GOBLIN DAY", active: "bg-red-700 text-white border-red-500" },
+    { key: "contenders" as const, label: "CONTENDERS", active: "bg-zinc-800 text-white border-zinc-500" },
+    { key: "upcoming" as const, label: "UPCOMING", active: "bg-zinc-800 text-violet-400 border-violet-500" },
+    { key: "watched" as const, label: "WATCHED", active: "bg-zinc-800 text-emerald-400 border-emerald-500" },
+  ];
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
+    <div className="min-h-screen bg-black text-white font-mono">
       {/* Scrolling Marquee */}
-      <div className="overflow-hidden bg-black select-none border-b border-red-900/30">
+      <div className="overflow-hidden bg-black select-none border-b-4 border-red-800">
         <div className="flex items-center whitespace-nowrap animate-marquee">
           {marqueeStrip}
           {marqueeStrip}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex justify-center gap-2 mb-8 mt-6 px-4">
-        {(
-          [
-            { key: "next", label: "Next Goblin Day" },
-            { key: "contenders", label: "Contenders" },
-            { key: "upcoming", label: "Upcoming" },
-            { key: "watched", label: "Watched" },
-          ] as const
-        ).map(({ key, label }) => (
+      {/* Tabs — brutalist rectangles */}
+      <div className="flex flex-wrap justify-center gap-0 border-b-2 border-zinc-800">
+        {TAB_CONFIG.map(({ key, label, active }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            className={`px-4 sm:px-6 py-2 rounded-full text-sm font-medium transition-colors ${
+            className={`px-4 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-[0.15em] uppercase border-b-3 transition-colors ${
               activeTab === key
-                ? key === "next"
-                  ? "bg-orange-600 text-white"
-                  : key === "watched"
-                    ? "bg-emerald-700 text-white"
-                    : key === "upcoming"
-                      ? "bg-violet-700 text-white"
-                      : "bg-zinc-700 text-white"
-                : "bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700"
+                ? active
+                : "bg-black text-zinc-600 border-transparent hover:text-zinc-400 hover:bg-zinc-950"
             }`}
           >
             {label}
             {counts[key] > 0 && (
-              <span className="ml-1.5 text-xs opacity-70">{counts[key]}</span>
+              <span className="ml-2 text-xs opacity-60">[{counts[key]}]</span>
             )}
           </button>
         ))}
@@ -170,15 +162,15 @@ export default function GoblinDayPage({ initialMovies }: Props) {
 
       {/* Sort Bar (contenders only) */}
       {activeTab === "contenders" && (
-        <div className="flex justify-center gap-1.5 mb-6 px-4">
+        <div className="flex justify-center gap-0 border-b border-zinc-800">
           {SORT_OPTIONS.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setSortKey(key)}
-              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+              className={`px-4 py-2 text-2xs font-bold tracking-[0.2em] uppercase transition-colors ${
                 sortKey === key
-                  ? "bg-zinc-600 text-white"
-                  : "bg-zinc-800/60 text-zinc-500 hover:text-zinc-300"
+                  ? "bg-zinc-900 text-red-500 border-b-2 border-red-500"
+                  : "bg-black text-zinc-600 hover:text-zinc-400"
               }`}
             >
               {label}
@@ -188,8 +180,8 @@ export default function GoblinDayPage({ initialMovies }: Props) {
       )}
 
       {/* Movie Grid */}
-      <main className="max-w-7xl mx-auto px-4 pb-16">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6 pb-16">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
           {filteredMovies.map((movie) => (
             <GoblinMovieCard
               key={movie.id}
@@ -200,14 +192,14 @@ export default function GoblinDayPage({ initialMovies }: Props) {
         </div>
 
         {filteredMovies.length === 0 && (
-          <p className="text-center text-zinc-500 py-16">
+          <p className="text-center text-zinc-600 py-20 text-sm tracking-widest uppercase">
             {activeTab === "next"
-              ? "No movies proposed yet. Go to Contenders and propose some!"
+              ? "// NO PROPOSALS YET — GO PICK SOME CONTENDERS"
               : activeTab === "watched"
-                ? "Haven't watched anything yet. Get to it, goblins!"
+                ? "// NOTHING WATCHED — GET TO IT GOBLINS"
                 : activeTab === "upcoming"
-                  ? "No upcoming movies. Everything's already out!"
-                  : "No contenders. Run the seed script!"}
+                  ? "// NO UPCOMING — EVERYTHING IS OUT"
+                  : "// NO CONTENDERS — RUN THE SEED SCRIPT"}
           </p>
         )}
       </main>
@@ -219,7 +211,7 @@ export default function GoblinDayPage({ initialMovies }: Props) {
           100% { transform: translateX(-50%); }
         }
         .animate-marquee {
-          animation: marquee 15s linear infinite;
+          animation: marquee 20s linear infinite;
         }
       `}</style>
     </div>

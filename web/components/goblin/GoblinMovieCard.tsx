@@ -44,18 +44,20 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
   const inTheaters = streaming.includes("theaters");
   const streamingProviders = streaming.filter((s) => s !== "theaters");
 
+  const trailerUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + " " + movie.year + " trailer")}`;
+
   return (
     <div
-      className={`bg-zinc-900 rounded-lg overflow-hidden border transition-colors ${
+      className={`bg-zinc-950 overflow-hidden border-2 transition-all font-mono ${
         movie.proposed && !movie.watched
-          ? "border-orange-500/50 shadow-[0_0_12px_rgba(249,115,22,0.15)]"
+          ? "border-red-700 shadow-[0_0_20px_rgba(185,28,28,0.2)]"
           : movie.watched
-            ? "border-zinc-800/50 opacity-75"
-            : "border-zinc-800 hover:border-zinc-700"
+            ? "border-zinc-800 opacity-50"
+            : "border-zinc-800 hover:border-zinc-600"
       }`}
     >
       {/* Poster */}
-      <div className="relative aspect-[2/3] bg-zinc-800">
+      <div className="relative aspect-[2/3] bg-zinc-900">
         {posterUrl ? (
           <SmartImage
             src={posterUrl}
@@ -64,114 +66,98 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
             className={`object-cover ${movie.watched ? "grayscale" : ""}`}
           />
         ) : (
-          <div className="flex items-center justify-center h-full text-zinc-600 text-sm">
-            No Poster
+          <div className="flex items-center justify-center h-full text-zinc-700 text-xs tracking-widest uppercase">
+            NO POSTER
           </div>
         )}
         {movie.watched && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <span className="text-3xl select-none">&#x2705;</span>
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+            <span className="text-emerald-500 font-black text-xs tracking-[0.3em] uppercase rotate-[-12deg]">
+              WATCHED
+            </span>
+          </div>
+        )}
+        {movie.proposed && !movie.watched && (
+          <div className="absolute top-0 left-0 bg-red-700 px-2 py-0.5">
+            <span className="text-white font-bold text-2xs tracking-widest uppercase">
+              PROPOSED
+            </span>
           </div>
         )}
       </div>
 
       {/* Info */}
-      <div className="p-3 space-y-2">
+      <div className="p-2.5 space-y-1.5">
         <div>
-          <h3 className="font-semibold text-white text-sm leading-tight truncate">
+          <h3 className="font-bold text-white text-xs leading-tight line-clamp-2 uppercase tracking-wide">
             {movie.title}
           </h3>
-          <p className="text-zinc-400 text-xs mt-0.5">{releaseDate}</p>
+          <p className="text-zinc-600 text-2xs mt-0.5 tracking-widest">{releaseDate}</p>
         </div>
 
-        {/* RT Scores */}
-        <div className="flex gap-3 text-xs">
-          <span title="Critics Score">
-            {movie.rt_critics_score != null ? (
-              <span
-                className={
-                  movie.rt_critics_score >= 60
-                    ? "text-red-400"
-                    : "text-green-400"
-                }
-              >
-                {movie.rt_critics_score >= 60 ? "\uD83C\uDF45" : "\uD83E\uDD6C"}{" "}
-                {movie.rt_critics_score}%
-              </span>
-            ) : (
-              <span className="text-zinc-500">{"\uD83C\uDF45"} --</span>
-            )}
+        {/* RT Scores — raw numbers */}
+        <div className="flex gap-3 text-2xs">
+          <span className={movie.rt_critics_score != null ? (movie.rt_critics_score >= 60 ? "text-red-500" : "text-zinc-500") : "text-zinc-700"}>
+            RT {movie.rt_critics_score != null ? `${movie.rt_critics_score}%` : "--"}
           </span>
-          <span title="Audience Score">
-            {movie.rt_audience_score != null ? (
-              <span
-                className={
-                  movie.rt_audience_score >= 60
-                    ? "text-yellow-400"
-                    : "text-zinc-400"
-                }
-              >
-                {"\uD83C\uDF7F"} {movie.rt_audience_score}%
-              </span>
-            ) : (
-              <span className="text-zinc-500">{"\uD83C\uDF7F"} --</span>
-            )}
+          <span className={movie.rt_audience_score != null ? (movie.rt_audience_score >= 60 ? "text-amber-500" : "text-zinc-500") : "text-zinc-700"}>
+            AUD {movie.rt_audience_score != null ? `${movie.rt_audience_score}%` : "--"}
           </span>
         </div>
 
         {/* Availability */}
         <div className="flex flex-wrap gap-1">
           {inTheaters && (
-            <span className="text-2xs px-1.5 py-0.5 rounded bg-red-900/50 text-red-300 border border-red-800/50">
-              In Theaters
+            <span className="text-2xs px-1.5 py-0.5 bg-red-900/80 text-red-300 font-bold tracking-wider uppercase">
+              THEATERS
             </span>
           )}
           {streamingProviders.map((provider) => (
             <span
               key={provider}
-              className="text-2xs px-1.5 py-0.5 rounded bg-emerald-900/50 text-emerald-300 border border-emerald-800/50"
+              className="text-2xs px-1.5 py-0.5 bg-emerald-900/60 text-emerald-400 tracking-wider uppercase"
             >
               {provider}
             </span>
           ))}
           {!isReleased && streaming.length === 0 && (
-            <span className="text-2xs px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 border border-zinc-700/50">
-              Not Released
+            <span className="text-2xs px-1.5 py-0.5 bg-zinc-900 text-zinc-600 tracking-wider uppercase">
+              UNRELEASED
             </span>
           )}
         </div>
 
-        {/* Trailer */}
+        {/* Trailer link */}
         <a
-          href={`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + " " + movie.year + " trailer")}`}
+          href={trailerUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-2xs text-zinc-500 hover:text-red-400 transition-colors flex items-center gap-1"
+          className="text-2xs text-zinc-600 hover:text-red-500 transition-colors tracking-widest uppercase block"
         >
-          <span>&#9654;</span> Trailer
+          &#9654; TRAILER
         </a>
 
-        {/* Actions */}
-        <div className="flex gap-2 pt-1 border-t border-zinc-800">
+        {/* Actions — hard rectangles */}
+        <div className="flex gap-1 pt-1.5 border-t border-zinc-800">
           <button
             onClick={() => onToggle(movie.id, "proposed", !movie.proposed)}
-            className={`flex-1 text-2xs py-1.5 rounded font-medium transition-colors ${
+            className={`flex-1 text-2xs py-1.5 font-bold tracking-wider uppercase transition-colors ${
               movie.proposed
-                ? "bg-orange-600 text-white"
-                : "bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700"
+                ? "bg-red-800 text-white"
+                : "bg-zinc-900 text-zinc-500 hover:text-white hover:bg-zinc-800 border border-zinc-800"
             }`}
           >
-            {movie.proposed ? "Proposed" : "Propose"}
+            {movie.proposed ? "PROPOSED" : "PROPOSE"}
           </button>
           <button
             onClick={() => onToggle(movie.id, "watched", !movie.watched)}
-            className={`flex-1 text-2xs py-1.5 rounded font-medium transition-colors ${
+            className={`flex-1 text-2xs py-1.5 font-bold tracking-wider uppercase transition-colors ${
               movie.watched
-                ? "bg-emerald-700 text-white"
-                : "bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700"
+                ? "bg-emerald-800 text-white"
+                : "bg-zinc-900 text-zinc-500 hover:text-white hover:bg-zinc-800 border border-zinc-800"
             }`}
           >
-            {movie.watched ? "Watched" : "Mark Watched"}
+            {movie.watched ? "WATCHED" : "WATCHED?"}
           </button>
         </div>
       </div>

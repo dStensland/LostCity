@@ -127,7 +127,7 @@ export default async function PortalLayout({ children, params }: Props) {
   const { portal: slug } = await params;
 
   // Special handling for known non-portal routes to avoid conflicts
-  const reservedRoutes = ["admin", "api", "auth", "calendar", "claim", "collections", "community", "dashboard", "data", "design", "events", "festivals", "find-friends", "foryou", "friends", "goblin-day", "happening-now", "invite", "invite-friends", "logo-concepts", "notifications", "onboarding", "people", "plans", "privacy", "profile", "saved", "series", "settings", "spots", "submit", "terms", "venue", "welcome"];
+  const reservedRoutes = ["admin", "api", "auth", "calendar", "claim", "collections", "community", "dashboard", "data", "design", "events", "festivals", "find-friends", "foryou", "friends", "goblinday", "happening-now", "invite", "invite-friends", "logo-concepts", "notifications", "onboarding", "people", "plans", "privacy", "profile", "saved", "series", "settings", "spots", "submit", "terms", "venue", "welcome"];
   if (reservedRoutes.includes(slug)) {
     notFound();
   }
