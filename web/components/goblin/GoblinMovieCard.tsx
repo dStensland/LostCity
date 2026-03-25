@@ -86,15 +86,6 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
             </span>
           </div>
         )}
-        {/* Trailer button — overlaid on poster bottom */}
-        <a
-          href={trailerUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="absolute bottom-2 right-2 bg-red-800/90 hover:bg-red-700 text-white text-2xs font-bold tracking-widest uppercase px-2.5 py-1.5 transition-all hover:shadow-[0_0_12px_rgba(220,38,38,0.5)] border border-red-600/50 flex items-center gap-1.5 backdrop-blur-sm"
-        >
-          <span className="text-xs">&#9654;</span> TRAILER
-        </a>
       </div>
 
       {/* Info */}
@@ -154,8 +145,18 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
           )}
         </div>
 
-        {/* Actions — pinned to bottom */}
-        <div className="flex gap-1 pt-1.5 border-t border-zinc-800/50 mt-auto">
+        {/* Trailer + Actions — pinned to bottom */}
+        <div className="mt-auto pt-1.5 border-t border-zinc-800/50 space-y-1">
+          <a
+            href={trailerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full text-center bg-red-900/40 hover:bg-red-800/60 text-red-400 hover:text-red-300 text-2xs font-bold tracking-widest uppercase py-1.5 transition-all hover:shadow-[0_0_10px_rgba(220,38,38,0.3)] border border-red-800/40"
+          >
+            &#9654; TRAILER
+          </a>
+        </div>
+        <div className="flex gap-1">
           <button
             onClick={() => onToggle(movie.id, "proposed", !movie.proposed)}
             className={`flex-1 text-2xs py-2 font-bold tracking-wider uppercase transition-all ${
