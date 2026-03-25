@@ -13,6 +13,10 @@ export function NavigationProgress() {
   const [state, setState] = useState<"idle" | "loading" | "completing">("idle");
   const prevPathnameRef = useRef(pathname);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [supportsVT, setSupportsVT] = useState(false);
+  useEffect(() => {
+    setSupportsVT("startViewTransition" in document);
+  }, []);
 
   useEffect(() => {
     // On mount, record the initial path without triggering a load animation.
@@ -55,14 +59,18 @@ export function NavigationProgress() {
 
       if (isExternal || isHashOnly || isSamePage) return;
 
-      // Start the loading animation
+      // Start the loading animation, delayed when VT crossfade is already providing feedback.
       if (timerRef.current) clearTimeout(timerRef.current);
-      setState("loading");
+      if (supportsVT) {
+        timerRef.current = setTimeout(() => setState("loading"), 300);
+      } else {
+        setState("loading");
+      }
     }
 
     document.addEventListener("click", handleClick, { capture: true });
     return () => document.removeEventListener("click", handleClick, { capture: true });
-  }, [pathname]);
+  }, [pathname, supportsVT]);
 
   // Clean up on unmount
   useEffect(() => {
