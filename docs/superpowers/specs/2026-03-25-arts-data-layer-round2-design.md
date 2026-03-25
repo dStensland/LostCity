@@ -22,13 +22,15 @@ The `artists` table contains 5,767 records — all musicians, comedians, authors
 
 ### Solution
 
-1. **Crawl artist rosters from gallery websites.** The 43 venues with active exhibitions publish "Artists" or "Gallery Artists" pages listing represented artists with bios, headshots, and portfolio links. Scrape these pages to extract artist data.
+1. **Crawl artist rosters from gallery websites.** Of the 43 venues with active exhibitions, ~12-15 are commercial galleries with published artist roster pages. The rest are institutions (museums, history centers) that list artists per-exhibition, not as a standing roster. Scrape both: roster pages for gallery-class venues, exhibition detail pages for institutions.
 
-2. **Create artist records with `discipline='visual_artist'`.** Extend `get_or_create_artist()` to accept an optional `extra_fields: dict = None` parameter that gets merged into the insert payload (e.g., `{"bio": "...", "image_url": "...", "website": "..."}`). Existing callers are unaffected since it defaults to `None`. On the "get" path (artist already exists), update any null fields with provided extra_fields values (don't overwrite existing data).
+2. **Add artist name validation to `get_or_create_artist()`.** Before creating a record, reject names that are: all-caps single generic words ("ARTISTS"), contain pipe characters, are purely numeric ("2016"), or match a blocklist of known non-person strings (exhibition titles, archive names, UI elements). Blocklist: `["ARTISTS", "Various Artists", "Group Exhibition", "TBD", "TBA"]`.
 
-3. **Resolve `exhibition_artists.artist_id` FKs.** For each `exhibition_artists` row where `artist_id IS NULL`, match `artist_name` against the artists table (normalized) and set the FK.
+3. **Create artist records with `discipline='visual_artist'`.** Extend `get_or_create_artist()` to accept an optional `extra_fields: dict = None` parameter that gets merged into the insert payload (e.g., `{"bio": "...", "image_url": "...", "website": "..."}`). Existing callers are unaffected since it defaults to `None`. On the "get" path (artist already exists): update any null fields with provided extra_fields values (don't overwrite existing data). Additionally, if the existing record has `discipline='musician'` (the default) and the caller passes `discipline='visual_artist'`, overwrite the discipline — this resolves slug collisions where the event pipeline auto-created a skeleton record for a visual artist.
 
-4. **Build artist browse API endpoints:**
+4. **Resolve `exhibition_artists.artist_id` FKs.** For each `exhibition_artists` row where `artist_id IS NULL`, match `artist_name` against the artists table (normalized) and set the FK. Skip rows that fail the name validation gate from step 2 — these are garbage data that should be cleaned rather than linked.
+
+5. **Build artist browse API endpoints:**
    - `GET /api/artists` — List with filters: `discipline`, `medium` (via exhibitions), `q` (search), pagination (`limit`/`offset`). Portal-scoped via exhibition source access.
    - `GET /api/artists/[slug]` — Detail: profile fields + exhibition history via existing `getArtistExhibitions()` in `web/lib/artists.ts`.
 
@@ -56,11 +58,11 @@ Priority: galleries with the most active exhibitions and published artist pages.
 | College Football HoF | 9 | cfbhall.com | Skip — not visual art |
 | ADAM | 6 | adamatl.org | Artist archive |
 
-Target: 200+ artist profiles from top 15-20 gallery rosters. Rate-limit requests (1s delay between pages per domain) and use the standard crawler user-agent from `_exhibitions_base.py`.
+Target: 200+ artist profiles (stretch goal — dependent on roster page availability). Some gallery roster pages may redirect or 404; confirm reachability before building each scraper. Rate-limit requests (1s delay between pages per domain) and use the standard crawler user-agent from `_exhibitions_base.py`.
 
 ### Artist Table Fields Used
 
-Existing columns — no schema changes needed. Verify that `is_verified`, `claimed_by`, and `claimed_at` columns exist on the `artists` table in production before starting (they should from the claim endpoint migration but are not in tracked migration files):
+Existing columns on `artists` table — verify that `is_verified`, `claimed_by`, and `claimed_at` exist in production before starting. **One schema addition required:** the `get_portal_artists` RPC (see API Design) needs a migration file for the stored function.
 
 | Field | Source | Required |
 |-------|--------|----------|
@@ -79,7 +81,7 @@ Query params:
 - `limit` (default 20, max 100), `offset` (default 0)
 - `discipline` — filter by artist discipline (default `visual_artist` for arts portal)
 - `q` — ilike search on `name`
-- Portal scoping via RPC: Create `get_portal_artists(portal_id, limit, offset, discipline, q)` that handles the multi-table join server-side. The join path is: `artists` -> `exhibition_artists` -> `exhibitions` (filtered by `source_id IN portal-accessible sources`). This avoids complex client-side Supabase query chaining. The RPC returns artists with an `exhibition_count` field computed as the count of portal-scoped active exhibitions per artist (not global count).
+- Portal scoping via RPC: Create `get_portal_artists(portal_id, limit, offset, discipline, q)` in a migration file (`supabase/migrations/YYYYMMDD_get_portal_artists_rpc.sql`). The join path is: `artists` -> `exhibition_artists` -> `exhibitions` (filtered by `source_id IN portal-accessible sources`). This avoids complex client-side Supabase query chaining. The RPC returns artists with an `exhibition_count` field computed as the count of portal-scoped active exhibitions per artist (not global count). Use `COUNT(*) OVER()` window function to return a proper `total_count` for pagination (not array length).
 
 Response:
 ```json
@@ -137,6 +139,20 @@ Response: Full artist profile + exhibition history. Uses existing `getArtistExhi
 
 ---
 
+## Pre-Flight: Junk Exhibition Cleanup
+
+Before starting any workstream, deactivate ~25 known junk exhibition records. These are non-exhibition strings that passed through before title validation was tightened (e.g., "View fullsize" x19, UI element strings, bare dates). Run a one-time cleanup query:
+
+```sql
+UPDATE exhibitions SET is_active = false
+WHERE title IN ('View fullsize', ...)  -- full list TBD from data audit
+  AND is_active = true;
+```
+
+Also add a `source_url` validation rule to `insert_exhibition()`: reject records where `source_url` matches CDN image URL patterns (e.g., `*.cloudinary.com/*`, `*.wp-content/uploads/*`, `*.s3.amazonaws.com/*`). These are image URLs being stored as source URLs — they provide no exhibition detail page for closing date backfill or user navigation.
+
+---
+
 ## Workstream 2: Fix All 6 Failing Exhibition Crawlers
 
 ### Problem
@@ -145,14 +161,14 @@ Response: Full artist profile + exhibition history. Uses existing `getArtistExhi
 
 ### Crawlers to Fix
 
-| Crawler | File | Exhibitions | Error | Likely Cause |
-|---------|------|-------------|-------|-------------|
-| Kai Lin Art | `sources/kai_lin_art.py` | 36 | Server disconnected | Site change or Playwright issue |
-| Atlanta History Center | `sources/atlanta_history_center.py` | 29 | Server disconnected | Site change or Playwright issue |
-| Whitespace Gallery | `sources/whitespace_gallery.py` | 3 | Success but 0 found | React-only rendering, needs Playwright |
-| Michael C. Carlos Museum | `sources/carlos_museum.py` | 5 | Success but 0 found | DOM structure change |
-| Hammonds House Museum | `sources/hammonds_house.py` | 2 | Success but 0 found | Multi-path fallback failing |
-| Atlanta Printmakers Studio | `sources/atlanta_printmakers_studio.py` | 2 | Success but 0 found | Squarespace block structure change |
+| Crawler | File | Exhibitions | Error | Diagnosed Cause |
+|---------|------|-------------|-------|----------------|
+| Kai Lin Art | `sources/kai_lin_art.py` | 36 | Server disconnected (intermittent) | Rate-limit / anti-bot; also has a date-ordering bug (sorts by opening_date but some records lack it → inconsistent pagination). Fix: add retry with backoff + sort fallback. |
+| Atlanta History Center | `sources/atlanta_history_center.py` | 29 | Server disconnected (intermittent) | Cloudflare-style protection on some pages. Fix: retry with backoff, consider static HTTP if API exists. |
+| Whitespace Gallery | `sources/whitespace_gallery.py` | 3 | Success but 0 found | React SPA — content renders client-side only. Fix: switch to Playwright or find underlying API/JSON. |
+| Michael C. Carlos Museum | `sources/carlos_museum.py` | 5 | Success but 0 found | DOM selectors outdated after site redesign. Fix: update selectors to match current markup. |
+| Hammonds House Museum | `sources/hammonds_house.py` | 2 | Success but 0 found | Site may be offline or restructured. Verify site is up before investing fix time; if down, mark `is_active=false`. |
+| Atlanta Printmakers Studio | `sources/atlanta_printmakers_studio.py` | 2 | Success but 0 found | Domain may have changed or Squarespace block structure updated. Verify current URL first. |
 
 ### Approach
 
@@ -211,6 +227,7 @@ The `medium` column on `exhibitions` is 0% populated. No "filter by photography/
    - `textile` — textile, fiber, weaving, quilt, tapestry, embroidery
    - `digital` — digital, video, projection, new media, generative, AI
    - `ceramics` — ceramics, pottery, porcelain, stoneware, glaze
+   - `installation` — installation, site-specific, immersive, environment
 
 3. **Inference rules:**
    - Match keywords in title first (highest confidence)
@@ -220,6 +237,8 @@ The `medium` column on `exhibitions` is 0% populated. No "filter by photography/
    - Never overwrite existing non-null values
 
 4. **Wire into insert pipeline** — Add `infer_exhibition_medium(title, description)` call in `db/exhibitions.py:insert_exhibition()` after the junk-title check and before the dedup hash, only when `medium` is not already set in `exhibition_data`. Also call it in `update_exhibition()` when the existing record has null medium. The function is synchronous and in-process (keyword matching, no network calls).
+
+5. **Add CHECK constraint** — Create a migration (`supabase/migrations/YYYYMMDD_exhibition_medium_check.sql`) adding a CHECK constraint on `exhibitions.medium` to enforce the 10-value taxonomy: `CHECK (medium IS NULL OR medium IN ('painting', 'photography', 'sculpture', 'mixed_media', 'printmaking', 'drawing', 'textile', 'digital', 'ceramics', 'installation'))`. This prevents typos and undocumented values from entering the column.
 
 ### Success Criteria
 
