@@ -11,6 +11,7 @@ import { decodeHtmlEntities, formatTimeSplit, getLocalDateString } from "@/lib/f
 import { computeCountdown, formatFestivalDates } from "@/lib/moments-utils";
 import Image from "@/components/SmartImage";
 import { useImageParallax } from "@/lib/hooks/useImageParallax";
+import { useViewTransition } from "@/lib/hooks/useViewTransition";
 import Dot from "@/components/ui/Dot";
 
 interface Props {
@@ -41,6 +42,7 @@ const FestivalCard = memo(function FestivalCard({
   density = "comfortable",
 }: Props) {
   const { containerRef: parallaxContainerRef, imageRef: parallaxImageRef } = useImageParallax();
+  const { navigate } = useViewTransition();
   const typeColor = getSeriesTypeColor("festival_program");
   const formatFestivalType = (value?: string | null) => {
     if (!value) return "Festival";
@@ -113,6 +115,7 @@ const FestivalCard = memo(function FestivalCard({
             background:
               "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
           }}
+          onClick={(e) => { e.preventDefault(); navigate(festivalUrl); }}
         >
           <div className="px-3 py-2.5">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -158,6 +161,7 @@ const FestivalCard = memo(function FestivalCard({
         data-list-row="true"
         data-row-primary-link="true"
         aria-label={festivalName}
+        onClick={(e) => { e.preventDefault(); navigate(festivalUrl); }}
       >
       <div className="p-3 sm:p-3.5 flex gap-2.5 sm:gap-3">
         {/* Date cell - matches EventCard time cell */}

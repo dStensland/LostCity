@@ -13,6 +13,7 @@ import { EventsBadge } from "./Badge";
 import Dot from "@/components/ui/Dot";
 import { PressQuote } from "@/components/feed/PressQuote";
 import type { EditorialMention } from "@/lib/city-pulse/types";
+import { useViewTransition } from "@/lib/hooks/useViewTransition";
 
 function formatEventDate(dateStr: string): string {
   const today = new Date();
@@ -63,6 +64,8 @@ interface VenueCardProps {
   index?: number;
   /** Editorial press mentions to show on the discovery card */
   editorialMentions?: EditorialMention[];
+  /** Hide the neighborhood badge (e.g. when already on that neighborhood's page) */
+  hideNeighborhood?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,13 +98,16 @@ function DiscoveryCard({
   portalSlug,
   showDistance,
   editorialMentions,
+  hideNeighborhood,
 }: {
   venue: Spot;
   portalSlug: string;
   showDistance?: { lat: number; lng: number };
   editorialMentions?: EditorialMention[];
+  hideNeighborhood?: boolean;
 }) {
   const [imageError, setImageError] = useState(false);
+  const { navigate } = useViewTransition();
   const hasImage = venue.image_url && !imageError;
   const isFeatured = (venue.event_count ?? 0) >= FEATURED_EVENT_THRESHOLD;
   const categoryKey = venue.venue_type || "other";
@@ -109,12 +115,14 @@ function DiscoveryCard({
   const locationDesignator = venue.location_designator || "standard";
   const locationLabel = LOCATION_DESIGNATOR_LABELS[locationDesignator];
   const distance = getDistanceMiles(venue, showDistance);
+  const venueHref = `/${portalSlug}?spot=${venue.slug}`;
 
   return (
     <Link
-      href={`/${portalSlug}?spot=${venue.slug}`}
+      href={venueHref}
       scroll={false}
       data-category={categoryKey}
+      onClick={(e) => { e.preventDefault(); navigate(venueHref); }}
       className="find-row-card find-row-card-bg block rounded-xl border border-[var(--twilight)]/75 border-l-[2px] border-l-[var(--accent-color)] overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]"
       style={
         {
@@ -214,7 +222,7 @@ function DiscoveryCard({
                 {distance !== null && (
                   <span className="text-[var(--neon-green)] font-mono text-xs">{formatDistanceMiles(distance)}</span>
                 )}
-                {venue.neighborhood && (
+                {venue.neighborhood && !hideNeighborhood && (
                   <>
                     {distance !== null && <Dot />}
                     <span className="truncate max-w-[65%] sm:max-w-[45%] font-medium text-sm">{venue.neighborhood}</span>
@@ -296,6 +304,7 @@ function CompactCard({
   topSpecial,
   showDistance,
   index = 0,
+  hideNeighborhood,
 }: {
   venue: Spot;
   portalSlug: string;
@@ -304,19 +313,22 @@ function CompactCard({
   topSpecial?: VenueCardProps["topSpecial"];
   showDistance?: { lat: number; lng: number };
   index?: number;
+  hideNeighborhood?: boolean;
 }) {
   const staggerClass = index < 10 ? `stagger-${index + 1}` : "";
   const priceDisplay = formatPriceLevel(venue.price_level);
   const venueType = venue.venue_type || "music_venue";
-
+  const { navigate } = useViewTransition();
   const distance = getDistanceMiles(venue, showDistance);
+  const compactVenueHref = `/${portalSlug}?spot=${venue.slug}`;
 
   return (
     <Link
-      href={`/${portalSlug}?spot=${venue.slug}`}
+      href={compactVenueHref}
       scroll={false}
       data-category={venueType}
       data-accent="category"
+      onClick={(e) => { e.preventDefault(); navigate(compactVenueHref); }}
       className={`event-item animate-fade-in ${staggerClass} group card-atmospheric glow-accent reflection-accent card-hover-lift surface-raised rounded-xl border border-subtle shadow-card-sm hover:shadow-card-md`}
     >
       {/* Icon column */}
@@ -347,7 +359,7 @@ function CompactCard({
         )}
         <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1">
           <span className="font-medium text-base">{getCategoryLabel(venueType)}</span>
-          {venue.neighborhood && (
+          {venue.neighborhood && !hideNeighborhood && (
             <>
               <Dot />
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[var(--surface-elevated)]/60 text-[var(--text-secondary)] text-xs font-medium">
@@ -409,6 +421,7 @@ function VenueCard({
   showDistance,
   index,
   editorialMentions,
+  hideNeighborhood,
 }: VenueCardProps) {
   if (variant === "compact") {
     return (
@@ -420,6 +433,7 @@ function VenueCard({
         topSpecial={topSpecial}
         showDistance={showDistance}
         index={index}
+        hideNeighborhood={hideNeighborhood}
       />
     );
   }
@@ -430,6 +444,7 @@ function VenueCard({
       portalSlug={portalSlug}
       showDistance={showDistance}
       editorialMentions={editorialMentions}
+      hideNeighborhood={hideNeighborhood}
     />
   );
 }

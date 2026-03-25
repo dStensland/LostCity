@@ -31,6 +31,7 @@ import Image from "@/components/SmartImage";
 import type { RecommendationReason } from "./ReasonBadge";
 import RSVPButton, { type RSVPStatus } from "./RSVPButton";
 import { useImageParallax } from "@/lib/hooks/useImageParallax";
+import { useViewTransition } from "@/lib/hooks/useViewTransition";
 import type { Frequency, DayOfWeek } from "@/lib/recurrence";
 import Dot from "@/components/ui/Dot";
 import { EventCardImage } from "./event-card/EventCardImage";
@@ -214,6 +215,7 @@ function EventCard({
 
   const { containerRef: parallaxContainerRef, imageRef: parallaxImageRef } =
     useImageParallax();
+  const { navigate } = useViewTransition();
 
   // Optimistic RSVP count adjustments — user's own RSVP immediately ticks the count
   const [countAdjust, setCountAdjust] = useState({
@@ -298,6 +300,7 @@ function EventCard({
             scroll={false}
             data-row-primary-link="true"
             className="min-w-0"
+            onClick={(e) => { e.preventDefault(); navigate(eventHref); }}
           >
             <div className="min-w-0 space-y-1.5 sm:space-y-1">
               <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
@@ -431,6 +434,7 @@ function EventCard({
           scroll={false}
           data-row-primary-link="true"
           className="block min-w-0 p-3 sm:p-3.5"
+          onClick={(e) => { e.preventDefault(); navigate(eventHref); }}
         >
           <div className="flex gap-2.5 sm:gap-3">
             {/* Time/image rail — desktop only */}
