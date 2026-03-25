@@ -16,12 +16,12 @@ from unittest.mock import MagicMock, patch, call
 # ---------------------------------------------------------------------------
 
 def test_upsert_exhibition_artists_includes_artist_id_on_success(monkeypatch):
-    """When get_or_create_and_enrich resolves, artist_id is set in the upsert payload."""
+    """When get_or_create_artist resolves, artist_id is set in the upsert payload."""
     fake_artist = {"id": "uuid-1234", "name": "Kara Walker", "slug": "kara-walker"}
 
-    # Patch get_or_create_and_enrich in the exhibitions module's namespace
+    # Patch get_or_create_artist in the artists module's namespace
     monkeypatch.setattr(
-        "artists.get_or_create_and_enrich",
+        "artists.get_or_create_artist",
         lambda name, discipline="musician": fake_artist,
     )
 
@@ -64,12 +64,12 @@ def test_upsert_exhibition_artists_includes_artist_id_on_success(monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_upsert_exhibition_artists_proceeds_without_artist_id_on_failure(monkeypatch):
-    """When get_or_create_and_enrich raises, the row is still upserted without artist_id."""
+    """When get_or_create_artist raises, the row is still upserted without artist_id."""
 
     def exploding_resolve(name, discipline="musician"):
         raise RuntimeError("DB connection refused")
 
-    monkeypatch.setattr("artists.get_or_create_and_enrich", exploding_resolve)
+    monkeypatch.setattr("artists.get_or_create_artist", exploding_resolve)
 
     captured_payloads = []
 

@@ -188,36 +188,32 @@ def insert_exhibition(exhibition_data: dict, artists: Optional[list] = None) -> 
 
 
 def _upsert_exhibition_artists(exhibition_id: str, artists: list) -> None:
-    """Insert artist associations for an exhibition.
-
-    Attempts to resolve each artist to the canonical ``artists`` table via
-    ``get_or_create_and_enrich`` with ``discipline="visual_artist"``.  When
-    resolution succeeds the row gains an ``artist_id`` FK that powers the
-    Arts portal's living-CV feature.  If resolution fails for any artist the
-    row is still written without ``artist_id`` — resilience over completeness.
-    """
+    """Insert artist associations for an exhibition."""
     if not artists or not writes_enabled():
         return
 
-    from artists import get_or_create_and_enrich  # local import to avoid circular dep
+    from artists import get_or_create_artist, normalize_artist_name
 
     payload = []
     for artist in artists:
         name = (artist.get("artist_name") or "").strip()
         if not name:
             continue
+        normalized_name = normalize_artist_name(name)
+        if not normalized_name:
+            continue
         row: dict = {
             "exhibition_id": exhibition_id,
-            "artist_name": name,
+            "artist_name": normalized_name,
             "artist_url": artist.get("artist_url"),
             "role": artist.get("role", "artist"),
         }
         try:
-            canonical = get_or_create_and_enrich(name, discipline="visual_artist")
+            canonical = get_or_create_artist(normalized_name, discipline="visual_artist")
             row["artist_id"] = canonical["id"]
         except Exception as resolve_err:
             logger.debug(
-                "Could not resolve artist %r to canonical record: %s", name, resolve_err
+                "Could not resolve artist %r to canonical record: %s", normalized_name, resolve_err
             )
         payload.append(row)
 
@@ -238,8 +234,8 @@ def _upsert_exhibition_artists(exhibition_id: str, artists: list) -> None:
 # ---------------------------------------------------------------------------
 
 
-def update_exhibition(exhibition_id: str, updates: dict, artists=None) -> None:
-    """Update an existing exhibition by ID."""
+def update_exhibition(exhibition_id: str, updates: dict, artists: Optional[list] = None) -> None:
+    """Update an existing exhibition by ID, optionally re-linking artists."""
     if not writes_enabled():
         _log_write_skip(f"update exhibitions id={exhibition_id}")
         return
@@ -252,9 +248,11 @@ def update_exhibition(exhibition_id: str, updates: dict, artists=None) -> None:
     if "metadata" in updates and updates["metadata"]:
         filtered["metadata"] = updates["metadata"]
 
-    if not filtered:
-        return
+    if filtered:
+        client = get_client()
+        client.table("exhibitions").update(filtered).eq("id", exhibition_id).execute()
+        logger.debug("Updated exhibition %s", exhibition_id)
 
-    client = get_client()
-    client.table("exhibitions").update(filtered).eq("id", exhibition_id).execute()
-    logger.debug("Updated exhibition %s", exhibition_id)
+    # Re-link artists if provided
+    if artists:
+        _upsert_exhibition_artists(exhibition_id, artists)

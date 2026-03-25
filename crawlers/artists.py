@@ -38,6 +38,25 @@ def slugify_artist(name: str) -> str:
     return s
 
 
+_LAST_FIRST_RE = re.compile(r"^([\w][\w\-.]+),\s+(\w.+)$")
+
+
+def normalize_artist_name(name: str) -> str:
+    """Normalize an artist name for consistent matching.
+
+    - Strips leading/trailing whitespace
+    - Normalizes internal whitespace
+    - Inverts 'Last, First' → 'First Last'
+    """
+    name = re.sub(r"\s+", " ", name.strip())
+    if not name:
+        return ""
+    m = _LAST_FIRST_RE.match(name)
+    if m:
+        name = f"{m.group(2)} {m.group(1)}"
+    return name
+
+
 # ---------------------------------------------------------------------------
 # Core CRUD
 # ---------------------------------------------------------------------------
