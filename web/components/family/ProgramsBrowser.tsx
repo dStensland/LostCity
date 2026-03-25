@@ -895,7 +895,7 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
                   backgroundColor: BORDER,
                   opacity: 0.5,
                 }}
-                className="skeleton-shimmer-light"
+                className="skeleton-shimmer"
               />
             ))}
           </>

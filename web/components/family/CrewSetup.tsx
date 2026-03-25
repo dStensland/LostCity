@@ -462,7 +462,7 @@ export const CrewSetup = memo(function CrewSetup({
         {[1, 2].map((i) => (
           <div
             key={i}
-            className="h-16 rounded-xl skeleton-shimmer-light"
+            className="h-16 rounded-xl skeleton-shimmer"
           />
         ))}
       </div>
