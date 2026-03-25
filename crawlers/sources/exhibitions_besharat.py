@@ -17,7 +17,7 @@ from datetime import date
 import requests
 from bs4 import BeautifulSoup
 
-from sources.exhibitions_base import GenericExhibitionCrawler
+from sources._exhibitions_base import GenericExhibitionCrawler
 
 logger = logging.getLogger(__name__)
 

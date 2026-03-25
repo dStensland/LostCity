@@ -8,13 +8,14 @@
 -- domain/site issues as of 2026-03-25 and return 0 results until
 -- their new web presence is identified. is_active=false for those two.
 
-INSERT INTO sources (name, slug, source_type, url, is_active, crawl_frequency, owner_portal_id)
+INSERT INTO sources (name, slug, source_type, url, entity_family, is_active, crawl_frequency, owner_portal_id)
 VALUES
   (
     'MOCA GA (Exhibitions)',
     'exhibitions-moca-ga',
     'scrape',
     'https://www.mocaga.org',
+    'exhibitions',
     true,
     'weekly',
     (SELECT id FROM portals WHERE slug = 'arts-atlanta')
@@ -24,6 +25,7 @@ VALUES
     'exhibitions-atlanta-photography',
     'scrape',
     'https://www.atlantaphotography.org',
+    'exhibitions',
     false,
     'weekly',
     (SELECT id FROM portals WHERE slug = 'arts-atlanta')
@@ -33,6 +35,7 @@ VALUES
     'exhibitions-besharat',
     'scrape',
     'https://www.besharatcontemporary.com',
+    'exhibitions',
     true,
     'weekly',
     (SELECT id FROM portals WHERE slug = 'arts-atlanta')
@@ -42,6 +45,7 @@ VALUES
     'exhibitions-zucot',
     'scrape',
     'https://www.zucotgallery.com',
+    'exhibitions',
     true,
     'weekly',
     (SELECT id FROM portals WHERE slug = 'arts-atlanta')
@@ -51,6 +55,7 @@ VALUES
     'exhibitions-poem88',
     'scrape',
     'http://www.poem88.com',
+    'exhibitions',
     false,
     'weekly',
     (SELECT id FROM portals WHERE slug = 'arts-atlanta')
@@ -60,6 +65,7 @@ VALUES
     'exhibitions-hathaway',
     'scrape',
     'https://www.hathawaygallery.com',
+    'exhibitions',
     true,
     'weekly',
     (SELECT id FROM portals WHERE slug = 'arts-atlanta')
@@ -69,6 +75,7 @@ VALUES
     'exhibitions-mason-fine-art',
     'scrape',
     'https://masonfineartandevents.com',
+    'exhibitions',
     true,
     'weekly',
     (SELECT id FROM portals WHERE slug = 'arts-atlanta')
@@ -78,6 +85,7 @@ VALUES
     'exhibitions-alan-avery',
     'scrape',
     'https://www.alanaveryartcompany.com',
+    'exhibitions',
     true,
     'weekly',
     (SELECT id FROM portals WHERE slug = 'arts-atlanta')
@@ -85,4 +93,5 @@ VALUES
 ON CONFLICT (slug) DO UPDATE SET
   is_active = EXCLUDED.is_active,
   url = EXCLUDED.url,
+  entity_family = EXCLUDED.entity_family,
   owner_portal_id = EXCLUDED.owner_portal_id;

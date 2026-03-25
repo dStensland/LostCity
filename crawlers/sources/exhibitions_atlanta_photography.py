@@ -13,7 +13,7 @@ import time
 
 import requests
 
-from sources.exhibitions_base import GenericExhibitionCrawler
+from sources._exhibitions_base import GenericExhibitionCrawler
 
 logger = logging.getLogger(__name__)
 
