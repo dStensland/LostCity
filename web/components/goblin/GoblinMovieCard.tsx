@@ -56,7 +56,7 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
         movie.proposed && !movie.watched
           ? "border-red-700 shadow-[0_0_20px_rgba(185,28,28,0.25)] hover:shadow-[0_0_30px_rgba(185,28,28,0.4)]"
           : movie.watched
-            ? "border-zinc-800 opacity-50"
+            ? "border-zinc-800"
             : "border-zinc-800 hover:border-red-900/60 hover:shadow-[0_0_15px_rgba(120,10,10,0.15)]"
       }`}
     >
@@ -67,7 +67,7 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
             src={posterUrl}
             alt={movie.title}
             fill
-            className={`object-cover transition-transform duration-500 group-hover:scale-105 ${movie.watched ? "grayscale" : ""}`}
+            className={`object-cover transition-transform duration-500 group-hover:scale-105 ${movie.watched ? "grayscale brightness-50" : ""}`}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-zinc-700 text-xs tracking-widest uppercase">
