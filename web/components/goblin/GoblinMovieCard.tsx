@@ -99,20 +99,6 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
             i
           </button>
         )}
-        {/* Synopsis overlay */}
-        {showSynopsis && movie.synopsis && (
-          <div
-            className="absolute inset-0 bg-black/90 p-3 flex flex-col justify-center cursor-pointer"
-            onClick={() => setShowSynopsis(false)}
-          >
-            <p className="text-zinc-300 text-2xs leading-relaxed line-clamp-[8]">
-              {movie.synopsis}
-            </p>
-            <span className="text-zinc-600 text-2xs mt-2 tracking-widest uppercase text-center">
-              TAP TO CLOSE
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Info */}
@@ -206,6 +192,24 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
           </button>
         </div>
       </div>
+
+      {/* Synopsis overlay — covers entire card, scrollable */}
+      {showSynopsis && movie.synopsis && (
+        <div
+          className="absolute inset-0 z-20 bg-black/95 p-4 flex flex-col cursor-pointer overflow-y-auto"
+          onClick={() => setShowSynopsis(false)}
+        >
+          <h4 className="text-red-500 text-2xs font-bold tracking-[0.2em] uppercase mb-2">
+            SYNOPSIS
+          </h4>
+          <p className="text-zinc-300 text-xs leading-relaxed flex-1">
+            {movie.synopsis}
+          </p>
+          <span className="text-zinc-600 text-2xs mt-3 tracking-widest uppercase text-center shrink-0">
+            TAP TO CLOSE
+          </span>
+        </div>
+      )}
     </div>
   );
 }
