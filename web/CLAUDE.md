@@ -622,7 +622,6 @@ When writing recipes, prefer semantic tokens (Layer 2–3) over primitives. For 
 | `<DialogFooter>` | `onCancel`, `onConfirm`, `confirmLabel`, `loading`, `destructive` | Cancel + Primary button pair for modals |
 | `<Button>` | Standard button | Primary CTAs |
 | `<ScrollableRow>` | Horizontal scroll | Carousel containers |
-| `<NeonSpinner>` | Loading state | Animated spinner |
 
 **When to use these:**
 - `<Dot />` instead of `<span className="opacity-40">·</span>` (74+ former inline usages)

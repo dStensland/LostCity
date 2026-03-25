@@ -18,7 +18,7 @@ These rules guide AI coding agents when implementing Figma designs into the Lost
 
 ## Component Organization
 
-- **Shared UI components**: `web/components/ui/` — Badge, Button, CountBadge, Dot, DialogFooter, ScrollableRow, NeonSpinner
+- **Shared UI components**: `web/components/ui/` — Badge, Button, CountBadge, Dot, DialogFooter, ScrollableRow
 - **Detail page components**: `web/components/detail/` — DetailHero, DescriptionTeaser, SocialProofStrip, GenreChip, InfoCard, MetadataGrid, SectionHeader, RelatedSection, DetailStickyBar
 - **Feed components**: `web/components/feed/` — FeedSectionHeader, CompactEventRow, feed section components
 - **Feed tier components**: `web/components/feed/` — HeroCard, StandardRow, TieredEventList, EditorialCallout, PressQuote, SocialProofRow

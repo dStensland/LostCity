@@ -164,7 +164,7 @@ function AtlantaSkylineSVG() {
 export default function FeedSectionSkeleton({
   accentColor,
   minHeight = 360,
-  minDisplayMs = 400,
+  minDisplayMs = 250,
   timeoutMs = 12000,
   onRetry,
 }: FeedSectionSkeletonProps) {

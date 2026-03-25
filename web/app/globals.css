@@ -1329,7 +1329,7 @@ body[data-animations="none"] *::after {
   transition: none !important;
 }
 
-body[data-animations="subtle"] *:not(.ambient-layer):not(.ambient-layer *):not(.skeleton-shimmer):not(.skeleton-shimmer-light):not(.skeleton-shimmer-enhanced):not(.skeleton-card):not([class*="animate-pulse"]):not([class*="animate-horse"]) {
+body[data-animations="subtle"] *:not(.ambient-layer):not(.ambient-layer *):not(.skeleton-shimmer):not(.skeleton-shimmer-enhanced):not(.skeleton-card):not([class*="animate-pulse"]):not([class*="animate-horse"]) {
   transition-duration: 0.1s !important;
 }
 
@@ -3424,17 +3424,6 @@ textarea:focus-visible {
   animation: skeleton-shimmer 1.5s linear infinite;
 }
 
-/* Light mode skeleton shimmer - for family/light theme portals */
-.skeleton-shimmer-light {
-  background: linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 0.06) 30%,
-    rgba(0, 0, 0, 0.10) 50%,
-    rgba(0, 0, 0, 0.06) 70%
-  );
-  background-size: 300% 100%;
-  animation: skeleton-shimmer 1.5s linear infinite;
-}
 
 /* Skeleton base - for use with shimmer */
 .skeleton-base {
@@ -5237,17 +5226,9 @@ body:has([data-vertical="hospital"]) .rain-overlay {
   animation-delay: 0.4s;
 }
 
-/* Enhanced shimmer — now shares the unified skeleton-shimmer keyframe.
-   Uses canonical skeleton tokens so portal overrides apply automatically. */
+/* skeleton-shimmer-enhanced is an alias for skeleton-shimmer (consolidated). */
 .skeleton-shimmer-enhanced {
-  background: linear-gradient(
-    90deg,
-    var(--skeleton-base) 30%,
-    var(--skeleton-highlight) 50%,
-    var(--skeleton-base) 70%
-  );
-  background-size: 300% 100%;
-  animation: skeleton-shimmer 1.5s linear infinite;
+  /* consolidated into .skeleton-shimmer */
 }
 
 /* Disable all micro-interactions for reduced motion */
@@ -5261,7 +5242,6 @@ body:has([data-vertical="hospital"]) .rain-overlay {
   .animate-loading-dot-2,
   .animate-loading-dot-3,
   .skeleton-shimmer,
-  .skeleton-shimmer-light,
   .skeleton-shimmer-enhanced,
   .skeleton-card,
   .explore-skeleton-banner,

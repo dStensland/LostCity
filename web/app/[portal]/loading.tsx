@@ -13,18 +13,18 @@ type Props = {
 // Inline shimmer div — replaces the Skeleton component for server rendering.
 // The CSS classes are defined in globals.css and work without JS.
 // The `delay` is passed as an inline style so it renders in the initial HTML.
+// Uses `skeleton-shimmer` which automatically adapts to light/dark via [data-theme="light"]
+// overrides in globals.css.
 function S({
   className = "",
   delay,
-  light,
 }: {
   className?: string;
   delay?: string;
-  light?: boolean;
 }) {
   return (
     <div
-      className={`${light ? "skeleton-shimmer-light" : "skeleton-shimmer-enhanced"} ${className}`}
+      className={`skeleton-shimmer ${className}`}
       style={delay ? { animationDelay: delay } : undefined}
     />
   );
@@ -183,47 +183,47 @@ function HotelPortalLoading() {
       <header className="sticky top-0 z-50 bg-[var(--hotel-ivory)]/95 backdrop-blur-md border-b border-[var(--hotel-sand)]">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <S light className="h-8 w-32 rounded" />
+            <S className="h-8 w-32 rounded" />
             <span className="text-xs uppercase tracking-[0.2em] text-[var(--hotel-stone)] hidden sm:inline">Concierge</span>
           </div>
           <div className="hidden md:flex items-center gap-5">
-            <S light className="h-3 w-12 rounded" />
-            <S light className="h-3 w-14 rounded" delay="0.04s" />
-            <S light className="h-3 w-14 rounded" delay="0.08s" />
-            <S light className="h-3 w-10 rounded" delay="0.12s" />
+            <S className="h-3 w-12 rounded" />
+            <S className="h-3 w-14 rounded" delay="0.04s" />
+            <S className="h-3 w-14 rounded" delay="0.08s" />
+            <S className="h-3 w-10 rounded" delay="0.12s" />
           </div>
-          <S light className="h-5 w-5 rounded-full" />
+          <S className="h-5 w-5 rounded-full" />
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-5 md:px-8 py-8 md:py-12 space-y-8">
         <section className="rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-6 md:p-8 shadow-[var(--hotel-shadow-soft)]">
           <div className="space-y-3 max-w-3xl">
-            <S light className="h-3 w-28 rounded" />
-            <S light className="h-10 w-[70%] rounded" delay="0.04s" />
-            <S light className="h-4 w-full rounded" delay="0.08s" />
-            <S light className="h-4 w-[82%] rounded" delay="0.12s" />
+            <S className="h-3 w-28 rounded" />
+            <S className="h-10 w-[70%] rounded" delay="0.04s" />
+            <S className="h-4 w-full rounded" delay="0.08s" />
+            <S className="h-4 w-[82%] rounded" delay="0.12s" />
           </div>
           <div className="mt-6 flex flex-wrap gap-2">
-            <S light className="h-8 w-28 rounded-full" />
-            <S light className="h-8 w-24 rounded-full" delay="0.04s" />
-            <S light className="h-8 w-32 rounded-full" delay="0.08s" />
+            <S className="h-8 w-28 rounded-full" />
+            <S className="h-8 w-24 rounded-full" delay="0.04s" />
+            <S className="h-8 w-32 rounded-full" delay="0.08s" />
           </div>
         </section>
 
         <section className="grid gap-4 md:grid-cols-3">
-          <div className="md:col-span-2 h-64 rounded-2xl skeleton-shimmer-light" />
-          <div className="h-64 rounded-2xl skeleton-shimmer-light" />
+          <div className="md:col-span-2 h-64 rounded-2xl skeleton-shimmer" />
+          <div className="h-64 rounded-2xl skeleton-shimmer" />
         </section>
 
         <section>
           <div className="flex items-center justify-between mb-4">
-            <S light className="h-7 w-56 rounded" />
-            <S light className="h-3 w-20 rounded" delay="0.05s" />
+            <S className="h-7 w-56 rounded" />
+            <S className="h-3 w-20 rounded" delay="0.05s" />
           </div>
           <div className="flex gap-3 overflow-hidden -mx-2 px-2">
             {[0, 1, 2, 3].map((i) => (
-              <S light key={i} className="flex-shrink-0 w-[min(82vw,304px)] h-72 rounded-xl" delay={`${i * 0.06}s`} />
+              <S key={i} className="flex-shrink-0 w-[min(82vw,304px)] h-72 rounded-xl" delay={`${i * 0.06}s`} />
             ))}
           </div>
         </section>
@@ -239,39 +239,39 @@ function HospitalPortalLoading() {
     <div data-skeleton-route="portal-root" data-skeleton-vertical="hospital" className="min-h-screen bg-[#f2f5fa] text-[#12326a]">
       <div className="border-b border-[#d5dfef] bg-white/90">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <S light className="h-6 w-44 rounded" />
+          <S className="h-6 w-44 rounded" />
           <div className="flex items-center gap-3">
-            <S light className="h-3 w-16 rounded" />
-            <S light className="h-3 w-12 rounded" delay="0.05s" />
-            <S light className="h-3 w-14 rounded" delay="0.1s" />
+            <S className="h-3 w-16 rounded" />
+            <S className="h-3 w-12 rounded" delay="0.05s" />
+            <S className="h-3 w-14 rounded" delay="0.1s" />
           </div>
         </div>
       </div>
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
         <section className="rounded-[28px] border border-[#d5dfef] bg-white p-6 md:p-7">
-          <S light className="h-3 w-40 rounded" />
-          <S light className="h-10 w-[76%] rounded mt-3" delay="0.04s" />
-          <S light className="h-4 w-full rounded mt-3" delay="0.08s" />
-          <S light className="h-4 w-[84%] rounded mt-2" delay="0.12s" />
+          <S className="h-3 w-40 rounded" />
+          <S className="h-10 w-[76%] rounded mt-3" delay="0.04s" />
+          <S className="h-4 w-full rounded mt-3" delay="0.08s" />
+          <S className="h-4 w-[84%] rounded mt-2" delay="0.12s" />
           <div className="mt-5 grid gap-2 sm:grid-cols-3">
-            <S light className="h-10 rounded-xl" />
-            <S light className="h-10 rounded-xl" delay="0.05s" />
-            <S light className="h-10 rounded-xl" delay="0.1s" />
+            <S className="h-10 rounded-xl" />
+            <S className="h-10 rounded-xl" delay="0.05s" />
+            <S className="h-10 rounded-xl" delay="0.1s" />
           </div>
         </section>
 
         <section className="grid md:grid-cols-3 gap-4">
           {[0, 1, 2].map((i) => (
             <div key={i} className="rounded-2xl border border-[#d5dfef] bg-white p-4">
-              <S light className="h-4 w-28 rounded" delay={`${i * 0.04}s`} />
-              <S light className="h-3 w-full rounded mt-2" delay={`${i * 0.04 + 0.05}s`} />
-              <S light className="h-3 w-[80%] rounded mt-1" delay={`${i * 0.04 + 0.1}s`} />
+              <S className="h-4 w-28 rounded" delay={`${i * 0.04}s`} />
+              <S className="h-3 w-full rounded mt-2" delay={`${i * 0.04 + 0.05}s`} />
+              <S className="h-3 w-[80%] rounded mt-1" delay={`${i * 0.04 + 0.1}s`} />
             </div>
           ))}
         </section>
 
-        <S light className="h-64 rounded-3xl" delay="0.2s" />
+        <S className="h-64 rounded-3xl" delay="0.2s" />
       </main>
     </div>
   );

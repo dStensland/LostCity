@@ -390,7 +390,7 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
   // Show skeleton while data is loading OR while we have no content yet (still fetching)
   const lineupDataLoading = !hasLineupContent && isLoading;
   // Enforce minimum skeleton display time to prevent jarring flash-in/out
-  const lineupLoading = useMinSkeletonDelay(lineupDataLoading, 400);
+  const lineupLoading = useMinSkeletonDelay(lineupDataLoading, 250);
   // Content is ready to show = we have data AND the min skeleton time has passed
   const showLineupContent = hasLineupContent && !lineupLoading;
 
