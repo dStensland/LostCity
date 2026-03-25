@@ -5237,13 +5237,14 @@ body:has([data-vertical="hospital"]) .rain-overlay {
   animation-delay: 0.4s;
 }
 
-/* Enhanced shimmer — now shares the unified skeleton-shimmer keyframe */
+/* Enhanced shimmer — now shares the unified skeleton-shimmer keyframe.
+   Uses canonical skeleton tokens so portal overrides apply automatically. */
 .skeleton-shimmer-enhanced {
   background: linear-gradient(
     90deg,
-    var(--twilight) 30%,
-    color-mix(in srgb, var(--twilight) 60%, var(--muted) 40%) 50%,
-    var(--twilight) 70%
+    var(--skeleton-base) 30%,
+    var(--skeleton-highlight) 50%,
+    var(--skeleton-base) 70%
   );
   background-size: 300% 100%;
   animation: skeleton-shimmer 1.5s linear infinite;

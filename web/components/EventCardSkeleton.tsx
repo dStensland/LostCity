@@ -2,6 +2,9 @@
 
 import Skeleton from "@/components/Skeleton";
 
+/** Approximate rendered height of a single EventCard for ContentSwap minHeight */
+export const EVENT_CARD_SKELETON_HEIGHT = 94; // px, matches comfortable mode
+
 const ACCENT_COLORS = [
   "var(--coral)",
   "var(--neon-cyan)",
