@@ -40,6 +40,7 @@ const MARQUEE_IMAGES = [
   { src: "/goblin-day/goblin-1.jpg", alt: "goblin" },
   { src: "/goblin-day/pizza-1.jpg", alt: "pizza" },
   { src: "/goblin-day/basset-1.jpg", alt: "basset hound" },
+  { src: "/goblin-day/apple-1.jpg", alt: "apple" },
   { src: "/goblin-day/goblin-2.jpg", alt: "goblin" },
   { src: "/goblin-day/pizza-2.jpg", alt: "pizza" },
   { src: "/goblin-day/basset-2.jpg", alt: "basset hound" },
@@ -47,6 +48,24 @@ const MARQUEE_IMAGES = [
   { src: "/goblin-day/pizza-3.jpg", alt: "pizza" },
   { src: "/goblin-day/basset-3.jpg", alt: "basset hound" },
 ];
+
+// Zalgo text generator — corrupts text with combining diacritical marks
+function zalgoify(text: string): string {
+  const above = ['\u0300','\u0301','\u0302','\u0303','\u0304','\u0305','\u0306','\u0307','\u0308','\u030A','\u030B','\u030C','\u030D','\u030E','\u030F','\u0310','\u0311','\u0312','\u0313','\u0314','\u0315','\u031A','\u033D','\u034A','\u034B','\u034C','\u0350','\u0351','\u0352','\u0357','\u035B','\u0363','\u0364','\u0365','\u0366','\u0367','\u0368','\u0369','\u036A','\u036B','\u036C','\u036D','\u036E','\u036F'];
+  const below = ['\u0316','\u0317','\u0318','\u0319','\u031C','\u031D','\u031E','\u031F','\u0320','\u0321','\u0322','\u0323','\u0324','\u0325','\u0326','\u0327','\u0328','\u0329','\u032A','\u032B','\u032C','\u032D','\u032E','\u032F','\u0330','\u0331','\u0332','\u0333','\u0339','\u033A','\u033B','\u033C','\u0345','\u0347','\u0348','\u0349','\u034D','\u034E','\u0353','\u0354','\u0355','\u0356','\u0359','\u035A'];
+  const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+  return text.split('').map(c => {
+    if (c === ' ') return c;
+    let out = c;
+    const numAbove = 2 + Math.floor(Math.random() * 3);
+    const numBelow = 1 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < numAbove; i++) out += pick(above);
+    for (let i = 0; i < numBelow; i++) out += pick(below);
+    return out;
+  }).join('');
+}
+
+const ZALGO_TEXT = zalgoify("GOBLIN DAY");
 
 export default function GoblinDayPage({ initialMovies }: Props) {
   const [movies, setMovies] = useState(initialMovies);
@@ -101,35 +120,30 @@ export default function GoblinDayPage({ initialMovies }: Props) {
   );
 
   const marqueeStrip = MARQUEE_IMAGES.map((img, i) => (
-    <span key={i} className="inline-flex items-center gap-3 mx-1">
+    <span key={i} className="inline-flex items-center gap-4 mx-2">
       <img
         src={img.src}
         alt={img.alt}
-        className="h-10 w-10 rounded-full object-cover border-2 border-orange-800"
+        className="h-16 w-16 rounded-lg object-cover border-2 border-red-900/60"
       />
-      <span className="text-lg font-black tracking-widest">GOBLIN DAY</span>
+      <span className="text-2xl sm:text-3xl font-black tracking-widest text-red-600 drop-shadow-[0_0_8px_rgba(220,38,38,0.5)]">
+        {ZALGO_TEXT}
+      </span>
     </span>
   ));
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       {/* Scrolling Marquee */}
-      <div className="overflow-hidden bg-orange-600 py-2 select-none">
+      <div className="overflow-hidden bg-black py-4 select-none border-b border-red-900/30">
         <div className="flex items-center whitespace-nowrap animate-marquee">
           <span className="inline-flex items-center">{marqueeStrip}</span>
           <span className="inline-flex items-center">{marqueeStrip}</span>
         </div>
       </div>
 
-      {/* Header */}
-      <header className="text-center py-8 px-4">
-        <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-orange-500">
-          GOBLIN DAY
-        </h1>
-      </header>
-
       {/* Tabs */}
-      <div className="flex justify-center gap-2 mb-8 px-4">
+      <div className="flex justify-center gap-2 mb-8 mt-6 px-4">
         {(
           [
             { key: "next", label: "Next Goblin Day" },
