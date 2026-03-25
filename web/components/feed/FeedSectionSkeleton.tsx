@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { HorseIcon } from "@/components/ui/HorseSpinner";
 
 interface FeedSectionSkeletonProps {
@@ -263,33 +263,11 @@ export default function FeedSectionSkeleton({
 
 /**
  * Hook for parent components to enforce a minimum skeleton display time.
+ * Prevents disorienting micro-flashes when data arrives quickly.
  *
  * Usage:
  *   const showSkeleton = useMinSkeletonDelay(isLoading, 400);
  *   return showSkeleton ? <FeedSectionSkeleton /> : <Content />;
  */
-export function useMinSkeletonDelay(isLoading: boolean, minMs = 400): boolean {
-  const [showSkeleton, setShowSkeleton] = useState(isLoading);
-  const loadStartRef = useRef<number>(0);
-
-  useEffect(() => {
-    if (isLoading) {
-      // Loading started — record start time, show skeleton
-      loadStartRef.current = Date.now();
-      // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
-      setShowSkeleton(true);
-    } else if (loadStartRef.current > 0) {
-      // Loading ended — wait for remaining minimum time before hiding
-      const elapsed = Date.now() - loadStartRef.current;
-      const remaining = minMs - elapsed;
-      if (remaining <= 0) {
-        setShowSkeleton(false);
-      } else {
-        const t = setTimeout(() => setShowSkeleton(false), remaining);
-        return () => clearTimeout(t);
-      }
-    }
-  }, [isLoading, minMs]);
-
-  return showSkeleton;
-}
+// Re-export from shared hook for backwards compatibility
+export { useMinSkeletonDelay } from "@/lib/hooks/useMinSkeletonDelay";
