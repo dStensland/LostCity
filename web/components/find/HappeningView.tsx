@@ -1,11 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useMemo, useCallback, type MouseEvent } from "react";
+import { Suspense, useEffect, useRef, useMemo, useCallback, useTransition, type MouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import AddNewChooser from "@/components/find/AddNewChooser";
 import EventsFinder, { EventsFinderFilters } from "@/components/find/EventsFinder";
 import { FindContext } from "@/lib/find-context";
+import { TransitionContainer } from "@/components/ui/TransitionContainer";
 import {
   FIND_FILTER_RESET_KEYS,
   type FindType,
@@ -125,6 +126,7 @@ function HappeningViewInner({
   const viewRootRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
   const previousFilterSnapshotRef = useRef<FindFilterSnapshot | undefined>(undefined);
   const lastFilterChangeAtRef = useRef<number | undefined>(undefined);
 
@@ -147,8 +149,10 @@ function HappeningViewInner({
     }
     // Clear display mode when switching content types
     params.delete("display");
-    router.push(`/${portalSlug}?${params.toString()}`);
-  }, [portalSlug, router, searchParams]);
+    startTransition(() => {
+      router.push(`/${portalSlug}?${params.toString()}`);
+    });
+  }, [portalSlug, router, searchParams, startTransition]);
 
   // ─── Display Mode ──────────────────────────────────────────────────────────
 
@@ -169,8 +173,10 @@ function HappeningViewInner({
     if (mode === "calendar") {
       params.delete("date");
     }
-    router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
-  }, [portalSlug, router, searchParams]);
+    startTransition(() => {
+      router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
+    });
+  }, [portalSlug, router, searchParams, startTransition]);
 
   // ─── Analytics ──────────────────────────────────────────────────────────────
 
@@ -377,29 +383,31 @@ function HappeningViewInner({
 
       {/* ─── Content Area ─────────────────────────────────────────────────── */}
 
-      {contentType === "all" && (
-        <EventsFinder
-          portalId={portalId}
-          portalSlug={portalSlug}
-          portalExclusive={portalExclusive}
-          displayMode={displayMode}
-          hasActiveFilters={hasActiveFilters}
-        />
-      )}
+      <TransitionContainer isPending={isPending} scrollToTopOnPending>
+        {contentType === "all" && (
+          <EventsFinder
+            portalId={portalId}
+            portalSlug={portalSlug}
+            portalExclusive={portalExclusive}
+            displayMode={displayMode}
+            hasActiveFilters={hasActiveFilters}
+          />
+        )}
 
-      {contentType === "regulars" && (
-        <RegularsView
-          portalId={portalId}
-          portalSlug={portalSlug}
-        />
-      )}
+        {contentType === "regulars" && (
+          <RegularsView
+            portalId={portalId}
+            portalSlug={portalSlug}
+          />
+        )}
 
-      {contentType === "showtimes" && (
-        <WhatsOnView
-          portalId={portalId}
-          portalSlug={portalSlug}
-        />
-      )}
+        {contentType === "showtimes" && (
+          <WhatsOnView
+            portalId={portalId}
+            portalSlug={portalSlug}
+          />
+        )}
+      </TransitionContainer>
     </div>
     </FindContext.Provider>
   );
