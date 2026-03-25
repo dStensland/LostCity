@@ -167,10 +167,63 @@ export default function GoblinDayPage({ initialMovies }: Props) {
     const columns = Math.floor(canvas.width / fontSize);
     const drops: number[] = new Array(columns).fill(0).map(() => Math.random() * -100);
 
+    // Blood drips — slow irregular streaks from the top
+    interface Drip {
+      x: number;
+      y: number;
+      speed: number;
+      width: number;
+      length: number;
+      opacity: number;
+    }
+    const drips: Drip[] = [];
+    const MAX_DRIPS = 15;
+    const spawnDrip = () => {
+      if (drips.length < MAX_DRIPS) {
+        drips.push({
+          x: Math.random() * canvas.width,
+          y: -20 - Math.random() * 200,
+          speed: 0.15 + Math.random() * 0.4,
+          width: 1.5 + Math.random() * 2.5,
+          length: 40 + Math.random() * 120,
+          opacity: 0.06 + Math.random() * 0.08,
+        });
+      }
+    };
+    // Seed a few drips
+    for (let i = 0; i < 8; i++) spawnDrip();
+
     const draw = () => {
       ctx.fillStyle = "rgba(0, 0, 0, 0.06)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+      // Draw blood drips
+      for (let i = drips.length - 1; i >= 0; i--) {
+        const d = drips[i];
+        const gradient = ctx.createLinearGradient(d.x, d.y, d.x, d.y + d.length);
+        gradient.addColorStop(0, `rgba(120, 10, 10, 0)`);
+        gradient.addColorStop(0.3, `rgba(120, 10, 10, ${d.opacity})`);
+        gradient.addColorStop(0.85, `rgba(80, 5, 5, ${d.opacity * 0.7})`);
+        gradient.addColorStop(1, `rgba(60, 0, 0, 0)`);
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.ellipse(d.x, d.y + d.length * 0.5, d.width * 0.5, d.length * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Bulge at bottom tip
+        ctx.beginPath();
+        ctx.arc(d.x, d.y + d.length, d.width * 0.8, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(100, 8, 8, ${d.opacity * 0.5})`;
+        ctx.fill();
+
+        d.y += d.speed;
+        if (d.y > canvas.height + d.length) {
+          drips.splice(i, 1);
+        }
+      }
+      // Occasionally spawn new drips
+      if (Math.random() < 0.02) spawnDrip();
+
+      // Draw symbol rain
       ctx.font = `${fontSize}px monospace`;
 
       for (let i = 0; i < drops.length; i++) {
