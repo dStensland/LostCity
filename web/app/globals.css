@@ -2878,6 +2878,21 @@ body:has([data-vertical="hospital"])::after {
   animation: page-enter 0.25s ease-out forwards;
 }
 
+/* View Transitions — progressive enhancement for page navigation */
+@keyframes vt-fade-out {
+  to { opacity: 0; }
+}
+@keyframes vt-fade-in {
+  from { opacity: 0; }
+}
+
+::view-transition-old(root) {
+  animation: 250ms ease-out both vt-fade-out;
+}
+::view-transition-new(root) {
+  animation: 250ms ease-out both vt-fade-in;
+}
+
 /* Outing planner: "added" checkmark entrance */
 @keyframes scaleIn {
   from {
