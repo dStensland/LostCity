@@ -31,8 +31,9 @@ def build_exhibition_record(
 ) -> tuple[dict, Optional[list[dict]]]:
     """Build an exhibition lane record for TypedEntityEnvelope.
 
-    Returns ``(record, artists)`` tuple matching what
-    ``entity_persistence.py`` expects when processing the exhibitions lane.
+    Returns ``(record, artists)`` tuple. Artists are ALSO embedded in the
+    record dict under the key ``"artists"`` so that ``entity_persistence.py``
+    can pop them when processing the exhibitions lane.
 
     Parameters
     ----------
@@ -91,5 +92,8 @@ def build_exhibition_record(
         record["exhibition_type"] = exhibition_type
     if metadata:
         record["metadata"] = metadata
+    # Embed artists in record so entity_persistence.py can pop them
+    if artists:
+        record["artists"] = artists
 
     return record, artists
