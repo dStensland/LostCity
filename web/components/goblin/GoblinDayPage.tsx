@@ -8,6 +8,33 @@ interface Props {
 }
 
 type Tab = "next" | "contenders" | "watched";
+type SortKey = "date" | "critics" | "audience" | "alpha";
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "date", label: "Release Date" },
+  { key: "critics", label: "Critics Score" },
+  { key: "audience", label: "Audience Score" },
+  { key: "alpha", label: "A-Z" },
+];
+
+function sortMovies(movies: GoblinMovie[], sortKey: SortKey): GoblinMovie[] {
+  return [...movies].sort((a, b) => {
+    switch (sortKey) {
+      case "critics":
+        return (b.rt_critics_score ?? -1) - (a.rt_critics_score ?? -1);
+      case "audience":
+        return (b.rt_audience_score ?? -1) - (a.rt_audience_score ?? -1);
+      case "alpha":
+        return a.title.localeCompare(b.title);
+      case "date":
+      default:
+        if (!a.release_date && !b.release_date) return 0;
+        if (!a.release_date) return 1;
+        if (!b.release_date) return -1;
+        return a.release_date.localeCompare(b.release_date);
+    }
+  });
+}
 
 const MARQUEE_ITEMS = [
   "\uD83D\uDC7A", // goblin
@@ -27,17 +54,21 @@ const MARQUEE_ITEMS = [
 export default function GoblinDayPage({ initialMovies }: Props) {
   const [movies, setMovies] = useState(initialMovies);
   const [activeTab, setActiveTab] = useState<Tab>("next");
+  const [sortKey, setSortKey] = useState<SortKey>("date");
 
-  const filteredMovies = movies.filter((m) => {
-    switch (activeTab) {
-      case "next":
-        return m.proposed && !m.watched;
-      case "contenders":
-        return !m.watched;
-      case "watched":
-        return m.watched;
-    }
-  });
+  const filteredMovies = sortMovies(
+    movies.filter((m) => {
+      switch (activeTab) {
+        case "next":
+          return m.proposed && !m.watched;
+        case "contenders":
+          return !m.watched;
+        case "watched":
+          return m.watched;
+      }
+    }),
+    activeTab === "contenders" ? sortKey : "date"
+  );
 
   const counts = {
     next: movies.filter((m) => m.proposed && !m.watched).length,
@@ -127,6 +158,25 @@ export default function GoblinDayPage({ initialMovies }: Props) {
           </button>
         ))}
       </div>
+
+      {/* Sort Bar (contenders only) */}
+      {activeTab === "contenders" && (
+        <div className="flex justify-center gap-1.5 mb-6 px-4">
+          {SORT_OPTIONS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setSortKey(key)}
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                sortKey === key
+                  ? "bg-zinc-600 text-white"
+                  : "bg-zinc-800/60 text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Movie Grid */}
       <main className="max-w-7xl mx-auto px-4 pb-16">
