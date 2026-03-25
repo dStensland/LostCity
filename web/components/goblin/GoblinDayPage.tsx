@@ -11,9 +11,9 @@ type Tab = "next" | "contenders" | "upcoming" | "watched";
 type SortKey = "date" | "critics" | "audience" | "alpha";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "date", label: "DATE" },
   { key: "critics", label: "CRITICS" },
   { key: "audience", label: "AUDIENCE" },
+  { key: "date", label: "DATE" },
   { key: "alpha", label: "A-Z" },
 ];
 

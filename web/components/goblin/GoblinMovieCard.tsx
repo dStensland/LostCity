@@ -48,7 +48,7 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
 
   return (
     <div
-      className={`group bg-zinc-950 overflow-hidden border-2 transition-all font-mono relative ${
+      className={`group bg-zinc-950 overflow-hidden border-2 transition-all font-mono relative flex flex-col ${
         movie.proposed && !movie.watched
           ? "border-red-700 shadow-[0_0_20px_rgba(185,28,28,0.25)] hover:shadow-[0_0_30px_rgba(185,28,28,0.4)]"
           : movie.watched
@@ -98,7 +98,7 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
       </div>
 
       {/* Info */}
-      <div className="p-2.5 space-y-1.5 border-t border-zinc-800/50">
+      <div className="p-2.5 space-y-1.5 border-t border-zinc-800/50 flex flex-col flex-1">
         <div>
           <h3 className="font-bold text-white text-xs leading-tight line-clamp-2 uppercase tracking-wide">
             {movie.title}
@@ -154,8 +154,8 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
           )}
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-1 pt-1.5 border-t border-zinc-800/50">
+        {/* Actions — pinned to bottom */}
+        <div className="flex gap-1 pt-1.5 border-t border-zinc-800/50 mt-auto">
           <button
             onClick={() => onToggle(movie.id, "proposed", !movie.proposed)}
             className={`flex-1 text-2xs py-2 font-bold tracking-wider uppercase transition-all ${
