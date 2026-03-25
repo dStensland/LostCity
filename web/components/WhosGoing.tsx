@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
+import Skeleton from "@/components/Skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 
@@ -149,8 +150,26 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
     };
   }, [user, eventId, supabase]);
 
-  // Hide while loading or when no attendees
-  if (loading || attendees.length === 0) {
+  // Show skeleton immediately while fetching so there's no blank-space flash
+  if (loading) {
+    return (
+      <div className={className}>
+        <Skeleton variant="text" className="h-3 w-16 mb-4" />
+        <div className="flex items-center gap-4 mb-4">
+          <Skeleton variant="rect" className="h-5 w-20" />
+          <Skeleton variant="rect" className="h-5 w-24" />
+        </div>
+        <div className="flex gap-2">
+          {[...Array(5)].map((_, i) => (
+            <Skeleton key={i} variant="circle" width={40} height={40} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // No attendees — collapse to nothing (don't hold space)
+  if (attendees.length === 0) {
     return null;
   }
 
@@ -161,7 +180,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
   return (
     <div className={`${className}`}>
       <h2 className="font-mono text-xs font-bold text-[var(--muted)] uppercase tracking-[0.14em] mb-4">
-        Who&apos;s in
+        WHO&apos;S IN
       </h2>
 
       {/* Stats with accessible indicators */}
@@ -169,7 +188,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
         {goingCount > 0 && (
           <span className="flex items-center gap-1.5 text-sm">
             <span
-              className="w-4 h-4 rounded-full bg-[var(--neon-green)] flex items-center justify-center text-2xs font-bold text-[var(--void)]"
+              className="w-4 h-4 rounded-full bg-[var(--coral)] flex items-center justify-center text-2xs font-bold text-[var(--void)]"
               aria-label="Going indicator"
             >
               G
@@ -181,7 +200,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
         {interestedCount > 0 && (
           <span className="flex items-center gap-1.5 text-sm">
             <span
-              className="w-4 h-4 rounded-full bg-[var(--neon-amber)] flex items-center justify-center text-2xs font-bold text-[var(--void)]"
+              className="w-4 h-4 rounded-full bg-[var(--gold)] flex items-center justify-center text-2xs font-bold text-[var(--void)]"
               aria-label="Interested indicator"
             >
               I
@@ -217,7 +236,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-[var(--neon-magenta)] to-[var(--coral)] flex items-center justify-center">
+                <div className="w-full h-full bg-[var(--dusk)] flex items-center justify-center">
                   <span className="font-mono text-sm font-bold text-white">
                     {(attendee.user.display_name || attendee.user.username)[0].toUpperCase()}
                   </span>
@@ -228,8 +247,8 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
             <span
               className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[var(--dusk)] flex items-center justify-center text-2xs font-bold ${
                 attendee.status === "going"
-                  ? "bg-[var(--neon-green)] text-[var(--void)]"
-                  : "bg-[var(--neon-amber)] text-[var(--void)]"
+                  ? "bg-[var(--coral)] text-[var(--void)]"
+                  : "bg-[var(--gold)] text-[var(--void)]"
               }`}
               title={attendee.status === "going" ? "In" : "Maybe"}
             >
