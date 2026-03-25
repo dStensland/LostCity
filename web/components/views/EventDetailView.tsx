@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import Skeleton from "@/components/Skeleton";
 import { getCategoryColor } from "@/components/CategoryIcon";
 import FriendsGoing from "@/components/FriendsGoing";
@@ -54,6 +54,8 @@ import Badge from "@/components/ui/Badge";
 import Dot from "@/components/ui/Dot";
 import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
 import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
+import { ContentSwap } from "@/components/ui/ContentSwap";
+import { DETAIL_HERO_SKELETON_HEIGHT } from "@/components/skeletons/DetailHeroSkeleton";
 
 // ─── Description cleaner ─────────────────────────────────────────────────────
 
@@ -209,11 +211,12 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
     [eventId, portal?.id, initialData]
   );
 
-  const { data: fetchedData, status, error, retry } = useDetailFetch<EventApiResponse>(
+  const { data: fetchedData, status, error: fetchError, retry } = useDetailFetch<EventApiResponse>(
     fetchUrl,
     { entityLabel: "event" }
   );
   const data = initialData ?? fetchedData;
+  const isLoading = status === "loading";
 
   // Derive data slices
   const event = data?.event ?? null;
@@ -256,54 +259,16 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
     [displayParticipants, event?.category, event]
   );
 
-  // ── LOADING SKELETON ──────────────────────────────────────────────────
-  if (status === "loading") {
-    const skeletonSidebar = (
-      <div role="status" aria-label="Loading event details">
-        <Skeleton className="aspect-video lg:aspect-[16/10] w-full" />
-        <div className="px-5 pt-4 pb-3 space-y-2">
-          <Skeleton className="h-7 w-[80%] rounded" delay="0.1s" />
-          <Skeleton className="h-4 w-[50%] rounded" delay="0.14s" />
-          <Skeleton className="h-4 w-[60%] rounded" delay="0.18s" />
-        </div>
-        <div className="mx-5 border-t border-[var(--twilight)]/40" />
-        <div className="px-5 py-3 flex gap-1.5">
-          <Skeleton className="h-6 w-16 rounded-full" delay="0.22s" />
-          <Skeleton className="h-6 w-20 rounded-full" delay="0.24s" />
-        </div>
-        <div className="mx-5 border-t border-[var(--twilight)]/40" />
-        <div className="px-5 py-3">
-          <Skeleton className="h-12 w-full rounded-lg" delay="0.28s" />
-        </div>
-      </div>
-    );
-    const skeletonContent = (
-      <div className="p-4 lg:p-8 space-y-6">
-        <Skeleton className="h-3 w-32 rounded" delay="0.3s" />
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-full rounded-lg" delay="0.34s" />
-          <Skeleton className="h-10 w-full rounded-lg" delay="0.38s" />
-          <Skeleton className="h-10 w-full rounded-lg" delay="0.42s" />
-        </div>
-      </div>
-    );
-    return (
-      <DetailShell
-        sidebar={skeletonSidebar}
-        content={skeletonContent}
-      />
-    );
-  }
-
   // ── ERROR STATE ───────────────────────────────────────────────────────
-  if (error || !event) {
+  // Only show error when not still loading — during loading, event is null but that's expected.
+  if (!isLoading && (fetchError || !event)) {
     return (
       <DetailShell
         onClose={onClose}
         singleColumn
         content={
           <div className="flex flex-col items-center justify-center py-20 px-4" role="alert">
-            <p className="text-[var(--soft)] mb-6">{error || "Event not found"}</p>
+            <p className="text-[var(--soft)] mb-6">{fetchError || "Event not found"}</p>
             <div className="flex gap-3">
               <button
                 onClick={onClose}
@@ -326,7 +291,47 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
     );
   }
 
-  // ── DERIVED VALUES ────────────────────────────────────────────────────
+  // ── LOADING SKELETON ──────────────────────────────────────────────────
+  const skeletonSidebar = (
+    <div role="status" aria-label="Loading event details">
+      <Skeleton className="aspect-video lg:aspect-[16/10] w-full" />
+      <div className="px-5 pt-4 pb-3 space-y-2">
+        <Skeleton className="h-7 w-[80%] rounded" delay="0.1s" />
+        <Skeleton className="h-4 w-[50%] rounded" delay="0.14s" />
+        <Skeleton className="h-4 w-[60%] rounded" delay="0.18s" />
+      </div>
+      <div className="mx-5 border-t border-[var(--twilight)]/40" />
+      <div className="px-5 py-3 flex gap-1.5">
+        <Skeleton className="h-6 w-16 rounded-full" delay="0.22s" />
+        <Skeleton className="h-6 w-20 rounded-full" delay="0.24s" />
+      </div>
+      <div className="mx-5 border-t border-[var(--twilight)]/40" />
+      <div className="px-5 py-3">
+        <Skeleton className="h-12 w-full rounded-lg" delay="0.28s" />
+      </div>
+    </div>
+  );
+  const skeletonContent = (
+    <div className="p-4 lg:p-8 space-y-6">
+      <Skeleton className="h-3 w-32 rounded" delay="0.3s" />
+      <div className="space-y-2">
+        <Skeleton className="h-10 w-full rounded-lg" delay="0.34s" />
+        <Skeleton className="h-10 w-full rounded-lg" delay="0.38s" />
+        <Skeleton className="h-10 w-full rounded-lg" delay="0.42s" />
+      </div>
+    </div>
+  );
+
+  // ── LOADED CONTENT ────────────────────────────────────────────────────
+  // All event-dependent values and JSX are computed inside this block.
+  // During loading, event is null — ContentSwap shows the skeleton instead.
+  // After load, event is non-null and ContentSwap crossfades to this content.
+  let sidebarContent: ReactNode = null;
+  let contentZone: ReactNode = null;
+  let topBar: ReactNode = null;
+  let bottomBar: ReactNode = null;
+
+  if (event) {
   const isDog = isDogPortal(portalSlug);
   const recurrenceText = parseRecurrenceRule(event.recurrence_rule);
   const dogTags = isDog && event.tags
@@ -444,7 +449,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
       : null;
 
   // ── SIDEBAR ───────────────────────────────────────────────────────────
-  const sidebarContent = (
+  sidebarContent = (
     <div className="flex flex-col h-full">
       <ScopedStyles
         css={[heroAccentClass?.css, seriesColorClass?.css, festivalColorClass?.css].filter(Boolean).join("\n")}
@@ -679,7 +684,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
   );
 
   // ── CONTENT ZONE ──────────────────────────────────────────────────────
-  const contentZone = (
+  contentZone = (
     <div className="px-4 lg:px-8 py-6 space-y-8">
       {/* ── 1. ABOUT ─────────────────────────────────────────── */}
       {descriptionText && (
@@ -806,7 +811,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
   );
 
   // ── TOP BAR ───────────────────────────────────────────────────────────
-  const topBar = (
+  topBar = (
     <div className="flex items-center justify-end px-4 lg:px-6 py-3">
       <div className="flex items-center gap-1">
         <SaveButton eventId={event.id} size="sm" />
@@ -816,7 +821,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
   );
 
   // ── BOTTOM BAR (mobile only) ──────────────────────────────────────────
-  const bottomBar = primaryCtaUrl && primaryCtaLabel ? (
+  bottomBar = primaryCtaUrl && primaryCtaLabel ? (
     <DetailStickyBar
       className="lg:hidden"
       primaryAction={{
@@ -836,15 +841,33 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
     />
   ) : null;
 
-  return (
-    <>
-      <DetailShell
-        topBar={topBar}
-        sidebar={sidebarContent}
-        content={contentZone}
-        bottomBar={bottomBar}
-      />
+  } // end if (event)
 
-    </>
+  // ── RENDER ────────────────────────────────────────────────────────────
+  const swapKey = isLoading ? "skeleton" : "loaded";
+  const fetchErrorObj = fetchError ? new Error(fetchError) : null;
+
+  return (
+    <DetailShell
+      topBar={topBar ?? undefined}
+      sidebar={
+        <ContentSwap
+          swapKey={swapKey}
+          error={fetchErrorObj}
+          minHeight={DETAIL_HERO_SKELETON_HEIGHT}
+        >
+          {isLoading ? skeletonSidebar : sidebarContent}
+        </ContentSwap>
+      }
+      content={
+        <ContentSwap
+          swapKey={swapKey}
+          error={fetchErrorObj}
+        >
+          {isLoading ? skeletonContent : contentZone}
+        </ContentSwap>
+      }
+      bottomBar={bottomBar ?? undefined}
+    />
   );
 }
