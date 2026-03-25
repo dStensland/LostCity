@@ -1,9 +1,10 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import HorseSpinner from "@/components/ui/HorseSpinner";
+import { TransitionContainer } from "@/components/ui/TransitionContainer";
 import ForYouView from "@/components/feed/ForYouView";
 import ExploreTrackList from "@/components/explore/ExploreTrackList";
 import Link from "next/link";
@@ -105,6 +106,7 @@ function FeedShellInner({ portalId, portalSlug, activeTab, curatedContent }: Fee
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const [timedOut, setTimedOut] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   // Fallback timeout for auth loading - auth context has its own 6s timeout,
   // this is a defense-in-depth backup in case something else hangs
@@ -125,7 +127,9 @@ function FeedShellInner({ portalId, portalSlug, activeTab, curatedContent }: Fee
       params.set("tab", tab);
     }
     const queryString = params.toString();
-    router.push(`/${portalSlug}${queryString ? `?${queryString}` : ""}`);
+    startTransition(() => {
+      router.push(`/${portalSlug}${queryString ? `?${queryString}` : ""}`);
+    });
   };
 
   // Render content based on auth state for protected tabs
@@ -178,17 +182,20 @@ function FeedShellInner({ portalId, portalSlug, activeTab, curatedContent }: Fee
         </div>
       </div>
 
-      {/* Tab content */}
-      {activeTab === "curated" && curatedContent}
+      {/* Tab content — TransitionContainer dims stale content during tab navigation.
+          Suspense (outer) handles the initial load when useSearchParams suspends. */}
+      <TransitionContainer isPending={isPending} scrollToTopOnPending>
+        {activeTab === "curated" && curatedContent}
 
-      {activeTab === "explore" && (
-        <>
-          <ExploreTrackList />
-          <ExploreFeedOutro portalSlug={portalSlug} />
-        </>
-      )}
+        {activeTab === "explore" && (
+          <>
+            <ExploreTrackList />
+            <ExploreFeedOutro portalSlug={portalSlug} />
+          </>
+        )}
 
-      {activeTab === "foryou" && renderProtectedContent(<ForYouView portalSlug={portalSlug} portalId={portalId} />, true)}
+        {activeTab === "foryou" && renderProtectedContent(<ForYouView portalSlug={portalSlug} portalId={portalId} />, true)}
+      </TransitionContainer>
     </div>
   );
 }
