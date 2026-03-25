@@ -300,7 +300,7 @@ function EventCard({
             scroll={false}
             data-row-primary-link="true"
             className="min-w-0"
-            onClick={(e) => { e.preventDefault(); navigate(eventHref); }}
+            onClick={(e) => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); navigate(eventHref); }}
           >
             <div className="min-w-0 space-y-1.5 sm:space-y-1">
               <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
@@ -434,7 +434,7 @@ function EventCard({
           scroll={false}
           data-row-primary-link="true"
           className="block min-w-0 p-3 sm:p-3.5"
-          onClick={(e) => { e.preventDefault(); navigate(eventHref); }}
+          onClick={(e) => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); navigate(eventHref); }}
         >
           <div className="flex gap-2.5 sm:gap-3">
             {/* Time/image rail — desktop only */}

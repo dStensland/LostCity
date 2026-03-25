@@ -170,7 +170,7 @@ const SeriesCard = memo(function SeriesCard({
         }
       >
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 px-3 py-2.5">
-          <Link href={seriesUrl} scroll={false} data-row-primary-link="true" className="min-w-0" onClick={(e) => { e.preventDefault(); navigate(seriesUrl); }}>
+          <Link href={seriesUrl} scroll={false} data-row-primary-link="true" className="min-w-0" onClick={(e) => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); navigate(seriesUrl); }}>
             <div className="min-w-0">
               <div className="flex items-center gap-2.5 min-w-0">
                 <span className="flex-shrink-0 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[76px] sm:min-w-[82px]">
@@ -279,7 +279,7 @@ const SeriesCard = memo(function SeriesCard({
             scroll={false}
             data-row-primary-link="true"
             className="block min-w-0 p-3 sm:p-3.5"
-            onClick={(e) => { e.preventDefault(); navigate(seriesUrl); }}
+            onClick={(e) => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); navigate(seriesUrl); }}
           >
             <div className="flex gap-2.5 sm:gap-3">
               {/* Time cell - matches EventCard typography */}
