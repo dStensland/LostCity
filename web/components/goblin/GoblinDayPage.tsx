@@ -178,9 +178,9 @@ export default function GoblinDayPage({ initialMovies }: Props) {
         const x = i * fontSize;
         const y = drops[i] * fontSize;
 
-        // Dark red, very subtle
-        const alpha = 0.08 + Math.random() * 0.07;
-        ctx.fillStyle = `rgba(127, 29, 29, ${alpha})`;
+        // Dark red
+        const alpha = 0.25 + Math.random() * 0.15;
+        ctx.fillStyle = `rgba(153, 27, 27, ${alpha})`;
         ctx.fillText(char, x, y);
 
         if (y > canvas.height && Math.random() > 0.985) {
