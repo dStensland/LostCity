@@ -11,8 +11,7 @@ export interface GoblinMovie {
   rt_critics_score: number | null;
   rt_audience_score: number | null;
   watched: boolean;
-  daniel_list: boolean;
-  ashley_list: boolean;
+  proposed: boolean;
   streaming_info: string[] | null;
   year: number;
 }
@@ -46,7 +45,15 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
   const streamingProviders = streaming.filter((s) => s !== "theaters");
 
   return (
-    <div className="bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-colors">
+    <div
+      className={`bg-zinc-900 rounded-lg overflow-hidden border transition-colors ${
+        movie.proposed && !movie.watched
+          ? "border-orange-500/50 shadow-[0_0_12px_rgba(249,115,22,0.15)]"
+          : movie.watched
+            ? "border-zinc-800/50 opacity-75"
+            : "border-zinc-800 hover:border-zinc-700"
+      }`}
+    >
       {/* Poster */}
       <div className="relative aspect-[2/3] bg-zinc-800">
         {posterUrl ? (
@@ -54,11 +61,16 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
             src={posterUrl}
             alt={movie.title}
             fill
-            className="object-cover"
+            className={`object-cover ${movie.watched ? "grayscale" : ""}`}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-zinc-600 text-sm">
             No Poster
+          </div>
+        )}
+        {movie.watched && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <span className="text-3xl select-none">&#x2705;</span>
           </div>
         )}
       </div>
@@ -75,10 +87,35 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
         {/* RT Scores */}
         <div className="flex gap-3 text-xs">
           <span title="Critics Score">
-            🍅 {movie.rt_critics_score != null ? `${movie.rt_critics_score}%` : "N/A"}
+            {movie.rt_critics_score != null ? (
+              <span
+                className={
+                  movie.rt_critics_score >= 60
+                    ? "text-red-400"
+                    : "text-green-400"
+                }
+              >
+                {movie.rt_critics_score >= 60 ? "\uD83C\uDF45" : "\uD83E\uDD6C"}{" "}
+                {movie.rt_critics_score}%
+              </span>
+            ) : (
+              <span className="text-zinc-500">{"\uD83C\uDF45"} --</span>
+            )}
           </span>
           <span title="Audience Score">
-            🍿 {movie.rt_audience_score != null ? `${movie.rt_audience_score}%` : "N/A"}
+            {movie.rt_audience_score != null ? (
+              <span
+                className={
+                  movie.rt_audience_score >= 60
+                    ? "text-yellow-400"
+                    : "text-zinc-400"
+                }
+              >
+                {"\uD83C\uDF7F"} {movie.rt_audience_score}%
+              </span>
+            ) : (
+              <span className="text-zinc-500">{"\uD83C\uDF7F"} --</span>
+            )}
           </span>
         </div>
 
@@ -104,29 +141,28 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
           )}
         </div>
 
-        {/* Checkboxes */}
-        <div className="flex flex-col gap-1.5 pt-1 border-t border-zinc-800">
-          {(["watched", "daniel_list", "ashley_list"] as const).map((field) => {
-            const labels: Record<string, string> = {
-              watched: "Watched",
-              daniel_list: "Daniel's List",
-              ashley_list: "Ashley's List",
-            };
-            return (
-              <label
-                key={field}
-                className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer hover:text-white transition-colors"
-              >
-                <input
-                  type="checkbox"
-                  checked={movie[field]}
-                  onChange={() => onToggle(movie.id, field, !movie[field])}
-                  className="rounded border-zinc-600 bg-zinc-800 text-emerald-500 focus:ring-emerald-500/30 focus:ring-offset-0"
-                />
-                {labels[field]}
-              </label>
-            );
-          })}
+        {/* Actions */}
+        <div className="flex gap-2 pt-1 border-t border-zinc-800">
+          <button
+            onClick={() => onToggle(movie.id, "proposed", !movie.proposed)}
+            className={`flex-1 text-2xs py-1.5 rounded font-medium transition-colors ${
+              movie.proposed
+                ? "bg-orange-600 text-white"
+                : "bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700"
+            }`}
+          >
+            {movie.proposed ? "Proposed" : "Propose"}
+          </button>
+          <button
+            onClick={() => onToggle(movie.id, "watched", !movie.watched)}
+            className={`flex-1 text-2xs py-1.5 rounded font-medium transition-colors ${
+              movie.watched
+                ? "bg-emerald-700 text-white"
+                : "bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700"
+            }`}
+          >
+            {movie.watched ? "Watched" : "Mark Watched"}
+          </button>
         </div>
       </div>
     </div>

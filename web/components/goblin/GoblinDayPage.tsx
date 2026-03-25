@@ -7,15 +7,46 @@ interface Props {
   initialMovies: GoblinMovie[];
 }
 
+type Tab = "next" | "contenders" | "watched";
+
+const MARQUEE_ITEMS = [
+  "\uD83D\uDC7A", // goblin
+  "\uD83C\uDF55", // pizza
+  "\uD83D\uDC36", // basset hound (dog face)
+  "\uD83D\uDC7A",
+  "\uD83C\uDF55",
+  "\uD83D\uDC15", // dog
+  "\uD83D\uDC7A",
+  "\uD83C\uDF55",
+  "\uD83D\uDC36",
+  "\uD83D\uDC7A",
+  "\uD83C\uDF55",
+  "\uD83D\uDC15",
+];
+
 export default function GoblinDayPage({ initialMovies }: Props) {
   const [movies, setMovies] = useState(initialMovies);
-  const [activeYear, setActiveYear] = useState<2025 | 2026>(2026);
+  const [activeTab, setActiveTab] = useState<Tab>("next");
 
-  const filteredMovies = movies.filter((m) => m.year === activeYear);
+  const filteredMovies = movies.filter((m) => {
+    switch (activeTab) {
+      case "next":
+        return m.proposed && !m.watched;
+      case "contenders":
+        return !m.watched;
+      case "watched":
+        return m.watched;
+    }
+  });
+
+  const counts = {
+    next: movies.filter((m) => m.proposed && !m.watched).length,
+    contenders: movies.filter((m) => !m.watched).length,
+    watched: movies.filter((m) => m.watched).length,
+  };
 
   const handleToggle = useCallback(
     async (id: number, field: string, value: boolean) => {
-      // Optimistic update
       setMovies((prev) =>
         prev.map((m) => (m.id === id ? { ...m, [field]: value } : m))
       );
@@ -28,13 +59,11 @@ export default function GoblinDayPage({ initialMovies }: Props) {
         });
 
         if (!res.ok) {
-          // Revert on failure
           setMovies((prev) =>
             prev.map((m) => (m.id === id ? { ...m, [field]: !value } : m))
           );
         }
       } catch {
-        // Revert on error
         setMovies((prev) =>
           prev.map((m) => (m.id === id ? { ...m, [field]: !value } : m))
         );
@@ -43,31 +72,58 @@ export default function GoblinDayPage({ initialMovies }: Props) {
     []
   );
 
+  const marqueeContent = MARQUEE_ITEMS.join("  GOBLIN DAY  ");
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
+      {/* Scrolling Marquee */}
+      <div className="overflow-hidden bg-orange-600 py-2 select-none">
+        <div className="flex whitespace-nowrap animate-marquee">
+          <span className="text-2xl font-black tracking-widest px-4">
+            {marqueeContent}
+          </span>
+          <span className="text-2xl font-black tracking-widest px-4">
+            {marqueeContent}
+          </span>
+        </div>
+      </div>
+
       {/* Header */}
-      <header className="text-center py-12 px-4">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
-          🎃 Goblin Day 🎃
+      <header className="text-center py-8 px-4">
+        <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-orange-500">
+          GOBLIN DAY
         </h1>
-        <p className="text-zinc-400 mt-2 text-lg">
-          Horror movies. Scary vibes. Daniel & Ashley.
+        <p className="text-zinc-400 mt-2 text-base">
+          Horror movies. Basset hounds. Pizza. Scary vibes.
         </p>
       </header>
 
-      {/* Year Tabs */}
-      <div className="flex justify-center gap-2 mb-8">
-        {([2025, 2026] as const).map((year) => (
+      {/* Tabs */}
+      <div className="flex justify-center gap-2 mb-8 px-4">
+        {(
+          [
+            { key: "next", label: "Next Goblin Day" },
+            { key: "contenders", label: "Contenders" },
+            { key: "watched", label: "Watched" },
+          ] as const
+        ).map(({ key, label }) => (
           <button
-            key={year}
-            onClick={() => setActiveYear(year)}
-            className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
-              activeYear === year
-                ? "bg-orange-600 text-white"
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className={`px-4 sm:px-6 py-2 rounded-full text-sm font-medium transition-colors ${
+              activeTab === key
+                ? key === "next"
+                  ? "bg-orange-600 text-white"
+                  : key === "watched"
+                    ? "bg-emerald-700 text-white"
+                    : "bg-zinc-700 text-white"
                 : "bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700"
             }`}
           >
-            {year}
+            {label}
+            {counts[key] > 0 && (
+              <span className="ml-1.5 text-xs opacity-70">{counts[key]}</span>
+            )}
           </button>
         ))}
       </div>
@@ -86,10 +142,25 @@ export default function GoblinDayPage({ initialMovies }: Props) {
 
         {filteredMovies.length === 0 && (
           <p className="text-center text-zinc-500 py-16">
-            No movies yet for {activeYear}. Run the seed script!
+            {activeTab === "next"
+              ? "No movies proposed yet. Go to Contenders and propose some!"
+              : activeTab === "watched"
+                ? "Haven't watched anything yet. Get to it, goblins!"
+                : "No contenders. Run the seed script!"}
           </p>
         )}
       </main>
+
+      {/* Marquee animation */}
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+          animation: marquee 15s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }

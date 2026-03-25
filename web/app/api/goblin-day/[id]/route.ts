@@ -5,8 +5,7 @@ export const dynamic = "force-dynamic";
 
 const MUTABLE_FIELDS = new Set([
   "watched",
-  "daniel_list",
-  "ashley_list",
+  "proposed",
   "rt_critics_score",
   "rt_audience_score",
   "streaming_info",
