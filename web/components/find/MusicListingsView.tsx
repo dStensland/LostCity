@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { DatePillStrip } from "@/components/find/DatePillStrip";
 import { MusicShowCard, type MusicShow } from "@/components/find/MusicShowCard";
 import CategoryIcon from "@/components/CategoryIcon";
 import { useShowListings } from "@/lib/hooks/useShowListings";
+import { TransitionContainer } from "@/components/ui/TransitionContainer";
 
 export interface MusicListingsViewProps {
   portalId: string;
@@ -46,6 +47,7 @@ function MusicSkeleton() {
 
 export default function MusicListingsView({ portalId, portalSlug }: MusicListingsViewProps) {
   const [activeFilter, setActiveFilter] = useState<MusicFilter>("all");
+  const [isPending, startTransition] = useTransition();
 
   const {
     selectedDate,
@@ -58,6 +60,12 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
     apiPath: "/api/whats-on/music",
     portalSlug,
   });
+
+  function handleDateSelect(date: string) {
+    startTransition(() => {
+      setSelectedDate(date);
+    });
+  }
 
   // Apply client-side genre filter
   const filteredShows =
@@ -80,7 +88,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
       <DatePillStrip
         dates={datePills}
         selectedDate={selectedDate}
-        onSelect={setSelectedDate}
+        onSelect={handleDateSelect}
         todayLabel="Tonight"
         summaryItems={summaryItems}
       />
@@ -108,19 +116,9 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
       {metaLoading && <MusicSkeleton />}
 
       {!metaLoading && (
-        <div className="relative">
-          {loading && shows.length > 0 && (
-            <div className="absolute inset-0 z-10 bg-[var(--void)]/40 backdrop-blur-[1px] rounded-xl flex items-start justify-center pt-24 pointer-events-none">
-              <div className="w-5 h-5 border-2 border-[var(--coral)]/40 border-t-[var(--coral)] rounded-full animate-spin" />
-            </div>
-          )}
-
-          {loading && shows.length === 0 && <MusicSkeleton />}
-
+        <TransitionContainer isPending={isPending || loading}>
           {filteredShows.length > 0 && (
-            <div
-              className={`space-y-2.5 sm:grid sm:grid-cols-2 sm:gap-3 sm:space-y-0 ${loading ? "pointer-events-none" : ""}`}
-            >
+            <div className="space-y-2.5 sm:grid sm:grid-cols-2 sm:gap-3 sm:space-y-0">
               {filteredShows.map((show) => (
                 <MusicShowCard
                   key={show.event_id}
@@ -133,7 +131,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
             </div>
           )}
 
-          {!loading && filteredShows.length === 0 && (
+          {!loading && !isPending && filteredShows.length === 0 && (
             <div className="py-12 sm:py-16 text-center">
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[var(--twilight)]/25 border border-[var(--twilight)]/50 mb-4">
                 <CategoryIcon type="music" size={28} glow="subtle" />
@@ -146,7 +144,7 @@ export default function MusicListingsView({ portalId, portalSlug }: MusicListing
               </div>
             </div>
           )}
-        </div>
+        </TransitionContainer>
       )}
     </div>
   );
