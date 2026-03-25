@@ -49,7 +49,8 @@ const HangFeedSection = dynamic(
   () => import("./sections/HangFeedSection").then(m => ({ default: m.HangFeedSection })),
   { ssr: false },
 );
-import FeedSectionSkeleton, { useMinSkeletonDelay } from "@/components/feed/FeedSectionSkeleton";
+import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
+import { ContentSwap } from "@/components/ui/ContentSwap";
 import ActiveContestSection from "./sections/ActiveContestSection";
 import HolidayHero from "./HolidayHero";
 import { DestinationsSection } from "./sections/DestinationsSection";
@@ -387,12 +388,9 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
 
   const hasAnyTabEvents = tabCounts && (tabCounts.today > 0 || tabCounts.this_week > 0 || tabCounts.coming_up > 0);
   const hasLineupContent = lineupSections.length > 0 || hasAnyTabEvents;
-  // Show skeleton while data is loading OR while we have no content yet (still fetching)
-  const lineupDataLoading = !hasLineupContent && isLoading;
-  // Enforce minimum skeleton display time to prevent jarring flash-in/out
-  const lineupLoading = useMinSkeletonDelay(lineupDataLoading, 250);
-  // Content is ready to show = we have data AND the min skeleton time has passed
-  const showLineupContent = hasLineupContent && !lineupLoading;
+  // ContentSwap handles the minimum skeleton display time internally (minDisplayMs=250).
+  // Drive swapKey directly from whether we have content — no manual useMinSkeletonDelay needed.
+  const showLineupContent = !!hasLineupContent;
 
   // After initial load failure with no data at all, show error
   if (error && !data && !isLoading) {
@@ -462,18 +460,14 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         data-index-label="The Lineup"
         data-block-id="events"
         className="mt-4 scroll-mt-28"
-        style={{ minHeight: showLineupContent ? undefined : 400 }}
       >
-        {!showLineupContent ? (
-          <FeedSectionSkeleton accentColor="var(--coral)" minHeight={400} onRetry={refresh} />
-        ) : (
-          <div
-            style={{
-              opacity: 1,
-              transform: "translateY(0)",
-              transition: "opacity 0.4s ease-out, transform 0.4s ease-out",
-            }}
-          >
+        <ContentSwap
+          swapKey={showLineupContent ? "loaded" : "loading"}
+          minHeight={400}
+        >
+          {!showLineupContent ? (
+            <FeedSectionSkeleton accentColor="var(--coral)" minHeight={400} onRetry={refresh} />
+          ) : (
             <LineupSection
               sections={lineupSections}
               portalSlug={portalSlug}
@@ -486,8 +480,8 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
               onSaveInterests={handleSaveInterests}
               vertical={portal?.settings?.vertical}
             />
-          </div>
-        )}
+          )}
+        </ContentSwap>
       </div>
 
       {/* 5. Destinations — contextual venue suggestions.
