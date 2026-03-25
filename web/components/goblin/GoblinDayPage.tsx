@@ -54,7 +54,7 @@ const ZALGO_TEXT = "G\u0336\u0322\u0327\u0321\u030e\u0351\u034b\u0352\u0314\u031
 export default function GoblinDayPage({ initialMovies }: Props) {
   const [movies, setMovies] = useState(initialMovies);
   const [activeTab, setActiveTab] = useState<Tab>("next");
-  const [sortKey, setSortKey] = useState<SortKey>("date");
+  const [sortKey, setSortKey] = useState<SortKey>("critics");
 
   const now = new Date().toISOString().slice(0, 10);
   const isReleased = (m: GoblinMovie) =>
