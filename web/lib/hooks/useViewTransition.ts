@@ -16,9 +16,15 @@ export function useViewTransition() {
         typeof document !== "undefined" &&
         "startViewTransition" in document
       ) {
-        document.startViewTransition(() => {
+        try {
+          document.startViewTransition(() => {
+            router.push(href);
+          });
+        } catch {
+          // Transition may throw if another is already in progress.
+          // Fall back to normal navigation.
           router.push(href);
-        });
+        }
       } else {
         router.push(href);
       }
