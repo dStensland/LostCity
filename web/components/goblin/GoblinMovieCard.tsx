@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import SmartImage from "@/components/SmartImage";
 
 export interface GoblinMovie {
@@ -14,6 +15,7 @@ export interface GoblinMovie {
   proposed: boolean;
   streaming_info: string[] | null;
   year: number;
+  synopsis: string | null;
 }
 
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
@@ -24,6 +26,8 @@ interface Props {
 }
 
 export default function GoblinMovieCard({ movie, onToggle }: Props) {
+  const [showSynopsis, setShowSynopsis] = useState(false);
+
   const posterUrl = movie.poster_path
     ? `${TMDB_IMAGE_BASE}${movie.poster_path}`
     : null;
@@ -83,6 +87,29 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
           <div className="absolute top-0 left-0 bg-red-700 px-2 py-0.5 shadow-[4px_4px_0_rgba(0,0,0,0.5)]">
             <span className="text-white font-bold text-2xs tracking-widest uppercase">
               PROPOSED
+            </span>
+          </div>
+        )}
+        {/* Info button */}
+        {movie.synopsis && (
+          <button
+            onClick={() => setShowSynopsis(!showSynopsis)}
+            className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/70 hover:bg-red-900/80 border border-zinc-600/50 hover:border-red-600/50 text-zinc-400 hover:text-white text-xs font-bold flex items-center justify-center transition-all"
+          >
+            i
+          </button>
+        )}
+        {/* Synopsis overlay */}
+        {showSynopsis && movie.synopsis && (
+          <div
+            className="absolute inset-0 bg-black/90 p-3 flex flex-col justify-center cursor-pointer"
+            onClick={() => setShowSynopsis(false)}
+          >
+            <p className="text-zinc-300 text-2xs leading-relaxed line-clamp-[8]">
+              {movie.synopsis}
+            </p>
+            <span className="text-zinc-600 text-2xs mt-2 tracking-widest uppercase text-center">
+              TAP TO CLOSE
             </span>
           </div>
         )}
