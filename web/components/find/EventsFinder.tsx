@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, useState, useCallback } from "react";
+import { Suspense, useState, useCallback, useDeferredValue } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { TransitionContainer } from "@/components/ui/TransitionContainer";
 import FindFilterBar from "@/components/find/FindFilterBar";
 import FindSearchInput from "@/components/find/FindSearchInput";
 import { PreSearchState } from "@/components/search";
@@ -158,6 +159,12 @@ export default function EventsFinder({
   hasActiveFilters,
 }: EventsFinderProps) {
   const searchParams = useSearchParams();
+  // Detect in-flight filter changes: useDeferredValue holds the previous
+  // searchParams string until React commits the new render. While they differ,
+  // the results area dims via TransitionContainer.
+  const searchParamsStr = searchParams?.toString() ?? "";
+  const deferredSearchParamsStr = useDeferredValue(searchParamsStr);
+  const isFilterPending = searchParamsStr !== deferredSearchParamsStr;
 
   // ─── Shared location state (map-specific) ──────────────────────────────
   const loc = useMapLocation(portalSlug);
@@ -196,12 +203,14 @@ export default function EventsFinder({
     <>
       {/* List mode */}
       {displayMode === "list" && (
-        <EventList
-          hasActiveFilters={hasActiveFilters}
-          portalId={portalId}
-          portalExclusive={portalExclusive}
-          portalSlug={portalSlug}
-        />
+        <TransitionContainer isPending={isFilterPending}>
+          <EventList
+            hasActiveFilters={hasActiveFilters}
+            portalId={portalId}
+            portalExclusive={portalExclusive}
+            portalSlug={portalSlug}
+          />
+        </TransitionContainer>
       )}
 
       {/* Calendar mode */}
