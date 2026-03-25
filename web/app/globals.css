@@ -1127,6 +1127,10 @@
   /* Disable grain texture in light mode */
   --grain-opacity: 0;
 
+  /* Skeleton shimmer — light surfaces need lighter base, more contrast highlight */
+  --skeleton-base: var(--twilight);
+  --skeleton-highlight: color-mix(in srgb, var(--skeleton-base) 60%, white 40%);
+
   /* Adjusted category colors for light mode - deeper variants */
   --cat-music: #DB2777;
   --cat-film: #4F46E5;
@@ -1355,6 +1359,10 @@ body[data-animations="subtle"] *:not(.ambient-layer):not(.ambient-layer *):not(.
   --text-xl: 1.25rem;     /* 20px - section headers secondary */
   --text-2xl: 1.5rem;     /* 24px - section headers primary */
   --text-3xl: 1.875rem;   /* 30px - page titles */
+
+  /* Skeleton shimmer tokens — derive from portal's card surface */
+  --skeleton-base: var(--card-bg, var(--twilight));
+  --skeleton-highlight: color-mix(in srgb, var(--skeleton-base) 70%, var(--soft) 30%);
 
 }
 
@@ -2867,7 +2875,7 @@ body:has([data-vertical="hospital"])::after {
 }
 
 .animate-page-enter {
-  animation: page-enter 0.3s ease-out forwards;
+  animation: page-enter 0.25s ease-out forwards;
 }
 
 /* Outing planner: "added" checkmark entrance */
@@ -3408,9 +3416,9 @@ textarea:focus-visible {
 .skeleton-shimmer {
   background: linear-gradient(
     90deg,
-    var(--twilight) 30%,
-    color-mix(in srgb, var(--twilight) 70%, var(--soft) 30%) 50%,
-    var(--twilight) 70%
+    var(--skeleton-base) 30%,
+    var(--skeleton-highlight) 50%,
+    var(--skeleton-base) 70%
   );
   background-size: 300% 100%;
   animation: skeleton-shimmer 1.5s linear infinite;
@@ -5259,6 +5267,11 @@ body:has([data-vertical="hospital"]) .rain-overlay {
   .explore-skeleton-text {
     animation: none !important;
     transition: none !important;
+  }
+
+  .skeleton-shimmer {
+    animation: none !important;
+    background: var(--skeleton-base) !important;
   }
 
   .card-hover-lift:hover,
