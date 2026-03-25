@@ -141,6 +141,16 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
           )}
         </div>
 
+        {/* Trailer */}
+        <a
+          href={`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + " " + movie.year + " trailer")}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-2xs text-zinc-500 hover:text-red-400 transition-colors flex items-center gap-1"
+        >
+          <span>&#9654;</span> Trailer
+        </a>
+
         {/* Actions */}
         <div className="flex gap-2 pt-1 border-t border-zinc-800">
           <button

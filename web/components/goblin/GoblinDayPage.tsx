@@ -36,19 +36,16 @@ function sortMovies(movies: GoblinMovie[], sortKey: SortKey): GoblinMovie[] {
   });
 }
 
-const MARQUEE_ITEMS = [
-  "\uD83D\uDC7A", // goblin
-  "\uD83C\uDF55", // pizza
-  "\uD83D\uDC36", // basset hound (dog face)
-  "\uD83D\uDC7A",
-  "\uD83C\uDF55",
-  "\uD83D\uDC15", // dog
-  "\uD83D\uDC7A",
-  "\uD83C\uDF55",
-  "\uD83D\uDC36",
-  "\uD83D\uDC7A",
-  "\uD83C\uDF55",
-  "\uD83D\uDC15",
+const MARQUEE_IMAGES = [
+  { src: "/goblin-day/goblin-1.jpg", alt: "goblin" },
+  { src: "/goblin-day/pizza-1.jpg", alt: "pizza" },
+  { src: "/goblin-day/basset-1.jpg", alt: "basset hound" },
+  { src: "/goblin-day/goblin-2.jpg", alt: "goblin" },
+  { src: "/goblin-day/pizza-2.jpg", alt: "pizza" },
+  { src: "/goblin-day/basset-2.jpg", alt: "basset hound" },
+  { src: "/goblin-day/goblin-3.jpg", alt: "goblin" },
+  { src: "/goblin-day/pizza-3.jpg", alt: "pizza" },
+  { src: "/goblin-day/basset-3.jpg", alt: "basset hound" },
 ];
 
 export default function GoblinDayPage({ initialMovies }: Props) {
@@ -103,19 +100,24 @@ export default function GoblinDayPage({ initialMovies }: Props) {
     []
   );
 
-  const marqueeContent = MARQUEE_ITEMS.join("  GOBLIN DAY  ");
+  const marqueeStrip = MARQUEE_IMAGES.map((img, i) => (
+    <span key={i} className="inline-flex items-center gap-3 mx-1">
+      <img
+        src={img.src}
+        alt={img.alt}
+        className="h-10 w-10 rounded-full object-cover border-2 border-orange-800"
+      />
+      <span className="text-lg font-black tracking-widest">GOBLIN DAY</span>
+    </span>
+  ));
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       {/* Scrolling Marquee */}
       <div className="overflow-hidden bg-orange-600 py-2 select-none">
-        <div className="flex whitespace-nowrap animate-marquee">
-          <span className="text-2xl font-black tracking-widest px-4">
-            {marqueeContent}
-          </span>
-          <span className="text-2xl font-black tracking-widest px-4">
-            {marqueeContent}
-          </span>
+        <div className="flex items-center whitespace-nowrap animate-marquee">
+          <span className="inline-flex items-center">{marqueeStrip}</span>
+          <span className="inline-flex items-center">{marqueeStrip}</span>
         </div>
       </div>
 
@@ -124,9 +126,6 @@ export default function GoblinDayPage({ initialMovies }: Props) {
         <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-orange-500">
           GOBLIN DAY
         </h1>
-        <p className="text-zinc-400 mt-2 text-base">
-          Horror movies. Basset hounds. Pizza. Scary vibes.
-        </p>
       </header>
 
       {/* Tabs */}
