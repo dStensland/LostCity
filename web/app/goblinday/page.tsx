@@ -4,7 +4,17 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Goblin Day — Horror Movie Tracker",
-  description: "Daniel & Ashley's horror movie watchlist for 2025-2026",
+  description: "Horror movies. Basset hounds. Pizza. Track what to watch, propose picks, run live Goblin Day sessions with themes.",
+  openGraph: {
+    title: "GOBLIN DAY",
+    description: "Horror movies. Basset hounds. Pizza. Scary vibes.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GOBLIN DAY",
+    description: "Horror movies. Basset hounds. Pizza. Scary vibes.",
+  },
 };
 
 export const dynamic = "force-dynamic";
