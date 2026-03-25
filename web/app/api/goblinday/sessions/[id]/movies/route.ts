@@ -22,7 +22,7 @@ export async function POST(
     .order("watch_order", { ascending: false })
     .limit(1);
 
-  const nextOrder = (existing?.[0]?.watch_order ?? 0) + 1;
+  const nextOrder = ((existing?.[0] as { watch_order: number } | undefined)?.watch_order ?? 0) + 1;
 
   const { error: insertError } = await supabase
     .from("goblin_session_movies")

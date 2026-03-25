@@ -18,26 +18,28 @@ export async function GET(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 404 });
 
+  const s = session as { id: number; name: string | null; date: string; is_active: boolean; created_at: string };
+
   const { data: sessionMovies } = await supabase
     .from("goblin_session_movies")
     .select("id, movie_id, watch_order, added_at, goblin_movies(*)")
-    .eq("session_id", session.id)
+    .eq("session_id", s.id)
     .order("watch_order");
 
   const { data: themes } = await supabase
     .from("goblin_themes")
     .select("id, label, status, created_at, canceled_at, goblin_theme_movies(movie_id)")
-    .eq("session_id", session.id)
+    .eq("session_id", s.id)
     .order("created_at");
 
   const { data: timeline } = await supabase
     .from("goblin_timeline")
     .select("id, event_type, movie_id, theme_id, created_at")
-    .eq("session_id", session.id)
+    .eq("session_id", s.id)
     .order("created_at");
 
   return NextResponse.json({
-    ...session,
+    ...s,
     movies: (sessionMovies ?? []).map((sm: any) => ({
       ...sm.goblin_movies,
       watch_order: sm.watch_order,

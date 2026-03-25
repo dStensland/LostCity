@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (active) {
-    return NextResponse.json({ error: "A session is already active", active_id: active.id }, { status: 400 });
+    return NextResponse.json({ error: "A session is already active", active_id: (active as { id: number }).id }, { status: 400 });
   }
 
   let body: { name?: string } = {};

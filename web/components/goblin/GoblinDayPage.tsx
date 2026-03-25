@@ -2,9 +2,12 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import GoblinMovieCard, { type GoblinMovie } from "./GoblinMovieCard";
+import GoblinSessionView from "./GoblinSessionView";
+import GoblinSessionHistory from "./GoblinSessionHistory";
 
 interface Props {
   initialMovies: GoblinMovie[];
+  activeSessionId: number | null;
 }
 
 type Tab = "next" | "contenders" | "upcoming" | "watched";
@@ -51,10 +54,75 @@ const MARQUEE_IMAGES = [
 
 const ZALGO_TEXT = "G\u0336\u0322\u0327\u0321\u030e\u0351\u034b\u0352\u0314\u0310\u0301\u030a\u0306\u0300\u030d\u031c\u031f\u0329\u0347\u0320\u031e\u0345\u032eO\u0334\u0321\u0328\u031c\u0326\u0324\u031f\u0356\u032c\u032b\u0323\u0349\u034e\u0353\u0339\u0316\u0355\u0330\u031d\u032f\u0354\u0301\u030c\u0313\u0307\u0302\u030a\u0363\u0310\u0351\u030e\u034a\u0311\u0357\u0300\u0303\u036b\u036aB\u0337\u0321\u0329\u0326\u031e\u032c\u0339\u034d\u0345\u031f\u0320\u032a\u032e\u0348\u0316\u031c\u0353\u0332\u0347\u0354\u0301\u0303\u0304\u0312\u030c\u0307\u030d\u030f\u0302\u0315\u0308\u036f\u035b\u0352\u034a\u034c\u036d\u0305\u0363\u036eL\u0334\u0321\u031d\u031c\u031e\u0329\u032a\u0339\u034e\u0316\u0356\u0345\u032f\u031f\u032b\u034d\u0353\u0355\u033b\u0332\u030b\u030f\u0312\u030d\u0303\u0311\u0351\u0306\u0300\u036c\u034b\u034a\u0310\u0357\u0363\u0365I\u0336\u0321\u0331\u032c\u0329\u031e\u0347\u031f\u034e\u032a\u0345\u032b\u034d\u0339\u033b\u033c\u032f\u0301\u030c\u0302\u0300\u0305\u0307\u030a\u0352\u036a\u036b\u0313\u034c\u0351\u0311N\u0334\u0328\u031c\u031e\u0320\u032c\u0324\u034e\u0349\u0339\u034d\u0356\u0316\u033c\u032f\u032a\u031d\u0345\u0300\u0303\u030d\u0312\u0352\u030e\u036f\u036b\u034a\u035b\u0306\u0310\u0315\u0363 D\u0336\u0323\u034d\u0316\u032f\u032b\u031d\u034e\u0356\u032a\u031e\u031f\u0339\u031c\u0349\u0347\u032c\u0345\u0355\u033b\u0332\u0305\u0311\u0301\u030c\u0307\u0300\u030a\u034b\u034a\u036c\u0357\u0352\u0350\u0314\u0351\u0363\u036fA\u0336\u0329\u032a\u031e\u032c\u0331\u031f\u032f\u034e\u032b\u031d\u034d\u031c\u0320\u0339\u0347\u0345\u0316\u0353\u030d\u030c\u0300\u0305\u0307\u0303\u030a\u030f\u0315\u034b\u036e\u0312\u035b\u034a\u0306\u0357\u036b\u034c\u0314\u0310\u0363Y\u0337\u032a\u0339\u034e\u0349\u0316\u0323\u031e\u0356\u032b\u034d\u031d\u031c\u031f\u032f\u0347\u0345\u0354\u0332\u033c\u0301\u0300\u0303\u030d\u0312\u0305\u0311\u030c\u030f\u030a\u0306\u0352\u034a\u034b\u0363\u036e\u0357\u0310\u036b\u0351\u036f\u035b";
 
-export default function GoblinDayPage({ initialMovies }: Props) {
+export default function GoblinDayPage({ initialMovies, activeSessionId }: Props) {
   const [movies, setMovies] = useState(initialMovies);
   const [activeTab, setActiveTab] = useState<Tab>("next");
   const [sortKey, setSortKey] = useState<SortKey>("critics");
+
+  // Session state
+  const [sessionId, setSessionId] = useState<number | null>(activeSessionId);
+  const [sessionData, setSessionData] = useState<any>(null);
+  const [sessionsList, setSessionsList] = useState<any[]>([]);
+  const [sessionsLoaded, setSessionsLoaded] = useState(false);
+
+  // Fetch active session detail
+  const fetchSession = useCallback(async (id: number) => {
+    const res = await fetch(`/api/goblinday/sessions/${id}`);
+    if (res.ok) {
+      const data = await res.json();
+      setSessionData(data);
+    }
+  }, []);
+
+  // Fetch sessions list (for history)
+  const fetchSessionsList = useCallback(async () => {
+    const res = await fetch("/api/goblinday/sessions");
+    if (res.ok) {
+      const data = await res.json();
+      setSessionsList(data);
+      setSessionsLoaded(true);
+    }
+  }, []);
+
+  // Load session data when tab is active
+  useEffect(() => {
+    if (activeTab === "next") {
+      if (sessionId) fetchSession(sessionId);
+      else fetchSessionsList();
+    }
+  }, [activeTab, sessionId, fetchSession, fetchSessionsList]);
+
+  const handleStartSession = useCallback(async () => {
+    const res = await fetch("/api/goblinday/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setSessionId(data.id);
+      fetchSession(data.id);
+    }
+  }, [fetchSession]);
+
+  const handleEndSession = useCallback(async () => {
+    if (!sessionId) return;
+    await fetch(`/api/goblinday/sessions/${sessionId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_active: false }),
+    });
+    setSessionId(null);
+    setSessionData(null);
+    // Refresh movies (some may now be marked watched)
+    const moviesRes = await fetch("/api/goblinday");
+    if (moviesRes.ok) setMovies(await moviesRes.json());
+    fetchSessionsList();
+  }, [sessionId, fetchSessionsList]);
+
+  const handleSessionRefresh = useCallback(() => {
+    if (sessionId) fetchSession(sessionId);
+  }, [sessionId, fetchSession]);
 
   const now = new Date().toISOString().slice(0, 10);
   const isReleased = (m: GoblinMovie) =>
@@ -304,28 +372,48 @@ export default function GoblinDayPage({ initialMovies }: Props) {
         </div>
       )}
 
-      {/* Movie Grid */}
+      {/* Content */}
       <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6 pb-16 relative z-10">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {filteredMovies.map((movie) => (
-            <GoblinMovieCard
-              key={movie.id}
-              movie={movie}
-              onToggle={handleToggle}
+        {activeTab === "next" ? (
+          // Session view
+          sessionId && sessionData ? (
+            <GoblinSessionView
+              session={sessionData}
+              proposedMovies={movies
+                .filter((m) => m.proposed && !m.watched)
+                .map((m) => ({ id: m.id, title: m.title, poster_path: m.poster_path }))}
+              onRefresh={handleSessionRefresh}
+              onEndSession={handleEndSession}
             />
-          ))}
-        </div>
+          ) : (
+            <GoblinSessionHistory
+              sessions={sessionsList}
+              onStartSession={handleStartSession}
+            />
+          )
+        ) : (
+          // Movie grid for contenders/upcoming/watched
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              {filteredMovies.map((movie) => (
+                <GoblinMovieCard
+                  key={movie.id}
+                  movie={movie}
+                  onToggle={handleToggle}
+                />
+              ))}
+            </div>
 
-        {filteredMovies.length === 0 && (
-          <p className="text-center text-zinc-600 py-20 text-sm tracking-widest uppercase">
-            {activeTab === "next"
-              ? "// NO PROPOSALS YET — GO PICK SOME CONTENDERS"
-              : activeTab === "watched"
-                ? "// NOTHING WATCHED — GET TO IT GOBLINS"
-                : activeTab === "upcoming"
-                  ? "// NO UPCOMING — EVERYTHING IS OUT"
-                  : "// NO CONTENDERS — RUN THE SEED SCRIPT"}
-          </p>
+            {filteredMovies.length === 0 && (
+              <p className="text-center text-zinc-600 py-20 text-sm tracking-widest uppercase">
+                {activeTab === "watched"
+                  ? "// NOTHING WATCHED — GET TO IT GOBLINS"
+                  : activeTab === "upcoming"
+                    ? "// NO UPCOMING — EVERYTHING IS OUT"
+                    : "// NO CONTENDERS — RUN THE SEED SCRIPT"}
+              </p>
+            )}
+          </>
         )}
       </main>
 

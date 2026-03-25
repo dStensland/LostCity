@@ -22,9 +22,11 @@ export async function POST(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  const t = theme as { id: number; label: string; status: string };
+
   if (body.movie_ids?.length > 0) {
     const rows = body.movie_ids.map((mid: number) => ({
-      theme_id: theme.id,
+      theme_id: t.id,
       movie_id: mid,
     }));
     await supabase.from("goblin_theme_movies").insert(rows as never);
@@ -32,7 +34,7 @@ export async function POST(
 
   await supabase
     .from("goblin_timeline")
-    .insert({ session_id: sessionId, event_type: "theme_added", theme_id: theme.id } as never);
+    .insert({ session_id: sessionId, event_type: "theme_added", theme_id: t.id } as never);
 
-  return NextResponse.json(theme, { status: 201 });
+  return NextResponse.json(t, { status: 201 });
 }

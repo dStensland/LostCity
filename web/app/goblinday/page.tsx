@@ -17,5 +17,17 @@ export default async function Page() {
     .select("*")
     .order("release_date", { ascending: true, nullsFirst: false });
 
-  return <GoblinDayPage initialMovies={movies ?? []} />;
+  // Check for active session
+  const { data: activeSession } = await supabase
+    .from("goblin_sessions")
+    .select("id")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  return (
+    <GoblinDayPage
+      initialMovies={movies ?? []}
+      activeSessionId={(activeSession as { id: number } | null)?.id ?? null}
+    />
+  );
 }
