@@ -124,10 +124,10 @@ export default function GoblinDayPage({ initialMovies }: Props) {
   ]);
 
   const TAB_CONFIG = [
-    { key: "next" as const, label: "NEXT GOBLIN DAY", active: "bg-red-700 text-white border-red-500" },
-    { key: "contenders" as const, label: "CONTENDERS", active: "bg-zinc-800 text-white border-zinc-500" },
-    { key: "upcoming" as const, label: "UPCOMING", active: "bg-zinc-800 text-violet-400 border-violet-500" },
-    { key: "watched" as const, label: "WATCHED", active: "bg-zinc-800 text-emerald-400 border-emerald-500" },
+    { key: "next" as const, label: "\u2666 NEXT GOBLIN DAY", active: "bg-red-900/80 text-red-300 border-red-500 shadow-[0_4px_12px_rgba(185,28,28,0.3)]" },
+    { key: "contenders" as const, label: "\u2620 CONTENDERS", active: "bg-zinc-900 text-white border-zinc-400 shadow-[0_4px_12px_rgba(255,255,255,0.05)]" },
+    { key: "upcoming" as const, label: "\u29D6 UPCOMING", active: "bg-zinc-900 text-violet-400 border-violet-500 shadow-[0_4px_12px_rgba(139,92,246,0.15)]" },
+    { key: "watched" as const, label: "\u2620 WATCHED", active: "bg-zinc-900 text-emerald-400 border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.15)]" },
   ];
 
   // Matrix rain of ancient/occult symbols
@@ -271,10 +271,10 @@ export default function GoblinDayPage({ initialMovies }: Props) {
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            className={`px-4 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-[0.15em] uppercase border-b-3 transition-colors ${
+            className={`px-4 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-[0.15em] uppercase border-b-3 transition-all duration-200 ${
               activeTab === key
                 ? active
-                : "bg-black text-zinc-600 border-transparent hover:text-zinc-400 hover:bg-zinc-950"
+                : "bg-black text-zinc-600 border-transparent hover:text-red-400/60 hover:bg-red-950/10 hover:border-red-900/30"
             }`}
           >
             {label}
@@ -292,10 +292,10 @@ export default function GoblinDayPage({ initialMovies }: Props) {
             <button
               key={key}
               onClick={() => setSortKey(key)}
-              className={`px-4 py-2 text-2xs font-bold tracking-[0.2em] uppercase transition-colors ${
+              className={`px-4 py-2 text-2xs font-bold tracking-[0.2em] uppercase transition-all ${
                 sortKey === key
-                  ? "bg-zinc-900 text-red-500 border-b-2 border-red-500"
-                  : "bg-black text-zinc-600 hover:text-zinc-400"
+                  ? "bg-red-950/30 text-red-500 border-b-2 border-red-500 shadow-[0_2px_8px_rgba(185,28,28,0.2)]"
+                  : "bg-black text-zinc-600 hover:text-red-400/50 hover:bg-red-950/10"
               }`}
             >
               {label}
