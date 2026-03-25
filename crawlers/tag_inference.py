@@ -1103,6 +1103,29 @@ def infer_is_support_group(
     return False
 
 
+# ---------------------------------------------------------------------------
+# Arts venue / title signal — events at gallery/museum venues with art
+# keywords should be category="art", NOT community/learning/family.
+# ---------------------------------------------------------------------------
+
+ARTS_VENUE_TYPES = {"gallery", "museum", "art_center", "art_gallery"}
+
+ARTS_TITLE_SIGNALS = re.compile(
+    r"(exhibition|gallery\s+walk|opening\s+reception|artist\s+talk|art\s+show|"
+    r"group\s+show|solo\s+show|closing\s+reception|curator|retrospective)",
+    re.IGNORECASE,
+)
+
+
+def infer_arts_category(event: dict, venue_type: str | None) -> str | None:
+    """If event is at an arts venue with art signals, return 'art' category."""
+    if venue_type in ARTS_VENUE_TYPES:
+        title = event.get("title", "")
+        if ARTS_TITLE_SIGNALS.search(title):
+            return "art"
+    return None
+
+
 # ── Kids activity recategorization ─────────────────────────────────
 
 # Categories where a kids/children signal should override to "family"
