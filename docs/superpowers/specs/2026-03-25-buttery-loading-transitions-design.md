@@ -1,7 +1,7 @@
 # Buttery Loading & Transitions Design Spec
 
 **Date**: 2026-03-25
-**Status**: Approved
+**Status**: Approved (rev 3 — post expert review)
 **Goal**: Make the entire Atlanta portal feel like a native app — no blank flashes, no layout shifts, smooth crossfades between every state.
 
 ## Problem
@@ -33,23 +33,24 @@ The foundation. One skeleton system replacing the current three implementations.
 **`<Skeleton>`** — Atomic primitive. A shimmer bar with configurable shape via props:
 - `variant`: `"text"` | `"circle"` | `"rect"` | `"card"`
 - `width`, `height`, `radius` as CSS custom properties (server-renderable)
-- Theme-aware: uses `var(--skeleton-base)` and `var(--skeleton-highlight)` semantic tokens. These derive from each portal's existing `--card-bg` token, so every portal automatically gets visible, palette-matched skeletons without manual overrides.
+- Theme-aware: uses `var(--skeleton-base)` and `var(--skeleton-highlight)` semantic tokens (see Theme Tokens below)
 - Single `skeleton-shimmer` keyframe (1.5s linear infinite, already exists in globals.css)
 
 **`<SkeletonGroup>`** — Wraps multiple `<Skeleton>` children:
 - Auto-increments `--skeleton-delay` on children (staggered animation)
-- Enforces `useMinSkeletonDelay(400ms)` so the group never micro-flashes
+- Enforces `useMinSkeletonDelay(250ms)` so the group never micro-flashes
 - Crossfade out: when `show` transitions true→false, opacity 1→0 over 200ms (not a hard cut)
 - Replaces all ad-hoc skeleton wrapper patterns
 
 **Content-matched skeleton factories** — `EventCardSkeleton`, `VenueCardSkeleton`, `DetailHeroSkeleton`, `StandardRowSkeleton`, `HeroCardSkeleton`, etc.
 - Render the **exact DOM structure** of the real component with skeleton fills
 - Dimensions match pixel-for-pixel — eliminates CLS
+- Each factory exports a `SKELETON_HEIGHT` constant for use as ContentSwap's `minHeight` prop
 - Consolidate from existing partial implementations (EventCardSkeleton, VenueListSkeleton already exist but don't dimension-match)
 
 #### Theme Tokens (semantic, portal-aware)
 
-Skeleton tokens derive from each portal's existing surface tokens rather than hardcoded values. This ensures every portal — dark, light, warm, cool — gets visible, palette-matched skeletons automatically.
+Skeleton tokens derive from each portal's existing surface tokens. Dark portals use `--card-bg` (which is a dark surface with natural contrast against `--void`). Light portals need an explicit override because `--card-bg` is near-white and invisible against the light page background.
 
 ```css
 /* In globals.css @theme inline */
@@ -57,25 +58,39 @@ Skeleton tokens derive from each portal's existing surface tokens rather than ha
 --skeleton-highlight: color-mix(in srgb, var(--skeleton-base) 70%, var(--soft) 30%);
 ```
 
-No `[data-theme="light"]` override needed — `--card-bg` already adapts per portal theme. Each portal's `PortalTheme.tsx` sets `--card-bg` to the correct surface color (dark night for Atlanta, warm cream for Family, light gray for HelpATL), and the skeleton tokens follow automatically.
+Light-mode override (required — `--card-bg` is near-white on light portals):
+```css
+[data-theme="light"] {
+  --skeleton-base: var(--twilight);
+  --skeleton-highlight: color-mix(in srgb, var(--skeleton-base) 60%, white 40%);
+}
+```
 
-For portals where `--card-bg` matches the page background too closely (shimmer would be invisible), the shimmer gradient uses `--skeleton-highlight` which mixes in `--soft` for contrast.
+This gives light portals (HelpATL, Family) a visible gray shimmer (`--twilight` = `#D6D3D1` in light mode) against their warm/cool page backgrounds, while dark portals get palette-matched shimmer from `--card-bg`.
+
+#### Atlanta Skyline: Keep for First Load
+
+The Atlanta skyline SVG in `FeedSectionSkeleton` is a premium brand element — city-specific, hand-crafted, and distinctive. It stays as the initial portal page skeleton (`loading.tsx` for `/atlanta` first load, once per session). The horse appears at 12s for timeout states.
+
+Generic `SkeletonGroup` replaces the skyline only for **repeat interactions** (tab switches, filter changes, content refreshes) where the skyline would feel excessive.
 
 #### What Dies
 
-- `skeleton-shimmer-light` CSS class (semantic tokens replace it)
-- `FeedSectionSkeleton` horse animation as default loading (replaced by `SkeletonGroup` crossfade)
+- `skeleton-shimmer-light` CSS class (theme token overrides replace it)
 - `NeonSpinner.tsx` (dead code, delete)
 - Inline shimmer divs in `loading.tsx` files (replaced by skeleton factories)
 - All per-component `animate-pulse` usage for loading states
 
 #### What Survives
 
-- `HorseSpinner` — kept as brand element for 12s+ timeout "taking longer than usual" state
+- `HorseSpinner` — brand element for 12s+ timeout "taking longer than usual" state
+- Atlanta skyline SVG — kept in `loading.tsx` for first page load
 - `skeleton-shimmer` keyframe in globals.css (unchanged, all variants consolidated to use it)
 - `useMinSkeletonDelay()` hook (promoted from FeedSectionSkeleton-local to shared utility)
 
-**Note on `useMinSkeletonDelay` promotion:** The current implementation in `FeedSectionSkeleton.tsx` has a bug where `loadStartRef.current` initializes to `0`, so if `isLoading` starts as `false` the delay logic never fires. Fix this during the promotion.
+**Note on `useMinSkeletonDelay` promotion:** The current implementation has a bug: `loadStartRef.current` initializes to `0`, so if `isLoading` starts as `false` the delay logic never fires. Fix: initialize `loadStartRef.current = isLoading ? Date.now() : 0` based on the initial `isLoading` value.
+
+**Default minimum delay: 250ms** (reduced from current 400ms). 400ms is perceptibly sluggish on fast networks — users wait 350ms extra when data arrives in 50ms. 250ms prevents micro-flash while staying under the threshold of perceived sluggishness.
 
 ---
 
@@ -110,9 +125,10 @@ interface TransitionContainerProps {
 
 Behavior:
 - `isPending=false`: Renders children at full opacity
-- `isPending=true`: Applies `opacity: 0.7`, `pointer-events: none`, 150ms CSS transition
-- When `isPending` transitions false→true→false, old content dims then new content appears at full opacity
-- Respects `prefers-reduced-motion` (no opacity change, just `pointer-events: none`)
+- `isPending=true`: Applies `opacity: 0.55`, `filter: blur(1px)`, `pointer-events: none`, 150ms CSS transition. The blur carries the "inactive/loading" signal much more clearly than opacity alone on dark surfaces. At 0.7 (originally proposed), content is still fully readable and users re-tap thinking nothing happened.
+- Respects `prefers-reduced-motion` (no opacity/blur change, just `pointer-events: none`)
+- **Focus management:** On transition start, moves focus to the container itself (`tabIndex={-1}`, `focus()`) so keyboard users don't interact with stale content. Focus returns to the first focusable element in new content after transition completes.
+- **Scroll position:** For tab switches (Pattern B), scrolls the content container to top inside the `startTransition` callback, before the state update. Prevents users from landing mid-scroll in new content.
 
 #### Where Applied
 
@@ -217,27 +233,38 @@ The view transition captures the old DOM screenshot *before* the key change unmo
 3. Browser crossfades captured screenshot → new skeleton DOM
 4. ContentSwap handles skeleton → real content transition
 
-For non-VT browsers, the existing `animate-page-enter` fade continues to work as-is.
-
-```tsx
-// template.tsx stays the same structurally
-<div key={pathname} className="animate-page-enter">{children}</div>
-```
-
 The only change: when View Transitions are active, suppress the `animate-page-enter` CSS class to avoid doubling the fade animation (VT handles the fade, CSS class would add a second one).
 
+**Hydration-safe VT detection:** Cannot use inline `typeof document` check (causes server/client mismatch). Use `useState(false)` + `useEffect` pattern:
+
 ```tsx
-const supportsVT = typeof document !== "undefined" && "startViewTransition" in document;
-<div key={pathname} className={supportsVT ? "" : "animate-page-enter"}>{children}</div>
+const [supportsVT, setSupportsVT] = useState(false);
+useEffect(() => {
+  setSupportsVT("startViewTransition" in document);
+}, []);
+
+return (
+  <div key={pathname} className={supportsVT ? "" : "animate-page-enter"}>
+    {children}
+  </div>
+);
 ```
+
+Server always renders with `animate-page-enter` (safe fallback). Client removes it after hydration if VT is supported. The first navigation uses CSS fade; subsequent navigations use VT. No hydration mismatch.
 
 #### NavigationProgress Interaction
 
-The codebase has a `NavigationProgress` component that shows a thin progress bar during navigation. When View Transitions are supported, the crossfade provides its own visual feedback. Disable the progress bar when VT is active to avoid competing indicators:
+The codebase has a `NavigationProgress` component that shows a thin progress bar during navigation. When View Transitions are supported, the crossfade provides visual feedback for the first 250ms. But on slow navigations (>500ms), the crossfade completes and there's no signal that loading continues.
+
+**Don't suppress NavigationProgress. Delay it.** Show the progress bar only after a 300ms delay when VT is active (the crossfade covers the first 250ms, the 50ms buffer avoids overlap). On non-VT browsers, show immediately as today.
 
 ```tsx
 // In NavigationProgress.tsx
-if (typeof document !== "undefined" && "startViewTransition" in document) return null;
+const [supportsVT, setSupportsVT] = useState(false);
+useEffect(() => { setSupportsVT("startViewTransition" in document); }, []);
+
+// When navigation starts:
+const delay = supportsVT ? 300 : 0;
 ```
 
 #### Navigation Timeline (Corrected)
@@ -245,8 +272,8 @@ if (typeof document !== "undefined" && "startViewTransition" in document) return
 | Network Speed | User Experience |
 |--------------|-----------------|
 | Fast (< 300ms) | Old page screenshot → 250ms crossfade → new page (skeleton may flash briefly, then ContentSwap fades in real content). |
-| Medium (300-800ms) | Old page screenshot → 250ms crossfade → skeleton visible for 200-500ms → ContentSwap fades in real content. |
-| Slow (> 800ms) | Old page screenshot → 250ms crossfade → skeleton with shimmer → content streams in, ContentSwap fades each section. |
+| Medium (300-800ms) | Old page screenshot → 250ms crossfade → skeleton visible → progress bar appears at 300ms → ContentSwap fades in real content. |
+| Slow (> 800ms) | Old page screenshot → 250ms crossfade → skeleton with shimmer → progress bar → content streams in, ContentSwap fades each section. |
 
 In all cases: **no blank flash.** The old page screenshot persists through the crossfade. The skeleton is the worst case, and it transitions smoothly in and out.
 
@@ -262,9 +289,10 @@ Every place content replaces other content uses one unified component.
 interface ContentSwapProps {
   children: React.ReactNode;
   swapKey: string | number;        // triggers crossfade on change
-  minDisplayMs?: number;            // default 400ms, prevents micro-flash
+  error?: Error | null;            // triggers immediate error state on API failure
+  minDisplayMs?: number;            // default 250ms, prevents micro-flash
   duration?: number;                // crossfade duration in ms, default 200
-  minHeight?: number | string;      // SSR-safe fallback height
+  minHeight?: number | string;      // SSR-safe fallback height (static, no runtime measurement)
   className?: string;
 }
 ```
@@ -274,8 +302,12 @@ Behavior:
 2. When `swapKey` changes, holds old children visible
 3. After `minDisplayMs` elapsed (if applicable), crossfades old → new (200ms)
 4. Uses `prefers-reduced-motion` to skip animation
-5. CLS prevention: uses `minHeight` prop for SSR-safe initial render. On the client, `useEffect` (not `useLayoutEffect` — avoids SSR warnings) measures outgoing height via ref and sets `min-height` to prevent collapse during swap. The `minHeight` prop provides the server-render fallback.
-6. **Rapid swap handling:** If `swapKey` changes again while a crossfade is in progress, the latest content wins. The in-progress fade cancels and a new fade begins from whatever opacity the container is at. No stacking of intermediate states.
+5. **CLS prevention: static `minHeight` only.** No runtime height measurement. The content-matched skeleton factories pixel-match real content, so measured heights are unnecessary. Runtime `offsetHeight` reads on multiple ContentSwap instances cause forced reflow storms (3-4 simultaneous layout thrashes on feed page load). The `minHeight` prop is the sole CLS guard. Skeleton factories export `SKELETON_HEIGHT` constants for this purpose.
+6. **Rapid swap handling:** If `swapKey` changes again while a crossfade is in progress, the latest content wins. Use Web Animations API (`element.animate()`) for the crossfade — calling `.animate()` on an element that's already animating automatically cancels the previous animation. This gives cancellation for free without manual state management.
+7. **Error prop:** When `error` is set (from a data-fetching hook), ContentSwap immediately crossfades to an error state component (200ms, same duration as content swap). This triggers on API failure, not on a timeout. The 10s independent timer is a safety net for cases where the hook never settles, not the primary error path.
+8. **No one-frame flash:** Incoming content is styled with `opacity: 0` via a CSS class (`.content-swap-enter { opacity: 0; }`) applied on initial render. The crossfade animation transitions it to `opacity: 1`. Because the CSS class applies before paint, there's no flash of unstyled content. No `useLayoutEffect` needed.
+
+**Exclusion: CityBriefing.** The above-fold CityBriefing/hero section renders from `serverFeedData` (server-side data passed as props). It does NOT get wrapped in ContentSwap — it should paint immediately without any crossfade delay. ContentSwap is for content that transitions from skeleton → loaded, not for content that's already available at render time.
 
 #### Where Applied
 
@@ -292,33 +324,36 @@ Replaces all ad-hoc swap patterns:
 Ship incrementally, not all at once. Each phase is independently valuable and reduces risk.
 
 ### Phase 1: Skeleton Primitives + Theme Tokens
-- Refactor `Skeleton.tsx` with semantic tokens
+- Refactor `Skeleton.tsx` with semantic tokens + light-mode override
 - Build `SkeletonGroup` with staggered delays and crossfade-out
-- Create content-matched skeleton factories (EventCard, VenueCard, DetailHero, StandardRow, HeroCard)
-- Promote `useMinSkeletonDelay` to shared hook (fix the bug)
-- Update `loading.tsx` files to use factories
+- Create content-matched skeleton factories with exported `SKELETON_HEIGHT` constants
+- Promote `useMinSkeletonDelay` to shared hook (fix the init bug, default 250ms)
+- Update `loading.tsx` files to use factories (keep Atlanta skyline for first load)
 - Delete `NeonSpinner.tsx`
+- Align `animate-page-enter` fallback to 250ms (currently 300ms) for timing consistency
 - **Result:** Consistent, visible skeletons on every portal. Zero CLS. Light-mode fixed.
 
 ### Phase 2: React 19 Transitions (In-Page)
-- Build `TransitionContainer`
+- Build `TransitionContainer` (opacity 0.55 + blur(1px), focus management, scroll-to-top)
 - Apply to Pattern A components (RegularsView, MusicListingsView)
 - Apply to Pattern B components (FindView tabs, EventsFinder, Feed tabs)
 - Remove spinner overlays and per-component loading state management
+- **Note:** FeedSectionSkeleton's tab-switch usage is replaced here (not in Phase 1). Phase 1 only changes the visual style of skeletons, not the transition behavior.
 - **Result:** Tabs and filters keep old content visible. No blank flashes on interaction.
 
 ### Phase 3: ContentSwap
-- Build `ContentSwap` component
+- Build `ContentSwap` component (CSS-first opacity, Web Animations API, error prop, static minHeight)
 - Replace LazySection opacity transition (compose, don't replace viewport trigger)
 - Replace detail page skeleton/content conditional renders
-- Replace feed section skeleton→content swaps
-- Add error timeouts (10s → error state, 12s → HorseSpinner retry)
+- Replace feed section skeleton→content swaps (exclude CityBriefing)
+- Add error prop wiring to `useDetailFetch` and feed section hooks
+- Add 10s safety-net timeout → error state, 12s → HorseSpinner retry
 - **Result:** Every content replacement is a smooth crossfade. Error states exist.
 
 ### Phase 4: View Transitions (Navigation)
 - Build `useViewTransition` hook
-- Update `template.tsx` (suppress `animate-page-enter` when VT active)
-- Update `NavigationProgress` (hide when VT active)
+- Update `template.tsx` (hydration-safe VT detection via useState+useEffect, suppress `animate-page-enter` when VT active)
+- Update `NavigationProgress` (300ms delay when VT active, not hidden)
 - Add root-level crossfade CSS
 - Wire `useViewTransition` into navigation components (cards, links)
 - **Result:** Page navigation is a smooth crossfade. No blank flashes between pages.
@@ -347,19 +382,19 @@ Ship incrementally, not all at once. Each phase is independently valuable and re
 | File | Change | Phase |
 |------|--------|-------|
 | `components/Skeleton.tsx` | Refactor to use semantic theme tokens, add variant prop | 1 |
-| `app/globals.css` | Add skeleton theme tokens, view transition CSS, remove `skeleton-shimmer-light` | 1, 4 |
-| `app/[portal]/loading.tsx` | Replace inline shimmer divs with skeleton factories | 1 |
+| `app/globals.css` | Add skeleton theme tokens + light override, view transition CSS, `.content-swap-enter`, remove `skeleton-shimmer-light` | 1, 3, 4 |
+| `app/[portal]/loading.tsx` | Replace inline shimmer divs with skeleton factories (keep skyline for first load) | 1 |
 | `app/[portal]/events/[id]/loading.tsx` | Replace inline shimmer with `DetailHeroSkeleton` etc. | 1 |
 | `components/feed/CityPulseShell.tsx` | Replace FeedSectionSkeleton usage with SkeletonGroup + ContentSwap | 1, 3 |
-| `components/feed/FeedSectionSkeleton.tsx` | Gut — becomes SkeletonGroup + HorseSpinner for timeout only | 1 |
+| `components/feed/FeedSectionSkeleton.tsx` | Simplify — becomes SkeletonGroup + HorseSpinner for timeout only | 1, 2 |
 | `components/find/RegularsView.tsx` | Add `TransitionContainer` for filter feedback | 2 |
 | `components/find/MusicListingsView.tsx` | Replace spinner overlay with `TransitionContainer` | 2 |
 | `components/find/EventsFinder.tsx` | Add `useTransition` + `TransitionContainer` for filter changes | 2 |
 | `components/feed/FeedShell.tsx` | Replace Suspense+HorseSpinner with `useTransition` for tab switches | 2 |
 | `components/views/VenueDetailView.tsx` | Wrap in ContentSwap for skeleton→content | 3 |
 | `components/WhosGoing.tsx` | Fix blank-before-skeleton flash (render skeleton immediately) | 3 |
-| `app/template.tsx` | Suppress `animate-page-enter` when View Transitions active | 4 |
-| `components/ui/NavigationProgress.tsx` | Hide when View Transitions active | 4 |
+| `app/template.tsx` | Hydration-safe VT detection, suppress `animate-page-enter` when VT active | 4 |
+| `components/ui/NavigationProgress.tsx` | 300ms delay when VT active (not hidden) | 4 |
 
 ### Deleted Files
 
@@ -375,8 +410,9 @@ All other `loading.tsx` files, feed section components, and detail views get min
 
 Currently missing. Added as part of Phase 3:
 
-- **`ContentSwap` timeout** — if content doesn't arrive within 10s, show error state (not infinite skeleton)
-- **Detail pages** — `useDetailFetch` gets an error return that renders a "Something went wrong" card instead of eternal skeleton
+- **`ContentSwap` error prop** — when data-fetching hook returns an error, ContentSwap immediately crossfades to error state (200ms). No waiting for a timeout. Renders a "Something went wrong" card with retry button.
+- **`ContentSwap` safety-net timeout** — if content never arrives AND no error is returned (hook hangs), show error state after 10s. This is the fallback, not the primary error path.
+- **Detail pages** — `useDetailFetch` passes error to ContentSwap's `error` prop
 - **Feed sections** — sections that fail to load collapse gracefully (0 height, no error banner cluttering the feed)
 - **HorseSpinner** appears at 12s with "Taking longer than usual..." + retry button (existing pattern, kept)
 - **Error boundary reset** — `key={pathname}` on `template.tsx` already handles this (error boundaries reset on navigation because the tree remounts)
@@ -386,8 +422,19 @@ Currently missing. Added as part of Phase 3:
 All four systems respect `prefers-reduced-motion: reduce`:
 - Skeleton shimmer: static fill, no animation
 - ContentSwap: instant swap, no crossfade
-- TransitionContainer: `pointer-events: none` only, no opacity change
+- TransitionContainer: `pointer-events: none` only, no opacity/blur change
 - View Transitions: browser respects the media query natively for `::view-transition` pseudos
+
+## Performance Constraints
+
+These are hard rules to prevent jank:
+
+1. **No runtime height measurement in ContentSwap.** Use static `minHeight` prop exclusively. Skeleton factories export `SKELETON_HEIGHT` constants.
+2. **All transitions are GPU-compositable only.** `opacity` and `transform` transitions only. Never animate `height`, `max-height`, `width`, or any layout-triggering property. Container height snaps after crossfade completes.
+3. **ContentSwap uses CSS-first opacity** (`.content-swap-enter { opacity: 0; }`) — no `useLayoutEffect`, no one-frame flash.
+4. **ContentSwap uses Web Animations API** (`element.animate()`) for crossfades — automatic cancellation on rapid swaps, no manual state machine.
+5. **Don't wrap CityBriefing in ContentSwap.** It renders from server data and should paint immediately.
+6. **`skeleton-shimmer` background-position animation is paint-triggering** but on small elements with negligible cost. Accepted tradeoff (already running in production).
 
 ## Success Criteria
 
@@ -397,8 +444,9 @@ All four systems respect `prefers-reduced-motion: reduce`:
 4. **URL-driven tab switches show smooth transition** — Pattern B transitions dim old content, crossfade to new shell, content streams in gracefully
 5. **Progressive enhancement** — Chrome/Edge get crossfade, Safari gets crossfade, Firefox gets existing fade, nothing breaks
 6. **Light-mode skeletons visible** — HelpATL/family portal skeletons are clearly visible loading indicators
-7. **Consistent timing** — every crossfade is 200ms, every skeleton minimum is 400ms, every pending dim is 150ms
+7. **Consistent timing** — every crossfade is 200ms, every skeleton minimum is 250ms, every pending dim is 150ms
 8. **Reduced motion respected** — all animations disabled for users who prefer it
+9. **No forced reflows** — zero `offsetHeight`/`getBoundingClientRect` reads during content swap transitions
 
 ## Non-Goals
 
