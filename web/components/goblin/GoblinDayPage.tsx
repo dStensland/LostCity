@@ -119,26 +119,28 @@ export default function GoblinDayPage({ initialMovies }: Props) {
     []
   );
 
-  const marqueeStrip = MARQUEE_IMAGES.map((img, i) => (
-    <span key={i} className="inline-flex items-center gap-4 mx-2">
-      <img
-        src={img.src}
-        alt={img.alt}
-        className="h-16 w-16 rounded-lg object-cover border-2 border-red-900/60"
-      />
-      <span className="text-2xl sm:text-3xl font-black tracking-widest text-red-600 drop-shadow-[0_0_8px_rgba(220,38,38,0.5)]">
-        {ZALGO_TEXT}
-      </span>
-    </span>
-  ));
+  const marqueeStrip = MARQUEE_IMAGES.flatMap((img, i) => [
+    <img
+      key={`img-${i}`}
+      src={img.src}
+      alt={img.alt}
+      className="h-20 w-28 object-cover flex-shrink-0"
+    />,
+    <span
+      key={`txt-${i}`}
+      className="flex-shrink-0 px-6 text-2xl sm:text-3xl font-black tracking-widest text-red-600 drop-shadow-[0_0_8px_rgba(220,38,38,0.5)]"
+    >
+      {ZALGO_TEXT}
+    </span>,
+  ]);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       {/* Scrolling Marquee */}
-      <div className="overflow-hidden bg-black py-4 select-none border-b border-red-900/30">
+      <div className="overflow-hidden bg-black select-none border-b border-red-900/30">
         <div className="flex items-center whitespace-nowrap animate-marquee">
-          <span className="inline-flex items-center">{marqueeStrip}</span>
-          <span className="inline-flex items-center">{marqueeStrip}</span>
+          {marqueeStrip}
+          {marqueeStrip}
         </div>
       </div>
 
