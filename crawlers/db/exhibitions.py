@@ -26,6 +26,11 @@ logger = logging.getLogger(__name__)
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
+_JUNK_TITLE_RE = re.compile(
+    r"^(view\s+fullsize|download\s+(press|release|pdf|image|file|brochure)|click\s+here|read\s+more|learn\s+more)",
+    re.IGNORECASE,
+)
+
 
 def _generate_exhibition_slug(venue_name: str, title: str) -> str:
     """Generate a URL-safe slug: '{venue}-{title}', max 80 chars."""
@@ -36,7 +41,8 @@ def _generate_exhibition_slug(venue_name: str, title: str) -> str:
 
 def generate_exhibition_hash(title: str, venue_id: int, opening_date: Optional[str]) -> str:
     """MD5 hash on (title, venue_id, opening_date) for dedup."""
-    key = f"{title.strip().lower()}|{venue_id}|{opening_date or ''}"
+    normalized_title = re.sub(r"\s+", " ", title.strip().lower())
+    key = f"{normalized_title}|{venue_id}|{opening_date or ''}"
     return hashlib.md5(key.encode()).hexdigest()
 
 
@@ -87,6 +93,10 @@ def insert_exhibition(exhibition_data: dict, artists: Optional[list] = None) -> 
     title = exhibition_data.get("title", "").strip()
     if not title:
         logger.warning("Skipping exhibition with empty title")
+        return None
+
+    if _JUNK_TITLE_RE.match(title):
+        logger.debug("Skipping exhibition with junk title: %r", title)
         return None
 
     venue_id = exhibition_data.get("venue_id")
