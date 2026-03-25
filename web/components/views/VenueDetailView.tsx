@@ -50,11 +50,13 @@ import { DestinationDetailSections } from "@/components/adventure/DestinationDet
 import { LibraryPassCallout, type LibraryPassData } from "@/components/family/LibraryPassCallout";
 import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
 import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
+import { ContentSwap } from "@/components/ui/ContentSwap";
 import { isFeatureHeavyType, type VenueFeature } from "@/lib/venue-features";
 import { type VenueSpecial } from "@/lib/specials-utils";
 import VenueFeaturesSection from "@/components/detail/VenueFeaturesSection";
 import VenueSpecialsSection from "@/components/detail/VenueSpecialsSection";
 import dynamic from "next/dynamic";
+import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
 
 const DogTagModal = dynamic(
   () => import("@/app/[portal]/_components/dog/DogTagModal"),
@@ -62,6 +64,10 @@ const DogTagModal = dynamic(
 );
 const HangButton = dynamic(
   () => import("@/components/hangs/HangButton").then((m) => ({ default: m.HangButton })),
+  { ssr: false },
+);
+const VenueHangStripLive = dynamic(
+  () => import("@/components/hangs/VenueHangStripLive").then((m) => ({ default: m.VenueHangStripLive })),
   { ssr: false },
 );
 
@@ -293,54 +299,45 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
     [exhibitions]
   );
 
-  // ── LOADING SKELETON ─────────────────────────────────────────────────
-  if (status === "loading") {
-    const skeletonTopBar = (
-      <div className="flex items-center px-4 lg:px-6 py-3">
-        <NeonBackButton onClose={onClose} floating={false} />
+  // ── LOADING SKELETON (rendered inside ContentSwap below) ─────────────
+  const skeletonTopBar = (
+    <div className="flex items-center px-4 lg:px-6 py-3">
+      <NeonBackButton onClose={onClose} floating={false} />
+    </div>
+  );
+  const skeletonSidebar = (
+    <div role="status" aria-label="Loading venue details">
+      <Skeleton className="aspect-video lg:aspect-[16/10] w-full" />
+      <div className="px-5 pt-4 pb-3 space-y-2">
+        <Skeleton className="h-5 w-28 rounded-full" delay="0.06s" />
+        <Skeleton className="h-7 w-[80%] rounded" delay="0.1s" />
+        <Skeleton className="h-4 w-[50%] rounded" delay="0.14s" />
       </div>
-    );
-    const skeletonSidebar = (
-      <div role="status" aria-label="Loading venue details">
-        <Skeleton className="aspect-video lg:aspect-[16/10] w-full" />
-        <div className="px-5 pt-4 pb-3 space-y-2">
-          <Skeleton className="h-5 w-28 rounded-full" delay="0.06s" />
-          <Skeleton className="h-7 w-[80%] rounded" delay="0.1s" />
-          <Skeleton className="h-4 w-[50%] rounded" delay="0.14s" />
-        </div>
-        <div className="mx-5 border-t border-[var(--twilight)]/40" />
-        <div className="px-3 py-2 grid grid-cols-4 gap-1">
-          <Skeleton className="h-10 rounded-lg" delay="0.18s" />
-          <Skeleton className="h-10 rounded-lg" delay="0.2s" />
-          <Skeleton className="h-10 rounded-lg" delay="0.22s" />
-          <Skeleton className="h-10 rounded-lg" delay="0.24s" />
-        </div>
-        <div className="mx-5 border-t border-[var(--twilight)]/40" />
-        <div className="px-5 py-3 space-y-2">
-          <Skeleton className="h-3 w-12 rounded" delay="0.26s" />
-          <Skeleton className="h-4 w-[70%] rounded" delay="0.28s" />
-          <Skeleton className="h-4 w-[60%] rounded" delay="0.3s" />
-        </div>
+      <div className="mx-5 border-t border-[var(--twilight)]/40" />
+      <div className="px-3 py-2 grid grid-cols-4 gap-1">
+        <Skeleton className="h-10 rounded-lg" delay="0.18s" />
+        <Skeleton className="h-10 rounded-lg" delay="0.2s" />
+        <Skeleton className="h-10 rounded-lg" delay="0.22s" />
+        <Skeleton className="h-10 rounded-lg" delay="0.24s" />
       </div>
-    );
-    const skeletonContent = (
-      <div className="p-4 lg:p-8 space-y-6">
-        <Skeleton className="h-3 w-32 rounded" delay="0.3s" />
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-full rounded-lg" delay="0.34s" />
-          <Skeleton className="h-10 w-full rounded-lg" delay="0.38s" />
-          <Skeleton className="h-10 w-full rounded-lg" delay="0.42s" />
-        </div>
+      <div className="mx-5 border-t border-[var(--twilight)]/40" />
+      <div className="px-5 py-3 space-y-2">
+        <Skeleton className="h-3 w-12 rounded" delay="0.26s" />
+        <Skeleton className="h-4 w-[70%] rounded" delay="0.28s" />
+        <Skeleton className="h-4 w-[60%] rounded" delay="0.3s" />
       </div>
-    );
-    return (
-      <DetailShell
-        topBar={skeletonTopBar}
-        sidebar={skeletonSidebar}
-        content={skeletonContent}
-      />
-    );
-  }
+    </div>
+  );
+  const skeletonContent = (
+    <div className="p-4 lg:p-8 space-y-6">
+      <Skeleton className="h-3 w-32 rounded" delay="0.3s" />
+      <div className="space-y-2">
+        <Skeleton className="h-10 w-full rounded-lg" delay="0.34s" />
+        <Skeleton className="h-10 w-full rounded-lg" delay="0.38s" />
+        <Skeleton className="h-10 w-full rounded-lg" delay="0.42s" />
+      </div>
+    </div>
+  );
 
   // ── ERROR STATE ──────────────────────────────────────────────────────
   if (error || !spot) {
@@ -564,6 +561,13 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
           className="flex-1 min-h-[36px]"
         />
       </div>
+
+      {/* Who's here — only renders when active hangs exist */}
+      {ENABLE_HANGS_V1 && (
+        <div className="px-5 pb-3">
+          <VenueHangStripLive venueId={spot.id} variant="compact" />
+        </div>
+      )}
     </div>
   );
 
@@ -974,12 +978,26 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
 
   return (
     <>
-      <DetailShell
-        topBar={topBar}
-        sidebar={sidebarContent}
-        content={contentZone}
-        bottomBar={bottomBar}
-      />
+      <ContentSwap
+        swapKey={spot ? "loaded" : "skeleton"}
+        error={error ? new Error(error) : null}
+        minHeight={500}
+      >
+        {spot ? (
+          <DetailShell
+            topBar={topBar}
+            sidebar={sidebarContent}
+            content={contentZone}
+            bottomBar={bottomBar}
+          />
+        ) : (
+          <DetailShell
+            topBar={skeletonTopBar}
+            sidebar={skeletonSidebar}
+            content={skeletonContent}
+          />
+        )}
+      </ContentSwap>
 
       {/* Modals */}
       {isDog && showTagModal && (
