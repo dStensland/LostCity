@@ -3442,6 +3442,11 @@ textarea:focus-visible {
   animation: skeleton-shimmer 1.5s linear infinite;
 }
 
+/* ContentSwap — initial state for fade-in entrance (opacity animated via Web Animations API) */
+.content-swap-enter {
+  opacity: 0;
+}
+
 /* ============================================
    ATLITTLE FAMILY PORTAL ANIMATIONS
    Playful, bouncy, hand-drawn energy
