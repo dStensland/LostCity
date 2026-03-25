@@ -124,6 +124,15 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
     if (sessionId) fetchSession(sessionId);
   }, [sessionId, fetchSession]);
 
+  const handleDeleteSession = useCallback(async (id: number) => {
+    await fetch(`/api/goblinday/sessions/${id}`, { method: "DELETE" });
+    setSessionsList((prev) => prev.filter((s) => s.id !== id));
+    if (sessionId === id) {
+      setSessionId(null);
+      setSessionData(null);
+    }
+  }, [sessionId]);
+
   const now = new Date().toISOString().slice(0, 10);
   const isReleased = (m: GoblinMovie) =>
     m.release_date ? m.release_date <= now : false;
@@ -390,6 +399,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
               <GoblinSessionHistory
                 sessions={sessionsList}
                 onStartSession={handleStartSession}
+                onDeleteSession={handleDeleteSession}
               />
             )}
 

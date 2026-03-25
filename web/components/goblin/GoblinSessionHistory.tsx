@@ -15,6 +15,7 @@ interface SessionSummary {
 interface Props {
   sessions: SessionSummary[];
   onStartSession: () => void;
+  onDeleteSession: (id: number) => void;
 }
 
 interface SessionDetail {
@@ -171,6 +172,7 @@ function SessionDetailView({ detail }: { detail: SessionDetail }) {
 export default function GoblinSessionHistory({
   sessions,
   onStartSession,
+  onDeleteSession,
 }: Props) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [detailCache, setDetailCache] = useState<Record<number, SessionDetail>>(
@@ -317,6 +319,17 @@ export default function GoblinSessionHistory({
                         </div>
                       )}
                       {detail && <SessionDetailView detail={detail} />}
+                      <div className="border-t border-zinc-800 px-4 py-3 flex justify-end">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteSession(session.id);
+                          }}
+                          className="text-2xs font-bold tracking-widest uppercase text-zinc-600 hover:text-red-500 transition-colors px-3 py-1.5 border border-zinc-800 hover:border-red-800 hover:bg-red-950/20"
+                        >
+                          DELETE SESSION
+                        </button>
+                      </div>
                     </>
                   )}
                 </div>

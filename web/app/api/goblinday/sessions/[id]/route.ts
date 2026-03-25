@@ -73,3 +73,20 @@ export async function PATCH(
 
   return NextResponse.json({ error: "Only ending sessions is supported" }, { status: 400 });
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  // CASCADE handles session_movies, themes, theme_movies, timeline
+  const { error } = await supabase
+    .from("goblin_sessions")
+    .delete()
+    .eq("id", parseInt(id));
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ deleted: true });
+}
