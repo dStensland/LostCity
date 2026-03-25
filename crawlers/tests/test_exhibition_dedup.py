@@ -53,3 +53,11 @@ def test_insert_exhibition_accepts_real_titles():
     ]
     for title in real_titles:
         assert not _JUNK_TITLE_RE.match(title), f"Real title {title!r} should not be blocked by junk filter"
+
+
+from db.exhibitions import find_exhibition_by_title_venue
+
+
+def test_find_exhibition_by_title_venue_exists():
+    """find_exhibition_by_title_venue should be importable and callable."""
+    assert callable(find_exhibition_by_title_venue)

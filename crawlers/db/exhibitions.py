@@ -66,6 +66,27 @@ def find_exhibition_by_hash(content_hash: str) -> Optional[dict]:
     return None
 
 
+def find_exhibition_by_title_venue(title: str, venue_id: int) -> Optional[dict]:
+    """Fallback dedup: find exhibition by normalized title + venue_id.
+
+    Used when hash-based lookup misses (e.g., same exhibition from different
+    sources with different opening_date values).
+    """
+    normalized = re.sub(r"\s+", " ", title.strip().lower())
+    client = get_client()
+    result = (
+        client.table("exhibitions")
+        .select("id, title, venue_id, opening_date, updated_at")
+        .eq("venue_id", venue_id)
+        .ilike("title", normalized)
+        .limit(1)
+        .execute()
+    )
+    if result.data:
+        return result.data[0]
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Insert
 # ---------------------------------------------------------------------------
@@ -108,11 +129,18 @@ def insert_exhibition(exhibition_data: dict, artists: Optional[list] = None) -> 
     opening_date = exhibition_data.get("opening_date")
     content_hash = generate_exhibition_hash(title, venue_id, opening_date)
 
-    # Dedup check
+    # Hash-based dedup (fast path)
     existing = find_exhibition_by_hash(content_hash)
     if existing:
-        logger.debug("Exhibition %r already exists (id=%s), updating", title, existing["id"])
-        update_exhibition(existing["id"], exhibition_data)
+        logger.debug("Exhibition %r already exists (hash match, id=%s), updating", title, existing["id"])
+        update_exhibition(existing["id"], exhibition_data, artists=artists)
+        return existing["id"]
+
+    # Title+venue fallback (catches cross-source duplicates with different dates)
+    existing = find_exhibition_by_title_venue(title, venue_id)
+    if existing:
+        logger.debug("Exhibition %r already exists (title+venue match, id=%s), updating", title, existing["id"])
+        update_exhibition(existing["id"], exhibition_data, artists=artists)
         return existing["id"]
 
     # Generate slug if not provided
@@ -210,7 +238,7 @@ def _upsert_exhibition_artists(exhibition_id: str, artists: list) -> None:
 # ---------------------------------------------------------------------------
 
 
-def update_exhibition(exhibition_id: str, updates: dict) -> None:
+def update_exhibition(exhibition_id: str, updates: dict, artists=None) -> None:
     """Update an existing exhibition by ID."""
     if not writes_enabled():
         _log_write_skip(f"update exhibitions id={exhibition_id}")
