@@ -57,8 +57,8 @@ function zalgoify(text: string): string {
   return text.split('').map(c => {
     if (c === ' ') return c;
     let out = c;
-    const numAbove = 4 + Math.floor(Math.random() * 5);
-    const numBelow = 3 + Math.floor(Math.random() * 4);
+    const numAbove = 8 + Math.floor(Math.random() * 10);
+    const numBelow = 6 + Math.floor(Math.random() * 8);
     for (let i = 0; i < numAbove; i++) out += pick(above);
     for (let i = 0; i < numBelow; i++) out += pick(below);
     return out;
