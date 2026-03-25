@@ -7,7 +7,7 @@ interface Props {
   initialMovies: GoblinMovie[];
 }
 
-type Tab = "next" | "contenders" | "watched";
+type Tab = "next" | "contenders" | "upcoming" | "watched";
 type SortKey = "date" | "critics" | "audience" | "alpha";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
@@ -72,13 +72,19 @@ export default function GoblinDayPage({ initialMovies }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("next");
   const [sortKey, setSortKey] = useState<SortKey>("date");
 
+  const now = new Date().toISOString().slice(0, 10);
+  const isReleased = (m: GoblinMovie) =>
+    m.release_date ? m.release_date <= now : false;
+
   const filteredMovies = sortMovies(
     movies.filter((m) => {
       switch (activeTab) {
         case "next":
           return m.proposed && !m.watched;
         case "contenders":
-          return !m.watched;
+          return !m.watched && isReleased(m);
+        case "upcoming":
+          return !m.watched && !isReleased(m);
         case "watched":
           return m.watched;
       }
@@ -88,7 +94,8 @@ export default function GoblinDayPage({ initialMovies }: Props) {
 
   const counts = {
     next: movies.filter((m) => m.proposed && !m.watched).length,
-    contenders: movies.filter((m) => !m.watched).length,
+    contenders: movies.filter((m) => !m.watched && isReleased(m)).length,
+    upcoming: movies.filter((m) => !m.watched && !isReleased(m)).length,
     watched: movies.filter((m) => m.watched).length,
   };
 
@@ -150,6 +157,7 @@ export default function GoblinDayPage({ initialMovies }: Props) {
           [
             { key: "next", label: "Next Goblin Day" },
             { key: "contenders", label: "Contenders" },
+            { key: "upcoming", label: "Upcoming" },
             { key: "watched", label: "Watched" },
           ] as const
         ).map(({ key, label }) => (
@@ -162,7 +170,9 @@ export default function GoblinDayPage({ initialMovies }: Props) {
                   ? "bg-orange-600 text-white"
                   : key === "watched"
                     ? "bg-emerald-700 text-white"
-                    : "bg-zinc-700 text-white"
+                    : key === "upcoming"
+                      ? "bg-violet-700 text-white"
+                      : "bg-zinc-700 text-white"
                 : "bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700"
             }`}
           >
@@ -211,7 +221,9 @@ export default function GoblinDayPage({ initialMovies }: Props) {
               ? "No movies proposed yet. Go to Contenders and propose some!"
               : activeTab === "watched"
                 ? "Haven't watched anything yet. Get to it, goblins!"
-                : "No contenders. Run the seed script!"}
+                : activeTab === "upcoming"
+                  ? "No upcoming movies. Everything's already out!"
+                  : "No contenders. Run the seed script!"}
           </p>
         )}
       </main>
