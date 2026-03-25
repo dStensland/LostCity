@@ -375,22 +375,50 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
       {/* Content */}
       <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6 pb-16 relative z-10">
         {activeTab === "next" ? (
-          // Session view
-          sessionId && sessionData ? (
-            <GoblinSessionView
-              session={sessionData}
-              proposedMovies={movies
-                .filter((m) => m.proposed && !m.watched)
-                .map((m) => ({ id: m.id, title: m.title, poster_path: m.poster_path }))}
-              onRefresh={handleSessionRefresh}
-              onEndSession={handleEndSession}
-            />
-          ) : (
-            <GoblinSessionHistory
-              sessions={sessionsList}
-              onStartSession={handleStartSession}
-            />
-          )
+          // Session view + proposed movies
+          <>
+            {sessionId && sessionData ? (
+              <GoblinSessionView
+                session={sessionData}
+                proposedMovies={movies
+                  .filter((m) => m.proposed && !m.watched)
+                  .map((m) => ({ id: m.id, title: m.title, poster_path: m.poster_path }))}
+                onRefresh={handleSessionRefresh}
+                onEndSession={handleEndSession}
+              />
+            ) : (
+              <GoblinSessionHistory
+                sessions={sessionsList}
+                onStartSession={handleStartSession}
+              />
+            )}
+
+            {/* Proposed movies grid */}
+            {filteredMovies.length > 0 && (
+              <>
+                <div className="border-t-2 border-zinc-800 mt-8 pt-6 mb-4">
+                  <h2 className="text-xs font-bold tracking-[0.2em] uppercase text-red-500">
+                    PROPOSED FOR NEXT GOBLIN DAY [{filteredMovies.length}]
+                  </h2>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  {filteredMovies.map((movie) => (
+                    <GoblinMovieCard
+                      key={movie.id}
+                      movie={movie}
+                      onToggle={handleToggle}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {filteredMovies.length === 0 && !sessionId && (
+              <p className="text-center text-zinc-600 py-10 text-sm tracking-widest uppercase">
+                // NO PROPOSALS YET — GO TO CONTENDERS AND PROPOSE SOME
+              </p>
+            )}
+          </>
         ) : (
           // Movie grid for contenders/upcoming/watched
           <>
