@@ -4,16 +4,18 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Goblin Day — Horror Movie Tracker",
-  description: "Horror movies. Basset hounds. Pizza. Track what to watch, propose picks, run live Goblin Day sessions with themes.",
+  description: "Click the link you fool",
   openGraph: {
     title: "GOBLIN DAY",
-    description: "Horror movies. Basset hounds. Pizza. Scary vibes.",
+    description: "Click the link you fool",
     type: "website",
+    images: [{ url: "/goblin-day/og-image.jpg", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "GOBLIN DAY",
-    description: "Horror movies. Basset hounds. Pizza. Scary vibes.",
+    description: "Click the link you fool",
+    images: ["/goblin-day/og-image.jpg"],
   },
 };
 
