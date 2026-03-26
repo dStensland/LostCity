@@ -147,10 +147,12 @@ export function useGoblinUser(): GoblinUserState & GoblinUserActions {
 
   const signIn = useCallback(async () => {
     const supabase = createClient();
+    // Pass current path so the callback redirects back here after auth
+    const currentPath = window.location.pathname + window.location.search;
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(currentPath)}`,
       },
     });
   }, []);
