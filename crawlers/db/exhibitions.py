@@ -17,6 +17,7 @@ from db.client import (
     writes_enabled,
     _log_write_skip,
 )
+from medium_inference import infer_exhibition_medium
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +131,14 @@ def insert_exhibition(exhibition_data: dict, artists: Optional[list] = None) -> 
     if source_url and _CDN_URL_RE.search(source_url):
         logger.debug("Skipping exhibition %r — source_url is a CDN image URL: %s", title, source_url[:80])
         return None
+
+    # Infer medium from title/description if not already set
+    if not exhibition_data.get("medium"):
+        description = exhibition_data.get("description", "")
+        inferred = infer_exhibition_medium(title, description)
+        if inferred:
+            exhibition_data["medium"] = inferred
+            logger.debug("Inferred medium=%s for %r", inferred, title)
 
     venue_id = exhibition_data.get("venue_id")
     if not venue_id:
