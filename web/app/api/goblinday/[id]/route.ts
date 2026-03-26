@@ -4,8 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 const MUTABLE_FIELDS = new Set([
-  "watched",
-  "proposed",
   "rt_critics_score",
   "rt_audience_score",
   "streaming_info",
