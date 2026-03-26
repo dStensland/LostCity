@@ -423,22 +423,43 @@ export default function LineupSection({
     return evts;
   }, [tabDateEvents, activeChipId, unionMatcher]);
 
-  // Split events into standard (TieredEventList) vs recurring (RecurringStrip)
+  // Fetch tonight's recurring events for RecurringStrip (separate data source from city-pulse)
+  const [regularsData, setRegularsData] = useState<CityPulseEventItem[]>([]);
+  useEffect(() => {
+    if (!ENABLE_LINEUP_RECURRING) return;
+    const controller = new AbortController();
+    fetch(`/api/regulars?portal=${portalSlug}`, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        const items: CityPulseEventItem[] = ((data.events || []) as FeedEventData[])
+          .filter((event: FeedEventData) => {
+            // Only include events that match a scene activity type (trivia, karaoke, comedy, etc.)
+            // Exclude volunteer shifts, community meetings, etc. that don't have a scene type
+            return isSceneEvent(event as Parameters<typeof isSceneEvent>[0]);
+          })
+          .slice(0, 20)
+          .map((event: FeedEventData) => ({
+            item_type: "event" as const,
+            event: {
+              ...event,
+              is_recurring: true,
+              recurrence_label: (event as Record<string, unknown>).recurrence_label as string | undefined,
+            },
+          }));
+        setRegularsData(items);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [portalSlug]);
+
+  // Split: standard events from city-pulse + recurring from regulars fetch
   const { standardEvents, recurringEvents } = useMemo(() => {
     if (!ENABLE_LINEUP_RECURRING) {
-      return { standardEvents: events, recurringEvents: [] as typeof events };
+      return { standardEvents: events, recurringEvents: [] as CityPulseEventItem[] };
     }
-    const standard: typeof events = [];
-    const recurring: typeof events = [];
-    for (const e of events) {
-      if (e.event.activity_type) {
-        recurring.push(e);
-      } else {
-        standard.push(e);
-      }
-    }
-    return { standardEvents: standard, recurringEvents: recurring };
-  }, [events]);
+    return { standardEvents: events, recurringEvents: regularsData };
+  }, [events, regularsData]);
 
   // Merged category counts: initial response + lazy-loaded tab overrides
   // Date tab counts — show TOTAL lineup depth per tab (not filtered by interests).
