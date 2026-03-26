@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import GoblinDayPage from "@/components/goblin/GoblinDayPage";
 import type { Metadata } from "next";
@@ -37,9 +38,11 @@ export default async function Page() {
     .maybeSingle();
 
   return (
-    <GoblinDayPage
-      initialMovies={movies ?? []}
-      activeSessionId={(activeSession as { id: number } | null)?.id ?? null}
-    />
+    <Suspense>
+      <GoblinDayPage
+        initialMovies={movies ?? []}
+        activeSessionId={(activeSession as { id: number } | null)?.id ?? null}
+      />
+    </Suspense>
   );
 }

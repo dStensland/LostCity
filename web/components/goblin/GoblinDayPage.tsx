@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import GoblinMovieCard, { type GoblinMovie } from "./GoblinMovieCard";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
+import GoblinMovieCard, { type GoblinMovie, normalizeStreaming } from "./GoblinMovieCard";
 import GoblinSessionView from "./GoblinSessionView";
 import GoblinSessionHistory from "./GoblinSessionHistory";
 
@@ -11,11 +12,33 @@ interface Props {
 }
 
 type Tab = "next" | "contenders" | "upcoming" | "watched";
-type SortKey = "date" | "critics" | "audience" | "alpha";
+type SortKey = "date" | "critics" | "audience" | "tmdb" | "alpha";
+type GenreFilter = string | null;
+type SubgenreFilter = string | null;
+type TheaterFilter = boolean;
+
+// Keyword-based horror sub-genres — curated from high-frequency keywords
+const SUBGENRE_KEYWORDS: { label: string; match: string[] }[] = [
+  { label: "Found Footage", match: ["found footage"] },
+  { label: "Slasher", match: ["slasher"] },
+  { label: "Supernatural", match: ["supernatural horror", "supernatural"] },
+  { label: "Body Horror", match: ["body horror"] },
+  { label: "Folk Horror", match: ["folk horror"] },
+  { label: "Zombie", match: ["zombie"] },
+  { label: "Possession", match: ["demonic possession", "possession"] },
+  { label: "Haunted House", match: ["haunted house", "haunted"] },
+  { label: "Survival", match: ["survival horror", "survival"] },
+  { label: "Psychological", match: ["psychological horror", "psychological thriller", "psychological"] },
+  { label: "Dark Comedy", match: ["dark comedy", "comedy horror"] },
+  { label: "Gore", match: ["gore"] },
+  { label: "Serial Killer", match: ["serial killer"] },
+  { label: "Based On", match: ["based on novel or book", "based on video game", "based on short story", "remake"] },
+];
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "critics", label: "CRITICS" },
   { key: "audience", label: "AUDIENCE" },
+  { key: "tmdb", label: "TMDB" },
   { key: "date", label: "DATE" },
   { key: "alpha", label: "A-Z" },
 ];
@@ -27,6 +50,8 @@ function sortMovies(movies: GoblinMovie[], sortKey: SortKey): GoblinMovie[] {
         return (b.rt_critics_score ?? -1) - (a.rt_critics_score ?? -1);
       case "audience":
         return (b.rt_audience_score ?? -1) - (a.rt_audience_score ?? -1);
+      case "tmdb":
+        return (b.tmdb_vote_average ?? -1) - (a.tmdb_vote_average ?? -1);
       case "alpha":
         return a.title.localeCompare(b.title);
       case "date":
@@ -54,10 +79,69 @@ const MARQUEE_IMAGES = [
 
 const ZALGO_TEXT = "G\u0336\u0322\u0327\u0321\u030e\u0351\u034b\u0352\u0314\u0310\u0301\u030a\u0306\u0300\u030d\u031c\u031f\u0329\u0347\u0320\u031e\u0345\u032eO\u0334\u0321\u0328\u031c\u0326\u0324\u031f\u0356\u032c\u032b\u0323\u0349\u034e\u0353\u0339\u0316\u0355\u0330\u031d\u032f\u0354\u0301\u030c\u0313\u0307\u0302\u030a\u0363\u0310\u0351\u030e\u034a\u0311\u0357\u0300\u0303\u036b\u036aB\u0337\u0321\u0329\u0326\u031e\u032c\u0339\u034d\u0345\u031f\u0320\u032a\u032e\u0348\u0316\u031c\u0353\u0332\u0347\u0354\u0301\u0303\u0304\u0312\u030c\u0307\u030d\u030f\u0302\u0315\u0308\u036f\u035b\u0352\u034a\u034c\u036d\u0305\u0363\u036eL\u0334\u0321\u031d\u031c\u031e\u0329\u032a\u0339\u034e\u0316\u0356\u0345\u032f\u031f\u032b\u034d\u0353\u0355\u033b\u0332\u030b\u030f\u0312\u030d\u0303\u0311\u0351\u0306\u0300\u036c\u034b\u034a\u0310\u0357\u0363\u0365I\u0336\u0321\u0331\u032c\u0329\u031e\u0347\u031f\u034e\u032a\u0345\u032b\u034d\u0339\u033b\u033c\u032f\u0301\u030c\u0302\u0300\u0305\u0307\u030a\u0352\u036a\u036b\u0313\u034c\u0351\u0311N\u0334\u0328\u031c\u031e\u0320\u032c\u0324\u034e\u0349\u0339\u034d\u0356\u0316\u033c\u032f\u032a\u031d\u0345\u0300\u0303\u030d\u0312\u0352\u030e\u036f\u036b\u034a\u035b\u0306\u0310\u0315\u0363 D\u0336\u0323\u034d\u0316\u032f\u032b\u031d\u034e\u0356\u032a\u031e\u031f\u0339\u031c\u0349\u0347\u032c\u0345\u0355\u033b\u0332\u0305\u0311\u0301\u030c\u0307\u0300\u030a\u034b\u034a\u036c\u0357\u0352\u0350\u0314\u0351\u0363\u036fA\u0336\u0329\u032a\u031e\u032c\u0331\u031f\u032f\u034e\u032b\u031d\u034d\u031c\u0320\u0339\u0347\u0345\u0316\u0353\u030d\u030c\u0300\u0305\u0307\u0303\u030a\u030f\u0315\u034b\u036e\u0312\u035b\u034a\u0306\u0357\u036b\u034c\u0314\u0310\u0363Y\u0337\u032a\u0339\u034e\u0349\u0316\u0323\u031e\u0356\u032b\u034d\u031d\u031c\u031f\u032f\u0347\u0345\u0354\u0332\u033c\u0301\u0300\u0303\u030d\u0312\u0305\u0311\u030c\u030f\u030a\u0306\u0352\u034a\u034b\u0363\u036e\u0357\u0310\u036b\u0351\u036f\u035b";
 
+const VALID_TABS: Tab[] = ["next", "contenders", "upcoming", "watched"];
+const VALID_SORTS: SortKey[] = ["date", "critics", "audience", "tmdb", "alpha"];
+
+function updateURL(params: Record<string, string | null>) {
+  const url = new URL(window.location.href);
+  for (const [key, value] of Object.entries(params)) {
+    if (value) url.searchParams.set(key, value);
+    else url.searchParams.delete(key);
+  }
+  window.history.replaceState({}, "", url.toString());
+}
+
 export default function GoblinDayPage({ initialMovies, activeSessionId }: Props) {
+  const searchParams = useSearchParams();
+
+  // Initialize state from URL params
+  const initialTab = useMemo(() => {
+    const t = searchParams.get("tab") as Tab | null;
+    return t && VALID_TABS.includes(t) ? t : "next";
+  }, [searchParams]);
+
+  const initialSort = useMemo(() => {
+    const s = searchParams.get("sort") as SortKey | null;
+    return s && VALID_SORTS.includes(s) ? s : "critics";
+  }, [searchParams]);
+
   const [movies, setMovies] = useState(initialMovies);
-  const [activeTab, setActiveTab] = useState<Tab>("next");
-  const [sortKey, setSortKey] = useState<SortKey>("critics");
+  const [activeTab, setActiveTabState] = useState<Tab>(initialTab);
+  const [sortKey, setSortKeyState] = useState<SortKey>(initialSort);
+  const [genreFilter, setGenreFilterState] = useState<GenreFilter>(searchParams.get("genre") || null);
+  const [subgenreFilter, setSubgenreFilterState] = useState<SubgenreFilter>(searchParams.get("subgenre") || null);
+  const [theaterFilter, setTheaterFilterState] = useState<TheaterFilter>(searchParams.get("theaters") === "1");
+
+  // Wrapped setters that sync to URL
+  const setActiveTab = useCallback((tab: Tab) => {
+    setActiveTabState(tab);
+    updateURL({ tab: tab === "next" ? null : tab, sort: null, genre: null, subgenre: null, theaters: null });
+    // Reset filters when switching tabs
+    setGenreFilterState(null);
+    setSubgenreFilterState(null);
+    setTheaterFilterState(false);
+    setSortKeyState("critics");
+  }, []);
+
+  const setSortKey = useCallback((key: SortKey) => {
+    setSortKeyState(key);
+    updateURL({ sort: key === "critics" ? null : key });
+  }, []);
+
+  const setGenreFilter = useCallback((genre: GenreFilter) => {
+    setGenreFilterState(genre);
+    updateURL({ genre });
+  }, []);
+
+  const setSubgenreFilter = useCallback((sg: SubgenreFilter) => {
+    setSubgenreFilterState(sg);
+    updateURL({ subgenre: sg });
+  }, []);
+
+  const setTheaterFilter = useCallback((on: TheaterFilter) => {
+    setTheaterFilterState(on);
+    updateURL({ theaters: on ? "1" : null });
+  }, []);
 
   // Session state
   const [sessionId, setSessionId] = useState<number | null>(activeSessionId);
@@ -137,13 +221,53 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
   const isReleased = (m: GoblinMovie) =>
     m.release_date ? m.release_date <= now : false;
 
+  // Build genre list from contenders for filter chips
+  const contenderMovies = movies.filter((m) => !m.watched && isReleased(m));
+  const genreCounts = new Map<string, number>();
+  for (const m of contenderMovies) {
+    for (const g of m.genres ?? []) {
+      genreCounts.set(g, (genreCounts.get(g) ?? 0) + 1);
+    }
+  }
+  // Sort genres by count descending, exclude "Horror" (everything is horror)
+  const availableGenres = [...genreCounts.entries()]
+    .filter(([g]) => g !== "Horror")
+    .sort((a, b) => b[1] - a[1])
+    .map(([g, count]) => ({ genre: g, count }));
+
+  // Build sub-genre counts from keywords
+  const movieMatchesSubgenre = (m: GoblinMovie, matchKeywords: string[]) =>
+    (m.keywords ?? []).some((kw) =>
+      matchKeywords.some((mk) => kw.toLowerCase().includes(mk))
+    );
+
+  const availableSubgenres = SUBGENRE_KEYWORDS
+    .map(({ label, match }) => ({
+      label,
+      match,
+      count: contenderMovies.filter((m) => movieMatchesSubgenre(m, match)).length,
+    }))
+    .filter(({ count }) => count > 0);
+
+  const theatersCount = contenderMovies.filter(
+    (m) => normalizeStreaming(m.streaming_info).theaters
+  ).length;
+
   const filteredMovies = sortMovies(
     movies.filter((m) => {
       switch (activeTab) {
         case "next":
           return m.proposed && !m.watched;
-        case "contenders":
-          return !m.watched && isReleased(m);
+        case "contenders": {
+          if (m.watched || !isReleased(m)) return false;
+          if (genreFilter && !(m.genres ?? []).includes(genreFilter)) return false;
+          if (subgenreFilter) {
+            const sg = availableSubgenres.find((s) => s.label === subgenreFilter);
+            if (sg && !movieMatchesSubgenre(m, sg.match)) return false;
+          }
+          if (theaterFilter && !normalizeStreaming(m.streaming_info).theaters) return false;
+          return true;
+        }
         case "upcoming":
           return !m.watched && !isReleased(m);
         case "watched":
@@ -365,21 +489,78 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
 
       {/* Sort Bar (contenders only) */}
       {activeTab === "contenders" && (
-        <div className="flex justify-center gap-0 border-b border-zinc-800 relative z-10 bg-black/90">
-          {SORT_OPTIONS.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setSortKey(key)}
-              className={`px-4 py-2 text-2xs font-bold tracking-[0.2em] uppercase transition-all ${
-                sortKey === key
-                  ? "bg-red-950/30 text-red-500 border-b-2 border-red-500 shadow-[0_2px_8px_rgba(185,28,28,0.2)]"
-                  : "bg-black text-zinc-600 hover:text-red-400/50 hover:bg-red-950/10"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="flex justify-center gap-0 border-b border-zinc-800 relative z-10 bg-black/90">
+            {SORT_OPTIONS.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setSortKey(key)}
+                className={`px-4 py-2 text-2xs font-bold tracking-[0.2em] uppercase transition-all ${
+                  sortKey === key
+                    ? "bg-red-950/30 text-red-500 border-b-2 border-red-500 shadow-[0_2px_8px_rgba(185,28,28,0.2)]"
+                    : "bg-black text-zinc-600 hover:text-red-400/50 hover:bg-red-950/10"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {/* Filter chips — row 1: theaters + genres */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide px-3 pt-2 pb-1 relative z-10 bg-black/90">
+            {/* In Theaters */}
+            {theatersCount > 0 && (
+              <button
+                onClick={() => setTheaterFilter(!theaterFilter)}
+                className={`flex-shrink-0 px-2.5 py-1 text-2xs font-bold tracking-[0.15em] uppercase transition-all border ${
+                  theaterFilter
+                    ? "bg-red-900/60 text-red-300 border-red-600 shadow-[0_0_8px_rgba(185,28,28,0.3)]"
+                    : "bg-zinc-950 text-zinc-500 border-zinc-800 hover:text-red-400/60 hover:border-red-900/40"
+                }`}
+              >
+                IN THEATERS [{theatersCount}]
+              </button>
+            )}
+            {/* Genre filters */}
+            {availableGenres.map(({ genre, count }) => (
+              <button
+                key={genre}
+                onClick={() => setGenreFilter(genreFilter === genre ? null : genre)}
+                className={`flex-shrink-0 px-2.5 py-1 text-2xs font-bold tracking-[0.15em] uppercase transition-all border ${
+                  genreFilter === genre
+                    ? "bg-violet-900/50 text-violet-300 border-violet-600 shadow-[0_0_8px_rgba(139,92,246,0.2)]"
+                    : "bg-zinc-950 text-zinc-500 border-zinc-800 hover:text-violet-400/60 hover:border-violet-900/40"
+                }`}
+              >
+                {genre} [{count}]
+              </button>
+            ))}
+          </div>
+          {/* Filter chips — row 2: keyword sub-genres */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide px-3 pb-2 pt-0.5 border-b border-zinc-800/50 relative z-10 bg-black/90">
+            {availableSubgenres.map(({ label, count }) => (
+              <button
+                key={label}
+                onClick={() => setSubgenreFilter(subgenreFilter === label ? null : label)}
+                className={`flex-shrink-0 px-2.5 py-1 text-2xs font-bold tracking-[0.15em] uppercase transition-all border ${
+                  subgenreFilter === label
+                    ? "bg-orange-900/50 text-orange-300 border-orange-600 shadow-[0_0_8px_rgba(234,88,12,0.2)]"
+                    : "bg-zinc-950 text-zinc-600 border-zinc-800/60 hover:text-orange-400/60 hover:border-orange-900/40"
+                }`}
+              >
+                {label} [{count}]
+              </button>
+            ))}
+            {/* Clear all filters */}
+            {(genreFilter || subgenreFilter || theaterFilter) && (
+              <button
+                onClick={() => { setGenreFilter(null); setSubgenreFilter(null); setTheaterFilter(false); }}
+                className="flex-shrink-0 px-2.5 py-1 text-2xs font-bold tracking-[0.15em] uppercase text-zinc-600 hover:text-white transition-all"
+              >
+                CLEAR
+              </button>
+            )}
+          </div>
+        </>
       )}
 
       {/* Content */}
