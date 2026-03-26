@@ -436,15 +436,8 @@ export default function LineupSection({
         const items: CityPulseEventItem[] = ((data.events || []) as FeedEventData[])
           .filter((event: FeedEventData) => {
             // Only include events that match a scene activity type (trivia, karaoke, comedy, etc.)
-            // Can't use isSceneEvent() here — regulars API events lack series_id.
-            // matchActivityType checks genres/tags/title directly.
-            const ev = event as Record<string, unknown>;
-            return matchActivityType({
-              genres: ev.genres as string[] | null,
-              tags: ev.tags as string[] | null,
-              category: (ev.category ?? ev.category_id ?? "") as string,
-              title: (ev.title ?? "") as string,
-            } as Parameters<typeof matchActivityType>[0]) !== null;
+            // Can't use isSceneEvent() — regulars API events lack series_id.
+            return matchActivityType(event as unknown as Parameters<typeof matchActivityType>[0]) !== null;
           })
           .slice(0, 20)
           .map((event: FeedEventData) => ({
