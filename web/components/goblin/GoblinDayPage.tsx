@@ -206,6 +206,10 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
   }, [activeTab, activeSession, fetchSession, fetchSessionsList]);
 
   const handleStartSession = useCallback(async () => {
+    if (!goblinUser.user) {
+      goblinUser.signIn();
+      return;
+    }
     const res = await fetch("/api/goblinday/sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -219,8 +223,10 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
         invite_code: data.invite_code ?? "",
       });
       fetchSession(data.id);
+    } else if (res.status === 401) {
+      goblinUser.signIn();
     }
-  }, [fetchSession]);
+  }, [fetchSession, goblinUser]);
 
   const handleStartLive = useCallback(async () => {
     if (!activeSession) return;
