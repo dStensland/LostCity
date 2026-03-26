@@ -285,9 +285,8 @@ export function buildTabEventPool(
   _signals: UserSignals | null,
   friendsGoingMap: Record<number, FriendGoingInfo[]>,
 ): CityPulseSection {
-  // Exclude Regular Hangs events — they belong in The Scene, not the Lineup
-  const nonScene = events.filter((e) => !isSceneEvent(e));
-  const deduped = deduplicateSeries(nonScene);
+  // Scene events now flow through tagged with activity_type — RecurringStrip renders them compactly.
+  const deduped = deduplicateSeries(events);
 
   const items: CityPulseItem[] = deduped.map((event) => {
     const seriesId = (event as Record<string, unknown>).series_id as number | null;
@@ -728,12 +727,11 @@ export function buildThisWeekSection(
   friendsGoingMap: Record<number, FriendGoingInfo[]>,
 ): CityPulseSection | null {
   // Always build — the THIS WEEK tab needs data every day
-  // Exclude Regular Hangs — they belong in The Scene section
-  const nonScene = weekEvents.filter((e) => !isSceneEvent(e));
-  if (nonScene.length < 2) return null;
+  // Scene events now flow through tagged with activity_type.
+  if (weekEvents.length < 2) return null;
 
   // Distribute across days so one busy day doesn't dominate, cap total
-  const distributed = distributeByDate(nonScene, 25);
+  const distributed = distributeByDate(weekEvents, 25);
   const scored = scoreAndSort(distributed, signals, friendsGoingMap).slice(0, 30);
   const items: CityPulseItem[] = scored.map((e) =>
     makeEventItem(e, {
@@ -749,11 +747,11 @@ export function buildThisWeekSection(
     id: "this-week",
     type: "this_week",
     title: "This Week",
-    subtitle: `${nonScene.length} event${nonScene.length !== 1 ? "s" : ""} through Friday`,
+    subtitle: `${weekEvents.length} event${weekEvents.length !== 1 ? "s" : ""} through Friday`,
     priority: "secondary",
     accent_color: "var(--neon-cyan)",
     items,
-    meta: { total_this_week: nonScene.length },
+    meta: { total_this_week: weekEvents.length },
   };
 }
 
@@ -768,11 +766,10 @@ export function buildThisWeekendSection(
   friendsGoingMap: Record<number, FriendGoingInfo[]>,
 ): CityPulseSection | null {
   // Always build — feeds into the THIS WEEK tab alongside this_week
-  // Exclude Regular Hangs — they belong in The Scene section
-  const nonScene = weekendEvents.filter((e) => !isSceneEvent(e));
-  if (nonScene.length < 2) return null;
+  // Scene events now flow through tagged with activity_type.
+  if (weekendEvents.length < 2) return null;
 
-  const distributed = distributeByDate(nonScene, 25);
+  const distributed = distributeByDate(weekendEvents, 25);
   const scored = scoreAndSort(distributed, signals, friendsGoingMap);
   const items: CityPulseItem[] = scored.map((e) =>
     makeEventItem(e, {
@@ -912,12 +909,11 @@ export function buildComingUpSection(
   signals: UserSignals | null,
   friendsGoingMap: Record<number, FriendGoingInfo[]>,
 ): CityPulseSection | null {
-  // Exclude Regular Hangs — they belong in The Scene section
-  const nonScene = events.filter((e) => !isSceneEvent(e));
-  if (nonScene.length === 0) return null;
+  // Scene events now flow through tagged with activity_type.
+  if (events.length === 0) return null;
 
   // Distribute across days so one busy weekend doesn't dominate, cap total
-  const distributed = distributeByDate(nonScene, 15);
+  const distributed = distributeByDate(events, 15);
   const scored = scoreAndSort(distributed, signals, friendsGoingMap).slice(0, 25);
   const items: CityPulseItem[] = scored.map((e) =>
     makeEventItem(e, {
