@@ -437,23 +437,7 @@ export default function LineupSection({
         const filtered = allEvents.filter((event: FeedEventData) => {
           return matchActivityType(event as unknown as Parameters<typeof matchActivityType>[0]) !== null;
         });
-        // Sort nightlife events first (evening/late-night), then by start_time desc
-        // so the strip shows trivia/karaoke/comedy before morning book clubs
-        const NIGHTLIFE_TYPES = new Set([
-          "trivia", "karaoke", "comedy", "dj", "drag", "poker",
-          "open_mic", "happy_hour", "live_music", "jazz_blues",
-          "bingo", "spoken_word", "vinyl_night",
-        ]);
-        filtered.sort((a, b) => {
-          const aType = matchActivityType(a as unknown as Parameters<typeof matchActivityType>[0]);
-          const bType = matchActivityType(b as unknown as Parameters<typeof matchActivityType>[0]);
-          const aNight = NIGHTLIFE_TYPES.has(aType ?? "") ? 0 : 1;
-          const bNight = NIGHTLIFE_TYPES.has(bType ?? "") ? 0 : 1;
-          if (aNight !== bNight) return aNight - bNight;
-          const aTime = (a as Record<string, unknown>).start_time as string ?? "00:00";
-          const bTime = (b as Record<string, unknown>).start_time as string ?? "00:00";
-          return bTime.localeCompare(aTime);
-        });
+        // No hidden sort — show in chronological order from the API
         const items: CityPulseEventItem[] = filtered
           .slice(0, 20)
           .map((event: FeedEventData) => ({

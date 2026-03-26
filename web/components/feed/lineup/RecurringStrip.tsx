@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react";
 import Dot from "@/components/ui/Dot";
@@ -14,12 +14,6 @@ for (const a of SCENE_ACTIVITY_TYPES) {
   ACTIVITY_COLORS[a.id] = a.color;
 }
 
-/** Nightlife-oriented activity types float to top of the strip. */
-const NIGHTLIFE_PRIORITY = new Set([
-  "trivia", "karaoke", "comedy", "dj", "drag", "poker",
-  "open_mic", "happy_hour", "live_music", "jazz_blues",
-  "bingo", "spoken_word", "vinyl_night",
-]);
 
 interface RecurringStripProps {
   events: CityPulseEventItem[];
@@ -31,22 +25,8 @@ interface RecurringStripProps {
 export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStripProps) {
   const [expanded, setExpanded] = useState(false);
 
-  // Sort: nightlife scene events first, then daytime/recreation, then by start_time
-  const sorted = useMemo(() => {
-    return [...events].sort((a, b) => {
-      const aType = a.event.activity_type
-        ?? matchActivityType(a.event as Parameters<typeof matchActivityType>[0]);
-      const bType = b.event.activity_type
-        ?? matchActivityType(b.event as Parameters<typeof matchActivityType>[0]);
-      const aNight = NIGHTLIFE_PRIORITY.has(aType ?? "") ? 0 : 1;
-      const bNight = NIGHTLIFE_PRIORITY.has(bType ?? "") ? 0 : 1;
-      if (aNight !== bNight) return aNight - bNight;
-      // Within same priority, sort by start_time (evening first)
-      const aTime = a.event.start_time ?? "00:00";
-      const bTime = b.event.start_time ?? "00:00";
-      return bTime.localeCompare(aTime);
-    });
-  }, [events]);
+  // No hidden sort — use the order from the API (chronological by start_time)
+  const sorted = events;
 
   if (sorted.length === 0) return null;
 
@@ -82,7 +62,7 @@ export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStrip
             <Link
               key={item.event.id}
               href={`/${portalSlug}?event=${item.event.id}`}
-              className="flex items-center gap-2.5 py-1.5 px-2 -mx-2 rounded-lg hover:bg-[var(--dusk)]/40 transition-colors group"
+              className="flex items-center gap-2.5 py-1.5 px-2 -mx-2 hover:bg-[var(--dusk)]/40 transition-colors group"
             >
               <span
                 className="w-2 h-2 rounded-full flex-shrink-0"
