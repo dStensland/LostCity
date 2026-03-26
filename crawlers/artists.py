@@ -109,8 +109,14 @@ def validate_artist_name(name: str) -> bool:
 def get_or_create_artist(
     name: str,
     discipline: str = "musician",
+    extra_fields: dict | None = None,
 ) -> dict:
     """Find artist by slug or create a new record.
+
+    extra_fields: optional dict merged into insert payload (e.g., bio, image_url, website).
+    On the "get" path: updates null fields with extra_fields values (backfill-safe).
+    Discipline collision: if existing record has discipline='musician' and caller
+    passes 'visual_artist', overwrites — resolves slug collisions from event pipeline.
 
     Returns the full artist row dict (id, name, slug, ...).
     """
@@ -128,7 +134,29 @@ def get_or_create_artist(
     # Try to find existing
     result = client.table("artists").select("*").eq("slug", slug).execute()
     if result.data:
-        return result.data[0]
+        artist = result.data[0]
+        updates: dict = {}
+
+        # Discipline collision: musician → visual_artist upgrade
+        if (
+            artist.get("discipline") == "musician"
+            and discipline == "visual_artist"
+        ):
+            updates["discipline"] = "visual_artist"
+
+        # Backfill null fields from extra_fields
+        if extra_fields:
+            for key, value in extra_fields.items():
+                if value and not artist.get(key):
+                    updates[key] = value
+
+        if updates:
+            from datetime import datetime, timezone
+            updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+            client.table("artists").update(updates).eq("id", artist["id"]).execute()
+            artist.update(updates)
+
+        return artist
 
     # Create new
     payload = {
@@ -136,6 +164,11 @@ def get_or_create_artist(
         "slug": slug,
         "discipline": discipline,
     }
+    if extra_fields:
+        for key, value in extra_fields.items():
+            if value:
+                payload[key] = value
+
     result = client.table("artists").insert(payload).execute()
     return result.data[0]
 

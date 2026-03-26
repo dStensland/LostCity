@@ -54,3 +54,14 @@ class TestAcceptValid:
         """Multi-word all-caps names are OK (some galleries format names this way)."""
         assert validate_artist_name("KARA WALKER")
         assert validate_artist_name("JEAN SHON")
+
+
+class TestExtraFieldsSignature:
+    """Verify get_or_create_artist accepts extra_fields parameter."""
+
+    def test_extra_fields_param_exists(self):
+        import inspect
+        from artists import get_or_create_artist
+        sig = inspect.signature(get_or_create_artist)
+        assert "extra_fields" in sig.parameters
+        assert sig.parameters["extra_fields"].default is None
