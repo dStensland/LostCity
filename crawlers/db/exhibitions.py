@@ -31,6 +31,12 @@ _JUNK_TITLE_RE = re.compile(
     re.IGNORECASE,
 )
 
+_CDN_URL_RE = re.compile(
+    r"https?://[^/]*\.(cloudinary\.com|s3\.amazonaws\.com|imgix\.net|cloudfront\.net)/"
+    r"|https?://[^/]*/wp-content/uploads/",
+    re.IGNORECASE,
+)
+
 
 def _generate_exhibition_slug(venue_name: str, title: str) -> str:
     """Generate a URL-safe slug: '{venue}-{title}', max 80 chars."""
@@ -118,6 +124,11 @@ def insert_exhibition(exhibition_data: dict, artists: Optional[list] = None) -> 
 
     if _JUNK_TITLE_RE.match(title):
         logger.debug("Skipping exhibition with junk title: %r", title)
+        return None
+
+    source_url = exhibition_data.get("source_url", "")
+    if source_url and _CDN_URL_RE.search(source_url):
+        logger.debug("Skipping exhibition %r — source_url is a CDN image URL: %s", title, source_url[:80])
         return None
 
     venue_id = exhibition_data.get("venue_id")
