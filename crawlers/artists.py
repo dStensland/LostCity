@@ -58,6 +58,51 @@ def normalize_artist_name(name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------------
+
+# Blocklist of known non-person strings
+_ARTIST_BLOCKLIST = frozenset(s.lower() for s in [
+    "ARTISTS", "Various Artists", "Group Exhibition", "TBD", "TBA",
+    "Unknown", "Unknown Artist", "Anonymous", "N/A", "None",
+    "Staff", "Volunteer", "View fullsize", "Read More",
+])
+
+
+def validate_artist_name(name: str) -> bool:
+    """Check whether a string is a plausible artist name.
+
+    Returns True if valid, False if it should be rejected.
+    Rejects: blocklist matches, pipe chars, purely numeric,
+    all-caps single words, too short (<3), too long (>200).
+    """
+    name = name.strip()
+
+    # Length checks
+    if len(name) < 3 or len(name) > 200:
+        return False
+
+    # Blocklist (case-insensitive)
+    if name.lower() in _ARTIST_BLOCKLIST:
+        return False
+
+    # Pipe characters (concatenated lists)
+    if "|" in name:
+        return False
+
+    # Purely numeric
+    if name.isdigit():
+        return False
+
+    # All-caps single word (generic labels like "ARTISTS", "GALLERY")
+    words = name.split()
+    if len(words) == 1 and name.isupper():
+        return False
+
+    return True
+
+
+# ---------------------------------------------------------------------------
 # Core CRUD
 # ---------------------------------------------------------------------------
 
@@ -70,6 +115,9 @@ def get_or_create_artist(
     Returns the full artist row dict (id, name, slug, ...).
     """
     from db import get_client
+
+    if not validate_artist_name(name):
+        raise ValueError(f"Invalid artist name rejected by validation: {name!r}")
 
     slug = slugify_artist(name)
     if not slug:
