@@ -459,7 +459,7 @@ function FilmRow({
   );
 
   if (href) {
-    return <Link href={href}>{row}</Link>;
+    return <Link href={href} prefetch={false}>{row}</Link>;
   }
   return row;
 }

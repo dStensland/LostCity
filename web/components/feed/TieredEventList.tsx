@@ -77,6 +77,7 @@ function FeaturedMiniCard({
   return (
     <Link
       href={`/${portalSlug}/events/${event.id}`}
+      prefetch={false}
       className="group flex-shrink-0 w-72 snap-start flex flex-col rounded-xl overflow-hidden border border-[var(--twilight)]/40 bg-gradient-to-br from-[var(--night)] to-[var(--void)] hover:border-[var(--twilight)]/70 transition-all"
       aria-label={event.title}
     >
@@ -138,8 +139,8 @@ function FeaturedMiniCard({
           </div>
         )}
 
-        {/* Price badge */}
-        <div className="flex items-center gap-1.5 mt-auto pt-1">
+        {/* Price + social proof badges */}
+        <div className="flex items-center gap-1.5 mt-auto pt-1 flex-wrap">
           {event.is_free ? (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[var(--neon-green)]/10 border border-[var(--neon-green)]/20 text-[var(--neon-green)] font-mono text-2xs font-bold uppercase tracking-wider">
               Free
@@ -149,6 +150,11 @@ function FeaturedMiniCard({
               From ${event.price_min}
             </span>
           ) : null}
+          {(event.going_count ?? 0) > 0 && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-2xs font-medium text-[var(--coral)]">
+              {event.going_count} going
+            </span>
+          )}
         </div>
       </div>
     </Link>

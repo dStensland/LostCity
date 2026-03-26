@@ -104,6 +104,7 @@ export const HeroCard = memo(function HeroCard({
   return (
     <Link
       href={`/${portalSlug}/events/${event.id}`}
+      prefetch={false}
       className={[
         "block relative w-full rounded-card overflow-hidden hover-lift animate-page-enter",
         staggerClass,
@@ -195,6 +196,22 @@ export const HeroCard = memo(function HeroCard({
               {friendsGoing.length > 2 && ` + ${friendsGoing.length - 2} more`}{" "}
               going
             </p>
+          )}
+
+          {/* Aggregate social proof pills */}
+          {((event.going_count ?? 0) > 0 || (event.interested_count ?? 0) > 0) && (
+            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+              {(event.going_count ?? 0) > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs text-[var(--coral)]">
+                  {event.going_count} going
+                </span>
+              )}
+              {(event.interested_count ?? 0) > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--gold)]/10 border border-[var(--gold)]/20 font-mono text-xs text-[var(--gold)]">
+                  {event.interested_count} interested
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>

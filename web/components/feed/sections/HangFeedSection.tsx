@@ -54,7 +54,7 @@ const FriendHangRow = memo(function FriendHangRow({
   return (
     <div className="flex items-center gap-2.5 px-3 py-2 hover:bg-[var(--cream)]/[0.03] transition-colors">
       {/* Avatar */}
-      <Link href={profileHref} className="flex-shrink-0" aria-label={`View ${name}'s profile`}>
+      <Link href={profileHref} prefetch={false} className="flex-shrink-0" aria-label={`View ${name}'s profile`}>
         <div className="w-6 h-6 rounded-full overflow-hidden bg-[var(--twilight)] relative">
           {profile.avatar_url ? (
             <SmartImage

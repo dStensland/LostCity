@@ -44,6 +44,7 @@ export const StandardRow = memo(function StandardRow({
   return (
     <Link
       href={`/${portalSlug}/events/${event.id}`}
+      prefetch={false}
       className="block w-full rounded-lg bg-[var(--night)] border border-[var(--twilight)]/40 overflow-hidden hover:bg-[var(--dusk)] transition-colors"
       aria-label={event.title}
     >
@@ -76,6 +77,11 @@ export const StandardRow = memo(function StandardRow({
 
         {/* Right: badges */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
+          {(event.going_count ?? 0) > 0 && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-2xs font-medium text-[var(--coral)]">
+              {event.going_count} going
+            </span>
+          )}
           {event.is_free ? (
             <FreeBadge />
           ) : event.price_min !== null && event.price_min !== undefined ? (

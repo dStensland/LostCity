@@ -50,7 +50,7 @@ interface DestinationCardProps {
 
 function DestinationCard({ item, portalSlug }: DestinationCardProps) {
   const { venue, contextual_label, editorial_quote } = item;
-  const href = venue.slug ? `/${portalSlug}/places/${venue.slug}` : null;
+  const href = venue.slug ? `/${portalSlug}/spots/${venue.slug}` : null;
 
   const inner = (
     <div
@@ -114,7 +114,7 @@ function DestinationCard({ item, portalSlug }: DestinationCardProps) {
 
   if (href) {
     return (
-      <Link href={href} className="snap-start block">
+      <Link href={href} prefetch={false} className="snap-start block">
         {inner}
       </Link>
     );
