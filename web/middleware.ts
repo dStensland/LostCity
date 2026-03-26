@@ -73,6 +73,10 @@ export function middleware(request: NextRequest) {
   const vanityPath = VANITY_DOMAINS[hostname];
   if (vanityPath) {
     const url = request.nextUrl.clone();
+    // Don't rewrite API, auth, or Next.js internal paths — they must resolve to their real paths
+    if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/auth/")) {
+      return NextResponse.next();
+    }
     // Rewrite root and all sub-paths under the vanity path
     if (url.pathname === "/" || url.pathname === "") {
       url.pathname = vanityPath;
