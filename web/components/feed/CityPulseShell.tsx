@@ -479,6 +479,7 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
               onInterestsChange={handleInterestsChange}
               onSaveInterests={handleSaveInterests}
               vertical={portal?.settings?.vertical}
+              keepRecurring={portal?.settings?.vertical === "community"}
             />
           )}
         </ContentSwap>

@@ -6,13 +6,15 @@ import GoblinMovieCard, { type GoblinMovie, normalizeStreaming } from "./GoblinM
 import GoblinSessionView from "./GoblinSessionView";
 import GoblinSessionHistory from "./GoblinSessionHistory";
 import { GoblinPlanningView } from "./GoblinPlanningView";
+import { GoblinAuthBar } from "./GoblinAuthBar";
+import { useGoblinUser } from "@/lib/hooks/useGoblinUser";
 
 interface Props {
   initialMovies: GoblinMovie[];
   activeSessionId: number | null;
 }
 
-type Tab = "next" | "contenders" | "upcoming" | "watched";
+type Tab = "next" | "contenders" | "upcoming" | "watched" | "mylist";
 type SortKey = "date" | "critics" | "audience" | "tmdb" | "alpha";
 type GenreFilter = string | null;
 type SubgenreFilter = string | null;
@@ -80,7 +82,7 @@ const MARQUEE_IMAGES = [
 
 const ZALGO_TEXT = "G\u0336\u0322\u0327\u0321\u030e\u0351\u034b\u0352\u0314\u0310\u0301\u030a\u0306\u0300\u030d\u031c\u031f\u0329\u0347\u0320\u031e\u0345\u032eO\u0334\u0321\u0328\u031c\u0326\u0324\u031f\u0356\u032c\u032b\u0323\u0349\u034e\u0353\u0339\u0316\u0355\u0330\u031d\u032f\u0354\u0301\u030c\u0313\u0307\u0302\u030a\u0363\u0310\u0351\u030e\u034a\u0311\u0357\u0300\u0303\u036b\u036aB\u0337\u0321\u0329\u0326\u031e\u032c\u0339\u034d\u0345\u031f\u0320\u032a\u032e\u0348\u0316\u031c\u0353\u0332\u0347\u0354\u0301\u0303\u0304\u0312\u030c\u0307\u030d\u030f\u0302\u0315\u0308\u036f\u035b\u0352\u034a\u034c\u036d\u0305\u0363\u036eL\u0334\u0321\u031d\u031c\u031e\u0329\u032a\u0339\u034e\u0316\u0356\u0345\u032f\u031f\u032b\u034d\u0353\u0355\u033b\u0332\u030b\u030f\u0312\u030d\u0303\u0311\u0351\u0306\u0300\u036c\u034b\u034a\u0310\u0357\u0363\u0365I\u0336\u0321\u0331\u032c\u0329\u031e\u0347\u031f\u034e\u032a\u0345\u032b\u034d\u0339\u033b\u033c\u032f\u0301\u030c\u0302\u0300\u0305\u0307\u030a\u0352\u036a\u036b\u0313\u034c\u0351\u0311N\u0334\u0328\u031c\u031e\u0320\u032c\u0324\u034e\u0349\u0339\u034d\u0356\u0316\u033c\u032f\u032a\u031d\u0345\u0300\u0303\u030d\u0312\u0352\u030e\u036f\u036b\u034a\u035b\u0306\u0310\u0315\u0363 D\u0336\u0323\u034d\u0316\u032f\u032b\u031d\u034e\u0356\u032a\u031e\u031f\u0339\u031c\u0349\u0347\u032c\u0345\u0355\u033b\u0332\u0305\u0311\u0301\u030c\u0307\u0300\u030a\u034b\u034a\u036c\u0357\u0352\u0350\u0314\u0351\u0363\u036fA\u0336\u0329\u032a\u031e\u032c\u0331\u031f\u032f\u034e\u032b\u031d\u034d\u031c\u0320\u0339\u0347\u0345\u0316\u0353\u030d\u030c\u0300\u0305\u0307\u0303\u030a\u030f\u0315\u034b\u036e\u0312\u035b\u034a\u0306\u0357\u036b\u034c\u0314\u0310\u0363Y\u0337\u032a\u0339\u034e\u0349\u0316\u0323\u031e\u0356\u032b\u034d\u031d\u031c\u031f\u032f\u0347\u0345\u0354\u0332\u033c\u0301\u0300\u0303\u030d\u0312\u0305\u0311\u030c\u030f\u030a\u0306\u0352\u034a\u034b\u0363\u036e\u0357\u0310\u036b\u0351\u036f\u035b";
 
-const VALID_TABS: Tab[] = ["next", "contenders", "upcoming", "watched"];
+const VALID_TABS: Tab[] = ["next", "contenders", "upcoming", "watched", "mylist"];
 const VALID_SORTS: SortKey[] = ["date", "critics", "audience", "tmdb", "alpha"];
 
 function updateURL(params: Record<string, string | null>) {
@@ -94,6 +96,7 @@ function updateURL(params: Record<string, string | null>) {
 
 export default function GoblinDayPage({ initialMovies, activeSessionId }: Props) {
   const searchParams = useSearchParams();
+  const goblinUser = useGoblinUser();
 
   // Initialize state from URL params
   const initialTab = useMemo(() => {
@@ -275,7 +278,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
     m.release_date ? m.release_date <= now : false;
 
   // Build genre list from contenders for filter chips
-  const contenderMovies = movies.filter((m) => !m.watched && isReleased(m));
+  const contenderMovies = movies.filter((m) => !goblinUser.watched.has(m.id) && isReleased(m));
   const genreCounts = new Map<string, number>();
   for (const m of contenderMovies) {
     for (const g of m.genres ?? []) {
@@ -308,11 +311,13 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
 
   const filteredMovies = sortMovies(
     movies.filter((m) => {
+      const mBookmarked = goblinUser.bookmarks.has(m.id);
+      const mWatched = goblinUser.watched.has(m.id);
       switch (activeTab) {
         case "next":
-          return m.proposed && !m.watched;
+          return mBookmarked && !mWatched;
         case "contenders": {
-          if (m.watched || !isReleased(m)) return false;
+          if (mWatched || !isReleased(m)) return false;
           if (genreFilter && !(m.genres ?? []).includes(genreFilter)) return false;
           if (subgenreFilter) {
             const sg = availableSubgenres.find((s) => s.label === subgenreFilter);
@@ -322,44 +327,36 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
           return true;
         }
         case "upcoming":
-          return !m.watched && !isReleased(m);
+          return !mWatched && !isReleased(m);
         case "watched":
-          return m.watched;
+          return mWatched;
+        case "mylist":
+          return mBookmarked;
       }
     }),
     activeTab === "contenders" ? sortKey : "date"
   );
 
   const counts = {
-    next: movies.filter((m) => m.proposed && !m.watched).length,
-    contenders: movies.filter((m) => !m.watched && isReleased(m)).length,
-    upcoming: movies.filter((m) => !m.watched && !isReleased(m)).length,
-    watched: movies.filter((m) => m.watched).length,
+    next: movies.filter((m) => goblinUser.bookmarks.has(m.id) && !goblinUser.watched.has(m.id)).length,
+    contenders: movies.filter((m) => !goblinUser.watched.has(m.id) && isReleased(m)).length,
+    upcoming: movies.filter((m) => !goblinUser.watched.has(m.id) && !isReleased(m)).length,
+    watched: goblinUser.watched.size,
+    mylist: goblinUser.bookmarks.size,
   };
 
-  const handleToggle = useCallback(
-    async (id: number, field: string, value: boolean) => {
-      setMovies((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, [field]: value } : m))
-      );
-      try {
-        const res = await fetch(`/api/goblinday/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ [field]: value }),
-        });
-        if (!res.ok) {
-          setMovies((prev) =>
-            prev.map((m) => (m.id === id ? { ...m, [field]: !value } : m))
-          );
-        }
-      } catch {
-        setMovies((prev) =>
-          prev.map((m) => (m.id === id ? { ...m, [field]: !value } : m))
-        );
-      }
+  const handleToggleBookmark = useCallback(
+    (id: number) => {
+      goblinUser.toggleBookmark(id);
     },
-    []
+    [goblinUser]
+  );
+
+  const handleToggleWatched = useCallback(
+    (id: number) => {
+      goblinUser.toggleWatched(id);
+    },
+    [goblinUser]
   );
 
   const marqueeStrip = MARQUEE_IMAGES.flatMap((img, i) => [
@@ -382,6 +379,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
     { key: "contenders" as const, label: "\u2620 CONTENDERS", labelLong: "\u2620 CONTENDERS", active: "bg-zinc-900 text-white border-zinc-400 shadow-[0_4px_12px_rgba(255,255,255,0.05)]" },
     { key: "upcoming" as const, label: "\u29D6 UPCOMING", labelLong: "\u29D6 UPCOMING", active: "bg-zinc-900 text-violet-400 border-violet-500 shadow-[0_4px_12px_rgba(139,92,246,0.15)]" },
     { key: "watched" as const, label: "\u2620 WATCHED", labelLong: "\u2620 WATCHED", active: "bg-zinc-900 text-emerald-400 border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.15)]" },
+    { key: "mylist" as const, label: "\u2665 LIST", labelLong: "\u2665 MY LIST", active: "bg-zinc-900 text-red-400 border-red-700 shadow-[0_4px_12px_rgba(185,28,28,0.15)]" },
   ];
 
   // Matrix rain of ancient/occult symbols
@@ -511,6 +509,14 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
         ref={canvasRef}
         className="fixed inset-0 pointer-events-none z-0"
       />
+      {/* Auth bar */}
+      <GoblinAuthBar
+        user={goblinUser.user}
+        loading={goblinUser.loading}
+        onSignIn={goblinUser.signIn}
+        onSignOut={goblinUser.signOut}
+      />
+
       {/* Scrolling Marquee */}
       <div className="overflow-hidden bg-black/90 select-none border-b-4 border-red-800 relative z-10">
         <div className="flex items-center whitespace-nowrap animate-marquee">
@@ -520,12 +526,12 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
       </div>
 
       {/* Tabs — brutalist rectangles */}
-      <div className="flex overflow-x-auto scrollbar-hide border-b-2 border-zinc-800 relative z-10 bg-black/90">
+      <div className="flex sm:justify-center overflow-x-auto scrollbar-hide border-b-2 border-zinc-800 relative z-10 bg-black/90">
         {TAB_CONFIG.map(({ key, label, labelLong, active }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            className={`flex-shrink-0 flex-1 min-w-0 px-3 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-[0.1em] sm:tracking-[0.15em] uppercase border-b-3 transition-all duration-200 whitespace-nowrap ${
+            className={`flex-shrink-0 flex-1 sm:flex-none min-w-0 px-3 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-[0.1em] sm:tracking-[0.15em] uppercase border-b-3 transition-all duration-200 whitespace-nowrap ${
               activeTab === key
                 ? active
                 : "bg-black text-zinc-600 border-transparent hover:text-red-400/60 hover:bg-red-950/10 hover:border-red-900/30"
@@ -639,7 +645,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
               <GoblinSessionView
                 session={sessionData}
                 proposedMovies={movies
-                  .filter((m) => m.proposed && !m.watched)
+                  .filter((m) => goblinUser.bookmarks.has(m.id) && !goblinUser.watched.has(m.id))
                   .map((m) => ({ id: m.id, title: m.title, poster_path: m.poster_path }))}
                 onRefresh={handleSessionRefresh}
                 onEndSession={handleEndSession}
@@ -657,7 +663,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
               <>
                 <div className="border-t-2 border-zinc-800 mt-8 pt-6 mb-4">
                   <h2 className="text-xs font-bold tracking-[0.2em] uppercase text-red-500">
-                    PROPOSED FOR NEXT GOBLIN DAY [{filteredMovies.length}]
+                    SAVED FOR NEXT GOBLIN DAY [{filteredMovies.length}]
                   </h2>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
@@ -665,7 +671,10 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
                     <GoblinMovieCard
                       key={movie.id}
                       movie={movie}
-                      onToggle={handleToggle}
+                      isBookmarked={goblinUser.bookmarks.has(movie.id)}
+                      isWatched={goblinUser.watched.has(movie.id)}
+                      onToggleBookmark={handleToggleBookmark}
+                      onToggleWatched={handleToggleWatched}
                     />
                   ))}
                 </div>
@@ -674,19 +683,22 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
 
             {filteredMovies.length === 0 && !activeSession && (
               <p className="text-center text-zinc-600 py-10 text-sm tracking-widest uppercase">
-                // NO PROPOSALS YET — GO TO CONTENDERS AND PROPOSE SOME
+                // NOTHING SAVED YET — GO TO CONTENDERS AND SAVE SOME
               </p>
             )}
           </>
         ) : (
-          // Movie grid for contenders/upcoming/watched
+          // Movie grid for contenders/upcoming/watched/mylist
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {filteredMovies.map((movie) => (
                 <GoblinMovieCard
                   key={movie.id}
                   movie={movie}
-                  onToggle={handleToggle}
+                  isBookmarked={goblinUser.bookmarks.has(movie.id)}
+                  isWatched={goblinUser.watched.has(movie.id)}
+                  onToggleBookmark={handleToggleBookmark}
+                  onToggleWatched={handleToggleWatched}
                 />
               ))}
             </div>
@@ -697,7 +709,9 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
                   ? "// NOTHING WATCHED — GET TO IT GOBLINS"
                   : activeTab === "upcoming"
                     ? "// NO UPCOMING — EVERYTHING IS OUT"
-                    : "// NO CONTENDERS — RUN THE SEED SCRIPT"}
+                    : activeTab === "mylist"
+                      ? "// NO SAVED MOVIES — SAVE SOME FROM CONTENDERS"
+                      : "// NO CONTENDERS — RUN THE SEED SCRIPT"}
               </p>
             )}
           </>

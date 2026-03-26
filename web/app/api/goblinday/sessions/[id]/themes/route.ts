@@ -1,40 +1,58 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
+import { withAuthAndParams } from "@/lib/api-middleware";
+import { isSessionMember } from "@/lib/goblin-utils";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  const sessionId = parseInt(id);
-  const supabase = await createClient();
+// POST /api/goblinday/sessions/[id]/themes
+// Member-only: creates a theme for the session
+export const POST = withAuthAndParams<{ id: string }>(
+  async (request, { user, serviceClient, params }) => {
+    const sessionId = parseInt(params.id);
 
-  const body = await request.json();
-  if (!body.label?.trim()) return NextResponse.json({ error: "label required" }, { status: 400 });
+    const isMember = await isSessionMember(serviceClient, sessionId, user.id);
+    if (!isMember) {
+      return NextResponse.json({ error: "Not a member of this session" }, { status: 403 });
+    }
 
-  const { data: theme, error } = await supabase
-    .from("goblin_themes")
-    .insert({ session_id: sessionId, label: body.label.trim() } as never)
-    .select()
-    .single();
+    const body = await request.json();
+    if (!body.label?.trim()) {
+      return NextResponse.json({ error: "label required" }, { status: 400 });
+    }
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const { data: theme, error } = await serviceClient
+      .from("goblin_themes")
+      .insert({
+        session_id: sessionId,
+        label: body.label.trim(),
+        created_by: user.id,
+      } as never)
+      .select()
+      .single();
 
-  const t = theme as { id: number; label: string; status: string };
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  if (body.movie_ids?.length > 0) {
-    const rows = body.movie_ids.map((mid: number) => ({
-      theme_id: t.id,
-      movie_id: mid,
-    }));
-    await supabase.from("goblin_theme_movies").insert(rows as never);
+    const t = theme as { id: number; label: string; status: string };
+
+    // Optionally link movies to the theme
+    if (Array.isArray(body.movie_ids) && body.movie_ids.length > 0) {
+      const rows = body.movie_ids.map((mid: number) => ({
+        theme_id: t.id,
+        movie_id: mid,
+      }));
+      await serviceClient.from("goblin_theme_movies").insert(rows as never);
+    }
+
+    // Log timeline event with user_id
+    await serviceClient
+      .from("goblin_timeline")
+      .insert({
+        session_id: sessionId,
+        event_type: "theme_added",
+        theme_id: t.id,
+        user_id: user.id,
+      } as never);
+
+    return NextResponse.json(t, { status: 201 });
   }
-
-  await supabase
-    .from("goblin_timeline")
-    .insert({ session_id: sessionId, event_type: "theme_added", theme_id: t.id } as never);
-
-  return NextResponse.json(t, { status: 201 });
-}
+);
