@@ -1,5 +1,10 @@
 import { addDays, format } from "date-fns";
-import { JSDOM } from "jsdom";
+
+// Dynamic import to avoid ESM/CJS crash in Vercel runtime.
+// jsdom v28's transitive dep @exodus/bytes is ESM-only and can't be require()'d.
+async function getJSDOM(): Promise<typeof import("jsdom")> {
+  return await import("jsdom");
+}
 import {
   getYonderAccommodationInventorySource,
   type YonderAccommodationInventorySource,
@@ -395,7 +400,8 @@ function parseRuntimeInventoryRecords(
     .sort((a, b) => b.visibleInventoryCount - a.visibleInventoryCount);
 }
 
-function parseRuntimeSiteCards(html: string): RuntimeSiteCard[] {
+async function parseRuntimeSiteCards(html: string): Promise<RuntimeSiteCard[]> {
+  const { JSDOM } = await getJSDOM();
   const dom = new JSDOM(html);
   const document = dom.window.document;
   const cards: RuntimeSiteCard[] = [];
@@ -445,6 +451,7 @@ async function fetchGaStateParkDetailSignal(
   });
   if (!initialRes.ok) return null;
   const initialHtml = await initialRes.text();
+  const { JSDOM } = await getJSDOM();
   const initialDom = new JSDOM(initialHtml);
   const form = initialDom.window.document.querySelector<HTMLFormElement>(
     "#booksiteform",
@@ -542,7 +549,7 @@ async function fetchGaStateParkRuntimeSnapshot(
 
   const html = await res.text();
   const records = parseRuntimeInventoryRecords(html);
-  const siteCards = parseRuntimeSiteCards(html);
+  const siteCards = await parseRuntimeSiteCards(html);
   const seenUnitTypes = new Set<YonderRuntimeInventoryRecord["unitType"]>();
 
   for (const record of records) {
