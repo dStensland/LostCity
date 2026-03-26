@@ -19,7 +19,7 @@ export function GoblinAuthBar({ user, loading, onSignIn, onSignOut }: GoblinAuth
     "GOBLIN";
 
   return (
-    <div className="flex items-center justify-end gap-3 px-4 py-2 bg-black/90 border-b border-zinc-900 relative z-10 font-mono">
+    <div className="flex items-center justify-end gap-3 px-4 py-2 bg-black/80 backdrop-blur-sm font-mono">
       {user ? (
         <>
           <span className="text-2xs text-zinc-500 tracking-widest uppercase truncate max-w-[200px]">

@@ -505,19 +505,20 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
         ref={canvasRef}
         className="fixed inset-0 pointer-events-none z-0"
       />
-      {/* Auth bar */}
-      <GoblinAuthBar
-        user={goblinUser.user}
-        loading={goblinUser.loading}
-        onSignIn={goblinUser.signIn}
-        onSignOut={goblinUser.signOut}
-      />
-
-      {/* Scrolling Marquee */}
+      {/* Scrolling Marquee with auth overlay */}
       <div className="overflow-hidden bg-black/90 select-none border-b-4 border-red-800 relative z-10">
         <div className="flex items-center whitespace-nowrap animate-marquee">
           {marqueeStrip}
           {marqueeStrip}
+        </div>
+        {/* Auth overlaid on top-right of marquee */}
+        <div className="absolute top-0 right-0 z-20">
+          <GoblinAuthBar
+            user={goblinUser.user}
+            loading={goblinUser.loading}
+            onSignIn={goblinUser.signIn}
+            onSignOut={goblinUser.signOut}
+          />
         </div>
       </div>
 
