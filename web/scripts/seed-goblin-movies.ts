@@ -36,23 +36,48 @@ const RT_BASE = "https://www.rottentomatoes.com";
 const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
+// TMDB genre ID → name mapping
+const TMDB_GENRES: Record<number, string> = {
+  28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime",
+  99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History",
+  27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance",
+  878: "Sci-Fi", 10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western",
+};
+
 interface TmdbMovie {
   id: number;
   title: string;
   release_date: string;
   poster_path: string | null;
+  genre_ids: number[];
+  vote_average: number;
+  vote_count: number;
+  popularity: number;
 }
 
-interface TmdbProvider {
-  provider_name: string;
+interface MovieEnrichment {
+  runtime: number | null;
+  overview: string | null;
+  backdrop_path: string | null;
+  director: string | null;
+  mpaa_rating: string | null;
+  trailer_url: string | null;
+  imdb_id: string | null;
+  keywords: string[];
+  genres: string[];
+  vote_average: number | null;
+  vote_count: number | null;
+  popularity: number | null;
+  streaming: StreamingInfo;
 }
 
-interface TmdbWatchProviders {
-  results?: {
-    US?: {
-      flatrate?: TmdbProvider[];
-    };
-  };
+interface StreamingInfo {
+  stream?: string[];
+  rent?: string[];
+  buy?: string[];
+  ads?: string[];
+  free?: string[];
+  theaters?: boolean;
 }
 
 interface RTScores {
@@ -61,6 +86,73 @@ interface RTScores {
 }
 
 // --- TMDB helpers ---
+
+async function fetchAllMovieData(tmdbId: number): Promise<MovieEnrichment> {
+  const url = `${TMDB_BASE}/movie/${tmdbId}?api_key=${TMDB_KEY}&append_to_response=credits,videos,release_dates,external_ids,keywords,watch/providers`;
+  const res = await fetch(url);
+  const data = await res.json();
+
+  // Director — first crew member with job "Director"
+  const director: string | null =
+    data.credits?.crew?.find((c: any) => c.job === "Director")?.name ?? null;
+
+  // Trailer — first YouTube trailer
+  const trailer = data.videos?.results?.find(
+    (v: any) => v.site === "YouTube" && v.type === "Trailer"
+  );
+  const trailer_url = trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null;
+
+  // MPAA rating — US certification
+  const usRelease = data.release_dates?.results?.find(
+    (r: any) => r.iso_3166_1 === "US"
+  );
+  const mpaa_rating: string | null =
+    usRelease?.release_dates?.[0]?.certification || null;
+
+  // IMDB ID
+  const imdb_id: string | null = data.external_ids?.imdb_id ?? null;
+
+  // Keywords
+  const keywords: string[] =
+    (data.keywords?.keywords ?? []).map((k: any) => k.name);
+
+  // Genres (from detail endpoint — full objects, not IDs)
+  const genres: string[] =
+    (data.genres ?? []).map((g: any) => g.name);
+
+  // Streaming — same parsing logic as old fetchProviders
+  const us = data["watch/providers"]?.results?.US;
+  const streaming: StreamingInfo = {};
+  if (us) {
+    const names = (arr?: any[]) => arr?.map((p: any) => p.provider_name) ?? [];
+    const stream = names(us.flatrate);
+    const rent = names(us.rent);
+    const buy = names(us.buy);
+    const ads = names(us.ads);
+    const free = names(us.free);
+    if (stream.length > 0) streaming.stream = stream;
+    if (rent.length > 0) streaming.rent = rent;
+    if (buy.length > 0) streaming.buy = buy;
+    if (ads.length > 0) streaming.ads = ads;
+    if (free.length > 0) streaming.free = free;
+  }
+
+  return {
+    runtime: data.runtime ?? null,
+    overview: data.overview || null,
+    backdrop_path: data.backdrop_path ?? null,
+    director,
+    mpaa_rating,
+    trailer_url,
+    imdb_id,
+    keywords,
+    genres,
+    vote_average: data.vote_average ?? null,
+    vote_count: data.vote_count ?? null,
+    popularity: data.popularity ?? null,
+    streaming,
+  };
+}
 
 async function fetchHorrorMovies(year: number): Promise<TmdbMovie[]> {
   const movies: TmdbMovie[] = [];
@@ -80,20 +172,12 @@ async function fetchHorrorMovies(year: number): Promise<TmdbMovie[]> {
   return movies;
 }
 
-async function fetchProviders(tmdbId: number): Promise<string[]> {
-  const url = `${TMDB_BASE}/movie/${tmdbId}/watch/providers?api_key=${TMDB_KEY}`;
-  const res = await fetch(url);
-  const data: TmdbWatchProviders = await res.json();
-  const us = data.results?.US;
-  if (!us) return [];
-  return us.flatrate?.map((p) => p.provider_name) ?? [];
-}
-
 function isInTheaters(
   releaseDate: string,
-  streamingProviders: string[]
+  info: StreamingInfo
 ): boolean {
-  if (streamingProviders.length > 0) return false;
+  // If it's already streaming, it's probably not in theaters
+  if ((info.stream?.length ?? 0) > 0) return false;
   const release = new Date(releaseDate);
   const now = new Date();
   const days = (now.getTime() - release.getTime()) / (1000 * 60 * 60 * 24);
@@ -164,10 +248,13 @@ async function scrapeRTScores(
 
 async function seed() {
   const UPDATE_ONLY = process.argv.includes("--update-scores");
+  const UPDATE_TMDB = process.argv.includes("--update-tmdb");
   console.log(
-    UPDATE_ONLY
-      ? "Updating RT scores for existing movies...\n"
-      : "Seeding Goblin Day movies...\n"
+    UPDATE_TMDB
+      ? "Backfilling TMDB enrichment data for existing movies...\n"
+      : UPDATE_ONLY
+        ? "Updating RT scores for existing movies...\n"
+        : "Seeding Goblin Day movies...\n"
   );
 
   if (UPDATE_ONLY) {
@@ -216,6 +303,63 @@ async function seed() {
     return;
   }
 
+  if (UPDATE_TMDB) {
+    // Backfill genres, vote data, runtime, keywords for existing movies
+    const { data: movies } = await supabase
+      .from("goblin_movies")
+      .select("id, tmdb_id, title")
+      .not("tmdb_id", "is", null)
+      .order("id");
+
+    if (!movies) {
+      console.error("Failed to fetch movies");
+      return;
+    }
+
+    let updated = 0;
+    for (const movie of movies) {
+      const enrichment = await fetchAllMovieData(movie.tmdb_id);
+      await new Promise((r) => setTimeout(r, 300));
+
+      // Theater detection
+      const { data: movieRow } = await supabase
+        .from("goblin_movies")
+        .select("release_date")
+        .eq("id", movie.id)
+        .single();
+
+      if (movieRow?.release_date && isInTheaters(movieRow.release_date, enrichment.streaming)) {
+        enrichment.streaming.theaters = true;
+      }
+
+      await supabase
+        .from("goblin_movies")
+        .update({
+          genres: enrichment.genres,
+          tmdb_vote_average: enrichment.vote_average,
+          tmdb_vote_count: enrichment.vote_count,
+          tmdb_popularity: enrichment.popularity,
+          runtime_minutes: enrichment.runtime,
+          keywords: enrichment.keywords,
+          streaming_info: Object.keys(enrichment.streaming).length > 0 ? enrichment.streaming : {},
+          synopsis: enrichment.overview,
+          director: enrichment.director,
+          mpaa_rating: enrichment.mpaa_rating,
+          trailer_url: enrichment.trailer_url,
+          backdrop_path: enrichment.backdrop_path,
+          imdb_id: enrichment.imdb_id,
+        } as never)
+        .eq("id", movie.id);
+
+      updated++;
+      console.log(
+        `  ${movie.title}: dir=${enrichment.director ?? "?"} | ${enrichment.mpaa_rating ?? "NR"} | trailer=${enrichment.trailer_url ? "yes" : "no"} | imdb=${enrichment.imdb_id ?? "?"}`
+      );
+    }
+    console.log(`\nUpdated: ${updated} movies`);
+    return;
+  }
+
   // Full seed: fetch from TMDB + scrape RT
   for (const year of [2025, 2026]) {
     console.log(`--- ${year} ---`);
@@ -241,14 +385,13 @@ async function seed() {
         continue;
       }
 
-      // Fetch streaming info
-      const streamingProviders = await fetchProviders(movie.id);
-      const streamingInfo: string[] = [...streamingProviders];
-      if (
-        movie.release_date &&
-        isInTheaters(movie.release_date, streamingProviders)
-      ) {
-        streamingInfo.unshift("theaters");
+      // Fetch all enrichment data in one call
+      const enrichment = await fetchAllMovieData(movie.id);
+      await new Promise((r) => setTimeout(r, 300));
+
+      // Theater detection
+      if (movie.release_date && isInTheaters(movie.release_date, enrichment.streaming)) {
+        enrichment.streaming.theaters = true;
       }
 
       // Scrape RT scores
@@ -263,7 +406,19 @@ async function seed() {
         poster_path: movie.poster_path,
         rt_critics_score: scores.critics,
         rt_audience_score: scores.audience,
-        streaming_info: streamingInfo.length > 0 ? streamingInfo : [],
+        streaming_info: Object.keys(enrichment.streaming).length > 0 ? enrichment.streaming : {},
+        genres: enrichment.genres.length > 0 ? enrichment.genres : movie.genre_ids.map((id) => TMDB_GENRES[id]).filter(Boolean),
+        tmdb_vote_average: movie.vote_average,
+        tmdb_vote_count: movie.vote_count,
+        tmdb_popularity: movie.popularity,
+        runtime_minutes: enrichment.runtime,
+        keywords: enrichment.keywords,
+        synopsis: enrichment.overview,
+        director: enrichment.director,
+        mpaa_rating: enrichment.mpaa_rating,
+        trailer_url: enrichment.trailer_url,
+        backdrop_path: enrichment.backdrop_path,
+        imdb_id: enrichment.imdb_id,
         year,
       };
 
