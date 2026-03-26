@@ -704,7 +704,7 @@ export default function LineupSection({
           />
 
           {ENABLE_LINEUP_RECURRING && recurringEvents.length > 0 && (
-            <RecurringStrip events={recurringEvents} portalSlug={portalSlug} />
+            <RecurringStrip events={recurringEvents} portalSlug={portalSlug} activeTab={activeTabId} />
           )}
 
           {events.length === 0 && (
