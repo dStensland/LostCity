@@ -201,10 +201,10 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
   ]);
 
   const TAB_CONFIG = [
-    { key: "next" as const, label: "\u2666 NEXT GOBLIN DAY", active: "bg-red-900/80 text-red-300 border-red-500 shadow-[0_4px_12px_rgba(185,28,28,0.3)]" },
-    { key: "contenders" as const, label: "\u2620 CONTENDERS", active: "bg-zinc-900 text-white border-zinc-400 shadow-[0_4px_12px_rgba(255,255,255,0.05)]" },
-    { key: "upcoming" as const, label: "\u29D6 UPCOMING", active: "bg-zinc-900 text-violet-400 border-violet-500 shadow-[0_4px_12px_rgba(139,92,246,0.15)]" },
-    { key: "watched" as const, label: "\u2620 WATCHED", active: "bg-zinc-900 text-emerald-400 border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.15)]" },
+    { key: "next" as const, label: "\u2666 NEXT", labelLong: "\u2666 NEXT GOBLIN DAY", active: "bg-red-900/80 text-red-300 border-red-500 shadow-[0_4px_12px_rgba(185,28,28,0.3)]" },
+    { key: "contenders" as const, label: "\u2620 CONTENDERS", labelLong: "\u2620 CONTENDERS", active: "bg-zinc-900 text-white border-zinc-400 shadow-[0_4px_12px_rgba(255,255,255,0.05)]" },
+    { key: "upcoming" as const, label: "\u29D6 UPCOMING", labelLong: "\u29D6 UPCOMING", active: "bg-zinc-900 text-violet-400 border-violet-500 shadow-[0_4px_12px_rgba(139,92,246,0.15)]" },
+    { key: "watched" as const, label: "\u2620 WATCHED", labelLong: "\u2620 WATCHED", active: "bg-zinc-900 text-emerald-400 border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.15)]" },
   ];
 
   // Matrix rain of ancient/occult symbols
@@ -343,20 +343,21 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
       </div>
 
       {/* Tabs — brutalist rectangles */}
-      <div className="flex flex-wrap justify-center gap-0 border-b-2 border-zinc-800 relative z-10 bg-black/90">
-        {TAB_CONFIG.map(({ key, label, active }) => (
+      <div className="flex overflow-x-auto scrollbar-hide border-b-2 border-zinc-800 relative z-10 bg-black/90">
+        {TAB_CONFIG.map(({ key, label, labelLong, active }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            className={`px-4 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-[0.15em] uppercase border-b-3 transition-all duration-200 ${
+            className={`flex-shrink-0 flex-1 min-w-0 px-3 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-[0.1em] sm:tracking-[0.15em] uppercase border-b-3 transition-all duration-200 whitespace-nowrap ${
               activeTab === key
                 ? active
                 : "bg-black text-zinc-600 border-transparent hover:text-red-400/60 hover:bg-red-950/10 hover:border-red-900/30"
             }`}
           >
-            {label}
+            <span className="sm:hidden">{label}</span>
+            <span className="hidden sm:inline">{labelLong}</span>
             {counts[key] > 0 && (
-              <span className="ml-2 text-xs opacity-60">[{counts[key]}]</span>
+              <span className="ml-1.5 sm:ml-2 text-xs opacity-60">[{counts[key]}]</span>
             )}
           </button>
         ))}
