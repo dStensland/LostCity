@@ -29,6 +29,7 @@ import {
   type InterestChip,
 } from "@/lib/city-pulse/interests";
 import { isSceneEvent } from "@/lib/city-pulse/section-builders";
+import { matchActivityType } from "@/lib/scene-event-routing";
 import { ENABLE_LINEUP_RECURRING } from "@/lib/launch-flags";
 import { RecurringStrip } from "./lineup/RecurringStrip";
 import FeedSectionHeader from "./FeedSectionHeader";
@@ -435,8 +436,15 @@ export default function LineupSection({
         const items: CityPulseEventItem[] = ((data.events || []) as FeedEventData[])
           .filter((event: FeedEventData) => {
             // Only include events that match a scene activity type (trivia, karaoke, comedy, etc.)
-            // Exclude volunteer shifts, community meetings, etc. that don't have a scene type
-            return isSceneEvent(event as Parameters<typeof isSceneEvent>[0]);
+            // Can't use isSceneEvent() here — regulars API events lack series_id.
+            // matchActivityType checks genres/tags/title directly.
+            const ev = event as Record<string, unknown>;
+            return matchActivityType({
+              genres: ev.genres as string[] | null,
+              tags: ev.tags as string[] | null,
+              category: (ev.category ?? ev.category_id ?? "") as string,
+              title: (ev.title ?? "") as string,
+            } as Parameters<typeof matchActivityType>[0]) !== null;
           })
           .slice(0, 20)
           .map((event: FeedEventData) => ({
