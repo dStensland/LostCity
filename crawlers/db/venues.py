@@ -513,8 +513,8 @@ def get_or_create_virtual_venue() -> int:
 
 
 @retry_on_network_error(max_retries=3, base_delay=0.5)
-def get_or_create_venue(venue_data: dict) -> int:
-    """Get existing venue or create new one. Returns venue ID."""
+def get_or_create_venue(venue_data: dict) -> Optional[int]:
+    """Get existing venue or create new one. Returns venue ID, or None if validation rejects the venue."""
     client = get_client()
 
     # Pop underscore-prefixed enrichment payloads before any DB write.
@@ -613,27 +613,14 @@ def get_or_create_venue(venue_data: dict) -> int:
         _touch_verified_at(venue_id)
         return venue_id
 
-    # ── Venue validation gate ──
+    # ── Venue name validation (must pass before any lookup) ──
     _v_name = venue_data.get("name")
     name_ok, name_reason = validate_venue_name(_v_name)
     if not name_ok:
         logger.warning("Venue name rejected: %r — %s", _v_name, name_reason)
-        return _next_temp_id()
+        return None
 
-    context = get_crawl_context()
-    geo_ok, geo_reason = validate_venue_geo_scope(venue_data, context)
-    if not geo_ok:
-        logger.warning("Venue out of scope: %r — %s", _v_name, geo_reason)
-        return _next_temp_id()
-
-    min_ok, min_warnings = validate_venue_minimum_fields(venue_data)
-    if min_warnings:
-        for w in min_warnings:
-            logger.debug("Venue %r: %s", _v_name, w)
-    if not min_ok:
-        logger.warning("Venue %r fails minimum field check — skipping", _v_name)
-        return _next_temp_id()
-
+    # ── Existing venue lookup (before creation-only validation) ──
     slug = venue_data.get("slug")
     if slug:
         result = client.table("venues").select("id, active").eq("slug", slug).execute()
@@ -664,6 +651,21 @@ def get_or_create_venue(venue_data: dict) -> int:
                 _maybe_update_existing_venue(venue_id, venue_data)
                 _persist_venue_enrichment(venue_id, _enrichment_details, _enrichment_features, _enrichment_specials)
                 return venue_id
+
+    # ── Creation-only validation (geo scope, minimum fields) ──
+    context = get_crawl_context()
+    geo_ok, geo_reason = validate_venue_geo_scope(venue_data, context)
+    if not geo_ok:
+        logger.warning("Venue out of scope: %r — %s", _v_name, geo_reason)
+        return None
+
+    min_ok, min_warnings = validate_venue_minimum_fields(venue_data)
+    if min_warnings:
+        for w in min_warnings:
+            logger.debug("Venue %r: %s", _v_name, w)
+    if not min_ok:
+        logger.warning("Venue %r fails minimum field check — skipping", _v_name)
+        return None
 
     lat = venue_data.get("lat")
     lng = venue_data.get("lng")
@@ -788,7 +790,7 @@ def get_or_create_venue(venue_data: dict) -> int:
                 "Skipping venue creation for '%s' — insufficient data.",
                 venue_data.get("name", "unknown"),
             )
-            return _next_temp_id()
+            return None
 
     venue_data = _sanitize_venue_payload(venue_data)
 

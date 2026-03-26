@@ -1292,6 +1292,12 @@ def insert_event(
     event_data: dict, series_hint: dict = None, genres: list = None
 ) -> int:
     """Insert a new event with inferred tags, series linking, and genres. Returns event ID."""
+    venue_id = event_data.get("venue_id")
+    if venue_id is None or (isinstance(venue_id, int) and venue_id < 0):
+        title = event_data.get("title", "untitled")
+        logger.warning("Skipping event insert — invalid venue_id=%s for '%s'", venue_id, title[:80])
+        return _next_temp_id()
+
     client = get_client()
 
     ctx = InsertContext(

@@ -412,7 +412,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(
-                headless=False,
+                headless=False,  # B&N locator API requires real browser session; use xvfb on headless servers
                 args=[
                     "--disable-blink-features=AutomationControlled",
                     "--no-sandbox",

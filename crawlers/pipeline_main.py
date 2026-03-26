@@ -73,6 +73,9 @@ def _get_or_create_default_venue(profile) -> int | None:
         "website": None,
     }
     venue_id = get_or_create_venue(venue_data)
+    if venue_id is None:
+        logger.warning("Default venue rejected by validation for '%s'", profile.defaults.venue_name)
+        return None
     _VENUE_CACHE[venue_slug] = venue_id
 
     from db import get_venue_by_id
@@ -104,6 +107,8 @@ def _get_or_create_event_venue(event: dict) -> int | None:
         "website": venue.get("website"),
     }
     venue_id = get_or_create_venue(venue_data)
+    if venue_id is None:
+        return None
     _VENUE_CACHE[slug] = venue_id
     return venue_id
 

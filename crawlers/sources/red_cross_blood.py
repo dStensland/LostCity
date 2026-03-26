@@ -141,7 +141,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Launch browser with anti-detection measures
             # NOTE: This site requires headless=False to bypass Akamai bot detection
             browser = p.chromium.launch(
-                headless=False,  # MUST be False - Akamai blocks headless
+                headless=True,
                 args=[
                     '--disable-blink-features=AutomationControlled',
                     '--disable-dev-shm-usage',
