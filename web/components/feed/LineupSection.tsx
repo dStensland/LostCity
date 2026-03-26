@@ -29,6 +29,8 @@ import {
   type InterestChip,
 } from "@/lib/city-pulse/interests";
 import { isSceneEvent } from "@/lib/city-pulse/section-builders";
+import { ENABLE_LINEUP_RECURRING } from "@/lib/launch-flags";
+import { RecurringStrip } from "./lineup/RecurringStrip";
 import FeedSectionHeader from "./FeedSectionHeader";
 import { TieredEventList } from "@/components/feed/TieredEventList";
 import { useAuth } from "@/lib/auth-context";
@@ -119,7 +121,7 @@ const TABS: TabConfig[] = [
     id: "coming_up",
     label: "COMING UP",
     dateFilter: (e) => {
-      const weekOut = getDatePlusDays(8);
+      const weekOut = getDatePlusDays(7);
       const monthOut = getDatePlusDays(28);
       return e.start_date >= weekOut && e.start_date <= monthOut;
     },
@@ -338,7 +340,7 @@ export default function LineupSection({
     const dedup = (items: CityPulseEventItem[]) => {
       const seen = new Set<number>();
       return items.filter((e) => {
-        if (!keepRecurring && isSceneEvent(e.event as FeedEventData)) return false;
+        if (!keepRecurring && !ENABLE_LINEUP_RECURRING && isSceneEvent(e.event as FeedEventData)) return false;
         const ev = e.event as FeedEventData & Record<string, unknown>;
         const ev_series = ev.series as { series_type?: string | null } | null;
         const evTags = ((ev.tags as string[] | null) ?? []);
@@ -405,11 +407,11 @@ export default function LineupSection({
     let evts = tabDateEvents;
 
     if (activeChipId === "all") {
-      evts = evts.filter(unionMatcher);
+      // "All" means all events — no category restriction
     } else if (activeChipId === "free") {
       const freeChip = INTEREST_MAP.get("free");
       if (freeChip) {
-        evts = evts.filter((e) => unionMatcher(e) && freeChip.match(e));
+        evts = evts.filter((e) => freeChip.match(e));
       }
     } else {
       const chip = INTEREST_MAP.get(activeChipId);
@@ -420,6 +422,23 @@ export default function LineupSection({
 
     return evts;
   }, [tabDateEvents, activeChipId, unionMatcher]);
+
+  // Split events into standard (TieredEventList) vs recurring (RecurringStrip)
+  const { standardEvents, recurringEvents } = useMemo(() => {
+    if (!ENABLE_LINEUP_RECURRING) {
+      return { standardEvents: events, recurringEvents: [] as typeof events };
+    }
+    const standard: typeof events = [];
+    const recurring: typeof events = [];
+    for (const e of events) {
+      if (e.event.activity_type) {
+        recurring.push(e);
+      } else {
+        standard.push(e);
+      }
+    }
+    return { standardEvents: standard, recurringEvents: recurring };
+  }, [events]);
 
   // Merged category counts: initial response + lazy-loaded tab overrides
   // Date tab counts — show TOTAL lineup depth per tab (not filtered by interests).
@@ -440,7 +459,7 @@ export default function LineupSection({
   // because the SQL count query can't replicate every section-builder filter.
   const chipCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    counts["all"] = tabDateEvents.filter(unionMatcher).length;
+    counts["all"] = tabDateEvents.length;
     for (const chip of INTEREST_CHIPS) {
       if (chip.type === "tag" && chip.id === "free") {
         counts[chip.id] = tabDateEvents.filter(
@@ -453,7 +472,7 @@ export default function LineupSection({
     return counts;
   }, [tabDateEvents, unionMatcher]);
 
-  const visibleItems = events;
+  const visibleItems = standardEvents;
 
   // If no sections have any events at all, hide entirely
   const hasAnyContent = sections.some((s) =>
@@ -662,6 +681,10 @@ export default function LineupSection({
             maxHero={1}
             maxFeatured={4}
           />
+
+          {ENABLE_LINEUP_RECURRING && recurringEvents.length > 0 && (
+            <RecurringStrip events={recurringEvents} portalSlug={portalSlug} />
+          )}
 
           {events.length === 0 && (
             <p className="text-center text-[var(--muted)] text-sm py-8 font-mono">

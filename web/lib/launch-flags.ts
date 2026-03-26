@@ -17,3 +17,8 @@ export const ENABLE_GROUPS_V1 =
 // instead of the 4+ complex parallel queries. Set USE_FEED_READY_TABLE=true to enable.
 export const USE_FEED_READY_TABLE =
   process.env.USE_FEED_READY_TABLE === "true";
+// NEXT_PUBLIC_ prefix required: this flag is checked in client components (LineupSection).
+// When ON, recurring/scene events pass through the Lineup and render as RecurringStrip below TieredEventList.
+export const ENABLE_LINEUP_RECURRING =
+  process.env.NEXT_PUBLIC_ENABLE_LINEUP_RECURRING === "true" ||
+  process.env.ENABLE_LINEUP_RECURRING === "true";

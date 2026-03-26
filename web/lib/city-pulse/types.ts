@@ -106,6 +106,8 @@ export interface CityPulseEventItem {
     featured?: boolean;
     is_recurring?: boolean;
     recurrence_label?: string;
+    /** Set by makeEventItem when event matches a SCENE_ACTIVITY_TYPE. Used by RecurringStrip. */
+    activity_type?: string | null;
     card_tier?: CardTier;
     editorial_mentions?: EditorialMention[];
   };
