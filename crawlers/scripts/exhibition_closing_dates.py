@@ -162,6 +162,16 @@ def main():
             failed += 1
             continue
 
+        # Validate: closing_date must be >= opening_date (DB constraint)
+        if ex.get("opening_date"):
+            try:
+                if date.fromisoformat(closing_date) < date.fromisoformat(ex["opening_date"]):
+                    logger.debug("  Skipped %s — closing %s < opening %s", title[:50], closing_date, ex["opening_date"])
+                    failed += 1
+                    continue
+            except ValueError:
+                pass
+
         # Track whether this was scraped or inferred
         was_inferred = closing_date and not source_url_yielded_date
 
@@ -174,7 +184,11 @@ def main():
                 metadata["closing_date_inferred"] = True
                 update_data["metadata"] = metadata
 
-            client.table("exhibitions").update(update_data).eq("id", ex["id"]).execute()
+            try:
+                client.table("exhibitions").update(update_data).eq("id", ex["id"]).execute()
+            except Exception as e:
+                logger.warning("  Failed to update %s: %s", title[:50], e)
+                failed += 1
 
     logger.info("")
     logger.info("=== Results ===")

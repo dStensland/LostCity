@@ -28,7 +28,7 @@ def main():
     client = get_client()
 
     result = client.table("exhibition_artists").select(
-        "id, artist_name, exhibition_id"
+        "artist_name, exhibition_id"
     ).is_("artist_id", "null").execute()
 
     rows = result.data or []
@@ -64,7 +64,7 @@ def main():
         if not args.dry_run:
             client.table("exhibition_artists").update(
                 {"artist_id": artist_id}
-            ).eq("id", row["id"]).execute()
+            ).eq("exhibition_id", row["exhibition_id"]).eq("artist_name", row["artist_name"]).execute()
 
         linked += 1
         logger.debug("  Linked: %r -> %s", normalized, artist_id)
