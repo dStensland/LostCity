@@ -18,6 +18,8 @@ from datetime import date, datetime
 from typing import Optional
 from urllib.parse import urljoin, urlparse
 
+import time
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -277,10 +279,39 @@ _CONFIG = TribeConfig(
 )
 
 
+_FETCH_MAX_RETRIES = 3
+_FETCH_RETRY_BASE_DELAY = 2.0  # seconds
+
+
 def _fetch_soup(url: str) -> BeautifulSoup:
-    response = requests.get(url, headers=HEADERS, timeout=30)
-    response.raise_for_status()
-    return BeautifulSoup(response.text, "html.parser")
+    """Fetch a URL with exponential backoff retry on transient errors."""
+    last_exc: Exception = RuntimeError("unreachable")
+    for attempt in range(1, _FETCH_MAX_RETRIES + 1):
+        try:
+            response = requests.get(url, headers=HEADERS, timeout=30)
+            response.raise_for_status()
+            return BeautifulSoup(response.text, "html.parser")
+        except requests.exceptions.HTTPError as exc:
+            # Do not retry on 4xx (client errors — will not change)
+            if exc.response is not None and exc.response.status_code < 500:
+                raise
+            last_exc = exc
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
+            last_exc = exc
+
+        delay = _FETCH_RETRY_BASE_DELAY * (2 ** (attempt - 1))
+        logger.warning(
+            "Atlanta History Center: fetch error on attempt %d/%d for %s: %s — retrying in %.1fs",
+            attempt,
+            _FETCH_MAX_RETRIES,
+            url,
+            last_exc,
+            delay,
+        )
+        if attempt < _FETCH_MAX_RETRIES:
+            time.sleep(delay)
+
+    raise last_exc
 
 
 def _clean_text(value: Optional[str]) -> str:
