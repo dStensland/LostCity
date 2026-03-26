@@ -433,12 +433,11 @@ export default function LineupSection({
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => {
         if (controller.signal.aborted) return;
-        const items: CityPulseEventItem[] = ((data.events || []) as FeedEventData[])
-          .filter((event: FeedEventData) => {
-            // Only include events that match a scene activity type (trivia, karaoke, comedy, etc.)
-            // Can't use isSceneEvent() — regulars API events lack series_id.
-            return matchActivityType(event as unknown as Parameters<typeof matchActivityType>[0]) !== null;
-          })
+        const allEvents = (data.events || []) as FeedEventData[];
+        const filtered = allEvents.filter((event: FeedEventData) => {
+          return matchActivityType(event as unknown as Parameters<typeof matchActivityType>[0]) !== null;
+        });
+        const items: CityPulseEventItem[] = filtered
           .slice(0, 20)
           .map((event: FeedEventData) => ({
             item_type: "event" as const,
