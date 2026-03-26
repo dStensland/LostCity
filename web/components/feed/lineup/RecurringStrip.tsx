@@ -6,7 +6,6 @@ import { ArrowRight } from "@phosphor-icons/react";
 import Dot from "@/components/ui/Dot";
 import type { CityPulseEventItem } from "@/lib/city-pulse/types";
 import { SCENE_ACTIVITY_TYPES } from "@/lib/scene-event-routing";
-import { matchActivityType } from "@/lib/scene-event-routing";
 
 const INITIAL_SHOW = 5;
 
@@ -45,8 +44,7 @@ export function RecurringStrip({ events, portalSlug }: RecurringStripProps) {
 
       <div className="space-y-0.5">
         {visible.map((item) => {
-          const activityId = matchActivityType(item.event);
-          const color = activityId ? (ACTIVITY_COLORS[activityId] ?? "var(--vibe)") : "var(--vibe)";
+          const color = ACTIVITY_COLORS[item.event.activity_type ?? ""] ?? "var(--vibe)";
           const venue = item.event.venue;
           const recurrenceLabel = item.event.recurrence_label;
 

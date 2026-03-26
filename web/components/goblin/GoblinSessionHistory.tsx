@@ -2,14 +2,25 @@
 
 import { useState, useCallback } from "react";
 
+type SessionStatus = "planning" | "live" | "ended";
+
+interface SessionMember {
+  user_id: string;
+  role: string;
+  display_name: string;
+  avatar_url: string | null;
+}
+
 interface SessionSummary {
   id: number;
   name: string | null;
   date: string;
-  is_active: boolean;
+  status: SessionStatus;
+  invite_code?: string | null;
   movie_count: number;
   themes: string[];
   canceled_themes: string[];
+  members?: SessionMember[];
 }
 
 interface Props {
@@ -22,7 +33,9 @@ interface SessionDetail {
   id: number;
   name: string | null;
   date: string;
-  is_active: boolean;
+  status: SessionStatus;
+  invite_code?: string | null;
+  members?: SessionMember[];
   movies: {
     id: number;
     title: string;
@@ -41,27 +54,55 @@ interface SessionDetail {
     event_type: string;
     movie_id: number | null;
     theme_id: number | null;
+    user_name?: string | null;
     created_at: string;
   }[];
 }
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).toUpperCase();
+  return d
+    .toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+    .toUpperCase();
 }
 
 function formatTimestamp(isoStr: string): string {
   const d = new Date(isoStr);
-  return d.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).toUpperCase();
+  return d
+    .toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })
+    .toUpperCase();
+}
+
+function StatusBadge({ status }: { status: SessionStatus }) {
+  if (status === "live") {
+    return (
+      <span className="flex items-center gap-1 text-2xs font-bold tracking-[0.2em] uppercase border border-red-700 bg-red-950/40 text-red-400 px-1.5 py-0.5">
+        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" />
+        LIVE
+      </span>
+    );
+  }
+  if (status === "planning") {
+    return (
+      <span className="text-2xs font-bold tracking-[0.2em] uppercase border border-amber-800/60 bg-amber-950/30 text-amber-500 px-1.5 py-0.5">
+        PLANNING
+      </span>
+    );
+  }
+  return (
+    <span className="text-2xs font-bold tracking-[0.2em] uppercase border border-zinc-800 bg-zinc-900/30 text-zinc-600 px-1.5 py-0.5">
+      ENDED
+    </span>
+  );
 }
 
 function SessionDetailView({ detail }: { detail: SessionDetail }) {
@@ -73,6 +114,41 @@ function SessionDetailView({ detail }: { detail: SessionDetail }) {
 
   return (
     <div className="border-t-2 border-zinc-800 bg-black/60 px-4 py-4 space-y-4">
+      {/* Members */}
+      {detail.members && detail.members.length > 0 && (
+        <div>
+          <h4 className="text-red-600 text-2xs font-bold tracking-[0.2em] uppercase mb-2">
+            GOBLINS
+          </h4>
+          <div className="flex flex-wrap gap-1.5">
+            {detail.members.map((m) => (
+              <span
+                key={m.user_id}
+                className="text-2xs px-2 py-0.5 border border-zinc-800 text-zinc-400 tracking-wider uppercase"
+              >
+                {m.display_name}
+                {m.role === "host" && (
+                  <span className="text-red-700 ml-1">[HOST]</span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Invite code for active sessions */}
+      {(detail.status === "planning" || detail.status === "live") &&
+        detail.invite_code && (
+          <div>
+            <h4 className="text-red-600 text-2xs font-bold tracking-[0.2em] uppercase mb-1">
+              INVITE CODE
+            </h4>
+            <code className="text-zinc-400 text-xs font-mono tracking-widest">
+              {detail.invite_code}
+            </code>
+          </div>
+        )}
+
       {/* Movies */}
       {sortedMovies.length > 0 && (
         <div>
@@ -137,11 +213,19 @@ function SessionDetailView({ detail }: { detail: SessionDetail }) {
                 : null;
 
               return (
-                <div key={entry.id} className="flex items-baseline gap-2 text-2xs">
+                <div
+                  key={entry.id}
+                  className="flex items-baseline gap-2 text-2xs"
+                >
                   <span className="text-zinc-600 tabular-nums shrink-0">
                     {formatTimestamp(entry.created_at)}
                   </span>
                   <span className="text-zinc-500 uppercase tracking-wider">
+                    {entry.user_name && (
+                      <span className="text-zinc-400 font-bold mr-1">
+                        {entry.user_name.toUpperCase()}
+                      </span>
+                    )}
                     {entry.event_type.replace(/_/g, " ")}
                     {movie && (
                       <span className="text-zinc-400"> — {movie.title}</span>
@@ -180,7 +264,9 @@ export default function GoblinSessionHistory({
   );
   const [loadingId, setLoadingId] = useState<number | null>(null);
 
-  const hasActiveSesssion = sessions.some((s) => s.is_active);
+  const hasActiveSession = sessions.some(
+    (s) => s.status === "live" || s.status === "planning"
+  );
 
   const handleExpand = useCallback(
     async (id: number) => {
@@ -209,7 +295,7 @@ export default function GoblinSessionHistory({
     [expandedId, detailCache]
   );
 
-  const pastSessions = sessions.filter((s) => !s.is_active);
+  const pastSessions = sessions.filter((s) => s.status === "ended");
 
   return (
     <div className="space-y-8">
@@ -217,14 +303,14 @@ export default function GoblinSessionHistory({
       <div className="flex justify-center">
         <button
           onClick={onStartSession}
-          disabled={hasActiveSesssion}
+          disabled={hasActiveSession}
           className={`px-12 py-4 font-mono font-black text-lg tracking-[0.25em] uppercase border-2 transition-all ${
-            hasActiveSesssion
+            hasActiveSession
               ? "border-zinc-700 bg-zinc-900 text-zinc-600 cursor-not-allowed"
               : "border-red-600 bg-red-900/40 text-red-400 hover:bg-red-800/60 hover:text-red-300 hover:shadow-[0_0_30px_rgba(220,38,38,0.4)] hover:border-red-500 active:scale-95"
           }`}
         >
-          {hasActiveSesssion ? "SESSION IN PROGRESS" : "START GOBLIN DAY"}
+          {hasActiveSession ? "SESSION IN PROGRESS" : "START GOBLIN DAY"}
         </button>
       </div>
 
@@ -242,8 +328,7 @@ export default function GoblinSessionHistory({
           <div className="border-2 border-zinc-800">
             {pastSessions.map((session, index) => {
               const displayName =
-                session.name ||
-                `GOBLIN DAY #${pastSessions.length - index}`;
+                session.name || `GOBLIN DAY #${pastSessions.length - index}`;
               const isExpanded = expandedId === session.id;
               const isLoading = loadingId === session.id;
               const detail = detailCache[session.id];
@@ -278,6 +363,11 @@ export default function GoblinSessionHistory({
                     <span className="text-zinc-300 text-xs font-bold tracking-wider uppercase truncate flex-1 group-hover:text-red-400 transition-colors">
                       {displayName}
                     </span>
+
+                    {/* Status badge */}
+                    <div className="shrink-0">
+                      <StatusBadge status={session.status} />
+                    </div>
 
                     {/* Movie count */}
                     <span className="text-zinc-600 text-2xs tracking-wider shrink-0">

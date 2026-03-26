@@ -28,14 +28,25 @@ interface TimelineEntry {
   event_type: string;
   movie_id: number | null;
   theme_id: number | null;
+  user_id?: string | null;
+  user_name?: string | null;
   created_at: string;
+}
+
+interface SessionMember {
+  user_id: string;
+  role: string;
+  display_name: string;
+  avatar_url: string | null;
 }
 
 export interface SessionData {
   id: number;
   name: string | null;
   date: string;
-  is_active: boolean;
+  status: "planning" | "live" | "ended";
+  invite_code?: string | null;
+  members?: SessionMember[];
   movies: SessionMovie[];
   themes: SessionTheme[];
   timeline: TimelineEntry[];
@@ -230,12 +241,19 @@ export default function GoblinSessionView({
   /* ---- Timeline renderer ---- */
 
   function renderTimelineEntry(entry: TimelineEntry) {
+    const actor = entry.user_name ? (
+      <span className="text-zinc-300 font-bold mr-1">
+        {entry.user_name.toUpperCase()}
+      </span>
+    ) : null;
+
     switch (entry.event_type) {
       case "movie_started": {
         const movie = entry.movie_id ? movieMap.get(entry.movie_id) : null;
         return (
           <span>
             <span className="text-red-500 mr-2">&#9654;</span>
+            {actor}
             STARTED WATCHING{" "}
             <span className="text-white font-bold">
               {movie?.title ?? `#${entry.movie_id}`}
@@ -248,6 +266,7 @@ export default function GoblinSessionView({
         return (
           <span>
             <span className="text-red-500 mr-2">+</span>
+            {actor}
             ADDED THEME{" "}
             <span className="text-white font-bold">
               &quot;{theme?.label ?? `#${entry.theme_id}`}&quot;
@@ -260,6 +279,7 @@ export default function GoblinSessionView({
         return (
           <span>
             <span className="text-zinc-500 mr-2">&#10005;</span>
+            {actor}
             CANCELED THEME{" "}
             <span className="text-zinc-500 line-through">
               &quot;{theme?.label ?? `#${entry.theme_id}`}&quot;
@@ -271,6 +291,7 @@ export default function GoblinSessionView({
         return (
           <span>
             <span className="text-zinc-600 mr-2">?</span>
+            {actor}
             {entry.event_type.toUpperCase()}
           </span>
         );
@@ -286,13 +307,35 @@ export default function GoblinSessionView({
       {/* ---- HEADER BAR ---- */}
       <div className="border-b-2 border-zinc-800 bg-black">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="flex items-center gap-1 text-2xs font-bold tracking-[0.2em] uppercase border border-red-700 bg-red-950/40 text-red-400 px-1.5 py-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" />
+                LIVE
+              </span>
+            </div>
             <h1 className="text-white font-black text-lg sm:text-xl tracking-[0.15em] uppercase truncate">
               {session.name ?? "GOBLIN DAY"}
             </h1>
             <p className="text-zinc-600 text-xs tracking-[0.2em] uppercase mt-0.5">
               {displayDate}
             </p>
+            {/* Members strip */}
+            {session.members && session.members.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {session.members.map((m) => (
+                  <span
+                    key={m.user_id}
+                    className="text-2xs px-1.5 py-0.5 border border-zinc-800 text-zinc-500 tracking-wider uppercase"
+                  >
+                    {m.display_name}
+                    {m.role === "host" && (
+                      <span className="text-red-700 ml-1">[H]</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <button
             onClick={onEndSession}

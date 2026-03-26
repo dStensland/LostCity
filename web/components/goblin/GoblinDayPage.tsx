@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import GoblinMovieCard, { type GoblinMovie, normalizeStreaming } from "./GoblinMovieCard";
 import GoblinSessionView from "./GoblinSessionView";
 import GoblinSessionHistory from "./GoblinSessionHistory";
+import { GoblinPlanningView } from "./GoblinPlanningView";
 
 interface Props {
   initialMovies: GoblinMovie[];

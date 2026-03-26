@@ -106,6 +106,8 @@ export interface CityPulseEventItem {
     featured?: boolean;
     is_recurring?: boolean;
     recurrence_label?: string;
+    /** Scene activity type for recurring events (e.g. "trivia", "karaoke"). */
+    activity_type?: string | null;
     card_tier?: CardTier;
     editorial_mentions?: EditorialMention[];
   };
