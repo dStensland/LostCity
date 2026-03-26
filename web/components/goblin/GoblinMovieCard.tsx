@@ -57,7 +57,10 @@ const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 
 interface Props {
   movie: GoblinMovie;
-  onToggle: (id: number, field: string, value: boolean) => void;
+  isBookmarked: boolean;
+  isWatched: boolean;
+  onToggleBookmark: (id: number) => void;
+  onToggleWatched: (id: number) => void;
 }
 
 function formatRuntime(minutes: number): string {
@@ -73,7 +76,7 @@ function formatVoteCount(count: number): string {
 
 type FlipMode = null | "info" | "watch";
 
-export default function GoblinMovieCard({ movie, onToggle }: Props) {
+export default function GoblinMovieCard({ movie, isBookmarked, isWatched, onToggleBookmark, onToggleWatched }: Props) {
   const [flipMode, setFlipMode] = useState<FlipMode>(null);
   const streaming = normalizeStreaming(movie.streaming_info);
 
@@ -103,9 +106,9 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
   return (
     <div
       className={`group bg-zinc-950 overflow-hidden border-2 transition-all font-mono relative flex flex-col ${
-        movie.proposed && !movie.watched
+        isBookmarked && !isWatched
           ? "border-red-700 shadow-[0_0_20px_rgba(185,28,28,0.25)] hover:shadow-[0_0_30px_rgba(185,28,28,0.4)]"
-          : movie.watched
+          : isWatched
             ? "border-zinc-800"
             : "border-zinc-800 hover:border-red-900/60 hover:shadow-[0_0_15px_rgba(120,10,10,0.15)]"
       }`}
@@ -117,7 +120,7 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
             src={posterUrl}
             alt={movie.title}
             fill
-            className={`object-cover transition-transform duration-500 group-hover:scale-105 ${movie.watched ? "grayscale brightness-50" : ""}`}
+            className={`object-cover transition-transform duration-500 group-hover:scale-105 ${isWatched ? "grayscale brightness-50" : ""}`}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-zinc-700 text-xs tracking-widest uppercase">
@@ -126,17 +129,17 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
         )}
         {/* Dark vignette overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 pointer-events-none" />
-        {movie.watched && (
+        {isWatched && (
           <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
             <span className="text-emerald-500 font-black text-sm tracking-[0.3em] uppercase rotate-[-12deg] border-2 border-emerald-500/50 px-3 py-1">
               WATCHED
             </span>
           </div>
         )}
-        {movie.proposed && !movie.watched && (
+        {isBookmarked && !isWatched && (
           <div className="absolute top-0 left-0 bg-red-700 px-2 py-0.5 shadow-[4px_4px_0_rgba(0,0,0,0.5)]">
             <span className="text-white font-bold text-2xs tracking-widest uppercase">
-              PROPOSED
+              SAVED
             </span>
           </div>
         )}
@@ -259,24 +262,24 @@ export default function GoblinMovieCard({ movie, onToggle }: Props) {
         </div>
         <div className="flex gap-1">
           <button
-            onClick={() => onToggle(movie.id, "proposed", !movie.proposed)}
+            onClick={() => onToggleBookmark(movie.id)}
             className={`flex-1 text-2xs py-2 font-bold tracking-wider uppercase transition-all ${
-              movie.proposed
+              isBookmarked
                 ? "bg-red-800 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.3)] hover:bg-red-700"
                 : "bg-zinc-900 text-zinc-500 border border-zinc-800 hover:text-red-400 hover:border-red-900/50 hover:bg-red-950/20 hover:shadow-[0_0_8px_rgba(120,10,10,0.2)]"
             }`}
           >
-            {movie.proposed ? "\u2666 PROPOSED" : "PROPOSE"}
+            {isBookmarked ? "\u2666 SAVED" : "SAVE"}
           </button>
           <button
-            onClick={() => onToggle(movie.id, "watched", !movie.watched)}
+            onClick={() => onToggleWatched(movie.id)}
             className={`flex-1 text-2xs py-2 font-bold tracking-wider uppercase transition-all ${
-              movie.watched
+              isWatched
                 ? "bg-emerald-800 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.3)] hover:bg-emerald-700"
                 : "bg-zinc-900 text-zinc-500 border border-zinc-800 hover:text-emerald-400 hover:border-emerald-900/50 hover:bg-emerald-950/20 hover:shadow-[0_0_8px_rgba(10,80,40,0.2)]"
             }`}
           >
-            {movie.watched ? "\u2620 WATCHED" : "WATCHED?"}
+            {isWatched ? "\u2620 WATCHED" : "WATCHED?"}
           </button>
         </div>
       </div>
