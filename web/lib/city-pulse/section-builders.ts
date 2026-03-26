@@ -86,6 +86,12 @@ function makeEventItem(
     opts?.friends_going?.length ?? 0,
   );
 
+  // Compute scene activity type for recurring events (e.g. "trivia", "karaoke")
+  const rawEvent = event as Record<string, unknown>;
+  const activityType = (event.series_id || rawEvent.is_recurring)
+    ? (matchActivityType(event as Parameters<typeof matchActivityType>[0]) ?? null)
+    : null;
+
   return {
     item_type: "event",
     event: {
@@ -97,6 +103,7 @@ function makeEventItem(
       featured: opts?.featured,
       is_recurring: opts?.is_recurring,
       recurrence_label: opts?.recurrence_label,
+      activity_type: activityType ?? undefined,
       card_tier: cardTier,
       editorial_mentions: editorialMentions,
     },
