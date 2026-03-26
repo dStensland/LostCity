@@ -144,7 +144,11 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
   }, []);
 
   // Session state
-  const [sessionId, setSessionId] = useState<number | null>(activeSessionId);
+  const [activeSession, setActiveSession] = useState<{
+    id: number;
+    status: "planning" | "live";
+    invite_code: string;
+  } | null>(activeSessionId ? { id: activeSessionId, status: "live", invite_code: "" } : null);
   const [sessionData, setSessionData] = useState<any>(null);
   const [sessionsList, setSessionsList] = useState<any[]>([]);
   const [sessionsLoaded, setSessionsLoaded] = useState(false);
@@ -155,6 +159,14 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
     if (res.ok) {
       const data = await res.json();
       setSessionData(data);
+      // Sync status from API response
+      if (data.status === "planning" || data.status === "live") {
+        setActiveSession((prev) =>
+          prev
+            ? { ...prev, status: data.status, invite_code: data.invite_code ?? prev.invite_code }
+            : { id, status: data.status, invite_code: data.invite_code ?? "" }
+        );
+      }
     }
   }, []);
 
@@ -165,16 +177,29 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
       const data = await res.json();
       setSessionsList(data);
       setSessionsLoaded(true);
+      // Re-surface any in-progress session from the list
+      const inProgress = data.find(
+        (s: any) => s.status === "planning" || s.status === "live"
+      );
+      if (inProgress && !activeSession) {
+        setActiveSession({
+          id: inProgress.id,
+          status: inProgress.status,
+          invite_code: inProgress.invite_code ?? "",
+        });
+        fetchSession(inProgress.id);
+      }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load session data when tab is active
   useEffect(() => {
     if (activeTab === "next") {
-      if (sessionId) fetchSession(sessionId);
+      if (activeSession) fetchSession(activeSession.id);
       else fetchSessionsList();
     }
-  }, [activeTab, sessionId, fetchSession, fetchSessionsList]);
+  }, [activeTab, activeSession, fetchSession, fetchSessionsList]);
 
   const handleStartSession = useCallback(async () => {
     const res = await fetch("/api/goblinday/sessions", {
@@ -184,38 +209,65 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
     });
     if (res.ok) {
       const data = await res.json();
-      setSessionId(data.id);
+      setActiveSession({
+        id: data.id,
+        status: data.status ?? "planning",
+        invite_code: data.invite_code ?? "",
+      });
       fetchSession(data.id);
     }
   }, [fetchSession]);
 
-  const handleEndSession = useCallback(async () => {
-    if (!sessionId) return;
-    await fetch(`/api/goblinday/sessions/${sessionId}`, {
+  const handleStartLive = useCallback(async () => {
+    if (!activeSession) return;
+    const res = await fetch(`/api/goblinday/sessions/${activeSession.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_active: false }),
+      body: JSON.stringify({ status: "live" }),
     });
-    setSessionId(null);
+    if (res.ok) {
+      setActiveSession((prev) => prev ? { ...prev, status: "live" } : prev);
+      fetchSession(activeSession.id);
+    }
+  }, [activeSession, fetchSession]);
+
+  const handlePropose = useCallback(async (movieId: number) => {
+    if (!activeSession) return;
+    await fetch(`/api/goblinday/sessions/${activeSession.id}/propose`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ movie_id: movieId }),
+    });
+    fetchSession(activeSession.id);
+  }, [activeSession, fetchSession]);
+
+  const handleEndSession = useCallback(async () => {
+    if (!activeSession) return;
+    await fetch(`/api/goblinday/sessions/${activeSession.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "ended" }),
+    });
+    setActiveSession(null);
     setSessionData(null);
     // Refresh movies (some may now be marked watched)
     const moviesRes = await fetch("/api/goblinday");
     if (moviesRes.ok) setMovies(await moviesRes.json());
     fetchSessionsList();
-  }, [sessionId, fetchSessionsList]);
+  }, [activeSession, fetchSessionsList]);
 
   const handleSessionRefresh = useCallback(() => {
-    if (sessionId) fetchSession(sessionId);
-  }, [sessionId, fetchSession]);
+    if (activeSession) fetchSession(activeSession.id);
+  }, [activeSession, fetchSession]);
 
   const handleDeleteSession = useCallback(async (id: number) => {
     await fetch(`/api/goblinday/sessions/${id}`, { method: "DELETE" });
     setSessionsList((prev) => prev.filter((s) => s.id !== id));
-    if (sessionId === id) {
-      setSessionId(null);
+    if (activeSession?.id === id) {
+      setActiveSession(null);
       setSessionData(null);
     }
-  }, [sessionId]);
+  }, [activeSession]);
 
   const now = new Date().toISOString().slice(0, 10);
   const isReleased = (m: GoblinMovie) =>
@@ -568,7 +620,21 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
         {activeTab === "next" ? (
           // Session view + proposed movies
           <>
-            {sessionId && sessionData ? (
+            {activeSession?.status === "planning" && sessionData ? (
+              <GoblinPlanningView
+                sessionId={activeSession.id}
+                sessionName={sessionData.name ?? null}
+                sessionDate={sessionData.date ?? new Date().toISOString().slice(0, 10)}
+                inviteCode={activeSession.invite_code}
+                members={sessionData.members ?? []}
+                proposedMovies={sessionData.proposed_movies ?? sessionData.movies ?? []}
+                allMovies={movies.map((m) => ({ id: m.id, title: m.title, poster_path: m.poster_path }))}
+                isHost={true}
+                onPropose={handlePropose}
+                onStartLive={handleStartLive}
+                onRefresh={handleSessionRefresh}
+              />
+            ) : activeSession?.status === "live" && sessionData ? (
               <GoblinSessionView
                 session={sessionData}
                 proposedMovies={movies
@@ -605,7 +671,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
               </>
             )}
 
-            {filteredMovies.length === 0 && !sessionId && (
+            {filteredMovies.length === 0 && !activeSession && (
               <p className="text-center text-zinc-600 py-10 text-sm tracking-widest uppercase">
                 // NO PROPOSALS YET — GO TO CONTENDERS AND PROPOSE SOME
               </p>

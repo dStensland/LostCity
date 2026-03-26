@@ -241,7 +241,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           category: row.category_id, series_id: row.series_id,
           is_recurring: row.is_recurring, genres: row.genres, tags: row.tags,
         };
-        if (isSceneEvent(pseudo as never)) return false;
+        if (isSceneEvent(pseudo as never)) return true;
         const tags = row.tags ?? [];
         if (!tags.some((t) => LINEUP_PREMIUM_TAGS.has(t))) return false;
         return true;
