@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
 /**
+ * Vanity domains that map to specific paths on the main site.
+ * The domain serves content from the mapped path while keeping the vanity URL in the address bar.
+ */
+const VANITY_DOMAINS: Record<string, string> = {
+  "goblinday.com": "/goblinday",
+  "www.goblinday.com": "/goblinday",
+};
+
+/**
  * Known vertical slugs that map to subdomain routing.
  * Duplicated from constants.ts to avoid importing non-edge-compatible modules.
  */
@@ -57,6 +66,22 @@ function extractSubdomain(host: string, baseDomain: string): string | null {
 
 export function middleware(request: NextRequest) {
   const host = request.headers.get("host") || "";
+
+  // --- Vanity domain rewrites ---
+  // e.g., goblinday.com → serve /goblinday content at the root
+  const hostname = host.split(":")[0];
+  const vanityPath = VANITY_DOMAINS[hostname];
+  if (vanityPath) {
+    const url = request.nextUrl.clone();
+    // Rewrite root and all sub-paths under the vanity path
+    if (url.pathname === "/" || url.pathname === "") {
+      url.pathname = vanityPath;
+    } else {
+      url.pathname = `${vanityPath}${url.pathname}`;
+    }
+    return NextResponse.rewrite(url);
+  }
+
   const baseDomain = getBaseDomainFromHost(host);
 
   // If we can't identify the base domain, pass through
