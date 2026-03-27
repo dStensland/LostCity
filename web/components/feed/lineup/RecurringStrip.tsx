@@ -75,7 +75,8 @@ export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStrip
       if (activeDay === null && activeTab !== "this_week") {
         const isToday = item.event.start_date === todayStr;
         const startTime = item.event.start_time;
-        if (isToday && startTime && startTime < currentTime) return false;
+        // Compare HH:MM only (start_time can be HH:MM:SS)
+        if (isToday && startTime && startTime.slice(0, 5) < currentTime) return false;
       }
       return true;
     });
