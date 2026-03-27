@@ -692,8 +692,8 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
                       onPropose={activeSession?.status === "planning" ? handlePropose : undefined}
                       isProposed={proposedIds.has(movie.id)}
                     />
-                    );})
-                  ))}
+                    );
+                  })}
                 </div>
               </>
             )}
