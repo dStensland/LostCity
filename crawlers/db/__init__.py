@@ -30,6 +30,7 @@ from db.client import (
     venues_support_location_designator,
     has_event_extractions_table,
     venues_support_destination_details_table,
+    events_support_taxonomy_v2_columns,
     # module-level state (needed by scripts that directly access them)
     _SOURCE_CACHE,
     _VENUE_CACHE,

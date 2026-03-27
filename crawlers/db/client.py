@@ -172,6 +172,7 @@ _EVENTS_HAS_FILM_IDENTITY_COLUMNS: Optional[bool] = None
 _EVENTS_HAS_CONTENT_KIND_COLUMN: Optional[bool] = None
 _EVENTS_HAS_FIELD_METADATA_COLUMNS: Optional[bool] = None
 _EVENTS_HAS_IS_ACTIVE_COLUMN: Optional[bool] = None
+_EVENTS_HAS_TAXONOMY_V2_COLUMNS: Optional[bool] = None
 _VENUES_HAS_FEATURES_TABLE: Optional[bool] = None
 _VENUES_HAS_DESTINATION_DETAILS_TABLE: Optional[bool] = None
 _VENUES_HAS_LOCATION_DESIGNATOR: Optional[bool] = None
@@ -516,3 +517,19 @@ def has_event_extractions_table() -> bool:
             raise
 
     return bool(_HAS_EVENT_EXTRACTIONS_TABLE)
+
+
+def events_support_taxonomy_v2_columns() -> bool:
+    """Detect whether taxonomy v2 derived columns exist on events."""
+    global _EVENTS_HAS_TAXONOMY_V2_COLUMNS
+    if _EVENTS_HAS_TAXONOMY_V2_COLUMNS is not None:
+        return _EVENTS_HAS_TAXONOMY_V2_COLUMNS
+    client = get_client()
+    try:
+        client.table("events").select(
+            "classification_prompt_version,duration,significance"
+        ).limit(1).execute()
+        _EVENTS_HAS_TAXONOMY_V2_COLUMNS = True
+    except Exception:
+        _EVENTS_HAS_TAXONOMY_V2_COLUMNS = False
+    return _EVENTS_HAS_TAXONOMY_V2_COLUMNS

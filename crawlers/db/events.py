@@ -24,6 +24,7 @@ from db.client import (
     events_support_is_active_column,
     events_support_field_metadata_columns,
     has_event_extractions_table,
+    events_support_taxonomy_v2_columns,
 )
 from db.validation import (
     validate_event,
@@ -823,6 +824,77 @@ def _step_infer_tags(event_data: dict, ctx: InsertContext) -> dict:
     return event_data
 
 
+def _step_classify_v2(event_data: dict, ctx: InsertContext) -> dict:
+    """
+    Run new hybrid classification engine (Phase 2).
+    Populates derived columns WITHOUT overwriting category_id.
+    Guarded by CLASSIFY_V2_ENABLED env var and column-existence check.
+    """
+    import os as _os
+    import time as _time
+
+    # Feature flag — disable without a code deploy
+    if not _os.environ.get("CLASSIFY_V2_ENABLED"):
+        return event_data
+
+    # Column-existence guard
+    if not events_support_taxonomy_v2_columns():
+        return event_data
+
+    from classify import classify_event
+
+    # Extract source_id from ctx.source_info (NOT ctx.source_id which doesn't exist!)
+    source_id = None
+    if ctx.source_info:
+        source_id = ctx.source_info.get("id")
+    if not source_id:
+        source_id = event_data.get("source_id")
+
+    title = event_data.get("title", "")
+    old_category = event_data.get("category", "")
+
+    start = _time.monotonic()
+    result = classify_event(
+        title=title,
+        description=event_data.get("description", ""),
+        venue_type=ctx.venue_type,
+        source_name=ctx.source_name or ctx.source_slug,
+        source_id=source_id,
+        source_slug=ctx.source_slug,
+        category_hint=old_category,
+    )
+    elapsed = _time.monotonic() - start
+    if elapsed > 2.0:
+        logger.info("classify_v2 took %.1fs for '%s' (source=%s)", elapsed, title[:40], result.source)
+
+    # Log disagreements between old and new classification
+    if result.category and old_category and result.category != old_category:
+        logger.info("classify_v2 disagrees: old=%s new=%s title='%s'",
+                    old_category, result.category, title[:60])
+
+    # Populate derived attributes (additive — DON'T overwrite category)
+    if result.duration:
+        event_data["duration"] = result.duration
+    if result.cost_tier:
+        event_data["cost_tier"] = result.cost_tier
+    if result.skill_level:
+        event_data["skill_level"] = result.skill_level
+    if result.booking_required is not None:
+        event_data["booking_required"] = result.booking_required
+    if result.indoor_outdoor:
+        event_data["indoor_outdoor"] = result.indoor_outdoor
+    if result.significance:
+        event_data["significance"] = result.significance
+    if result.significance_signals:
+        event_data["significance_signals"] = result.significance_signals
+    # Only set audience_tags when non-general
+    if result.audience and result.audience != "general":
+        event_data["audience_tags"] = [result.audience]
+    event_data["classification_prompt_version"] = result.prompt_version
+
+    return event_data
+
+
 def _step_infer_content_kind(event_data: dict, ctx: InsertContext) -> dict:
     """Infer content_kind column value."""
     if events_support_content_kind_column():
@@ -1153,6 +1225,7 @@ INSERT_PIPELINE = [
     _step_infer_genres,
     _step_set_flags,
     _step_infer_tags,
+    _step_classify_v2,          # NEW — taxonomy v2 derived columns
     _step_infer_content_kind,
     _step_show_signals,
     _step_field_metadata,
