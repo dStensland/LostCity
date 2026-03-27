@@ -677,7 +677,11 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
                   </h2>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                  {filteredMovies.map((movie) => (
+                  {filteredMovies.map((movie) => {
+                    const proposedIds = new Set(
+                      (sessionData?.movies ?? []).map((m: { id: number }) => m.id)
+                    );
+                    return (
                     <GoblinMovieCard
                       key={movie.id}
                       movie={movie}
@@ -685,7 +689,10 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
                       isWatched={goblinUser.watched.has(movie.id)}
                       onToggleBookmark={handleToggleBookmark}
                       onToggleWatched={handleToggleWatched}
+                      onPropose={activeSession?.status === "planning" ? handlePropose : undefined}
+                      isProposed={proposedIds.has(movie.id)}
                     />
+                    );})
                   ))}
                 </div>
               </>

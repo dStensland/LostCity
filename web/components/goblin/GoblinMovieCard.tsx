@@ -61,6 +61,8 @@ interface Props {
   isWatched: boolean;
   onToggleBookmark: (id: number) => void;
   onToggleWatched: (id: number) => void;
+  onPropose?: (id: number) => void;
+  isProposed?: boolean;
 }
 
 function formatRuntime(minutes: number): string {
@@ -76,7 +78,7 @@ function formatVoteCount(count: number): string {
 
 type FlipMode = null | "info" | "watch";
 
-export default function GoblinMovieCard({ movie, isBookmarked, isWatched, onToggleBookmark, onToggleWatched }: Props) {
+export default function GoblinMovieCard({ movie, isBookmarked, isWatched, onToggleBookmark, onToggleWatched, onPropose, isProposed }: Props) {
   const [flipMode, setFlipMode] = useState<FlipMode>(null);
   const streaming = normalizeStreaming(movie.streaming_info);
 
@@ -260,6 +262,19 @@ export default function GoblinMovieCard({ movie, isBookmarked, isWatched, onTogg
             &#9654; TRAILER
           </a>
         </div>
+        {onPropose && (
+          <button
+            onClick={() => !isProposed && onPropose(movie.id)}
+            disabled={isProposed}
+            className={`w-full text-2xs py-2 font-bold tracking-wider uppercase transition-all ${
+              isProposed
+                ? "bg-amber-900/60 text-amber-300 cursor-default"
+                : "bg-amber-800 text-amber-100 hover:bg-amber-700 hover:shadow-[0_0_12px_rgba(180,120,0,0.3)] active:scale-95"
+            }`}
+          >
+            {isProposed ? "✦ PROPOSED" : "✦ PROPOSE FOR GOBLIN DAY"}
+          </button>
+        )}
         <div className="flex gap-1">
           <button
             onClick={() => onToggleBookmark(movie.id)}
