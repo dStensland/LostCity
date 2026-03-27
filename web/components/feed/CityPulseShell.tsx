@@ -506,15 +506,7 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         return renderMiddleSection(blockId);
       })}
 
-      {/* Portal teasers — cross-portal headlines */}
-      <div className="mt-8">
-        <div className="h-px bg-[var(--twilight)]" />
-        <div className="pt-6">
-          <LazySection minHeight={200}>
-            <PortalTeasersSection portalSlug={portalSlug} />
-          </LazySection>
-        </div>
-      </div>
+      {/* Portal teasers — hidden until sibling portals are more built out */}
 
       {/* Planning Horizon — big future events with urgency signals */}
       {planningHorizonSection && !hiddenBlockSet.has("horizon") && (
