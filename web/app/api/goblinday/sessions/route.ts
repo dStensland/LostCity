@@ -75,15 +75,17 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
 
   const inviteCode = generateInviteCode();
 
+  const insertData: Record<string, unknown> = {
+    name: body.name ?? null,
+    status: "planning",
+    invite_code: inviteCode,
+    created_by: user.id,
+  };
+  if (body.date) insertData.date = body.date;
+
   const { data: session, error } = await serviceClient
     .from("goblin_sessions")
-    .insert({
-      name: body.name ?? null,
-      date: body.date ?? null,
-      status: "planning",
-      invite_code: inviteCode,
-      created_by: user.id,
-    } as never)
+    .insert(insertData as never)
     .select()
     .single();
 
