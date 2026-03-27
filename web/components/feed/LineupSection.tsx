@@ -798,7 +798,7 @@ function ChipButton({
               color,
               backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
               borderColor: `color-mix(in srgb, ${color} 30%, transparent)`,
-              boxShadow: `0 0 12px color-mix(in srgb, ${color} 40%, transparent), 0 0 24px color-mix(in srgb, ${color} 20%, transparent)`,
+              boxShadow: `inset 0 0 16px color-mix(in srgb, ${color} 25%, transparent)`,
             }
           : undefined
       }

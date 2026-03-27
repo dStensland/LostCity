@@ -81,7 +81,7 @@ export default function CountdownBadge({ countdown, size = "sm" }: CountdownBadg
         borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
         borderWidth: 1,
         borderStyle: "solid",
-        boxShadow: `0 0 12px color-mix(in srgb, ${color} 20%, transparent)`,
+        boxShadow: `inset 0 0 12px color-mix(in srgb, ${color} 25%, transparent)`,
       }}
     >
       {icon}

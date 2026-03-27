@@ -50,7 +50,7 @@ export default function InlineSpecialRow({ special, portalSlug, isLast }: Inline
           width: isActive ? "5px" : "4px",
           borderRadius: "50%",
           background: `linear-gradient(to bottom, transparent, var(--gold), transparent)`,
-          boxShadow: isActive ? "0 0 8px color-mix(in srgb, var(--gold) 40%, transparent)" : undefined,
+          boxShadow: isActive ? "inset 0 0 8px color-mix(in srgb, var(--gold) 40%, transparent)" : undefined,
         }}
       />
 

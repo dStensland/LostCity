@@ -4899,33 +4899,33 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 }
 
 /* Chip glow variants - applied when active */
-/* Chip glow — subtle atmospheric, not neon sign */
+/* Chip glow — inset to avoid clipping in overflow-x-auto containers */
 .chip-glow-cyan {
-  box-shadow: 0 0 8px hsl(var(--neon-cyan-hsl) / 0.12);
+  box-shadow: inset 0 0 12px hsl(var(--neon-cyan-hsl) / 0.15);
 }
 
 .chip-glow-green {
-  box-shadow: 0 0 8px hsl(var(--neon-green-hsl) / 0.12);
+  box-shadow: inset 0 0 12px hsl(var(--neon-green-hsl) / 0.15);
 }
 
 .chip-glow-gold {
-  box-shadow: 0 0 8px hsl(var(--neon-amber-hsl) / 0.12);
+  box-shadow: inset 0 0 12px hsl(var(--neon-amber-hsl) / 0.15);
 }
 
 .chip-glow-vibe {
-  box-shadow: 0 0 8px rgba(124, 58, 237, 0.12);
+  box-shadow: inset 0 0 12px rgba(124, 58, 237, 0.15);
 }
 
 .chip-glow-coral {
-  box-shadow: 0 0 8px rgba(255, 107, 122, 0.12);
+  box-shadow: inset 0 0 12px rgba(255, 107, 122, 0.15);
 }
 
 .chip-glow-cream {
-  box-shadow: 0 0 8px rgba(250, 250, 249, 0.10);
+  box-shadow: inset 0 0 12px rgba(250, 250, 249, 0.12);
 }
 
 .chip-glow-red {
-  box-shadow: 0 0 8px hsl(var(--neon-red-hsl) / 0.12);
+  box-shadow: inset 0 0 12px hsl(var(--neon-red-hsl) / 0.15);
 }
 
 /* ============================================

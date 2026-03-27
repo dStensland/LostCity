@@ -131,7 +131,7 @@ export default function LineupHero({ event, portalSlug, vertical }: LineupHeroPr
           className="absolute top-3 right-3 inline-flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-2.5 py-1.5 rounded-lg font-mono text-2xs font-bold uppercase tracking-wider leading-none border border-white/10"
           style={{
             color: catColor,
-            boxShadow: `0 0 12px color-mix(in srgb, ${catColor} 25%, transparent)`,
+            boxShadow: `inset 0 0 12px color-mix(in srgb, ${catColor} 30%, transparent)`,
           }}
         >
           <CategoryIcon
