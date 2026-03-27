@@ -288,30 +288,37 @@ VIBE_TO_TAG = {
     "outdoor-seating": "outdoor",
 }
 
-# Canonical valid categories (matches web search-constants.ts CATEGORIES)
+# Canonical valid categories (new taxonomy + legacy during migration)
 VALID_CATEGORIES = {
+    # === New taxonomy (19 categories) ===
     "music",
     "film",
     "comedy",
     "theater",
-    "dance",
     "art",
+    "dance",
     "sports",
+    "fitness",
+    "outdoors",
+    "games",
     "food_drink",
+    "conventions",
+    "workshops",
+    "education",
+    "words",
+    "volunteer",
+    "civic",
+    "support",
+    "religious",
+    # === Legacy (kept during dual-write migration, removed in Phase 5) ===
     "nightlife",
     "community",
-    "civic",
-    "volunteer",
-    "fitness",  # legacy alias — normalizes to "exercise"
-    "exercise",
-    "recreation",
     "family",
-    "learning",
-    "words",
-    "religious",
+    "recreation",
     "wellness",
+    "exercise",
+    "learning",
     "support_group",
-    "outdoors",
     "other",
 }
 

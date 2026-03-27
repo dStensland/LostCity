@@ -28,6 +28,7 @@ MUSIC_GENRES = {
     # Extended
     "alternative", "singer-songwriter", "house", "reggae", "gospel",
     "opera", "world", "jam", "cover", "edm", "funk", "bluegrass", "ambient",
+    "karaoke", "dj", "vinyl", "listening-party",
 }
 
 FILM_GENRES = {
@@ -47,6 +48,7 @@ THEATER_GENRES = {
 DANCE_GENRES = {
     "ballet", "contemporary", "modern-dance", "afrocentric", "hip-hop",
     "flamenco", "latin", "ballroom", "swing", "social-dance",
+    "salsa", "bachata", "line-dancing", "tap", "modern", "jazz",
 }
 
 SPORTS_GENRES = {
@@ -56,7 +58,7 @@ SPORTS_GENRES = {
     "lacrosse", "rugby", "cricket", "field-hockey",
     "boxing", "wrestling", "kickboxing", "motorsports", "nascar",
     "monster-truck", "dirt-track", "track", "gymnastics", "figure-skating",
-    "poker",
+    "poker", "volleyball",
 }
 
 RECREATION_GENRES = {
@@ -138,6 +140,59 @@ GAMING_GENRES = {
     "retro", "lan-party",
 }
 
+GAMES_GENRES = {
+    "trivia", "bingo", "board-games", "poker", "dnd", "warhammer",
+    "bar-games", "escape-room", "esports", "card-games", "pub-quiz",
+    "game-night",
+}
+
+WORKSHOPS_GENRES = {
+    "pottery", "painting", "blacksmithing", "woodworking", "jewelry",
+    "textiles", "glassblowing", "printmaking", "floral", "candle-making",
+    "resin", "crafts",
+}
+
+EDUCATION_GENRES = {
+    "seminar", "lecture", "certification", "language", "career",
+    "medical", "technology", "financial", "science",
+}
+
+CONVENTIONS_GENRES = {
+    "fan", "tech", "professional", "trade", "hobby", "academic",
+    "convention",
+}
+
+SUPPORT_GENRES = {
+    "recovery", "grief", "caregiver", "chronic-illness", "mental-health",
+    "peer-support", "meditation",
+}
+
+FITNESS_NEW_GENRES = {
+    "yoga", "running", "cycling", "swimming", "crossfit", "pilates",
+    "climbing", "martial-arts", "gymnastics", "barre", "hiit",
+    "dance-fitness", "aerial", "run",
+}
+
+WORDS_NEW_GENRES = {
+    "book-club", "reading", "signing", "poetry", "zine",
+    "literary-festival", "storytime", "spoken-word",
+}
+
+RELIGIOUS_GENRES = {
+    "worship", "prayer", "bible-study", "interfaith", "revival",
+    "choir", "ministry",
+}
+
+VOLUNTEER_GENRES = {
+    "food-bank", "habitat", "cleanup", "mentoring", "animal-shelter",
+    "tutoring", "tree-planting", "meal-delivery",
+}
+
+CIVIC_GENRES = {
+    "legislation", "town-hall", "public-comment", "advocacy",
+    "organizing", "voter-registration", "commission",
+}
+
 # Union of all valid genres
 VALID_GENRES: set[str] = (
     MUSIC_GENRES | FILM_GENRES | COMEDY_GENRES | THEATER_GENRES | DANCE_GENRES |
@@ -145,11 +200,16 @@ VALID_GENRES: set[str] = (
     FOOD_DRINK_GENRES | ART_GENRES |
     NIGHTLIFE_GENRES | LEARNING_GENRES | COMMUNITY_GENRES | FAMILY_GENRES |
     OUTDOOR_GENRES | WORDS_GENRES | WELLNESS_GENRES | MEETUP_GENRES |
-    GAMING_GENRES
+    GAMING_GENRES |
+    # New taxonomy genre sets
+    GAMES_GENRES | WORKSHOPS_GENRES | EDUCATION_GENRES | CONVENTIONS_GENRES |
+    SUPPORT_GENRES | FITNESS_NEW_GENRES | WORDS_NEW_GENRES | RELIGIOUS_GENRES |
+    VOLUNTEER_GENRES | CIVIC_GENRES
 )
 
 # Category → genre set mapping (for category-scoped lookups)
 GENRES_BY_CATEGORY: dict[str, set[str]] = {
+    # Legacy mappings (kept during dual-write migration)
     "music": MUSIC_GENRES,
     "film": FILM_GENRES,
     "comedy": COMEDY_GENRES,
@@ -158,7 +218,6 @@ GENRES_BY_CATEGORY: dict[str, set[str]] = {
     "sports": SPORTS_GENRES,
     "recreation": RECREATION_GENRES,
     "exercise": EXERCISE_GENRES,
-    "fitness": EXERCISE_GENRES,  # legacy alias
     "food_drink": FOOD_DRINK_GENRES,
     "art": ART_GENRES,
     "nightlife": NIGHTLIFE_GENRES,
@@ -166,10 +225,21 @@ GENRES_BY_CATEGORY: dict[str, set[str]] = {
     "community": COMMUNITY_GENRES,
     "family": FAMILY_GENRES,
     "outdoor": OUTDOOR_GENRES,
-    "words": WORDS_GENRES,
     "wellness": WELLNESS_GENRES,
     "meetup": MEETUP_GENRES,
     "gaming": GAMING_GENRES,
+    # New taxonomy mappings (fitness/words replace legacy aliases)
+    "fitness": FITNESS_NEW_GENRES,
+    "words": WORDS_NEW_GENRES,
+    "games": GAMES_GENRES,
+    "workshops": WORKSHOPS_GENRES,
+    "education": EDUCATION_GENRES,
+    "conventions": CONVENTIONS_GENRES,
+    "support": SUPPORT_GENRES,
+    "religious": RELIGIOUS_GENRES,
+    "volunteer": VOLUNTEER_GENRES,
+    "civic": CIVIC_GENRES,
+    "outdoors": OUTDOOR_GENRES,
 }
 
 
