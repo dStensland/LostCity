@@ -450,10 +450,17 @@ export default function LineupSection({
 
   const recurringEvents = useMemo<CityPulseEventItem[]>(() => {
     if (!ENABLE_LINEUP_RECURRING || !regularsData?.events) return [];
+    // Dedup: one per title+venue (same trivia night at same bar = one row)
+    const seen = new Set<string>();
     return regularsData.events
-      .filter((event: FeedEventData) =>
-        matchActivityType(event as unknown as Parameters<typeof matchActivityType>[0]) !== null,
-      )
+      .filter((event: FeedEventData) => {
+        if (!matchActivityType(event as unknown as Parameters<typeof matchActivityType>[0])) return false;
+        const venueId = event.venue?.id ?? 0;
+        const key = `${event.title}|${venueId}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
       .map((event: FeedEventData) => ({
         item_type: "event" as const,
         event: {
