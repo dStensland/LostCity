@@ -344,23 +344,8 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         ) : null;
 
       case "recurring":
-        return (
-          <div
-            key="city-pulse-recurring"
-            id="city-pulse-recurring"
-            data-feed-anchor="true"
-            data-index-label="Regular Hangs"
-            data-block-id="recurring"
-            className="mt-8 scroll-mt-28"
-          >
-            <div className="h-px bg-[var(--twilight)]" />
-            <div className="pt-6">
-              <LazySection minHeight={300}>
-                <TheSceneSection portalSlug={portalSlug} />
-              </LazySection>
-            </div>
-          </div>
-        );
+        // Regular Hangs absorbed into RecurringStrip inside the Lineup
+        return null;
 
       case "cinema":
         return (
