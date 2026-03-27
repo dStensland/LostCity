@@ -344,25 +344,6 @@ export default function GoblinMovieCard({ movie, isBookmarked, isWatched, onTogg
                 </h4>
               )}
 
-              {/* Keywords */}
-              {movie.keywords && movie.keywords.length > 0 && (
-                <>
-                  <h4 className="text-red-500 text-2xs font-bold tracking-[0.2em] uppercase mb-2">
-                    KEYWORDS
-                  </h4>
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {movie.keywords.map((kw) => (
-                      <span
-                        key={kw}
-                        className="text-2xs px-1.5 py-0.5 bg-red-950/40 text-red-400/80 border border-red-900/30 tracking-wider uppercase"
-                      >
-                        {kw}
-                      </span>
-                    ))}
-                  </div>
-                </>
-              )}
-
               {/* Genres */}
               {movie.genres && movie.genres.length > 0 && (
                 <>
@@ -419,6 +400,22 @@ export default function GoblinMovieCard({ movie, isBookmarked, isWatched, onTogg
                       LETTERBOXD &rarr;
                     </a>
                   )}
+                </div>
+              )}
+
+              {/* Keywords — at the bottom, can be many */}
+              {movie.keywords && movie.keywords.length > 0 && (
+                <div className="mt-3 pt-2 border-t border-zinc-800/50">
+                  <div className="flex flex-wrap gap-1">
+                    {movie.keywords.map((kw) => (
+                      <span
+                        key={kw}
+                        className="text-[9px] px-1 py-0.5 text-zinc-600 tracking-wider uppercase"
+                      >
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </>
