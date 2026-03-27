@@ -1,7 +1,7 @@
-export const MAPBOX_TOKEN =
-  "pk.eyJ1IjoiZHN0ZW5zbGFuZCIsImEiOiJjbWxlaHo4aXYxbWdoM2VvZmNxYzI3amVzIn0.xnPbU9ijBcU_jTfpu8jNAw";
+export const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
 export const DARK_STYLE = "mapbox://styles/mapbox/dark-v11";
+export const MAPLIBRE_DARK_STYLE = DARK_STYLE;
 export const LIGHT_STYLE = "mapbox://styles/mapbox/light-v11";
 
 export function getMapStyle(isLightTheme: boolean = false): string {
