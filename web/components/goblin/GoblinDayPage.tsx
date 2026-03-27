@@ -7,6 +7,7 @@ import GoblinSessionView from "./GoblinSessionView";
 import GoblinSessionHistory from "./GoblinSessionHistory";
 import { GoblinPlanningView } from "./GoblinPlanningView";
 import { GoblinAuthBar } from "./GoblinAuthBar";
+import { GoblinLoginPrompt } from "./GoblinLoginPrompt";
 import { useGoblinUser } from "@/lib/hooks/useGoblinUser";
 
 interface Props {
@@ -97,6 +98,13 @@ function updateURL(params: Record<string, string | null>) {
 export default function GoblinDayPage({ initialMovies, activeSessionId }: Props) {
   const searchParams = useSearchParams();
   const goblinUser = useGoblinUser();
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
+  const requireAuth = useCallback((): boolean => {
+    if (goblinUser.user) return true;
+    setShowLoginPrompt(true);
+    return false;
+  }, [goblinUser.user]);
 
   // Initialize state from URL params
   const initialTab = useMemo(() => {
@@ -207,10 +215,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
   }, [activeTab, activeSession, fetchSession, fetchSessionsList]);
 
   const handleStartSession = useCallback(async () => {
-    if (!goblinUser.user) {
-      goblinUser.signIn();
-      return;
-    }
+    if (!requireAuth()) return;
     setSessionLoading(true);
     try {
       const res = await fetch("/api/goblinday/sessions", {
@@ -227,12 +232,12 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
         });
         fetchSession(data.id);
       } else if (res.status === 401) {
-        goblinUser.signIn();
+        setShowLoginPrompt(true);
       }
     } finally {
       setSessionLoading(false);
     }
-  }, [fetchSession, goblinUser]);
+  }, [fetchSession, requireAuth]);
 
   const handleStartLive = useCallback(async () => {
     if (!activeSession) return;
@@ -356,16 +361,18 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
 
   const handleToggleBookmark = useCallback(
     (id: number) => {
+      if (!requireAuth()) return;
       goblinUser.toggleBookmark(id);
     },
-    [goblinUser]
+    [goblinUser, requireAuth]
   );
 
   const handleToggleWatched = useCallback(
     (id: number) => {
+      if (!requireAuth()) return;
       goblinUser.toggleWatched(id);
     },
-    [goblinUser]
+    [goblinUser, requireAuth]
   );
 
   const marqueeStrip = MARQUEE_IMAGES.flatMap((img, i) => [
@@ -743,6 +750,16 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
           animation: marquee 20s linear infinite;
         }
       `}</style>
+
+      {/* Login prompt modal */}
+      <GoblinLoginPrompt
+        open={showLoginPrompt}
+        onClose={() => setShowLoginPrompt(false)}
+        onSignIn={() => {
+          setShowLoginPrompt(false);
+          goblinUser.signIn();
+        }}
+      />
     </div>
   );
 }
