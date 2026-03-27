@@ -1,23 +1,28 @@
 export const PUBLIC_EVENT_CATEGORY_OPTIONS = [
+  // Performance & Entertainment
   { id: "music", label: "Music" },
   { id: "film", label: "Film" },
   { id: "comedy", label: "Comedy" },
   { id: "theater", label: "Theater" },
   { id: "art", label: "Art" },
+  { id: "dance", label: "Dance" },
+  // Active & Outdoors
   { id: "sports", label: "Sports" },
-  { id: "food_drink", label: "Food & Drink" },
-  { id: "nightlife", label: "Nightlife" },
-  { id: "community", label: "Community" },
-  { id: "civic", label: "Civic" },
-  { id: "volunteer", label: "Volunteer" },
-  { id: "recreation", label: "Recreation" },
-  { id: "exercise", label: "Exercise" },
-  { id: "family", label: "Family" },
-  { id: "learning", label: "Learning" },
-  { id: "words", label: "Words" },
-  { id: "religious", label: "Religious" },
-  { id: "wellness", label: "Wellness" },
+  { id: "fitness", label: "Fitness" },
   { id: "outdoors", label: "Outdoors" },
+  { id: "games", label: "Games" },
+  // Food & Social
+  { id: "food_drink", label: "Food & Drink" },
+  { id: "conventions", label: "Conventions" },
+  // Learning & Making
+  { id: "workshops", label: "Workshops" },
+  { id: "education", label: "Education" },
+  { id: "words", label: "Words" },
+  // Civic & Service
+  { id: "volunteer", label: "Volunteer" },
+  { id: "civic", label: "Civic" },
+  { id: "support", label: "Support" },
+  { id: "religious", label: "Religious" },
 ] as const;
 
 export const PORTAL_EVENT_CATEGORY_OPTIONS = PUBLIC_EVENT_CATEGORY_OPTIONS;
@@ -29,7 +34,6 @@ export const SUBMISSION_EVENT_CATEGORY_OPTIONS = [
 
 export const ADMIN_EVENT_CATEGORY_OPTIONS = [
   ...PUBLIC_EVENT_CATEGORY_OPTIONS,
-  { id: "support_group", label: "Support Groups" },
   { id: "other", label: "Other" },
 ] as const;
 
@@ -59,34 +63,44 @@ export const ADMIN_EVENT_CATEGORY_IDS = ADMIN_EVENT_CATEGORY_OPTIONS.map(
 ) as readonly AdminEventCategoryId[];
 
 export const LEGACY_EVENT_CATEGORY_ALIASES: Record<string, string> = {
-  activism: "civic",             // CHANGED — was "community"
-  civic_engagement: "civic",     // NEW
-  government: "civic",           // NEW
-  volunteering: "volunteer",     // NEW
-  service: "volunteer",          // NEW
+  // Dissolved categories -> new taxonomy (defaults for legacy data)
+  nightlife: "music",
+  community: "civic",
+  family: "workshops",
+  recreation: "fitness",
+  wellness: "fitness",
+  exercise: "fitness",
+  learning: "education",
+  support_group: "support",
+  // Legacy string aliases
+  activism: "civic",
+  civic_engagement: "civic",
+  government: "civic",
+  volunteering: "volunteer",
+  service: "volunteer",
   arts: "art",
-  class: "learning",
-  cooking: "learning",
-  cultural: "community",
-  dance: "learning",
-  education: "learning",
+  class: "workshops",
+  cooking: "workshops",
+  cultural: "civic",
+  dance: "dance",
+  education: "education",
   "food-drink": "food_drink",
   food: "food_drink",
-  gaming: "nightlife",
-  health: "wellness",
-  "kids-family": "family",
+  gaming: "games",
+  health: "fitness",
+  "kids-family": "workshops",
   markets: "food_drink",
-  meetup: "learning",
+  meetup: "education",
   museums: "art",
   outdoor: "outdoors",
-  programs: "family",
-  shopping: "community",
-  sports_recreation: "recreation",
-  tours: "learning",
-  fitness: "exercise",
-  yoga: "exercise",
-  gym: "exercise",
-  workout: "exercise",
+  programs: "education",
+  shopping: "food_drink",
+  sports_recreation: "fitness",
+  tours: "education",
+  fitness: "fitness",
+  yoga: "fitness",
+  gym: "fitness",
+  workout: "fitness",
 };
 
 export function normalizeEventCategory(category: string | null | undefined): string | null {

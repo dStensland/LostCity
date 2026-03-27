@@ -28,6 +28,11 @@ export const CATEGORY_CONFIG = {
   outdoors: { label: "Outdoors", color: "#BEF264" },
   activism: { label: "Activism", color: "#F87171" },
   other: { label: "Other", color: "#8B8B94" },
+  // New taxonomy categories
+  workshops: { label: "Workshops", color: "#FBBF24" },
+  education: { label: "Education", color: "#60A5FA" },
+  conventions: { label: "Conventions", color: "#38BDF8" },
+  support: { label: "Support", color: "#F9A8D4" },
 
   // Spot types
   music_venue: { label: "Music Venue", color: "#F9A8D4" },
@@ -151,7 +156,7 @@ const MAP_PIN_FAMILY_LOOKUP: Record<string, string> = {
 
   // Amber #FCD34D — entertainment & attractions (brighter gold)
   comedy: "#FCD34D", comedy_club: "#FCD34D", festival: "#FCD34D", markets: "#FCD34D",
-  attraction: "#FCD34D", hotel: "#FCD34D", eatertainment: "#FCD34D",
+  attraction: "#FCD34D", hotel: "#FCD34D", eatertainment: "#FCD34D", games: "#FCD34D",
 
   // Mint #34D399 — community & wellness (brighter, more visible)
   community: "#34D399", fitness: "#34D399", fitness_center: "#34D399",
@@ -160,19 +165,19 @@ const MAP_PIN_FAMILY_LOOKUP: Record<string, string> = {
 
   // Cyan #22D3EE — sports & screen (more saturated, distinct from violet)
   sports: "#22D3EE", recreation: "#22D3EE", sports_venue: "#22D3EE", film: "#22D3EE", cinema: "#22D3EE",
-  tours: "#22D3EE", arena: "#22D3EE", convention_center: "#22D3EE",
+  tours: "#22D3EE", arena: "#22D3EE", convention_center: "#22D3EE", conventions: "#22D3EE",
 
   // Bright Violet #A78BFA — arts & learning (brighter, more visible)
   art: "#A78BFA", theater: "#A78BFA", gallery: "#A78BFA", museum: "#A78BFA",
   learning: "#A78BFA", words: "#A78BFA", religious: "#A78BFA", church: "#A78BFA",
   library: "#A78BFA", bookstore: "#A78BFA", college: "#A78BFA",
-  university: "#A78BFA", studio: "#A78BFA",
+  university: "#A78BFA", studio: "#A78BFA", workshops: "#A78BFA", education: "#A78BFA",
 
   // Coral #F87171 — everything else
   family: "#F87171", meetup: "#F87171", activism: "#F87171", gaming: "#F87171",
-  games: "#F87171", haunted: "#F87171", rooftop: "#F87171", coworking: "#F87171",
+  haunted: "#F87171", rooftop: "#F87171", coworking: "#F87171",
   venue: "#F87171", organization: "#F87171", event_space: "#F87171",
-  healthcare: "#F87171", hospital: "#F87171", other: "#F87171",
+  healthcare: "#F87171", hospital: "#F87171", other: "#F87171", support: "#F87171",
 };
 
 const MAP_PIN_DEFAULT = "#F87171";
