@@ -437,9 +437,8 @@ export default function LineupSection({
         const filtered = allEvents.filter((event: FeedEventData) => {
           return matchActivityType(event as unknown as Parameters<typeof matchActivityType>[0]) !== null;
         });
-        // No hidden sort — show in chronological order from the API
+        // Pass all matched events — RecurringStrip handles time filtering + display limit
         const items: CityPulseEventItem[] = filtered
-          .slice(0, 20)
           .map((event: FeedEventData) => ({
             item_type: "event" as const,
             event: {
