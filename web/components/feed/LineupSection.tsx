@@ -424,33 +424,44 @@ export default function LineupSection({
     return evts;
   }, [tabDateEvents, activeChipId, unionMatcher]);
 
-  // Fetch tonight's recurring events for RecurringStrip (separate data source from city-pulse)
+  // Fetch recurring events for RecurringStrip (same source as TheSceneSection)
   const [regularsData, setRegularsData] = useState<CityPulseEventItem[]>([]);
+  const [regularsLoading, setRegularsLoading] = useState(ENABLE_LINEUP_RECURRING);
   useEffect(() => {
     if (!ENABLE_LINEUP_RECURRING) return;
     const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    setRegularsLoading(true);
     fetch(`/api/regulars?portal=${portalSlug}`, { signal: controller.signal })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
+        clearTimeout(timeout);
         if (controller.signal.aborted) return;
         const allEvents = (data.events || []) as FeedEventData[];
-        const filtered = allEvents.filter((event: FeedEventData) => {
-          return matchActivityType(event as unknown as Parameters<typeof matchActivityType>[0]) !== null;
-        });
-        // Pass all matched events — RecurringStrip handles time filtering + display limit
-        const items: CityPulseEventItem[] = filtered
-          .map((event: FeedEventData) => ({
-            item_type: "event" as const,
-            event: {
-              ...event,
-              is_recurring: true,
-              recurrence_label: (event as Record<string, unknown>).recurrence_label as string | undefined,
-            },
-          }));
+        const filtered = allEvents.filter((event: FeedEventData) =>
+          matchActivityType(event as unknown as Parameters<typeof matchActivityType>[0]) !== null,
+        );
+        const items: CityPulseEventItem[] = filtered.map((event: FeedEventData) => ({
+          item_type: "event" as const,
+          event: {
+            ...event,
+            is_recurring: true,
+            recurrence_label: (event as Record<string, unknown>).recurrence_label as string | undefined,
+          },
+        }));
         setRegularsData(items);
       })
-      .catch(() => {});
-    return () => controller.abort();
+      .catch(() => {
+        clearTimeout(timeout);
+        // Silent fail — strip just won't show. Not critical content.
+      })
+      .finally(() => setRegularsLoading(false));
+
+    return () => { controller.abort(); clearTimeout(timeout); };
   }, [portalSlug]);
 
   // Split: standard events from city-pulse + recurring from regulars fetch
@@ -703,9 +714,18 @@ export default function LineupSection({
             maxFeatured={4}
           />
 
-          {ENABLE_LINEUP_RECURRING && recurringEvents.length > 0 && (
+          {ENABLE_LINEUP_RECURRING && (regularsLoading ? (
+            <div className="mt-4 pt-3 border-t border-[var(--twilight)]/30">
+              <div className="h-3 w-28 rounded skeleton-shimmer mb-3" />
+              <div className="space-y-2">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-4 rounded skeleton-shimmer" style={{ width: `${70 - i * 10}%`, animationDelay: `${i * 0.1}s` }} />
+                ))}
+              </div>
+            </div>
+          ) : recurringEvents.length > 0 ? (
             <RecurringStrip events={recurringEvents} portalSlug={portalSlug} activeTab={activeTabId} />
-          )}
+          ) : null)}
 
           {events.length === 0 && (
             <p className="text-center text-[var(--muted)] text-sm py-8 font-mono">
