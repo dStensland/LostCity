@@ -107,13 +107,25 @@ export default function GoblinMovieCard({ movie, isBookmarked, isWatched, onTogg
 
   return (
     <div
-      className={`group bg-zinc-950 overflow-hidden border-2 transition-all font-mono relative flex flex-col ${
+      className="relative font-mono"
+      style={{ perspective: "1000px" }}
+    >
+    <div
+      className={`relative w-full transition-transform duration-500 ${
+        flipMode ? "[transform:rotateY(180deg)]" : ""
+      }`}
+      style={{ transformStyle: "preserve-3d" }}
+    >
+    {/* FRONT FACE */}
+    <div
+      className={`group bg-zinc-950 overflow-hidden border-2 transition-all relative flex flex-col ${
         isBookmarked && !isWatched
           ? "border-red-700 shadow-[0_0_20px_rgba(185,28,28,0.25)] hover:shadow-[0_0_30px_rgba(185,28,28,0.4)]"
           : isWatched
             ? "border-zinc-800"
             : "border-zinc-800 hover:border-red-900/60 hover:shadow-[0_0_15px_rgba(120,10,10,0.15)]"
       }`}
+      style={{ backfaceVisibility: "hidden" }}
     >
       {/* Poster */}
       <div className="relative aspect-[2/3] bg-zinc-900 overflow-hidden">
@@ -299,12 +311,16 @@ export default function GoblinMovieCard({ movie, isBookmarked, isWatched, onTogg
         </div>
       </div>
 
-      {/* Flipped card back — info or watch mode */}
-      {flipMode && (
-        <div
-          className="absolute inset-0 z-20 p-3 flex flex-col cursor-pointer overflow-y-auto"
-          onClick={() => setFlipMode(null)}
-        >
+    </div>
+    {/* BACK FACE */}
+    <div
+      className="absolute inset-0 border-2 border-zinc-800 bg-zinc-950 overflow-y-auto [transform:rotateY(180deg)]"
+      style={{ backfaceVisibility: "hidden" }}
+    >
+      <div
+        className="p-3 flex flex-col cursor-pointer min-h-full"
+        onClick={() => setFlipMode(null)}
+      >
           {/* Backdrop background (info flip only) */}
           {flipMode === "info" && movie.backdrop_path ? (
             <div className="absolute inset-0 -z-10">
@@ -489,10 +505,11 @@ export default function GoblinMovieCard({ movie, isBookmarked, isWatched, onTogg
           )}
 
           <span className="text-zinc-700 text-2xs mt-auto pt-3 tracking-widest uppercase text-center shrink-0">
-            TAP TO CLOSE
+            TAP TO FLIP BACK
           </span>
         </div>
-      )}
+      </div>
+    </div>
     </div>
   );
 }
