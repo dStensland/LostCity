@@ -47,6 +47,7 @@ function buildTimelineCacheKey(portalId: string | undefined, filters: SearchFilt
     filters.venue_id?.toString() || "",
     filters.mood || "",
     filters.portal_exclusive ? "excl" : "",
+    filters.festival_slug || "",
   ];
   return parts.join("|");
 }
@@ -239,6 +240,7 @@ export async function GET(request: Request) {
       exclude_categories: portalContext.filters.exclude_categories?.length
         ? portalContext.filters.exclude_categories
         : undefined,
+      festival_slug: searchParams.get("series") || undefined,
     };
 
     const pageSize = 20;

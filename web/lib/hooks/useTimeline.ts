@@ -53,6 +53,7 @@ export function useTimeline(options: UseTimelineOptions = {}) {
       "free",
       "date",
       "mood",
+      "series",
     ];
     filterKeys.forEach((key) => {
       const value = searchParams.get(key);
