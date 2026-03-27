@@ -867,16 +867,16 @@ export default function CityBriefing({
   const flagship = header.flagship_event ?? null;
 
   // ── Hero image with fallback ─────────────────────────────────────────────
-  // When a flagship event is present, use its image as the hero.
+  // CMS header photo or atmospheric city photo. Flagship events get hero cards
+  // in the Lineup but don't override the page hero — tentpole data isn't curated
+  // enough to trust random event images as the full-bleed background.
   const atmosphericImageUrl = header.hero_image_url;
-  // serverHeroUrl is the server-computed atmospheric URL — available before hydration.
-  // Use it as the initial state so the browser can preload it and avoid a blank hero frame.
-  const initialHeroUrl = flagship?.image_url ?? serverHeroUrl ?? atmosphericImageUrl;
+  const initialHeroUrl = serverHeroUrl ?? atmosphericImageUrl;
   const [heroImageUrl, setHeroImageUrl] = useState(initialHeroUrl);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHeroImageUrl(flagship?.image_url ?? atmosphericImageUrl);
-  }, [flagship?.image_url, atmosphericImageUrl]);
+    setHeroImageUrl(atmosphericImageUrl);
+  }, [atmosphericImageUrl]);
 
   // ── Derived state ────────────────────────────────────────────────────────
   const effectiveQuickLinks = quickLinks ?? header.quick_links ?? [];
