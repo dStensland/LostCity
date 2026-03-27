@@ -59,7 +59,11 @@ export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStrip
   const currentTime = useMemo(() => getCurrentHourMinute(), []);
 
   // Compute activity type for each event + filter out past events for today
-  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  // Use local date, not UTC (toISOString gives UTC which can be a day ahead)
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, []);
 
   const enrichedEvents = useMemo(() => {
     return events.map((item) => {
