@@ -59,20 +59,23 @@ export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStrip
   const currentTime = useMemo(() => getCurrentHourMinute(), []);
 
   // Compute activity type for each event + filter out past events for today
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
   const enrichedEvents = useMemo(() => {
     return events.map((item) => {
       const activityId = item.event.activity_type
         ?? matchActivityType(item.event as Parameters<typeof matchActivityType>[0]);
       return { item, activityId };
     }).filter(({ item }) => {
-      // If viewing today (no day filter), hide events already over
+      // Only hide events that are TODAY and already over
       if (activeDay === null && activeTab !== "this_week") {
+        const isToday = item.event.start_date === todayStr;
         const startTime = item.event.start_time;
-        if (startTime && startTime < currentTime) return false;
+        if (isToday && startTime && startTime < currentTime) return false;
       }
       return true;
     });
-  }, [events, activeDay, activeTab, currentTime]);
+  }, [events, activeDay, activeTab, currentTime, todayStr]);
 
   // Activity type counts (from all events, not filtered by day)
   const activityCounts = useMemo(() => {
