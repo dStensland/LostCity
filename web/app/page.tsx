@@ -12,14 +12,14 @@ import { safeJsonLd } from "@/lib/formats";
 import { getSiteUrl } from "@/lib/site-url";
 
 // Static brag stats — updated periodically, not worth blocking page render.
-// Last verified: 2026-03-12 against Supabase.
-// Real counts: 26,192 future events, 1,334 total sources, 5,411 venues,
-// 262 neighborhoods. 659 sources active.
+// Last verified: 2026-03-27 against Supabase.
+// Real counts: 30,394 upcoming events, 1,517 total sources (778 active),
+// 4,687 active venues, 367 neighborhoods, 231 cities, 21 portals.
 const STATS = [
-  { value: "26k+", label: "events", colorClass: "home-stat-cyan" },
-  { value: "1.3k+", label: "sources", colorClass: "home-stat-pink" },
-  { value: "5.4k+", label: "venues", colorClass: "home-stat-purple" },
-  { value: "260+", label: "hoods", colorClass: "home-stat-cyan" },
+  { value: "30k+", label: "events", colorClass: "home-stat-cyan" },
+  { value: "1.5k+", label: "sources", colorClass: "home-stat-pink" },
+  { value: "4.7k+", label: "venues", colorClass: "home-stat-purple" },
+  { value: "360+", label: "hoods", colorClass: "home-stat-cyan" },
 ];
 
 export default function Home() {
