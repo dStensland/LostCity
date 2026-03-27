@@ -34,14 +34,10 @@ export const GET = withAuthAndParams<{ id: string }>(
       created_at: string;
     };
 
-    // Fetch movies with proposer info
+    // Fetch movies
     const { data: sessionMovies } = await serviceClient
       .from("goblin_session_movies")
-      .select(`
-        id, movie_id, watch_order, added_at, proposed_by,
-        goblin_movies(*),
-        profiles!goblin_session_movies_proposed_by_fkey(display_name)
-      `)
+      .select("id, movie_id, watch_order, added_at, proposed_by, goblin_movies(*)")
       .eq("session_id", s.id)
       .order("watch_order");
 
@@ -52,21 +48,35 @@ export const GET = withAuthAndParams<{ id: string }>(
       .eq("session_id", s.id)
       .order("created_at");
 
-    // Fetch timeline with user info
+    // Fetch timeline
     const { data: timeline } = await serviceClient
       .from("goblin_timeline")
-      .select(`
-        id, event_type, movie_id, theme_id, created_at, user_id,
-        profiles!goblin_timeline_user_id_fkey(display_name)
-      `)
+      .select("id, event_type, movie_id, theme_id, created_at, user_id")
       .eq("session_id", s.id)
       .order("created_at");
 
-    // Fetch members with profile info
+    // Fetch members
     const { data: members } = await serviceClient
       .from("goblin_session_members")
-      .select("user_id, role, joined_at, profiles(display_name, avatar_url)")
+      .select("user_id, role, joined_at")
       .eq("session_id", s.id);
+
+    // Collect all user IDs and fetch profiles in one query
+    const allUserIds = [...new Set([
+      ...(sessionMovies ?? []).map((sm: any) => sm.proposed_by).filter(Boolean),
+      ...(timeline ?? []).map((t: any) => t.user_id).filter(Boolean),
+      ...(members ?? []).map((m: any) => m.user_id),
+    ])];
+    let profileMap: Record<string, { display_name: string; avatar_url: string | null }> = {};
+    if (allUserIds.length > 0) {
+      const { data: profiles } = await serviceClient
+        .from("profiles")
+        .select("id, display_name, avatar_url")
+        .in("id", allUserIds);
+      profileMap = Object.fromEntries(
+        (profiles ?? []).map((p: any) => [p.id, { display_name: p.display_name, avatar_url: p.avatar_url }])
+      );
+    }
 
     return NextResponse.json({
       ...s,
@@ -75,7 +85,7 @@ export const GET = withAuthAndParams<{ id: string }>(
         watch_order: sm.watch_order,
         added_at: sm.added_at,
         proposed_by: sm.proposed_by,
-        proposed_by_name: sm.profiles?.display_name ?? null,
+        proposed_by_name: sm.proposed_by ? profileMap[sm.proposed_by]?.display_name ?? null : null,
       })),
       themes: themes ?? [],
       timeline: (timeline ?? []).map((t: any) => ({
@@ -85,14 +95,14 @@ export const GET = withAuthAndParams<{ id: string }>(
         theme_id: t.theme_id,
         created_at: t.created_at,
         user_id: t.user_id,
-        user_name: t.profiles?.display_name ?? null,
+        user_name: t.user_id ? profileMap[t.user_id]?.display_name ?? null : null,
       })),
       members: (members ?? []).map((m: any) => ({
         user_id: m.user_id,
         role: m.role,
         joined_at: m.joined_at,
-        display_name: m.profiles?.display_name ?? null,
-        avatar_url: m.profiles?.avatar_url ?? null,
+        display_name: profileMap[m.user_id]?.display_name ?? null,
+        avatar_url: profileMap[m.user_id]?.avatar_url ?? null,
       })),
     });
   }

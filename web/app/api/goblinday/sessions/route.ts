@@ -30,12 +30,29 @@ export const GET = withAuth(async (_request, { user, serviceClient }) => {
       id, name, date, status, invite_code, created_by, created_at,
       goblin_session_movies(movie_id),
       goblin_themes(id, label, status),
-      goblin_session_members(user_id, role, profiles(display_name, avatar_url))
+      goblin_session_members(user_id, role)
     `)
     .in("id", sessionIds)
     .order("date", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Fetch profile names for all members across sessions
+  const allUserIds = [...new Set(
+    (sessions ?? []).flatMap((s: any) =>
+      (s.goblin_session_members ?? []).map((m: any) => m.user_id)
+    )
+  )];
+  let profileMap: Record<string, { display_name: string; avatar_url: string | null }> = {};
+  if (allUserIds.length > 0) {
+    const { data: profiles } = await serviceClient
+      .from("profiles")
+      .select("id, display_name, avatar_url")
+      .in("id", allUserIds);
+    profileMap = Object.fromEntries(
+      (profiles ?? []).map((p: any) => [p.id, { display_name: p.display_name, avatar_url: p.avatar_url }])
+    );
+  }
 
   const result = (sessions ?? []).map((s: any) => ({
     id: s.id,
@@ -55,8 +72,8 @@ export const GET = withAuth(async (_request, { user, serviceClient }) => {
     members: (s.goblin_session_members ?? []).map((m: any) => ({
       user_id: m.user_id,
       role: m.role,
-      display_name: m.profiles?.display_name ?? null,
-      avatar_url: m.profiles?.avatar_url ?? null,
+      display_name: profileMap[m.user_id]?.display_name ?? null,
+      avatar_url: profileMap[m.user_id]?.avatar_url ?? null,
     })),
   }));
 
