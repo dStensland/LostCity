@@ -30,6 +30,8 @@ import {
 } from "@/lib/city-pulse/interests";
 import { isSceneEvent } from "@/lib/city-pulse/section-builders";
 
+import { useQuery } from "@tanstack/react-query";
+import { matchActivityType } from "@/lib/scene-event-routing";
 import { ENABLE_LINEUP_RECURRING } from "@/lib/launch-flags";
 import { RecurringStrip } from "./lineup/RecurringStrip";
 import FeedSectionHeader from "./FeedSectionHeader";
@@ -424,24 +426,45 @@ export default function LineupSection({
     return evts;
   }, [tabDateEvents, activeChipId, unionMatcher]);
 
-  // Split events by activity_type — recurring events (tagged by makeEventItem server-side)
-  // go to RecurringStrip, everything else goes to TieredEventList.
-  // No extra fetch needed — these events are already in the city-pulse pipeline.
-  const { standardEvents, recurringEvents } = useMemo(() => {
-    if (!ENABLE_LINEUP_RECURRING) {
-      return { standardEvents: events, recurringEvents: [] as typeof events };
-    }
-    const standard: typeof events = [];
-    const recurring: typeof events = [];
-    for (const e of events) {
-      if (e.event.activity_type) {
-        recurring.push(e);
-      } else {
-        standard.push(e);
+  // Regulars data — shares React Query cache with TheSceneSection (same queryKey).
+  // No duplicate fetch: if TheSceneSection already loaded, this is instant from cache.
+  const { data: regularsData } = useQuery<{ events: FeedEventData[] }>({
+    queryKey: ["regulars", portalSlug],
+    queryFn: async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10_000);
+      try {
+        const res = await fetch(`/api/regulars?portal=${portalSlug}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`Regulars fetch failed: ${res.status}`);
+        return res.json();
+      } finally {
+        clearTimeout(timeoutId);
       }
-    }
-    return { standardEvents: standard, recurringEvents: recurring };
-  }, [events]);
+    },
+    staleTime: 3 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    enabled: ENABLE_LINEUP_RECURRING,
+  });
+
+  const recurringEvents = useMemo<CityPulseEventItem[]>(() => {
+    if (!ENABLE_LINEUP_RECURRING || !regularsData?.events) return [];
+    return regularsData.events
+      .filter((event: FeedEventData) =>
+        matchActivityType(event as unknown as Parameters<typeof matchActivityType>[0]) !== null,
+      )
+      .map((event: FeedEventData) => ({
+        item_type: "event" as const,
+        event: {
+          ...event,
+          is_recurring: true,
+          recurrence_label: (event as Record<string, unknown>).recurrence_label as string | undefined,
+        },
+      }));
+  }, [regularsData]);
+
+  const standardEvents = events;
 
   // Merged category counts: initial response + lazy-loaded tab overrides
   // Date tab counts — show TOTAL lineup depth per tab (not filtered by interests).
