@@ -22,12 +22,15 @@ Usage:
 """
 from __future__ import annotations
 
+import json
 import logging
 import re
+import time
 from dataclasses import dataclass, field
 from typing import Optional
 
 from genre_normalize import GENRES_BY_CATEGORY
+from llm_client import generate_text
 
 logger = logging.getLogger(__name__)
 
@@ -389,6 +392,11 @@ def classify_rules(
     description: str = "",
     venue_type: Optional[str] = None,
     category_hint: Optional[str] = None,
+    # Extra params accepted (but unused) so orchestrator can call uniformly
+    source_name: Optional[str] = None,
+    source_id: Optional[int] = None,
+    source_slug: Optional[str] = None,
+    genres_hint: Optional[list[str]] = None,
 ) -> ClassificationResult:
     """Apply rules-based classification. Source defaults are NOT checked here.
 
@@ -400,6 +408,10 @@ def classify_rules(
             hints and dance-party override.
         category_hint: Category hint from the crawler (lowest priority, 0.5
             confidence ceiling).
+        source_name: Unused at rules layer; accepted for orchestrator compat.
+        source_id: Unused at rules layer; accepted for orchestrator compat.
+        source_slug: Unused at rules layer; accepted for orchestrator compat.
+        genres_hint: Unused at rules layer; accepted for orchestrator compat.
 
     Returns:
         ClassificationResult with category, genres, audience, confidence, and source.
@@ -466,4 +478,240 @@ def classify_rules(
     # ------------------------------------------------------------------
     result.audience = _infer_audience(f"{title} {description}")
 
+    return result
+
+
+# ---------------------------------------------------------------------------
+# LLM classification layer
+# ---------------------------------------------------------------------------
+
+def _build_genre_list_text() -> str:
+    """Generate genre list section for the LLM prompt."""
+    _SKIP_LEGACY = {
+        "nightlife", "community", "family", "recreation", "wellness",
+        "exercise", "learning", "meetup", "gaming", "outdoor",
+    }
+    lines = []
+    for cat, genres in sorted(GENRES_BY_CATEGORY.items()):
+        if cat in _SKIP_LEGACY:
+            continue
+        lines.append(f"  {cat}: {', '.join(sorted(genres))}")
+    return "\n".join(lines)
+
+
+_SYSTEM_PROMPT = f"""You are an event taxonomy classifier for LostCity, an Atlanta event discovery platform.
+
+Classify the event into exactly one of these 19 categories:
+  music         - Live performances, concerts, DJ sets, karaoke. NOT dance classes.
+  film          - Movie screenings, film festivals, cinema events.
+  comedy        - Stand-up, improv, sketch, roast, comedy open mic.
+  theater       - Plays, musicals, opera, puppetry, drag, burlesque.
+  art           - Gallery openings, exhibitions, art shows, art fairs.
+  dance         - Dance classes, dance performances, social dance nights with a named style.
+  sports        - Spectator sports: games, matches, tournaments, watch parties.
+  fitness       - Workout classes, yoga, run clubs, martial arts, cycling, pilates, barre.
+  outdoors      - Hiking, kayaking, camping, birding, nature walks, trail events.
+  games         - Trivia, bingo, poker, board games, D&D, escape rooms, esports.
+  food_drink    - Tastings, food festivals, farmers markets, cooking classes, happy hours.
+  conventions   - Cons, expos, trade shows, conferences, fan conventions.
+  workshops     - Hands-on making: pottery, painting, woodworking, jewelry, glassblowing.
+  education     - Seminars, lectures, certifications, language classes, professional training.
+  words         - Book clubs, author talks, poetry readings, spoken word, storytime.
+  volunteer     - Volunteer shifts, service events, cleanups, food drives.
+  civic         - Town halls, public hearings, legislative sessions, voter registration.
+  support       - Recovery meetings, grief groups, peer support, mental health groups.
+  religious     - Worship services, Bible study, prayer meetings, choir, ministry events.
+
+Rules:
+- Dance workshops and classes → "dance". General skill-building workshops → "workshops".
+- "Education" is for seminars/lectures/certifications, NOT hands-on craft workshops.
+- Watch parties for sports events → "sports", not "music" or "film".
+- Audience is "general" UNLESS the event text EXPLICITLY gates by age (e.g. "21+ only", "ages 6-12"). A bar venue alone does NOT make an event "21+".
+
+Valid genres per category:
+{_build_genre_list_text()}
+
+Return a JSON object with these fields:
+  category           - one of the 19 categories above (string)
+  genres             - list of valid genre slugs for that category (array of strings, may be empty)
+  audience           - "general", "21+", "18+", "kids", "teen", "toddler", or "preschool" (string)
+  duration           - "quick" (<2h), "medium" (2-4h), "long" (4-8h), "all-day", or null (string or null)
+  cost_tier          - "free", "$", "$$", "$$$", or null (string or null)
+  skill_level        - "beginner", "intermediate", "advanced", "all-levels", or null (string or null)
+  booking_required   - true, false, or null (boolean or null)
+  indoor_outdoor     - "indoor", "outdoor", "both", or null (string or null)
+  significance       - "low", "medium", "high", or null (string or null)
+  significance_signals - list of strings explaining why significance is high (e.g. ["annual festival", "sold out last year"]) (array)
+  confidence         - float 0.0-1.0 reflecting how certain you are of the category assignment
+
+Respond with ONLY valid JSON. No markdown, no explanation."""
+
+
+def _strip_markdown_fences(raw: str) -> str:
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+    if raw.endswith("```"):
+        raw = raw[:-3]
+    return raw.strip()
+
+
+_VALID_NEW_CATEGORIES = {
+    "music", "film", "comedy", "theater", "art", "dance",
+    "sports", "fitness", "outdoors", "games",
+    "food_drink", "conventions",
+    "workshops", "education", "words",
+    "volunteer", "civic", "support", "religious",
+}
+
+
+def classify_llm(
+    title: str,
+    description: str = "",
+    venue_type: Optional[str] = None,
+    venue_name: Optional[str] = None,
+    source_name: Optional[str] = None,
+) -> ClassificationResult:
+    """Classify an event using the LLM. Returns a ClassificationResult with source='llm'.
+
+    On API or parse errors, returns an empty result (category=None, confidence=0.0).
+    """
+    result = ClassificationResult(source="llm")
+
+    user_msg = f"Title: {title}\n"
+    if description:
+        user_msg += f"Description: {description[:800]}\n"
+    if venue_name:
+        user_msg += f"Venue: {venue_name}\n"
+    if venue_type:
+        user_msg += f"Venue type: {venue_type}\n"
+    if source_name:
+        user_msg += f"Source: {source_name}\n"
+
+    try:
+        raw = generate_text(
+            system_prompt=_SYSTEM_PROMPT,
+            user_message=user_msg,
+            model_override="claude-haiku-4-5-20251001",
+        )
+    except Exception as e:
+        logger.error("LLM API call failed for '%s': %s", title[:60], e)
+        return result
+
+    try:
+        cleaned = _strip_markdown_fences(raw)
+        data = json.loads(cleaned)
+    except json.JSONDecodeError:
+        logger.warning("LLM returned non-JSON for '%s': %.100s", title[:60], raw)
+        return result
+
+    result.category = data.get("category")
+    result.genres = data.get("genres", [])
+    result.audience = data.get("audience", "general")
+    result.confidence = float(data.get("confidence", 0.5))
+    result.duration = data.get("duration")
+    result.cost_tier = data.get("cost_tier")
+    result.skill_level = data.get("skill_level")
+    result.booking_required = data.get("booking_required")
+    result.indoor_outdoor = data.get("indoor_outdoor")
+    result.significance = data.get("significance")
+    result.significance_signals = data.get("significance_signals", [])
+
+    # Validate: strip genres that don't belong to the returned category
+    if result.category and result.genres:
+        allowed = GENRES_BY_CATEGORY.get(result.category, set())
+        result.genres = [g for g in result.genres if g in allowed]
+
+    # Validate category against known set
+    if result.category not in _VALID_NEW_CATEGORIES:
+        logger.warning(
+            "LLM returned invalid category '%s' for '%s'", result.category, title[:60]
+        )
+        result.category = None
+        result.confidence = 0.0
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Orchestrator — source defaults → rules → LLM fallback
+# ---------------------------------------------------------------------------
+
+from source_defaults import get_source_default  # noqa: E402 — intentional late import
+
+
+def classify_event(
+    title: str,
+    description: str = "",
+    venue_type: Optional[str] = None,
+    venue_name: Optional[str] = None,
+    source_name: Optional[str] = None,
+    source_id: Optional[int] = None,
+    source_slug: Optional[str] = None,
+    category_hint: Optional[str] = None,
+    genres_hint: Optional[list[str]] = None,
+) -> ClassificationResult:
+    """Classify an event using the three-layer pipeline.
+
+    Layer 1 — source defaults: deterministic override for high-volume sources
+        where every event has the same category (e.g. AMC theatres → film).
+    Layer 2 — rules: fast pattern matching, no network calls.
+    Layer 3 — LLM fallback: called only when rules confidence < CONFIDENCE_THRESHOLD.
+
+    Args:
+        title: Event title (required).
+        description: Event description text.
+        venue_type: Venue type slug (e.g. "bar", "cinema").
+        venue_name: Human-readable venue name (passed to LLM context).
+        source_name: Crawler/source name string.
+        source_id: Source DB id for source-default lookup.
+        source_slug: Source slug for source-default lookup.
+        category_hint: Crawler-supplied category hint (capped at 0.5 confidence).
+        genres_hint: Crawler-supplied genre hints (unused by current layers).
+
+    Returns:
+        ClassificationResult with prompt_version always set.
+    """
+    # Layer 1: Source defaults
+    source_default = get_source_default(
+        source_id=source_id, source_name=source_name, source_slug=source_slug
+    )
+    if source_default:
+        return ClassificationResult(
+            category=source_default["category"],
+            genres=[source_default["genre"]] if "genre" in source_default else [],
+            confidence=0.95,
+            source="source_default",
+            prompt_version=TAXONOMY_PROMPT_VERSION,
+        )
+
+    # Layer 2: Rules
+    result = classify_rules(
+        title=title,
+        description=description,
+        venue_type=venue_type,
+        source_name=source_name,
+        source_id=source_id,
+        source_slug=source_slug,
+        category_hint=category_hint,
+        genres_hint=genres_hint,
+    )
+
+    # Layer 3: LLM fallback (only when rules didn't reach threshold)
+    if result.confidence < CONFIDENCE_THRESHOLD:
+        start = time.monotonic()
+        llm_result = classify_llm(
+            title=title,
+            description=description,
+            venue_type=venue_type,
+            venue_name=venue_name,
+            source_name=source_name,
+        )
+        elapsed = time.monotonic() - start
+        if elapsed > 3.0:
+            logger.info("LLM classify took %.1fs for '%s'", elapsed, title[:40])
+        if llm_result.category and llm_result.confidence > result.confidence:
+            result = llm_result
+
+    result.prompt_version = TAXONOMY_PROMPT_VERSION
     return result
