@@ -156,6 +156,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
   const [sessionData, setSessionData] = useState<any>(null);
   const [sessionsList, setSessionsList] = useState<any[]>([]);
   const [sessionsLoaded, setSessionsLoaded] = useState(false);
+  const [sessionLoading, setSessionLoading] = useState(false);
 
   // Fetch active session detail
   const fetchSession = useCallback(async (id: number) => {
@@ -210,21 +211,26 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
       goblinUser.signIn();
       return;
     }
-    const res = await fetch("/api/goblinday/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setActiveSession({
-        id: data.id,
-        status: data.status ?? "planning",
-        invite_code: data.invite_code ?? "",
+    setSessionLoading(true);
+    try {
+      const res = await fetch("/api/goblinday/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
       });
-      fetchSession(data.id);
-    } else if (res.status === 401) {
-      goblinUser.signIn();
+      if (res.ok) {
+        const data = await res.json();
+        setActiveSession({
+          id: data.id,
+          status: data.status ?? "planning",
+          invite_code: data.invite_code ?? "",
+        });
+        fetchSession(data.id);
+      } else if (res.status === 401) {
+        goblinUser.signIn();
+      }
+    } finally {
+      setSessionLoading(false);
     }
   }, [fetchSession, goblinUser]);
 
@@ -658,6 +664,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
                 sessions={sessionsList}
                 onStartSession={handleStartSession}
                 onDeleteSession={handleDeleteSession}
+                loading={sessionLoading}
               />
             )}
 

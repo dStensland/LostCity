@@ -27,6 +27,68 @@ interface Props {
   sessions: SessionSummary[];
   onStartSession: () => void;
   onDeleteSession: (id: number) => void;
+  loading?: boolean;
+}
+
+function SatanicSkullSpinner() {
+  return (
+    <div className="flex flex-col items-center gap-4 py-8">
+      <svg
+        viewBox="0 0 100 100"
+        className="w-16 h-16 animate-skull-spin"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {/* Skull */}
+        <ellipse cx="50" cy="42" rx="28" ry="30" stroke="#dc2626" strokeWidth="2.5" fill="#0a0a0a" />
+        {/* Left eye */}
+        <path d="M36 38 L30 44 L36 50 L42 44 Z" fill="#dc2626" />
+        {/* Right eye */}
+        <path d="M58 38 L52 44 L58 50 L64 44 Z" fill="#dc2626" />
+        {/* Nose */}
+        <path d="M50 50 L47 56 L53 56 Z" fill="#dc2626" />
+        {/* Jaw */}
+        <path d="M32 60 Q50 75 68 60" stroke="#dc2626" strokeWidth="2" fill="none" />
+        {/* Teeth */}
+        <line x1="38" y1="60" x2="38" y2="66" stroke="#dc2626" strokeWidth="1.5" />
+        <line x1="44" y1="61" x2="44" y2="68" stroke="#dc2626" strokeWidth="1.5" />
+        <line x1="50" y1="62" x2="50" y2="69" stroke="#dc2626" strokeWidth="1.5" />
+        <line x1="56" y1="61" x2="56" y2="68" stroke="#dc2626" strokeWidth="1.5" />
+        <line x1="62" y1="60" x2="62" y2="66" stroke="#dc2626" strokeWidth="1.5" />
+        {/* Inverted pentagram */}
+        <polygon
+          points="50,22 43,8 57,8"
+          stroke="#dc2626"
+          strokeWidth="1"
+          fill="none"
+          opacity="0.6"
+        />
+        <polygon
+          points="50,22 35,14 65,14"
+          stroke="#dc2626"
+          strokeWidth="1"
+          fill="none"
+          opacity="0.6"
+        />
+        {/* Horns */}
+        <path d="M25 30 Q15 10 22 2" stroke="#dc2626" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+        <path d="M75 30 Q85 10 78 2" stroke="#dc2626" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      </svg>
+      <span className="font-mono text-xs text-red-600 tracking-[0.3em] uppercase animate-pulse">
+        SUMMONING...
+      </span>
+      <style>{`
+        @keyframes skull-spin {
+          0% { transform: rotateY(0deg); }
+          100% { transform: rotateY(360deg); }
+        }
+        .animate-skull-spin {
+          animation: skull-spin 1.5s ease-in-out infinite;
+          transform-style: preserve-3d;
+        }
+      `}</style>
+    </div>
+  );
 }
 
 interface SessionDetail {
@@ -257,6 +319,7 @@ export default function GoblinSessionHistory({
   sessions,
   onStartSession,
   onDeleteSession,
+  loading = false,
 }: Props) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [detailCache, setDetailCache] = useState<Record<number, SessionDetail>>(
@@ -300,19 +363,23 @@ export default function GoblinSessionHistory({
   return (
     <div className="space-y-8">
       {/* START GOBLIN DAY button */}
-      <div className="flex justify-center">
-        <button
-          onClick={onStartSession}
-          disabled={hasActiveSession}
-          className={`px-12 py-4 font-mono font-black text-lg tracking-[0.25em] uppercase border-2 transition-all ${
-            hasActiveSession
-              ? "border-zinc-700 bg-zinc-900 text-zinc-600 cursor-not-allowed"
-              : "border-red-600 bg-red-900/40 text-red-400 hover:bg-red-800/60 hover:text-red-300 hover:shadow-[0_0_30px_rgba(220,38,38,0.4)] hover:border-red-500 active:scale-95"
-          }`}
-        >
-          {hasActiveSession ? "SESSION IN PROGRESS" : "START GOBLIN DAY"}
-        </button>
-      </div>
+      {loading ? (
+        <SatanicSkullSpinner />
+      ) : (
+        <div className="flex justify-center">
+          <button
+            onClick={onStartSession}
+            disabled={hasActiveSession}
+            className={`px-12 py-4 font-mono font-black text-lg tracking-[0.25em] uppercase border-2 transition-all ${
+              hasActiveSession
+                ? "border-zinc-700 bg-zinc-900 text-zinc-600 cursor-not-allowed"
+                : "border-red-600 bg-red-900/40 text-red-400 hover:bg-red-800/60 hover:text-red-300 hover:shadow-[0_0_30px_rgba(220,38,38,0.4)] hover:border-red-500 active:scale-95"
+            }`}
+          >
+            {hasActiveSession ? "SESSION IN PROGRESS" : "START GOBLIN DAY"}
+          </button>
+        </div>
+      )}
 
       {/* Past sessions list */}
       {pastSessions.length === 0 ? (
