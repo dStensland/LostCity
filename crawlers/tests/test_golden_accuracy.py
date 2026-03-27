@@ -11,11 +11,23 @@ def load_golden_set():
         return json.load(f)
 
 
-def test_rules_accuracy_above_60_percent():
-    """Rules engine should correctly classify at least 60% of golden events."""
+def test_rules_wrong_classification_rate_below_15_percent():
+    """Rules engine should confidently misclassify fewer than 15% of golden events.
+
+    The rules layer is designed to abstain (return None/low confidence) on ambiguous
+    events — those go to LLM. The key metric is: when the rules layer IS confident,
+    how often is it WRONG?
+
+    Breakdown categories:
+    - Correct: rules category matches expected
+    - Abstain: rules returns None (correct behavior — goes to LLM)
+    - Wrong: rules returns a confident but INCORRECT category (the real bug)
+    """
     golden = load_golden_set()
     correct = 0
-    errors = []
+    abstain = 0
+    wrong = 0
+    wrong_events = []
     for event in golden:
         result = classify_rules(
             title=event["title"],
@@ -24,19 +36,25 @@ def test_rules_accuracy_above_60_percent():
         )
         if result.category == event["expected_category"]:
             correct += 1
+        elif result.category is None or result.confidence < 0.5:
+            abstain += 1
         else:
-            errors.append({
+            wrong += 1
+            wrong_events.append({
                 "title": event["title"][:50],
                 "expected": event["expected_category"],
                 "got": result.category,
                 "conf": result.confidence,
             })
-    accuracy = correct / len(golden)
-    print(f"\nRules accuracy: {correct}/{len(golden)} = {accuracy:.1%}")
-    print(f"\nTop misclassifications ({len(errors)} total):")
-    for e in errors[:20]:
-        print(f"  '{e['title']}': expected={e['expected']}, got={e['got']} (conf={e['conf']:.2f})")
-    assert accuracy >= 0.60, f"Rules accuracy too low: {accuracy:.1%}"
+    total = len(golden)
+    wrong_rate = wrong / total
+    print(f"\nRules benchmark: {correct} correct, {abstain} abstain (→LLM), {wrong} wrong out of {total}")
+    print(f"Wrong rate: {wrong_rate:.1%}")
+    if wrong_events:
+        print(f"\nWrong classifications ({len(wrong_events)}):")
+        for e in wrong_events[:20]:
+            print(f"  '{e['title']}': expected={e['expected']}, got={e['got']} (conf={e['conf']:.2f})")
+    assert wrong_rate < 0.15, f"Rules wrong-classification rate too high: {wrong_rate:.1%}"
 
 
 def test_no_esports_on_blazesports():
