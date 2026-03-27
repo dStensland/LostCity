@@ -42,7 +42,7 @@ COMEDY_GENRES = {
 
 THEATER_GENRES = {
     "musical", "drama", "comedy", "ballet", "opera", "immersive",
-    "spoken-word", "burlesque", "puppet", "shakespeare",
+    "spoken-word", "burlesque", "puppet", "shakespeare", "drag",
 }
 
 DANCE_GENRES = {
@@ -117,6 +117,7 @@ FAMILY_GENRES = {
 
 OUTDOOR_GENRES = {
     "parks", "garden", "market", "sightseeing", "water", "camping", "adventure",
+    "hiking", "birding", "trail",
 }
 
 WORDS_GENRES = {
