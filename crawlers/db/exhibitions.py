@@ -17,6 +17,7 @@ from db.client import (
     writes_enabled,
     _log_write_skip,
 )
+from medium_inference import infer_exhibition_medium
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,12 @@ _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
 _JUNK_TITLE_RE = re.compile(
     r"^(view\s+fullsize|download\s+(press|release|pdf|image|file|brochure)|click\s+here|read\s+more|learn\s+more)",
+    re.IGNORECASE,
+)
+
+_CDN_URL_RE = re.compile(
+    r"https?://[^/]*\.(cloudinary\.com|s3\.amazonaws\.com|imgix\.net|cloudfront\.net)/"
+    r"|https?://[^/]*/wp-content/uploads/",
     re.IGNORECASE,
 )
 
@@ -119,6 +126,19 @@ def insert_exhibition(exhibition_data: dict, artists: Optional[list] = None) -> 
     if _JUNK_TITLE_RE.match(title):
         logger.debug("Skipping exhibition with junk title: %r", title)
         return None
+
+    source_url = exhibition_data.get("source_url", "")
+    if source_url and _CDN_URL_RE.search(source_url):
+        logger.debug("Skipping exhibition %r — source_url is a CDN image URL: %s", title, source_url[:80])
+        return None
+
+    # Infer medium from title/description if not already set
+    if not exhibition_data.get("medium"):
+        description = exhibition_data.get("description", "")
+        inferred = infer_exhibition_medium(title, description)
+        if inferred:
+            exhibition_data["medium"] = inferred
+            logger.debug("Inferred medium=%s for %r", inferred, title)
 
     venue_id = exhibition_data.get("venue_id")
     if not venue_id:

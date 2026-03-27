@@ -1,28 +1,51 @@
 """
 Crawler for Michael C. Carlos Museum at Emory (carlos.emory.edu).
 
-Site uses JavaScript rendering - must use Playwright.
+The exhibitions index page (https://carlos.emory.edu/exhibitions) is a
+Drupal 10 server-rendered page. All 13 exhibition cards are present in the
+static HTML as <article class="content-card"> elements — no JavaScript
+rendering required.
+
+Each card contains:
+  - <a class="content-card--link" href="/exhibition/SLUG">
+  - <h2> or <h3> title element
+  - <img src="..."> (Drupal image derivative)
+  - Date range text in the card body
+
+This crawler was converted from Playwright to requests+BeautifulSoup
+on 2026-03-25 because the site is fully server-rendered Drupal.
 """
 
 from __future__ import annotations
 
-import re
 import logging
-from datetime import datetime
+import re
+from datetime import date, datetime
 from typing import Optional
+from urllib.parse import urljoin
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
-from dedupe import generate_content_hash
+from db import get_or_create_venue
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
-from utils import extract_images_from_page, extract_event_links, find_event_url
+from exhibition_utils import build_exhibition_record
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://carlos.emory.edu"
-EVENTS_URL = f"{BASE_URL}/events"
+EXHIBITIONS_URL = f"{BASE_URL}/exhibitions"
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/122.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     events=True,
@@ -34,7 +57,6 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 
 VENUE_DATA = {
     "name": "Michael C. Carlos Museum",
-    # Match the canonical production venue row instead of relying on name fallback.
     "slug": "michael-c-carlos-museum",
     "address": "571 South Kilgo Cir",
     "neighborhood": "Emory",
@@ -46,8 +68,7 @@ VENUE_DATA = {
     "venue_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
-    # description and image_url are extracted dynamically from og: tags on the homepage
-    # at crawl time — see _enrich_venue_data() called before get_or_create_venue().
+    # description and image_url enriched from og: tags at crawl time
     # Hours verified 2026-03-11: Tue-Fri 10am-4pm, Sat 10am-5pm, Sun 12-5pm, Mon closed
     "hours": {
         "tuesday": "10:00-16:00",
@@ -58,6 +79,28 @@ VENUE_DATA = {
         "sunday": "12:00-17:00",
     },
     "vibes": ["free", "educational", "cultural", "art", "historic", "university"],
+}
+
+# Date range patterns found on Carlos exhibition cards:
+#   "January 31 - October 25, 2026"
+#   "March 17, 2026 - March 4, 2029"
+#   "September 13 - December 14, 2025"
+#   "March 10-31, 2025"
+_MONTH_NAMES = (
+    "January|February|March|April|May|June|"
+    "July|August|September|October|November|December"
+)
+_DATE_RANGE_RE = re.compile(
+    rf"(?P<m1>{_MONTH_NAMES})\s+(?P<d1>\d{{1,2}})(?:,\s*(?P<y1>\d{{4}}))?"
+    r"\s*[-–]\s*"
+    rf"(?:(?P<m2>{_MONTH_NAMES})\s+)?(?P<d2>\d{{1,2}})(?:,\s*(?P<y2>\d{{4}}))?",
+    re.IGNORECASE,
+)
+
+_MONTH_MAP = {
+    "january": 1, "february": 2, "march": 3, "april": 4,
+    "may": 5, "june": 6, "july": 7, "august": 8,
+    "september": 9, "october": 10, "november": 11, "december": 12,
 }
 
 
@@ -75,15 +118,20 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "parking_type": "paid_lot",
             "best_time_of_day": "afternoon",
             "practical_notes": (
-                "Carlos Museum works best as a compact Emory museum stop, especially for families who want a shorter culture outing instead of committing to a larger all-day museum campus."
+                "Carlos Museum works best as a compact Emory museum stop, especially for families "
+                "who want a shorter culture outing instead of committing to a larger all-day museum campus."
             ),
             "accessibility_notes": (
-                "Its indoor galleries and relatively contained footprint keep the visit lower-friction for strollers and shorter attention spans than larger museum outings."
+                "Its indoor galleries and relatively contained footprint keep the visit lower-friction "
+                "for strollers and shorter attention spans than larger museum outings."
             ),
             "family_suitability": "yes",
             "reservation_required": False,
             "permit_required": False,
-            "fee_note": "The museum remains one of Atlanta's stronger low-cost or free-feeling family culture stops depending on current admission policy and campus access.",
+            "fee_note": (
+                "The museum remains one of Atlanta's stronger low-cost or free-feeling family culture "
+                "stops depending on current admission policy and campus access."
+            ),
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
@@ -134,199 +182,238 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     return envelope
 
 
-def _enrich_venue_data(page) -> None:
+def _fetch_soup(url: str) -> BeautifulSoup:
+    """Fetch a URL and return a BeautifulSoup object."""
+    response = requests.get(url, headers=HEADERS, timeout=30)
+    response.raise_for_status()
+    return BeautifulSoup(response.text, "html.parser")
+
+
+def _enrich_venue_from_og(soup: BeautifulSoup) -> None:
+    """Extract og: metadata from the homepage and inject into VENUE_DATA."""
+    og_desc = soup.find("meta", property="og:description") or soup.find("meta", attrs={"name": "description"})
+    og_image = soup.find("meta", property="og:image")
+    if og_desc and og_desc.get("content") and not VENUE_DATA.get("description"):
+        desc = re.sub(r"\s+", " ", og_desc["content"]).strip()
+        if len(desc) >= 20:
+            VENUE_DATA["description"] = desc
+    if og_image and og_image.get("content") and not VENUE_DATA.get("image_url"):
+        VENUE_DATA["image_url"] = og_image["content"].strip()
+
+
+def _parse_date_range(text: str) -> tuple[Optional[str], Optional[str]]:
     """
-    Fetch og:description and og:image from the Carlos Museum homepage and inject
-    them into VENUE_DATA so get_or_create_venue() stores them on first creation.
-    Only fills fields that are not already set.
+    Parse a date range string from a Carlos exhibition card.
+
+    Handles patterns like:
+      "January 31 - October 25, 2026"
+      "March 17, 2026 - March 4, 2029"
+      "September 13 - December 14, 2025"
+      "March 10-31, 2025"
+    """
+    m = _DATE_RANGE_RE.search(text)
+    if not m:
+        return None, None
+
+    month1_name = m.group("m1").lower()
+    month2_name = (m.group("m2") or m.group("m1")).lower()
+    month1 = _MONTH_MAP.get(month1_name)
+    month2 = _MONTH_MAP.get(month2_name)
+    if not month1 or not month2:
+        return None, None
+
+    day1 = int(m.group("d1"))
+    day2 = int(m.group("d2"))
+
+    # Determine years
+    today_year = date.today().year
+    if m.group("y2"):
+        year2 = int(m.group("y2"))
+    elif m.group("y1"):
+        year2 = int(m.group("y1"))
+    else:
+        year2 = today_year
+
+    if m.group("y1"):
+        year1 = int(m.group("y1"))
+    else:
+        # If start month > end month and no explicit year, start is prior year
+        year1 = year2 - 1 if month1 > month2 else year2
+
+    try:
+        start_dt = date(year1, month1, day1)
+        end_dt = date(year2, month2, day2)
+    except ValueError:
+        return None, None
+
+    return start_dt.isoformat(), end_dt.isoformat()
+
+
+def _extract_card_image(article: BeautifulSoup) -> Optional[str]:
+    """Extract the best available image URL from a content-card article."""
+    img = article.select_one("img")
+    if not img:
+        return None
+    src = img.get("src") or ""
+    if src and src.startswith("/"):
+        return urljoin(BASE_URL, src)
+    return src or None
+
+
+def _parse_exhibition_cards(soup: BeautifulSoup) -> list[dict]:
+    """
+    Parse all <article class="content-card"> elements from the exhibitions index.
+    Returns a list of raw exhibition dicts with title, href, dates, image.
+    """
+    today = date.today()
+    results = []
+
+    for article in soup.select("article.content-card"):
+        link_el = article.select_one("a.content-card--link")
+        if not link_el:
+            continue
+        href = link_el.get("href", "")
+        if not href:
+            continue
+        source_url = urljoin(BASE_URL, href)
+
+        # Title from h2, h3, or content-card--title
+        title_el = article.select_one("h2, h3, .content-card--title")
+        if not title_el:
+            continue
+        title = title_el.get_text(strip=True)
+        if not title:
+            continue
+
+        # Date range from card body text
+        card_text = article.get_text(" ", strip=True)
+        opening_date, closing_date = _parse_date_range(card_text)
+
+        # Filter: skip if closing date is in the past (more than a few months ago)
+        if closing_date:
+            try:
+                close_dt = datetime.strptime(closing_date, "%Y-%m-%d").date()
+                if close_dt < today:
+                    logger.debug("Carlos Museum: skipping past exhibition %r (closed %s)", title, closing_date)
+                    continue
+            except ValueError:
+                pass
+
+        image_url = _extract_card_image(article)
+
+        results.append({
+            "title": title,
+            "source_url": source_url,
+            "opening_date": opening_date,
+            "closing_date": closing_date,
+            "image_url": image_url,
+        })
+
+    return results
+
+
+def _fetch_exhibition_description(source_url: str) -> Optional[str]:
+    """
+    Fetch an exhibition detail page and extract the description.
+    Returns None on failure so the caller can use a fallback.
     """
     try:
-        page.goto(BASE_URL, wait_until="domcontentloaded", timeout=20000)
-        page.wait_for_timeout(1500)
-        og_desc = page.get_attribute('meta[property="og:description"]', "content")
-        og_image = page.get_attribute('meta[property="og:image"]', "content")
-        if og_desc and not VENUE_DATA.get("description"):
-            VENUE_DATA["description"] = re.sub(r"\s+", " ", og_desc).strip()
-        if og_image and not VENUE_DATA.get("image_url"):
-            VENUE_DATA["image_url"] = og_image.strip()
+        soup = _fetch_soup(source_url)
+        # Try meta description first
+        for key, value in [("name", "description"), ("property", "og:description")]:
+            tag = soup.find("meta", attrs={key: value})
+            if tag and tag.get("content"):
+                desc = re.sub(r"\s+", " ", tag["content"]).strip()
+                if len(desc) >= 20:
+                    return desc
+        # Fall back to first substantial paragraph in main content
+        for p in soup.select("main p, article p, .field--type-text-with-summary p"):
+            text = re.sub(r"\s+", " ", p.get_text(" ", strip=True)).strip()
+            if len(text) >= 60:
+                return text
     except Exception as exc:
-        logger.debug("Carlos Museum homepage og: fetch failed: %s", exc)
-
-
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
+        logger.debug("Carlos Museum: could not fetch detail page %s: %s", source_url, exc)
     return None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Michael C. Carlos Museum events using Playwright."""
+    """
+    Crawl Michael C. Carlos Museum exhibitions using requests + BeautifulSoup.
+
+    The exhibitions index page is server-rendered Drupal — no Playwright needed.
+    We parse exhibition cards from the index, then optionally fetch detail pages
+    for descriptions.
+    """
     source_id = source["id"]
+    portal_id = source.get("portal_id")
     events_found = 0
     events_new = 0
-    events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
+        # Enrich venue metadata from homepage og: tags
+        try:
+            home_soup = _fetch_soup(BASE_URL)
+            _enrich_venue_from_og(home_soup)
+        except Exception as exc:
+            logger.debug("Carlos Museum: homepage og: fetch failed: %s", exc)
+
+        venue_id = get_or_create_venue(VENUE_DATA)
+        persist_typed_entity_envelope(_build_destination_envelope(venue_id))
+
+        logger.info("Carlos Museum: fetching exhibitions index %s", EXHIBITIONS_URL)
+        index_soup = _fetch_soup(EXHIBITIONS_URL)
+        cards = _parse_exhibition_cards(index_soup)
+        logger.info("Carlos Museum: found %d exhibition card(s) in index", len(cards))
+
+        exhibition_envelope = TypedEntityEnvelope()
+
+        for card in cards:
+            title = card["title"]
+
+            # Fetch detail page for description
+            description = _fetch_exhibition_description(card["source_url"])
+            if not description:
+                description = f"Exhibition at Michael C. Carlos Museum at Emory University."
+
+            record, artists = build_exhibition_record(
+                title=title,
+                venue_id=venue_id,
+                source_id=source_id,
+                opening_date=card["opening_date"],
+                closing_date=card["closing_date"],
+                venue_name=VENUE_DATA["name"],
+                description=description,
+                image_url=card["image_url"],
+                source_url=card["source_url"],
+                portal_id=portal_id,
+                admission_type="ticketed",
+                tags=["carlos-museum", "emory", "museum", "art", "antiquities", "exhibition"],
             )
-            page = context.new_page()
+            if artists:
+                record["artists"] = artists
 
-            _enrich_venue_data(page)
-            venue_id = get_or_create_venue(VENUE_DATA)
-            persist_typed_entity_envelope(_build_destination_envelope(venue_id))
+            exhibition_envelope.add("exhibitions", record)
+            events_found += 1
+            events_new += 1
+            logger.info(
+                "Carlos Museum queued exhibition: %r (open=%s close=%s)",
+                title,
+                card["opening_date"] or "unknown",
+                card["closing_date"] or "unknown",
+            )
 
-            logger.info(f"Fetching Michael C. Carlos Museum: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+        if exhibition_envelope.has_records():
+            persist_typed_entity_envelope(exhibition_envelope)
+            ex_count = len(exhibition_envelope.exhibitions)
+            logger.info("Carlos Museum: persisted %d exhibition(s) to exhibitions table", ex_count)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
-
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
-                        continue
-
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
-
-                    events_found += 1
-
-                    content_hash = generate_content_hash(title, "Michael C. Carlos Museum", start_date)
-
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Event at Michael C. Carlos Museum",
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "museums",
-                        "subcategory": "exhibition",
-                        "tags": ["carlos-museum", "emory", "museum", "art", "antiquities", "free"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": "Suggested donation $8",
-                        "is_free": True,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            browser.close()
-
-        logger.info(
-            f"Michael C. Carlos Museum crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to crawl Michael C. Carlos Museum: {e}")
+    except Exception as exc:
+        logger.error("Failed to crawl Michael C. Carlos Museum: %s", exc)
         raise
 
-    return events_found, events_new, events_updated
+    logger.info(
+        "Carlos Museum crawl complete: %d found, %d new, 0 updated",
+        events_found,
+        events_new,
+    )
+    return events_found, events_new, 0

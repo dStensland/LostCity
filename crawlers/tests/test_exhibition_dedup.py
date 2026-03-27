@@ -61,3 +61,32 @@ from db.exhibitions import find_exhibition_by_title_venue
 def test_find_exhibition_by_title_venue_exists():
     """find_exhibition_by_title_venue should be importable and callable."""
     assert callable(find_exhibition_by_title_venue)
+
+
+def test_cdn_url_regex_matches_cdn_urls():
+    """CDN image URLs should be caught by the regex pattern."""
+    from db.exhibitions import _CDN_URL_RE
+
+    cdn_urls = [
+        "https://res.cloudinary.com/gallery/image/upload/v123/photo.jpg",
+        "https://bucket.s3.amazonaws.com/exhibitions/img.png",
+        "https://gallery.com/wp-content/uploads/2026/03/show.jpg",
+        "https://cdn.imgix.net/photos/exhibit.jpg",
+        "https://d1234.cloudfront.net/images/show.jpg",
+    ]
+    for url in cdn_urls:
+        assert _CDN_URL_RE.search(url), f"CDN URL {url!r} should match"
+
+
+def test_cdn_url_regex_does_not_match_real_urls():
+    """Real exhibition page URLs should not match the CDN pattern."""
+    from db.exhibitions import _CDN_URL_RE
+
+    real_urls = [
+        "https://gallery.com/exhibitions/my-show",
+        "https://www.mocaga.org/2026-exhibitions/",
+        "https://high.org/exhibition/radcliffe-bailey",
+        "https://atlantacontemporary.org/exhibitions/current",
+    ]
+    for url in real_urls:
+        assert not _CDN_URL_RE.search(url), f"Real URL {url!r} should not match CDN pattern"

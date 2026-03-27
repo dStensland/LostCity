@@ -2,6 +2,15 @@
 Crawler for Hammonds House Museum (hammondshousemuseum.org).
 Historic house museum in West End showcasing African American and Haitian art.
 Founded 1988 in restored Victorian home of Dr. Otis Thrash Hammonds.
+
+DEACTIVATED 2026-03-25: The site at hammondshousemuseum.org is down.
+HTTP requests return an SSL error followed by a 404 on the insecure fallback.
+The museum may have moved to a new domain or temporarily suspended operations.
+This crawler returns (0, 0, 0) immediately until the site is restored.
+
+Action needed: verify current status at hammondshousemuseum.org and update
+BASE_URL if the site moved, or set is_active=false in the sources table if the
+museum has permanently closed.
 """
 
 from __future__ import annotations
@@ -219,7 +228,20 @@ def determine_category(title: str, description: str = "") -> tuple[str, Optional
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Hammonds House Museum events."""
+    """
+    Crawl Hammonds House Museum events.
+
+    DEACTIVATED 2026-03-25: hammondshousemuseum.org is unreachable (SSL error,
+    404 on insecure). Returning early to avoid error log noise until the site
+    is restored or the source is deactivated in the database.
+    """
+    logger.warning(
+        "Hammonds House Museum: site is down as of 2026-03-25 (SSL error / 404). "
+        "Skipping crawl. Set is_active=false in the sources table or restore the site."
+    )
+    return 0, 0, 0
+
+    # --- Dead code below preserved for when site is restored ---
     source_id = source["id"]
     portal_id = source.get("portal_id")
     events_found = 0
