@@ -689,14 +689,22 @@ export async function GET(request: NextRequest, { params }: Props) {
   });
   const enforcePortalCityFilter = shouldApplyCityFilter(manifest);
   const hasSubscribedSources = manifest.scope.allowFederatedSources;
-  const applyPortalEventScope = (query: ReturnType<typeof supabase.from>) =>
-    applyPortalCategoryFilters(
+  const applyPortalEventScope = (query: ReturnType<typeof supabase.from>) => {
+    let q = applyPortalCategoryFilters(
       applyManifestFederatedScopeToQuery(query, manifest, {
         sourceIds: hasSubscribedSources ? federationAccess.sourceIds : [],
         publicOnlyWhenNoPortal: true,
       }),
       portalContentFilters,
     );
+    // Family portal: category filter replaced by audience_tags overlap
+    // (family category dissolved in taxonomy v2 — events now tagged by age audience)
+    if (manifest.vertical === "family") {
+      q = (q as unknown as { overlaps: (col: string, val: string[]) => ReturnType<typeof supabase.from> })
+        .overlaps("audience_tags", ["toddler", "preschool", "kids", "teen"]);
+    }
+    return q;
+  };
 
   // Merge curated + pinned event rows into a single lookup map
   const eventMap = new Map<number, Event>();
@@ -971,6 +979,11 @@ export async function GET(request: NextRequest, { params }: Props) {
           .is("canonical_event_id", null)
           .or("is_class.eq.false,is_class.is.null")
           .or("is_sensitive.eq.false,is_sensitive.is.null");
+        // Suppress Support category from all non-civic portals
+        // (AA meetings, grief groups belong in HelpATL, not alongside music shows)
+        if (manifest.vertical !== "community") {
+          q = q.neq("category_id", "support");
+        }
         q = applyFeedGate(q);
         q = applyPortalEventScope(q);
         return q
@@ -1096,6 +1109,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
         const supplementEndDate = tomorrowStr;
 
+        // v2: nightlife dissolved — games (trivia/bingo/poker) + dance (latin/line-dancing) replace "nightlife" category
         let nightlifeCoreQuery = portalClient
           .from("events")
           .select(eventSelect)
@@ -1104,7 +1118,8 @@ export async function GET(request: NextRequest, { params }: Props) {
           .is("canonical_event_id", null)
           .or("is_class.eq.false,is_class.is.null")
           .or("is_sensitive.eq.false,is_sensitive.is.null")
-          .eq("category_id", "nightlife");
+          .in("category_id", ["games", "dance"])
+          .gte("start_time", "17:00:00");
         nightlifeCoreQuery = applyFeedGate(nightlifeCoreQuery);
         nightlifeCoreQuery = applyPortalEventScope(nightlifeCoreQuery);
 

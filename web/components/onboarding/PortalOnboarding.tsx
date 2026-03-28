@@ -13,6 +13,7 @@ import {
   Tree,
   Sparkle,
   MusicNotes,
+  MusicNote,
   Trophy,
   Leaf,
   Plant,
@@ -20,6 +21,16 @@ import {
   Drop,
   SealCheck,
   X,
+  Lightning,
+  GameController,
+  Smiley,
+  MaskHappy,
+  FilmSlate,
+  Wrench,
+  BookOpen,
+  Book,
+  HandHeart,
+  Buildings,
 } from "@phosphor-icons/react";
 import {
   type PortalPreferences,
@@ -48,14 +59,25 @@ const TRAVEL_TONES: Record<TravelParty, Tone> = {
   group: { accent: "#6ee7b7", glow: "rgba(110,231,183,0.24)" },
 };
 
+// Taxonomy v2 interest tones — one accent per interest tag
 const INTEREST_TONES: Record<InterestTag, Tone> = {
-  food: { accent: "#f59e0b", glow: "rgba(245,158,11,0.24)" },
-  nightlife: { accent: "#00d4e8", glow: "rgba(0,212,232,0.24)" },
-  arts: { accent: "#a78bfa", glow: "rgba(167,139,250,0.24)" },
-  outdoors: { accent: "#22c55e", glow: "rgba(34,197,94,0.22)" },
-  wellness: { accent: "#6ee7b7", glow: "rgba(110,231,183,0.22)" },
-  music: { accent: "#ff6b7a", glow: "rgba(255,107,122,0.24)" },
-  sports: { accent: "#60a5fa", glow: "rgba(96,165,250,0.24)" },
+  food:        { accent: "#f59e0b", glow: "rgba(245,158,11,0.24)" },
+  music:       { accent: "#ff6b7a", glow: "rgba(255,107,122,0.24)" },
+  arts:        { accent: "#a78bfa", glow: "rgba(167,139,250,0.24)" },
+  outdoors:    { accent: "#22c55e", glow: "rgba(34,197,94,0.22)" },
+  fitness:     { accent: "#6ee7b7", glow: "rgba(110,231,183,0.22)" },
+  games:       { accent: "#00d4e8", glow: "rgba(0,212,232,0.24)" },
+  dance:       { accent: "#e855a0", glow: "rgba(232,85,160,0.24)" },
+  comedy:      { accent: "#ffd93d", glow: "rgba(255,217,61,0.24)" },
+  theater:     { accent: "#a78bfa", glow: "rgba(167,139,250,0.22)" },
+  film:        { accent: "#a78bfa", glow: "rgba(167,139,250,0.20)" },
+  sports:      { accent: "#60a5fa", glow: "rgba(96,165,250,0.24)" },
+  workshops:   { accent: "#f59e0b", glow: "rgba(245,158,11,0.20)" },
+  education:   { accent: "#60a5fa", glow: "rgba(96,165,250,0.20)" },
+  words:       { accent: "#a78bfa", glow: "rgba(167,139,250,0.18)" },
+  volunteer:   { accent: "#22c55e", glow: "rgba(34,197,94,0.24)" },
+  civic:       { accent: "#00d4e8", glow: "rgba(0,212,232,0.20)" },
+  conventions: { accent: "#f59e0b", glow: "rgba(245,158,11,0.22)" },
 };
 
 const DIETARY_TONE: Tone = { accent: "#00d4e8", glow: "rgba(0,212,232,0.2)" };
@@ -71,6 +93,7 @@ const ICONS: Record<string, ComponentType<IconProps>> = {
   tree: Tree,
   spa: Sparkle,
   music: MusicNotes,
+  "music-notes": MusicNote,
   trophy: Trophy,
   leaf: Leaf,
   seedling: Plant,
@@ -78,6 +101,18 @@ const ICONS: Record<string, ComponentType<IconProps>> = {
   alert: WarningCircle,
   "milk-off": Drop,
   check: SealCheck,
+  // Taxonomy v2 interest icons
+  lightning: Lightning,
+  "game-controller": GameController,
+  smiley: Smiley,
+  "mask-happy": MaskHappy,
+  "film-slate": FilmSlate,
+  wrench: Wrench,
+  "book-open": BookOpen,
+  book: Book,
+  "hand-heart": HandHeart,
+  buildings: Buildings,
+  "users-three": UsersThree,
 };
 
 function Icon({ name, accent, size = 18 }: { name: string; accent: string; size?: number }) {

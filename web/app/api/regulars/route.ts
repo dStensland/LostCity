@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
     .is("canonical_event_id", null)
     .eq("is_regular_ready", true)
     .not("is_class", "eq", true)
-    .not("category_id", "in", "(film,theater,family,learning,support_group,community)") // Showtimes, theater runs, kids events, classes, recovery meetings, volunteer shifts — never regular hangs
+    .not("category_id", "in", "(film,theater,education,support,support_group,civic,volunteer,religious,community,family,learning)") // Showtimes, theater runs, civic meetings, recovery, volunteer shifts, worship — never regular hangs
     .not("tags", "cs", '{"class"}'); // Exclude class-tagged events (paint-and-sip, workshops)
 
   query = applyVenueGate(query);

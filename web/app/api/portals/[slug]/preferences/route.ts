@@ -29,14 +29,25 @@ const VALID_TRAVEL_PARTIES = [
   "family",
   "group",
 ] as const;
+// Taxonomy v2 interests — old: nightlife→music, wellness→fitness, family→(audience tags)
 const VALID_INTERESTS = [
   "food",
-  "nightlife",
+  "music",
   "arts",
   "outdoors",
-  "wellness",
-  "music",
+  "fitness",
+  "games",
+  "dance",
+  "comedy",
+  "theater",
+  "film",
   "sports",
+  "workshops",
+  "education",
+  "words",
+  "volunteer",
+  "civic",
+  "conventions",
 ] as const;
 const VALID_DIETARY = [
   "vegetarian",

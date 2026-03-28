@@ -284,7 +284,7 @@ export function buildEventQuery(
     .or("is_class.eq.false,is_class.is.null")
     .or("is_sensitive.eq.false,is_sensitive.is.null")
     .neq("category_id", "film")
-    .not("category_id", "in", "(recreation,unknown,support_group,religious)");
+    .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)");
   if (excludeSourceIds.length > 0) {
     q = q.not("source_id", "in", `(${excludeSourceIds.join(",")})`);
   }
@@ -324,7 +324,7 @@ export function buildInterestQueries(
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null")
-      .not("category_id", "in", "(recreation,unknown,support_group,religious)");
+      .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)");
     if (excludeSourceIds.length > 0) {
       q = q.not("source_id", "in", `(${excludeSourceIds.join(",")})`);
     }
@@ -407,7 +407,7 @@ export async function fetchEventPools(
           .is("canonical_event_id", null)
           .or("is_class.eq.false,is_class.is.null")
           .or("is_sensitive.eq.false,is_sensitive.is.null")
-          .not("category_id", "in", "(recreation,unknown,support_group,religious)");
+          .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)");
         if (ymcaSourceIds.length > 0) {
           q = q.not("source_id", "in", `(${ymcaSourceIds.join(",")})`);
         }
@@ -428,7 +428,7 @@ export async function fetchEventPools(
           .is("canonical_event_id", null)
           .or("is_class.eq.false,is_class.is.null")
           .or("is_sensitive.eq.false,is_sensitive.is.null")
-          .not("category_id", "in", "(recreation,unknown,support_group,religious)");
+          .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)");
         if (ymcaSourceIds.length > 0) {
           q = q.not("source_id", "in", `(${ymcaSourceIds.join(",")})`);
         }
@@ -558,7 +558,7 @@ export async function fetchNewFromSpots(
     .is("canonical_event_id", null)
     .or("is_class.eq.false,is_class.is.null")
     .or("is_sensitive.eq.false,is_sensitive.is.null")
-    .not("category_id", "in", "(recreation,unknown,support_group,religious)")
+    .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)")
     .order("start_date", { ascending: true })
     .order("data_quality", { ascending: false, nullsFirst: false })
     .limit(10);

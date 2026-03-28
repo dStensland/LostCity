@@ -110,9 +110,9 @@ async function setCachedTonightResponse(
   );
 }
 
-// Categories that appeal to young hip crowd
-const HIP_CATEGORIES = ["music", "comedy", "nightlife", "art", "film", "theater", "sports"];
-const GENERIC_CATEGORIES = ["family", "exercise", "recreation", "classes"];
+// Categories that appeal to young hip crowd — taxonomy v2 (dissolved categories removed)
+const HIP_CATEGORIES = ["music", "comedy", "dance", "games", "art", "film", "theater", "sports"];
+const GENERIC_CATEGORIES = ["fitness", "workshops", "education"];
 
 // Venue name patterns that indicate hip/cool venues
 const HIP_VENUE_PATTERNS = [
@@ -501,8 +501,8 @@ function calculateQualityScore(
     }
   }
 
-  // Penalize nightlife events in the morning (likely miscategorized)
-  if (cat === "nightlife" && event.start_time) {
+  // Penalize late-night-category events in the morning (likely miscategorized)
+  if ((cat === "music" || cat === "dance" || cat === "games") && event.start_time) {
     const hour = parseInt(event.start_time.split(":")[0]);
     if (hour >= 6 && hour < 17) {
       score -= 15;
@@ -564,8 +564,8 @@ function calculateQualityScore(
     const isWeekendEvening = (dayOfWeek === 5 || dayOfWeek === 6) && event.start_time && parseInt(event.start_time.split(":")[0]) >= 18;
     if (isWeekendEvening) {
       score += 5;
-      // Music and comedy are the stars of weekend nights
-      if (cat === "music" || cat === "comedy" || cat === "nightlife") {
+      // Music, comedy, dance, and games are the stars of weekend nights
+      if (cat === "music" || cat === "comedy" || cat === "dance" || cat === "games") {
         score += 8;
       }
     }

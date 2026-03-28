@@ -8,14 +8,25 @@
 // ============================================================================
 
 export type TravelParty = "alone" | "couple" | "family" | "group";
+// Taxonomy v2 interests — nightlife→music/dance/games, wellness→fitness, family→(audience tags)
 export type InterestTag =
   | "food"
-  | "nightlife"
+  | "music"
   | "arts"
   | "outdoors"
-  | "wellness"
-  | "music"
-  | "sports";
+  | "fitness"
+  | "games"
+  | "dance"
+  | "comedy"
+  | "theater"
+  | "film"
+  | "sports"
+  | "workshops"
+  | "education"
+  | "words"
+  | "volunteer"
+  | "civic"
+  | "conventions";
 export type DietaryNeed =
   | "vegetarian"
   | "vegan"
@@ -76,14 +87,25 @@ export const TRAVEL_PARTY_OPTIONS: OnboardingOption<TravelParty>[] = [
   },
 ];
 
+// Taxonomy v2 interest options
 export const INTEREST_OPTIONS: OnboardingOption<InterestTag>[] = [
   { id: "food", label: "Food & Dining", icon: "utensils" },
-  { id: "nightlife", label: "Nightlife", icon: "moon" },
+  { id: "music", label: "Live Music", icon: "music" },
   { id: "arts", label: "Arts & Culture", icon: "palette" },
   { id: "outdoors", label: "Outdoors", icon: "tree" },
-  { id: "wellness", label: "Wellness", icon: "spa" },
-  { id: "music", label: "Live Music", icon: "music" },
+  { id: "fitness", label: "Fitness", icon: "lightning" },
+  { id: "games", label: "Games & Trivia", icon: "game-controller" },
+  { id: "dance", label: "Dancing", icon: "music-notes" },
+  { id: "comedy", label: "Comedy", icon: "smiley" },
+  { id: "theater", label: "Theater", icon: "mask-happy" },
+  { id: "film", label: "Film", icon: "film-slate" },
   { id: "sports", label: "Sports", icon: "trophy" },
+  { id: "workshops", label: "Workshops", icon: "wrench" },
+  { id: "education", label: "Education", icon: "book-open" },
+  { id: "words", label: "Books & Words", icon: "book" },
+  { id: "volunteer", label: "Volunteer", icon: "hand-heart" },
+  { id: "civic", label: "Civic", icon: "buildings" },
+  { id: "conventions", label: "Conventions", icon: "users-three" },
 ];
 
 export const DIETARY_OPTIONS: OnboardingOption<DietaryNeed>[] = [
@@ -148,10 +170,10 @@ export function suggestGuestIntent(prefs: PortalPreferences): string | null {
   if (prefs.travel_party === "couple") return "romance";
   if (
     prefs.travel_party === "alone" &&
-    prefs.interests.includes("wellness")
+    prefs.interests.includes("fitness")
   )
     return "wellness";
-  if (prefs.interests.includes("nightlife")) return "night_out";
+  if (prefs.interests.includes("music") || prefs.interests.includes("dance") || prefs.interests.includes("games")) return "night_out";
   if (prefs.travel_party === "alone") return "business";
 
   return null;
@@ -167,7 +189,7 @@ export function suggestVisitorPersona(
 
   switch (prefs.travel_party) {
     case "alone":
-      return prefs.interests.includes("wellness")
+      return prefs.interests.includes("fitness")
         ? "wellness_guest"
         : "business_traveler";
     case "couple":

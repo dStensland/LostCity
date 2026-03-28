@@ -178,9 +178,13 @@ function buildEventReason(
     const CATEGORY_LABELS: Record<string, string> = {
       music: "Music", comedy: "Comedy", theater: "Theater", dance: "Dance",
       film: "Film", art: "Art", food_drink: "Food & Drink", sports: "Sports",
-      nightlife: "Nightlife", community: "Community", festival: "Festival",
-      family: "Family", wellness: "Wellness", education: "Education",
-      networking: "Networking", other: "Event",
+      fitness: "Fitness", outdoors: "Outdoors", games: "Games",
+      workshops: "Workshops", education: "Education", words: "Words",
+      conventions: "Conventions", volunteer: "Volunteer", civic: "Civic",
+      support: "Support", religious: "Religious",
+      // Legacy aliases kept for graceful degradation on existing saved preferences
+      nightlife: "Nightlife", community: "Community", family: "Family",
+      wellness: "Wellness", other: "Event",
     };
     const label = CATEGORY_LABELS[event.category_id] ??
       event.category_id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());

@@ -420,6 +420,7 @@ export async function GET(request: Request) {
       .is("canonical_event_id", null) // Only show canonical events, not duplicates
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null")
+      .not("category_id", "in", "(support,support_group)") // Support/recovery meetings never in the main discovery feed
       .order("start_date", { ascending: true })
       .order("data_quality", { ascending: false, nullsFirst: false });
 
