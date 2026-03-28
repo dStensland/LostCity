@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PlatformHeader } from "@/components/headers";
 import ImageUploader from "@/components/ImageUploader";
-import VenueAutocomplete from "@/components/VenueAutocomplete";
+import PlaceAutocomplete from "@/components/PlaceAutocomplete";
 import OrganizationAutocomplete from "@/components/OrganizationAutocomplete";
 import { useAuth } from "@/lib/auth-context";
 import type { EventSubmissionData, VenueSubmissionData } from "@/lib/types";
@@ -871,7 +871,7 @@ export default function SubmitEventPage() {
 
               {venueMode === "existing" ? (
                 <div className="space-y-2">
-                  <VenueAutocomplete
+                  <PlaceAutocomplete
                     value={selectedVenue}
                     onChange={(venue) => {
                       setSelectedVenue(venue);

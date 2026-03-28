@@ -6,17 +6,17 @@ import VenueDetailView, {
   type SpotApiResponse,
 } from "@/components/views/VenueDetailView";
 
-interface VenueDetailWrapperProps {
+interface PlaceDetailWrapperProps {
   slug: string;
   portalSlug: string;
   initialData: SpotApiResponse;
 }
 
-export default function VenueDetailWrapper({
+export default function PlaceDetailWrapper({
   slug,
   portalSlug,
   initialData,
-}: VenueDetailWrapperProps) {
+}: PlaceDetailWrapperProps) {
   const router = useRouter();
   const handleClose = useCallback(() => {
     if (window.history.length > 1) {

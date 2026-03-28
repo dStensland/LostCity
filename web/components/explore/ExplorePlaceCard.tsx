@@ -6,7 +6,7 @@ import { EXPLORE_THEME, isUncertainArtefactImageSlug } from "@/lib/explore-track
 import type { ExploreTrackVenue, ExploreVenueEvent } from "@/lib/explore-tracks";
 import { HIGHLIGHT_CONFIG, type HighlightType } from "@/lib/venue-highlights";
 
-interface ExploreVenueCardProps {
+interface ExplorePlaceCardProps {
   venue: ExploreTrackVenue;
   portalSlug: string;
   accent?: string;
@@ -14,13 +14,13 @@ interface ExploreVenueCardProps {
   highlight?: boolean;
 }
 
-export default function ExploreVenueCard({
+export default function ExplorePlaceCard({
   venue,
   portalSlug,
   accent = EXPLORE_THEME.primary,
   variant = "compact",
   highlight = false,
-}: ExploreVenueCardProps) {
+}: ExplorePlaceCardProps) {
   const isFeatured = variant === "featured";
   const events = venue.upcomingEvents ?? [];
   const tonightEvents = events.filter((e) => e.isTonight);

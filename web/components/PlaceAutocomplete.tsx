@@ -14,7 +14,7 @@ interface VenueResult {
   displayLabel: string;
 }
 
-interface VenueAutocompleteProps {
+interface PlaceAutocompleteProps {
   value: { id: number; name: string } | null;
   onChange: (venue: { id: number; name: string } | null) => void;
   onCreateNew?: (name: string) => void;
@@ -24,7 +24,7 @@ interface VenueAutocompleteProps {
   error?: string;
 }
 
-export default function VenueAutocomplete({
+export default function PlaceAutocomplete({
   value,
   onChange,
   onCreateNew,
@@ -32,7 +32,7 @@ export default function VenueAutocomplete({
   required = false,
   disabled = false,
   error,
-}: VenueAutocompleteProps) {
+}: PlaceAutocompleteProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<VenueResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);

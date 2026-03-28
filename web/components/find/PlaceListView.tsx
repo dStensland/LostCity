@@ -6,7 +6,7 @@ import { SPOT_TYPE_CONFIG, SPOT_TYPE_ORDER, SPOTS_TABS, type Spot, type SpotsTab
 import { haversineKm } from "@/lib/distance";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
-import VenueListSkeleton from "@/components/find/VenueListSkeleton";
+import PlaceListSkeleton from "@/components/find/PlaceListSkeleton";
 import CategoryTileGrid from "@/components/find/CategoryTileGrid";
 import { getSpotsEmptyStateCopy } from "@/lib/empty-state-copy";
 
@@ -16,7 +16,7 @@ import { getSpotsEmptyStateCopy } from "@/lib/empty-state-copy";
 
 export type SortOption = "category" | "alphabetical" | "neighborhood" | "distance";
 
-interface VenueListViewProps {
+interface PlaceListViewProps {
   spots: Spot[];
   sortBy: SortOption;
   setSortBy: (sort: SortOption) => void;
@@ -47,7 +47,7 @@ interface VenueListViewProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function VenueListView({
+export default function PlaceListView({
   spots,
   sortBy,
   setSortBy,
@@ -64,7 +64,7 @@ export default function VenueListView({
   showCategoryGrid,
   onCategorySelect,
   allTabSpots,
-}: VenueListViewProps) {
+}: PlaceListViewProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const alphaScrollRef = useRef<HTMLDivElement>(null);
   const prevTabRef = useRef(activeTab);
@@ -229,7 +229,7 @@ export default function VenueListView({
 
   // ── Initial loading state ──────────────────────────────────────────────
   if (loading && spots.length === 0) {
-    return <VenueListSkeleton />;
+    return <PlaceListSkeleton />;
   }
 
   // ── Empty state ────────────────────────────────────────────────────────

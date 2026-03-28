@@ -9,7 +9,7 @@ import BestOfVoteButton from "./BestOfVoteButton";
 import CaseCard from "./CaseCard";
 import MakeYourCaseSheet from "./MakeYourCaseSheet";
 
-interface BestOfVenueCardProps {
+interface BestOfPlaceCardProps {
   venue: BestOfRankedVenue;
   categorySlug: string;
   categoryId: string;
@@ -23,7 +23,7 @@ interface BestOfVenueCardProps {
   onCaseUpvote: (caseId: string) => Promise<void>;
 }
 
-function BestOfVenueCardInner({
+function BestOfPlaceCardInner({
   venue,
   categorySlug,
   categoryName,
@@ -33,7 +33,7 @@ function BestOfVenueCardInner({
   onVote,
   onCaseSubmit,
   onCaseUpvote,
-}: BestOfVenueCardProps) {
+}: BestOfPlaceCardProps) {
   const router = useRouter();
   const [isCaseSheetOpen, setIsCaseSheetOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -215,7 +215,7 @@ function BestOfVenueCardInner({
   );
 }
 
-const BestOfVenueCard = memo(BestOfVenueCardInner, (prev, next) => {
+const BestOfPlaceCard = memo(BestOfPlaceCardInner, (prev, next) => {
   const pv = prev.venue;
   const nv = next.venue;
   return (
@@ -232,6 +232,6 @@ const BestOfVenueCard = memo(BestOfVenueCardInner, (prev, next) => {
   );
 });
 
-BestOfVenueCard.displayName = "BestOfVenueCard";
+BestOfPlaceCard.displayName = "BestOfPlaceCard";
 
-export default BestOfVenueCard;
+export default BestOfPlaceCard;

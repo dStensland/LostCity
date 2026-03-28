@@ -45,7 +45,7 @@ export type SpotTagData = {
   score: number;
 };
 
-interface VenueCardProps {
+interface PlaceCardProps {
   venue: Spot;
   portalSlug: string;
   /** "discovery" = image-rail list card, "compact" = tighter single-line for feed/search */
@@ -310,7 +310,7 @@ function CompactCard({
   portalSlug: string;
   contextualLabel?: string;
   isOpenNow?: boolean;
-  topSpecial?: VenueCardProps["topSpecial"];
+  topSpecial?: PlaceCardProps["topSpecial"];
   showDistance?: { lat: number; lng: number };
   index?: number;
   hideNeighborhood?: boolean;
@@ -410,7 +410,7 @@ function CompactCard({
 // Public component
 // ---------------------------------------------------------------------------
 
-function VenueCard({
+function PlaceCard({
   venue,
   portalSlug,
   variant = "discovery",
@@ -422,7 +422,7 @@ function VenueCard({
   index,
   editorialMentions,
   hideNeighborhood,
-}: VenueCardProps) {
+}: PlaceCardProps) {
   if (variant === "compact") {
     return (
       <CompactCard
@@ -449,4 +449,4 @@ function VenueCard({
   );
 }
 
-export default React.memo(VenueCard);
+export default React.memo(PlaceCard);

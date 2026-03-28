@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 
-interface HotelVenueCardProps {
+interface HotelPlaceCardProps {
   venue: {
     id?: number;
     slug: string;
@@ -25,7 +25,7 @@ interface HotelVenueCardProps {
  * Hotel-themed venue/destination card
  * Shows venue photo, type, neighborhood, and next event
  */
-export default function HotelVenueCard({ venue, portalSlug, variant = "default" }: HotelVenueCardProps) {
+export default function HotelPlaceCard({ venue, portalSlug, variant = "default" }: HotelPlaceCardProps) {
   const venueUrl = `/${portalSlug}?spot=${venue.slug}`;
 
   // Format distance if available

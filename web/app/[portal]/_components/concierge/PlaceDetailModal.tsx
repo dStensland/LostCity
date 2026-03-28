@@ -106,7 +106,7 @@ const STATUS_CONFIG: Record<
 // Component
 // ---------------------------------------------------------------------------
 
-interface VenueDetailModalProps {
+interface PlaceDetailModalProps {
   venue: VenueModalData;
   tonightEvents?: FeedEvent[];
   onClose: () => void;
@@ -134,12 +134,12 @@ function formatVenueType(type: string | null): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export default function VenueDetailModal({
+export default function PlaceDetailModal({
   venue,
   tonightEvents = [],
   onClose,
   onEventClick,
-}: VenueDetailModalProps) {
+}: PlaceDetailModalProps) {
   const walkMin = estimateWalkMinutes(venue.distanceKm);
   const statusConfig = venue.status ? STATUS_CONFIG[venue.status] : null;
 

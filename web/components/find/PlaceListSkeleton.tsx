@@ -75,7 +75,7 @@ function VenueCardSkeleton({ index }: { index: number }) {
   );
 }
 
-export default function VenueListSkeleton({ count = 6 }: { count?: number }) {
+export default function PlaceListSkeleton({ count = 6 }: { count?: number }) {
   return (
     <div className="space-y-3 mt-4">
       {Array.from({ length: count }, (_, i) => (

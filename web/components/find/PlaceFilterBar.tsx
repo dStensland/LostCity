@@ -14,7 +14,7 @@ import {
 import { getPortalNeighborhoodShortcuts } from "@/config/neighborhoods";
 import type { FilterState } from "@/lib/hooks/useVenueDiscovery";
 import { DEFAULT_FILTERS } from "@/lib/hooks/useVenueDiscovery";
-import { VenueFilterSheet } from "@/components/find/VenueFilterSheet";
+import { PlaceFilterSheet } from "@/components/find/PlaceFilterSheet";
 import { triggerHaptic } from "@/lib/haptics";
 
 const FindSearchInput = dynamic(() => import("@/components/find/FindSearchInput"), {
@@ -556,10 +556,10 @@ function FilterDeck({
 }
 
 // ---------------------------------------------------------------------------
-// VenueFilterBar — exported composite (search + filters + context label)
+// PlaceFilterBar — exported composite (search + filters + context label)
 // ---------------------------------------------------------------------------
 
-interface VenueFilterBarProps {
+interface PlaceFilterBarProps {
   filters: FilterState;
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
   openCount: number;
@@ -716,10 +716,10 @@ function MobileFilterStrip({
 }
 
 // ---------------------------------------------------------------------------
-// VenueFilterBar — exported composite (search + filters + context label)
+// PlaceFilterBar — exported composite (search + filters + context label)
 // ---------------------------------------------------------------------------
 
-export default function VenueFilterBar({
+export default function PlaceFilterBar({
   filters,
   setFilters,
   openCount,
@@ -731,7 +731,7 @@ export default function VenueFilterBar({
   onLocationChange,
   activeTab = "eat-drink",
   filteredCount = 0,
-}: VenueFilterBarProps) {
+}: PlaceFilterBarProps) {
   const handleLocationChange = onLocationChange ?? (() => {});
 
   // Shared geolocation state — single source for both mobile and desktop

@@ -11,7 +11,7 @@ type Venue = {
   image_url?: string;
 };
 
-export default function ProfileVenues({ username }: { username: string }) {
+export default function ProfilePlaces({ username }: { username: string }) {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
 

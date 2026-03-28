@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import VenueCard from "./VenueCard";
+import PlaceCard from "./PlaceCard";
 import { useVenueDiscovery } from "@/lib/hooks/useVenueDiscovery";
-import VenueFilterBar from "@/components/find/VenueFilterBar";
-import VenueListView, { type SortOption } from "@/components/find/VenueListView";
+import PlaceFilterBar from "@/components/find/PlaceFilterBar";
+import PlaceListView, { type SortOption } from "@/components/find/PlaceListView";
 import { SPOTS_TABS, getTabChips, type SpotsTab } from "@/lib/spots-constants";
 
 // ---------------------------------------------------------------------------
@@ -129,7 +129,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
   return (
     <div className="space-y-3">
       <SpotsTabBar activeTab={activeTab} onTabChange={setActiveTab} />
-      <VenueFilterBar
+      <PlaceFilterBar
         filters={filters}
         setFilters={setFilters}
         openCount={meta.openCount}
@@ -142,7 +142,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
         activeTab={activeTab}
         filteredCount={filteredSpots.length}
       />
-      <VenueListView
+      <PlaceListView
         spots={filteredSpots}
         sortBy={sortBy}
         setSortBy={setSortBy}
@@ -160,7 +160,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
         onCategorySelect={handleCategorySelect}
         allTabSpots={spots}
         renderCard={(spot) => (
-          <VenueCard
+          <PlaceCard
             key={spot.id}
             venue={spot}
             portalSlug={portalSlug}

@@ -34,7 +34,7 @@ interface ShowsApiResponse {
   this_week_count?: number;
 }
 
-export interface VenueGroupedShowsListProps {
+export interface PlaceGroupedShowsListProps {
   portalSlug: string;
   categories: string; // "music", "theater,dance", or "comedy"
   accentColor?: string; // CSS variable like "var(--neon-magenta)"
@@ -49,11 +49,11 @@ const MAX_DOTS = 7;
 
 // ── Component ────────────────────────────────────────────────────────
 
-export function VenueGroupedShowsList({
+export function PlaceGroupedShowsList({
   portalSlug,
   categories,
   accentColor = "var(--neon-magenta)",
-}: VenueGroupedShowsListProps) {
+}: PlaceGroupedShowsListProps) {
   const vertical: "music" | "theater" | "clowns" =
     categories === "music" ? "music" : categories === "comedy" ? "clowns" : "theater";
   // URL-compatible vertical for Find view links

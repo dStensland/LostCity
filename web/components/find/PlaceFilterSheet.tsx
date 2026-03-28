@@ -25,7 +25,7 @@ const PRICE_LEVELS = [
   { value: 4, label: "$$$$" },
 ] as const;
 
-interface VenueFilterSheetProps {
+interface PlaceFilterSheetProps {
   isOpen: boolean;
   onClose: () => void;
   filters: FilterState;
@@ -36,7 +36,7 @@ interface VenueFilterSheetProps {
   portalSlug?: string;
 }
 
-export const VenueFilterSheet = memo(function VenueFilterSheet({
+export const PlaceFilterSheet = memo(function PlaceFilterSheet({
   isOpen,
   onClose,
   filters,
@@ -45,7 +45,7 @@ export const VenueFilterSheet = memo(function VenueFilterSheet({
   activeTab,
   resultCount,
   portalSlug,
-}: VenueFilterSheetProps) {
+}: PlaceFilterSheetProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [showAllHoods, setShowAllHoods] = useState(false);
