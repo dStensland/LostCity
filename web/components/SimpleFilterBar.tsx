@@ -9,12 +9,12 @@ import { MobileFilterSheet } from "./MobileFilterSheet";
 import { formatGenre } from "@/lib/series-utils";
 
 // Group categories into logical sections
-const CATEGORY_GROUPS = {
-  "Popular": ["music", "food_drink", "nightlife"],
-  "Arts & Culture": ["art", "theater", "comedy", "film", "dance", "words"],
-  "Activities": ["sports", "recreation", "exercise", "gaming", "outdoors", "family", "tours"],
-  "Community": ["community", "meetup", "learning", "religious", "markets", "wellness"],
-} as const;
+const CATEGORY_GROUPS: Record<string, string[]> = {
+  Popular: ["music", "food_drink", "comedy", "film", "art", "theater"],
+  Active: ["sports", "fitness", "dance", "outdoors", "games"],
+  Learning: ["workshops", "education", "words", "conventions"],
+  Service: ["volunteer", "civic", "religious"],
+};
 
 // Get all categories that are in groups
 const GROUPED_CATEGORY_VALUES = Object.values(CATEGORY_GROUPS).flat() as readonly string[];

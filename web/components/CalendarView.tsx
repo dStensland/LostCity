@@ -38,8 +38,10 @@ interface Props {
 
 // Category priority for showing dots (most colorful/interesting first)
 const CATEGORY_PRIORITY = [
-  "music", "art", "comedy", "theater", "film", "nightlife",
-  "food_drink", "sports", "recreation", "exercise", "community", "family", "other"
+  "music", "comedy", "theater", "film", "art", "dance",
+  "sports", "games", "food_drink", "fitness", "outdoors",
+  "workshops", "education", "words", "conventions",
+  "volunteer", "civic", "support", "religious",
 ];
 
 // Genre-specific colors for film events

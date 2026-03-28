@@ -26,18 +26,23 @@ interface Props {
 
 const EVENT_CATEGORIES = [
   "music",
-  "nightlife",
-  "food_drink",
-  "art",
-  "comedy",
-  "sports",
-  "community",
-  "exercise",
-  "recreation",
-  "learning",
-  "family",
   "film",
+  "comedy",
   "theater",
+  "art",
+  "dance",
+  "sports",
+  "fitness",
+  "outdoors",
+  "games",
+  "food_drink",
+  "conventions",
+  "workshops",
+  "education",
+  "words",
+  "volunteer",
+  "civic",
+  "religious",
 ] as const;
 
 export default function BrowseSection({ section, portalSlug }: Props) {

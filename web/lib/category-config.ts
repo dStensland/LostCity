@@ -1,6 +1,8 @@
 // Category configuration - shared between server and client components
 // This file intentionally has no "use client" directive so it can be imported from server components.
 
+import { normalizeEventCategory } from "@/lib/event-taxonomy";
+
 export const CATEGORY_CONFIG = {
   // Event categories
   music: { label: "Music", color: "#F9A8D4" },
@@ -135,8 +137,16 @@ export function getCategoryColor(type: string | null | undefined): string {
 }
 
 export function getCategoryLabel(type: string | null | undefined): string {
-  const normalized = normalizeCategoryType(type);
-  return CATEGORY_CONFIG[normalized as CategoryType]?.label || formatFallbackLabel(normalized);
+  const raw = type ?? "";
+  // First pass: resolve dissolved/legacy category IDs to their v2 equivalents
+  const taxonomyNormalized = normalizeEventCategory(raw) || raw;
+  // Second pass: normalize casing/aliases within category-config
+  const normalized = normalizeCategoryType(taxonomyNormalized);
+  return (
+    CATEGORY_CONFIG[normalized as CategoryType]?.label ||
+    CATEGORY_CONFIG[raw as CategoryType]?.label ||
+    formatFallbackLabel(normalized)
+  );
 }
 
 // ─── Map Pin Color Families ───────────────────────────────────────────────────

@@ -240,9 +240,9 @@ function getSeeAllUrl(section: FeedSectionData, portalSlug: string): string {
     params.set("categories", autoFilter.categories.join(","));
     hasFilters = true;
   }
-  // nightlife_mode sections link to the nightlife category in find view
+  // nightlife_mode sections link to the games+dance categories in find view
   if ((autoFilter as Record<string, unknown>)?.nightlife_mode) {
-    params.set("categories", "nightlife");
+    params.set("categories", "games,dance");
     hasFilters = true;
   }
   if (autoFilter?.tags?.length) {

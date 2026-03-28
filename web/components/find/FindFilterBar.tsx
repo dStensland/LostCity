@@ -209,7 +209,7 @@ export default function FindFilterBar({ variant = "full", hideDate = false, port
   const isCommunity = vertical === "community";
 
   // For civic portals, filter desktop category dropdown to relevant options
-  const CIVIC_CATEGORY_VALUES = new Set(["government", "community", "volunteer", "family", "education"]);
+  const CIVIC_CATEGORY_VALUES = new Set(["civic", "support", "volunteer", "education", "religious"]);
   const desktopCategoryOptions = isCommunity
     ? f.categoryOptions.filter((c) => CIVIC_CATEGORY_VALUES.has(c.value))
     : f.categoryOptions;

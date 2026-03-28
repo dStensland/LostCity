@@ -93,7 +93,7 @@ export function getSeeAllUrl(section: FeedSectionData, portalSlug: string): stri
     hasFilters = true;
   }
   if ((autoFilter as Record<string, unknown>)?.nightlife_mode) {
-    params.set("categories", "nightlife");
+    params.set("categories", "games,dance");
     hasFilters = true;
   }
   if (autoFilter?.tags?.length) {
