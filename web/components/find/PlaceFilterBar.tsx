@@ -12,8 +12,8 @@ import {
   type SpotsTab,
 } from "@/lib/spots-constants";
 import { getPortalNeighborhoodShortcuts } from "@/config/neighborhoods";
-import type { FilterState } from "@/lib/hooks/useVenueDiscovery";
-import { DEFAULT_FILTERS } from "@/lib/hooks/useVenueDiscovery";
+import type { FilterState } from "@/lib/hooks/usePlaceDiscovery";
+import { DEFAULT_FILTERS } from "@/lib/hooks/usePlaceDiscovery";
 import { PlaceFilterSheet } from "@/components/find/PlaceFilterSheet";
 import { triggerHaptic } from "@/lib/haptics";
 

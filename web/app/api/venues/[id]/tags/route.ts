@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
-  getVenueTagsWithUserStatus,
-  addTagToVenue,
-  removeTagFromVenue,
+  getPlaceTagsWithUserStatus,
+  addTagToPlace,
+  removeTagFromPlace,
   suggestTag,
-} from "@/lib/venue-tags";
+} from "@/lib/place-tags";
 import type { VenueTagGroup, TagGroup } from "@/lib/types";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const tags = await getVenueTagsWithUserStatus(venueId, user?.id || null);
+  const tags = await getPlaceTagsWithUserStatus(venueId, user?.id || null);
 
   return NextResponse.json({ tags });
 }
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Invalid tagId format" }, { status: 400 });
     }
 
-    const result = await addTagToVenue(venueId, body.tagId, user.id);
+    const result = await addTagToPlace(venueId, body.tagId, user.id);
 
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
@@ -162,7 +162,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  const result = await removeTagFromVenue(venueId, tagId, user.id);
+  const result = await removeTagFromPlace(venueId, tagId, user.id);
 
   if (!result.success) {
     return NextResponse.json({ error: result.error }, { status: 400 });

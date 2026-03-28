@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { voteOnTag } from "@/lib/venue-tags";
+import { voteOnPlaceTag } from "@/lib/place-tags";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     );
   }
 
-  const result = await voteOnTag(venueId, tagId, user.id, voteType);
+  const result = await voteOnPlaceTag(venueId, tagId, user.id, voteType);
 
   if (!result.success) {
     return NextResponse.json({ error: result.error }, { status: 400 });

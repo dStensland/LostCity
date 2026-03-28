@@ -12,8 +12,8 @@ import {
   type SpotsTab,
 } from "@/lib/spots-constants";
 import { PREFERENCE_NEIGHBORHOOD_NAMES, getPortalNeighborhoodShortcuts } from "@/config/neighborhoods";
-import type { FilterState } from "@/lib/hooks/useVenueDiscovery";
-import { DEFAULT_FILTERS } from "@/lib/hooks/useVenueDiscovery";
+import type { FilterState } from "@/lib/hooks/usePlaceDiscovery";
+import { DEFAULT_FILTERS } from "@/lib/hooks/usePlaceDiscovery";
 
 /** Tier 1+2 neighborhoods — shown by default in the sheet */
 const PRIMARY_NEIGHBORHOODS = new Set(PREFERENCE_NEIGHBORHOOD_NAMES);

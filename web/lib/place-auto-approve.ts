@@ -270,3 +270,6 @@ export async function autoApproveVenue(
     };
   }
 }
+
+// Alias for parallel branch naming
+export const autoApprovePlace = autoApproveVenue;

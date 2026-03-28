@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import { EXPLORE_THEME, isUncertainArtefactImageSlug } from "@/lib/explore-tracks";
 import type { ExploreTrackVenue, ExploreVenueEvent } from "@/lib/explore-tracks";
-import { HIGHLIGHT_CONFIG, type HighlightType } from "@/lib/venue-highlights";
+import { HIGHLIGHT_CONFIG, type HighlightType } from "@/lib/place-highlights";
 
 interface ExplorePlaceCardProps {
   venue: ExploreTrackVenue;

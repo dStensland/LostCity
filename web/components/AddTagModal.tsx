@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { getTagGroupsForEntity } from "@/lib/venue-tags-config";
+import { getTagGroupsForEntity } from "@/lib/place-tags-config";
 import type { VenueTagDefinition, TagEntityType, TagGroup } from "@/lib/types";
 
 interface AddTagModalProps {

@@ -9,7 +9,7 @@ export type FeatureType =
   | "experience"
   | "amenity";
 
-export type VenueFeature = {
+export type PlaceFeature = {
   id: number;
   slug: string;
   title: string;
@@ -25,7 +25,10 @@ export type VenueFeature = {
   sort_order: number;
 };
 
-type VenueFeatureFilterOptions = {
+// Legacy alias for backwards compatibility
+export type VenueFeature = PlaceFeature;
+
+type PlaceFeatureFilterOptions = {
   portalSlug?: string | null;
   venueSlug?: string | null;
 };
@@ -97,7 +100,7 @@ const FAMILY_ALLOWED_SLUGS_BY_VENUE: Record<string, Set<string>> = {
 };
 
 function shouldExcludeFromFamily(
-  feature: VenueFeature,
+  feature: PlaceFeature,
   venueSlug: string | null
 ): boolean {
   if (FAMILY_GLOBAL_EXCLUDED_SLUGS.has(feature.slug)) {
@@ -121,10 +124,10 @@ function shouldExcludeFromFamily(
   return false;
 }
 
-export function filterVenueFeaturesForPortal(
-  features: VenueFeature[],
-  { portalSlug, venueSlug }: VenueFeatureFilterOptions = {}
-): VenueFeature[] {
+export function filterPlaceFeaturesForPortal(
+  features: PlaceFeature[],
+  { portalSlug, venueSlug }: PlaceFeatureFilterOptions = {}
+): PlaceFeature[] {
   if (portalSlug !== "atlanta-families") {
     return features;
   }
@@ -133,3 +136,6 @@ export function filterVenueFeaturesForPortal(
     (feature) => !shouldExcludeFromFamily(feature, venueSlug ?? null)
   );
 }
+
+// Legacy alias for backwards compatibility
+export const filterVenueFeaturesForPortal = filterPlaceFeaturesForPortal;

@@ -15,7 +15,7 @@ import type {
   VenueSubmissionData,
   ProducerSubmissionData,
 } from "@/lib/types";
-import { autoApproveVenue } from "@/lib/venue-auto-approve";
+import { autoApprovePlace } from "@/lib/place-auto-approve";
 import { createEventFromSubmission } from "@/lib/submissions/approval";
 import crypto from "crypto";
 import { logger } from "@/lib/logger";
@@ -416,7 +416,7 @@ export async function POST(request: NextRequest) {
     if (placeId) {
       logger.info("Attempting auto-approval for venue", { placeId, userId: user.id, component: "submissions" });
 
-      const autoApproveResult = await autoApproveVenue(
+      const autoApproveResult = await autoApprovePlace(
         placeId,
         user.id,
         portal_id

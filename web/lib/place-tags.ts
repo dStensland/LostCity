@@ -14,7 +14,7 @@ export {
   ORG_TAG_GROUPS,
   getTagGroupsForEntity,
   TAG_CATEGORIES,
-} from "./venue-tags-config";
+} from "./place-tags-config";
 
 // Type helper for untyped tables (new tables not yet in generated types)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -818,3 +818,13 @@ export async function voteOnEntityTag(
 
   return { success: true };
 }
+
+// ---------------------------------------------------------------------------
+// Place-scoped export aliases (for parallel branch naming)
+// ---------------------------------------------------------------------------
+
+// These are aliases for the Venue-prefixed functions above
+export const getPlaceTagsWithUserStatus = getVenueTagsWithUserStatus;
+export const addTagToPlace = addTagToVenue;
+export const removeTagFromPlace = removeTagFromVenue;
+export const voteOnPlaceTag = voteOnTag;
