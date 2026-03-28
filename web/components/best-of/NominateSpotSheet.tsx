@@ -62,7 +62,7 @@ export default function NominateSpotSheet({
     }
     setIsSearching(true);
     try {
-      const res = await fetch(`/api/venues/search?q=${encodeURIComponent(q)}&portal=${portalSlug}&limit=10`);
+      const res = await fetch(`/api/places/search?q=${encodeURIComponent(q)}&portal=${portalSlug}&limit=10`);
       if (res.ok) {
         const data = await res.json();
         const venues = (data.venues ?? []).map((v: Record<string, unknown>) => ({

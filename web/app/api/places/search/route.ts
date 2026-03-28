@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
+import { errorResponse, isValidString, escapeSQLPattern, parseIntParam } from "@/lib/api-utils";
+import { createClient } from "@/lib/supabase/server";
 
 // Foursquare Places API base URL (migrated from api.foursquare.com/v3)
 const FOURSQUARE_BASE_URL = "https://places-api.foursquare.com";
@@ -252,4 +254,145 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// GET /api/places/search?q= - Search venues (internal autocomplete)
+// Moved from /api/venues/search
+export async function GET(request: NextRequest) {
+  const rateLimitResult = await applyRateLimit(
+    request,
+    RATE_LIMITS.search,
+    getClientIdentifier(request)
+  );
+  if (rateLimitResult) return rateLimitResult;
+
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get("q");
+  const limit = Math.min(parseIntParam(searchParams.get("limit")) ?? 10, 20);
+  const neighborhood = searchParams.get("neighborhood");
+  const city = searchParams.get("city");
+
+  if (!query || !isValidString(query, 1, 100)) {
+    return NextResponse.json({ error: "Query parameter 'q' is required" }, { status: 400 });
+  }
+
+  const supabase = await createClient();
+
+  const normalizedQuery = query.toLowerCase().trim();
+  const sanitizedQuery = escapeSQLPattern(normalizedQuery);
+  const sanitizedArrayQuery = normalizedQuery.replace(/[{},"\\/]/g, "");
+
+  let searchQuery = supabase
+    .from("venues")
+    .select(
+      `
+      id,
+      name,
+      slug,
+      address,
+      neighborhood,
+      city,
+      state,
+      venue_type,
+      aliases,
+      lat,
+      lng,
+      image_url
+    `
+    )
+    .or(
+      `name.ilike.%${sanitizedQuery}%,` +
+        `address.ilike.%${sanitizedQuery}%,` +
+        `aliases.cs.{${sanitizedArrayQuery}}`
+    )
+    .order("name")
+    .limit(limit);
+
+  if (city && isValidString(city, 1, 50)) {
+    searchQuery = searchQuery.eq("city", city);
+  }
+
+  if (neighborhood && isValidString(neighborhood, 1, 50)) {
+    searchQuery = searchQuery.eq("neighborhood", neighborhood);
+  }
+
+  const { data: venuesData, error } = await searchQuery;
+
+  if (error) {
+    return errorResponse(error, "GET /api/places/search");
+  }
+
+  type VenueResult = {
+    id: number;
+    name: string;
+    slug: string;
+    address: string | null;
+    neighborhood: string | null;
+    city: string | null;
+    state: string | null;
+    venue_type: string | null;
+    aliases: string[] | null;
+    lat: number | null;
+    lng: number | null;
+    image_url: string | null;
+  };
+
+  const venues = venuesData as VenueResult[] | null;
+
+  const sortedVenues = (venues || []).sort((a, b) => {
+    const aName = a.name.toLowerCase();
+    const bName = b.name.toLowerCase();
+    if (aName === normalizedQuery && bName !== normalizedQuery) return -1;
+    if (bName === normalizedQuery && aName !== normalizedQuery) return 1;
+    const aPrefix = aName.startsWith(normalizedQuery);
+    const bPrefix = bName.startsWith(normalizedQuery);
+    if (aPrefix && !bPrefix) return -1;
+    if (bPrefix && !aPrefix) return 1;
+    return aName.localeCompare(bName);
+  });
+
+  const results = sortedVenues.map((venue) => ({
+    id: venue.id,
+    name: venue.name,
+    slug: venue.slug,
+    address: venue.address,
+    neighborhood: venue.neighborhood,
+    city: venue.city,
+    state: venue.state,
+    venue_type: venue.venue_type,
+    lat: venue.lat,
+    lng: venue.lng,
+    image_url: venue.image_url,
+    matchedAlias: venue.aliases?.find((alias: string) =>
+      alias.toLowerCase().includes(normalizedQuery)
+    ),
+    displayLabel: formatVenueLabel(venue),
+  }));
+
+  return NextResponse.json(
+    {
+      venues: results,
+      query: query,
+      count: results.length,
+    },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+      },
+    }
+  );
+}
+
+function formatVenueLabel(venue: {
+  name: string;
+  neighborhood: string | null;
+  city: string | null;
+}): string {
+  const parts = [venue.name];
+  if (venue.neighborhood) {
+    parts.push(venue.neighborhood);
+  } else if (venue.city && venue.city !== "Atlanta") {
+    parts.push(venue.city);
+  }
+  return parts.join(" - ");
 }

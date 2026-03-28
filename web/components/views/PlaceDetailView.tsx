@@ -240,7 +240,7 @@ function CollapsibleVenueTags({ venueId }: { venueId: number }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/venues/${venueId}/tags`)
+    fetch(`/api/places/${venueId}/tags`)
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (!cancelled) {

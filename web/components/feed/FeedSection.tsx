@@ -1849,7 +1849,7 @@ function VenueList({
           const params = new URLSearchParams({ limit: "20" });
           if (portalSlug) params.set("portal", portalSlug);
           const res = await fetch(
-            `/api/venues/${venueId}/events?${params.toString()}`,
+            `/api/places/${venueId}/events?${params.toString()}`,
           );
           if (res.ok) {
             const data = await res.json();

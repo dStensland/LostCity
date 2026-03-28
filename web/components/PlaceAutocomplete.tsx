@@ -53,7 +53,7 @@ export default function PlaceAutocomplete({
     const searchVenues = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/venues/search?q=${encodeURIComponent(debouncedQuery)}&limit=8`);
+        const res = await fetch(`/api/places/search?q=${encodeURIComponent(debouncedQuery)}&limit=8`);
         const data = await res.json();
         setResults(data.venues || []);
       } catch (err) {

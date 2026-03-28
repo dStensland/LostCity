@@ -22,7 +22,7 @@ export default function PlaceTagList({ venueId, initialTags = [] }: PlaceTagList
 
     const fetchTags = async () => {
       try {
-        const res = await fetch(`/api/venues/${venueId}/tags`);
+        const res = await fetch(`/api/places/${venueId}/tags`);
         if (!res.ok) throw new Error("Failed to fetch tags");
         const data = await res.json();
         setTags(data.tags || []);
@@ -40,7 +40,7 @@ export default function PlaceTagList({ venueId, initialTags = [] }: PlaceTagList
   // Handle voting
   const handleVote = useCallback(
     async (tagId: string, voteType: "up" | "down" | null) => {
-      const res = await fetch(`/api/venues/${venueId}/tags/${tagId}/vote`, {
+      const res = await fetch(`/api/places/${venueId}/tags/${tagId}/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ voteType }),
@@ -52,7 +52,7 @@ export default function PlaceTagList({ venueId, initialTags = [] }: PlaceTagList
       }
 
       // Refresh tags after successful vote
-      const tagsRes = await fetch(`/api/venues/${venueId}/tags`);
+      const tagsRes = await fetch(`/api/places/${venueId}/tags`);
       if (tagsRes.ok) {
         const data = await tagsRes.json();
         setTags(data.tags || []);
@@ -64,7 +64,7 @@ export default function PlaceTagList({ venueId, initialTags = [] }: PlaceTagList
   // Handle tag added
   const handleTagAdded = useCallback(async () => {
     // Refresh tags
-    const res = await fetch(`/api/venues/${venueId}/tags`);
+    const res = await fetch(`/api/places/${venueId}/tags`);
     if (res.ok) {
       const data = await res.json();
       setTags(data.tags || []);

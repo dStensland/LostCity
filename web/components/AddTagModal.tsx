@@ -94,7 +94,7 @@ export default function AddTagModal({ venueId, entityType = "venue", onClose, on
     setError(null);
 
     try {
-      const res = await fetch(`/api/venues/${venueId}/tags`, {
+      const res = await fetch(`/api/places/${venueId}/tags`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tagId }),
@@ -123,7 +123,7 @@ export default function AddTagModal({ venueId, entityType = "venue", onClose, on
     setError(null);
 
     try {
-      const res = await fetch(`/api/venues/${venueId}/tags`, {
+      const res = await fetch(`/api/places/${venueId}/tags`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

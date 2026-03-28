@@ -221,7 +221,7 @@ export const RegularSpotsSection = memo(function RegularSpotsSection() {
 
     try {
       const params = new URLSearchParams({ q, limit: "5", city: "Atlanta" });
-      const res = await fetch(`/api/venues/search?${params}`);
+      const res = await fetch(`/api/places/search?${params}`);
       if (!res.ok) {
         setSearchResults([]);
         return;

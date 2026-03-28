@@ -29,7 +29,7 @@ describe("portal route guardrails", () => {
       "app/api/around-me/route.ts",
       "app/api/spots/route.ts",
       "app/api/festivals/[slug]/route.ts",
-      "app/api/venues/[id]/events/route.ts",
+      "app/api/places/[id]/events/route.ts",
       "app/api/activities/popular/route.ts",
     ];
 

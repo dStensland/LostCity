@@ -80,7 +80,7 @@ export default function QuickAddPlace({ trigger, onAdd, onRemove, size = "sm" }:
     (async () => {
       try {
         const [venueRes, placeRes] = await Promise.all([
-          fetch(`/api/venues/search?q=${encodeURIComponent(debouncedQuery)}&limit=5`),
+          fetch(`/api/places/search?q=${encodeURIComponent(debouncedQuery)}&limit=5`),
           fetch("/api/places/search", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

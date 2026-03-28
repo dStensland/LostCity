@@ -15,7 +15,7 @@ export default function PlaceTagBadges({ venueId, maxTags = 3 }: PlaceTagBadgesP
   useEffect(() => {
     const fetchTags = async () => {
       try {
-        const res = await fetch(`/api/venues/${venueId}/tags`);
+        const res = await fetch(`/api/places/${venueId}/tags`);
         if (!res.ok) return;
         const data = await res.json();
         // Only show tags with decent score

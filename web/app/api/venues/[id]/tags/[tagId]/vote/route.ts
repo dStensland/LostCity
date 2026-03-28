@@ -1,52 +1,15 @@
+// 308 Permanent Redirect — route moved to /api/places/[id]/tags/[tagId]/vote
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { voteOnPlaceTag } from "@/lib/place-tags";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
-export const dynamic = "force-dynamic";
+function redirect(request: NextRequest): NextResponse {
+  const url = new URL(request.url);
+  url.pathname = url.pathname.replace("/api/venues/", "/api/places/");
+  return NextResponse.redirect(url.toString(), 308);
+}
 
-type Props = {
-  params: Promise<{ id: string; tagId: string }>;
-};
-
-// POST /api/venues/[id]/tags/[tagId]/vote - Vote on a tag
-export async function POST(request: NextRequest, { params }: Props) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
-  if (rateLimitResult) return rateLimitResult;
-
-  const { id, tagId } = await params;
-
-  const venueId = parseInt(id);
-  if (isNaN(venueId)) {
-    return NextResponse.json({ error: "Invalid venue ID" }, { status: 400 });
-  }
-
-  // Require authentication
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
-  }
-
-  const body = await request.json();
-  const voteType = body.voteType;
-
-  // Validate vote type
-  if (voteType !== "up" && voteType !== "down" && voteType !== null) {
-    return NextResponse.json(
-      { error: 'Invalid vote type. Must be "up", "down", or null' },
-      { status: 400 }
-    );
-  }
-
-  const result = await voteOnPlaceTag(venueId, tagId, user.id, voteType);
-
-  if (!result.success) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
-  }
-
-  return NextResponse.json({ success: true });
+export async function POST(request: NextRequest) {
+  const rl = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  if (rl) return rl;
+  return redirect(request);
 }

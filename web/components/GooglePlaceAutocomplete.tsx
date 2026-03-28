@@ -83,7 +83,7 @@ export function GooglePlaceAutocomplete({
       try {
         // Search local database first
         const venueRes = await fetch(
-          `/api/venues/search?q=${encodeURIComponent(debouncedQuery)}&limit=5`
+          `/api/places/search?q=${encodeURIComponent(debouncedQuery)}&limit=5`
         );
         const venueData = await venueRes.json();
         const venueResults: SearchResult[] = (venueData.venues || []).map(

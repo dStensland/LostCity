@@ -30,7 +30,7 @@ export default function VenueClaimPage({
   useEffect(() => {
     const fetchVenue = async () => {
       try {
-        const response = await fetch(`/api/venues/search?slug=${params.slug}`);
+        const response = await fetch(`/api/places/search?slug=${params.slug}`);
         if (!response.ok) {
           throw new Error("Failed to fetch venue");
         }
@@ -77,7 +77,7 @@ export default function VenueClaimPage({
     if (!venue) return;
 
     try {
-      const response = await fetch("/api/venues/claim", {
+      const response = await fetch("/api/places/claim", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

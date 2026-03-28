@@ -92,7 +92,7 @@ export function AddItemsModal({ listId, existingItems, onClose, onItemsAdded }: 
         });
 
         if (activeTab === "venue") {
-          const res = await fetch(`/api/venues/search?${params}`);
+          const res = await fetch(`/api/places/search?${params}`);
           if (!res.ok) throw new Error("Search failed");
           const data = await res.json();
           setVenues(data.venues || []);

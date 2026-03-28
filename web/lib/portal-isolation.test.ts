@@ -60,7 +60,7 @@ describe("portal isolation guardrails", () => {
       "app/api/around-me/route.ts",
       "app/api/spots/route.ts",
       "app/api/festivals/[slug]/route.ts",
-      "app/api/venues/[id]/events/route.ts",
+      "app/api/places/[id]/events/route.ts",
       "app/api/activities/popular/route.ts",
       "app/api/portals/[slug]/happening-now/route.ts",
       "app/api/portals/[slug]/explore/route.ts",

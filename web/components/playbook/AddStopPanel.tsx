@@ -4,7 +4,7 @@
  * AddStopPanel — Enhanced "Add a stop" panel for the Playbook editor.
  *
  * Features:
- * - Debounced venue search via /api/venues/search
+ * - Debounced venue search via /api/places/search
  * - Category filter chips (Food, Drinks, Activity, Nightlife)
  * - Smart suggestions from outing-suggestions API
  * - Custom stop creation form
@@ -185,7 +185,7 @@ export default function AddStopPanel({
 
     (async () => {
       try {
-        const res = await fetch(`/api/venues/search?q=${encodeURIComponent(debouncedQuery)}&limit=8&city=${encodeURIComponent(portalCity)}`);
+        const res = await fetch(`/api/places/search?q=${encodeURIComponent(debouncedQuery)}&limit=8&city=${encodeURIComponent(portalCity)}`);
         if (version !== searchVersionRef.current) return;
         if (res.ok) {
           const data = await res.json();

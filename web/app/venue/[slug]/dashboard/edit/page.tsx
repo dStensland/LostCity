@@ -66,7 +66,7 @@ export default function VenueEditPage({
   useEffect(() => {
     const fetchVenue = async () => {
       try {
-        const response = await fetch(`/api/venues/by-slug/${params.slug}/edit`);
+        const response = await fetch(`/api/places/by-slug/${params.slug}/edit`);
         if (!response.ok) {
           throw new Error("Failed to fetch venue");
         }
@@ -157,7 +157,7 @@ export default function VenueEditPage({
         planning_notes: formData.planning_notes || null,
       };
 
-      const response = await fetch(`/api/venues/by-slug/${params.slug}/edit`, {
+      const response = await fetch(`/api/places/by-slug/${params.slug}/edit`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

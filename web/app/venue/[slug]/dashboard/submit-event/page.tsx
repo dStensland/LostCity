@@ -45,7 +45,7 @@ export default function SubmitEventPage({
   useEffect(() => {
     const fetchVenue = async () => {
       try {
-        const response = await fetch(`/api/venues/by-slug/${params.slug}/edit`);
+        const response = await fetch(`/api/places/by-slug/${params.slug}/edit`);
         if (!response.ok) {
           throw new Error("Failed to fetch venue");
         }
@@ -93,7 +93,7 @@ export default function SubmitEventPage({
         price_note: formData.price_note || undefined,
       };
 
-      const response = await fetch(`/api/venues/by-slug/${params.slug}/submit-event`, {
+      const response = await fetch(`/api/places/by-slug/${params.slug}/submit-event`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
