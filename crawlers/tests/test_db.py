@@ -184,8 +184,8 @@ def test_get_sibling_venue_ids_prefers_parent_linked_active_family():
     client = MagicMock()
     client.table.return_value = query
 
-    with patch("db.venues.get_venue_by_id", return_value={"id": 104, "name": "The Masquerade - Hell", "parent_venue_id": 364}), patch(
-        "db.venues.get_client", return_value=client
+    with patch("db.places.get_venue_by_id", return_value={"id": 104, "name": "The Masquerade - Hell", "parent_venue_id": 364}), patch(
+        "db.places.get_client", return_value=client
     ):
         assert sorted(get_sibling_venue_ids(104)) == [104, 112, 364]
 
@@ -202,14 +202,14 @@ def test_get_sibling_venue_ids_falls_back_to_active_name_match_for_masquerade_fa
     client = MagicMock()
     client.table.return_value = query
 
-    with patch("db.venues.get_venue_by_id", return_value={"id": 104, "name": "The Masquerade - Hell", "parent_venue_id": None}), patch(
-        "db.venues.get_client", return_value=client
+    with patch("db.places.get_venue_by_id", return_value={"id": 104, "name": "The Masquerade - Hell", "parent_venue_id": None}), patch(
+        "db.places.get_client", return_value=client
     ):
         assert sorted(get_sibling_venue_ids(104)) == [104, 112, 364]
 
 
 def test_db_venues_get_sibling_venue_ids_prefers_parent_linked_active_family():
-    from db.venues import get_sibling_venue_ids
+    from db.places import get_sibling_venue_ids
 
     family_rows = [{"id": 364}, {"id": 104}, {"id": 112}]
     query = MagicMock()
@@ -220,8 +220,8 @@ def test_db_venues_get_sibling_venue_ids_prefers_parent_linked_active_family():
     client = MagicMock()
     client.table.return_value = query
 
-    with patch("db.venues.get_venue_by_id", return_value={"id": 104, "name": "The Masquerade - Hell", "parent_venue_id": 364}), patch(
-        "db.venues.get_client", return_value=client
+    with patch("db.places.get_venue_by_id", return_value={"id": 104, "name": "The Masquerade - Hell", "parent_venue_id": 364}), patch(
+        "db.places.get_client", return_value=client
     ):
         assert sorted(get_sibling_venue_ids(104)) == [104, 112, 364]
 
@@ -423,7 +423,7 @@ def test_find_existing_event_for_insert_prefers_explicit_content_hash(
 class TestGetOrCreateVenue:
     """Tests for get_or_create_venue function."""
 
-    @patch("db.venues.get_client")
+    @patch("db.places.get_client")
     def test_finds_existing_venue_by_slug(self, mock_get_client, sample_venue_data):
         """Should return existing venue ID when slug matches."""
         client = MagicMock()
@@ -443,9 +443,9 @@ class TestGetOrCreateVenue:
         assert venue_id == 42
         client.table.assert_called_with("venues")
 
-    @patch("db.venues._maybe_update_existing_venue")
-    @patch("db.venues.writes_enabled", return_value=True)
-    @patch("db.venues.get_client")
+    @patch("db.places._maybe_update_existing_venue")
+    @patch("db.places.writes_enabled", return_value=True)
+    @patch("db.places.get_client")
     def test_reactivates_existing_venue_when_source_marks_it_active(
         self, mock_get_client, _mock_writes_enabled, _mock_update, sample_venue_data
     ):
@@ -473,8 +473,8 @@ class TestGetOrCreateVenue:
         update_calls = table.update.call_args_list
         assert any(call.args == ({"active": True},) for call in update_calls)
 
-    @patch("db.venues._maybe_update_existing_venue")
-    @patch("db.venues.get_client")
+    @patch("db.places._maybe_update_existing_venue")
+    @patch("db.places.get_client")
     def test_finds_existing_venue_by_name(self, mock_get_client, _mock_update, sample_venue_data):
         """Should return existing venue ID when name matches."""
         client = MagicMock()
@@ -497,8 +497,8 @@ class TestGetOrCreateVenue:
 
         assert venue_id == 99
 
-    @patch("db.venues._maybe_update_existing_venue")
-    @patch("db.venues.get_client")
+    @patch("db.places._maybe_update_existing_venue")
+    @patch("db.places.get_client")
     def test_finds_existing_venue_by_name_alias(self, mock_get_client, _mock_update, sample_venue_data):
         """Should reuse deterministic singular/plural venue aliases before creating a new row."""
         client = MagicMock()
@@ -527,7 +527,7 @@ class TestGetOrCreateVenue:
 
         assert venue_id == 2206
 
-    @patch("db.venues.get_client")
+    @patch("db.places.get_client")
     def test_creates_new_venue(self, mock_get_client, sample_venue_data):
         """Should create new venue when no match found."""
         client = MagicMock()
@@ -553,7 +553,7 @@ class TestGetOrCreateVenue:
         assert venue_id == 123
         table.insert.assert_called_once_with(sample_venue_data)
 
-    @patch("db.venues.get_client")
+    @patch("db.places.get_client")
     def test_strips_event_only_fields_from_new_venue_payload(
         self, mock_get_client, sample_venue_data
     ):
@@ -590,7 +590,7 @@ class TestGetOrCreateVenue:
         assert "start_date" not in insert_payload
         assert insert_payload["name"] == sample_venue_data["name"]
 
-    @patch("db.venues.get_client")
+    @patch("db.places.get_client")
     def test_dry_run_skips_new_venue_insert(self, mock_get_client, sample_venue_data):
         """Should return a synthetic ID and skip insert in dry-run mode."""
         client = MagicMock()

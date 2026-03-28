@@ -9,7 +9,7 @@ import logging
 os.environ["LLM_PROVIDER"] = "openai"
 
 from db import get_client
-from scrape_venue_specials import get_venues, scrape_venue, upsert_results, _close_browser
+from scrape_place_specials import get_venues, scrape_venue, upsert_results, _close_browser
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)

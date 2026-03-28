@@ -20,7 +20,7 @@ from copy import deepcopy
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db import get_client, get_or_create_venue, get_venue_by_slug
-from db.destination_details import upsert_venue_destination_details
+from db.place_vertical import upsert_venue_destination_details
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)

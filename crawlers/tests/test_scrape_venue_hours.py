@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 
-from scrape_venue_hours import get_hours_from_jsonld, get_hours_from_text, parse_day_range, parse_text_hours
+from scrape_place_hours import get_hours_from_jsonld, get_hours_from_text, parse_day_range, parse_text_hours
 
 
 def test_parse_schema_hours_accepts_single_object_jsonld():

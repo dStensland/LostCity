@@ -34,7 +34,7 @@ from db.validation import (
     infer_content_kind,
     sanitize_text,
 )
-from db.venues import get_venue_by_id_cached
+from db.places import get_venue_by_id_cached
 from crawl_context import get_crawl_context
 from db.sources import get_source_info, get_festival_source_hint, infer_program_title
 from db.enrichment import _queue_event_blurhash
@@ -2303,7 +2303,7 @@ def find_events_by_date_and_venue(date: str, venue_id: int) -> list[dict]:
 
 def find_events_by_date_and_venue_family(date: str, venue_id: int) -> list[dict]:
     """Find events on a specific date at a venue OR any of its sibling rooms."""
-    from db.venues import get_sibling_venue_ids
+    from db.places import get_sibling_venue_ids
     client = get_client()
     sibling_ids = get_sibling_venue_ids(venue_id)
 

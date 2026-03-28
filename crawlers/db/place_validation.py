@@ -1,8 +1,11 @@
 """
-Venue validation — name quality, geo-scope, and minimum field checks.
+Place validation — name quality, geo-scope, and minimum field checks.
 
-Analogous to db/validation.py for events. Called from get_or_create_venue()
-to reject junk venues before they enter the database.
+Renamed from venue_validation.py. Exported functions renamed to place_*
+with backward-compatible venue_* aliases at the bottom of this file.
+
+Analogous to db/validation.py for events. Called from get_or_create_place()
+to reject junk places before they enter the database.
 """
 
 import re
@@ -101,7 +104,7 @@ _JUNK_PATTERNS = [
 ]
 
 
-def validate_venue_name(name: Optional[str]) -> tuple[bool, Optional[str]]:
+def validate_place_name(name: Optional[str]) -> tuple[bool, Optional[str]]:
     """
     Reject address-as-name, pure numbers, single chars, known junk patterns.
 
@@ -143,17 +146,17 @@ def validate_venue_name(name: Optional[str]) -> tuple[bool, Optional[str]]:
 
 # ===== GEO-SCOPE VALIDATION =====
 
-def validate_venue_geo_scope(venue_data: dict, context) -> tuple[bool, Optional[str]]:
+def validate_place_geo_scope(venue_data: dict, context) -> tuple[bool, Optional[str]]:
     """
-    Reject venues outside the crawl context's allowed geography.
+    Reject places outside the crawl context's allowed geography.
 
     Logic:
-    - State is the primary gate: venues in allowed_states pass.
-    - Coordinates are secondary: used to reject venues in allowed states but
+    - State is the primary gate: places in allowed_states pass.
+    - Coordinates are secondary: used to reject places in allowed states but
       clearly in a different region (e.g., coords in Michigan with state="GA"
       defaulted by a crawler). Only rejects if coords are WAY outside — the
-      metro_radius is for neighborhood inference, not venue rejection.
-    - Venues with no state and no coords are ambiguous but allowed through
+      metro_radius is for neighborhood inference, not place rejection.
+    - Places with no state and no coords are ambiguous but allowed through
       (name validation is the gatekeeper for those).
 
     Returns (is_valid, rejection_reason).
@@ -183,12 +186,12 @@ def validate_venue_geo_scope(venue_data: dict, context) -> tuple[bool, Optional[
 
 # ===== MINIMUM FIELD VALIDATION =====
 
-def validate_venue_minimum_fields(venue_data: dict) -> tuple[bool, list[str]]:
+def validate_place_minimum_fields(venue_data: dict) -> tuple[bool, list[str]]:
     """
-    Warn on hollow venues missing critical fields.
+    Warn on hollow places missing critical fields.
 
     Returns (passes_minimum, list_of_warnings).
-    A venue passes minimum if it has name, city, and state.
+    A place passes minimum if it has name, city, and state.
     Warnings are generated for strongly preferred but missing fields.
     """
     warnings: list[str] = []
@@ -212,3 +215,10 @@ def validate_venue_minimum_fields(venue_data: dict) -> tuple[bool, list[str]]:
         warnings.append("missing address")
 
     return passes, warnings
+
+
+# ===== BACKWARD-COMPATIBLE ALIASES =====
+# Remove in cleanup phase (Task 9+)
+validate_venue_name = validate_place_name
+validate_venue_geo_scope = validate_place_geo_scope
+validate_venue_minimum_fields = validate_place_minimum_fields

@@ -1,8 +1,11 @@
 """
-Shared writes for venue_specials.
+Shared writes for venue_specials (place specials).
+
+Renamed from venue_specials.py. upsert_place_special is the canonical name;
+upsert_venue_special is kept as a backward-compatible alias.
 
 This gives typed crawler envelopes a real persistence path for time-sensitive
-venue offerings instead of advertising the lane and dropping it.
+place offerings instead of advertising the lane and dropping it.
 """
 
 import logging
@@ -74,15 +77,15 @@ def _update_special_record(client, special_id: int, row: dict):
     return client.table("venue_specials").update(row).eq("id", special_id).execute()
 
 
-def upsert_venue_special(venue_id: int, special_data: dict) -> Optional[int]:
-    """Insert or update a venue special matched by venue/title/type/source/date."""
+def upsert_place_special(venue_id: int, special_data: dict) -> Optional[int]:
+    """Insert or update a place special matched by venue/title/type/source/date."""
     if not venue_id:
-        logger.warning("upsert_venue_special: missing venue_id")
+        logger.warning("upsert_place_special: missing venue_id")
         return None
 
     title = special_data.get("title")
     if not isinstance(title, str) or not title.strip():
-        logger.warning("upsert_venue_special: missing title for venue_id=%s", venue_id)
+        logger.warning("upsert_place_special: missing title for venue_id=%s", venue_id)
         return None
 
     row = {
@@ -116,8 +119,13 @@ def upsert_venue_special(venue_id: int, special_data: dict) -> Optional[int]:
         return venue_id
     except Exception:
         logger.exception(
-            "Failed to upsert venue special for venue_id=%s title=%s",
+            "Failed to upsert place special for venue_id=%s title=%s",
             venue_id,
             row["title"],
         )
         return None
+
+
+# ===== BACKWARD-COMPATIBLE ALIASES =====
+# Remove in cleanup phase (Task 9+)
+upsert_venue_special = upsert_place_special

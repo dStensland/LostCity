@@ -110,7 +110,7 @@ def refresh_venue_specials_from_website(
     specials, hours, images, and descriptive venue metadata in the same pass as
     their event crawl.
     """
-    from scrape_venue_specials import get_venues, scrape_venue, upsert_results
+    from scrape_place_specials import get_venues, scrape_venue, upsert_results
 
     venues = get_venues(venue_ids=[venue_id], limit=1)
     if not venues:

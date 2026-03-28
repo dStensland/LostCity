@@ -2044,7 +2044,7 @@ def main():
         with hold_crawl_run_lock(enabled=lock_enabled, db_target=cfg.database.active_target):
             # Venue specials scraper
             if args.specials:
-                from scrape_venue_specials import get_venues, scrape_venue, _close_browser
+                from scrape_place_specials import get_venues, scrape_venue, _close_browser
                 logger.info(
                     f"Specials mode: scraping {args.specials_venue_type} venues "
                     f"(limit={args.specials_limit})"

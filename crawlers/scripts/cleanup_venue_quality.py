@@ -22,7 +22,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db.client import get_client
-from db.venue_validation import validate_venue_name
+from db.place_validation import validate_venue_name
 from neighborhood_lookup import haversine
 
 logger = logging.getLogger(__name__)

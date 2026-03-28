@@ -1,5 +1,8 @@
 """
-Venue CRUD, proximity dedup, and caching.
+Place CRUD, proximity dedup, and caching.
+
+Renamed from venues.py. Exported function get_or_create_place replaces
+get_or_create_venue. Backward-compatible alias kept at bottom of file.
 """
 
 import re
@@ -10,10 +13,10 @@ from datetime import datetime, timezone
 
 from neighborhood_lookup import infer_neighborhood_from_coords
 from crawl_context import get_crawl_context
-from db.venue_validation import (
-    validate_venue_name,
-    validate_venue_geo_scope,
-    validate_venue_minimum_fields,
+from db.place_validation import (
+    validate_place_name,
+    validate_place_geo_scope,
+    validate_place_minimum_fields,
 )
 from db.client import (
     get_client,
@@ -460,7 +463,7 @@ def _persist_venue_enrichment(
     """
     if details:
         try:
-            from db.destination_details import upsert_venue_destination_details
+            from db.place_vertical import upsert_venue_destination_details
             upsert_venue_destination_details(venue_id, details)
             logger.debug("_persist_venue_enrichment: destination_details for venue_id=%s", venue_id)
         except Exception:
@@ -480,7 +483,7 @@ def _persist_venue_enrichment(
 
     if specials:
         try:
-            from db.venue_specials import upsert_venue_special
+            from db.place_specials import upsert_venue_special
             for special in specials:
                 upsert_venue_special(venue_id, special)
             logger.debug(
@@ -513,8 +516,8 @@ def get_or_create_virtual_venue() -> int:
 
 
 @retry_on_network_error(max_retries=3, base_delay=0.5)
-def get_or_create_venue(venue_data: dict) -> Optional[int]:
-    """Get existing venue or create new one. Returns venue ID, or None if validation rejects the venue."""
+def get_or_create_place(venue_data: dict) -> Optional[int]:
+    """Get existing place (venue) or create new one. Returns venue ID, or None if validation rejects."""
     client = get_client()
 
     # Pop underscore-prefixed enrichment payloads before any DB write.
@@ -615,7 +618,7 @@ def get_or_create_venue(venue_data: dict) -> Optional[int]:
 
     # ── Venue name validation (must pass before any lookup) ──
     _v_name = venue_data.get("name")
-    name_ok, name_reason = validate_venue_name(_v_name)
+    name_ok, name_reason = validate_place_name(_v_name)
     if not name_ok:
         logger.warning("Venue name rejected: %r — %s", _v_name, name_reason)
         return None
@@ -654,12 +657,12 @@ def get_or_create_venue(venue_data: dict) -> Optional[int]:
 
     # ── Creation-only validation (geo scope, minimum fields) ──
     context = get_crawl_context()
-    geo_ok, geo_reason = validate_venue_geo_scope(venue_data, context)
+    geo_ok, geo_reason = validate_place_geo_scope(venue_data, context)
     if not geo_ok:
         logger.warning("Venue out of scope: %r — %s", _v_name, geo_reason)
         return None
 
-    min_ok, min_warnings = validate_venue_minimum_fields(venue_data)
+    min_ok, min_warnings = validate_place_minimum_fields(venue_data)
     if min_warnings:
         for w in min_warnings:
             logger.debug("Venue %r: %s", _v_name, w)
@@ -900,7 +903,7 @@ def get_sibling_venue_ids(venue_id: int) -> list[int]:
 
     venue = get_venue_by_id(venue_id)
     if not venue:
-        return [venue_id]
+        return [venue_id]  # noqa: early-return
 
     venue_name = venue.get("name", "").lower()
 
@@ -929,3 +932,8 @@ def get_sibling_venue_ids(venue_id: int) -> list[int]:
             return [v["id"] for v in result.data]
 
     return [venue_id]
+
+
+# ===== BACKWARD-COMPATIBLE ALIASES =====
+# Remove in cleanup phase (Task 9+)
+get_or_create_venue = get_or_create_place

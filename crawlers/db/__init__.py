@@ -2,6 +2,13 @@
 db package — backward-compatible re-export of all public symbols.
 
 All existing `from db import X` statements continue to work unchanged.
+
+Module rename map (Task 8 — places refactor):
+  venues.py            -> places.py
+  venue_validation.py  -> place_validation.py
+  venue_occasions.py   -> place_occasions.py
+  venue_specials.py    -> place_specials.py
+  destination_details.py -> place_vertical.py
 """
 
 # ===== client.py =====
@@ -75,8 +82,8 @@ from db.sources import (
     detect_zero_event_sources,
 )
 
-# ===== venues.py =====
-from db.venues import (
+# ===== places.py (formerly venues.py) =====
+from db.places import (
     VIRTUAL_VENUE_SLUG,
     VIRTUAL_VENUE_DATA,
     _normalize_venue_name,
@@ -88,7 +95,8 @@ from db.venues import (
     _fetch_venue_web_metadata,
     _persist_venue_enrichment,
     get_or_create_virtual_venue,
-    get_or_create_venue,
+    get_or_create_place,
+    get_or_create_venue,  # backward-compat alias
     get_venue_by_id,
     get_venue_by_id_cached,
     clear_venue_cache,
@@ -186,14 +194,16 @@ from db.open_calls import (
     update_open_call,
 )
 
-# ===== destination_details.py =====
-from db.destination_details import (
-    upsert_venue_destination_details,
+# ===== place_vertical.py (formerly destination_details.py) =====
+from db.place_vertical import (
+    upsert_place_vertical_details,
+    upsert_venue_destination_details,  # backward-compat alias
 )
 
-# ===== venue_specials.py =====
-from db.venue_specials import (
-    upsert_venue_special,
+# ===== place_specials.py (formerly venue_specials.py) =====
+from db.place_specials import (
+    upsert_place_special,
+    upsert_venue_special,  # backward-compat alias
 )
 
 # ===== editorial_mentions.py =====
@@ -201,9 +211,10 @@ from db.editorial_mentions import (
     upsert_editorial_mention,
 )
 
-# ===== venue_occasions.py =====
-from db.venue_occasions import (
-    upsert_venue_occasion,
+# ===== place_occasions.py (formerly venue_occasions.py) =====
+from db.place_occasions import (
+    upsert_place_occasion,
+    upsert_venue_occasion,  # backward-compat alias
 )
 
 # ===== volunteer_opportunities.py =====

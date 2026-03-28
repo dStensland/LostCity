@@ -43,7 +43,7 @@ load_dotenv(env_path)
 
 sys.path.insert(0, str(Path(__file__).parent))
 from db import get_client
-from scrape_venue_specials import (
+from scrape_place_specials import (
     fetch_page,
     extract_page_content,
     _close_browser,

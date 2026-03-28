@@ -1,4 +1,4 @@
-from scrape_venue_specials import (
+from scrape_place_specials import (
     extract_event_items,
     _extract_popmenu_embedded_text,
     _supplement_with_fallback,

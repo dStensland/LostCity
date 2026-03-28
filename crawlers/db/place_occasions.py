@@ -1,5 +1,8 @@
 """
-Shared writes for venue_occasions.
+Shared writes for venue_occasions (place occasions).
+
+Renamed from venue_occasions.py. upsert_place_occasion is the canonical name;
+upsert_venue_occasion is kept as a backward-compatible alias.
 
 This preserves the same source-protection semantics used by occasion inference:
 manual and editorial rows are authoritative, inferred rows can refresh their
@@ -48,15 +51,15 @@ def _update_occasion_record(client, occasion_id: int, updates: dict):
     return client.table("venue_occasions").update(updates).eq("id", occasion_id).execute()
 
 
-def upsert_venue_occasion(venue_id: int, occasion_data: dict) -> Optional[int]:
-    """Insert or update a venue occasion while respecting authoritative rows."""
+def upsert_place_occasion(venue_id: int, occasion_data: dict) -> Optional[int]:
+    """Insert or update a place occasion while respecting authoritative rows."""
     if not venue_id:
-        logger.warning("upsert_venue_occasion: missing venue_id")
+        logger.warning("upsert_place_occasion: missing venue_id")
         return None
 
     occasion = occasion_data.get("occasion")
     if not isinstance(occasion, str) or not occasion.strip():
-        logger.warning("upsert_venue_occasion: missing occasion for venue_id=%s", venue_id)
+        logger.warning("upsert_place_occasion: missing occasion for venue_id=%s", venue_id)
         return None
 
     row = {
@@ -104,8 +107,13 @@ def upsert_venue_occasion(venue_id: int, occasion_data: dict) -> Optional[int]:
         return current["id"]
     except Exception:
         logger.exception(
-            "Failed to upsert venue occasion for venue_id=%s occasion=%s",
+            "Failed to upsert place occasion for venue_id=%s occasion=%s",
             venue_id,
             row["occasion"],
         )
         return None
+
+
+# ===== BACKWARD-COMPATIBLE ALIASES =====
+# Remove in cleanup phase (Task 9+)
+upsert_venue_occasion = upsert_place_occasion

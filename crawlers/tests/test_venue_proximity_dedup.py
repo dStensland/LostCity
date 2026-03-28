@@ -5,7 +5,7 @@ These tests exercise the matching logic directly without any DB calls.
 """
 
 import pytest
-from db.venues import _proximity_name_match
+from db.places import _proximity_name_match
 
 
 # ---------------------------------------------------------------------------

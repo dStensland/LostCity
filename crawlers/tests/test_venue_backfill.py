@@ -7,8 +7,8 @@ All tests mock the Supabase client so no real DB calls are made.
 from unittest.mock import MagicMock, patch, call
 import pytest
 
-import db.venues as venues_module
-from db.venues import _maybe_update_existing_venue
+import db.places as venues_module
+from db.places import _maybe_update_existing_venue
 
 
 # ---------------------------------------------------------------------------

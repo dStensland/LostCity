@@ -1,8 +1,12 @@
 """
-Destination detail extension writes for venue_destination_details.
+Place vertical detail extension writes for venue_destination_details.
 
-This keeps Yonder-style destination intelligence in a shared 1:1 venue
-extension instead of portal-specific seed scripts.
+Renamed from destination_details.py. upsert_place_vertical_details is the
+canonical name; upsert_venue_destination_details is kept as a backward-
+compatible alias.
+
+This keeps Yonder/Adventure-style destination intelligence in a shared 1:1
+place extension instead of portal-specific seed scripts.
 """
 
 import logging
@@ -55,13 +59,13 @@ def _upsert_destination_details_record(client, row: dict):
     ).execute()
 
 
-def upsert_venue_destination_details(venue_id: int, details: dict) -> Optional[int]:
-    """Insert or update the 1:1 destination-details extension for a venue."""
+def upsert_place_vertical_details(venue_id: int, details: dict) -> Optional[int]:
+    """Insert or update the 1:1 vertical-details extension for a place."""
     if not venues_support_destination_details_table():
         return None
 
     if not venue_id:
-        logger.warning("upsert_venue_destination_details: missing venue_id")
+        logger.warning("upsert_place_vertical_details: missing venue_id")
         return None
 
     row = {
@@ -82,7 +86,12 @@ def upsert_venue_destination_details(venue_id: int, details: dict) -> Optional[i
         return venue_id
     except Exception:
         logger.exception(
-            "Failed to upsert destination details for venue_id=%s",
+            "Failed to upsert place vertical details for venue_id=%s",
             venue_id,
         )
         return None
+
+
+# ===== BACKWARD-COMPATIBLE ALIASES =====
+# Remove in cleanup phase (Task 9+)
+upsert_venue_destination_details = upsert_place_vertical_details

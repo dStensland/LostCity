@@ -50,7 +50,7 @@ from enrich_transit import (
     compute_transit_score,
 )
 from hours_utils import prepare_hours_update, should_update_hours
-from scrape_venue_hours import scrape_hours_from_website
+from scrape_place_hours import scrape_hours_from_website
 from utils import extract_text_content, fetch_page, validate_url
 
 # Load .env from repo root

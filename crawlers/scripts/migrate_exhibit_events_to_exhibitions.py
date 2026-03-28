@@ -22,7 +22,7 @@ from datetime import date, datetime
 sys.path.insert(0, ".")
 from db.client import get_client
 from db.exhibitions import generate_exhibition_hash, insert_exhibition, find_exhibition_by_hash
-from db.venues import upsert_venue_feature
+from db.places import upsert_venue_feature
 
 logger = logging.getLogger(__name__)
 
