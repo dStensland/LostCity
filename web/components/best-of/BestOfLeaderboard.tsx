@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthenticatedFetch } from "@/lib/hooks/useAuthenticatedFetch";
 import type { BestOfCategory, BestOfRankedVenue } from "@/lib/best-of";
 import { getCategoryColor, CASE_MIN_LENGTH, CASE_MAX_LENGTH } from "@/lib/best-of";
-import BestOfVenueCard from "./BestOfVenueCard";
+import BestOfPlaceCard from "./BestOfPlaceCard";
 import NominateSpotSheet from "./NominateSpotSheet";
 import { Info, CaretDown } from "@phosphor-icons/react";
 import { BEST_OF_ICONS, DEFAULT_BEST_OF_ICON } from "./best-of-icons";
@@ -390,7 +390,7 @@ export default function BestOfLeaderboard({ categorySlug, portalSlug }: BestOfLe
       ) : (
         <div className="space-y-2">
           {venues.map((venue, i) => (
-            <BestOfVenueCard
+            <BestOfPlaceCard
               key={venue.venueId}
               venue={venue}
               categorySlug={categorySlug}

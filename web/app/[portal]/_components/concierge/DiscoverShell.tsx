@@ -15,11 +15,11 @@ import DiscoverNeighborhoodSection from "./sections/DiscoverNeighborhoodSection"
 import AgentFooter from "./sections/AgentFooter";
 import EveningPlannerDrawer from "./EveningPlannerDrawer";
 import EventDetailModal from "./EventDetailModal";
-import VenueDetailModal, {
+import PlaceDetailModal, {
   type VenueModalData,
   venueFromDestination,
   venueFromPropertyMoment,
-} from "./VenueDetailModal";
+} from "./PlaceDetailModal";
 import AddToPlanSheet from "./AddToPlanSheet";
 
 interface DiscoverShellProps {
@@ -185,7 +185,7 @@ export default function DiscoverShell({ portal, data }: DiscoverShellProps) {
 
       {/* Venue Detail Modal */}
       {selectedVenue && (
-        <VenueDetailModal
+        <PlaceDetailModal
           venue={selectedVenue}
           tonightEvents={venueEvents}
           onClose={handleCloseVenueDetail}

@@ -9,7 +9,7 @@ import { cache } from "react";
 import { safeJsonLd } from "@/lib/formats";
 import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
 import { mapSpotDetailToViewData } from "@/lib/mappers/spot-detail-mapper";
-import VenueDetailWrapper from "./VenueDetailWrapper";
+import PlaceDetailWrapper from "./PlaceDetailWrapper";
 
 export const revalidate = 60;
 
@@ -223,7 +223,7 @@ export default async function PortalSpotPage({ params }: Props) {
           ),
         }}
       />
-      <VenueDetailWrapper
+      <PlaceDetailWrapper
         slug={slug}
         portalSlug={activePortalSlug}
         initialData={initialData}

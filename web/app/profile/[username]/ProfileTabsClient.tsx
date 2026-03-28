@@ -3,7 +3,7 @@
 import ProfileTabs, { type ProfileSection } from "@/components/profile/ProfileTabs";
 import ProfileActivity from "@/components/profile/ProfileActivity";
 import ProfileUpcoming from "@/components/profile/ProfileUpcoming";
-import ProfileVenues from "@/components/profile/ProfileVenues";
+import ProfilePlaces from "@/components/profile/ProfilePlaces";
 import ProfileCurations from "@/components/profile/ProfileCurations";
 import ProfileTaste from "@/components/profile/ProfileTaste";
 
@@ -38,7 +38,7 @@ export default function ProfileTabsClient({
           case "upcoming":
             return <ProfileUpcoming username={username} />;
           case "venues":
-            return <ProfileVenues username={username} />;
+            return <ProfilePlaces username={username} />;
           case "curations":
             return <ProfileCurations userId={userId} isOwnProfile={isOwnProfile} />;
           case "taste":

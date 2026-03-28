@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Ticket } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import NowShowingSection from "./NowShowingSection";
-import { VenueGroupedShowsList } from "@/components/feed/VenueGroupedShowsList";
+import { PlaceGroupedShowsList } from "@/components/feed/PlaceGroupedShowsList";
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -77,7 +77,7 @@ export default function SeeShowsSection({ portalSlug }: SeeShowsSectionProps) {
 
       <div className={activeTab === "music" ? "block" : "hidden"}>
         {visited.has("music") && (
-          <VenueGroupedShowsList
+          <PlaceGroupedShowsList
             portalSlug={portalSlug}
             categories="music"
             accentColor="#E855A0"
@@ -87,7 +87,7 @@ export default function SeeShowsSection({ portalSlug }: SeeShowsSectionProps) {
 
       <div className={activeTab === "theater" ? "block" : "hidden"}>
         {visited.has("theater") && (
-          <VenueGroupedShowsList
+          <PlaceGroupedShowsList
             portalSlug={portalSlug}
             categories="theater,dance"
             accentColor="var(--neon-cyan)"
@@ -97,7 +97,7 @@ export default function SeeShowsSection({ portalSlug }: SeeShowsSectionProps) {
 
       <div className={activeTab === "clowns" ? "block" : "hidden"}>
         {visited.has("clowns") && (
-          <VenueGroupedShowsList
+          <PlaceGroupedShowsList
             portalSlug={portalSlug}
             categories="comedy"
             accentColor="var(--gold)"

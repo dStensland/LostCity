@@ -9,7 +9,7 @@ import {
   DEFAULT_CATEGORY,
 } from "@/lib/explore-tracks";
 import type { ExploreTrackVenue } from "@/lib/explore-tracks";
-import ExploreVenueCard from "./ExploreVenueCard";
+import ExplorePlaceCard from "./ExplorePlaceCard";
 
 type TrackActivity = {
   tonightCount: number;
@@ -513,7 +513,7 @@ export default function ExploreTrackDetail({
                   className="explore-track-enter"
                   style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
                 >
-                  <ExploreVenueCard
+                  <ExplorePlaceCard
                     venue={venue}
                     portalSlug={portalSlug}
                     accent={accent}
@@ -550,7 +550,7 @@ export default function ExploreTrackDetail({
                   className="explore-track-enter"
                   style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
                 >
-                  <ExploreVenueCard
+                  <ExplorePlaceCard
                     venue={venue}
                     portalSlug={portalSlug}
                     accent={accent}
@@ -588,7 +588,7 @@ export default function ExploreTrackDetail({
                   className="explore-track-enter"
                   style={{ animationDelay: `${Math.min(index * 50, 400)}ms` }}
                 >
-                  <ExploreVenueCard
+                  <ExplorePlaceCard
                     venue={venue}
                     portalSlug={portalSlug}
                     accent={accent}
