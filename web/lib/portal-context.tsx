@@ -230,6 +230,8 @@ export type Portal = {
   visibility: string;
   /** Plan tier: starter (free), professional, or enterprise */
   plan?: "starter" | "professional" | "enterprise";
+  /** Per-hotel scoring weights for the FORTH concierge feed */
+  scoring_config?: Record<string, unknown> | null;
   /** Custom domain for white-label portals (e.g., events.marriott.com) */
   custom_domain?: string | null;
   /** Parent city portal ID for B2B portals */

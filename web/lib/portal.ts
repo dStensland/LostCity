@@ -29,7 +29,8 @@ const BASE_PORTAL_COLUMNS = `
   visibility,
   filters,
   branding,
-  settings
+  settings,
+  scoring_config
 `;
 
 // B2B columns that may not exist yet (added in 091_custom_domains migration)

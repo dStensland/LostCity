@@ -36,6 +36,7 @@ import {
 import { expandCityFilterForMetro } from "./portal-scope";
 import { addDays, startOfDay, nextFriday, nextSunday, isFriday, isSaturday, isSunday } from "date-fns";
 import { applyFeedGate } from "@/lib/feed-gate";
+import { scoreForConcierge, type ScoringEvent } from "./forth-scoring";
 
 // ---------------------------------------------------------------------------
 // Daypart helpers
@@ -278,6 +279,9 @@ type DbEvent = {
   description: string | null;
   tags: string[] | null;
   source_id: number | null;
+  significance: string | null;
+  significance_signals: string[] | null;
+  is_tentpole: boolean | null;
   venue: {
     id: number;
     name: string;
@@ -324,6 +328,8 @@ type DbNextEvent = {
   venue_id: number | null;
   source_id: number | null;
   category_id: string | null;
+  significance: string | null;
+  significance_signals: string[] | null;
 };
 
 export type ForthFeedOptions = {
@@ -500,24 +506,6 @@ function getSpecialStatus(
   return { state: "inactive", startsInMinutes: null, remainingMinutes: null };
 }
 
-function scoreDestination(
-  tier: ProximityTier,
-  state: SpecialState,
-  confidence: string | null,
-  lastVerifiedAt: string | null
-): number {
-  const proximityWeight = tier === "walkable" ? 100 : tier === "close" ? 60 : 30;
-  const stateWeight = state === "active_now" ? 50 : state === "starting_soon" ? 20 : 0;
-  const confScore = { high: 3, medium: 2, low: 1 }[(confidence || "medium").toLowerCase()] || 1;
-  let freshnessWeight = 0;
-  if (lastVerifiedAt) {
-    const ageDays = (Date.now() - new Date(lastVerifiedAt).getTime()) / (1000 * 60 * 60 * 24);
-    if (ageDays <= 7) freshnessWeight = 10;
-    else if (ageDays <= 30) freshnessWeight = 5;
-  }
-  return proximityWeight + stateWeight + confScore * 3 + freshnessWeight;
-}
-
 // ---------------------------------------------------------------------------
 // Direct database queries
 // ---------------------------------------------------------------------------
@@ -525,6 +513,7 @@ function scoreDestination(
 const EVENT_SELECT = `
   id, title, start_date, start_time, end_date, is_all_day, is_free, price_min,
   category_id, image_url, description, tags, source_id,
+  significance, significance_signals, is_tentpole,
   venue:venues(id, name, neighborhood, slug, venue_type, city)
 `;
 
@@ -837,7 +826,7 @@ async function fetchDestinationsDirect(
       let q = applyFeedGate(
         supabase
           .from("events")
-          .select("id, title, start_date, start_time, venue_id, source_id, category_id")
+          .select("id, title, start_date, start_time, venue_id, source_id, category_id, significance, significance_signals")
           .in("venue_id", venueIds)
           .gte("start_date", today)
           .is("canonical_event_id", null)
@@ -907,7 +896,34 @@ async function fetchDestinationsDirect(
 
       const top = withStatus[0];
       const nextEvent = nextEventByVenue.get(venue.id);
-      const score = scoreDestination(venue.proximity_tier, state, top?.special.confidence || null, top?.special.last_verified_at || null);
+
+      const hotelNeighborhood = ((portal.settings as Record<string, unknown>)?.neighborhood as string) ?? "midtown";
+      const daypart = getDayPart(now);
+
+      const nextEventForScoring: ScoringEvent | null = nextEvent
+        ? {
+            id: nextEvent.id,
+            category_id: nextEvent.category_id,
+            significance: nextEvent.significance,
+            significance_signals: nextEvent.significance_signals,
+            image_url: null,
+            is_tentpole: null,
+            venue: { neighborhood: venue.neighborhood },
+          }
+        : null;
+
+      const score = nextEventForScoring
+        ? scoreForConcierge(
+            nextEventForScoring,
+            {
+              scoring_config: (portal as unknown as Record<string, unknown>).scoring_config as Record<string, unknown> | null,
+              neighborhood: hotelNeighborhood,
+            },
+            venue.proximity_tier,
+            daypart,
+          )
+        : // Fall back to proximity-only when no upcoming event
+          (venue.proximity_tier === "walkable" ? 80 : venue.proximity_tier === "close" ? 40 : 15);
 
       return {
         venue: {

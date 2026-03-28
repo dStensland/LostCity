@@ -2097,3 +2097,9 @@ COMMENT ON FUNCTION refresh_feed_events_ready(UUID) IS
   'Prunes rows with start_date < CURRENT_DATE - 1. '
   'Returns the number of rows upserted. '
   'Called after every crawl run by post_crawl_maintenance.py.';
+
+-- Per-hotel scoring configuration for the FORTH concierge feed.
+-- Stores proximity weights, neighborhood boost, category boosts, and suppressed categories.
+-- See: database/migrations/20260328100001_portals_scoring_config.sql
+ALTER TABLE IF EXISTS portals
+  ADD COLUMN IF NOT EXISTS scoring_config JSONB DEFAULT '{}';
