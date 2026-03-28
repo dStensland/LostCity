@@ -236,7 +236,7 @@ export async function GET(request: NextRequest) {
         lunch_included,
         tags,
         status,
-        venue:venues(id, name, neighborhood, address, city, lat, lng, image_url, indoor_outdoor)
+        venue:places(id, name, neighborhood, address, city, lat, lng, image_url, indoor_outdoor)
       `
       )
     );
@@ -403,7 +403,7 @@ export async function GET(request: NextRequest) {
           age_max,
           is_recurring,
           category_id,
-          venue:venues(id, name, neighborhood, address, city, lat, lng, image_url)
+          venue:places(id, name, neighborhood, address, city, lat, lng, image_url)
         `
         )
         .eq("is_recurring", true)

@@ -36,7 +36,7 @@ def task1_add_repossessions():
         "description": "Six Black artists, commissioned by The Reparations Project, created works drawing from objects and documents tied to enslavement and the Jim Crow era in the U.S.",
         "start_date": "2025-10-17",
         "end_date": "2026-05-01",
-        "venue_id": VENUE_ID,
+        "place_id": VENUE_ID,
         "source_id": SOURCE_ID,
         "category": "art",
         "tags": ["art", "exhibition", "spelman", "hbcu"],
@@ -68,7 +68,7 @@ def task2_fix_calida_rawles_end_date():
 
     # Find the event
     print(f"Searching for Calida Rawles exhibition at venue_id {VENUE_ID}...")
-    result = client.table("events").select("*").eq("venue_id", VENUE_ID).ilike("title", "%Calida Rawles%").execute()
+    result = client.table("events").select("*").eq("place_id", VENUE_ID).ilike("title", "%Calida Rawles%").execute()
 
     if not result.data:
         print("❌ No Calida Rawles event found at venue_id 852")

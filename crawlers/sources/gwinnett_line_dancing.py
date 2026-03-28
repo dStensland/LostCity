@@ -74,7 +74,7 @@ VENUE_DATA_BY_LOCATION = {
         "zip": "30024",
         "lat": 34.0443,
         "lng": -84.0678,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": CATALOG_URL,
         "description": "Gwinnett County recreation center hosting public adult line dancing classes.",
@@ -89,7 +89,7 @@ VENUE_DATA_BY_LOCATION = {
         "zip": "30044",
         "lat": 33.9211,
         "lng": -84.0299,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "senior_center",
         "website": CATALOG_URL,
         "description": "Gwinnett County senior center hosting public line dancing classes.",
@@ -104,7 +104,7 @@ VENUE_DATA_BY_LOCATION = {
         "zip": "30096",
         "lat": 33.9796,
         "lng": -84.1245,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": CATALOG_URL,
         "description": "Gwinnett County activity building hosting public adult line dancing classes.",
@@ -117,7 +117,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "community_recreation_center",
             "commitment_tier": "halfday",
             "primary_activity": "community center class or recreation visit",
@@ -138,7 +138,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
             "source_url": CATALOG_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": place_data["venue_type"],
+                "place_type": place_data.get("place_type") or place_data.get("venue_type"),
                 "county": "gwinnett",
             },
         },
@@ -146,7 +146,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "indoor-family-recreation-space",
             "title": "Indoor family recreation space",
             "feature_type": "amenity",
@@ -160,7 +160,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "planned-class-and-activity-building",
             "title": "Planned class and activity building",
             "feature_type": "experience",
@@ -353,7 +353,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": parsed["title"],
                     "description": parsed["description"],
                     "start_date": start_date,

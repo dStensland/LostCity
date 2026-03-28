@@ -94,9 +94,9 @@ def fetch_venues_without_vibes(client, *, venue_type=None):
     all_venues = []
     offset = 0
     while True:
-        q = client.table("venues").select("id,name,venue_type,vibes").eq("active", True)
+        q = client.table("places").select("id,name,venue_type,vibes").eq("active", True)
         if venue_type:
-            q = q.eq("venue_type", venue_type)
+            q = q.eq("place_type", venue_type)
         q = q.order("id").range(offset, offset + 999)
         r = q.execute()
         if not r.data:
@@ -152,7 +152,7 @@ def main():
         if write:
             for v in type_venues:
                 try:
-                    client.table("venues").update({"vibes": template_vibes}).eq("id", v["id"]).execute()
+                    client.table("places").update({"vibes": template_vibes}).eq("id", v["id"]).execute()
                     filled += 1
                 except Exception as e:
                     logger.error(f"  Failed to update venue {v['id']} ({v['name']}): {e}")

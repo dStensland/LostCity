@@ -58,7 +58,7 @@ PLACE_DATA = {
     "zip": "30324",
     "lat": 33.8198,
     "lng": -84.3675,
-    "venue_type": "community_center",
+    "place_type": "community_center",
     "spot_type": "community_center",
     "website": "https://www.itsmarta.com",
     "vibes": ["government", "civic", "transit"],
@@ -417,7 +417,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": date_str,

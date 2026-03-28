@@ -38,7 +38,7 @@ PLACE_DATA = {
     "zip": "30340",
     "lat": 33.8875,
     "lng": -84.2780,
-    "venue_type": "fitness_center",
+    "place_type": "fitness_center",
     "spot_type": "fitness_center",
     "website": "https://centralrockgym.com/atlanta/",
     "vibes": ["active", "indoor", "welcoming"],
@@ -369,7 +369,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         # Build event record
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": description,
                             "start_date": event_date,

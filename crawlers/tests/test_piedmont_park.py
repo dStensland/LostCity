@@ -30,7 +30,7 @@ def test_categorize_event_marks_pickup_sports_as_sports():
 def test_build_destination_envelope_adds_playgrounds_and_splash_pad() -> None:
     envelope = _build_destination_envelope(2201)
 
-    assert envelope.destination_details[0]["venue_id"] == 2201
+    assert envelope.destination_details[0]["place_id"] == 2201
     assert envelope.destination_details[0]["destination_type"] == "park"
     assert envelope.destination_details[0]["parking_type"] == "garage"
     assert "restroom" in envelope.destination_details[0]["practical_notes"].lower()
@@ -50,7 +50,7 @@ def test_build_destination_envelope_supports_official_alias_rows() -> None:
         alias_of="piedmont-park",
     )
 
-    assert envelope.destination_details[0]["venue_id"] == 9
+    assert envelope.destination_details[0]["place_id"] == 9
     assert envelope.destination_details[0]["metadata"]["alias_of"] == "piedmont-park"
     assert envelope.destination_details[0]["metadata"]["source_slug"] == "piedmont-park"
     assert "Piedmont Park Greystone" in envelope.destination_details[0]["practical_notes"]

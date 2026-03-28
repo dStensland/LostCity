@@ -92,7 +92,7 @@ const TRACKS: TrackSeed[] = [
 async function findVenueId(slug: string): Promise<number | null> {
   // Try venues first
   const { data: venue } = await supabase
-    .from("venues")
+    .from("places")
     .select("id")
     .eq("slug", slug)
     .maybeSingle();

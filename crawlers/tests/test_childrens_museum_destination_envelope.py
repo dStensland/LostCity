@@ -4,7 +4,7 @@ from sources.childrens_museum import _build_destination_envelope
 def test_build_destination_envelope_for_childrens_museum() -> None:
     envelope = _build_destination_envelope(1804)
 
-    assert envelope.destination_details[0]["venue_id"] == 1804
+    assert envelope.destination_details[0]["place_id"] == 1804
     assert envelope.destination_details[0]["destination_type"] == "childrens_museum"
     assert envelope.destination_details[0]["parking_type"] == "garage"
     assert "weather-proof anchor" in envelope.destination_details[0]["practical_notes"].lower()

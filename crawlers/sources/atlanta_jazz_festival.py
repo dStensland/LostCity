@@ -25,7 +25,7 @@ PLACE_DATA = {
     "zip": "30306",
     "lat": 33.7879,
     "lng": -84.3742,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": "https://piedmontpark.org",
 }
@@ -76,7 +76,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": "The largest free jazz festival in the country, featuring world-class jazz artists over Memorial Day weekend in Piedmont Park.",
         "start_date": start_date.strftime("%Y-%m-%d"),

@@ -290,7 +290,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "city": city,
                                 "state": state,
                                 "zip": zip_val,
-                                "venue_type": venue_type,
+                                "place_type": venue_type,
                                 "spot_type": venue_type,
                                 "neighborhood": None,  # Will be enriched later
                                 "lat": None,
@@ -314,7 +314,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             # Build event record
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": venue_id,
+                                "place_id": venue_id,
                                 "title": title,
                                 "description": f"Blood drive at {sponsor_name}. Walk-ins welcome or schedule an appointment online. Donating blood takes about an hour and can save up to three lives.",
                                 "start_date": start_date,

@@ -47,7 +47,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7540,
     "lng": -84.3866,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": BASE_URL,
     # Note: vibes are for venue atmosphere/amenities, not applicable to organizations
@@ -343,7 +343,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Build event record
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title[:200],
                     "description": description[:1000] if description else None,
                     "start_date": start_date,

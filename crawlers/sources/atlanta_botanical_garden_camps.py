@@ -51,7 +51,7 @@ PLACE_DATA = {
     "neighborhood": "Midtown",
     "lat": 33.7901,
     "lng": -84.3728,
-    "venue_type": "garden",
+    "place_type": "garden",
     "spot_type": "garden",
     "website": "https://atlantabg.org/",
     "vibes": ["family-friendly", "outdoor", "educational"],
@@ -191,7 +191,7 @@ def _parse_rows(html: str) -> list[dict]:
 def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": row["title"],
         "description": row["description"],
         "start_date": row["start_date"],

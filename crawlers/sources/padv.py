@@ -34,7 +34,7 @@ _CONFIG = TribeConfig(
         "zip": "30317",
         "lat": 33.7391,
         "lng": -84.3371,
-        "venue_type": "organization",
+        "place_type": "organization",
         "spot_type": "organization",
         "website": "https://padv.org",
     },

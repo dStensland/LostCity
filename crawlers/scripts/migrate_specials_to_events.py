@@ -131,7 +131,7 @@ def migrate_special_to_events(
 
             event_data = {
                 "title": title,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "source_id": SPECIALS_SOURCE_ID,
                 "start_date": date_str,
                 "start_time": time_start,
@@ -176,7 +176,7 @@ def main():
 
     # Fetch active specials with venue data
     query = (
-        client.table("venue_specials")
+        client.table("place_specials")
         .select("id, venue_id, title, type, description, price_note, "
                 "days_of_week, time_start, time_end, "
                 "venues!inner(id, name, slug, website)")
@@ -184,7 +184,7 @@ def main():
         .is_("start_date", "null")  # Only recurring specials, not one-off
     )
     if args.venue_id:
-        query = query.eq("venue_id", args.venue_id)
+        query = query.eq("place_id", args.venue_id)
 
     result = query.execute()
     specials = result.data or []
@@ -217,7 +217,7 @@ def main():
     # Deactivate migrated specials
     if migrated_ids and not dry_run:
         for sid in migrated_ids:
-            client.table("venue_specials").update({"is_active": False}).eq("id", sid).execute()
+            client.table("place_specials").update({"is_active": False}).eq("id", sid).execute()
         logger.info(f"\nDeactivated {len(migrated_ids)} migrated specials")
 
     mode = "DRY RUN" if dry_run else "APPLIED"

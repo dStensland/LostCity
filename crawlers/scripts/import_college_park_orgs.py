@@ -316,7 +316,7 @@ def link_organizations_to_venues(dry_run: bool = False):
         try:
             # Check if venue exists
             venue = (
-                client.table("venues")
+                client.table("places")
                 .select("id, name")
                 .eq("slug", venue_slug)
                 .execute()
@@ -332,7 +332,7 @@ def link_organizations_to_venues(dry_run: bool = False):
                 continue
 
             # Update venue to link to organization
-            client.table("venues").update({"organization_id": organization_id}).eq(
+            client.table("places").update({"organization_id": organization_id}).eq(
                 "slug", venue_slug
             ).execute()
             logger.info(f"  [LINKED] {organization_id} -> {venue_name}")

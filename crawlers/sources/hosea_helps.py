@@ -35,7 +35,7 @@ HOSEA_HELPS_HQ = {
     "zip": "30354",
     "lat": 33.6854,
     "lng": -84.3517,
-    "venue_type": "nonprofit",
+    "place_type": "nonprofit",
     "spot_type": "nonprofit",
     "website": BASE_URL,
 }
@@ -281,7 +281,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                                     event_record = {
                                         "source_id": source_id,
-                                        "venue_id": venue_id,
+                                        "place_id": venue_id,
                                         "title": title,
                                         "description": description if description else None,
                                         "start_date": date_data["start_date"],
@@ -359,7 +359,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                                 event_record = {
                                     "source_id": source_id,
-                                    "venue_id": venue_id,
+                                    "place_id": venue_id,
                                     "title": title,
                                     "description": description if description else None,
                                     "start_date": date_data["start_date"],

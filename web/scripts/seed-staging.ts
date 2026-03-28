@@ -583,7 +583,7 @@ async function clearTestData() {
 
   // Delete test events and venues (by slug suffix)
   await supabase.from("events").delete().like("source_url", "%example.com%");
-  await supabase.from("venues").delete().like("slug", "%-test");
+  await supabase.from("places").delete().like("slug", "%-test");
 
   console.log("Test data cleared.");
 }
@@ -592,7 +592,7 @@ async function seedVenues(): Promise<number[]> {
   console.log("Seeding venues...");
 
   const { data: existingCanonicalVenues, error: existingCanonicalError } = await supabase
-    .from("venues")
+    .from("places")
     .select("name, slug")
     .in("name", testVenues.map((venue) => venue.name))
     .not("slug", "like", "%-test");
@@ -616,7 +616,7 @@ async function seedVenues(): Promise<number[]> {
   }
 
   const { data, error } = await supabase
-    .from("venues")
+    .from("places")
     .upsert(testVenues, { onConflict: "slug" })
     .select("id");
 

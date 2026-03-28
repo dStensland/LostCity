@@ -87,7 +87,7 @@ PLACE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30309",
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "lat": 33.7926,
     "lng": -84.3862,
@@ -231,7 +231,7 @@ def _build_catalog_destination_envelope(venue_id: int, updates: dict) -> TypedEn
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "museum",
             "commitment_tier": "halfday",
             "primary_activity": "fashion and film exhibitions",
@@ -257,7 +257,7 @@ def _build_catalog_destination_envelope(venue_id: int, updates: dict) -> TypedEn
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "rotating-fashion-and-film-exhibitions",
             "title": "Rotating fashion and film exhibitions",
             "feature_type": "experience",
@@ -277,7 +277,7 @@ def _apply_catalog_destination_fallback(venue_id: int) -> bool:
 
     client = get_client()
     current_res = (
-        client.table("venues")
+        client.table("places")
         .select("website,description,short_description,planning_notes")
         .eq("id", venue_id)
         .limit(1)
@@ -307,7 +307,7 @@ def _apply_catalog_destination_fallback(venue_id: int) -> bool:
         logger.info("SCAD FASH catalog fallback would update venue %s with %s", venue_id, sorted(merged_updates))
         venue_updated = True
     else:
-        client.table("venues").update(merged_updates).eq("id", venue_id).execute()
+        client.table("places").update(merged_updates).eq("id", venue_id).execute()
         logger.info("SCAD FASH catalog fallback updated venue %s with %s", venue_id, sorted(merged_updates))
         venue_updated = True
 
@@ -601,7 +601,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": description,
                             "start_date": start_date,

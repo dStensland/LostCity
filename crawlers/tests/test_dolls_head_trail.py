@@ -9,7 +9,7 @@ def test_build_destination_envelope_projects_destination_details_and_feature() -
         },
     )
 
-    assert envelope.destination_details[0]["venue_id"] == 31
+    assert envelope.destination_details[0]["place_id"] == 31
     assert envelope.destination_details[0]["destination_type"] == "trail"
     assert envelope.destination_details[0]["commitment_tier"] == "hour"
     assert envelope.destination_details[0]["family_suitability"] == "caution"

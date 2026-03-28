@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       supabase.rpc("best_of_vote_counts_by_category" as never, { p_category_ids: categoryIds } as never),
       supabase
         .from("best_of_nominations")
-        .select("category_id, venue_id")
+        .select("category_id, place_id")
         .in("category_id", categoryIds)
         .eq("status", "approved"),
     ]);
@@ -112,14 +112,14 @@ export async function GET(request: NextRequest) {
 
       const [{ data: venueData }, { data: scoreData }] = await Promise.all([
         supabase
-          .from("venues")
+          .from("places")
           .select("id, name, image_url, hero_image_url, neighborhood")
           .in("id", venueIdArr)
-          .eq("active", true),
+          .eq("is_active", true),
         supabase
           .from("best_of_venue_scores")
-          .select("venue_id, algorithm_score")
-          .in("venue_id", venueIdArr),
+          .select("place_id, algorithm_score")
+          .in("place_id", venueIdArr),
       ]);
 
       for (const v of (venueData ?? []) as unknown as VenuePreviewRow[]) {

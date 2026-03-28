@@ -36,7 +36,7 @@ _CONFIG = TribeConfig(
         "zip": "30080",
         "lat": 33.8784,
         "lng": -84.5144,
-        "venue_type": "organization",
+        "place_type": "organization",
         "spot_type": "organization",
         "website": "https://newamericanpathways.org",
     },

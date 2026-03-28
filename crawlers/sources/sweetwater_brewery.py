@@ -35,7 +35,7 @@ PLACE_DATA = {
     "zip": "30324",
     "lat": 33.7856,
     "lng": -84.3964,
-    "venue_type": "brewery",
+    "place_type": "brewery",
     "spot_type": "bar",
     "website": BASE_URL,
     "vibes": ["brewery", "taproom", "outdoor-seating", "tours", "live-music"],
@@ -69,7 +69,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "brewery",
         "commitment_tier": "hour",
         "primary_activity": "Atlanta's flagship brewery with taproom, tours, and outdoor space",
@@ -84,10 +84,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Free to visit taproom. Beer and food priced individually. Tour tickets sold separately.",
         "source_url": "https://sweetwaterbrew.com",
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "brewery", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "brewery", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "taproom-20-plus-beers",
         "title": "Taproom with 20+ beers on tap",
         "feature_type": "experience",
@@ -97,7 +97,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "outdoor-space-food-trucks",
         "title": "Outdoor space and food trucks",
         "feature_type": "amenity",
@@ -107,7 +107,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "brewery-tours",
         "title": "Brewery tours",
         "feature_type": "experience",
@@ -117,7 +117,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "live-music-events",
         "title": "Live music and events",
         "feature_type": "experience",
@@ -127,7 +127,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 40,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "dog-friendly-patio",
         "title": "Dog-friendly patio",
         "feature_type": "amenity",
@@ -183,7 +183,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": template["title"],
                 "description": template["description"],
                 "start_date": start_date,

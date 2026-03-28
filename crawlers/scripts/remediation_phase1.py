@@ -243,7 +243,7 @@ def remove_stone_mountain_attractions(dry_run: bool = True) -> None:
     client = get_client()
 
     venue_result = (
-        client.table("venues")
+        client.table("places")
         .select("id, name, slug")
         .eq("slug", _STONE_MOUNTAIN_VENUE_SLUG)
         .execute()
@@ -252,7 +252,7 @@ def remove_stone_mountain_attractions(dry_run: bool = True) -> None:
     if not venue_result.data:
         # Try a broader name search as a fallback.
         venue_result = (
-            client.table("venues")
+            client.table("places")
             .select("id, name, slug")
             .ilike("name", "%stone mountain%")
             .execute()
@@ -272,7 +272,7 @@ def remove_stone_mountain_attractions(dry_run: bool = True) -> None:
         events_result = (
             client.table("events")
             .select("id, title, start_date, content_kind")
-            .eq("venue_id", venue_id)
+            .eq("place_id", venue_id)
             .neq("content_kind", "exhibit")
             .execute()
         )

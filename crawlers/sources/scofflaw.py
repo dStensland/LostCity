@@ -24,7 +24,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7879,
     "lng": -84.4098,
-    "venue_type": "bar",
+    "place_type": "bar",
     "spot_type": "bar",
     "website": None,
     "vibes": ["craft-cocktails", "neighborhood-bar", "westside", "date-night"],

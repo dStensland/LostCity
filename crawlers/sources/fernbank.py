@@ -46,7 +46,7 @@ PLACE_DATA = {
     "zip": "30307",
     "lat": 33.7739,
     "lng": -84.3281,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     # description and image_url are extracted dynamically from og: tags on the homepage
@@ -68,7 +68,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "natural_history_museum",
             "commitment_tier": "halfday",
             "primary_activity": "family museum and nature visit",
@@ -91,7 +91,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "museum",
+                "place_type": "museum",
                 "city": "atlanta",
             },
         },
@@ -99,7 +99,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "dinosaurs-and-natural-history-galleries",
             "title": "Dinosaurs and natural history galleries",
             "feature_type": "amenity",
@@ -112,7 +112,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "museum-plus-outdoor-nature-flex",
             "title": "Museum plus outdoor nature flex",
             "feature_type": "amenity",
@@ -125,7 +125,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "indoor-bathroom-core-with-outdoor-bonus",
             "title": "Indoor bathroom core with outdoor bonus",
             "feature_type": "amenity",
@@ -138,7 +138,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_specials",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "children-2-and-under-free",
             "title": "Children 2 and under free",
             "description": "Children age 2 and under receive free admission, which makes Fernbank easier to use as a repeat museum-and-nature day for families with very young kids.",
@@ -349,7 +349,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description,
                         "start_date": start_date,

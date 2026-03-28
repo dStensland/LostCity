@@ -40,7 +40,7 @@ VENUE_MAP = {
         "city": "Kennesaw",
         "state": "GA",
         "zip": "30144",
-        "venue_type": "concert-hall",
+        "place_type": "concert-hall",
         "website": "https://www.kennesaw.edu/arts/music/venues/bailey.php",
     },
     "strand theatre": {
@@ -51,7 +51,7 @@ VENUE_MAP = {
         "city": "Marietta",
         "state": "GA",
         "zip": "30060",
-        "venue_type": "theater",
+        "place_type": "theater",
         "website": "https://earlsmithstrand.org",
     },
     "atlanta symphony hall": {
@@ -62,7 +62,7 @@ VENUE_MAP = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "concert-hall",
+        "place_type": "concert-hall",
         "website": "https://www.atlantasymphony.org",
     },
     "first presbyterian church marietta": {
@@ -73,7 +73,7 @@ VENUE_MAP = {
         "city": "Marietta",
         "state": "GA",
         "zip": "30060",
-        "venue_type": "church",
+        "place_type": "church",
         "website": "https://fpcmarietta.org",
     },
     "jennie t. anderson theatre": {
@@ -86,7 +86,7 @@ VENUE_MAP = {
         "zip": "30060",
         "lat": 33.9433,
         "lng": -84.5360,
-        "venue_type": "theater",
+        "place_type": "theater",
         "website": "https://www.cobbcounty.gov/jennie-t-anderson-theatre",
     },
 }
@@ -410,7 +410,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description,
                         "start_date": start_date,

@@ -88,7 +88,7 @@ class DataAudit:
         print(f"  Loaded {len(self.sources)} sources")
         
         # Load venues
-        venues_result = self.client.table("venues").select("*").execute()
+        venues_result = self.client.table("places").select("*").execute()
         self.venues = {v['id']: v for v in venues_result.data}
         print(f"  Loaded {len(self.venues)} venues")
         

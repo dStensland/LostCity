@@ -32,7 +32,7 @@ class CinemarkAtlantaCrawler(ChainCinemaCrawler):
                 "city": "Fayetteville",
                 "state": "GA",
                 "zip": "30214",
-                "venue_type": "cinema",
+                "place_type": "cinema",
                 "website": "https://www.cinemark.com/theatres/ga-fayetteville/cinemark-tinseltown-fayetteville-17-and-xd",
                 "lat": 33.4469,
                 "lng": -84.4588,

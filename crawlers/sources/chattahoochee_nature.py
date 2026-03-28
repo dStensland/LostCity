@@ -94,7 +94,7 @@ _VENUE_DATA = {
     "zip": "30075",
     "lat": 34.0315,
     "lng": -84.3707,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": _BASE_URL,
     "vibes": ["family-friendly", "outdoor", "all-ages", "educational", "historic"],
@@ -129,7 +129,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "nature_center",
             "commitment_tier": "halfday",
             "primary_activity": "family nature center visit",
@@ -153,7 +153,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": _BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": _VENUE_DATA.get("venue_type"),
+                "place_type": _VENUE_DATA.get("venue_type"),
                 "city": "roswell",
             },
         },
@@ -161,7 +161,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "river-trails-and-canoe-trips",
             "title": "River trails and canoe trips",
             "feature_type": "experience",
@@ -175,7 +175,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "wildlife-exhibits-and-discovery-center",
             "title": "Wildlife exhibits and discovery center",
             "feature_type": "amenity",
@@ -189,7 +189,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "short-trail-range-with-indoor-backup",
             "title": "Short trail range with indoor backup",
             "feature_type": "amenity",
@@ -202,7 +202,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "easy-trails-plus-indoor-fallback",
             "title": "Easy trails plus indoor fallback",
             "feature_type": "amenity",
@@ -809,7 +809,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             og_soup = BeautifulSoup(homepage, "html.parser")
             og_img = og_soup.find("meta", property="og:image")
             if og_img and og_img.get("content"):
-                get_client().table("venues").update(
+                get_client().table("places").update(
                     {"image_url": og_img["content"].strip()}
                 ).eq("id", venue_id).execute()
                 logger.debug("[cnc] Updated venue image from homepage og:image")
@@ -901,7 +901,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         record: dict = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": detail["name"],
             "description": detail.get("description"),
             "start_date": detail["start_date"],

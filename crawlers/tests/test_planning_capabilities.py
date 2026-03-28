@@ -77,7 +77,7 @@ def test_snapshot_includes_quality_and_planning_fields():
         "price_max": 250.0,
         "source_url": "https://example.org/camps/junior-makers",
         "ticket_url": "https://example.org/register",
-        "venue_id": 101,
+        "place_id": 101,
         "source_id": 5,
     }
     source_info = {

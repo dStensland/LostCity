@@ -84,7 +84,7 @@ def _build_venue_data(business: dict[str, Any]) -> dict[str, Any]:
         "city": city or "Atlanta",
         "state": state or "GA",
         "zip": zip_code,
-        "venue_type": "sports_bar",
+        "place_type": "sports_bar",
         "spot_type": "sports_bar",
         "website": business.get("web_url") or BASE_PAGE_URL,
     }
@@ -239,7 +239,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": item["title"],
             "description": description[:1000],
             "start_date": item["start_date"],

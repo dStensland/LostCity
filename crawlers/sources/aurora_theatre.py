@@ -51,7 +51,7 @@ PLACE_DATA = {
     "zip": "30046",
     "lat": 33.9562,
     "lng": -83.9880,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": BASE_URL,
 }
@@ -490,7 +490,7 @@ def _crawl_aurora_education(source_id: int, venue_id: int) -> tuple[int, int, in
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": f"{title} — Aurora Academy",
             "description": camp["description"],
             "start_date": start_date,
@@ -711,7 +711,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description or f"{title} at Aurora Theatre",
                         "start_date": start_date,

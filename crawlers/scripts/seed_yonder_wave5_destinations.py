@@ -35,7 +35,7 @@ WAVE_5_DESTINATIONS = [
         "lat": 34.1422,
         "lng": -84.7072,
         "website": "https://gastateparks.org/RedTopMountain",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "short_description": "A close-in lake-and-camp weekend anchor that gives Yonder a realistic first overnight answer without the North Georgia drive.",
         "description": "Red Top Mountain State Park gives Yonder a highly reachable weekend base with lake access, cabin-and-campsite energy, and broad audience appeal. It is strategically useful because it makes the weekend shelf feel more repeatable and less dependent on mountain-only destinations.",
@@ -56,7 +56,7 @@ WAVE_5_DESTINATIONS = [
         "lat": 33.6264,
         "lng": -83.5847,
         "website": "https://gastateparks.org/HardLaborCreek",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "short_description": "A quieter east-metro camping base that helps Yonder build a weekend layer beyond the same handful of mountain parks.",
         "description": "Hard Labor Creek State Park gives Yonder a calmer weekend basecamp option with cabins, campsites, and enough outdoor range to support a real overnight prompt. It matters because it broadens the weekend shelf without requiring dramatic-scenery-only framing every time.",
@@ -77,7 +77,7 @@ WAVE_5_DESTINATIONS = [
         "lat": 33.9869,
         "lng": -83.7349,
         "website": "https://gastateparks.org/FortYargo",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "short_description": "A lake-centered state park that adds another realistic weekend base for cabins, campsites, and broad-audience outdoor plans.",
         "description": "Fort Yargo State Park helps Yonder build a more repeatable overnight layer by adding a reachable lake park with family-friendly range, cabin adjacency, and easier logistics than the farthest regional anchors. It keeps the weekend shelf from feeling like the same mountain template in rotation.",
@@ -98,7 +98,7 @@ WAVE_5_DESTINATIONS = [
         "lat": 34.3662,
         "lng": -83.8807,
         "website": "https://gastateparks.org/DonCarter",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "short_description": "A Lake Lanier state park that gives Yonder a cleaner weekend answer for paddling, cabins, and warm-weather overnighters.",
         "description": "Don Carter State Park adds a water-forward weekend base with campsites, cabin adjacency, and lake access that feels meaningfully different from Yonder's mountain park pattern. It is important because it strengthens both the water lane and the overnight layer at the same time.",
@@ -119,7 +119,7 @@ WAVE_5_DESTINATIONS = [
         "lat": 34.7165,
         "lng": -83.7274,
         "website": "https://www.unicoilodge.com/",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "short_description": "A Helen-adjacent lodge and lake base that gives Yonder a stronger cabin-capable weekend option in North Georgia.",
         "description": "Unicoi State Park & Lodge gives Yonder a more accommodation-friendly North Georgia weekend anchor with lake access, lodge logic, and easy linkage to Helen and nearby mountain activity. It makes the weekend shelf feel more varied than pure hike-or-camp destinations alone.",
@@ -146,7 +146,7 @@ def find_existing_venue(seed: dict) -> dict | None:
 
     client = get_client()
     result = (
-        client.table("venues")
+        client.table("places")
         .select("*")
         .eq("name", seed["name"])
         .limit(1)
@@ -234,7 +234,7 @@ def main() -> None:
             continue
 
         if args.apply:
-            client.table("venues").update(updates).eq("id", existing["id"]).execute()
+            client.table("places").update(updates).eq("id", existing["id"]).execute()
         logger.info(
             "%s venue: %s (%s fields)",
             "UPDATE" if args.apply else "WOULD UPDATE",

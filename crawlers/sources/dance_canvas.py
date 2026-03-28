@@ -44,7 +44,7 @@ RIALTO_VENUE_DATA = {
     "zip": "30303",
     "lat": 33.7497,
     "lng": -84.3884,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": "https://rialto.gsu.edu",
     "vibes": ["all-ages"],
@@ -61,7 +61,7 @@ DANCE_CANVAS_ORG_VENUE_DATA = {
     "zip": "30308",
     "lat": 33.7490,
     "lng": -84.3880,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "theater",
     "website": BASE_URL,
     "vibes": ["artsy"],
@@ -227,7 +227,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": rialto_venue_id,
+                            "place_id": rialto_venue_id,
                             "title": title,
                             "description": description,
                             "start_date": start_date,
@@ -301,7 +301,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             events_found += 1
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": org_venue_id,
+                                "place_id": org_venue_id,
                                 "title": title,
                                 "description": "Dance Canvas: On Film — a curated film screening series presented by Dance Canvas.",
                                 "start_date": start_date,

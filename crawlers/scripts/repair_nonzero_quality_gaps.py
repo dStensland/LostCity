@@ -244,7 +244,7 @@ def main() -> int:
     for idx in range(0, len(venue_ids), 150):
         batch = venue_ids[idx : idx + 150]
         rows = (
-            client.table("venues")
+            client.table("places")
             .select("id,image_url")
             .in_("id", batch)
             .execute()

@@ -43,7 +43,7 @@ import type { WeatherData } from "@/lib/weather-utils";
 // ---------------------------------------------------------------------------
 
 export const VENUE_SELECT = `
-  id, name, slug, address, neighborhood, city, venue_type,
+  id, name, slug, address, neighborhood, city, place_type,
   venue_types, lat, lng, image_url, short_description,
   vibes, genres, price_level, hours_display,
   hours, featured, active,
@@ -85,7 +85,7 @@ export async function fetchPhaseAEnrichments(
         const typesList = weatherFilter.venue_types.join(",");
         const vibesList = weatherFilter.vibes.join(",");
         let q = supabase
-          .from("venues")
+          .from("places")
           .select(VENUE_SELECT)
           .eq("active", true)
           .or(`venue_type.in.(${typesList}),vibes.ov.{${vibesList}}`);
@@ -109,15 +109,15 @@ export async function fetchPhaseAEnrichments(
     ? Promise.resolve({ data: [] })
     : (() => {
         let q = supabase
-          .from("venue_specials")
+          .from("place_specials")
           .select(`
-        id, venue_id, title, type, description,
+        id, place_id, title, type, description,
         days_of_week, time_start, time_end,
         start_date, end_date, price_note,
-        venue:venues!inner(id, name, slug, neighborhood, venue_type, image_url, city)
+        venue:places!inner(id, name, slug, neighborhood, place_type, image_url, city)
       `)
           .eq("is_active", true)
-          .eq("venue.active", true);
+          .eq("venue.is_active", true);
         if (ctx.portalCity) {
           q = q.ilike("venue.city", `%${ctx.portalCity}%`);
         }
@@ -240,8 +240,8 @@ export async function fetchPhaseBEnrichments(
     ? Promise.resolve(
         supabase
           .from("editorial_mentions")
-          .select("venue_id, source_key, snippet, article_url, guide_name")
-          .in("venue_id", allPlaceIds),
+          .select("place_id, source_key, snippet, article_url, guide_name")
+          .in("place_id", allPlaceIds),
       ).then(({ data }) => (data ?? []) as unknown as EditorialMention[])
     : Promise.resolve([]);
 

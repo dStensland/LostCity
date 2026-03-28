@@ -43,7 +43,7 @@ PLACE_DATA = {
     "zip": "30345",
     "lat": 33.8174,
     "lng": -84.2862,
-    "venue_type": "event_space",
+    "place_type": "event_space",
     "spot_type": "event_space",
     "website": "https://northlakemall.com/",
 }
@@ -193,7 +193,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": event["title"],
         "description": event["description"],
         "start_date": event["start_date"],

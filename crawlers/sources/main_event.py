@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30009",
     "lat": 34.0655,
     "lng": -84.2742,
-    "venue_type": "entertainment",
+    "place_type": "entertainment",
     "spot_type": "entertainment",
     "website": HOMEPAGE,
     # Hours verified 2026-03-22 against mainevent.com
@@ -60,7 +60,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "entertainment",
         "commitment_tier": "halfday",
         "primary_activity": "Bowling, laser tag, arcade, and family dining",
@@ -79,10 +79,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Pay-per-activity or all-you-can-play packages. Full restaurant and bar on-site.",
         "source_url": HOMEPAGE,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "entertainment", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "entertainment", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "bowling-cosmic-bowling",
         "title": "Bowling with cosmic bowling option",
         "feature_type": "experience",
@@ -92,7 +92,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "laser-tag-arena",
         "title": "Laser tag arena",
         "feature_type": "experience",
@@ -102,7 +102,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "arcade-and-prizes",
         "title": "Arcade games and prizes",
         "feature_type": "experience",
@@ -112,7 +112,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "full-restaurant-bar",
         "title": "Full restaurant and bar",
         "feature_type": "amenity",
@@ -125,7 +125,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 40,
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "all-you-can-play-packages",
         "title": "All-you-can-play packages",
         "description": (
@@ -199,7 +199,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning("Main Event Alpharetta: venue update failed: %s", exc)
 

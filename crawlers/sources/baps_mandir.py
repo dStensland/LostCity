@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30047",
     "lat": 33.8847,
     "lng": -84.1362,
-    "venue_type": "community_center",
+    "place_type": "community_center",
     "spot_type": "attraction",
     "website": f"{BASE_URL}/Global-Network/North-America/Atlanta.aspx",
     "vibes": ["faith-hindu", "family-friendly", "all-ages", "historic"],
@@ -249,7 +249,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                                 event_record = {
                                     "source_id": source_id,
-                                    "venue_id": venue_id,
+                                    "place_id": venue_id,
                                     "title": current_title[:200],
                                     "description": description_text[:1000] if description_text else None,
                                     "start_date": current_date,
@@ -316,7 +316,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": current_title[:200],
                             "description": description_text[:1000] if description_text else None,
                             "start_date": current_date,
@@ -409,7 +409,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title[:200],
                             "description": description[:1000] if description else None,
                             "start_date": start_date,

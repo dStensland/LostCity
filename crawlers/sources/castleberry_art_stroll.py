@@ -24,7 +24,7 @@ PLACE_DATA = {
     "zip": "30313",
     "lat": 33.7510,
     "lng": -84.3970,
-    "venue_type": "arts_district",
+    "place_type": "arts_district",
     "spot_type": "arts_district",
     "website": "https://castleberryhill.org",
     "description": "Historic warehouse district turned arts neighborhood with galleries, lofts, and monthly art stroll.",
@@ -74,7 +74,7 @@ def create_monthly_art_strolls(source_id: int, venue_id: int) -> tuple[int, int]
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,

@@ -33,7 +33,7 @@ class _FakeClient:
         self.executed = False
 
     def table(self, name):
-        assert name == "venues"
+        assert name == "places"
         return _FakeVenueTable(self)
 
 

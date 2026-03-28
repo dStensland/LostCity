@@ -340,7 +340,7 @@ def main() -> None:
 
     updated = 0
     for candidate in candidates:
-        client.table("venues").update({"active": True}).eq("id", candidate.venue_id).execute()
+        client.table("places").update({"active": True}).eq("id", candidate.venue_id).execute()
         updated += 1
 
     print(

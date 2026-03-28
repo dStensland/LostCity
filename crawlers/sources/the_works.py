@@ -31,7 +31,7 @@ THE_WORKS_VENUE = {
     "zip": "30318",
     "lat": 33.8098,
     "lng": -84.4305,
-    "venue_type": "event_space",
+    "place_type": "event_space",
     "spot_type": "event_space",
     "website": "https://theworksatl.com",
     "vibes": ["mixed-use", "upper-westside", "chattahoochee", "food-hall", "brewery"],
@@ -47,7 +47,7 @@ CHATTAHOOCHEE_FOOD_WORKS_VENUE = {
         "zip": "30318",
         "lat": 33.8098,
         "lng": -84.4305,
-        "venue_type": "food_hall",
+        "place_type": "food_hall",
         "spot_type": "food_hall",
         "website": "https://chattahoocheefoodworks.com",
         "vibes": ["food-hall", "upper-westside", "chattahoochee", "diverse-cuisine"],
@@ -359,7 +359,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": start_date,

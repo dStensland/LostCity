@@ -80,7 +80,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         price_max,
         category:category_id,
         image_url,
-        venue:venues(name, slug, neighborhood)
+        venue:places(name, slug, neighborhood)
       )
     `)
     .eq("collection_id", collection.id)

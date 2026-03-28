@@ -312,7 +312,7 @@ def infer_occasions(venue: dict, min_confidence: float = 0.5) -> list[dict]:
     """Apply all occasion rules to a single venue.
 
     Returns a list of occasion dicts ready for DB upsert:
-        {"venue_id": int, "occasion": str, "confidence": float, "source": "inferred"}
+        {"place_id": int, "occasion": str, "confidence": float, "source": "inferred"}
     """
     venue_id = venue["id"]
     vibes = _normalize_vibes(venue)
@@ -334,7 +334,7 @@ def infer_occasions(venue: dict, min_confidence: float = 0.5) -> list[dict]:
             if beltline_adjacent:
                 results.append(
                     {
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "occasion": "beltline",
                         "confidence": 1.0,
                         "source": "inferred",
@@ -475,7 +475,7 @@ def infer_occasions(venue: dict, min_confidence: float = 0.5) -> list[dict]:
 
         results.append(
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "occasion": occasion,
                 "confidence": round(confidence, 2),
                 "source": "inferred",
@@ -497,7 +497,7 @@ def load_venues(venue_id: Optional[int] = None) -> list[dict]:
     offset = 0
     while True:
         query = (
-            client.table("venues")
+            client.table("places")
             .select(
                 "id, name, slug, venue_type, vibes, price_level, hours, "
                 "service_style, reservation_recommended, beltline_adjacent, lat, lng"
@@ -535,7 +535,7 @@ def load_existing_occasions(venue_ids: list[int]) -> dict[tuple[int, str], dict]
     for i in range(0, len(venue_ids), batch_size):
         batch = venue_ids[i : i + batch_size]
         result = (
-            client.table("venue_occasions")
+            client.table("place_occasions")
             .select("id, venue_id, occasion, confidence, source")
             .in_("venue_id", batch)
             .execute()
@@ -589,7 +589,7 @@ def upsert_occasions(
         if row is None:
             # New row
             try:
-                client.table("venue_occasions").insert(o).execute()
+                client.table("place_occasions").insert(o).execute()
                 created += 1
                 logger.debug(
                     "INSERT venue_id=%s %s (%.2f)",
@@ -623,7 +623,7 @@ def upsert_occasions(
             continue
 
         try:
-            client.table("venue_occasions").update({"confidence": new_conf}).eq(
+            client.table("place_occasions").update({"confidence": new_conf}).eq(
                 "id", row["id"]
             ).execute()
             updated += 1
@@ -693,7 +693,7 @@ def delete_stale_occasions(
     for i in range(0, len(stale_ids), batch_size):
         batch = stale_ids[i : i + batch_size]
         try:
-            client.table("venue_occasions").delete().in_("id", batch).execute()
+            client.table("place_occasions").delete().in_("id", batch).execute()
             deleted += len(batch)
         except Exception as exc:
             logger.warning("Failed to delete stale occasion rows %s: %s", batch, exc)

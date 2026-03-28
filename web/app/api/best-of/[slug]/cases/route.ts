@@ -65,7 +65,7 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
         .eq("is_active", true)
         .maybeSingle(),
       serviceClient
-        .from("venues")
+        .from("places")
         .select("id")
         .eq("id", venueId)
         .maybeSingle(),
@@ -84,7 +84,7 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
       .select("id")
       .eq("user_id", user.id)
       .eq("category_id", categoryId)
-      .eq("venue_id", venueId)
+      .eq("place_id", venueId)
       .maybeSingle();
 
     if (existing) {

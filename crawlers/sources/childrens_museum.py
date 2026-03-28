@@ -51,7 +51,7 @@ PLACE_DATA = {
     "zip": "30313",
     "lat": 33.7625,
     "lng": -84.3933,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     # Admission: ~$24.75 per person (members free)
@@ -80,7 +80,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "childrens_museum",
             "commitment_tier": "halfday",
             "primary_activity": "family children's museum visit",
@@ -102,7 +102,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "museum",
+                "place_type": "museum",
                 "city": "atlanta",
             },
         },
@@ -110,7 +110,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "interactive-play-and-learning-floor",
             "title": "Interactive play and learning floor",
             "feature_type": "amenity",
@@ -123,7 +123,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "downtown-younger-kid-weather-proof-anchor",
             "title": "Downtown younger-kid weather-proof anchor",
             "feature_type": "amenity",
@@ -136,7 +136,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "bathroom-and-attention-span-reset-friendly",
             "title": "Bathroom and attention-span reset friendly",
             "feature_type": "amenity",
@@ -149,7 +149,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_specials",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "children-under-1-free-admission",
             "title": "Children under 1 free admission",
             "description": "Children under age 1 receive free admission, which makes the museum materially easier to justify for families with babies and mixed-age sibling outings.",
@@ -162,7 +162,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_specials",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "museums-for-all-discount-admission",
             "title": "Museums for All discount admission",
             "description": "The museum participates in Museums for All, which gives eligible families a lower-cost way to use it as a recurring downtown play-and-learning stop.",
@@ -540,7 +540,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         if og_desc:
             venue_update["description"] = og_desc
         if venue_update:
-            get_client().table("venues").update(venue_update).eq("id", venue_id).execute()
+            get_client().table("places").update(venue_update).eq("id", venue_id).execute()
             logger.info("Children's Museum: enriched venue from homepage og: metadata")
     except Exception as enrich_exc:
         logger.warning("Children's Museum: og: enrichment failed: %s", enrich_exc)
@@ -638,7 +638,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record: dict = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": current_date.strftime("%Y-%m-%d"),

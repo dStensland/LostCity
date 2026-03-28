@@ -56,7 +56,7 @@ PLACE_DATA = {
         "zip": "30083",
         "lat": 33.7945,
         "lng": -84.2057,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": ACTIVITY_SEARCH_URL,
         "description": "DeKalb County community center hosting public line dance classes.",
@@ -226,7 +226,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": parsed["title"],
                     "description": parsed["description"],
                     "start_date": start_date,

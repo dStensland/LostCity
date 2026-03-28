@@ -31,10 +31,10 @@ export async function GET(request: NextRequest) {
 
   // Two-step: get venue IDs for this neighborhood, then events at those venues
   const { data: rawVenues } = await supabase
-    .from("venues")
+    .from("places")
     .select("id, name, slug, neighborhood")
     .eq("neighborhood", neighborhood)
-    .eq("active", true);
+    .eq("is_active", true);
 
   const venues = (rawVenues ?? []) as VenueRow[];
   if (venues.length === 0) {
@@ -49,10 +49,10 @@ export async function GET(request: NextRequest) {
 
   const { data: rawEvents, error } = await supabase
     .from("events")
-    .select("id, title, start_date, start_time, end_time, is_all_day, category_id, is_free, venue_id")
+    .select("id, title, start_date, start_time, end_time, is_all_day, category_id, is_free, place_id")
     .eq("is_active", true)
     .is("canonical_event_id", null)
-    .in("venue_id", venueIds)
+    .in("place_id", venueIds)
     .gte("start_date", today)
     .or("is_sensitive.eq.false,is_sensitive.is.null")
     .order("start_date", { ascending: true })

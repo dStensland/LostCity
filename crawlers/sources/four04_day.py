@@ -60,7 +60,7 @@ PIEDMONT_PARK_VENUE = {
     "zip": "30309",
     "lat": 33.7873,
     "lng": -84.3733,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "outdoor",
     "website": "https://piedmontpark.org",
 }
@@ -76,7 +76,7 @@ STANKONIA_VENUE = {
     "zip": "",
     "lat": None,
     "lng": None,
-    "venue_type": "music_venue",
+    "place_type": "music_venue",
     "spot_type": "music_venue",
     "website": BASE_URL,
 }
@@ -262,7 +262,7 @@ def _build_main_festival_event(
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": "404 Day 2026",
         "description": description,
         "start_date": start_date,
@@ -309,7 +309,7 @@ def _build_stankonia_event(
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,

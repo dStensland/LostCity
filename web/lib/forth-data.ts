@@ -514,7 +514,7 @@ const EVENT_SELECT = `
   id, title, start_date, start_time, end_date, is_all_day, is_free, price_min,
   category_id, image_url, description, tags, source_id,
   significance, significance_signals, is_tentpole,
-  venue:venues(id, name, neighborhood, slug, venue_type, city)
+  venue:places(id, name, neighborhood, slug, place_type, city)
 `;
 
 /**
@@ -779,8 +779,8 @@ async function fetchDestinationsDirect(
 
   // 1. Fetch venues within bounding box
   const { data: venuesRaw } = await supabase
-    .from("venues")
-    .select("id, name, slug, neighborhood, venue_type, lat, lng, city, image_url, short_description")
+    .from("places")
+    .select("id, name, slug, neighborhood, place_type, lat, lng, city, image_url, short_description")
     .neq("active", false)
     .not("lat", "is", null)
     .not("lng", "is", null)
@@ -818,16 +818,16 @@ async function fetchDestinationsDirect(
   const today = getLocalDateString();
   const [{ data: specialsRaw }, { data: eventsRaw }] = await Promise.all([
     supabase
-      .from("venue_specials")
-      .select("id, venue_id, title, type, days_of_week, time_start, time_end, start_date, end_date, price_note, confidence, last_verified_at")
-      .in("venue_id", venueIds)
+      .from("place_specials")
+      .select("id, place_id, title, type, days_of_week, time_start, time_end, start_date, end_date, price_note, confidence, last_verified_at")
+      .in("place_id", venueIds)
       .eq("is_active", true),
     (() => {
       let q = applyFeedGate(
         supabase
           .from("events")
-          .select("id, title, start_date, start_time, venue_id, source_id, category_id, significance, significance_signals")
-          .in("venue_id", venueIds)
+          .select("id, title, start_date, start_time, place_id, source_id, category_id, significance, significance_signals")
+          .in("place_id", venueIds)
           .gte("start_date", today)
           .is("canonical_event_id", null)
           .or("is_class.eq.false,is_class.is.null")

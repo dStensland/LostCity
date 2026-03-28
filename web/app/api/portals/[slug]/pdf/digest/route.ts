@@ -122,8 +122,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   // Fetch nearby restaurants/venues for this portal's area
   const { data: venuesData } = await supabase
-    .from("venues")
-    .select("name, venue_type, neighborhood, lat, lng")
+    .from("places")
+    .select("name, place_type, neighborhood, lat, lng")
     .eq("status", "active")
     .limit(20);
 

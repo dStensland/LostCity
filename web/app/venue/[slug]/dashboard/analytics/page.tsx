@@ -21,7 +21,7 @@ export default async function VenueAnalyticsPage({ params }: Props) {
 
   // Get venue and verify ownership
   const { data: venue, error: venueError } = await supabase
-    .from("venues")
+    .from("places")
     .select("id, name, slug, claimed_by")
     .eq("slug", slug)
     .maybeSingle() as {
@@ -68,18 +68,18 @@ export default async function VenueAnalyticsPage({ params }: Props) {
   const { count: upcomingEvents } = await supabase
     .from("events")
     .select("*", { count: "exact", head: true })
-    .eq("venue_id", venue.id)
+    .eq("place_id", venue.id)
     .gte("start_date", getLocalDateString());
 
   const { count: totalEvents } = await supabase
     .from("events")
     .select("*", { count: "exact", head: true })
-    .eq("venue_id", venue.id);
+    .eq("place_id", venue.id);
 
   const { count: venueSubmittedEvents } = await supabase
     .from("events")
     .select("*", { count: "exact", head: true })
-    .eq("venue_id", venue.id)
+    .eq("place_id", venue.id)
     .eq("source_type", "venue_submission");
 
   return (

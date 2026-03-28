@@ -96,7 +96,7 @@ _VENUE_MIDTOWN: dict = {
     "zip": "30309",
     "lat": 33.7893,
     "lng": -84.3733,
-    "venue_type": "garden",
+    "place_type": "garden",
     "spot_type": "garden",
     "website": BASE_URL,
     "vibes": ["family-friendly", "outdoor-seating", "all-ages"],
@@ -127,7 +127,7 @@ _VENUE_GAINESVILLE: dict = {
     "zip": "30501",
     "lat": 34.3054,
     "lng": -83.8243,
-    "venue_type": "garden",
+    "place_type": "garden",
     "spot_type": "garden",
     "website": f"{BASE_URL}/gainesville/",
     "vibes": ["family-friendly", "outdoor-seating", "all-ages"],
@@ -155,7 +155,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "botanical_garden",
             "commitment_tier": "halfday",
             "primary_activity": "family garden visit",
@@ -179,7 +179,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
             "source_url": place_data.get("website") or BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "garden",
+                "place_type": "garden",
                 "city": place_data.get("city"),
             },
         },
@@ -187,7 +187,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "childrens-garden-and-kids-programming",
             "title": "Children's garden and kids programming",
             "feature_type": "amenity",
@@ -200,7 +200,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "paved-garden-paths-and-stroller-friendly-circulation",
             "title": "Paved garden paths and stroller-friendly circulation",
             "feature_type": "amenity",
@@ -213,7 +213,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "indoor-conservatories-and-weather-flex-space",
             "title": "Indoor conservatories and weather-flex space",
             "feature_type": "amenity",
@@ -226,7 +226,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "shade-and-conservatory-reset-flex",
             "title": "Shade and conservatory reset flex",
             "feature_type": "amenity",
@@ -239,7 +239,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "venue_specials",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "children-under-3-free-daytime-admission",
             "title": "Children under 3 free daytime admission",
             "description": f"{venue_name} offers free daytime admission for children under 3, which makes it materially easier to treat the garden as a family outing with very young kids.",
@@ -529,7 +529,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             og_image = _fetch_og_image(session, venue_url)
             if og_image:
                 try:
-                    get_client().table("venues").update({"image_url": og_image}).eq(
+                    get_client().table("places").update({"image_url": og_image}).eq(
                         "id", venue_id_local
                     ).execute()
                     logger.debug(f"ABG: updated venue {venue_id_local} image from {venue_url}")
@@ -677,7 +677,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record: dict = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description,
                         "start_date": start_date,

@@ -34,7 +34,7 @@ PLACE_DATA = {
     "zip": "30354",
     "lat": 33.6479,
     "lng": -84.4284,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     # Admission: $15 adult, $12 child (ages 4-17) / senior, free under 4
@@ -150,7 +150,7 @@ def _extract_event_record(event_url: str, venue_id: int, source_id: int) -> Opti
     content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,
@@ -200,7 +200,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         if og_desc:
             venue_update["description"] = og_desc
         if venue_update:
-            get_client().table("venues").update(venue_update).eq("id", venue_id).execute()
+            get_client().table("places").update(venue_update).eq("id", venue_id).execute()
             logger.info("Delta Flight Museum: enriched venue from homepage og: metadata")
     except Exception as enrich_exc:
         logger.warning("Delta Flight Museum: og: enrichment failed: %s", enrich_exc)

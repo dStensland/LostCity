@@ -73,7 +73,7 @@ PLACE_DATA = {
     "zip": "30326",
     "lat": 33.8481,
     "lng": -84.3638,
-    "venue_type": "attraction",
+    "place_type": "attraction",
     "spot_type": "attraction",
     "website": f"{BASE_URL}/atlanta/",
     "vibes": ["family-friendly", "all-ages"],
@@ -85,7 +85,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "family_attraction",
             "commitment_tier": "halfday",
             "primary_activity": "family indoor attraction visit",
@@ -107,7 +107,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": f"{BASE_URL}/atlanta/",
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "attraction",
+                "place_type": "attraction",
                 "city": "atlanta",
             },
         },
@@ -115,7 +115,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "indoor-build-play-attraction-stack",
             "title": "Indoor build-play attraction stack",
             "feature_type": "amenity",
@@ -128,7 +128,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "buckhead-weather-proof-younger-kid-anchor",
             "title": "Buckhead weather-proof younger-kid anchor",
             "feature_type": "amenity",
@@ -141,7 +141,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "low-walking-indoor-younger-kid-reset",
             "title": "Low-walking indoor younger-kid reset",
             "feature_type": "amenity",
@@ -546,7 +546,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 is_html_fallback = ld.get("_source") == "html_fallback"
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description or None,
                     "start_date": start_date,

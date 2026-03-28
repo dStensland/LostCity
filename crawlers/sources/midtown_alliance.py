@@ -61,7 +61,7 @@ ORG_VENUE_DATA = {
     "zip": "30309",
     "lat": 33.7848,
     "lng": -84.3836,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": BASE_URL,
     "description": (
@@ -90,7 +90,7 @@ _KNOWN_VENUES: list[dict] = [
         "zip": "30309",
         "lat": 33.7786,
         "lng": -84.3763,
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "website": BASE_URL,
         "vibes": ["family-friendly", "outdoor-seating"],
@@ -106,7 +106,7 @@ _KNOWN_VENUES: list[dict] = [
         "zip": "30308",
         "lat": 33.7718,
         "lng": -84.3869,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": "https://www.itsmarta.com",
         "vibes": [],
@@ -122,7 +122,7 @@ _KNOWN_VENUES: list[dict] = [
         "zip": "30332",
         "lat": 33.7744,
         "lng": -84.3960,
-        "venue_type": "theater",
+        "place_type": "theater",
         "spot_type": "theater",
         "website": "https://www.ferstcenter.org",
         "vibes": ["performing-arts", "live-music"],
@@ -138,7 +138,7 @@ _KNOWN_VENUES: list[dict] = [
         "zip": "30308",
         "lat": 33.7750,
         "lng": -84.3876,
-        "venue_type": "church",
+        "place_type": "church",
         "spot_type": "community_center",
         "website": "https://www.allsaintsatlanta.org",
         "vibes": ["historic"],
@@ -498,7 +498,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if ORG_VENUE_DATA.get("description"):
                     venue_update["description"] = ORG_VENUE_DATA["description"]
                 if venue_update:
-                    get_client().table("venues").update(venue_update).eq("id", org_venue_id).execute()
+                    get_client().table("places").update(venue_update).eq("id", org_venue_id).execute()
                     logger.debug("Midtown Alliance: org venue enriched with og: data")
             except Exception as exc:
                 logger.warning(f"Midtown Alliance: org venue update failed: {exc}")
@@ -639,7 +639,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record: dict = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": None,
                         "start_date": start_date,

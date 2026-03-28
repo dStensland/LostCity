@@ -585,7 +585,7 @@ def _crawl_meets(source_id: int) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": event_date_str,
@@ -751,7 +751,7 @@ def _build_lessons_event_record(
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date_str,
@@ -794,7 +794,7 @@ def _build_venue_data(loc: dict) -> dict:
         "neighborhood": loc["neighborhood"],
         "lat": loc["lat"],
         "lng": loc["lng"],
-        "venue_type": "fitness_center",
+        "place_type": "fitness_center",
         "spot_type": "fitness",
         "website": loc["location_url"],
         "vibes": ["family-friendly", "all-ages"],

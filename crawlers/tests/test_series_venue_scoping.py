@@ -48,7 +48,7 @@ def _make_client(side_effects: list) -> MagicMock:
 class TestFindSeriesByTitleVenueScoping:
     def test_same_title_different_venue_ids_return_none(self):
         """
-        When venue_id is provided, queries include a .eq("venue_id", ...) filter.
+        When venue_id is provided, queries include a .eq("place_id", ...) filter.
         A series stored under venue 1 must NOT be returned when searching
         for venue 2 — the mock will return empty for all queries.
         """
@@ -65,7 +65,7 @@ class TestFindSeriesByTitleVenueScoping:
 
     def test_exact_match_with_matching_venue_id(self):
         """When venue_id matches, the record is returned on first query."""
-        record = {"id": "abc", "title": "Yoga Basics", "venue_id": 1}
+        record = {"id": "abc", "title": "Yoga Basics", "place_id": 1}
         client = _make_client([[record]])
 
         result = find_series_by_title(
@@ -79,7 +79,7 @@ class TestFindSeriesByTitleVenueScoping:
 
     def test_venue_filter_applied_to_recurring_show(self):
         """recurring_show also uses venue scoping."""
-        record = {"id": "xyz", "title": "Monday Night Trivia", "venue_id": 42}
+        record = {"id": "xyz", "title": "Monday Night Trivia", "place_id": 42}
         client = _make_client([[record]])
 
         result = find_series_by_title(
@@ -159,8 +159,8 @@ class TestGetOrCreateSeriesVenueScoping:
             [new_series_2],  # insert → returns record
         ])
 
-        hint_1 = {"series_type": "class_series", "series_title": "Yoga Basics", "venue_id": 10}
-        hint_2 = {"series_type": "class_series", "series_title": "Yoga Basics", "venue_id": 20}
+        hint_1 = {"series_type": "class_series", "series_title": "Yoga Basics", "place_id": 10}
+        hint_2 = {"series_type": "class_series", "series_title": "Yoga Basics", "place_id": 20}
 
         with self._patch_resolve_festival():
             id_1 = get_or_create_series(client, hint_1)
@@ -188,7 +188,7 @@ class TestGetOrCreateSeriesVenueScoping:
         hint = {
             "series_type": "film",
             "series_title": "Casablanca",
-            "venue_id": 99,
+            "place_id": 99,
         }
 
         with self._patch_resolve_festival():

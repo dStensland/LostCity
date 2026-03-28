@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30060",
     "lat": 33.9526,
     "lng": -84.5499,
-    "venue_type": "government",
+    "place_type": "government",
     "spot_type": "community_center",
     "website": BASE_URL,
 }
@@ -350,7 +350,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         # Build event record
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": description if description else f"Event at City of Marietta",
                             "start_date": start_date,
@@ -502,7 +502,7 @@ def parse_text_content(
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description if description else "Event at City of Marietta",
                         "start_date": start_date,

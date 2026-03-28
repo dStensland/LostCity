@@ -157,7 +157,7 @@ export const POST = withAuthAndParams<RouteParams>(async (request, { user, servi
 
     // Verify venue exists
     const { data: venue } = await serviceClient
-      .from("venues")
+      .from("places")
       .select("id, name, slug, image_url, neighborhood, address")
       .eq("id", venue_id)
       .maybeSingle();

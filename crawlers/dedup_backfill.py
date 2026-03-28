@@ -212,7 +212,7 @@ def _fetch_venue_events_other_sources(
         lambda: (
             client.table("events")
             .select(fields)
-            .eq("venue_id", venue_id)
+            .eq("place_id", venue_id)
             .eq("start_date", start_date)
             .eq("is_active", True)
             .neq("source_id", exclude_source_id)

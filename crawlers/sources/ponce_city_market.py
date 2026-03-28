@@ -62,7 +62,7 @@ PLACE_DATA = {
     "zip": "30308",
     "lat": 33.7724,
     "lng": -84.3656,
-    "venue_type": "food_hall",
+    "place_type": "food_hall",
     "spot_type": "food_hall",
     "website": BASE_URL,
 }
@@ -106,7 +106,7 @@ RECURRING_SCHEDULE = [
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "food_hall",
         "commitment_tier": "halfday",
         "primary_activity": "Food hall, rooftop amusements, shopping, and Beltline access",
@@ -125,10 +125,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Free to enter. Skyline Park rooftop games are pay-per-play. Food hall is pay-as-you-go.",
         "source_url": BASE_URL,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "food_hall", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "food_hall", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "skyline-park-rooftop",
         "title": "Skyline Park rooftop amusements",
         "feature_type": "attraction",
@@ -138,7 +138,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "central-food-hall",
         "title": "Central Food Hall",
         "feature_type": "amenity",
@@ -148,7 +148,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "beltline-eastside-trail-access",
         "title": "Beltline Eastside Trail access",
         "feature_type": "experience",
@@ -158,7 +158,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "retail-local-boutiques",
         "title": "Retail shops and local boutiques",
         "feature_type": "amenity",
@@ -168,7 +168,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 40,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "historic-sears-architecture",
         "title": "Historic Sears building architecture",
         "feature_type": "attraction",
@@ -178,7 +178,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 50,
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "skyline-park-admission",
         "title": "Skyline Park rooftop admission",
         "description": "Rooftop carnival games, mini golf, and rides. Pay-per-activity or buy an all-access wristband.",
@@ -188,7 +188,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "category": "admission",
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "free-beltline-access",
         "title": "Free Beltline access",
         "description": "Walk or bike directly onto the Beltline Eastside Trail from the building — no fee, no barrier.",
@@ -239,7 +239,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": template["title"],
                 "description": template["description"],
                 "start_date": start_date,
@@ -409,7 +409,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": None,
                         "start_date": start_date,

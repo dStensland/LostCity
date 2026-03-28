@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
             upvote_count,
             status,
             submitted_by,
-            venue:venues(id, name, slug, neighborhood, venue_type, image_url),
-            event:events(id, title, start_date, image_url, venue:venues(name))
+            venue:places(id, name, slug, neighborhood, place_type, image_url),
+            event:events(id, title, start_date, image_url, venue:places(name))
           )
         `)
         .eq("slug", slug)
@@ -199,7 +199,7 @@ export async function GET(request: NextRequest) {
         portal:portals(slug),
         list_items(
           position,
-          venue:venues(image_url),
+          venue:places(image_url),
           event:events(image_url)
         )
       `)

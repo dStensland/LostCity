@@ -55,7 +55,7 @@ GRADY_HOSPITAL = {
     "zip": "30303",
     "lat": 33.7534,
     "lng": -84.3832,
-    "venue_type": "hospital",
+    "place_type": "hospital",
     "website": GRADY_HOSPITAL_URL,
 }
 
@@ -69,7 +69,7 @@ GEORGIA_AQUARIUM = {
     "zip": "30313",
     "lat": 33.7634,
     "lng": -84.3951,
-    "venue_type": "attraction",
+    "place_type": "attraction",
     "website": "https://www.georgiaaquarium.org",
 }
 
@@ -349,7 +349,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Create event record
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": start_date,

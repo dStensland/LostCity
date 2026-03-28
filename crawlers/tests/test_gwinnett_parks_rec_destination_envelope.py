@@ -20,7 +20,7 @@ def test_build_destination_envelope_for_rec_center() -> None:
     )
 
     assert envelope is not None
-    assert envelope.destination_details[0]["venue_id"] == 901
+    assert envelope.destination_details[0]["place_id"] == 901
     assert envelope.destination_details[0]["destination_type"] == "community_recreation_center"
     assert envelope.destination_details[0]["family_suitability"] == "yes"
     assert envelope.destination_details[0]["practical_notes"]
@@ -49,7 +49,7 @@ def test_build_destination_envelope_for_park() -> None:
     )
 
     assert envelope is not None
-    assert envelope.destination_details[0]["venue_id"] == 902
+    assert envelope.destination_details[0]["place_id"] == 902
     assert envelope.destination_details[0]["destination_type"] == "park"
     assert envelope.destination_details[0]["parking_type"] == "free_lot"
     assert envelope.destination_details[0]["practical_notes"]

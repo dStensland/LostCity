@@ -39,7 +39,7 @@ PLACE_DATA = {
     "zip": "30313",
     "lat": 33.7553,
     "lng": -84.4006,
-    "venue_type": "event_space",
+    "place_type": "event_space",
     "spot_type": "event_space",
     "website": "https://www.mercedesbenzstadium.com/hdby",
     "vibes": ["outdoor", "fitness", "community", "free", "family-friendly"],
@@ -380,7 +380,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Build event record
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description,
                         "start_date": start_date,

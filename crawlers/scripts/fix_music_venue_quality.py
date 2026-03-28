@@ -313,7 +313,7 @@ def run_music_venue_quality_fix(
     client = get_client()
 
     venues_result = (
-        client.table("venues")
+        client.table("places")
         .select("id,name,slug")
         .in_("slug", venue_slugs)
         .execute()

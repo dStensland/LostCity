@@ -571,7 +571,7 @@ def convert_camps(source_slug: str, dry_run: bool) -> tuple[int, int]:
         program_record = {
             "portal_id": portal_id,
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "name": camp_name,
             "slug": program_slug,
             "description": description,
@@ -758,7 +758,7 @@ def convert_georgia_gymnastics(dry_run: bool) -> tuple[int, int]:
         program_record = {
             "portal_id": portal_id,
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "name": full_name,
             "slug": program_slug,
             "description": description,

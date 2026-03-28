@@ -47,7 +47,7 @@ PLACE_DATA = {
     "zip": "30324",
     "lat": 33.8098,
     "lng": -84.3666,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": BASE_URL,
     "vibes": ["running", "fitness", "community", "racing"],
@@ -63,7 +63,7 @@ CLUB_NIGHT_VENUE_DATA = {
     "zip": "30306",
     "lat": 33.7875,
     "lng": -84.3733,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "outdoor",
     "website": "https://www.piedmontpark.org",
 }
@@ -295,7 +295,7 @@ def parse_event_from_text(text_block: str, venue_id: int, source_id: int) -> Opt
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,
@@ -393,7 +393,7 @@ def parse_event_cards(page, venue_id: int, source_id: int, image_map: dict) -> l
 
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": venue_id,
+                                "place_id": venue_id,
                                 "title": title,
                                 "description": description,
                                 "start_date": start_date,
@@ -482,7 +482,7 @@ def seed_recurring_programs(source_id: int) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": program["title"],
                 "description": program["description"],
                 "start_date": start_date,

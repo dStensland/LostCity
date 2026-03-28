@@ -25,7 +25,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30319",
-        "venue_type": "museum",
+        "place_type": "museum",
         "website": "https://museum.oglethorpe.edu",
     },
     "default": {
@@ -36,7 +36,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30319",
-        "venue_type": "university",
+        "place_type": "university",
         "website": "https://oglethorpe.edu",
     },
 }
@@ -112,7 +112,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": event_data.get("description", "Event at Oglethorpe University in Brookhaven")[:500],
                 "start_date": start_date,

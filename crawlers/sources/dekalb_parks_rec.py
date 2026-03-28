@@ -89,7 +89,7 @@ GENERIC_VENUE = {
     "zip": "30030",
     "lat": 33.7748,
     "lng": -84.2963,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": f"{APM_BASE}/Home",
 }
@@ -110,7 +110,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30033",
         "lat": 33.8060,
         "lng": -84.3126,
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "website": f"{APM_BASE}/Home",
     },
@@ -124,7 +124,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30021",
         "lat": 33.8140,
         "lng": -84.2407,
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "website": f"{APM_BASE}/Home",
     },
@@ -138,7 +138,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30058",
         "lat": 33.7116,
         "lng": -84.0888,
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "website": f"{APM_BASE}/Home",
     },
@@ -152,7 +152,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30058",
         "lat": 33.7116,
         "lng": -84.0888,
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "website": f"{APM_BASE}/Home",
     },
@@ -166,7 +166,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30316",
         "lat": 33.7217,
         "lng": -84.3220,
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "website": f"{APM_BASE}/Home",
     },
@@ -180,7 +180,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30316",
         "lat": 33.7095,
         "lng": -84.3347,
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "website": f"{APM_BASE}/Home",
     },
@@ -194,7 +194,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30084",
         "lat": 33.8596,
         "lng": -84.2023,
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "website": f"{APM_BASE}/Home",
     },
@@ -208,7 +208,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30079",
         "lat": 33.7756,
         "lng": -84.2568,
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "website": f"{APM_BASE}/Home",
     },
@@ -222,7 +222,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30038",
         "lat": 33.6938,
         "lng": -84.0856,
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "website": f"{APM_BASE}/Home",
     },
@@ -236,7 +236,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30058",
         "lat": 33.7234,
         "lng": -84.0843,
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "website": f"{APM_BASE}/Home",
     },
@@ -250,7 +250,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30316",
         "lat": 33.7128,
         "lng": -84.2990,
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "website": f"{APM_BASE}/Home",
     },
@@ -264,7 +264,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30021",
         "lat": 33.8189,
         "lng": -84.2340,
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "website": f"{APM_BASE}/Home",
     },
@@ -278,7 +278,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30021",
         "lat": 33.8147,
         "lng": -84.2391,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": f"{APM_BASE}/Home",
     },
@@ -292,7 +292,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30084",
         "lat": 33.8573,
         "lng": -84.2275,
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "website": f"{APM_BASE}/Home",
     },
@@ -306,7 +306,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30306",
         "lat": 33.8044,
         "lng": -84.3365,
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "website": f"{APM_BASE}/Home",
     },
@@ -320,7 +320,7 @@ REC_CENTER_VENUES: dict[str, dict] = {
         "zip": "30035",
         "lat": 33.7580,
         "lng": -84.2433,
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "website": f"{APM_BASE}/Home",
     },
@@ -543,14 +543,14 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
     if not slug or slug == GENERIC_VENUE["slug"]:
         return None
 
-    venue_type = str(place_data.get("venue_type") or "").strip().lower()
+    venue_type = str(place_data.get("place_type") or place_data.get("venue_type") or "").strip().lower()
     envelope = TypedEntityEnvelope()
 
     if venue_type in {"recreation", "community_center"}:
         envelope.add(
             "destination_details",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "destination_type": "community_recreation_center",
                 "commitment_tier": "halfday",
                 "primary_activity": "family recreation center visit",
@@ -565,7 +565,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
                 "source_url": ACTIVITY_SEARCH_URL,
                 "metadata": {
                     "source_type": "family_destination_enrichment",
-                    "venue_type": venue_type,
+                    "place_type": venue_type,
                     "county": "dekalb",
                 },
             },
@@ -573,7 +573,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "indoor-family-recreation-space",
                 "title": "Indoor family recreation space",
                 "feature_type": "amenity",
@@ -587,7 +587,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "family-classes-and-seasonal-camps",
                 "title": "Family classes and seasonal camps",
                 "feature_type": "experience",
@@ -604,7 +604,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
         envelope.add(
             "destination_details",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "destination_type": "park",
                 "commitment_tier": "halfday",
                 "primary_activity": "family park visit",
@@ -619,7 +619,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
                 "source_url": ACTIVITY_SEARCH_URL,
                 "metadata": {
                     "source_type": "family_destination_enrichment",
-                    "venue_type": venue_type,
+                    "place_type": venue_type,
                     "county": "dekalb",
                 },
             },
@@ -627,7 +627,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "free-outdoor-play-space",
                 "title": "Free outdoor play space",
                 "feature_type": "amenity",
@@ -912,7 +912,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record: dict = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": name,
                     "description": description,
                     "start_date": start_raw or today.strftime("%Y-%m-%d"),

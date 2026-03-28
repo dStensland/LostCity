@@ -43,7 +43,7 @@ PLACE_DATA = {
     "zip": "30030",
     "lat": 33.7714,
     "lng": -84.2969,
-    "venue_type": "studio",
+    "place_type": "studio",
     "spot_type": "studio",
     "website": "https://www.mudfire.com",
     "vibes": ["artsy", "all-ages", "family-friendly", "casual"],
@@ -441,7 +441,7 @@ def _parse_acuity_sessions(
                     events.append(
                         {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": session_class_name or "Pottery Class at MudFire",
                             "description": session_desc,
                             "start_date": current_date,
@@ -655,7 +655,7 @@ def crawl_camps(page: Page, venue_id: int, source_id: int) -> tuple[int, int, in
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": camp_description
             + (f" {age_range} welcome." if age_range else ""),
@@ -794,7 +794,7 @@ def crawl_member_classes(
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description
                         or (

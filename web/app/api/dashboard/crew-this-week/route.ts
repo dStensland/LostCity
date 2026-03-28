@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       status,
       created_at,
       event:events!event_rsvps_event_id_fkey(
-        id, title, start_date, venue:venues(name)
+        id, title, start_date, venue:places(name)
       ),
       user:profiles!event_rsvps_user_id_fkey(
         id, username, display_name, avatar_url

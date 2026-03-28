@@ -44,14 +44,14 @@ type TrackVenueRow = {
     short_description: string | null;
     image_url: string | null;
     hero_image_url: string | null;
-    venue_type: string | null;
+    place_type: string | null;
     data_quality: number | null;
   } | null;
 };
 
 type TipRow = {
   id: number;
-  venue_id: number;
+  place_id: number;
   content: string;
   upvote_count: number;
   is_verified_visitor: boolean;
@@ -60,7 +60,7 @@ type TipRow = {
 
 type EventRow = {
   id: number;
-  venue_id: number;
+  place_id: number;
   title: string;
   start_date: string;
   start_time: string | null;
@@ -73,7 +73,7 @@ type EventRow = {
 
 type HighlightRow = {
   id: number;
-  venue_id: number;
+  place_id: number;
   highlight_type: string;
   title: string;
   description: string | null;
@@ -94,7 +94,7 @@ function dedupeTrackHighlights(rows: HighlightRow[]): HighlightRow[] {
   for (const row of rows) {
     const normalizedTitle = normalizeHighlightText(row.title);
     const normalizedDescription = normalizeHighlightText(row.description);
-    const fingerprint = `${row.venue_id}|${normalizedTitle}|${normalizedDescription}`;
+    const fingerprint = `${row.place_id}|${normalizedTitle}|${normalizedDescription}`;
 
     if (seen.has(fingerprint)) continue;
     seen.add(fingerprint);
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         is_featured,
         upvote_count,
         sort_order,
-        venues (
+        places (
           id,
           name,
           slug,
@@ -156,7 +156,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           short_description,
           image_url,
           hero_image_url,
-          venue_type,
+          place_type,
           data_quality
         )
       `)
@@ -197,8 +197,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // Fetch top tip for each venue (approved only)
     const { data: rawTips } = await supabase
       .from("explore_tips")
-      .select("id, venue_id, content, upvote_count, is_verified_visitor, created_at")
-      .in("venue_id", venueIds)
+      .select("id, place_id, content, upvote_count, is_verified_visitor, created_at")
+      .in("place_id", venueIds)
       .eq("status", "approved")
       .order("upvote_count", { ascending: false })
       .order("created_at", { ascending: false });
@@ -209,8 +209,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const topTipByVenue = new Map<number, TipRow>();
     if (tips) {
       for (const tip of tips) {
-        if (!topTipByVenue.has(tip.venue_id)) {
-          topTipByVenue.set(tip.venue_id, tip);
+        if (!topTipByVenue.has(tip.place_id)) {
+          topTipByVenue.set(tip.place_id, tip);
         }
       }
     }
@@ -222,8 +222,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     let trackEventsQuery = supabase
       .from("events")
-      .select("id, venue_id, title, start_date, start_time, end_time, category_id, is_free, price_min, price_max")
-      .in("venue_id", venueIds)
+      .select("id, place_id, title, start_date, start_time, end_time, category_id, is_free, price_min, price_max")
+      .in("place_id", venueIds)
       .gte("start_date", today)
       .lte("start_date", futureDateStr)
       .is("canonical_event_id", null)
@@ -242,10 +242,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const eventsByVenue = new Map<number, EventRow[]>();
     if (allEvents) {
       for (const ev of allEvents) {
-        const list = eventsByVenue.get(ev.venue_id) ?? [];
+        const list = eventsByVenue.get(ev.place_id) ?? [];
         if (list.length < 3) {
           list.push(ev);
-          eventsByVenue.set(ev.venue_id, list);
+          eventsByVenue.set(ev.place_id, list);
         }
       }
     }
@@ -253,8 +253,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // Fetch venue highlights
     const { data: rawHighlights } = await supabase
       .from("venue_highlights")
-      .select("id, venue_id, highlight_type, title, description, sort_order")
-      .in("venue_id", venueIds)
+      .select("id, place_id, highlight_type, title, description, sort_order")
+      .in("place_id", venueIds)
       .order("sort_order", { ascending: true });
 
     const allHighlights = dedupeTrackHighlights(
@@ -264,9 +264,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // Group highlights by venue
     const highlightsByVenue = new Map<number, HighlightRow[]>();
     for (const h of allHighlights) {
-      const list = highlightsByVenue.get(h.venue_id) ?? [];
+      const list = highlightsByVenue.get(h.place_id) ?? [];
       list.push(h);
-      highlightsByVenue.set(h.venue_id, list);
+      highlightsByVenue.set(h.place_id, list);
     }
 
     // Track-level aggregates
@@ -300,7 +300,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         short_description: string | null;
         image_url: string | null;
         hero_image_url: string | null;
-        venue_type: string | null;
+        place_type: string | null;
       } | null;
 
       if (!venue) return null;

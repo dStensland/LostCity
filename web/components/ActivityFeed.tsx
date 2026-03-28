@@ -119,9 +119,9 @@ export default function ActivityFeed({ limit = 20, className = "" }: ActivityFee
             ),
             event:events(
               id, title, start_date,
-              venue:venues(name)
+              venue:places(name)
             ),
-            venue:venues(id, name, slug, neighborhood),
+            venue:places(id, name, slug, neighborhood),
             target_user:profiles!activities_target_user_id_fkey(
               id, username, display_name
             )

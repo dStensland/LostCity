@@ -25,7 +25,7 @@ PLACE_DATA = {
     "zip": "30307",
     "lat": 33.7594,
     "lng": -84.3535,
-    "venue_type": "neighborhood",
+    "place_type": "neighborhood",
     "spot_type": "park",
     "website": BASE_URL,
 }
@@ -81,7 +81,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": "Atlanta's oldest neighborhood festival featuring arts and crafts, parade, Tour of Homes, live music, food, and more in historic Inman Park.",
         "start_date": start_date.strftime("%Y-%m-%d"),

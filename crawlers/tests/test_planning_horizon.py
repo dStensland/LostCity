@@ -23,7 +23,7 @@ def _base_existing(overrides: Optional[dict] = None) -> dict:
         "id": 42,
         "title": "Test Event",
         "source_id": 10,
-        "venue_id": 99,
+        "place_id": 99,
         "start_date": "2026-04-01",
         "start_time": "20:00",
         "category_id": "music",
@@ -58,7 +58,7 @@ def _base_incoming(overrides: Optional[dict] = None) -> dict:
     """Minimal incoming-event dict for smart_update_existing_event."""
     base = {
         "source_id": 10,
-        "venue_id": 99,
+        "place_id": 99,
         "title": "Test Event",
         "start_date": "2026-04-01",
         "start_time": "20:00",
@@ -277,7 +277,7 @@ class TestMaybeInferImportance:
         return mock_client
 
     def test_upgrades_to_major_for_high_capacity_venue(self):
-        event_data = {"venue_id": 10, "importance": "standard", "category": "music"}
+        event_data = {"place_id": 10, "importance": "standard", "category": "music"}
         venue = {"id": 10, "capacity_tier": 5}
         mock_client = self._call(event_data, venue)
 
@@ -286,7 +286,7 @@ class TestMaybeInferImportance:
         update_call.assert_called_once_with({"importance": "major"})
 
     def test_no_upgrade_for_low_capacity_venue(self):
-        event_data = {"venue_id": 10, "importance": "standard"}
+        event_data = {"place_id": 10, "importance": "standard"}
         venue = {"id": 10, "capacity_tier": 2}
         mock_client = self._call(event_data, venue)
 
@@ -294,7 +294,7 @@ class TestMaybeInferImportance:
 
     def test_flagship_event_skipped_early(self):
         """Already-flagship events must not be touched at all."""
-        event_data = {"venue_id": 10, "importance": "flagship"}
+        event_data = {"place_id": 10, "importance": "flagship"}
         venue = {"id": 10, "capacity_tier": 5}
         mock_client = self._call(event_data, venue)
 
@@ -302,7 +302,7 @@ class TestMaybeInferImportance:
 
     def test_major_event_skipped_early(self):
         """Already-major events must not be touched at all."""
-        event_data = {"venue_id": 10, "importance": "major"}
+        event_data = {"place_id": 10, "importance": "major"}
         venue = {"id": 10, "capacity_tier": 5}
         mock_client = self._call(event_data, venue)
 
@@ -317,14 +317,14 @@ class TestMaybeInferImportance:
 
     def test_venue_not_found_skips_upgrade(self):
         """If venue lookup returns None, no upgrade should occur."""
-        event_data = {"venue_id": 10, "importance": "standard"}
+        event_data = {"place_id": 10, "importance": "standard"}
         mock_client = self._call(event_data, venue=None)
 
         mock_client.table.return_value.update.assert_not_called()
 
     def test_capacity_tier_exactly_4_triggers_upgrade(self):
         """Boundary: tier >= 4 should upgrade."""
-        event_data = {"venue_id": 10, "importance": "standard", "category": "music"}
+        event_data = {"place_id": 10, "importance": "standard", "category": "music"}
         venue = {"id": 10, "capacity_tier": 4}
         mock_client = self._call(event_data, venue)
 
@@ -334,7 +334,7 @@ class TestMaybeInferImportance:
 
     def test_writes_disabled_returns_early(self):
         """When writes are disabled the function must be a no-op."""
-        event_data = {"venue_id": 10, "importance": "standard"}
+        event_data = {"place_id": 10, "importance": "standard"}
         venue = {"id": 10, "capacity_tier": 5}
         mock_client = self._call(event_data, venue, writes=False)
 

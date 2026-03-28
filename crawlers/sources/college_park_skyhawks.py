@@ -36,7 +36,7 @@ PLACE_DATA = {
     "zip": "30337",
     "lat": 33.6624,
     "lng": -84.4440,
-    "venue_type": "arena",
+    "place_type": "arena",
     "spot_type": "stadium",
     "website": "https://gatewaycenterarena.com",
     "description": "Home venue for the College Park Skyhawks in College Park.",
@@ -130,7 +130,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,

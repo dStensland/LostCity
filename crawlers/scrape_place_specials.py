@@ -1887,7 +1887,7 @@ def upsert_event_items(venue: dict, event_items: list[dict], dry_run: bool = Fal
 
                 event_data = {
                     "title": title,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "source_id": source_id,
                     "start_date": date_str,
                     "start_time": time_start,
@@ -2458,7 +2458,7 @@ def upsert_results(
         stats["venue_updated"] = True
 
     if not dry_run:
-        client.table("venues").update(updates).eq("id", venue_id).execute()
+        client.table("places").update(updates).eq("id", venue_id).execute()
 
     # --- Upsert specials ---
     if not skip_specials:
@@ -2472,7 +2472,7 @@ def upsert_results(
 
         if not dry_run and specials:
             # Delete existing recurring specials for this venue (start_date IS NULL)
-            client.table("venue_specials").delete().eq("venue_id", venue_id).is_("start_date", "null").execute()
+            client.table("place_specials").delete().eq("place_id", venue_id).is_("start_date", "null").execute()
 
         for special in specials:
             # Days are already parsed as ints by validate_specials
@@ -2483,7 +2483,7 @@ def upsert_results(
                 days = parse_days(days) if days else None
 
             row = {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": special["title"],
                 "type": special.get("type", "daily_special"),
                 "description": special.get("description"),
@@ -2498,7 +2498,7 @@ def upsert_results(
             }
 
             if not dry_run:
-                client.table("venue_specials").insert(row).execute()
+                client.table("place_specials").insert(row).execute()
 
             stats["specials_added"] += 1
 
@@ -2525,7 +2525,7 @@ def get_venues(
     client = get_client()
 
     query = (
-        client.table("venues")
+        client.table("places")
         .select("id, name, slug, website, venue_type, description, short_description, "
                "image_url, lat, lng, hours, menu_url, reservation_url, instagram, "
                "facebook_url, phone, price_level, vibes, cuisine, service_style, "
@@ -2539,7 +2539,7 @@ def get_venues(
     if venue_ids:
         query = query.in_("id", venue_ids)
     elif venue_type:
-        query = query.eq("venue_type", venue_type)
+        query = query.eq("place_type", venue_type)
 
     result = query.order("name").limit(5000).execute()
     venues = result.data or []
@@ -2697,7 +2697,7 @@ def main():
                 slug = venue.get("slug") or f"venue-{venue['id']}"
                 dump_file = dump_dir / f"{slug}.json"
                 dump_file.write_text(json.dumps({
-                    "venue_id": venue["id"],
+                    "place_id": venue["id"],
                     "venue_slug": slug,
                     "venue_name": venue["name"],
                     "website": venue.get("website"),

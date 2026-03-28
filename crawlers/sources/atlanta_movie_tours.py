@@ -34,7 +34,7 @@ PLACE_DATA = {
     "zip": "30313",
     "lat": 33.7480,
     "lng": -84.3980,
-    "venue_type": "attraction",
+    "place_type": "attraction",
     "spot_type": "attraction",
     "website": HOMEPAGE,
     # Tours run on a published schedule — check website for current times
@@ -114,7 +114,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning("Atlanta Movie Tours: venue update failed: %s", exc)
 

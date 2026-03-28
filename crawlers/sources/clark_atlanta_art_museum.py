@@ -30,7 +30,7 @@ PLACE_DATA = {
     "zip": "30314",
     "lat": 33.7517,
     "lng": -84.4123,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": "https://www.cau.edu/art-museum/",
     # Description populated dynamically at crawl time from og:description.
@@ -233,7 +233,7 @@ def build_exhibition_lane_record(
     raw_start, raw_end = parse_exhibition_date(exhibition_data["date_text"])
     record = {
         "title": exhibition_data["title"].rstrip(":").strip(),
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "source_id": source_id,
         "_venue_name": PLACE_DATA["name"],
         "opening_date": raw_start,

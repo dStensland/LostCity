@@ -29,7 +29,7 @@ PLACE_DATA = {
     "slug": "404-found-atl",
     "city": "Atlanta",
     "state": "GA",
-    "venue_type": "gallery",
+    "place_type": "gallery",
     "website": BASE_URL,
 }
 
@@ -247,7 +247,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             'source_id': source_id,
-                            'venue_id': venue_id,
+                            'place_id': venue_id,
                             'producer_id': producer_id,
                             'title': title[:500],
                             'description': description,
@@ -284,7 +284,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     try:
                         exhibition_record = {
                             "title": title,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "source_id": source_id,
                             "_venue_name": PLACE_DATA["name"],
                             "opening_date": start_date,
@@ -330,7 +330,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             'source_id': source_id,
-                            'venue_id': venue_id,
+                            'place_id': venue_id,
                             'producer_id': producer_id,
                             'title': reception_title[:500],
                             'description': description,

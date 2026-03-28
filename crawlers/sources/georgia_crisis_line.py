@@ -42,7 +42,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7573,
     "lng": -84.3891,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "community_center",
     "website": BASE_URL,
     "vibes": ["inclusive"],

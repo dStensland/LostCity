@@ -27,7 +27,7 @@ NEW_RESTAURANTS = [
         "zip": "30306",
         "lat": 33.7718,
         "lng": -84.3578,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://8armatl.com",
     },
     {
@@ -40,7 +40,7 @@ NEW_RESTAURANTS = [
         "zip": "30318",
         "lat": 33.7825,
         "lng": -84.4078,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://theoptimistrestaurant.com",
     },
     {
@@ -53,7 +53,7 @@ NEW_RESTAURANTS = [
         "zip": "30318",
         "lat": 33.7868,
         "lng": -84.4098,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://springatl.com",
     },
     {
@@ -66,7 +66,7 @@ NEW_RESTAURANTS = [
         "zip": "30306",
         "lat": 33.7728,
         "lng": -84.3528,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://tinylous.com",
     },
     {
@@ -79,7 +79,7 @@ NEW_RESTAURANTS = [
         "zip": "30305",
         "lat": 33.8418,
         "lng": -84.3698,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://buckheadrestaurants.com/kyma",
     },
     {
@@ -92,7 +92,7 @@ NEW_RESTAURANTS = [
         "zip": "30318",
         "lat": 33.7865,
         "lng": -84.4048,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://cooksandsoldiers.com",
     },
     {
@@ -105,7 +105,7 @@ NEW_RESTAURANTS = [
         "zip": "30329",
         "lat": 33.8128,
         "lng": -84.3258,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://thegeneralmuir.com",
     },
     {
@@ -118,7 +118,7 @@ NEW_RESTAURANTS = [
         "zip": "30307",
         "lat": 33.7668,
         "lng": -84.3358,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://wesukisuki.com",
     },
     {
@@ -131,7 +131,7 @@ NEW_RESTAURANTS = [
         "zip": "30306",
         "lat": 33.7758,
         "lng": -84.3498,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://lylalila.com",
     },
     {
@@ -144,7 +144,7 @@ NEW_RESTAURANTS = [
         "zip": "30339",
         "lat": 33.8618,
         "lng": -84.4578,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://canoeatl.com",
     },
     {
@@ -157,7 +157,7 @@ NEW_RESTAURANTS = [
         "zip": "30318",
         "lat": 33.7898,
         "lng": -84.4108,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://jctkitchen.com",
     },
     {
@@ -170,7 +170,7 @@ NEW_RESTAURANTS = [
         "zip": "30306",
         "lat": 33.7898,
         "lng": -84.3508,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://themercuryatl.com",
     },
     {
@@ -183,7 +183,7 @@ NEW_RESTAURANTS = [
         "zip": "30306",
         "lat": 33.7858,
         "lng": -84.3538,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://murphys-atlanta.com",
     },
     {
@@ -196,7 +196,7 @@ NEW_RESTAURANTS = [
         "zip": "30307",
         "lat": 33.7658,
         "lng": -84.3378,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://foxbrosbbq.com",
     },
     {
@@ -209,7 +209,7 @@ NEW_RESTAURANTS = [
         "zip": "30305",
         "lat": 33.8438,
         "lng": -84.3668,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://bonesrestaurant.com",
     },
     {
@@ -222,7 +222,7 @@ NEW_RESTAURANTS = [
         "zip": "30326",
         "lat": 33.8528,
         "lng": -84.3618,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://stceciliaatl.com",
     },
     {
@@ -235,7 +235,7 @@ NEW_RESTAURANTS = [
         "zip": "30318",
         "lat": 33.7888,
         "lng": -84.4098,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://marcelatl.com",
     },
     {
@@ -248,7 +248,7 @@ NEW_RESTAURANTS = [
         "zip": "30096",
         "lat": 33.9658,
         "lng": -84.1458,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://snackboxe.com",
     },
     {
@@ -261,7 +261,7 @@ NEW_RESTAURANTS = [
         "zip": "30305",
         "lat": 33.8408,
         "lng": -84.3788,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://lecolonialatlanta.com",
     },
     {
@@ -274,7 +274,7 @@ NEW_RESTAURANTS = [
         "zip": "30307",
         "lat": 33.7581,
         "lng": -84.3636,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://superica.com",
     },
     {
@@ -287,7 +287,7 @@ NEW_RESTAURANTS = [
         "zip": "30305",
         "lat": 33.8392,
         "lng": -84.3798,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://granaatlanta.com",
     },
     {
@@ -300,7 +300,7 @@ NEW_RESTAURANTS = [
         "zip": "30309",
         "lat": 33.7858,
         "lng": -84.3848,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://southcitykitchen.com",
     },
     {
@@ -313,7 +313,7 @@ NEW_RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7718,
         "lng": -84.2648,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://wafflehouse.com",
     },
 ]
@@ -330,7 +330,7 @@ BRUNCH_SPOTS = [
         "zip": "30307",
         "lat": 33.7658,
         "lng": -84.3388,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://flyingbiscuit.com",
     },
     {
@@ -343,7 +343,7 @@ BRUNCH_SPOTS = [
         "zip": "30317",
         "lat": 33.7568,
         "lng": -84.3228,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://suninmybelly.com",
     },
     {
@@ -356,7 +356,7 @@ BRUNCH_SPOTS = [
         "zip": "30316",
         "lat": 33.7498,
         "lng": -84.3518,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://homegrownga.com",
     },
     {
@@ -369,7 +369,7 @@ BRUNCH_SPOTS = [
         "zip": "30307",
         "lat": 33.7658,
         "lng": -84.3558,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://folk-art-restaurant.com",
     },
     {
@@ -382,7 +382,7 @@ BRUNCH_SPOTS = [
         "zip": "30318",
         "lat": 33.7868,
         "lng": -84.4098,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://westeggcafe.com",
     },
     {
@@ -395,7 +395,7 @@ BRUNCH_SPOTS = [
         "zip": "30342",
         "lat": 33.8658,
         "lng": -84.3658,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://buttermilkkitchen.com",
     },
     {
@@ -408,7 +408,7 @@ BRUNCH_SPOTS = [
         "zip": "30312",
         "lat": 33.7618,
         "lng": -84.3598,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://highlandbakery.com",
     },
     {
@@ -421,7 +421,7 @@ BRUNCH_SPOTS = [
         "zip": "30312",
         "lat": 33.7458,
         "lng": -84.3708,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -434,7 +434,7 @@ BRUNCH_SPOTS = [
         "zip": "30324",
         "lat": 33.8458,
         "lng": -84.3558,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://toastonlenox.com",
     },
     {
@@ -447,7 +447,7 @@ BRUNCH_SPOTS = [
         "zip": "30307",
         "lat": 33.7618,
         "lng": -84.3528,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://bread-and-butterfly.com",
     },
 ]
@@ -464,7 +464,7 @@ LATE_NIGHT = [
         "zip": "30308",
         "lat": 33.7718,
         "lng": -84.3888,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://thevarsity.com",
     },
     {
@@ -477,7 +477,7 @@ LATE_NIGHT = [
         "zip": "30307",
         "lat": 33.7658,
         "lng": -84.3498,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -490,7 +490,7 @@ LATE_NIGHT = [
         "zip": "30308",
         "lat": 33.7708,
         "lng": -84.3608,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -503,7 +503,7 @@ LATE_NIGHT = [
         "zip": "30307",
         "lat": 33.7648,
         "lng": -84.3488,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://thevortexatl.com",
     },
     {
@@ -516,7 +516,7 @@ LATE_NIGHT = [
         "zip": "30309",
         "lat": 33.7788,
         "lng": -84.3838,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://thevortexatl.com",
     },
     {
@@ -529,7 +529,7 @@ LATE_NIGHT = [
         "zip": "30318",
         "lat": 33.7898,
         "lng": -84.4108,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://taqueriadelsol.com",
     },
     {
@@ -542,7 +542,7 @@ LATE_NIGHT = [
         "zip": "30309",
         "lat": 33.8018,
         "lng": -84.3858,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://rthomasdeluxegrill.net",
     },
     {
@@ -555,7 +555,7 @@ LATE_NIGHT = [
         "zip": "30318",
         "lat": 33.7818,
         "lng": -84.4028,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://sublimedoughnuts.com",
     },
 ]
@@ -572,7 +572,7 @@ NEIGHBORHOOD_BARS = [
         "zip": "30306",
         "lat": 33.7698,
         "lng": -84.3558,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://manuelstavern.com",
     },
     {
@@ -585,7 +585,7 @@ NEIGHBORHOOD_BARS = [
         "zip": "30306",
         "lat": 33.7828,
         "lng": -84.3528,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -598,7 +598,7 @@ NEIGHBORHOOD_BARS = [
         "zip": "30306",
         "lat": 33.7858,
         "lng": -84.3518,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -611,7 +611,7 @@ NEIGHBORHOOD_BARS = [
         "zip": "30306",
         "lat": 33.7868,
         "lng": -84.3518,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://thealbertatlanta.com",
     },
     {
@@ -624,7 +624,7 @@ NEIGHBORHOOD_BARS = [
         "zip": "30316",
         "lat": 33.7298,
         "lng": -84.3398,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -637,7 +637,7 @@ NEIGHBORHOOD_BARS = [
         "zip": "30307",
         "lat": 33.7628,
         "lng": -84.3478,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -650,7 +650,7 @@ NEIGHBORHOOD_BARS = [
         "zip": "30030",
         "lat": 33.7738,
         "lng": -84.2928,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://vfrg.com/victory",
     },
     {
@@ -663,7 +663,7 @@ NEIGHBORHOOD_BARS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2935,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://leonsfullservice.com",
     },
     {
@@ -676,7 +676,7 @@ NEIGHBORHOOD_BARS = [
         "zip": "30030",
         "lat": 33.7745,
         "lng": -84.2948,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://bfrg.com/brickstorepub",
     },
     {
@@ -689,7 +689,7 @@ NEIGHBORHOOD_BARS = [
         "zip": "30030",
         "lat": 33.7738,
         "lng": -84.2928,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://sostikibar.com",
     },
     {
@@ -702,7 +702,7 @@ NEIGHBORHOOD_BARS = [
         "zip": "30030",
         "lat": 33.7728,
         "lng": -84.2918,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -715,7 +715,7 @@ NEIGHBORHOOD_BARS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2978,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://pinewooddecatur.com",
     },
     {
@@ -728,7 +728,7 @@ NEIGHBORHOOD_BARS = [
         "zip": "30307",
         "lat": 33.7638,
         "lng": -84.3488,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -741,7 +741,7 @@ NEIGHBORHOOD_BARS = [
         "zip": "30313",
         "lat": 33.7518,
         "lng": -84.4028,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -754,7 +754,7 @@ NEIGHBORHOOD_BARS = [
         "zip": "30318",
         "lat": 33.7838,
         "lng": -84.4068,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://northsidetavern.com",
     },
 ]
@@ -771,7 +771,7 @@ COCKTAIL_BARS = [
         "zip": "30030",
         "lat": 33.7738,
         "lng": -84.2928,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://paperplanebar.com",
     },
     {
@@ -784,7 +784,7 @@ COCKTAIL_BARS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2958,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://theiberianpigatl.com",
     },
     {
@@ -797,7 +797,7 @@ COCKTAIL_BARS = [
         "zip": "30307",
         "lat": 33.7581,
         "lng": -84.3636,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://watchmans.com",
     },
     {
@@ -810,7 +810,7 @@ COCKTAIL_BARS = [
         "zip": "30305",
         "lat": 33.8408,
         "lng": -84.3778,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://kinganddukeatl.com",
     },
     {
@@ -823,7 +823,7 @@ COCKTAIL_BARS = [
         "zip": "30303",
         "lat": 33.7598,
         "lng": -84.3858,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://redphonebooth.com",
     },
     {
@@ -836,7 +836,7 @@ COCKTAIL_BARS = [
         "zip": "30305",
         "lat": 33.8388,
         "lng": -84.3728,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -849,7 +849,7 @@ COCKTAIL_BARS = [
         "zip": "30305",
         "lat": 33.8398,
         "lng": -84.3778,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://himitsuatl.com",
     },
     {
@@ -862,7 +862,7 @@ COCKTAIL_BARS = [
         "zip": "30342",
         "lat": 33.8578,
         "lng": -84.3648,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
 ]
@@ -879,7 +879,7 @@ WINE_BARS = [
         "zip": "30307",
         "lat": 33.7598,
         "lng": -84.3548,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://barcelonawinebar.com",
     },
     {
@@ -892,7 +892,7 @@ WINE_BARS = [
         "zip": "30306",
         "lat": 33.7768,
         "lng": -84.3558,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://corkagewinebar.com",
     },
     {
@@ -905,7 +905,7 @@ WINE_BARS = [
         "zip": "30338",
         "lat": 33.9188,
         "lng": -84.3118,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://vinovenue.com",
     },
 ]

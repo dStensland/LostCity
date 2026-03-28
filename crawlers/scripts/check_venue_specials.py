@@ -12,7 +12,7 @@ supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_
 print("\n=== VENUE_SPECIALS TABLE DATA ===\n")
 
 # Count total records
-result = supabase.table('venue_specials').select('*', count='exact').execute()
+result = supabase.table('place_specials').select('*', count='exact').execute()
 print(f"Total venue_specials records: {result.count}\n")
 
 if result.data:
@@ -29,7 +29,7 @@ if result.data:
         print(f"  Source: {special.get('source_url')}")
         
         # Get venue name
-        venue = supabase.table('venues').select('name').eq('id', special['venue_id']).single().execute()
+        venue = supabase.table('places').select('name').eq('id', special['venue_id']).single().execute()
         if venue.data:
             print(f"  Venue Name: {venue.data['name']}")
 else:
@@ -39,7 +39,7 @@ else:
 print("\n\n=== SPECIALS BY TYPE ===\n")
 types = ['happy_hour', 'daily_special', 'recurring_deal', 'exhibit', 'seasonal_menu', 'brunch', 'event_night']
 for stype in types:
-    result = supabase.table('venue_specials').select('id', count='exact').eq('type', stype).execute()
+    result = supabase.table('place_specials').select('id', count='exact').eq('type', stype).execute()
     print(f"{stype:20} : {result.count or 0} records")
 
 print("\n")

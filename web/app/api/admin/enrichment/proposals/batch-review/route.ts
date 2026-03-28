@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     try {
       // Snapshot
       const { data: venue } = await serviceClient
-        .from("venues")
+        .from("places")
         .select(p.field_name)
         .eq("id", p.venue_id)
         .maybeSingle();
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
       // Apply
       await serviceClient
-        .from("venues")
+        .from("places")
         .update({ [p.field_name]: parsedValue } as never)
         .eq("id", p.venue_id);
 

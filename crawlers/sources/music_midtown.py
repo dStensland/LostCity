@@ -26,7 +26,7 @@ PLACE_DATA = {
     "zip": "30306",
     "lat": 33.7879,
     "lng": -84.3732,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "festival_grounds",
     "website": BASE_URL,
     "description": "Piedmont Park hosts Music Midtown, Atlanta's premier music festival.",
@@ -66,7 +66,7 @@ def create_music_midtown(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash_sat):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title_sat,
             "description": (
                 "Day 1 of Music Midtown, Atlanta's premier multi-genre music festival in Piedmont Park. "
@@ -112,7 +112,7 @@ def create_music_midtown(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash_sun):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title_sun,
             "description": (
                 "Day 2 of Music Midtown, Atlanta's premier multi-genre music festival in Piedmont Park. "

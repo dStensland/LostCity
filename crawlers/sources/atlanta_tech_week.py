@@ -25,7 +25,7 @@ PLACE_DATA = {
     "zip": "30305",
     "lat": 33.8508,
     "lng": -84.3669,
-    "venue_type": "coworking",
+    "place_type": "coworking",
     "spot_type": "coworking",
     "website": "https://www.atlantatechvillage.com",
 }
@@ -77,7 +77,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": "A week-long celebration of Atlanta's thriving tech ecosystem featuring 100+ events, networking, demos, and conversations about innovation.",
         "start_date": start_date.strftime("%Y-%m-%d"),

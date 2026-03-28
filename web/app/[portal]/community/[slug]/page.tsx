@@ -98,7 +98,7 @@ const getOrganizationEvents = unstable_cache(
       .from("events")
       .select(`
         *,
-        venue:venues(id, name, slug, address, neighborhood, city, state)
+        venue:places(id, name, slug, address, neighborhood, city, state)
       `)
       .eq("organization_id", organizationId)
       .gte("start_date", today)

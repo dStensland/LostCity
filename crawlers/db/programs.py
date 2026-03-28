@@ -258,9 +258,9 @@ def find_program_by_identity(
     client = get_client()
     query = (
         client.table("programs")
-        .select("id, name, venue_id, session_start, updated_at")
+        .select("id, name, place_id, session_start, updated_at")
         .eq("name", name)
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("session_start", session_start)
         .limit(1)
     )
@@ -277,7 +277,7 @@ def find_program_by_identity(
 # ---------------------------------------------------------------------------
 
 _PROGRAM_COLUMNS = {
-    "portal_id", "source_id", "venue_id", "name", "slug", "description",
+    "portal_id", "source_id", "place_id", "name", "slug", "description",
     "program_type", "provider_name", "age_min", "age_max", "season",
     "session_start", "session_end", "schedule_days", "schedule_start_time",
     "schedule_end_time", "cost_amount", "cost_period", "cost_notes",
@@ -306,10 +306,15 @@ def insert_program(program_data: dict) -> Optional[str]:
         logger.warning("Skipping program with empty name")
         return None
 
-    venue_id = program_data.get("venue_id")
+    venue_id = program_data.get("place_id") or program_data.get("venue_id")
     if not venue_id:
-        logger.warning("Skipping program %r — no venue_id", name)
+        logger.warning("Skipping program %r — no place_id", name)
         return None
+    # Normalize to place_id for DB insert
+    if "venue_id" in program_data and "place_id" not in program_data:
+        program_data["place_id"] = program_data.pop("venue_id")
+    elif "venue_id" in program_data:
+        program_data.pop("venue_id")
 
     program_type = program_data.get("program_type")
     if not program_type:

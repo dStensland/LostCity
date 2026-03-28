@@ -41,7 +41,7 @@ BRANCH_VENUES = {
         "city": "Snellville",
         "state": "GA",
         "zip": "30039",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "collins hill": {
         "name": "Collins Hill Library",
@@ -50,7 +50,7 @@ BRANCH_VENUES = {
         "city": "Lawrenceville",
         "state": "GA",
         "zip": "30043",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "dacula": {
         "name": "Dacula Library",
@@ -59,7 +59,7 @@ BRANCH_VENUES = {
         "city": "Dacula",
         "state": "GA",
         "zip": "30019",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "duluth": {
         "name": "Duluth Library",
@@ -68,7 +68,7 @@ BRANCH_VENUES = {
         "city": "Duluth",
         "state": "GA",
         "zip": "30096",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "five forks": {
         "name": "Five Forks Library",
@@ -77,7 +77,7 @@ BRANCH_VENUES = {
         "city": "Lawrenceville",
         "state": "GA",
         "zip": "30044",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "grayson": {
         "name": "Grayson Library",
@@ -86,7 +86,7 @@ BRANCH_VENUES = {
         "city": "Grayson",
         "state": "GA",
         "zip": "30017",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "hamilton mill": {
         "name": "Hamilton Mill Library",
@@ -95,7 +95,7 @@ BRANCH_VENUES = {
         "city": "Dacula",
         "state": "GA",
         "zip": "30019",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "lawrenceville": {
         "name": "Lawrenceville Library",
@@ -104,7 +104,7 @@ BRANCH_VENUES = {
         "city": "Lawrenceville",
         "state": "GA",
         "zip": "30046",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "lilburn": {
         "name": "Lilburn Library",
@@ -113,7 +113,7 @@ BRANCH_VENUES = {
         "city": "Lilburn",
         "state": "GA",
         "zip": "30047",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "mountain park": {
         "name": "Mountain Park Library",
@@ -122,7 +122,7 @@ BRANCH_VENUES = {
         "city": "Stone Mountain",
         "state": "GA",
         "zip": "30087",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "norcross": {
         "name": "Norcross Library",
@@ -131,7 +131,7 @@ BRANCH_VENUES = {
         "city": "Norcross",
         "state": "GA",
         "zip": "30071",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "peachtree corners": {
         "name": "Peachtree Corners Library",
@@ -140,7 +140,7 @@ BRANCH_VENUES = {
         "city": "Peachtree Corners",
         "state": "GA",
         "zip": "30092",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "pinckneyville": {
         "name": "Pinckneyville Library",
@@ -149,7 +149,7 @@ BRANCH_VENUES = {
         "city": "Norcross",
         "state": "GA",
         "zip": "30071",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "suwanee": {
         "name": "Suwanee Library",
@@ -158,14 +158,14 @@ BRANCH_VENUES = {
         "city": "Suwanee",
         "state": "GA",
         "zip": "30024",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "virtual": {
         "name": "Gwinnett County Public Library (Virtual)",
         "slug": "gwinnett-county-public-library-virtual",
         "city": "Lawrenceville",
         "state": "GA",
-        "venue_type": "library",
+        "place_type": "library",
     },
 }
 
@@ -174,7 +174,7 @@ DEFAULT_VENUE = {
     "slug": "gwinnett-county-public-library",
     "city": "Lawrenceville",
     "state": "GA",
-    "venue_type": "library",
+    "place_type": "library",
 }
 
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
@@ -193,7 +193,7 @@ def _build_branch_destination_envelope(venue_id: int, place_data: dict) -> Typed
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "library_branch",
             "commitment_tier": "hour",
             "primary_activity": "free indoor family library visit",
@@ -211,7 +211,7 @@ def _build_branch_destination_envelope(venue_id: int, place_data: dict) -> Typed
             "source_url": "https://www.gwinnettpl.org/locations/",
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "library",
+                "place_type": "library",
                 "branch_name": branch_name,
             },
         },
@@ -220,7 +220,7 @@ def _build_branch_destination_envelope(venue_id: int, place_data: dict) -> Typed
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "free-indoor-family-stop",
             "title": "Free indoor family stop",
             "feature_type": "amenity",
@@ -234,7 +234,7 @@ def _build_branch_destination_envelope(venue_id: int, place_data: dict) -> Typed
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "storytime-and-family-programs",
             "title": "Storytime and family programs",
             "feature_type": "experience",
@@ -550,7 +550,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description if description else None,
                 "start_date": start_date_str,

@@ -62,7 +62,7 @@ def main() -> None:
 
     for entry in CLOSED_VENUES:
         venues = (
-            client.table("venues")
+            client.table("places")
             .select("id,name,slug,active,description")
             .eq("slug", entry.slug)
             .limit(1)
@@ -84,7 +84,7 @@ def main() -> None:
         if venue_updates:
             print(f"[VENUE] {entry.slug} -> {venue_updates}")
             if args.apply:
-                client.table("venues").update(venue_updates).eq("id", venue["id"]).execute()
+                client.table("places").update(venue_updates).eq("id", venue["id"]).execute()
             updated_venues += 1
 
         if entry.source_slug:
@@ -105,7 +105,7 @@ def main() -> None:
             res = (
                 client.table("best_of_nominations")
                 .select("id,status")
-                .eq("venue_id", venue["id"])
+                .eq("place_id", venue["id"])
                 .eq("status", "approved")
                 .execute()
             ).data or []
@@ -114,7 +114,7 @@ def main() -> None:
                     f"[BEST_OF] reject {len(res)} approved nominations for `{entry.slug}`"
                 )
                 if args.apply:
-                    client.table("best_of_nominations").update({"status": "rejected"}).eq("venue_id", venue["id"]).eq("status", "approved").execute()
+                    client.table("best_of_nominations").update({"status": "rejected"}).eq("place_id", venue["id"]).eq("status", "approved").execute()
                 rejected_best_of += len(res)
 
     mode = "APPLY" if args.apply else "DRY-RUN"

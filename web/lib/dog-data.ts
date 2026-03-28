@@ -70,11 +70,11 @@ export type DogOrg = {
 const EVENT_SELECT = `
   id, title, start_date, start_time, end_date, end_time,
   is_all_day, is_free, price_min, price_max, category, image_url, tags, is_class,
-  venue:venues(id, name, neighborhood, slug)
+  venue:places(id, name, neighborhood, slug)
 `;
 
 const VENUE_SELECT = `
-  id, name, slug, address, neighborhood, venue_type, vibes,
+  id, name, slug, address, neighborhood, place_type, vibes,
   image_url, short_description, website, hours_display, lat, lng
 `;
 
@@ -153,7 +153,7 @@ export async function getDogWeekendEvents(limit = 10): Promise<DogEvent[]> {
 /** Get dog-friendly venues */
 export async function getDogVenues(): Promise<DogVenue[]> {
   const { data } = await supabase
-    .from("venues")
+    .from("places")
     .select(VENUE_SELECT)
     .contains("vibes", ["dog-friendly"])
     .eq("active", true)
@@ -165,7 +165,7 @@ export async function getDogVenues(): Promise<DogVenue[]> {
 /** Get dog-friendly venues with coordinates (for map view) */
 export async function getDogMapVenues(): Promise<DogVenue[]> {
   const { data } = await supabase
-    .from("venues")
+    .from("places")
     .select(VENUE_SELECT)
     .contains("vibes", ["dog-friendly"])
     .eq("active", true)
@@ -179,9 +179,9 @@ export async function getDogMapVenues(): Promise<DogVenue[]> {
 /** Get parks and outdoor spaces */
 export async function getDogParks(limit = 15): Promise<DogVenue[]> {
   const { data } = await supabase
-    .from("venues")
+    .from("places")
     .select(VENUE_SELECT)
-    .in("venue_type", PARK_TYPES)
+    .in("place_type", PARK_TYPES)
     .eq("active", true)
     .order("name")
     .limit(limit);
@@ -192,10 +192,10 @@ export async function getDogParks(limit = 15): Promise<DogVenue[]> {
 /** Get dog-friendly patios and restaurants */
 export async function getDogPatios(limit = 15): Promise<DogVenue[]> {
   const { data } = await supabase
-    .from("venues")
+    .from("places")
     .select(VENUE_SELECT)
     .contains("vibes", ["dog-friendly"])
-    .in("venue_type", PATIO_TYPES)
+    .in("place_type", PATIO_TYPES)
     .eq("active", true)
     .order("name")
     .limit(limit);
@@ -206,7 +206,7 @@ export async function getDogPatios(limit = 15): Promise<DogVenue[]> {
 /** Get trails and nature spots */
 export async function getDogTrails(limit = 10): Promise<DogVenue[]> {
   const { data } = await supabase
-    .from("venues")
+    .from("places")
     .select(VENUE_SELECT)
     .eq("active", true)
     .or(PARK_TYPES.map((t) => `venue_type.eq.${t}`).join(","))
@@ -226,7 +226,7 @@ export async function getDogOffLeashParks(
   filter?: string
 ): Promise<DogVenue[]> {
   let query = supabase
-    .from("venues")
+    .from("places")
     .select(VENUE_SELECT)
     .eq("active", true)
     .or(PARK_TYPES.map((t) => `venue_type.eq.${t}`).join(","))
@@ -244,7 +244,7 @@ export async function getDogOffLeashParks(
 /** Pup cup spots for the directory */
 export async function getDogPupCupSpots(): Promise<DogVenue[]> {
   const { data } = await supabase
-    .from("venues")
+    .from("places")
     .select(VENUE_SELECT)
     .eq("active", true)
     .overlaps("vibes", ["pup-cup", "dog-menu", "treats-available"])
@@ -283,10 +283,10 @@ export async function getDogAdoptionOrgs(): Promise<DogOrg[]> {
   // Fallback: also check venues that are shelters
   if (!data || data.length === 0) {
     const { data: venueOrgs } = await supabase
-      .from("venues")
+      .from("places")
       .select(VENUE_SELECT)
       .eq("active", true)
-      .in("venue_type", ["animal_shelter", "nonprofit_hq"])
+      .in("place_type", ["animal_shelter", "nonprofit_hq"])
       .overlaps("vibes", ["dog-friendly", "adoption"])
       .order("name");
 
@@ -346,15 +346,15 @@ export async function getDogServices(
   typeFilter?: string
 ): Promise<DogVenue[]> {
   let query = supabase
-    .from("venues")
+    .from("places")
     .select(VENUE_SELECT)
     .eq("active", true)
     .order("name");
 
   if (typeFilter && typeFilter !== "all") {
-    query = query.eq("venue_type", typeFilter);
+    query = query.eq("place_type", typeFilter);
   } else {
-    query = query.in("venue_type", SERVICE_TYPES);
+    query = query.in("place_type", SERVICE_TYPES);
   }
 
   const { data } = await query;

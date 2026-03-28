@@ -180,7 +180,7 @@ export async function GET(request: Request) {
               image_url,
               description,
               source_id,
-              venue:venues(id, name, slug, neighborhood)
+              venue:places(id, name, slug, neighborhood)
             `)
             .eq("is_tentpole", true)
             .eq("is_active", true)

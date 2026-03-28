@@ -191,12 +191,12 @@ def get_venues_needing_hydration(
     """Get venues that are missing data and haven't been processed yet."""
     client = get_client()
 
-    query = client.table("venues").select(
+    query = client.table("places").select(
         "id, name, slug, address, city, state, lat, lng, venue_type, hours, image_url, foursquare_id, website"
     ).eq("active", True).eq("city", "Atlanta")
 
     if venue_type:
-        query = query.eq("venue_type", venue_type)
+        query = query.eq("place_type", venue_type)
 
     # Skip venues that already have a foursquare_id (already processed)
     if skip_processed:
@@ -268,7 +268,7 @@ def update_venue_with_foursquare(venue_id: int, fsq_data: dict, dry_run: bool = 
         return True
 
     try:
-        client.table("venues").update(updates).eq("id", venue_id).execute()
+        client.table("places").update(updates).eq("id", venue_id).execute()
         return True
     except Exception as e:
         logger.error(f"    Update error: {e}")

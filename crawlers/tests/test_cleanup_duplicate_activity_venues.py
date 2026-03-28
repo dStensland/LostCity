@@ -9,4 +9,4 @@ def test_duplicate_cleanup_plans_cover_audit_targets() -> None:
 
 
 def test_duplicate_cleanup_keeps_dunwoody_but_normalizes_type() -> None:
-    assert VENUE_PATCHES["puttshack-atlanta-dunwoody"]["venue_type"] == "entertainment"
+    assert VENUE_PATCHES["puttshack-atlanta-dunwoody"]["place_type"] == "entertainment"

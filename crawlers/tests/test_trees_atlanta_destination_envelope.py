@@ -19,7 +19,7 @@ def test_build_location_venue_uses_canonical_kirkwood_slug() -> None:
     envelope = _build_destination_envelope(2297, venue_dict)
 
     assert venue_dict["slug"] == "kirkwood"
-    assert venue_dict["venue_type"] == "park"
+    assert venue_dict["place_type"] == "park"
     assert envelope.destination_details[0]["primary_activity"] == (
         "neighborhood park and community green-space reset"
     )

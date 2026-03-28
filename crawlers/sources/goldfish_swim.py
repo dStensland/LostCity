@@ -155,7 +155,7 @@ def _build_venue_data(loc: dict) -> dict:
         "neighborhood": loc["neighborhood"],
         "lat": loc["lat"],
         "lng": loc["lng"],
-        "venue_type": "fitness_center",
+        "place_type": "fitness_center",
         "spot_type": "fitness",
         "website": loc["website"],
         "vibes": ["family-friendly", "all-ages"],
@@ -387,7 +387,7 @@ def _build_jump_start_event_record(
     )
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date_str,
@@ -434,7 +434,7 @@ def _build_swim_lessons_event_record(
     )
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date_str,

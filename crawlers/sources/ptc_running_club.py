@@ -31,7 +31,7 @@ PLACE_DATA = {
     "city": "Peachtree City",
     "state": "GA",
     "zip": "30269",
-    "venue_type": "club",
+    "place_type": "club",
     "website": BASE_URL,
 }
 
@@ -149,7 +149,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Running event with Peachtree City Running Club",
                         "start_date": start_date,

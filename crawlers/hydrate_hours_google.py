@@ -242,7 +242,7 @@ def get_venues_needing_hours(
     """Get venues missing hours, with stale hours, or from lower-confidence sources."""
     client = get_client()
 
-    query = client.table("venues").select(
+    query = client.table("places").select(
         "id, name, slug, address, city, lat, lng, hours, venue_type, hours_source, hours_updated_at"
     ).eq("active", True).not_.is_("lat", "null").not_.is_("lng", "null")
 
@@ -250,9 +250,9 @@ def get_venues_needing_hours(
         query = query.eq("city", city)
 
     if venue_type:
-        query = query.eq("venue_type", venue_type)
+        query = query.eq("place_type", venue_type)
     elif destinations_only:
-        query = query.in_("venue_type", DESTINATION_TYPES)
+        query = query.in_("place_type", DESTINATION_TYPES)
 
     query = query.order("venue_type").limit(limit * 3)  # Over-fetch to filter client-side
 
@@ -300,7 +300,7 @@ def update_venue_hours(venue_id: int, hours: dict, hours_display: str, dry_run: 
         if hours_display:
             updates["hours_display"] = hours_display
 
-        client.table("venues").update(updates).eq("id", venue_id).execute()
+        client.table("places").update(updates).eq("id", venue_id).execute()
         return True
     except Exception as e:
         logger.error(f"Update error: {e}")
@@ -310,7 +310,7 @@ def update_venue_hours(venue_id: int, hours: dict, hours_display: str, dry_run: 
 def hydrate_venue_hours(venue: dict, dry_run: bool = False) -> dict:
     """Hydrate hours for a single venue from Google."""
     result = {
-        "venue_id": venue["id"],
+        "place_id": venue["id"],
         "venue_name": venue["name"],
         "status": "unknown",
         "hours": None,

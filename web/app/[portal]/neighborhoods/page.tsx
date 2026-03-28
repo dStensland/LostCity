@@ -28,9 +28,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 async function getVenueCountsByNeighborhood(): Promise<Record<string, number>> {
   // Fetch all venue neighborhoods in one query
   const { data, error } = await supabase
-    .from("venues")
+    .from("places")
     .select("neighborhood")
-    .eq("active", true)
+    .eq("is_active", true)
     .not("neighborhood", "is", null);
 
   if (error || !data) return {};

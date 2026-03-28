@@ -56,7 +56,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7565,
     "lng": -84.3930,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": BASE_URL,
     # Note: vibes are for venue atmosphere/amenities, not program types
@@ -338,7 +338,7 @@ def crawl_main_site(source_id: int, venue_id: int) -> tuple[int, int, int]:
             # Create event record
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": start_date,
@@ -523,7 +523,7 @@ def crawl_eventbrite_fallback(source_id: int, venue_id: int) -> tuple[int, int, 
             # Create event record
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": start_date,

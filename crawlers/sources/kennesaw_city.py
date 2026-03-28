@@ -26,7 +26,7 @@ PLACE_DATA = {
     "zip": "30144",
     "lat": 34.0234,
     "lng": -84.6155,
-    "venue_type": "city",
+    "place_type": "city",
     "spot_type": "city",
     "website": BASE_URL,
     "description": "Historic downtown Kennesaw with Civil War heritage, festivals, and community events.",
@@ -70,7 +70,7 @@ def create_annual_festivals(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Kennesaw's signature spring festival with 250+ arts and crafts booths, "
@@ -117,7 +117,7 @@ def create_annual_festivals(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Day 2 of Big Shanty Festival - arts, crafts, entertainment, and food."
@@ -170,7 +170,7 @@ def create_annual_festivals(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Culinary celebration featuring 30+ local restaurants. "
@@ -239,7 +239,7 @@ def create_first_friday_concerts(source_id: int, venue_id: int) -> tuple[int, in
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,

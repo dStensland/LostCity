@@ -43,7 +43,7 @@ PLACE_DATA = {
     "zip": "30322",
     "lat": 33.7904,
     "lng": -84.3253,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     # description and image_url are extracted dynamically from og: tags on the homepage
@@ -66,7 +66,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "art_museum",
             "commitment_tier": "hour",
             "primary_activity": "art and antiquities museum visit",
@@ -87,7 +87,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "art_museum",
+                "place_type": "art_museum",
                 "city": "atlanta",
             },
         },
@@ -95,7 +95,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "free-emory-art-and-antiquities-anchor",
             "title": "Emory art and antiquities anchor",
             "feature_type": "amenity",
@@ -108,7 +108,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "compact-campus-museum-stop",
             "title": "Compact campus museum stop",
             "feature_type": "amenity",
@@ -121,7 +121,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_specials",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "sunday-funday-free-admission",
             "title": "Sunday FUNday free admission",
             "description": "On the first Sunday of the month during the academic year, Sunday FUNdays offer free admission plus drop-in family art-making at the museum.",
@@ -278,7 +278,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at Michael C. Carlos Museum",
                         "start_date": start_date,

@@ -5,13 +5,13 @@ def test_build_destination_envelope_for_aquatic_center() -> None:
     place_data = {
         "name": "MLK Jr. Recreation & Aquatic Center",
         "slug": "mlk-recreation-center",
-        "venue_type": "recreation",
+        "place_type": "recreation",
     }
 
     envelope = _build_destination_envelope(place_data, 1201)
 
     assert envelope is not None
-    assert envelope.destination_details[0]["venue_id"] == 1201
+    assert envelope.destination_details[0]["place_id"] == 1201
     assert envelope.destination_details[0]["destination_type"] == "aquatic_center"
     assert envelope.destination_details[0]["family_suitability"] == "yes"
     assert envelope.destination_details[0]["practical_notes"]
@@ -23,13 +23,13 @@ def test_build_destination_envelope_for_park() -> None:
     place_data = {
         "name": "John A. White Park",
         "slug": "john-a-white-park",
-        "venue_type": "park",
+        "place_type": "park",
     }
 
     envelope = _build_destination_envelope(place_data, 1202)
 
     assert envelope is not None
-    assert envelope.destination_details[0]["venue_id"] == 1202
+    assert envelope.destination_details[0]["place_id"] == 1202
     assert envelope.destination_details[0]["destination_type"] == "park"
     assert envelope.destination_details[0]["parking_type"] == "free_lot"
     assert envelope.destination_details[0]["practical_notes"]
@@ -41,7 +41,7 @@ def test_build_destination_envelope_for_rec_center_adds_program_feature() -> Non
     place_data = {
         "name": "Pittman Park Recreation Center",
         "slug": "pittman-park-recreation-center",
-        "venue_type": "recreation",
+        "place_type": "recreation",
     }
 
     envelope = _build_destination_envelope(place_data, 1204)
@@ -60,7 +60,7 @@ def test_build_destination_envelope_skips_generic_org() -> None:
     place_data = {
         "name": "Atlanta Department of Parks & Recreation",
         "slug": "atlanta-dept-parks-recreation",
-        "venue_type": "organization",
+        "place_type": "organization",
     }
 
     assert _build_destination_envelope(place_data, 1203) is None

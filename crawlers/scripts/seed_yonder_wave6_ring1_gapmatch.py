@@ -39,7 +39,7 @@ WAVE_6_DESTINATIONS = [
             "lat": 34.2175,
             "lng": -84.1403,
             "website": "https://www.forsythco.com/Departments-Offices/Parks-Recreation/Parks-Facilities/Sawnee-Mountain-Preserve",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Rocky summit with Indian Seats overlook and 12 miles of trails through 683 acres of Forsyth County forest.",
             "description": "Sawnee Mountain Preserve offers one of the best summit views within an hour of Atlanta. The Indian Seats overlook provides panoramic views of the North Georgia foothills. 12 miles of well-maintained trails range from easy lakeside strolls to moderate rocky climbs.",
             "typical_duration_minutes": 180,
@@ -71,7 +71,7 @@ WAVE_6_DESTINATIONS = [
             "lat": 33.1768,
             "lng": -83.8544,
             "website": "https://gastateparks.org/HighFalls",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Towaliga River waterfalls, 650-acre lake, and camping just 47 minutes south of Atlanta.",
             "description": "High Falls State Park features cascading waterfalls on the Towaliga River, a 650-acre lake for fishing and paddling, and 4.5 miles of trails. Two campgrounds plus a primitive paddle-in campsite make this an accessible overnight option south of the city.",
             "typical_duration_minutes": 240,
@@ -104,7 +104,7 @@ WAVE_6_DESTINATIONS = [
             "lat": 34.1206,
             "lng": -84.4872,
             "website": "https://www.sorbawoodstock.org/trails",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Premier metro Atlanta mountain biking with 19 miles of singletrack across 6 trails from beginner to expert.",
             "description": "Blankets Creek is the most-ridden mountain bike trail system in the Southeast. 19 miles of SORBA-maintained singletrack across 6 named trails accommodate every skill level. Adjacent to Rope Mill Park for combined riding sessions.",
             "typical_duration_minutes": 180,
@@ -136,7 +136,7 @@ WAVE_6_DESTINATIONS = [
             "lat": 34.1620,
             "lng": -84.6985,
             "website": "https://www.sam.usace.army.mil/Missions/Civil-Works/Recreation/Allatoona-Lake/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "12,000-acre reservoir with kayaking, swimming beaches, and a hidden waterfall accessible only by boat.",
             "description": "Lake Allatoona offers 12,000 acres of water recreation just 35 minutes from Atlanta. Kayak rentals, multiple swimming beaches, fishing, and a hidden waterfall reachable only by boat. Red Top Mountain State Park sits on its shores.",
             "typical_duration_minutes": 300,
@@ -168,7 +168,7 @@ WAVE_6_DESTINATIONS = [
             "lat": 33.5073,
             "lng": -84.9397,
             "website": "https://www.historicbanningmills.com/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Guinness World Record zip line canopy course with 100+ zip lines spanning over 11 miles of forested gorge.",
             "description": "Historic Banning Mills holds the Guinness World Record for the longest continuous zip line canopy course. Over 100 zip lines, suspension bridges, and rappelling stations span Snake Creek Gorge. Resort lodging available for overnight adventures.",
             "typical_duration_minutes": 240,
@@ -201,7 +201,7 @@ WAVE_6_DESTINATIONS = [
             "lat": 34.1130,
             "lng": -84.5020,
             "website": "https://www.cherokeecountyga.gov/292/Rope-Mill-Park",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Mountain bike trails and Etowah River access adjacent to Blankets Creek in Cherokee County.",
             "description": "Rope Mill Park combines mountain bike singletrack with Etowah River access for kayaking and fishing. Adjacent to Blankets Creek trail system, making it ideal for a combined half-day riding session.",
             "typical_duration_minutes": 180,
@@ -233,7 +233,7 @@ WAVE_6_DESTINATIONS = [
             "lat": 33.9312,
             "lng": -84.3293,
             "website": "https://treetopquest.com/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "60+ obstacles and zip lines in a mature forest canopy at Brook Run Park, 30 minutes from downtown Atlanta.",
             "description": "Treetop Quest offers 60+ aerial obstacles and zip lines through the forest canopy of Brook Run Park. Multiple courses range from kid-friendly to challenging adult courses. One of the closest aerial adventure experiences to downtown Atlanta.",
             "typical_duration_minutes": 150,
@@ -266,7 +266,7 @@ WAVE_6_DESTINATIONS = [
             "lat": 34.6561,
             "lng": -83.5089,
             "website": "https://www.fs.usda.gov/recarea/conf/recarea/?recid=10519",
-            "venue_type": "trail",
+            "place_type": "trail",
             "short_description": "7.5-mile trail to a spectacular waterfall with multiple swimming holes along the route through Chattahoochee National Forest.",
             "description": "Panther Creek Trail is a 7.5-mile out-and-back through Chattahoochee National Forest ending at the stunning Panther Creek Falls. Multiple swimming holes along the creek make this a prime warm-weather destination. Best March through May.",
             "typical_duration_minutes": 300,
@@ -299,7 +299,7 @@ WAVE_6_DESTINATIONS = [
             "lat": 34.2897,
             "lng": -83.8198,
             "website": "https://www.elachee.org/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "1,400 acres of protected forest with 12 miles of trails and nature science education in the Chicopee Woods corridor.",
             "description": "Elachee Nature Science Center protects 1,400 acres of Chicopee Woods with 12 miles of hiking trails through diverse forest habitats. Education programs and museum exhibits complement the trail network. One of metro Atlanta's most undervisited natural areas.",
             "typical_duration_minutes": 180,
@@ -331,7 +331,7 @@ WAVE_6_DESTINATIONS = [
             "lat": 33.3969,
             "lng": -84.1578,
             "website": "https://southernbellefarm.com/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Year-round agritourism with strawberries, sunflowers, corn maze, and pumpkins south of Atlanta.",
             "description": "Southern Belle Farm is one of metro Atlanta's most complete agritourism destinations. Strawberry picking in spring, sunflower fields in summer, corn maze and pumpkin patch in fall. Playground, farm animals, and hayrides round out a family-friendly half day.",
             "typical_duration_minutes": 180,
@@ -369,7 +369,7 @@ def find_existing_venue(venue_seed: dict) -> dict | None:
 
     client = get_client()
     result = (
-        client.table("venues")
+        client.table("places")
         .select("*")
         .eq("name", venue_seed["name"])
         .limit(1)
@@ -462,7 +462,7 @@ def main() -> None:
                 skipped += 1
             else:
                 if args.apply:
-                    client.table("venues").update(updates).eq("id", existing["id"]).execute()
+                    client.table("places").update(updates).eq("id", existing["id"]).execute()
                 logger.info(
                     "%s venue: %s (%s fields)",
                     "UPDATE" if args.apply else "WOULD UPDATE",

@@ -25,7 +25,7 @@ PLACE_DATA = {
     "zip": "30309",
     "lat": 33.7856,
     "lng": -84.3838,
-    "venue_type": "hotel",
+    "place_type": "hotel",
     "spot_type": "hotel",
     "website": "https://www.loewshotels.com/atlanta-hotel",
 }
@@ -70,7 +70,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": "Atlanta's premier food and wine event featuring top Southern chefs, wine tastings, cooking demonstrations, and culinary experiences.",
         "start_date": start_date.strftime("%Y-%m-%d"),

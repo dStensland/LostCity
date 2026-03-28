@@ -51,7 +51,7 @@ PLACE_DATA = {
     "lat": 33.8598,
     "lng": -84.4818,
     "neighborhood": "Vinings",
-    "venue_type": "arts_venue",
+    "place_type": "arts_venue",
     "spot_type": "arts",
     "website": "https://viningsschoolofart.com/",
     "vibes": ["family-friendly", "creative"],
@@ -291,7 +291,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     title = f"{row['title']} at Vinings School of Art"
     record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": row["description"],
         "start_date": row["start_date"],

@@ -215,7 +215,7 @@ const EVENT_SELECT = `
   is_all_day, is_free, price_min, price_max,
   category:category_id, genres, image_url, content_kind, tags,
   series:series_id(id, frequency, day_of_week),
-  venue:venues(id, name, neighborhood, slug, venue_type, lat, lng, city, image_url)
+  venue:places(id, name, neighborhood, slug, place_type, lat, lng, city, image_url)
 `;
 
 const CACHE_CONTROL = "public, s-maxage=120, stale-while-revalidate=600";
@@ -341,12 +341,12 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Active specials
   const buildSpecialsQuery = () => {
     let q = supabase
-      .from("venue_specials")
+      .from("place_specials")
       .select(`
-        id, venue_id, title, type, description,
+        id, place_id, title, type, description,
         days_of_week, time_start, time_end,
         start_date, end_date, price_note,
-        venue:venues!inner(id, name, slug, neighborhood, venue_type, image_url, lat, lng, city)
+        venue:places!inner(id, name, slug, neighborhood, place_type, image_url, lat, lng, city)
       `)
       .eq("is_active", true)
       .eq("venue.active", true);

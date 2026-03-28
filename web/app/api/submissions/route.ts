@@ -323,7 +323,7 @@ export async function POST(request: NextRequest) {
 
     if (canAutoApprove && eventData.venue_id) {
       const { data: venueExists } = await serviceClient
-        .from("venues")
+        .from("places")
         .select("id")
         .eq("id", eventData.venue_id)
         .maybeSingle();
@@ -583,7 +583,7 @@ async function findEventDuplicate(
       .from("events")
       .select("id, title")
       .eq("start_date", data.start_date)
-      .eq("venue_id", data.venue_id)
+      .eq("place_id", data.venue_id)
       .ilike("title", `%${escapeSQLPattern(data.title?.substring(0, 20) || "")}%`)
       .limit(1)
       .maybeSingle();
@@ -604,7 +604,7 @@ async function findVenueDuplicate(
 ): Promise<{ id: number; type: string } | null> {
   // Check by exact name match
   const { data: nameMatchData } = await supabase
-    .from("venues")
+    .from("places")
     .select("id, name")
     .ilike("name", escapeSQLPattern(data.name))
     .limit(1)
@@ -618,7 +618,7 @@ async function findVenueDuplicate(
   // Check aliases
   if (data.name) {
     const { data: aliasMatchData } = await supabase
-      .from("venues")
+      .from("places")
       .select("id, name")
       .contains("aliases", [data.name])
       .limit(1)

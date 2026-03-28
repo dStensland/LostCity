@@ -288,7 +288,7 @@ class VenueCache:
         logger.info("Loading venue cache from database...")
         client = get_client()
         result = (
-            client.table("venues")
+            client.table("places")
             .select("id, name, aliases, venue_type")
             .eq("city", "Atlanta")
             .eq("active", True)

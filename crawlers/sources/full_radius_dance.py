@@ -49,7 +49,7 @@ SEVEN_STAGES_VENUE_DATA = {
     "zip": "30307",
     "lat": 33.7621,
     "lng": -84.3481,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": "https://www.7stages.org",
     "vibes": ["all-ages", "artsy"],
@@ -66,7 +66,7 @@ FRD_ORG_VENUE_DATA = {
     "zip": "30307",
     "lat": 33.7621,
     "lng": -84.3481,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "theater",
     "website": BASE_URL,
     "vibes": ["wheelchair-accessible", "all-ages"],
@@ -410,7 +410,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": start_date,
@@ -494,7 +494,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": None,
                     "start_date": start_date,

@@ -51,7 +51,7 @@ PLACE_DATA = {
     "lat": 33.7609,
     "lng": -84.3444,
     "neighborhood": "Old Fourth Ward",
-    "venue_type": "arts_venue",
+    "place_type": "arts_venue",
     "spot_type": "arts",
     "website": "https://www.dadsgarage.com",
     "vibes": ["family-friendly", "creative"],
@@ -232,7 +232,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     title = f"{row['title']} Camp at Dad's Garage ({row['grade_text']})"
     record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": row["description"],
         "start_date": row["start_date"],

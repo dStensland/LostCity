@@ -159,7 +159,7 @@ def parse_event(event_data: dict) -> Optional[dict]:
                 "city": city.get("name", "Nashville"),
                 "state": state.get("stateCode", "TN"),
                 "zip": v.get("postalCode"),
-                "venue_type": "venue",
+                "place_type": "venue",
                 "website": v.get("url"),
             }
 
@@ -323,7 +323,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "portal_id": portal_id,
                     "title": parsed["title"],
                     "description": parsed.get("description"),

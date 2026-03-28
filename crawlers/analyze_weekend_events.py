@@ -91,14 +91,14 @@ def analyze_weekend():
         # Query for earlier occurrences of this show (past 2 weeks)
         earlier_result = client.table("events").select(
             "id, title, start_date, venue_id"
-        ).eq("venue_id", venue_id).eq("title", title).lt("start_date", "2026-02-13").gte("start_date", "2026-02-01").execute()
+        ).eq("place_id", venue_id).eq("title", title).lt("start_date", "2026-02-13").gte("start_date", "2026-02-01").execute()
         
         earlier_events = earlier_result.data or []
         
         # Query for later occurrences (next week)
         later_result = client.table("events").select(
             "id, title, start_date, venue_id"
-        ).eq("venue_id", venue_id).eq("title", title).gt("start_date", "2026-02-15").lte("start_date", "2026-02-22").execute()
+        ).eq("place_id", venue_id).eq("title", title).gt("start_date", "2026-02-15").lte("start_date", "2026-02-22").execute()
         
         later_events = later_result.data or []
         

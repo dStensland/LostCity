@@ -80,7 +80,7 @@ PLACE_DATA = {
         "zip": "30083",
         "lat": 33.7945,
         "lng": -84.2057,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": ACTIVITY_SEARCH_URL,
         "description": "DeKalb County community center hosting public aquatic fitness classes.",
@@ -94,7 +94,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "aquatic_center",
             "commitment_tier": "halfday",
             "primary_activity": "family aquatic center visit",
@@ -109,7 +109,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
             "source_url": ACTIVITY_SEARCH_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": place_data.get("venue_type"),
+                "place_type": place_data.get("place_type") or place_data.get("venue_type"),
                 "county": "dekalb",
             },
         },
@@ -117,7 +117,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "public-pool-and-aquatics-programs",
             "title": "Public pool and aquatics programs",
             "feature_type": "amenity",
@@ -304,7 +304,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": parsed["title"],
                     "description": parsed["description"],
                     "start_date": start_date,

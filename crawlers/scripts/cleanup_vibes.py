@@ -231,7 +231,7 @@ def update_venue_with_retry(client, venue_id: int, new_vibes: List[str], new_gen
             updates: dict = {"vibes": new_vibes or None}
             if new_genres is not None:
                 updates["genres"] = new_genres or None
-            client.table("venues").update(updates).eq("id", venue_id).execute()
+            client.table("places").update(updates).eq("id", venue_id).execute()
             return True
         except Exception as e:
             error_msg = str(e).lower()
@@ -265,7 +265,7 @@ def main():
     client = get_client()
 
     # Fetch all active venues with vibes (include genres for merging)
-    result = client.table("venues").select("id,name,vibes,genres").not_.is_("vibes", "null").execute()
+    result = client.table("places").select("id,name,vibes,genres").not_.is_("vibes", "null").execute()
     venues = result.data
 
     logger.info(f"Found {len(venues)} venues with vibes")

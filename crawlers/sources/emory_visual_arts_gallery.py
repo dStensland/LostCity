@@ -64,7 +64,7 @@ PLACE_DATA = {
     "zip": "30322",
     "lat": 33.7923,
     "lng": -84.3251,
-    "venue_type": "gallery",
+    "place_type": "gallery",
     "spot_type": "gallery",
     "website": "https://filmandmedia.emory.edu/news/vizartsgallery.html",
     "vibes": ["university", "gallery", "contemporary", "free"],

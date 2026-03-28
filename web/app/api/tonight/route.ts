@@ -631,7 +631,7 @@ const EVENT_SELECT = `
     id, slug, title, series_type, image_url, frequency, day_of_week, genres,
     festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
   ),
-  venue:venues(id, name, neighborhood, image_url, city, lat, lng, location_designator),
+  venue:places(id, name, neighborhood, image_url, city, lat, lng, location_designator),
   event_artists(artist_id, name, is_headliner, billing_order, artist:artists(image_url))
 `;
 

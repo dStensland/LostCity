@@ -141,7 +141,7 @@ def check_all_festival_series_venue_diversity(client):
         # Get venue names
         venue_names = []
         for venue_id in venue_ids:
-            venue_result = client.table("venues")\
+            venue_result = client.table("places")\
                 .select("name")\
                 .eq("id", venue_id)\
                 .execute()

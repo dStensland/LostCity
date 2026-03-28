@@ -293,9 +293,9 @@ export async function GET(request: NextRequest, { params }: Props) {
   const lngDelta = radiusKm / (111 * Math.max(Math.cos((anchorLat * Math.PI) / 180), 0.01));
 
   let venueQuery = supabase
-    .from("venues")
+    .from("places")
     .select(`
-      id, name, slug, address, neighborhood, venue_type,
+      id, name, slug, address, neighborhood, place_type,
       lat, lng, image_url, short_description, vibes, hours, city
     `)
     .neq("active", false)
@@ -362,7 +362,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Build event query
   let eventQuery = supabase
     .from("events")
-    .select("id, title, category_id, start_time, end_time, image_url, is_free, tags, venue_id")
+    .select("id, title, category_id, start_time, end_time, image_url, is_free, tags, place_id")
     .eq("is_active", true)
     .not("start_time", "is", null)
     .limit(100);
@@ -375,7 +375,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   }
 
   if (eventVenueIds.length > 0) {
-    eventQuery = eventQuery.in("venue_id", eventVenueIds);
+    eventQuery = eventQuery.in("place_id", eventVenueIds);
   } else {
     // No event-hosting venues nearby — skip event query
     eventQuery = eventQuery.eq("id", -1); // no-op filter
@@ -392,10 +392,10 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   const [{ data: specials }, { data: nearbyEvents }] = await Promise.all([
     supabase
-      .from("venue_specials")
-      .select("id, venue_id, title, type, days_of_week, time_start, time_end")
+      .from("place_specials")
+      .select("id, place_id, title, type, days_of_week, time_start, time_end")
       .eq("is_active", true)
-      .in("venue_id", suggestionVenueIds.length > 0 ? suggestionVenueIds : [-1])
+      .in("place_id", suggestionVenueIds.length > 0 ? suggestionVenueIds : [-1])
       .contains("days_of_week", [anchorDayOfWeek])
       .limit(500),
     eventQuery,

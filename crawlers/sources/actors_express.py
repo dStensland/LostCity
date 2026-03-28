@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7799,
     "lng": -84.4132,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": BASE_URL,
 }
@@ -241,7 +241,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description or f"{title} at Actor's Express",
                         "start_date": start_date,

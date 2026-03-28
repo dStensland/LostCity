@@ -28,7 +28,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7594,
     "lng": -84.3884,
-    "venue_type": "restaurant",
+    "place_type": "restaurant",
     "website": BASE_URL,
 }
 
@@ -67,7 +67,7 @@ def generate_annual_events(source_id: int, venue_id: int) -> list[dict]:
         description = "Celebrate Valentine's Day 700+ feet above Atlanta with a special prix fixe menu and 360-degree rotating views of the city."
         events.append({
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": "Valentine's Day Dinner at Sun Dial",
             "description": description,
             "start_date": valentines_date,
@@ -105,7 +105,7 @@ def generate_annual_events(source_id: int, venue_id: int) -> list[dict]:
         description = f"Ring in {current_year + 1} at the top of Atlanta! Watch fireworks and the city lights from 700+ feet above with special dinner and celebration."
         events.append({
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": f"New Year's Eve {current_year + 1} Celebration",
             "description": description,
             "start_date": nye_date,
@@ -177,7 +177,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": event_data.get("description", "Special event at The Sun Dial Restaurant, 73 stories above Atlanta")[:500],
                             "start_date": start_date,

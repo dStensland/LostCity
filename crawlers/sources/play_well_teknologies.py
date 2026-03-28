@@ -98,7 +98,7 @@ _ORG_VENUE: dict = {
     "zip": "30301",
     "lat": 33.7490,
     "lng": -84.3880,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": "https://play-well.org",
     "vibes": ["family-friendly", "all-ages"],
@@ -298,7 +298,7 @@ def _build_venue_data(location_name: str, city_hint: str, county_name: str) -> d
         "zip": "",
         "lat": lat,
         "lng": lng,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": "https://play-well.org",
         "vibes": ["family-friendly", "all-ages"],
@@ -468,7 +468,7 @@ def _parse_county_page(
 
         event_record: dict = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": full_title,
             "description": (
                 f"Play-Well TEKnologies LEGO engineering camp for ages {age_min}–{age_max}. "

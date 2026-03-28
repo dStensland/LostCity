@@ -43,7 +43,7 @@ PLACE_DATA = {
     "zip": "30313",
     "lat": 33.7609,
     "lng": -84.3935,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     # description and image_url are extracted dynamically from og: tags on the homepage
@@ -67,7 +67,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "sports_museum",
             "commitment_tier": "halfday",
             "primary_activity": "interactive football history visit",
@@ -91,7 +91,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "museum",
+                "place_type": "museum",
                 "city": "atlanta",
             },
         },
@@ -99,7 +99,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "interactive-football-history-galleries",
             "title": "Interactive football history galleries",
             "feature_type": "amenity",
@@ -112,7 +112,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "downtown-sports-history-anchor",
             "title": "Downtown sports history anchor",
             "feature_type": "experience",
@@ -428,7 +428,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description,
                         "start_date": start_date,

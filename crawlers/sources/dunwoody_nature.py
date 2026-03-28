@@ -84,7 +84,7 @@ _VENUE_DATA = {
     "zip": "30338",
     "lat": 33.9458,
     "lng": -84.3347,
-    "venue_type": "nature_center",
+    "place_type": "nature_center",
     "spot_type": "park",
     "website": _BASE_URL,
     "vibes": ["family-friendly", "outdoor", "all-ages", "educational"],
@@ -841,7 +841,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         record: dict = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": detail["name"],
             "description": detail.get("description"),
             "start_date": detail["start_date"],

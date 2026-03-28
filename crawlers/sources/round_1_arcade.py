@@ -34,7 +34,7 @@ PLACE_DATA = {
     "zip": "30022",
     "lat": 34.0675,
     "lng": -84.2755,
-    "venue_type": "entertainment",
+    "place_type": "entertainment",
     "spot_type": "entertainment",
     "website": HOMEPAGE,
     # Hours verified 2026-03-11
@@ -116,7 +116,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "entertainment",
         "commitment_tier": "halfday",
         "primary_activity": "Japanese arcade imports, bowling, karaoke, and billiards",
@@ -131,10 +131,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Pay-per-play arcade. Bowling, karaoke, and billiards charged per game/hour.",
         "source_url": HOMEPAGE,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "entertainment", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "entertainment", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "japanese-arcade-imports",
         "title": "Japanese arcade imports",
         "feature_type": "experience",
@@ -144,7 +144,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "bowling-lanes",
         "title": "Bowling lanes",
         "feature_type": "experience",
@@ -154,7 +154,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "private-karaoke-rooms",
         "title": "Private karaoke rooms",
         "feature_type": "experience",
@@ -164,7 +164,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "food-and-drink-bar",
         "title": "Food and drink bar",
         "feature_type": "amenity",
@@ -174,7 +174,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 40,
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "weekday-early-play-discount",
         "title": "Weekday early-play discount",
         "description": "Discounted rates for bowling and select activities during early weekday hours.",
@@ -243,7 +243,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning(
                 "Round 1 Arcade Alpharetta: venue update failed: %s", exc

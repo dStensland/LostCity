@@ -39,7 +39,7 @@ BRANCH_VENUES = {
         "city": "Brookhaven",
         "state": "GA",
         "zip": "30319",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "chamblee": {
         "name": "Chamblee Library",
@@ -48,7 +48,7 @@ BRANCH_VENUES = {
         "city": "Chamblee",
         "state": "GA",
         "zip": "30341",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "clarkston": {
         "name": "Clarkston Library",
@@ -57,7 +57,7 @@ BRANCH_VENUES = {
         "city": "Clarkston",
         "state": "GA",
         "zip": "30021",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "county line": {
         "name": "County Line-Ellenwood Library",
@@ -66,7 +66,7 @@ BRANCH_VENUES = {
         "city": "Ellenwood",
         "state": "GA",
         "zip": "30294",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "ellenwood": {
         "name": "County Line-Ellenwood Library",
@@ -75,7 +75,7 @@ BRANCH_VENUES = {
         "city": "Ellenwood",
         "state": "GA",
         "zip": "30294",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "covington": {
         "name": "Covington Library",
@@ -84,7 +84,7 @@ BRANCH_VENUES = {
         "city": "Decatur",
         "state": "GA",
         "zip": "30032",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "decatur": {
         "name": "Decatur Library",
@@ -94,7 +94,7 @@ BRANCH_VENUES = {
         "city": "Decatur",
         "state": "GA",
         "zip": "30030",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "doraville": {
         "name": "Doraville Library",
@@ -103,7 +103,7 @@ BRANCH_VENUES = {
         "city": "Doraville",
         "state": "GA",
         "zip": "30360",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "dunwoody": {
         "name": "Dunwoody Library",
@@ -112,7 +112,7 @@ BRANCH_VENUES = {
         "city": "Dunwoody",
         "state": "GA",
         "zip": "30338",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "embry hills": {
         "name": "Embry Hills Library",
@@ -121,7 +121,7 @@ BRANCH_VENUES = {
         "city": "Chamblee",
         "state": "GA",
         "zip": "30341",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "flat shoals": {
         "name": "Flat Shoals Library",
@@ -130,7 +130,7 @@ BRANCH_VENUES = {
         "city": "Decatur",
         "state": "GA",
         "zip": "30034",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "gresham": {
         "name": "Gresham Library",
@@ -139,7 +139,7 @@ BRANCH_VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "hairston": {
         "name": "Hairston Crossing Library",
@@ -148,7 +148,7 @@ BRANCH_VENUES = {
         "city": "Stone Mountain",
         "state": "GA",
         "zip": "30088",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "lithonia": {
         "name": "Lithonia-Davidson Library",
@@ -157,7 +157,7 @@ BRANCH_VENUES = {
         "city": "Lithonia",
         "state": "GA",
         "zip": "30058",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "northlake": {
         "name": "Northlake-Barbara Loar Library",
@@ -166,7 +166,7 @@ BRANCH_VENUES = {
         "city": "Tucker",
         "state": "GA",
         "zip": "30084",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "redan": {
         "name": "Redan-Trotti Library",
@@ -175,7 +175,7 @@ BRANCH_VENUES = {
         "city": "Lithonia",
         "state": "GA",
         "zip": "30058",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "salem": {
         "name": "Salem-Panola Library",
@@ -184,7 +184,7 @@ BRANCH_VENUES = {
         "city": "Stonecrest",
         "state": "GA",
         "zip": "30038",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "scott candler": {
         "name": "Scott Candler Library",
@@ -193,7 +193,7 @@ BRANCH_VENUES = {
         "city": "Decatur",
         "state": "GA",
         "zip": "30032",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "scottdale": {
         "name": "Scottdale-Tobie Grant Homework Center",
@@ -202,7 +202,7 @@ BRANCH_VENUES = {
         "city": "Scottdale",
         "state": "GA",
         "zip": "30079",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "stone mountain": {
         "name": "Stone Mountain-Sue Kellogg Library",
@@ -211,7 +211,7 @@ BRANCH_VENUES = {
         "city": "Stone Mountain",
         "state": "GA",
         "zip": "30083",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "stonecrest": {
         "name": "Stonecrest Library",
@@ -220,7 +220,7 @@ BRANCH_VENUES = {
         "city": "Stonecrest",
         "state": "GA",
         "zip": "30038",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "toco hill": {
         "name": "Toco Hill-Avis G. Williams Library",
@@ -229,7 +229,7 @@ BRANCH_VENUES = {
         "city": "Decatur",
         "state": "GA",
         "zip": "30033",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "tucker": {
         "name": "Tucker-Reid H. Cofer Library",
@@ -238,7 +238,7 @@ BRANCH_VENUES = {
         "city": "Tucker",
         "state": "GA",
         "zip": "30084",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "wesley chapel": {
         "name": "Wesley Chapel-William C. Brown Library",
@@ -247,14 +247,14 @@ BRANCH_VENUES = {
         "city": "Decatur",
         "state": "GA",
         "zip": "30034",
-        "venue_type": "library",
+        "place_type": "library",
     },
     "virtual": {
         "name": "DeKalb County Library (Virtual)",
         "slug": "dekalb-county-library-virtual",
         "city": "Decatur",
         "state": "GA",
-        "venue_type": "library",
+        "place_type": "library",
     },
 }
 
@@ -263,7 +263,7 @@ DEFAULT_VENUE = {
     "slug": "dekalb-county-library",
     "city": "Decatur",
     "state": "GA",
-    "venue_type": "library",
+    "place_type": "library",
 }
 
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
@@ -282,7 +282,7 @@ def _build_branch_destination_envelope(venue_id: int, place_data: dict) -> Typed
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "library_branch",
             "commitment_tier": "hour",
             "primary_activity": "free indoor family library visit",
@@ -303,7 +303,7 @@ def _build_branch_destination_envelope(venue_id: int, place_data: dict) -> Typed
             "source_url": "https://dekalblibrary.org/locations/",
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "library",
+                "place_type": "library",
                 "branch_name": branch_name,
             },
         },
@@ -312,7 +312,7 @@ def _build_branch_destination_envelope(venue_id: int, place_data: dict) -> Typed
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "free-indoor-family-stop",
             "title": "Free indoor family stop",
             "feature_type": "amenity",
@@ -326,7 +326,7 @@ def _build_branch_destination_envelope(venue_id: int, place_data: dict) -> Typed
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "storytime-and-family-programs",
             "title": "Storytime and family programs",
             "feature_type": "experience",
@@ -698,7 +698,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description if description else None,
                 "start_date": start_date_str,

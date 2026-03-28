@@ -52,7 +52,7 @@ class _Crawler(GenericExhibitionCrawler):
         "zip": "30324",
         "lat": 33.8439,
         "lng": -84.3735,
-        "venue_type": "gallery",
+        "place_type": "gallery",
         "website": "https://masonfineartandevents.com",
     }
 

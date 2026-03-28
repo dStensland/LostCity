@@ -57,7 +57,7 @@ PLACE_DATA = {
     "lat": 33.7901,
     "lng": -84.3856,
     "neighborhood": "Midtown",
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": "https://high.org/",
     "vibes": ["family-friendly", "artsy", "all-ages"],
@@ -260,7 +260,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     title = f"{row['title']} at High Museum of Art"
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": row["description"],
         "start_date": row["start_date"],

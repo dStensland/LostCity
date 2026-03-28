@@ -110,7 +110,7 @@ class _Crawler(GenericExhibitionCrawler):
         "zip": "30309",
         "lat": 33.8278,
         "lng": -84.3856,
-        "venue_type": "gallery",
+        "place_type": "gallery",
         "website": "https://www.hathawaygallery.com",
     }
 

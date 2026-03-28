@@ -235,7 +235,7 @@ def run_cleanup(dry_run: bool = False, use_llm: bool = True):
     client = get_client()
 
     # Get ALL active venues
-    result = client.table("venues").select(
+    result = client.table("places").select(
         "id,name,slug,venue_type,website,address,city,state,neighborhood"
     ).eq("active", True).order("name").execute()
     venues = result.data or []
@@ -259,7 +259,7 @@ def run_cleanup(dry_run: bool = False, use_llm: bool = True):
         if reason:
             print(f"  DEACTIVATE [{v['id']}] {v['name'][:50]} — {reason}")
             if not dry_run:
-                client.table("venues").update({"active": False}).eq("id", v["id"]).execute()
+                client.table("places").update({"active": False}).eq("id", v["id"]).execute()
             stats["deactivated"] += 1
 
     print(f"\n  Total deactivated: {stats['deactivated']}")
@@ -273,7 +273,7 @@ def run_cleanup(dry_run: bool = False, use_llm: bool = True):
         if v.get("venue_type") in ORG_TYPES:
             print(f"  RECLASSIFY [{v['id']}] {v['name'][:50]} — {v['venue_type']} → organization")
             if not dry_run:
-                client.table("venues").update({"venue_type": "organization"}).eq("id", v["id"]).execute()
+                client.table("places").update({"place_type": "organization"}).eq("id", v["id"]).execute()
             stats["org_reclassified"] += 1
 
     print(f"\n  Total reclassified: {stats['org_reclassified']}")
@@ -297,7 +297,7 @@ def run_cleanup(dry_run: bool = False, use_llm: bool = True):
         if classified:
             print(f"  CLASSIFY [{v['id']}] {v['name'][:50]} → {classified}")
             if not dry_run:
-                client.table("venues").update({"venue_type": classified}).eq("id", v["id"]).execute()
+                client.table("places").update({"place_type": classified}).eq("id", v["id"]).execute()
             stats["rule_classified"] += 1
         else:
             needs_llm.append(v)
@@ -327,12 +327,12 @@ def run_cleanup(dry_run: bool = False, use_llm: bool = True):
                         if new_type == "deactivate":
                             print(f"    DEACTIVATE [{vid}] {v['name'][:50]}")
                             if not dry_run:
-                                client.table("venues").update({"active": False}).eq("id", vid).execute()
+                                client.table("places").update({"active": False}).eq("id", vid).execute()
                             stats["llm_deactivated"] += 1
                         else:
                             print(f"    CLASSIFY [{vid}] {v['name'][:50]} → {new_type}")
                             if not dry_run:
-                                client.table("venues").update({"venue_type": new_type}).eq("id", vid).execute()
+                                client.table("places").update({"place_type": new_type}).eq("id", vid).execute()
                             stats["llm_classified"] += 1
                     else:
                         print(f"    SKIP [{vid}] {v['name'][:50]} — no LLM result")

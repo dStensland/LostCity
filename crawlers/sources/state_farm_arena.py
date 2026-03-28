@@ -42,7 +42,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7573,
     "lng": -84.3963,
-    "venue_type": "arena",
+    "place_type": "arena",
     "spot_type": "arena",
     "website": BASE_URL,
     "description": (
@@ -176,7 +176,7 @@ def build_event_record(
     """Build the pre-enrichment event record for State Farm Arena."""
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": None,
         "start_date": start_date,
@@ -206,7 +206,7 @@ def build_event_record(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "arena",
         "commitment_tier": "halfday",
         "primary_activity": "NBA games, concerts, and major arena events",
@@ -225,10 +225,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Ticket prices vary by event.",
         "source_url": BASE_URL,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "arena", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "arena", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "hawks-games-concerts-events",
         "title": "Hawks games, concerts, and special events",
         "feature_type": "experience",
@@ -238,7 +238,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "levy-restaurants-food-program",
         "title": "Levy Restaurants food program",
         "feature_type": "amenity",
@@ -248,7 +248,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "club-suite-levels",
         "title": "Club and suite levels",
         "feature_type": "amenity",
@@ -293,7 +293,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "return m ? m.getAttribute('content') : null; }"
                 )
                 if og_image:
-                    get_client().table("venues").update(
+                    get_client().table("places").update(
                         {"image_url": og_image}
                     ).eq("id", venue_id).execute()
                     logger.debug("State Farm Arena: updated venue image from og:image")
@@ -542,7 +542,7 @@ def parse_text_events(page, source_id: int, venue_id: int, event_links: dict = N
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": None,
                 "start_date": start_date,

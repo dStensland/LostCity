@@ -103,7 +103,7 @@ def test_maybe_patch_existing_venue_backfills_missing_location_fields() -> None:
 
     class _FakeClient:
         def table(self, name: str) -> "_FakeClient":
-            assert name == "venues"
+            assert name == "places"
             return self
 
         def update(self, payload: dict) -> _FakeQuery:

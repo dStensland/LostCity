@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30214",
     "lat": 33.4501,
     "lng": -84.4549,
-    "venue_type": "amusement_park",
+    "place_type": "amusement_park",
     "website": BASE_URL,
 }
 
@@ -159,7 +159,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description if description else "Special event at Fun Spot America Atlanta",
                     "start_date": start_date,

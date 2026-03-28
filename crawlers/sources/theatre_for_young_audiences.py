@@ -40,7 +40,7 @@ ALLIANCE_THEATRE_VENUE = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30309",
-    "venue_type": "theater",
+    "place_type": "theater",
     "website": BASE_URL,
 }
 
@@ -303,7 +303,7 @@ def extract_shows_from_page(page, source_id: int, venue_id: int, page_url: str, 
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description if description else None,
                     "start_date": start_date,
@@ -394,7 +394,7 @@ def extract_shows_from_page(page, source_id: int, venue_id: int, page_url: str, 
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": potential_title,
                             "description": None,
                             "start_date": start_date,

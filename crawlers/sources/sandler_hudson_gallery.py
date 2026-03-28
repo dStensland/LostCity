@@ -55,7 +55,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7891,
     "lng": -84.4207,
-    "venue_type": "gallery",
+    "place_type": "gallery",
     "spot_type": "gallery",
     "website": BASE_URL,
     "vibes": ["contemporary", "gallery", "westside", "fine-art"],

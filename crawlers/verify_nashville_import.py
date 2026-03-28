@@ -7,7 +7,7 @@ import json
 client = db.get_client()
 
 # Query venues with curator tags
-result = client.table('venues').select('*').contains('vibes', ['eater-nashville-38']).execute()
+result = client.table('places').select('*').contains('vibes', ['eater-nashville-38']).execute()
 
 print(f"Total venues with 'eater-nashville-38' vibe: {len(result.data)}")
 print("\nSample venues:")

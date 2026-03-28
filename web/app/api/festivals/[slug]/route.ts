@@ -92,7 +92,7 @@ export async function GET(
     start_time,
     end_time,
     series_id,
-    venue:venues(id, name, slug, neighborhood, city, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score)
+    venue:places(id, name, slug, neighborhood, city, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score)
   `;
 
   // Fetch events via programs (series_id chain)

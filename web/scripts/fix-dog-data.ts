@@ -57,10 +57,10 @@ async function fixPetServicesVibes() {
   const SERVICE_TYPES = ["vet", "groomer", "pet_store", "pet_daycare", "animal_shelter"];
 
   const { data: services } = await supabase
-    .from("venues")
-    .select("id, name, venue_type, vibes")
-    .eq("active", true)
-    .in("venue_type", SERVICE_TYPES);
+    .from("places")
+    .select("id, name, place_type, vibes")
+    .eq("is_active", true)
+    .in("place_type", SERVICE_TYPES);
 
   if (!services || services.length === 0) {
     console.log("  No pet service venues found");
@@ -80,7 +80,7 @@ async function fixPetServicesVibes() {
 
     if (!DRY_RUN) {
       await supabase
-        .from("venues")
+        .from("places")
         .update({ vibes: merged } as never)
         .eq("id", venue.id);
     }
@@ -366,9 +366,9 @@ async function fixNashvilleContamination() {
   ];
 
   const { data: nashVenues } = await supabase
-    .from("venues")
+    .from("places")
     .select("id, name, neighborhood, city, vibes")
-    .eq("active", true)
+    .eq("is_active", true)
     .contains("vibes", ["dog-friendly"])
     .or(
       NASHVILLE_NEIGHBORHOODS.map((n) => `neighborhood.eq.${n}`).join(",")
@@ -377,9 +377,9 @@ async function fixNashvilleContamination() {
   if (!nashVenues || nashVenues.length === 0) {
     // Also try city-based filter
     const { data: nashByCity } = await supabase
-      .from("venues")
+      .from("places")
       .select("id, name, neighborhood, city, vibes")
-      .eq("active", true)
+      .eq("is_active", true)
       .contains("vibes", ["dog-friendly"])
       .eq("city", "Nashville");
 
@@ -394,7 +394,7 @@ async function fixNashvilleContamination() {
 
         if (!DRY_RUN) {
           await supabase
-            .from("venues")
+            .from("places")
             .update({ vibes: cleaned } as never)
             .eq("id", venue.id);
         }
@@ -417,7 +417,7 @@ async function fixNashvilleContamination() {
 
     if (!DRY_RUN) {
       await supabase
-        .from("venues")
+        .from("places")
         .update({ vibes: cleaned } as never)
         .eq("id", venue.id);
     }

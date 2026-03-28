@@ -115,7 +115,7 @@ def _venue_has_destination_details(client, venue_id: int) -> bool:
     result = (
         client.table("venue_destination_details")
         .select("venue_id")
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .limit(1)
         .execute()
     )
@@ -126,7 +126,7 @@ def _venue_has_feature_signal(client, venue_id: int, keywords: tuple[str, ...]) 
     result = (
         client.table("venue_features")
         .select("slug,title,description")
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("is_active", True)
         .execute()
     )
@@ -160,7 +160,7 @@ def _build_venue_record(park: dict) -> dict:
         "city": park["city"],
         "state": park["state"],
         "zip": park["zip"],
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "website": park["url"],
         "description": park["summary"] or None,
@@ -169,7 +169,7 @@ def _build_venue_record(park: dict) -> dict:
 
 def _fetch_existing_venue(client, park: dict) -> Optional[dict]:
     result = (
-        client.table("venues")
+        client.table("places")
         .select("id,name,slug,address,city,state,zip,venue_type,spot_type")
         .eq("slug", park["slug"])
         .limit(1)
@@ -186,7 +186,7 @@ def _fetch_existing_venue(client, park: dict) -> Optional[dict]:
 
     if park.get("address"):
         result = (
-            client.table("venues")
+            client.table("places")
             .select("id,name,slug,address,city,state,zip,venue_type,spot_type")
             .eq("address", park["address"])
             .limit(5)
@@ -197,7 +197,7 @@ def _fetch_existing_venue(client, park: dict) -> Optional[dict]:
                 return row
 
     result = (
-        client.table("venues")
+        client.table("places")
         .select("id,name,slug,address,city,state,zip,venue_type,spot_type")
         .eq("name", park["name"])
         .limit(5)
@@ -216,7 +216,7 @@ def _maybe_patch_existing_venue(client, venue: dict, park: dict) -> dict:
             updates[key] = park[key]
     if not updates:
         return venue
-    client.table("venues").update(updates).eq("id", venue["id"]).execute()
+    client.table("places").update(updates).eq("id", venue["id"]).execute()
     venue.update(updates)
     return venue
 
@@ -239,7 +239,7 @@ def _build_envelope(
         envelope.add(
             "destination_details",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "destination_type": "park",
                 "commitment_tier": "halfday",
                 "primary_activity": "family park visit",
@@ -266,7 +266,7 @@ def _build_envelope(
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "official-county-playground",
                 "title": "Official county playground",
                 "feature_type": "amenity",
@@ -282,7 +282,7 @@ def _build_envelope(
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "official-county-water-play",
                 "title": "Official county water play",
                 "feature_type": "amenity",
@@ -298,7 +298,7 @@ def _build_envelope(
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "official-county-trails-and-walking-loops",
                 "title": "Official county trails and walking loops",
                 "feature_type": "amenity",
@@ -314,7 +314,7 @@ def _build_envelope(
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "official-county-youth-sports-fields",
                 "title": "Official county sports fields",
                 "feature_type": "amenity",
@@ -330,7 +330,7 @@ def _build_envelope(
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "official-county-picnic-pavilions",
                 "title": "Official county picnic pavilions",
                 "feature_type": "amenity",
@@ -346,7 +346,7 @@ def _build_envelope(
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "official-county-nature-and-open-space",
                 "title": "Official county nature and open space",
                 "feature_type": "amenity",

@@ -76,7 +76,7 @@ def build_audit() -> dict:
     client = get_client()
     target_slugs = _target_slugs()
     venues = (
-        client.table("venues")
+        client.table("places")
         .select("id,slug,name,city,website,venue_type")
         .in_("slug", target_slugs)
         .execute()
@@ -85,7 +85,7 @@ def build_audit() -> dict:
     by_id = {row["id"]: row for row in venues}
     features = (
         client.table("venue_features")
-        .select("venue_id,slug,title,feature_type,description,price_note,url,sort_order,is_active")
+        .select("place_id,slug,title,feature_type,description,price_note,url,sort_order,is_active")
         .in_("venue_id", list(by_id.keys()))
         .eq("is_active", True)
         .execute()
@@ -108,7 +108,7 @@ def build_audit() -> dict:
             weak_rows.append(
                 {
                     "slug": venue["slug"],
-                    "venue_type": venue.get("venue_type"),
+                    "place_type": venue.get("venue_type"),
                     "city": venue.get("city"),
                     "website": website,
                     "issues": issues,
@@ -132,7 +132,7 @@ def build_audit() -> dict:
     duplicate_groups = {}
     for brand, slugs in BRAND_GROUPS.items():
         rows = (
-            client.table("venues")
+            client.table("places")
             .select("slug,name,city,venue_type,website,active")
             .in_("slug", slugs)
             .eq("active", True)

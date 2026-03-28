@@ -79,7 +79,7 @@ def test_parse_event_page_extracts_daily_sessions_from_jsonld_and_text() -> None
             "city": "Atlanta",
             "state": "GA",
             "zip": "30354",
-            "venue_type": "convention_center",
+            "place_type": "convention_center",
             "spot_type": "convention_center",
             "website": "https://rkshows.com/",
         },

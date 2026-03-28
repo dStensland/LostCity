@@ -357,7 +357,7 @@ _GENERIC_VENUE: dict = {
     "zip": "30313",
     "lat": 33.77058,
     "lng": -84.39512,
-    "venue_type": "community_center",
+    "place_type": "community_center",
     "spot_type": "community_center",
     "website": BASE_URL,
     "vibes": ["family-friendly", "all-ages"],
@@ -372,7 +372,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "community_center",
             "commitment_tier": "halfday",
             "primary_activity": "family YMCA branch visit",
@@ -393,7 +393,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "community_center",
+                "place_type": "community_center",
                 "city": city,
                 "site_pattern": "ymca_branch" if not is_generic else "ymca_generic",
             },
@@ -402,7 +402,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "family-community-program-campus",
             "title": "Family community program campus",
             "feature_type": "amenity",
@@ -415,7 +415,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "planned-ymca-day-not-drop-in-attraction",
             "title": "Planned YMCA day, not drop-in attraction",
             "feature_type": "amenity",
@@ -767,7 +767,7 @@ def _venue_data_for_branch(branch_slug: str) -> Optional[dict]:
         "zip": branch["zip"],
         "lat": branch["lat"],
         "lng": branch["lng"],
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": BASE_URL,
         "vibes": ["family-friendly", "all-ages"],
@@ -867,7 +867,7 @@ def _process_event_page(
 
         event_record: dict = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,

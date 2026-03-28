@@ -206,7 +206,7 @@ export async function GET(request: NextRequest) {
       ticket_url,
       source_id,
       portal_id,
-      venue:venues(id, name, slug, neighborhood, city, lat, lng, image_url, venue_type)
+      venue:places(id, name, slug, neighborhood, city, lat, lng, image_url, place_type)
     `;
 
     // Build the portal source scope filter

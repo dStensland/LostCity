@@ -11,7 +11,7 @@ const ALLOWED_FIELDS = new Set([
   "description",
   "short_description",
   "explore_blurb",
-  "venue_type",
+  "place_type",
   "vibes",
   "neighborhood",
   "image_url",
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     const { data: existing } = await serviceClient
       .from("venue_enrichment_proposals")
       .select("id")
-      .eq("venue_id", p.venue_id)
+      .eq("place_id", p.venue_id)
       .eq("field_name", p.field_name)
       .eq("status", "pending");
 
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
 
     // Get current value for context
     const { data: venue } = await serviceClient
-      .from("venues")
+      .from("places")
       .select(p.field_name)
       .eq("id", p.venue_id)
       .maybeSingle();

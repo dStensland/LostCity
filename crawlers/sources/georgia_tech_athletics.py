@@ -48,7 +48,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30313",
-        "venue_type": "stadium",
+        "place_type": "stadium",
         "website": "https://ramblinwreck.com",
     },
     "mens-basketball": {
@@ -59,7 +59,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "arena",
+        "place_type": "arena",
         "website": "https://ramblinwreck.com",
     },
     "womens-basketball": {
@@ -70,7 +70,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "arena",
+        "place_type": "arena",
         "website": "https://ramblinwreck.com",
     },
     "baseball": {
@@ -81,7 +81,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30332",
-        "venue_type": "stadium",
+        "place_type": "stadium",
         "website": "https://ramblinwreck.com",
     },
     "softball": {
@@ -92,7 +92,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30332",
-        "venue_type": "stadium",
+        "place_type": "stadium",
         "website": "https://ramblinwreck.com",
     },
     "default": {
@@ -103,7 +103,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30332",
-        "venue_type": "university",
+        "place_type": "university",
         "website": "https://gatech.edu",
     },
 }
@@ -341,7 +341,7 @@ def maybe_adopt_existing_public_title(
     result = (
         client.table("events")
         .select("title,source_id")
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("start_date", start_date)
         .eq("is_active", True)
         .neq("source_id", source_id)
@@ -394,7 +394,7 @@ def reconcile_same_slot_variants(
         client.table("events")
         .select("id,title,is_active")
         .eq("source_id", source_id)
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("start_date", start_date)
         .eq("is_active", True)
         .execute()
@@ -484,7 +484,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id if is_home else None,
+                    "place_id": venue_id if is_home else None,
                     "title": title,
                     "description": description,
                     "start_date": start_date,
@@ -519,7 +519,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         .table("events")
                         .select("id,title,is_active")
                         .eq("source_id", source_id)
-                        .eq("venue_id", venue_id)
+                        .eq("place_id", venue_id)
                         .eq("start_date", start_date)
                         .eq("is_active", True)
                         .execute()

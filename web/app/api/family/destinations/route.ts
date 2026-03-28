@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
 
     // Pass 1: get venue IDs that have a family_friendly occasion
     const { data: occasionRows } = await supabase
-      .from("venue_occasions")
+      .from("place_occasions")
       .select("venue_id")
       .eq("occasion", "family_friendly")
       .gte("confidence", 0.5);
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
     }
 
     let venuesQuery = supabase
-      .from("venues")
+      .from("places")
       .select(`
         id,
         name,
@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
         short_description,
         library_pass
       `)
-      .eq("active", true)
+      .eq("is_active", true)
       .not("name", "is", null)
       .not("address", "is", null)
       .not("slug", "is", null)
@@ -224,8 +224,8 @@ export async function GET(request: NextRequest) {
     const portalClient = await createPortalScopedClient(portal.id);
     let eventQuery = portalClient
       .from("events")
-      .select("venue_id, id")
-      .in("venue_id", venueIdSlice)
+      .select("place_id, id")
+      .in("place_id", venueIdSlice)
       .gte("start_date", today)
       .lte("start_date", thirtyDaysOut)
       .is("canonical_event_id", null)
@@ -248,12 +248,12 @@ export async function GET(request: NextRequest) {
       supabase
         .from("editorial_mentions")
         .select("venue_id")
-        .in("venue_id", venueIdSlice)
+        .in("place_id", venueIdSlice)
         .eq("is_active", true),
       supabase
-        .from("venue_occasions")
-        .select("venue_id, occasion, confidence")
-        .in("venue_id", venueIdSlice)
+        .from("place_occasions")
+        .select("place_id, occasion, confidence")
+        .in("place_id", venueIdSlice)
         .gte("confidence", 0.5)
         .order("confidence", { ascending: false }),
     ]);

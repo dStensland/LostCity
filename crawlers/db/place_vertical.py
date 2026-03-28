@@ -69,7 +69,7 @@ def upsert_place_vertical_details(venue_id: int, details: dict) -> Optional[int]
         return None
 
     row = {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         **{
             key: value
             for key, value in details.items()

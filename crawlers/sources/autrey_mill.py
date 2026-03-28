@@ -87,7 +87,7 @@ _VENUE_DATA = {
     "zip": "30022",
     "lat": 34.0208,
     "lng": -84.2327,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": _BASE_URL,
     "vibes": ["family-friendly", "outdoor", "all-ages", "educational", "historic"],
@@ -108,7 +108,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "nature_preserve",
             "commitment_tier": "halfday",
             "primary_activity": "nature preserve and heritage farm visit",
@@ -146,7 +146,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "woodland-trails-and-ravines",
             "title": "Woodland trails and ravines",
             "feature_type": "amenity",
@@ -162,7 +162,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "visitor-center-and-farm-museum",
             "title": "Visitor Center and Farm Museum",
             "feature_type": "attraction",
@@ -178,7 +178,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "heritage-buildings-and-farm-history",
             "title": "Heritage buildings and farm history",
             "feature_type": "experience",
@@ -194,7 +194,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "animals-and-pollinator-gardens",
             "title": "Animals and pollinator gardens",
             "feature_type": "attraction",
@@ -756,7 +756,7 @@ def _build_record(
 
     record: dict = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description if description else None,
         "start_date": start_date.isoformat(),

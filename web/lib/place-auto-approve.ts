@@ -97,7 +97,7 @@ async function generateUniqueSlug(
 
   // Check if slug exists
   const { data: existing } = await supabase
-    .from("venues")
+    .from("places")
     .select("id")
     .eq("slug", baseSlug)
     .maybeSingle();
@@ -150,7 +150,7 @@ export async function autoApproveVenue(
   try {
     // Check if venue with this place_id already exists (check both fields for compatibility)
     const { data: existingVenue } = await serviceClient
-      .from("venues")
+      .from("places")
       .select("id, name, slug")
       .or(`google_place_id.eq.${placeId},foursquare_id.eq.${placeId}`)
       .maybeSingle();
@@ -206,7 +206,7 @@ export async function autoApproveVenue(
 
     // Create the venue
     const { data: newVenue, error: insertError } = await serviceClient
-      .from("venues")
+      .from("places")
       .insert({
         name,
         slug,

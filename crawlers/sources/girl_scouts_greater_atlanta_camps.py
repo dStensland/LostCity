@@ -54,7 +54,7 @@ TIMBER_RIDGE_VENUE = {
     "state": "GA",
     "zip": "30126",
     "neighborhood": "Mableton",
-    "venue_type": "outdoor_venue",
+    "place_type": "outdoor_venue",
     "spot_type": "park",
     "website": "https://girlscoutsummer.com/timber-ridge-camp/",
     "vibes": ["family-friendly", "all-ages"],
@@ -68,7 +68,7 @@ MERIWETHER_VENUE = {
     "state": "GA",
     "zip": "30251",
     "neighborhood": "Luthersville",
-    "venue_type": "outdoor_venue",
+    "place_type": "outdoor_venue",
     "spot_type": "park",
     "website": "https://girlscoutsummer.com/meriwether-camp/",
     "vibes": ["family-friendly", "all-ages"],
@@ -297,7 +297,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     title = f"{row['title']} at {row['venue_data']['name']}"
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": row["description"],
         "start_date": row["start_date"],

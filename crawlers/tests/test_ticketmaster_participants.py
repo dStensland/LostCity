@@ -378,7 +378,7 @@ def test_crawl_uses_natural_key_guard_for_normalized_sports_titles(
         "id": 1069,
         "title": "Atlanta Hawks v. Brooklyn Nets",
         "source_id": 11,
-        "venue_id": 126,
+        "place_id": 126,
         "start_date": "2026-03-12",
         "start_time": "19:30",
     }

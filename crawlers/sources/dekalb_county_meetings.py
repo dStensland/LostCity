@@ -42,7 +42,7 @@ DEFAULT_VENUE_DATA = {
     "zip": "30030",
     "lat": 33.7748,
     "lng": -84.2963,
-    "venue_type": "community_center",
+    "place_type": "community_center",
     "spot_type": "community_center",
     "website": "https://www.dekalbcountyga.gov",
 }
@@ -147,7 +147,7 @@ def _venue_id_for_location(location: str, default_id: int) -> int:
         "address": loc,
         "city": "Decatur",
         "state": "GA",
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": "https://www.dekalbcountyga.gov",
     }
@@ -311,7 +311,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": start_date,

@@ -22,7 +22,7 @@ const NEARBY_RADIUS_MILES = 2;
 const EVENT_DETAIL_CACHE_TTL_MS = 60 * 1000;
 const EVENT_DETAIL_CACHE_NAMESPACE = "api:event-detail";
 const EVENT_DETAIL_CACHE_CONTROL = "public, max-age=30, s-maxage=60, stale-while-revalidate=120";
-const DESTINATION_SELECT_BASE = "id, name, slug, venue_type, neighborhood, lat, lng, hours, image_url, vibes";
+const DESTINATION_SELECT_BASE = "id, name, slug, place_type, neighborhood, lat, lng, hours, image_url, vibes";
 const DESTINATION_SELECT_WITH_PLANNING = `${DESTINATION_SELECT_BASE}, service_style, meal_duration_min_minutes, meal_duration_max_minutes, walk_in_wait_minutes, payment_buffer_minutes, accepts_reservations, reservation_recommended`;
 
 type RawEventArtist = {
@@ -110,9 +110,9 @@ async function fetchVenueEvents(
       id, title, start_date, end_date, start_time, end_time,
       series_id, image_url, category, is_free, price_min,
       series:series!events_series_id_fkey(id, slug, title, series_type, image_url),
-      venue:venues(id, name, slug, city, neighborhood, location_designator, venue_type)
+      venue:places(id, name, slug, city, neighborhood, location_designator, place_type)
     `)
-    .eq("venue_id", eventData.venue_id)
+    .eq("place_id", eventData.venue_id)
     .neq("id", eventId)
     .is("canonical_event_id", null)
     .or(`start_date.gte.${today},end_date.gte.${today}`)
@@ -149,7 +149,7 @@ async function fetchNearbyEvents(
       .from("events")
       .select(`
         id, title, start_date, start_time, end_time, category, is_free, price_min,
-        venue:venues!inner(id, name, slug, lat, lng, city, neighborhood, location_designator)
+        venue:places!inner(id, name, slug, lat, lng, city, neighborhood, location_designator)
       `)
       .eq("start_date", eventData.start_date)
       .neq("id", eventId)
@@ -206,7 +206,7 @@ async function fetchNearbyEvents(
       .from("events")
       .select(`
         id, title, start_date, start_time, end_time, category, is_free, price_min,
-        venue:venues(id, name, slug, city, neighborhood, location_designator)
+        venue:places(id, name, slug, city, neighborhood, location_designator)
       `)
       .eq("start_date", eventData.start_date)
       .neq("id", eventId)
@@ -248,11 +248,11 @@ async function fetchNearbyDestinations(
 
     // Fetch venues in the same neighborhood
     const spotsResult = await supabase
-      .from("venues")
+      .from("places")
       .select(DESTINATION_SELECT_WITH_PLANNING)
       .eq("neighborhood", eventData.venue.neighborhood)
-      .in("venue_type", allDestinationTypes)
-      .eq("active", true)
+      .in("place_type", allDestinationTypes)
+      .eq("is_active", true)
       .neq("id", eventData.venue?.id || 0);
     let spots = spotsResult.data;
 
@@ -262,11 +262,11 @@ async function fetchNearbyDestinations(
         spotsResult.error.message.includes("schema cache"))
     ) {
       const fallbackResult = await supabase
-        .from("venues")
+        .from("places")
         .select(DESTINATION_SELECT_BASE)
         .eq("neighborhood", eventData.venue.neighborhood)
-        .in("venue_type", allDestinationTypes)
-        .eq("active", true)
+        .in("place_type", allDestinationTypes)
+        .eq("is_active", true)
         .neq("id", eventData.venue?.id || 0);
       spots = fallbackResult.data;
     }
@@ -352,10 +352,10 @@ async function fetchNearbyDestinations(
     const allDestinationTypes = Object.values(DESTINATION_CATEGORIES).flat();
 
     const spotsResult = await supabase
-      .from("venues")
+      .from("places")
       .select(DESTINATION_SELECT_WITH_PLANNING)
-      .in("venue_type", allDestinationTypes)
-      .eq("active", true)
+      .in("place_type", allDestinationTypes)
+      .eq("is_active", true)
       .neq("id", eventData.venue?.id || 0)
       .limit(50);
     let spots = spotsResult.data;
@@ -366,10 +366,10 @@ async function fetchNearbyDestinations(
         spotsResult.error.message.includes("schema cache"))
     ) {
       const fallbackResult = await supabase
-        .from("venues")
+        .from("places")
         .select(DESTINATION_SELECT_BASE)
-        .in("venue_type", allDestinationTypes)
-        .eq("active", true)
+        .in("place_type", allDestinationTypes)
+        .eq("is_active", true)
         .neq("id", eventData.venue?.id || 0)
         .limit(50);
       spots = fallbackResult.data;
@@ -508,7 +508,7 @@ export async function GET(
 
   const fullSelect = `
     *,
-    venue:venues(id, name, slug, address, neighborhood, city, state, location_designator, vibes, description, lat, lng, venue_type, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score),
+    venue:places(id, name, slug, address, neighborhood, city, state, location_designator, vibes, description, lat, lng, place_type, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score),
     series:series_id(
       id,
       title,
@@ -541,7 +541,7 @@ export async function GET(
         .from("events")
         .select(`
           *,
-          venue:venues(id, name, slug, address, neighborhood, city, state, location_designator, vibes, description, lat, lng, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score)
+          venue:places(id, name, slug, address, neighborhood, city, state, location_designator, vibes, description, lat, lng, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score)
         `)
         .eq("id", eventId)
         .maybeSingle();

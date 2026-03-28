@@ -227,7 +227,7 @@ def backfill_venues(
 
     # Get venues without genres
     result = (
-        client.table("venues")
+        client.table("places")
         .select("id,name,venue_type,genres")
         .eq("active", True)
         .is_("genres", "null")
@@ -247,7 +247,7 @@ def backfill_venues(
         events_result = (
             client.table("events")
             .select("genres")
-            .eq("venue_id", venue_id)
+            .eq("place_id", venue_id)
             .not_.is_("genres", "null")
             .limit(100)
             .execute()
@@ -289,7 +289,7 @@ def backfill_venues(
 
         if not dry_run:
             try:
-                client.table("venues").update(
+                client.table("places").update(
                     {"genres": venue_genres}
                 ).eq("id", venue_id).execute()
             except Exception as e:

@@ -36,7 +36,7 @@ PLACE_DATA = {
     "zip": "30313",
     "lat": 33.7553,
     "lng": -84.4006,
-    "venue_type": "stadium",
+    "place_type": "stadium",
     "spot_type": "stadium",
     "website": BASE_URL,
     "vibes": ["sports", "landmark", "tours-available", "downtown", "world-class"],
@@ -86,7 +86,7 @@ def should_skip_official_match(title: str) -> bool:
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "stadium",
         "commitment_tier": "halfday",
         "primary_activity": "NFL, MLS, concerts, and major events in a world-class stadium",
@@ -105,10 +105,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Ticket prices vary by event. Stadium tours available on non-event days.",
         "source_url": BASE_URL,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "stadium", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "stadium", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "retractable-roof-oculus",
         "title": "Retractable roof and oculus design",
         "feature_type": "attraction",
@@ -118,7 +118,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "stadium-tours",
         "title": "Stadium tours",
         "feature_type": "experience",
@@ -128,7 +128,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "fan-first-pricing",
         "title": "Fan-first concession pricing",
         "feature_type": "amenity",
@@ -138,7 +138,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "100-yard-bar-molly-bs",
         "title": "100-yard bar and Molly B's restaurant",
         "feature_type": "amenity",
@@ -148,7 +148,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 40,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "halo-video-board",
         "title": "Halo video board",
         "feature_type": "attraction",
@@ -158,7 +158,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 50,
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "fan-first-concessions",
         "title": "Fan-first concession pricing",
         "description": "Permanently discounted food and drinks at every event — among the lowest concession prices in professional sports.",
@@ -168,7 +168,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "category": "daily_special",
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "mbs-stadium-tours",
         "title": "Mercedes-Benz Stadium tours",
         "description": "Guided tours available on non-event days with field access, locker rooms, and behind-the-scenes areas.",
@@ -310,7 +310,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": None,
                         "start_date": start_date,

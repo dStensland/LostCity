@@ -58,7 +58,7 @@ PLACE_DATA = {
     "zip": "30338",
     "lat": 33.9301,
     "lng": -84.2966,
-    "venue_type": "community_center",
+    "place_type": "community_center",
     "spot_type": "community_center",
     "website": BASE_URL,
     "vibes": ["family-friendly", "all-ages", "faith-jewish"],
@@ -70,7 +70,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "community_center",
             "commitment_tier": "halfday",
             "primary_activity": "family community-center campus visit",
@@ -91,7 +91,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "community_center",
+                "place_type": "community_center",
                 "city": "dunwoody",
             },
         },
@@ -99,7 +99,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "family-campus-program-hub",
             "title": "Family campus program hub",
             "feature_type": "amenity",
@@ -112,7 +112,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "indoor-community-and-cultural-flex",
             "title": "Indoor community and cultural flex",
             "feature_type": "amenity",
@@ -125,7 +125,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "planned-program-day-rather-than-drop-in-stop",
             "title": "Planned program day rather than drop-in stop",
             "feature_type": "amenity",
@@ -599,7 +599,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description,
                         "start_date": start_date,

@@ -55,7 +55,7 @@ PLACE_DATA = {
     "lat": 33.9428,
     "lng": -84.3227,
     "neighborhood": "Dunwoody",
-    "venue_type": "nature_center",
+    "place_type": "nature_center",
     "spot_type": "park",
     "website": "https://dunwoodynature.org/",
     "vibes": ["family-friendly", "outdoor", "educational"],
@@ -215,7 +215,7 @@ def _parse_rows_from_pdf() -> list[dict]:
 def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": row["title"],
         "description": row["description"],
         "start_date": row["start_date"],

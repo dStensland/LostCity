@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30309",
     "lat": 33.7892,
     "lng": -84.3862,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": BASE_URL,
     # Box office hours (verified from alliancetheatre.org/visit)
@@ -80,7 +80,7 @@ STAGE_PATTERN = re.compile(r"on the\s+(.+(?:STAGE|THEATRE|ANYWHERE))", re.IGNORE
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "theater",
         "commitment_tier": "halfday",
         "primary_activity": "Tony Award-winning regional theater productions",
@@ -99,10 +99,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Ticket prices vary by production. Rush tickets and student discounts available for select performances.",
         "source_url": BASE_URL,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "theater", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "theater", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "tony-award-winning-theater",
         "title": "Tony Award-winning regional theater",
         "feature_type": "experience",
@@ -112,7 +112,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "theatre-for-young-audiences",
         "title": "Alliance Theatre for Young Audiences",
         "feature_type": "experience",
@@ -122,7 +122,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "woodruff-arts-center-campus",
         "title": "Shared Woodruff Arts Center campus",
         "feature_type": "amenity",
@@ -132,7 +132,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "pre-show-dining-midtown",
         "title": "Pre-show dining options at Woodruff",
         "feature_type": "amenity",
@@ -142,7 +142,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 40,
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "rush-tickets-student-discounts",
         "title": "Rush tickets and student discounts",
         "description": "Day-of rush tickets and student pricing available for select performances.",
@@ -152,7 +152,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "category": "recurring_deal",
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "family-series-pricing",
         "title": "Family series pricing",
         "description": "Special pricing for Alliance Theatre for Young Audiences productions and family-oriented shows.",
@@ -274,7 +274,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if PLACE_DATA.get("description"):
                     venue_update["description"] = PLACE_DATA["description"]
                 if venue_update:
-                    get_client().table("venues").update(venue_update).eq("id", venue_id).execute()
+                    get_client().table("places").update(venue_update).eq("id", venue_id).execute()
                     logger.info("Alliance Theatre: enriched venue record from homepage og: metadata")
             except Exception as _upd_exc:
                 logger.warning("Alliance Theatre: venue update failed: %s", _upd_exc)
@@ -438,7 +438,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": venue_id,
+                                "place_id": venue_id,
                                 "title": title,
                                 "description": description,
                                 "start_date": start_date,

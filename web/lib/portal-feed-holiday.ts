@@ -217,7 +217,7 @@ export async function fetchHolidayEvents(
           id,
           start_date,
           tags,
-          venue:venues(id, city, active)
+          venue:places(id, city, is_active)
         `,
         )
         .overlaps("tags", groupTags)
@@ -309,7 +309,7 @@ export async function fetchHolidayEvents(
               day_of_week,
               festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
             ),
-            venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, active)
+            venue:places(id, name, neighborhood, slug, place_type, location_designator, city, image_url, is_active)
           `,
           )
           .in("id", holidayCandidateIds);

@@ -38,7 +38,7 @@ PLACE_DATA = {
     "zip": "30315",
     "lat": 33.6920,
     "lng": -84.3420,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "trail",
     "website": HOMEPAGE,
     # Open daily from dawn to dusk — no fixed closing time
@@ -101,7 +101,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "trail",
             "commitment_tier": "hour",
             "primary_activity": "self-guided folk-art trail walk",
@@ -127,7 +127,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "found-object-folk-art-installations",
             "title": "Found-object folk art installations",
             "feature_type": "experience",
@@ -177,7 +177,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning("Doll's Head Trail: venue update failed: %s", exc)
 

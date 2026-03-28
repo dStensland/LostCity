@@ -69,7 +69,7 @@ def sample_event_data():
         "start_date": start_date,
         "start_time": "20:00",
         "end_time": "23:00",
-        "venue_id": 1,
+        "place_id": 1,
         "category": "music",
         "subcategory": "live-music",
         "tags": ["live-music"],
@@ -94,7 +94,7 @@ def sample_venue_data():
         "zip": "30308",
         "lat": 33.78,
         "lng": -84.38,
-        "venue_type": "venue",
+        "place_type": "venue",
         "spot_type": "venue",
         "website": "https://testvenue.com",
     }

@@ -15,7 +15,7 @@ const MAX_NOTE_LENGTH = 280;
 
 // Venue + event select string reused across GET branches
 const VENUE_SELECT = "id, name, slug, image_url, neighborhood, address";
-const HANG_WITH_VENUE_SELECT = `*, venue:venues(${VENUE_SELECT}), event:events(id, title, start_date)`;
+const HANG_WITH_VENUE_SELECT = `*, venue:places(${VENUE_SELECT}), event:events(id, title, start_date)`;
 
 /**
  * POST /api/hangs

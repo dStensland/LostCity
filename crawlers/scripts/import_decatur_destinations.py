@@ -36,7 +36,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2938,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://revivalrestaurants.com",
     },
     {
@@ -49,7 +49,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7728,
         "lng": -84.2908,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://kimball-house.com",
     },
     {
@@ -62,7 +62,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.3008,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://chaipanidecatur.com",
     },
     {
@@ -75,7 +75,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2938,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://no246.com",
     },
     {
@@ -88,7 +88,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7755,
         "lng": -84.2965,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://cakesandaledecatur.com",
     },
     {
@@ -101,7 +101,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7752,
         "lng": -84.2962,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://ragingburrito.com",
     },
     {
@@ -114,7 +114,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7728,
         "lng": -84.3068,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://wahoogrill.com",
     },
     {
@@ -127,7 +127,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7728,
         "lng": -84.2918,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://deeranddove.com",
     },
     {
@@ -140,7 +140,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.3008,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://farmburger.net",
     },
     {
@@ -153,7 +153,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2998,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://butterandcream.com",
     },
     {
@@ -166,7 +166,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7752,
         "lng": -84.2965,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://tedsmontanagrill.com",
     },
     {
@@ -179,7 +179,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2988,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://taqueriatsunami.com",
     },
     {
@@ -192,7 +192,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7818,
         "lng": -84.2978,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://communitysmith.com",
     },
     {
@@ -205,7 +205,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7738,
         "lng": -84.2948,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://saporidinapoliatlanta.com",
     },
     {
@@ -218,7 +218,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2988,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://marrakeshcafe.com",
     },
     {
@@ -231,7 +231,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7738,
         "lng": -84.2948,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://sushiyokodecatur.com",
     },
     {
@@ -244,7 +244,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7728,
         "lng": -84.2858,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://surinofthailand.com",
     },
     {
@@ -257,7 +257,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2948,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://talatmarketatl.com",
     },
     {
@@ -270,7 +270,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2978,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://pinewooddecatur.com",
     },
     {
@@ -283,7 +283,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7745,
         "lng": -84.2948,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://thesquarepub.com",
     },
     {
@@ -296,7 +296,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7818,
         "lng": -84.2978,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://thinkingmantavern.com",
     },
     {
@@ -309,7 +309,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7745,
         "lng": -84.2948,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://bfrg.com/brickstorepub",
     },
     {
@@ -322,7 +322,7 @@ RESTAURANTS = [
         "zip": "30033",
         "lat": 33.7708,
         "lng": -84.2658,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://mellowmushroom.com",
     },
     {
@@ -335,7 +335,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7752,
         "lng": -84.2965,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -348,7 +348,7 @@ RESTAURANTS = [
         "zip": "30033",
         "lat": 33.8008,
         "lng": -84.2748,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://tiburongrille.com",
     },
     {
@@ -361,7 +361,7 @@ RESTAURANTS = [
         "zip": "30033",
         "lat": 33.7698,
         "lng": -84.2698,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://burritoart.net",
     },
     {
@@ -374,7 +374,7 @@ RESTAURANTS = [
         "zip": "30033",
         "lat": 33.8038,
         "lng": -84.2918,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://littlebangkokdecatur.com",
     },
     {
@@ -387,7 +387,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7745,
         "lng": -84.2945,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://proofbakeshop.com",
     },
     {
@@ -400,7 +400,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7765,
         "lng": -84.2958,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://frostycaboose.com",
     },
     {
@@ -413,7 +413,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7868,
         "lng": -84.3038,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://holytaco.com",
     },
     {
@@ -426,7 +426,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2998,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://cafelily.com",
     },
     {
@@ -439,7 +439,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2998,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://thaidineratlanta.com",
     },
     {
@@ -452,7 +452,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7758,
         "lng": -84.2968,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://matadorcantina.com",
     },
     {
@@ -465,7 +465,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2958,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://theiberianpigatl.com",
     },
     {
@@ -478,7 +478,7 @@ RESTAURANTS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2938,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://parkersonponce.com",
     },
 ]
@@ -495,7 +495,7 @@ BARS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2935,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://leonsfullservice.com",
     },
     {
@@ -508,7 +508,7 @@ BARS = [
         "zip": "30030",
         "lat": 33.7738,
         "lng": -84.2928,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://sostikibar.com",
     },
     {
@@ -521,7 +521,7 @@ BARS = [
         "zip": "30030",
         "lat": 33.7745,
         "lng": -84.2948,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://bfrg.com/brickstorepub",
     },
     {
@@ -534,7 +534,7 @@ BARS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2978,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://pinewooddecatur.com",
     },
     {
@@ -547,7 +547,7 @@ BARS = [
         "zip": "30030",
         "lat": 33.7728,
         "lng": -84.2918,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -560,7 +560,7 @@ BARS = [
         "zip": "30030",
         "lat": 33.7738,
         "lng": -84.2928,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://paperplanebar.com",
     },
     {
@@ -573,7 +573,7 @@ BARS = [
         "zip": "30030",
         "lat": 33.7738,
         "lng": -84.2928,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://vfrg.com/victory",
     },
     {
@@ -586,7 +586,7 @@ BARS = [
         "zip": "30030",
         "lat": 33.7738,
         "lng": -84.2908,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://twainsbrewpub.com",
     },
     {
@@ -599,7 +599,7 @@ BARS = [
         "zip": "30033",
         "lat": 33.8018,
         "lng": -84.2688,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://fifthseasongardening.com",
     },
     {
@@ -612,7 +612,7 @@ BARS = [
         "zip": "30030",
         "lat": 33.7738,
         "lng": -84.2908,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -625,7 +625,7 @@ BARS = [
         "zip": "30030",
         "lat": 33.7765,
         "lng": -84.2958,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://eddiesattic.com",
     },
     {
@@ -638,7 +638,7 @@ BARS = [
         "zip": "30030",
         "lat": 33.7728,
         "lng": -84.2798,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -651,7 +651,7 @@ BARS = [
         "zip": "30030",
         "lat": 33.7728,
         "lng": -84.2908,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://kimball-house.com",
     },
 ]
@@ -668,7 +668,7 @@ COFFEE_SHOPS = [
         "zip": "30030",
         "lat": 33.7745,
         "lng": -84.2945,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://dancinggoats.com",
     },
     {
@@ -681,7 +681,7 @@ COFFEE_SHOPS = [
         "zip": "30030",
         "lat": 33.7765,
         "lng": -84.2958,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://chromeyellow.com",
     },
     {
@@ -694,7 +694,7 @@ COFFEE_SHOPS = [
         "zip": "30030",
         "lat": 33.7715,
         "lng": -84.2895,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://opo.coffee",
     },
     {
@@ -707,7 +707,7 @@ COFFEE_SHOPS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2908,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": None,
     },
     {
@@ -720,7 +720,7 @@ COFFEE_SHOPS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2918,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://javamonkeydecatur.com",
     },
     {
@@ -733,7 +733,7 @@ COFFEE_SHOPS = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2908,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://starbucks.com",
     },
     {
@@ -746,7 +746,7 @@ COFFEE_SHOPS = [
         "zip": "30030",
         "lat": 33.7888,
         "lng": -84.3048,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://coolbeanscoffeeroasters.com",
     },
     {
@@ -759,7 +759,7 @@ COFFEE_SHOPS = [
         "zip": "30033",
         "lat": 33.8238,
         "lng": -84.3088,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://kavarnacoffee.com",
     },
     {
@@ -772,7 +772,7 @@ COFFEE_SHOPS = [
         "zip": "30033",
         "lat": 33.8638,
         "lng": -84.2968,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://starbucks.com",
     },
     {
@@ -785,7 +785,7 @@ COFFEE_SHOPS = [
         "zip": "30033",
         "lat": 33.7968,
         "lng": -84.2768,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://cariboucoffee.com",
     },
 ]
@@ -802,7 +802,7 @@ BREWERIES = [
         "zip": "30030",
         "lat": 33.7658,
         "lng": -84.2878,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://sceptrebrewing.com",
     },
     {
@@ -815,7 +815,7 @@ BREWERIES = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2898,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://innervoicebrewing.com",
     },
     {
@@ -828,7 +828,7 @@ BREWERIES = [
         "zip": "30030",
         "lat": 33.7738,
         "lng": -84.2908,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://twainsbrewpub.com",
     },
     {
@@ -841,7 +841,7 @@ BREWERIES = [
         "zip": "30030",
         "lat": 33.7715,
         "lng": -84.2898,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://threetavernsbrewery.com",
     },
     {
@@ -854,7 +854,7 @@ BREWERIES = [
         "zip": "30030",
         "lat": 33.7715,
         "lng": -84.2895,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://wildheavenbeer.com",
     },
     {
@@ -867,7 +867,7 @@ BREWERIES = [
         "zip": "30030",
         "lat": 33.7318,
         "lng": -84.4158,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://mondaynightbrewing.com",
     },
 ]
@@ -884,7 +884,7 @@ LIVE_MUSIC = [
         "zip": "30030",
         "lat": 33.7765,
         "lng": -84.2958,
-        "venue_type": "music_venue",
+        "place_type": "music_venue",
         "website": "https://eddiesattic.com",
     },
     {
@@ -897,7 +897,7 @@ LIVE_MUSIC = [
         "zip": "30030",
         "lat": 33.7765,
         "lng": -84.2958,
-        "venue_type": "music_venue",
+        "place_type": "music_venue",
         "website": "https://napoleonsdecatur.com",
     },
     {
@@ -910,7 +910,7 @@ LIVE_MUSIC = [
         "zip": "30030",
         "lat": 33.7765,
         "lng": -84.2958,
-        "venue_type": "music_venue",
+        "place_type": "music_venue",
         "website": "https://eddiesattic.com",
     },
     {
@@ -923,7 +923,7 @@ LIVE_MUSIC = [
         "zip": "30030",
         "lat": 33.7765,
         "lng": -84.2958,
-        "venue_type": "music_venue",
+        "place_type": "music_venue",
         "website": "https://eddiesattic.com",
     },
     {
@@ -936,7 +936,7 @@ LIVE_MUSIC = [
         "zip": "30030",
         "lat": 33.7748,
         "lng": -84.2918,
-        "venue_type": "music_venue",
+        "place_type": "music_venue",
         "website": "https://javamonkeydecatur.com",
     },
     {
@@ -949,7 +949,7 @@ LIVE_MUSIC = [
         "zip": "30030",
         "lat": 33.7765,
         "lng": -84.2958,
-        "venue_type": "music_venue",
+        "place_type": "music_venue",
         "website": None,
     },
     {
@@ -962,7 +962,7 @@ LIVE_MUSIC = [
         "zip": "30030",
         "lat": 33.7738,
         "lng": -84.2948,
-        "venue_type": "music_venue",
+        "place_type": "music_venue",
         "website": None,
     },
 ]

@@ -25,7 +25,7 @@ PLACE_DATA = {
     "zip": "30306",
     "lat": 33.7879,
     "lng": -84.3733,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": "https://piedmontpark.org",
 }
@@ -86,7 +86,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": "Multi-genre music festival featuring EDM, pop, and hip-hop artists. Part of the Breakaway festival series touring multiple cities.",
         "start_date": start_date.strftime("%Y-%m-%d"),

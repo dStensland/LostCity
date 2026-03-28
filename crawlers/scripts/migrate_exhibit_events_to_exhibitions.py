@@ -127,7 +127,7 @@ def fetch_exhibit_events() -> list[dict]:
     result = (
         client.table("events")
         .select("id, title, description, image_url, start_date, end_date, "
-                "venue_id, source_id, source_url, is_free, tags, content_kind, "
+                "place_id, source_id, source_url, is_free, tags, content_kind, "
                 "venues!inner(id, name, venue_type, slug), "
                 "sources!inner(slug)")
         .eq("content_kind", "exhibit")
@@ -149,7 +149,7 @@ def migrate_to_exhibition(event: dict, apply: bool) -> bool:
     """Migrate an exhibit event to the exhibitions table."""
     exhibition_data = {
         "title": event["title"],
-        "venue_id": event["venue_id"],
+        "place_id": event["venue_id"],
         "source_id": event.get("source_id"),
         "_venue_name": event.get("venue_name", "gallery"),
         "opening_date": event.get("start_date"),

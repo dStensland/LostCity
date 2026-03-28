@@ -451,7 +451,7 @@ def get_venues_needing_hours(
     """Get venues with websites that need hours (missing, stale, or lower-confidence)."""
     client = get_client()
 
-    query = client.table("venues").select(
+    query = client.table("places").select(
         "id, name, slug, website, hours, venue_type, hours_source, hours_updated_at"
     ).eq("active", True)
 
@@ -459,7 +459,7 @@ def get_venues_needing_hours(
     query = query.not_.is_("website", "null")
 
     if venue_type:
-        query = query.eq("venue_type", venue_type)
+        query = query.eq("place_type", venue_type)
 
     query = query.limit(limit * 3)  # Over-fetch to filter client-side
 
@@ -509,7 +509,7 @@ def update_venue_hours(venue_id: int, hours: dict, hours_display: str, dry_run: 
         if hours_display:
             updates["hours_display"] = hours_display
 
-        client.table("venues").update(updates).eq("id", venue_id).execute()
+        client.table("places").update(updates).eq("id", venue_id).execute()
         return True
     except Exception as e:
         logger.error(f"    Update error: {e}")

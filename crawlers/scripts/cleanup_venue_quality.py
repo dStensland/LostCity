@@ -44,7 +44,7 @@ def fetch_all_venues(client, *, active_only: bool = True) -> list[dict]:
     all_venues = []
     offset = 0
     while True:
-        query = client.table("venues").select(
+        query = client.table("places").select(
             "id, name, slug, city, state, lat, lng, neighborhood, active, address"
         ).order("id")
         if active_only:
@@ -79,7 +79,7 @@ def step1_address_as_name(client, venues: list[dict], *, write: bool = False) ->
         deactivated = 0
         for v, reason in flagged:
             try:
-                client.table("venues").update({"active": False}).eq("id", v["id"]).execute()
+                client.table("places").update({"active": False}).eq("id", v["id"]).execute()
                 deactivated += 1
             except Exception as e:
                 logger.error(f"Failed to deactivate venue {v['id']}: {e}")
@@ -121,7 +121,7 @@ def step2_out_of_state(client, venues: list[dict], *, write: bool = False) -> in
         deactivated = 0
         for v, reason in flagged:
             try:
-                client.table("venues").update({"active": False}).eq("id", v["id"]).execute()
+                client.table("places").update({"active": False}).eq("id", v["id"]).execute()
                 deactivated += 1
             except Exception as e:
                 logger.error(f"Failed to deactivate venue {v['id']}: {e}")
@@ -143,7 +143,7 @@ def step3_neighborhood_normalization(client, venues: list[dict], *, write: bool 
                 if write:
                     for v in matches:
                         try:
-                            client.table("venues").update(
+                            client.table("places").update(
                                 {"neighborhood": canonical}
                             ).eq("id", v["id"]).execute()
                             fixed += 1

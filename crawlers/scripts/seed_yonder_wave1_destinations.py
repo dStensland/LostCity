@@ -45,7 +45,7 @@ WAVE_1_DESTINATIONS = [
         "lat": 34.566883,
         "lng": -84.239113,
         "website": "https://gastateparks.org/AmicalolaFalls",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "short_description": "North Georgia's signature waterfall park with a high-payoff staircase climb and Appalachian Trail energy.",
         "description": "Amicalola Falls is one of Georgia's most iconic outdoor anchors, pairing a dramatic waterfall, steep approach stairs, and fast access to broader North Georgia hiking. It is one of the clearest full-day gateway destinations for Yonder's regional adventure layer.",
@@ -66,7 +66,7 @@ WAVE_1_DESTINATIONS = [
         "lat": 34.733104,
         "lng": -83.389225,
         "website": "https://gastateparks.org/TallulahGorge",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "short_description": "A dramatic canyon destination with suspension bridge views, steep stairs, and one of the strongest 'worth the trip' hikes in the state.",
         "description": "Tallulah Gorge gives Yonder a premium North Georgia canyon anchor with dramatic overlooks, high-reward hiking, and an unmistakable sense of scale. It is one of the clearest destinations for turning full-day motivation into real action.",
@@ -87,7 +87,7 @@ WAVE_1_DESTINATIONS = [
         "lat": 34.816813,
         "lng": -85.489446,
         "website": "https://gastateparks.org/CloudlandCanyon",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "short_description": "A canyon-and-waterfall anchor that makes Yonder's weekend layer feel real even before camping depth ships.",
         "description": "Cloudland Canyon is one of Georgia's highest-upside regional anchors, combining canyon overlooks, waterfall access, and strong overnight potential. It is a foundational destination for Yonder's full-day and weekend positioning.",
@@ -107,7 +107,7 @@ WAVE_1_DESTINATIONS = [
         "lat": 34.74198,
         "lng": -83.922727,
         "website": "https://appalachiantrail.org/explore/plan-and-prepare/hiking-basics/suggested-hikes/neels-gap-to-blood-mountain/",
-        "venue_type": "trail",
+        "place_type": "trail",
         "spot_type": "trail",
         "short_description": "An Appalachian icon with summit payoff that gives Yonder a real North Georgia mountain benchmark.",
         "description": "Blood Mountain is one of the clearest full-day summit anchors in North Georgia, with strong Appalachian identity and broad recognition. It gives Yonder a hike that feels meaningfully bigger than metro nature inventory.",
@@ -127,7 +127,7 @@ WAVE_1_DESTINATIONS = [
         "lat": 34.637512,
         "lng": -84.195343,
         "website": "https://appalachiantrail.org/explore/plan-and-prepare/hiking-basics/suggested-hikes/springer-mountain-loop/",
-        "venue_type": "trail",
+        "place_type": "trail",
         "spot_type": "trail",
         "short_description": "The southern Appalachian Trail anchor that turns Yonder's quest and weekend ambition into something concrete.",
         "description": "Springer Mountain matters less for pure spectacle than for what it represents: the southern anchor of the Appalachian Trail and a true weekend-scale North Georgia adventure symbol. It is critical future quest infrastructure for Yonder.",
@@ -148,7 +148,7 @@ WAVE_1_DESTINATIONS = [
         "lat": 34.874796,
         "lng": -83.810859,
         "website": "https://brasstownbald.com/",
-        "venue_type": "viewpoint",
+        "place_type": "viewpoint",
         "spot_type": "trail",
         "short_description": "Georgia's highest point with broad scenic payoff and one of the easiest ways to sell a regional day trip.",
         "description": "Brasstown Bald gives Yonder a top-tier summit anchor with a broad audience, strong scenic identity, and a much lower intimidation barrier than some North Georgia hikes. It is ideal for full-day discovery modules and beginner-friendly scenic recommendations.",
@@ -168,7 +168,7 @@ WAVE_1_DESTINATIONS = [
         "lat": 34.7398,
         "lng": -83.8106,
         "website": "https://www.fs.usda.gov/recarea/conf/recarea/?recid=10530",
-        "venue_type": "trail",
+        "place_type": "trail",
         "spot_type": "trail",
         "short_description": "A classic North Georgia waterfall hike that belongs in any serious full-day Yonder shelf.",
         "description": "Raven Cliff Falls is one of the most recognizable waterfall hikes in North Georgia and gives Yonder a clean, high-signal destination for full-day outdoor recommendations. It is especially valuable because it bridges scenic payoff and broad user appeal.",
@@ -189,7 +189,7 @@ WAVE_1_DESTINATIONS = [
         "lat": 34.76395,
         "lng": -83.900948,
         "website": "https://gastateparks.org/Vogel",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "short_description": "A mountain lake and camping anchor that helps Yonder bridge from day trips into weekend escapes.",
         "description": "Vogel State Park gives Yonder a mountain-lake anchor with strong camping adjacency and lower-barrier scenic value. It is strategically useful because it makes the weekend layer feel more attainable before Camp Finder becomes a full product.",
@@ -210,7 +210,7 @@ WAVE_1_DESTINATIONS = [
         "lat": 34.762284,
         "lng": -84.701934,
         "website": "https://gastateparks.org/FortMountain",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "short_description": "A mountain-park anchor with scenic overlooks, long-loop hiking, and real weekend credibility.",
         "description": "Fort Mountain State Park gives Yonder a strong mountain-park destination that can support both big day hikes and weekend cabin-or-camping ambition. It helps the portal feel geographically broader without losing product focus.",
@@ -231,7 +231,7 @@ WAVE_1_DESTINATIONS = [
         "lat": 33.7218781,
         "lng": -84.56408,
         "website": "https://www.seclimbers.org/projects/boat-rock",
-        "venue_type": "outdoor_venue",
+        "place_type": "outdoor_venue",
         "spot_type": "trail",
         "short_description": "Atlanta's defining outdoor climbing and bouldering anchor, with real community identity and local distinctiveness.",
         "description": "Boat Rock is one of the most distinctive outdoor recreation anchors in the Atlanta area, especially for climbing and bouldering culture. It matters to Yonder because it gives the portal a non-generic local adventure identity that cannot be replaced by city-park inventory.",
@@ -298,7 +298,7 @@ def find_existing_venue(seed: dict) -> dict | None:
 
     client = get_client()
     result = (
-        client.table("venues")
+        client.table("places")
         .select("*")
         .eq("name", seed["name"])
         .limit(1)
@@ -382,7 +382,7 @@ def main() -> None:
                 continue
 
             if args.apply:
-                client.table("venues").update(updates).eq("id", existing["id"]).execute()
+                client.table("places").update(updates).eq("id", existing["id"]).execute()
             logger.info(
                 "%s existing: %s (%s fields)",
                 "UPDATE" if args.apply else "WOULD UPDATE",

@@ -47,7 +47,7 @@ PARK_TARGETS = [
         "parking_note": "Use current Georgia State Parks guidance for access, reservations, and trail/lake logistics.",
         "typical_duration_minutes": 240,
         "explore_blurb": "Northwest Georgia state-park anchor with camping, lakes, and cabins.",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "explore_category": "outdoors",
         "active": True,
@@ -146,7 +146,7 @@ def find_existing_venue(seed: dict) -> dict | None:
     if existing:
         return existing
     client = get_client()
-    result = client.table("venues").select("*").eq("name", seed["name"]).limit(1).execute()
+    result = client.table("places").select("*").eq("name", seed["name"]).limit(1).execute()
     if result.data:
         return result.data[0]
     return None
@@ -187,7 +187,7 @@ def compute_updates(existing: dict, payload: dict) -> dict:
 
 def insert_venue_direct(payload: dict) -> int | None:
     client = get_client()
-    result = client.table("venues").insert(payload).execute()
+    result = client.table("places").insert(payload).execute()
     if result.data:
         return result.data[0].get("id")
     return None
@@ -225,7 +225,7 @@ def upsert_seeds(seeds: list[dict], *, apply: bool, refresh_existing: bool) -> t
             skipped += 1
             continue
         if apply:
-            client.table("venues").update(updates).eq("id", existing["id"]).execute()
+            client.table("places").update(updates).eq("id", existing["id"]).execute()
         print(f"{'UPDATE' if apply else 'WOULD UPDATE'} venue: {seed['slug']} ({len(updates)} fields)")
         updated += 1
     return created, updated, skipped

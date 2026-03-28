@@ -68,7 +68,7 @@ PLACE_DATA = {
     "zip": "30324",
     "lat": 33.7545,
     "lng": -84.3898,
-    "venue_type": "cinema",
+    "place_type": "cinema",
     "website": BASE_URL,
     "_destination_details": {
         "commitment_tier": "hour",
@@ -239,7 +239,7 @@ def extract_movies_for_date(
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title_part,
                         "description": movie_desc,
                         "start_date": date_str,
@@ -441,7 +441,7 @@ def extract_movies_for_date(
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title_part,
                 "description": movie_desc,
                 "start_date": date_str,
@@ -626,7 +626,7 @@ def extract_upcoming_movies(
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": movie_title,
             "description": "Coming Soon",
             "start_date": placeholder_date,
@@ -948,7 +948,7 @@ def _extract_movies_from_graphql_showings(
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": synopsis,
             "start_date": start_date,

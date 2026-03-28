@@ -11,7 +11,7 @@ ATLANTA_PORTAL_ID = "74c2f211-ee11-453d-8386-ac2861705695"
 def main() -> None:
     supabase = get_client()
 
-    venue = supabase.table("venues").select("id,name").eq("slug", "delta-flight-museum").execute()
+    venue = supabase.table("places").select("id,name").eq("slug", "delta-flight-museum").execute()
     if not venue.data:
         print("Venue missing; crawler can still create it on first run.")
 

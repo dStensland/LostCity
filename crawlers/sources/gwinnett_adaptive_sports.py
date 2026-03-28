@@ -45,7 +45,7 @@ VENUE_DATA_BY_LOCATION = {
         "zip": "30519",
         "lat": 34.0979,
         "lng": -83.9948,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": CATALOG_URL,
         "description": "Gwinnett County recreation center hosting adaptive sports sessions.",
@@ -151,7 +151,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": parsed["title"],
             "description": parsed["description"],
             "start_date": parsed["start_date"],

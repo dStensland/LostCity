@@ -295,7 +295,7 @@ def _normalize_decimal(value: Any) -> Optional[float]:
 
 
 def build_program_record(event_row: dict[str, Any]) -> Optional[dict[str, Any]]:
-    venue_id = event_row.get("venue_id")
+    venue_id = event_row.get("place_id") or event_row.get("venue_id")
     title = (event_row.get("title") or "").strip()
     if not venue_id or not title:
         return None
@@ -340,7 +340,7 @@ def build_program_record(event_row: dict[str, Any]) -> Optional[dict[str, Any]]:
     record = {
         "portal_id": event_row.get("portal_id") or event_row.get("owner_portal_id"),
         "source_id": event_row.get("source_id"),
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "name": title,
         "description": event_row.get("description"),
         "program_type": infer_program_type(title, section_name=title_and_tags),
@@ -479,7 +479,7 @@ def backfill_hooky_programs(
 
         content_hash = generate_program_hash(
             program_record["name"],
-            program_record["venue_id"],
+            program_record.get("place_id") or program_record.get("venue_id"),
             program_record["session_start"],
         )
         candidate_programs.append((row, program_record, content_hash))

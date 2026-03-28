@@ -64,7 +64,7 @@ TREES_ATLANTA_HQ = {
     "zip": "30316",
     "lat": 33.7398,
     "lng": -84.3544,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "nonprofit",
     "website": BASE_URL,
     "vibes": ["volunteer", "outdoors", "environment"],
@@ -187,7 +187,7 @@ def build_location_venue(location_name: str) -> dict:
             "city": "Atlanta",
             "state": "GA",
             "neighborhood": "Kirkwood",
-            "venue_type": "park",
+            "place_type": "park",
             "spot_type": "park",
             "website": BASE_URL,
         }
@@ -208,7 +208,7 @@ def build_location_venue(location_name: str) -> dict:
         "city": "Atlanta",
         "state": "GA",
         "neighborhood": neighborhood,
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "website": BASE_URL,
     }
@@ -237,7 +237,7 @@ def _build_destination_envelope(venue_id: int, venue_dict: dict) -> TypedEntityE
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "park",
             "commitment_tier": "hour",
             "primary_activity": primary_activity,
@@ -255,7 +255,7 @@ def _build_destination_envelope(venue_id: int, venue_dict: dict) -> TypedEntityE
             "metadata": {
                 "source_type": "family_destination_enrichment",
                 "source_slug": "trees-atlanta",
-                "venue_type": venue_dict.get("venue_type"),
+                "place_type": venue_dict.get("venue_type"),
                 "city": str(venue_dict.get("city") or "Atlanta").lower(),
                 "neighborhood": neighborhood.lower() if neighborhood else None,
             },
@@ -264,7 +264,7 @@ def _build_destination_envelope(venue_id: int, venue_dict: dict) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "free-neighborhood-green-space",
             "title": "Free neighborhood green space",
             "feature_type": "amenity",
@@ -278,7 +278,7 @@ def _build_destination_envelope(venue_id: int, venue_dict: dict) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "community-tree-canopy-and-outdoor-learning",
             "title": "Community tree canopy and outdoor learning",
             "feature_type": "experience",
@@ -581,7 +581,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title[:200],
                     "description": description[:800] if description else None,
                     "start_date": start_date,

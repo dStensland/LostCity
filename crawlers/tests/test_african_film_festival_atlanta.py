@@ -156,7 +156,7 @@ def test_build_tentpole_event_record_prefers_official_dates_and_metadata():
     assert record["subcategory"] == "festival"
     assert record["source_url"] == ANNOUNCEMENT_URL
     assert record["ticket_url"] == "https://www.eventbrite.com/cc/african-film-festival-atlanta-2026-4819851"
-    assert record["venue_id"] == 901
+    assert record["place_id"] == 901
     assert "32 curated films from 12 countries" in record["description"]
     assert "CTRL + CULTURE = AFRICA'S NEXT CINEMA CODE" in record["description"]
 
@@ -179,7 +179,7 @@ def test_build_screening_event_record_shapes_session_event():
     assert record["is_free"] is False
     assert record["ticket_url"] == "https://www.eventbrite.com/e/son-of-the-soil-opening-night-affatl-tickets-1"
     assert record["image_url"] == "https://img.example.com/son-large.jpg"
-    assert record["venue_id"] == 902
+    assert record["place_id"] == 902
 
 
 def test_crawl_inserts_tentpole_and_screenings_and_cleans_up_stale_rows():

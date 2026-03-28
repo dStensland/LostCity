@@ -130,17 +130,17 @@ export const GET = withOptionalAuth(async (request: NextRequest, { user, supabas
     ] = await Promise.all([
       supabase
         .from("best_of_venue_scores")
-        .select("venue_id, algorithm_score")
-        .in("venue_id", venueIdArr),
+        .select("place_id, algorithm_score")
+        .in("place_id", venueIdArr),
       supabase.rpc("best_of_vote_counts_by_venue", { p_category_id: category.id }),
       supabase.rpc("best_of_total_votes", { p_category_id: category.id }),
       supabase.rpc("best_of_top_cases", { p_category_id: category.id }),
       supabase.rpc("best_of_case_counts", { p_category_id: category.id }),
       supabase
-        .from("venues")
-        .select("id, name, slug, neighborhood, image_url, hero_image_url, venue_type")
+        .from("places")
+        .select("id, name, slug, neighborhood, image_url, hero_image_url, place_type")
         .in("id", venueIdArr)
-        .eq("active", true),
+        .eq("is_active", true),
     ]);
 
     // Build lookup maps

@@ -32,7 +32,7 @@ PLACE_DATA = {
     "zip": "30316",
     "lat": 33.7495,
     "lng": -84.3400,
-    "venue_type": "neighborhood",
+    "place_type": "neighborhood",
     "spot_type": "neighborhood",
     "website": BASE_URL,
 }
@@ -103,7 +103,7 @@ def create_wheelbarrow_festival(source_id: int, venue_id: int, year: int) -> tup
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,
@@ -214,7 +214,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 description = "Monthly meeting of the Reynoldstown Civic Improvement League. Open to all residents."
                                 event_record = {
                                     "source_id": source_id,
-                                    "venue_id": venue_id,
+                                    "place_id": venue_id,
                                     "title": title,
                                     "description": description,
                                     "start_date": start_date,

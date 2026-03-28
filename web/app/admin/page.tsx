@@ -14,7 +14,7 @@ export default async function AdminDashboard() {
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("events").select("*", { count: "exact", head: true }),
-    supabase.from("venues").select("*", { count: "exact", head: true }),
+    supabase.from("places").select("*", { count: "exact", head: true }),
     supabase.from("event_rsvps").select("*", { count: "exact", head: true }),
   ]);
 

@@ -50,7 +50,7 @@ PLACE_DATA = {
     "zip": "30309",
     "lat": 33.8334,
     "lng": -84.3835,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     # Description populated dynamically from og:description on first Playwright visit.
@@ -80,7 +80,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "art_museum",
             "commitment_tier": "halfday",
             "primary_activity": "family art museum visit",
@@ -105,7 +105,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "museum",
+                "place_type": "museum",
                 "city": "atlanta",
             },
         },
@@ -113,7 +113,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "family-art-making-and-kids-programs",
             "title": "Family art-making and kids programs",
             "feature_type": "amenity",
@@ -126,7 +126,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "weather-proof-midtown-family-culture-stop",
             "title": "Weather-proof Midtown family culture stop",
             "feature_type": "amenity",
@@ -139,7 +139,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "easy-museum-breaks-and-resets",
             "title": "Easy museum breaks and resets",
             "feature_type": "amenity",
@@ -152,7 +152,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_specials",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "free-second-sunday-admission",
             "title": "Free Second Sunday admission",
             "description": "General admission is free on the second Sunday of each month, making the High one of the strongest recurring free-family museum options in the city.",
@@ -165,7 +165,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_specials",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "children-5-and-under-free",
             "title": "Children 5 and under free",
             "description": "Children age 5 and under receive free admission, which lowers the cost of treating the High as a family museum day even outside the free monthly window.",
@@ -485,7 +485,7 @@ def _scrape_page_events(
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": current_date,

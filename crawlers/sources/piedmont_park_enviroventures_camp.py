@@ -51,7 +51,7 @@ PLACE_DATA = {
     "zip": "30306",
     "lat": 33.7875,
     "lng": -84.3733,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "outdoor",
     "website": "https://www.piedmontpark.org",
 }
@@ -254,7 +254,7 @@ def _parse_week_rows(html: str) -> list[dict]:
 def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": row["title"],
         "description": row["description"],
         "start_date": row["start_date"],

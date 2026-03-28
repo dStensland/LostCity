@@ -47,7 +47,7 @@ CCO_ORG_VENUE = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30327",
-    "venue_type": "organization",
+    "place_type": "organization",
     "website": "https://ccityopera.org",
 }
 
@@ -62,7 +62,7 @@ PETITE_VIOLETTE_VENUE = {
     "zip": "30329",
     "lat": 33.8375,
     "lng": -84.3271,
-    "venue_type": "restaurant",
+    "place_type": "restaurant",
     "website": "https://www.petitevioletterestaurant.com",
 }
 
@@ -77,7 +77,7 @@ PRUMC_VENUE = {
     "zip": "30305",
     "lat": 33.8476,
     "lng": -84.3719,
-    "venue_type": "church",
+    "place_type": "church",
     "website": "https://www.prumc.org",
 }
 
@@ -307,7 +307,7 @@ def _crawl_dnd_events(
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,
@@ -443,7 +443,7 @@ def _crawl_on_light_side(
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,

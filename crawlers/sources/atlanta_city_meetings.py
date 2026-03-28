@@ -44,7 +44,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7490,
     "lng": -84.3903,
-    "venue_type": "government",
+    "place_type": "government",
     "spot_type": "government",
     "website": "https://www.atlantaga.gov",
 }
@@ -281,7 +281,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": start_date,

@@ -49,7 +49,7 @@ PLACE_DATA = {
     "zip": "30322",
     "lat": 33.7963,
     "lng": -84.3254,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": "https://schwartz.emory.edu",
 }
@@ -63,7 +63,7 @@ AMC_ORG_VENUE = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30333",
-    "venue_type": "organization",
+    "place_type": "organization",
     "website": BASE_URL,
 }
 
@@ -343,7 +343,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": f"{title} — Atlanta Master Chorale performing at the Schwartz Center for Performing Arts at Emory University.",
                 "start_date": start_date,

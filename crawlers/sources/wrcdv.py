@@ -57,7 +57,7 @@ PLACE_DATA = {
     "zip": "30058",
     "lat": 33.7072,
     "lng": -84.1052,
-    "venue_type": "community_center",
+    "place_type": "community_center",
     "spot_type": "community_center",
     "website": BASE_URL,
     # Note: vibes are for venue atmosphere/amenities, not program types
@@ -299,7 +299,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Create event record
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": start_date,

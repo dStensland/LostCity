@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       .select(`
         id,
         category:category_id,
-        venue:venues(id, name, neighborhood)
+        venue:places(id, name, neighborhood)
       `)
       .eq("id", event_id)
       .maybeSingle() as { data: EventWithVenue | null; error: Error | null };

@@ -254,7 +254,7 @@ def _build_branch_destination_envelope(venue_id: int, place_data: dict) -> Typed
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "library_branch",
             "commitment_tier": "hour",
             "primary_activity": "free indoor family library visit",
@@ -275,7 +275,7 @@ def _build_branch_destination_envelope(venue_id: int, place_data: dict) -> Typed
             "source_url": "https://www.fulcolibrary.org/locations/",
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "library",
+                "place_type": "library",
                 "branch_name": branch_name,
             },
         },
@@ -284,7 +284,7 @@ def _build_branch_destination_envelope(venue_id: int, place_data: dict) -> Typed
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "free-indoor-family-stop",
             "title": "Free indoor family stop",
             "feature_type": "amenity",
@@ -298,7 +298,7 @@ def _build_branch_destination_envelope(venue_id: int, place_data: dict) -> Typed
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "storytime-and-family-programs",
             "title": "Storytime and family programs",
             "feature_type": "experience",
@@ -645,7 +645,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "city": address.get("city", "Atlanta"),
                             "state": address.get("region", "GA"),
                             "zip": address.get("postalCode"),
-                            "venue_type": "library",
+                            "place_type": "library",
                         }
                     else:
                         # Fallback to generic library venue
@@ -654,7 +654,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "slug": "fulton-county-library-system",
                             "city": "Atlanta",
                             "state": "GA",
-                            "venue_type": "library",
+                            "place_type": "library",
                         }
 
                     venue_id = get_or_create_place(place_data)
@@ -707,7 +707,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Create event record
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": build_library_description(
                             title=title,

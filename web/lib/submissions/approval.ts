@@ -198,7 +198,7 @@ export async function createVenueFromSubmission(
     .replace(/^-|-$/g, "");
 
   const { data: existing } = await supabase
-    .from("venues")
+    .from("places")
     .select("id")
     .eq("slug", slug)
     .maybeSingle();
@@ -208,7 +208,7 @@ export async function createVenueFromSubmission(
     : slug;
 
   const { data: venueData, error } = await supabase
-    .from("venues")
+    .from("places")
     .insert({
       name: data.name,
       slug: finalSlug,

@@ -26,7 +26,7 @@ PLACE_DATA = {
     "zip": "30308",
     "lat": 33.7896,
     "lng": -84.3938,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     "vibes": ["museum", "history", "architecture", "art", "classical"],

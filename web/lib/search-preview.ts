@@ -56,7 +56,7 @@ type VenuePreviewRow = {
   neighborhood: string | null;
   city: string | null;
   aliases: string[] | null;
-  venue_type: string | null;
+  place_type: string | null;
   vibes?: string[] | null;
 };
 
@@ -188,7 +188,7 @@ async function previewEvents(
         source_id,
         category_id,
         tags,
-        venue:venues(id, name, neighborhood, city, lat, lng, image_url, location_designator)
+        venue:places(id, name, neighborhood, city, lat, lng, image_url, location_designator)
       `,
       )
       .ilike("title", pattern)
@@ -277,8 +277,8 @@ async function previewVenues(
 
   const buildQuery = (namePattern: string) => {
     let query = supabase
-      .from("venues")
-      .select("id, name, slug, address, neighborhood, city, aliases, venue_type, vibes")
+      .from("places")
+      .select("id, name, slug, address, neighborhood, city, aliases, place_type, vibes")
       .or(
         `name.ilike.${namePattern},` +
           `address.ilike.%${escapedQuery}%,` +
@@ -331,7 +331,7 @@ async function previewVenues(
       score: computePreviewScore(normalizedQuery, venue.name, 200),
       metadata: {
         neighborhood: venue.neighborhood || undefined,
-        venueType: venue.venue_type || undefined,
+        venueType: venue.place_type || undefined,
         vibes: venue.vibes || undefined,
       },
     }));

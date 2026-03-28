@@ -85,7 +85,7 @@ def test_build_event_record_shapes_tentpole_fair_event():
     assert record["is_tentpole"] is True
     assert record["category"] == "family"
     assert record["subcategory"] == "fair"
-    assert record["venue_id"] == 515
+    assert record["place_id"] == 515
     assert record["image_url"] == "https://img.example.com/atlanta-fair.jpg"
     assert "Monday-Thursday" in record["description"]
     assert record["ticket_url"] is None

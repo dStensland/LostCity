@@ -39,7 +39,7 @@ _CONFIG = JackRabbitConfig(
         "zip": "30084",
         "lat": 33.8571,
         "lng": -84.2165,
-        "venue_type": "fitness_center",
+        "place_type": "fitness_center",
         "spot_type": "fitness",
         "website": "https://atlantaschoolofgymnastics.net",
         "phone": "(770) 938-1212",

@@ -47,7 +47,7 @@ PARK_TARGETS = [
         "parking_note": "Use current Georgia State Parks guidance for access, trailheads, camping rules, and seasonal trail conditions.",
         "typical_duration_minutes": 300,
         "explore_blurb": "Major Pine Mountain hiking-and-camping state-park anchor.",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "explore_category": "outdoors",
         "active": True,
@@ -72,7 +72,7 @@ CAMPGROUND_TARGETS = [
         "parking_note": "Use current Georgia State Parks reservation and campground guidance before promotion.",
         "typical_duration_minutes": 1440,
         "explore_blurb": "Official campground child for F.D. Roosevelt State Park stays.",
-        "venue_type": "campground",
+        "place_type": "campground",
         "spot_type": "campground",
         "explore_category": "outdoors",
         "active": True,
@@ -95,7 +95,7 @@ TRAIL_TARGETS = [
         "parking_note": "Use current Georgia State Parks trail guidance for segment planning, route conditions, and trailhead access before promotion.",
         "typical_duration_minutes": 300,
         "explore_blurb": "Canonical long-trail route through F.D. Roosevelt State Park.",
-        "venue_type": "trail",
+        "place_type": "trail",
         "spot_type": "trail",
         "explore_category": "outdoors",
         "active": True,
@@ -118,7 +118,7 @@ def find_existing_venue(seed: dict) -> dict | None:
     if existing:
         return existing
     client = get_client()
-    result = client.table("venues").select("*").eq("name", seed["name"]).limit(1).execute()
+    result = client.table("places").select("*").eq("name", seed["name"]).limit(1).execute()
     if result.data:
         return result.data[0]
     return None
@@ -159,7 +159,7 @@ def compute_updates(existing: dict, payload: dict) -> dict:
 
 def insert_venue_direct(payload: dict) -> int | None:
     client = get_client()
-    result = client.table("venues").insert(payload).execute()
+    result = client.table("places").insert(payload).execute()
     if result.data:
         return result.data[0].get("id")
     return None
@@ -193,7 +193,7 @@ def upsert_seeds(seeds: list[dict], *, apply: bool, refresh_existing: bool) -> t
             skipped += 1
             continue
         if apply:
-            client.table("venues").update(updates).eq("id", existing["id"]).execute()
+            client.table("places").update(updates).eq("id", existing["id"]).execute()
         print(f"{'UPDATE' if apply else 'WOULD UPDATE'} venue: {seed['slug']} ({len(updates)} fields)")
         updated += 1
     return created, updated, skipped

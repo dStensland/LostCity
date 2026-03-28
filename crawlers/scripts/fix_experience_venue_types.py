@@ -45,7 +45,7 @@ def main():
     supabase = get_client()
 
     ids = [r[0] for r in FIXES]
-    result = supabase.table("venues").select("id, name, venue_type, active").in_("id", ids).execute()
+    result = supabase.table("places").select("id, name, venue_type, active").in_("id", ids).execute()
     current = {row["id"]: row for row in result.data}
 
     print("=" * 70)
@@ -94,7 +94,7 @@ def main():
         success = 0
         for vid, name, old_type, new_type, reason in to_update:
             try:
-                supabase.table("venues").update({"venue_type": new_type}).eq("id", vid).execute()
+                supabase.table("places").update({"place_type": new_type}).eq("id", vid).execute()
                 success += 1
                 print(f"    OK [{vid:5d}] {name} -> {new_type}")
             except Exception as e:

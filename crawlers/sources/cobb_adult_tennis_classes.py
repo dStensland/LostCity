@@ -87,7 +87,7 @@ VENUE_DATA_BY_LOCATION = {
         "city": "Marietta",
         "state": "GA",
         "zip": "30008",
-        "venue_type": "sports_complex",
+        "place_type": "sports_complex",
         "spot_type": "sports_complex",
         "website": CATALOG_URL,
         "description": "Cobb County tennis center hosting public adult tennis classes.",
@@ -100,7 +100,7 @@ VENUE_DATA_BY_LOCATION = {
         "city": "Kennesaw",
         "state": "GA",
         "zip": "30144",
-        "venue_type": "sports_complex",
+        "place_type": "sports_complex",
         "spot_type": "sports_complex",
         "website": CATALOG_URL,
         "description": "Cobb County tennis center hosting public adult tennis classes.",
@@ -302,7 +302,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_ids[parsed["venue_data"]["slug"]],
+                "place_id": venue_ids[parsed["venue_data"]["slug"]],
                 "title": parsed["title"],
                 "description": parsed["description"],
                 "start_date": start_date,

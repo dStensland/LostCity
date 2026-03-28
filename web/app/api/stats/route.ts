@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
       // Count active venues
       supabase
-        .from("venues")
+        .from("places")
         .select("*", { count: "exact", head: true }),
 
       // Count active sources

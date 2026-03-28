@@ -24,7 +24,7 @@ PLACE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30305",
-    "venue_type": "rooftop_bar",
+    "place_type": "rooftop_bar",
     "website": BASE_URL,
 }
 
@@ -102,7 +102,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": event_data.get("description", "Event at Gypsy Kitchen, Spanish-themed rooftop in Buckhead")[:500],
                         "start_date": start_date,

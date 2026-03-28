@@ -40,7 +40,7 @@ PLACE_DATA = {
     "zip": "30030",
     "lat": 33.7704,
     "lng": -84.2963,
-    "venue_type": "arena",
+    "place_type": "arena",
     "spot_type": "arena",
     "website": BASE_URL,
     "description": "Atlanta's premier women's flat track roller derby league competing at Agnes Scott College.",
@@ -274,7 +274,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Create event record
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": event["title"],
                 "description": event["description"],
                 "start_date": event["start_date"],

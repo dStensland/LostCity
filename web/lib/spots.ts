@@ -38,7 +38,7 @@ export type {
 
 export async function getSpotBySlug(slug: string): Promise<Spot | null> {
   const { data, error } = await supabase
-    .from("venues")
+    .from("places")
     .select("*")
     .eq("slug", slug)
     .maybeSingle();
@@ -61,13 +61,13 @@ export async function getOpenSpots(
   limit = 20
 ): Promise<Spot[]> {
   let query = supabase
-    .from("venues")
+    .from("places")
     .select("*")
-    .eq("active", true)
+    .eq("is_active", true)
     .order("name");
 
   if (spotTypes && spotTypes.length > 0) {
-    const typeFilters = spotTypes.map(t => `venue_type.eq.${t},venue_types.cs.{${t}}`).join(",");
+    const typeFilters = spotTypes.map(t => `place_type.eq.${t},place_types.cs.{${t}}`).join(",");
     query = query.or(typeFilters);
   }
 
@@ -99,7 +99,7 @@ export async function getNearbySpots(
   limit = 6
 ): Promise<Spot[]> {
   const { data: venue } = await supabase
-    .from("venues")
+    .from("places")
     .select("neighborhood")
     .eq("id", venueId)
     .maybeSingle<{ neighborhood: string | null }>();
@@ -107,12 +107,12 @@ export async function getNearbySpots(
   if (!venue?.neighborhood) return [];
 
   const { data, error } = await supabase
-    .from("venues")
+    .from("places")
     .select("*")
     .eq("neighborhood", venue.neighborhood)
     .neq("id", venueId)
-    .in("venue_type", ["bar", "restaurant", "brewery", "cocktail_bar"])
-    .eq("active", true)
+    .in("place_type", ["bar", "restaurant", "brewery", "cocktail_bar"])
+    .eq("is_active", true)
     .limit(limit);
 
   if (error) {

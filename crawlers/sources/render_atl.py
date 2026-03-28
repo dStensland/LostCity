@@ -25,7 +25,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7589,
     "lng": -84.3952,
-    "venue_type": "convention_center",
+    "place_type": "convention_center",
     "spot_type": "convention_center",
     "website": "https://www.cnn.com/tour",
 }
@@ -71,7 +71,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": "The largest tech conference in the Southeast focused on software engineering, celebrating Black technologists and fostering diversity in tech.",
         "start_date": start_date.strftime("%Y-%m-%d"),

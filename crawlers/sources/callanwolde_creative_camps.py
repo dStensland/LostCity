@@ -52,7 +52,7 @@ PLACE_DATA = {
     "lat": 33.7835,
     "lng": -84.3314,
     "neighborhood": "Druid Hills",
-    "venue_type": "arts_center",
+    "place_type": "arts_center",
     "spot_type": "arts_center",
     "website": "https://callanwolde.org/",
     "vibes": ["family-friendly", "artsy", "educational"],
@@ -166,7 +166,7 @@ def _parse_rows(html: str) -> list[dict]:
 def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": row["title"],
         "description": row["description"],
         "start_date": row["start_date"],

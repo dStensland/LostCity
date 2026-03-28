@@ -76,7 +76,7 @@ def main() -> None:
         raise RuntimeError("--keep-per-window must be at least 1")
 
     client = build_client()
-    query = client.table("venue_inventory_snapshots").select(
+    query = client.table("place_inventory_snapshots").select(
         "id,venue_id,provider_id,inventory_scope,arrival_date,nights,captured_for_date,captured_at"
     )
     if args.provider_id:
@@ -124,7 +124,7 @@ def main() -> None:
         return
 
     for batch in batched(delete_ids, 200):
-        client.table("venue_inventory_snapshots").delete().in_("id", batch).execute()
+        client.table("place_inventory_snapshots").delete().in_("id", batch).execute()
 
     logger.info("Deleted rows: %s", len(delete_ids))
 

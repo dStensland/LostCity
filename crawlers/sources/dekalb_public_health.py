@@ -35,7 +35,7 @@ DEFAULT_VENUE = {
     "zip": "30030",
     "lat": 33.7867,
     "lng": -84.2787,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": BASE_URL,
     "vibes": ["family-friendly", "all-ages"],
@@ -142,7 +142,7 @@ def build_location_venue(location_name: str, location_address: str) -> dict:
         "address": location_address or None,
         "city": "Decatur",
         "state": "GA",
-        "venue_type": "organization",
+        "place_type": "organization",
         "spot_type": "organization",
         "website": BASE_URL,
     }
@@ -257,7 +257,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             is_free = "free" in description.lower() or "free" in title_lower
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": start_date,

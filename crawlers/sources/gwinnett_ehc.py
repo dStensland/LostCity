@@ -124,7 +124,7 @@ _VENUE_DATA = {
     "zip": "30519",
     "lat": 34.0447,
     "lng": -84.0189,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": "https://www.gwinnettcounty.com/government/departments/parks-recreation/parks/gwinnett-environmental-heritage-center",
     "vibes": [
@@ -154,7 +154,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "nature_center",
             "commitment_tier": "halfday",
             "primary_activity": "nature and heritage exploration",
@@ -190,7 +190,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "walking-trails-and-greenways",
             "title": "Walking trails and greenways",
             "feature_type": "amenity",
@@ -207,7 +207,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "historic-chesser-williams-house",
             "title": "Historic Chesser-Williams House",
             "feature_type": "attraction",
@@ -223,7 +223,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "indoor-environmental-exhibits",
             "title": "Indoor environmental exhibits",
             "feature_type": "experience",
@@ -239,7 +239,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "wooded-picnic-pavilion",
             "title": "Wooded picnic pavilion",
             "feature_type": "amenity",
@@ -255,7 +255,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_specials",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "children-2-and-under-free-admission",
             "title": "Children age 2 and under free admission",
             "description": "General admission at Gwinnett Environmental & Heritage Center is free for children age 2 and under.",
@@ -268,7 +268,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_specials",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "gehc-members-free-admission",
             "title": "GEHC members free admission",
             "description": "Gwinnett Environmental & Heritage Center members receive free general admission.",
@@ -1293,7 +1293,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # ---- Build event record --------------------------------------
                 record: dict = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": start_date_str,

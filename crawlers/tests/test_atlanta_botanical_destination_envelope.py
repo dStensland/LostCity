@@ -4,7 +4,7 @@ from sources.atlanta_botanical import _VENUE_MIDTOWN, _build_destination_envelop
 def test_build_destination_envelope_projects_family_garden_details() -> None:
     envelope = _build_destination_envelope(1602, _VENUE_MIDTOWN)
 
-    assert envelope.destination_details[0]["venue_id"] == 1602
+    assert envelope.destination_details[0]["place_id"] == 1602
     assert envelope.destination_details[0]["destination_type"] == "botanical_garden"
     assert envelope.destination_details[0]["family_suitability"] == "yes"
     assert envelope.destination_details[0]["parking_type"] == "paid_lot"

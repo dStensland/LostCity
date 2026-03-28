@@ -135,7 +135,7 @@ def check_venues_health(client) -> Dict:
         "zip": 5,
         "lat": 12,
         "lng": 12,
-        "venue_type": 10,
+        "place_type": 10,
         "website": 7,
         "image_url": 8,
         "description": 5,
@@ -160,7 +160,7 @@ def check_venues_health(client) -> Dict:
     # Missing coordinates
     missing_coords = total - get_total_count(client, "venues")  # placeholder
     try:
-        coords_query = client.table("venues").select("id", count="exact")
+        coords_query = client.table("places").select("id", count="exact")
         coords_query = coords_query.or_("lat.is.null,lng.is.null")
         coords_result = coords_query.limit(1).execute()
         missing_coords = coords_result.count or 0
@@ -236,7 +236,7 @@ def check_events_health(client) -> Dict:
         "description": 12,
         "start_date": 15,
         "start_time": 8,
-        "venue_id": 12,
+        "place_id": 12,
         "category_id": 10,
         "image_url": 10,
         "source_url": 8,
@@ -308,7 +308,7 @@ def check_classes_health(client) -> Dict:
         "title": 15,
         "description": 15,
         "start_date": 15,
-        "venue_id": 15,
+        "place_id": 15,
         "category_id": 10,
         "image_url": 10,
         "price_min": 10,

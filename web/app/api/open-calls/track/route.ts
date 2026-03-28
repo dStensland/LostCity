@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
           id, slug, title, description, deadline, application_url,
           fee, call_type, status, confidence_tier,
           organization:organizations(id, name, slug),
-          venue:venues(id, name, slug, neighborhood)
+          venue:places(id, name, slug, neighborhood)
         )
       `
       )

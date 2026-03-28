@@ -52,7 +52,7 @@ PLACE_DATA = {
     "lat": 33.7774,
     "lng": -84.3488,
     "neighborhood": "Druid Hills",
-    "venue_type": "campus",
+    "place_type": "campus",
     "spot_type": "campus",
     "website": "https://www.frazercenter.org/",
     "vibes": ["family-friendly", "outdoor", "educational"],
@@ -188,7 +188,7 @@ def _parse_rows(html: str) -> list[dict]:
 def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": row["title"],
         "description": row["description"],
         "start_date": row["start_date"],

@@ -54,7 +54,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7536,
     "lng": -84.3867,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     # Admission: $7 adult, $5 student/senior, free under 4
@@ -82,7 +82,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "history_museum",
             "commitment_tier": "hour",
             "primary_activity": "black history museum visit",
@@ -106,7 +106,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "history_museum",
+                "place_type": "history_museum",
                 "city": "atlanta",
             },
         },
@@ -114,7 +114,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "sweet-auburn-black-history-anchor",
             "title": "Sweet Auburn Black history anchor",
             "feature_type": "amenity",
@@ -127,7 +127,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "compact-history-museum-stop",
             "title": "Compact history museum stop",
             "feature_type": "amenity",
@@ -140,7 +140,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "stackable-sweet-auburn-cultural-stop",
             "title": "Stackable Sweet Auburn cultural stop",
             "feature_type": "amenity",
@@ -153,7 +153,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_specials",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "children-under-4-free-admission",
             "title": "Children under 4 free admission",
             "description": "APEX keeps the visit materially easier for families with very young kids by offering free admission for children under 4.",
@@ -430,7 +430,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if og_desc:
                     venue_update["description"] = og_desc[:500]
                 if venue_update:
-                    get_client().table("venues").update(venue_update).eq(
+                    get_client().table("places").update(venue_update).eq(
                         "id", venue_id
                     ).execute()
                     logger.info("APEX Museum: enriched venue from homepage og: metadata")

@@ -34,7 +34,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.8095,
     "lng": -84.4235,
-    "venue_type": "brewery",
+    "place_type": "brewery",
     "spot_type": "brewery",
     "website": BASE_URL,
     "vibes": ["craft-beer", "brewery", "german-beer", "west-midtown", "dog-friendly", "kid-friendly"],
@@ -153,7 +153,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at Round Trip Brewing",
                         "start_date": start_date,

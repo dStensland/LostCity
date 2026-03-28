@@ -344,7 +344,7 @@ def extract_events_from_page(page: Page, source_id: int, venue_cache: dict, seen
                 "slug": venue_slug[:50],
                 "city": "Atlanta",
                 "state": "GA",
-                "venue_type": "venue",
+                "place_type": "venue",
             }
             venue_id = get_or_create_place(place_data)
             venue_cache[venue_name] = venue_id
@@ -362,7 +362,7 @@ def extract_events_from_page(page: Page, source_id: int, venue_cache: dict, seen
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": event_data["title"],
             "description": event_data.get("description"),
             "start_date": event_data["start_date"],

@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30043",
     "lat": 33.9617,
     "lng": -84.0709,
-    "venue_type": "entertainment",
+    "place_type": "entertainment",
     "spot_type": "entertainment",
     "website": HOMEPAGE,
     # Hours verified 2026-03-22 against daveandbusters.com
@@ -60,7 +60,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "entertainment",
         "commitment_tier": "halfday",
         "primary_activity": "Arcade games, full-service restaurant, and sports viewing",
@@ -79,10 +79,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Games are pay-per-play via Power Card. Restaurant and bar menu priced separately.",
         "source_url": HOMEPAGE,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "entertainment", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "entertainment", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "arcade-floor-interactive-games",
         "title": "Arcade floor with interactive games",
         "feature_type": "experience",
@@ -95,7 +95,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "full-service-restaurant-sports-bar",
         "title": "Full-service restaurant and sports bar",
         "feature_type": "amenity",
@@ -107,7 +107,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "vr-interactive-experiences",
         "title": "VR and interactive experiences",
         "feature_type": "experience",
@@ -120,7 +120,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "value-day-promotions",
         "title": "Value day promotions",
         "description": "Rotating promotional days with discounted game play — check the website for the current schedule.",
@@ -130,7 +130,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "category": "recurring_deal",
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "eat-and-play-combos",
         "title": "Eat & Play combos",
         "description": (
@@ -204,7 +204,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning("Dave & Buster's Lawrenceville: venue update failed: %s", exc)
 

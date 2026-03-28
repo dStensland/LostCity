@@ -23,7 +23,7 @@ PLACE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30306",
-    "venue_type": "neighborhood",
+    "place_type": "neighborhood",
     "website": "https://www.vahi.org",
 }
 
@@ -87,7 +87,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": "Annual neighborhood music festival featuring 100+ live performances on porches, driveways, and yards throughout Virginia-Highland. Food trucks, art vendors, and local businesses participate.",
         "start_date": event_date.strftime("%Y-%m-%d"),

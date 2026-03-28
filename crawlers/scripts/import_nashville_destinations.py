@@ -48,7 +48,7 @@ HOT_CHICKEN = [
         "zip": "37207",
         "lat": 36.1749,
         "lng": -86.7435,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.princeshotchicken.com",
     },
     {
@@ -61,7 +61,7 @@ HOT_CHICKEN = [
         "zip": "37203",
         "lat": 36.1482,
         "lng": -86.7981,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://hattieb.com",
     },
     {
@@ -74,7 +74,7 @@ HOT_CHICKEN = [
         "zip": "37206",
         "lat": 36.1715,
         "lng": -86.7412,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
 ]
@@ -91,7 +91,7 @@ FINE_DINING = [
         "zip": "37203",
         "lat": 36.1517,
         "lng": -86.7964,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://thecatbirdseatrestaurant.com",
     },
     {
@@ -104,7 +104,7 @@ FINE_DINING = [
         "zip": "37206",
         "lat": 36.1709,
         "lng": -86.7541,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://margotcafe.com",
     },
     {
@@ -117,7 +117,7 @@ FINE_DINING = [
         "zip": "37208",
         "lat": 36.1712,
         "lng": -86.7878,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://rolfanddaughters.com",
     },
     {
@@ -130,7 +130,7 @@ FINE_DINING = [
         "zip": "37203",
         "lat": 36.1398,
         "lng": -86.7654,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://bastionnashville.com",
     },
     {
@@ -143,7 +143,7 @@ FINE_DINING = [
         "zip": "37203",
         "lat": 36.1515,
         "lng": -86.7693,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://404kitchen.com",
     },
 ]
@@ -160,7 +160,7 @@ MEAT_AND_THREE = [
         "zip": "37209",
         "lat": 36.1852,
         "lng": -86.7901,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -173,7 +173,7 @@ MEAT_AND_THREE = [
         "zip": "37203",
         "lat": 36.1529,
         "lng": -86.7784,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
 ]
@@ -190,7 +190,7 @@ BREWERIES = [
         "zip": "37203",
         "lat": 36.1499,
         "lng": -86.7724,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://yazoobrew.com",
     },
     {
@@ -203,7 +203,7 @@ BREWERIES = [
         "zip": "37208",
         "lat": 36.1723,
         "lng": -86.7899,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://beardedirisbrewing.com",
     },
     {
@@ -216,7 +216,7 @@ BREWERIES = [
         "zip": "37206",
         "lat": 36.1735,
         "lng": -86.7412,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://southerngristbrewing.com",
     },
     {
@@ -229,7 +229,7 @@ BREWERIES = [
         "zip": "37203",
         "lat": 36.1518,
         "lng": -86.7719,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://jackalopebrew.com",
     },
 ]
@@ -246,7 +246,7 @@ COFFEE_SHOPS = [
         "zip": "37206",
         "lat": 36.1698,
         "lng": -86.7512,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://baristaparlor.com",
     },
     {
@@ -259,7 +259,7 @@ COFFEE_SHOPS = [
         "zip": "37204",
         "lat": 36.1245,
         "lng": -86.7853,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://frothymonkey.com",
     },
     {
@@ -272,7 +272,7 @@ COFFEE_SHOPS = [
         "zip": "37209",
         "lat": 36.1591,
         "lng": -86.8142,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://eighthandroast.com",
     },
 ]
@@ -289,7 +289,7 @@ BARS = [
         "zip": "37203",
         "lat": 36.1517,
         "lng": -86.7964,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://thepattersonnashville.com",
     },
     {
@@ -302,7 +302,7 @@ BARS = [
         "zip": "37206",
         "lat": 36.1735,
         "lng": -86.7498,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -315,7 +315,7 @@ BARS = [
         "zip": "37203",
         "lat": 36.1609,
         "lng": -86.7782,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://robertswesternworld.com",
     },
 ]
@@ -332,7 +332,7 @@ ATTRACTIONS = [
         "zip": "37203",
         "lat": 36.1498,
         "lng": -86.8134,
-        "venue_type": "attraction",
+        "place_type": "attraction",
         "website": "https://www.nashvilleparthenon.com",
     },
     {
@@ -345,7 +345,7 @@ ATTRACTIONS = [
         "zip": "37205",
         "lat": 36.0993,
         "lng": -86.8542,
-        "venue_type": "attraction",
+        "place_type": "attraction",
         "website": "https://cheekwood.org",
     },
     {
@@ -358,7 +358,7 @@ ATTRACTIONS = [
         "zip": "37211",
         "lat": 36.0878,
         "lng": -86.7412,
-        "venue_type": "attraction",
+        "place_type": "attraction",
         "website": "https://www.nashvillezoo.org",
     },
 ]
@@ -375,7 +375,7 @@ FRANKLIN = [
         "zip": "37064",
         "lat": 35.9251,
         "lng": -86.8689,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://graysonmain.com",
     },
     {
@@ -388,7 +388,7 @@ FRANKLIN = [
         "zip": "37064",
         "lat": 35.9242,
         "lng": -86.8701,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://puckettsgro.com",
     },
 ]

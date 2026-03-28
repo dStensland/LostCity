@@ -31,7 +31,7 @@ export const EVENT_SELECT = `
   ticket_status, ticket_status_checked_at, ticket_url, source_url,
   cost_tier, duration, booking_required, indoor_outdoor, significance, significance_signals,
   series:series_id(id, frequency, day_of_week, series_type),
-  venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, active)
+  venue:places(id, name, neighborhood, slug, place_type, location_designator, city, image_url, is_active)
 `;
 
 // ---------------------------------------------------------------------------

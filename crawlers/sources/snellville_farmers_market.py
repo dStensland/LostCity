@@ -26,7 +26,7 @@ PLACE_DATA = {
     "zip": "30078",
     "lat": 33.8612,
     "lng": -84.0168,
-    "venue_type": "outdoor_space",
+    "place_type": "outdoor_space",
     "spot_type": "outdoor_space",
     "website": BASE_URL,
     "description": "Community green space in downtown Snellville hosting farmers market and events.",
@@ -86,7 +86,7 @@ def create_farmers_market_events(source_id: int, venue_id: int) -> tuple[int, in
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": start_date,

@@ -17,7 +17,7 @@ if result.data:
     source_id = result.data[0]['id']
 else:
     # Get the venue ID for ADAM ATL
-    venue_result = supabase.table('venues').select('id').eq('id', 2433).execute()
+    venue_result = supabase.table('places').select('id').eq('id', 2433).execute()
     if not venue_result.data:
         print("ERROR: Venue ID 2433 (ADAM ATL) not found!")
         exit(1)

@@ -42,7 +42,7 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
         .eq("is_active", true)
         .maybeSingle(),
       serviceClient
-        .from("venues")
+        .from("places")
         .select("id, city")
         .eq("id", venueId)
         .maybeSingle(),
@@ -50,12 +50,12 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
         .from("best_of_nominations")
         .select("id")
         .eq("category_id", categoryId)
-        .eq("venue_id", venueId)
+        .eq("place_id", venueId)
         .eq("status", "approved")
         .maybeSingle(),
       serviceClient
         .from("best_of_votes")
-        .select("id, venue_id")
+        .select("id, place_id")
         .eq("user_id", user.id)
         .eq("category_id", categoryId)
         .maybeSingle(),

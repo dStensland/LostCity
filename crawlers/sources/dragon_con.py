@@ -26,7 +26,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7590,
     "lng": -84.3880,
-    "venue_type": "convention",
+    "place_type": "convention",
     "spot_type": "convention_center",
     "website": BASE_URL,
 }
@@ -81,7 +81,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": "The largest multi-media, popular culture convention focusing on science fiction & fantasy, gaming, comics, literature, art, music, and film. 80,000+ attendees across downtown Atlanta hotels.",
         "start_date": start_date.strftime("%Y-%m-%d"),

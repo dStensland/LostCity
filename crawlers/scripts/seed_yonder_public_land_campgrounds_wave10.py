@@ -148,7 +148,7 @@ def find_existing_venue(seed: dict) -> dict | None:
     if existing:
         return existing
     client = get_client()
-    result = client.table("venues").select("*").eq("name", seed["name"]).limit(1).execute()
+    result = client.table("places").select("*").eq("name", seed["name"]).limit(1).execute()
     if result.data:
         return result.data[0]
     return None
@@ -189,7 +189,7 @@ def compute_updates(existing: dict, payload: dict) -> dict:
 
 def insert_venue_direct(payload: dict) -> int | None:
     client = get_client()
-    result = client.table("venues").insert(payload).execute()
+    result = client.table("places").insert(payload).execute()
     if result.data:
         return result.data[0].get("id")
     return None
@@ -239,7 +239,7 @@ def main() -> None:
             continue
 
         if args.apply:
-            client.table("venues").update(updates).eq("id", existing["id"]).execute()
+            client.table("places").update(updates).eq("id", existing["id"]).execute()
         print(f"{'UPDATE' if args.apply else 'WOULD UPDATE'} venue: {seed['slug']} ({len(updates)} fields)")
         updated += 1
 

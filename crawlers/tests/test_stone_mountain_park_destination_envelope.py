@@ -4,7 +4,7 @@ from sources.stone_mountain_park import _build_destination_envelope
 def test_build_destination_envelope_projects_family_regional_park_details() -> None:
     envelope = _build_destination_envelope(1604)
 
-    assert envelope.destination_details[0]["venue_id"] == 1604
+    assert envelope.destination_details[0]["place_id"] == 1604
     assert envelope.destination_details[0]["destination_type"] == "regional_park"
     assert envelope.destination_details[0]["family_suitability"] == "yes"
     assert envelope.destination_details[0]["parking_type"] == "paid_lot"

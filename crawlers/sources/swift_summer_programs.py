@@ -58,7 +58,7 @@ PLACE_DATA = {
     "lat": 34.0162,
     "lng": -84.3527,
     "neighborhood": "Roswell",
-    "venue_type": "institution",
+    "place_type": "institution",
     "spot_type": "education",
     "website": "https://www.theswiftschool.org/",
     "vibes": ["family-friendly", "educational"],
@@ -430,7 +430,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     )
     record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": row["title"],
         "description": row["description"],
         "start_date": row["start_date"],

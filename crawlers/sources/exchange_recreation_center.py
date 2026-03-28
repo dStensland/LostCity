@@ -40,7 +40,7 @@ PLACE_DATA = {
     "zip": "30034",
     "lat": 33.7074,
     "lng": -84.2538,
-    "venue_type": "recreation",
+    "place_type": "recreation",
     "spot_type": "community_center",
     "website": OFFICIAL_URL,
     "description": (
@@ -61,7 +61,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "community_recreation_center",
             "commitment_tier": "halfday",
             "primary_activity": "family recreation campus visit",
@@ -82,7 +82,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": OFFICIAL_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "recreation",
+                "place_type": "recreation",
                 "city": "decatur",
             },
         },
@@ -90,7 +90,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "playground-trails-and-lake-loop",
             "title": "Playground, trails, and lake loop",
             "feature_type": "amenity",
@@ -104,7 +104,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "large-gym-and-multipurpose-rec-center",
             "title": "Large gym and multipurpose rec center",
             "feature_type": "experience",
@@ -158,7 +158,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     update: dict = {
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
     }
     if place_data.get("image_url"):
@@ -166,7 +166,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     if place_data.get("description"):
         update["description"] = place_data["description"]
     try:
-        get_client().table("venues").update(update).eq("id", venue_id).execute()
+        get_client().table("places").update(update).eq("id", venue_id).execute()
     except Exception as exc:
         logger.warning("Exchange Recreation Center: venue update failed: %s", exc)
 

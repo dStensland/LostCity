@@ -32,7 +32,7 @@ PLACE_DATA = {
     "city": "Roswell",
     "state": "GA",
     "zip": "30076",
-    "venue_type": "cinema",
+    "place_type": "cinema",
     "website": BASE_URL,
     "lat": 34.0003,
     "lng": -84.3242,
@@ -137,7 +137,7 @@ def extract_movies(
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": None,
                         "start_date": date_str,
@@ -243,7 +243,7 @@ def _extract_from_text(
 
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": venue_id,
+                                "place_id": venue_id,
                                 "title": current_movie,
                                 "description": None,
                                 "start_date": date_str,

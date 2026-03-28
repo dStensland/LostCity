@@ -22,7 +22,7 @@ PLACE_DATA = {
     "zip": "30317",
     "lat": 33.7654,
     "lng": -84.3210,
-    "venue_type": "bar",
+    "place_type": "bar",
     "spot_type": "bar",
     "website": BASE_URL,
     "vibes": ["neighborhood-bar", "sports-bar", "patio", "beer", "pub-grub"],

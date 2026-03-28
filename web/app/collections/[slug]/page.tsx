@@ -105,7 +105,7 @@ async function getCollection(slug: string) {
         price_min,
         category,
         image_url,
-        venue:venues(name, slug, neighborhood)
+        venue:places(name, slug, neighborhood)
       )
     `)
     .eq("collection_id", collection.id)

@@ -39,7 +39,7 @@ def test_insert_program_retries_slug_collisions(monkeypatch) -> None:
         {
             "portal_id": "atlanta-families-portal",
             "source_id": 1,
-            "venue_id": 5624,
+            "place_id": 5624,
             "name": "Camp Sewell-Clay Creatives-PM-Ages 10-13",
             "description": "Arts camp",
             "program_type": "camp",
@@ -78,7 +78,7 @@ def test_insert_program_updates_identity_match_when_hash_metadata_missing(monkey
     program_id = insert_program(
         {
             "source_id": 1,
-            "venue_id": 5624,
+            "place_id": 5624,
             "name": "Legacy Program",
             "program_type": "camp",
             "session_start": "2026-06-08",
@@ -114,7 +114,7 @@ def test_insert_program_uses_in_process_cache_to_avoid_same_run_duplicates(monke
     payload = {
         "portal_id": "atlanta-families-portal",
         "source_id": 1303,
-        "venue_id": 5624,
+        "place_id": 5624,
         "name": "Legacy Program",
         "program_type": "camp",
         "session_start": "2026-06-08",
@@ -150,7 +150,7 @@ def test_insert_program_overrides_stale_portal_id_from_source_owner(monkeypatch)
         {
             "portal_id": "hooky-portal",
             "source_id": 1303,
-            "venue_id": 5624,
+            "place_id": 5624,
             "name": "Portal Repair Program",
             "program_type": "camp",
             "session_start": "2026-06-08",

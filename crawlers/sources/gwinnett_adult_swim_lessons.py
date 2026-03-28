@@ -76,7 +76,7 @@ PLACE_DATA = {
     "zip": "30039",
     "lat": 33.8019,
     "lng": -84.0031,
-    "venue_type": "aquatic_center",
+    "place_type": "aquatic_center",
     "spot_type": "aquatic_center",
     "website": CATALOG_URL,
     "description": "Gwinnett County aquatic facility hosting public adult swim lessons.",
@@ -264,7 +264,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": parsed["title"],
                 "description": parsed["description"],
                 "start_date": start_date,

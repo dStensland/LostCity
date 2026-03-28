@@ -49,7 +49,7 @@ def test_build_catalog_destination_envelope_projects_shared_destination_lanes():
 
     envelope = _build_catalog_destination_envelope(venue_id=17, updates=updates)
 
-    assert envelope.destination_details[0]["venue_id"] == 17
+    assert envelope.destination_details[0]["place_id"] == 17
     assert envelope.destination_details[0]["destination_type"] == "museum"
     assert envelope.destination_details[0]["commitment_tier"] == "halfday"
     assert envelope.destination_details[0]["metadata"]["source_note"]

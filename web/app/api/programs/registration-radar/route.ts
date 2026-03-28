@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       registration_closes,
       registration_url,
       tags,
-      venue:venues(id, name, neighborhood, address, city, lat, lng, image_url)
+      venue:places(id, name, neighborhood, address, city, lat, lng, image_url)
     `;
 
     // Build each query individually — applying the optional age filter inline

@@ -55,7 +55,7 @@ PLACE_DATA = {
     "zip": "30079",
     "lat": 33.7760,
     "lng": -84.2700,
-    "venue_type": "community_center",
+    "place_type": "community_center",
     "spot_type": "gymnasium",
     "website": ACTIVITY_SEARCH_URL,
     "description": "DeKalb County gymnasium hosting public pickleball open play.",
@@ -221,7 +221,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": parsed["title"],
                     "description": parsed["description"],
                     "start_date": start_date,

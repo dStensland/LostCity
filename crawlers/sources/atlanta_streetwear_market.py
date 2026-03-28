@@ -41,7 +41,7 @@ PLACE_DATA = {
     "zip": "30354",
     "lat": 33.6530,
     "lng": -84.4170,
-    "venue_type": "event_space",
+    "place_type": "event_space",
     "spot_type": "event_space",
     "website": "https://www.atlantaexpositioncenters.com/",
 }
@@ -137,7 +137,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": (
             "Atlanta Streetwear Market is a destination streetwear, vintage, and creator marketplace "

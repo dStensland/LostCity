@@ -55,7 +55,7 @@ PLACE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30308",
-    "venue_type": "theater",
+    "place_type": "theater",
     "website": BASE_URL,
     "lat": 33.7795,
     "lng": -84.3844,
@@ -517,7 +517,7 @@ def _upsert_production(
     content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
     event_record: dict[str, Any] = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": " ".join(desc_parts)[:2000],
         "start_date": start_date,
@@ -592,7 +592,7 @@ def _upsert_camp_session(
     content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
     event_record: dict[str, Any] = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": (session.get("description") or "")[:2000],
         "start_date": start_date,

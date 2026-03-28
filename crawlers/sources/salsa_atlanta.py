@@ -30,7 +30,7 @@ PLACE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": None,
-    "venue_type": "dance_studio",
+    "place_type": "dance_studio",
     "website": BASE_URL,
 }
 
@@ -158,7 +158,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at Salsa Atlanta",
                         "start_date": start_date,

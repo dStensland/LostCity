@@ -177,7 +177,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     // Verify the venue exists
     const { data: venue } = await serviceClient
-      .from("venues")
+      .from("places")
       .select("id, name, slug, neighborhood, image_url")
       .eq("id", venue_id)
       .maybeSingle();
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // Insert (primary key constraint handles duplicates gracefully with ON CONFLICT)
     const { error: insertError } = await serviceClient
       .from("user_regular_spots")
-      .insert({ user_id: user.id, venue_id } as never);
+      .insert({ user_id: user.id, place_id: venue_id } as never);
 
     if (insertError) {
       // PK violation = already added — treat as success
@@ -287,7 +287,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       .from("user_regular_spots")
       .delete()
       .eq("user_id", user.id)
-      .eq("venue_id", venue_id);
+      .eq("place_id", venue_id);
 
     if (deleteError) {
       logger.error("Error deleting spot", deleteError, { userId: user.id, venueId: venue_id, component: "profile/spots" });

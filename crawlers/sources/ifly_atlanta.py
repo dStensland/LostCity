@@ -34,7 +34,7 @@ PLACE_DATA = {
     "zip": "30080",
     "lat": 33.8870,
     "lng": -84.4700,
-    "venue_type": "entertainment",
+    "place_type": "entertainment",
     "spot_type": "entertainment",
     "website": HOMEPAGE,
     # Hours verified 2026-03-11 against iflyworld.com/atlanta/
@@ -116,7 +116,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning(
                 "iFly Indoor Skydiving Atlanta: venue update failed: %s", exc

@@ -39,7 +39,7 @@ PLACE_DATA = {
     "state": "GA",
     "zip": "30313",
     "neighborhood": "Downtown",
-    "venue_type": "convention_center",
+    "place_type": "convention_center",
     "spot_type": "convention_center",
     "website": "https://www.gwcca.org/",
 }
@@ -193,7 +193,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 f"{session['description']} Atlanta Black Expo is a three-day celebration of Black businesses, "

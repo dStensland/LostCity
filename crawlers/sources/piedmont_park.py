@@ -43,7 +43,7 @@ PLACE_DATA = {
     "zip": "30306",
     "lat": 33.7875,
     "lng": -84.3733,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "outdoor",
     "website": BASE_URL,
 }
@@ -63,7 +63,7 @@ def _build_destination_envelope(
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "park",
             "commitment_tier": "halfday",
             "primary_activity": "family park visit",
@@ -101,7 +101,7 @@ def _build_destination_envelope(
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "playgrounds-and-kid-play-areas",
             "title": "Playgrounds and kid play areas",
             "feature_type": "amenity",
@@ -115,7 +115,7 @@ def _build_destination_envelope(
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "pool-and-splash-pad",
             "title": "Pool and splash pad",
             "feature_type": "amenity",
@@ -130,7 +130,7 @@ def _build_destination_envelope(
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "restrooms-and-picnic-table-support",
             "title": "Restrooms and picnic-table support",
             "feature_type": "amenity",
@@ -144,7 +144,7 @@ def _build_destination_envelope(
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "stroller-friendly-paved-park-loops",
             "title": "Stroller-friendly paved park loops",
             "feature_type": "experience",
@@ -157,7 +157,7 @@ def _build_destination_envelope(
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "shade-lawns-and-flexible-basecamp-day",
             "title": "Shade, lawns, and flexible basecamp day",
             "feature_type": "amenity",
@@ -301,7 +301,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": template["title"],
                 "description": template["description"],
                 "start_date": start_date,
@@ -484,7 +484,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Build event record
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description_clean if description_clean else "Event at Piedmont Park",
                     "start_date": start_date,

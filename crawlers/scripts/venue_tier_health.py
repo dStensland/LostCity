@@ -216,11 +216,11 @@ def fetch_venues(client, *, city: Optional[str] = None, venue_type: Optional[str
     all_venues = []
     offset = 0
     while True:
-        q = client.table("venues").select(fields).eq("active", True)
+        q = client.table("places").select(fields).eq("active", True)
         if city:
             q = q.eq("city", city)
         if venue_type:
-            q = q.eq("venue_type", venue_type)
+            q = q.eq("place_type", venue_type)
         q = q.order("id").range(offset, offset + 999)
         r = q.execute()
         if not r.data:
@@ -384,7 +384,7 @@ def print_report(venues: list[dict], enrichment: dict, *, show_gaps: bool = Fals
         results.append({
             "id": v["id"],
             "name": v["name"],
-            "venue_type": vtype,
+            "place_type": vtype,
             "target_tier": target,
             "actual_tier": current,
             "meets_target": meets_target,

@@ -293,9 +293,9 @@ export async function GET(request: NextRequest) {
 
       // Spots count: still need to fetch hours to check isSpotOpen(), but select minimal columns
       let spotsCountQuery = supabase
-        .from("venues")
-        .select("id, lat, lng, hours, venue_type, city")
-        .eq("active", true)
+        .from("places")
+        .select("id, lat, lng, hours, place_type, city")
+        .eq("is_active", true)
         .not("lat", "is", null)
         .not("lng", "is", null)
         .not("hours", "is", null);
@@ -362,7 +362,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch open spots
     let spotsQuery = supabase
-      .from("venues")
+      .from("places")
       .select(`
         id,
         name,
@@ -385,7 +385,7 @@ export async function GET(request: NextRequest) {
         is_experience,
         typical_duration_minutes
       `)
-      .eq("active", true)
+      .eq("is_active", true)
       .not("lat", "is", null)
       .not("lng", "is", null);
 
@@ -447,7 +447,7 @@ export async function GET(request: NextRequest) {
         is_free,
         ticket_url,
         is_live,
-        venue:venues!events_venue_id_fkey(
+        venue:places!events_venue_id_fkey(
           id,
           name,
           slug,
@@ -635,9 +635,9 @@ export async function GET(request: NextRequest) {
     if (returnedSpotIds.length > 0) {
       type TagRow = { venue_id: number; tag_id: string; tag_label: string; tag_group: string; score: number };
       const { data: tagData } = await supabase
-        .from("venue_tag_summary")
-        .select("venue_id, tag_id, tag_label, tag_group, score")
-        .in("venue_id", returnedSpotIds)
+        .from("place_tag_summary")
+        .select("place_id, tag_id, tag_label, tag_group, score")
+        .in("place_id", returnedSpotIds)
         .gte("score", 2)
         .order("score", { ascending: false });
 

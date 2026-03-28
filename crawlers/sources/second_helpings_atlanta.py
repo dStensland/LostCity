@@ -34,7 +34,7 @@ PLACE_DATA = {
     "zip": "30306",
     "lat": 33.7681,
     "lng": -84.3651,
-    "venue_type": "nonprofit",
+    "place_type": "nonprofit",
     "spot_type": "nonprofit",
     "website": BASE_URL,
     "description": "Food rescue nonprofit fighting hunger and food waste by rescuing surplus food and delivering it to partner agencies.",
@@ -79,7 +79,7 @@ def create_recurring_volunteer_shifts(source_id: int, venue_id: int) -> tuple[in
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,
@@ -278,7 +278,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": venue_id,
+                                "place_id": venue_id,
                                 "title": title,
                                 "description": description[:2000],
                                 "start_date": start_date,

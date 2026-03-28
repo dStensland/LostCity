@@ -45,7 +45,7 @@ export async function GET(
     .from("events")
     .select(`
       id, title, start_date, start_time, end_time, is_free, price_min, category:category_id,
-      venue:venues(id, name, slug, neighborhood)
+      venue:places(id, name, slug, neighborhood)
     `)
     .eq("organization_id", organization.id)
     .gte("start_date", today)

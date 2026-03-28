@@ -84,7 +84,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   // Approve: apply change to venue
   // Snapshot current value
   const { data: venue } = await serviceClient
-    .from("venues")
+    .from("places")
     .select(p.field_name)
     .eq("id", p.venue_id)
     .maybeSingle();
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   // Apply update to venue
   await serviceClient
-    .from("venues")
+    .from("places")
     .update({ [p.field_name]: parsedValue } as never)
     .eq("id", p.venue_id);
 

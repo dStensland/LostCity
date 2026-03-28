@@ -34,7 +34,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7539,
     "lng": -84.3803,
-    "venue_type": "market",
+    "place_type": "market",
     "spot_type": "market",
     "website": BASE_URL,
 }
@@ -49,7 +49,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "food_hall",
         "commitment_tier": "hour",
         "primary_activity": "Historic municipal market with local food vendors since 1924",
@@ -64,10 +64,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Free to enter. Pay vendors individually.",
         "source_url": "https://sweetauburnmarket.com",
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "food_hall", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "food_hall", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "historic-market-since-1924",
         "title": "Historic municipal market since 1924",
         "feature_type": "attraction",
@@ -77,7 +77,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "local-food-vendors",
         "title": "Diverse local food vendors",
         "feature_type": "amenity",
@@ -87,7 +87,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "sweet-auburn-neighborhood",
         "title": "Sweet Auburn historic district",
         "feature_type": "experience",
@@ -223,7 +223,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at Sweet Auburn Curb Market",
                         "start_date": start_date,

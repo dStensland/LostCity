@@ -32,9 +32,9 @@ _VENUE_OCCASION_COLUMNS = {
 @retry_on_network_error(max_retries=4, base_delay=0.5)
 def _select_existing_occasion(client, venue_id: int, occasion: str):
     return (
-        client.table("venue_occasions")
+        client.table("place_occasions")
         .select("id, source, confidence")
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("occasion", occasion)
         .limit(1)
         .execute()
@@ -43,12 +43,12 @@ def _select_existing_occasion(client, venue_id: int, occasion: str):
 
 @retry_on_network_error(max_retries=4, base_delay=0.5)
 def _insert_occasion_record(client, row: dict):
-    return client.table("venue_occasions").insert(row).execute()
+    return client.table("place_occasions").insert(row).execute()
 
 
 @retry_on_network_error(max_retries=4, base_delay=0.5)
 def _update_occasion_record(client, occasion_id: int, updates: dict):
-    return client.table("venue_occasions").update(updates).eq("id", occasion_id).execute()
+    return client.table("place_occasions").update(updates).eq("id", occasion_id).execute()
 
 
 def upsert_place_occasion(venue_id: int, occasion_data: dict) -> Optional[int]:
@@ -63,7 +63,7 @@ def upsert_place_occasion(venue_id: int, occasion_data: dict) -> Optional[int]:
         return None
 
     row = {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         **{
             key: value
             for key, value in occasion_data.items()

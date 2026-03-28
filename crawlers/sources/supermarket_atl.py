@@ -33,7 +33,7 @@ SUPERMARKET_VENUE = {
     "city": "East Point",
     "state": "GA",
     "zip": "30344",
-    "venue_type": "event_space",
+    "place_type": "event_space",
     "website": BASE_URL,
 }
 
@@ -264,7 +264,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Prepare event record
                     event_record = {
                         'source_id': source_id,
-                        'venue_id': venue_id,
+                        'place_id': venue_id,
                         'producer_id': producer_id,
                         'title': title[:500],
                         'description': None,  # Would need to visit detail page

@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       created_at,
       updated_at,
       reviewed_at,
-      venue:venues(id, name, slug),
+      venue:places(id, name, slug),
       organization:organizations(id, name, slug)
     `,
       { count: "exact" }
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
   if (venue_id) {
     const { data: venue } = await supabase
-      .from("venues")
+      .from("places")
       .select("id")
       .eq("id", venue_id)
       .maybeSingle();
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
     .eq("user_id", user.id);
   const existingClaim =
     venue_id
-      ? await existingClaimQuery.eq("venue_id", venue_id).maybeSingle()
+      ? await existingClaimQuery.eq("place_id", venue_id).maybeSingle()
       : await existingClaimQuery.eq("organization_id", organization_id as string).maybeSingle();
 
   if (existingClaim.data) {
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
 
   const existingRequest =
     venue_id
-      ? await existingRequestQuery.eq("venue_id", venue_id).maybeSingle()
+      ? await existingRequestQuery.eq("place_id", venue_id).maybeSingle()
       : await existingRequestQuery.eq("organization_id", organization_id as string).maybeSingle();
 
   const existingReq = existingRequest.data as { id: string; status: string } | null;

@@ -65,7 +65,7 @@ def build_client():
 
 def load_venue_id(client) -> int | None:
     result = (
-        client.table("venues")
+        client.table("places")
         .select("id")
         .eq("slug", VENUE_SLUG)
         .eq("active", True)
@@ -244,7 +244,7 @@ def main() -> None:
 
     arrival_date_iso = (date.today() + timedelta(days=(4 - date.today().weekday()) % 7)).isoformat()
     payload_row = {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "provider_id": PROVIDER_ID,
         "inventory_scope": "overnight",
         "arrival_date": arrival_date_iso,
@@ -266,11 +266,11 @@ def main() -> None:
     }
 
     (
-        client.table("venue_inventory_snapshots")
+        client.table("place_inventory_snapshots")
         .upsert(
             payload_row,
             on_conflict=(
-                "venue_id,provider_id,inventory_scope,arrival_date,nights,captured_for_date"
+                "place_id,provider_id,inventory_scope,arrival_date,nights,captured_for_date"
             ),
         )
         .execute()

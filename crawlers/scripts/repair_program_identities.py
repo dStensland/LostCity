@@ -55,7 +55,7 @@ def build_identity(row: dict[str, Any]) -> ProgramIdentity:
     return ProgramIdentity(
         source_id=row["source_id"],
         portal_id=row.get("portal_id"),
-        venue_id=row["venue_id"],
+        venue_id=row.get("place_id") or row.get("venue_id"),
         name=row["name"],
         session_start=row.get("session_start"),
     )
@@ -141,7 +141,7 @@ def _missing_hash_updates(rows: Iterable[dict[str, Any]]) -> list[tuple[str, str
         metadata = dict(row.get("metadata") or {})
         if metadata.get("content_hash"):
             continue
-        content_hash = generate_program_hash(row["name"], row["venue_id"], row.get("session_start"))
+        content_hash = generate_program_hash(row["name"], row.get("place_id") or row.get("venue_id"), row.get("session_start"))
         metadata["content_hash"] = content_hash
         updates.append((str(row["id"]), content_hash, metadata))
     return updates
@@ -191,7 +191,7 @@ def main() -> int:
         metadata = dict(row.get("metadata") or {})
         if not metadata.get("content_hash"):
             metadata["content_hash"] = generate_program_hash(
-                row["name"], row["venue_id"], row.get("session_start")
+                row["name"], row.get("place_id") or row.get("venue_id"), row.get("session_start")
             )
         updated_rows.append({**row, "metadata": metadata})
 

@@ -440,7 +440,7 @@ def insert_session_event(
 
     event_data = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description[:1000] if description else None,
         "start_date": start_date,
@@ -534,7 +534,7 @@ def insert_experience_event(
 
     event_data = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description[:1000] if description else None,
         "start_date": start_date,
@@ -658,7 +658,7 @@ def enrich_festival_program(
                 # Use first and last significant words for broad match
                 pattern = f"%{words[0]}%{words[-1]}%"
                 result = (
-                    client.table("venues")
+                    client.table("places")
                     .select("id, name")
                     .ilike("name", pattern)
                     .limit(1)

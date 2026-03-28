@@ -45,7 +45,7 @@ def _get_latest_source(client, venue_id: int, field_name: str) -> Optional[str]:
     resp = (
         client.table("venue_enrichment_log")
         .select("source")
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("status", "success")
         .contains("fields_updated", [field_name])
         .order("created_at", desc=True)
@@ -84,7 +84,7 @@ def _log_enrichment(
 ):
     """Insert a row into venue_enrichment_log."""
     row = {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "enrichment_type": enrichment_type,
         "status": status,
         "source": source,
@@ -99,7 +99,7 @@ def _log_enrichment(
 def _recompute_venue_quality(client, venue_id: int):
     """Recompute data_quality for a single venue."""
     fields = ",".join(["id"] + list(VENUE_WEIGHTS.keys()))
-    resp = client.table("venues").select(fields).eq("id", venue_id).single().execute()
+    resp = client.table("places").select(fields).eq("id", venue_id).single().execute()
     if resp.data:
         score = score_record(resp.data, VENUE_WEIGHTS)
         update_scores(client, "venues", {venue_id: score})
@@ -133,7 +133,7 @@ def run_enrichment(
     client = get_client()
 
     # 1. Fetch venue
-    resp = client.table("venues").select("*").eq("id", venue_id).single().execute()
+    resp = client.table("places").select("*").eq("id", venue_id).single().execute()
     if not resp.data:
         logger.warning(f"Venue {venue_id} not found")
         return "failed"
@@ -197,7 +197,7 @@ def run_enrichment(
     previous = {f: venue.get(f) for f in updates}
 
     # 6. Apply update
-    client.table("venues").update(updates).eq("id", venue_id).execute()
+    client.table("places").update(updates).eq("id", venue_id).execute()
 
     # 7. Log
     _log_enrichment(
@@ -246,7 +246,7 @@ def run_batch(
 
     # Query low-quality active venues
     resp = (
-        client.table("venues")
+        client.table("places")
         .select("id, name, data_quality")
         .lt("data_quality", max_score)
         .order("data_quality", desc=False)

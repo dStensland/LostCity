@@ -74,9 +74,9 @@ export const getTagDefinitionsByCategory = getTagDefinitionsByGroup;
  */
 export async function getVenueTags(venueId: number): Promise<VenueTagSummary[]> {
   const { data, error } = await (supabase as UntypedTable)
-    .from("venue_tag_summary")
+    .from("place_tag_summary")
     .select("*")
-    .eq("venue_id", venueId)
+    .eq("place_id", venueId)
     .order("score", { ascending: false });
 
   if (error) {
@@ -108,16 +108,16 @@ export async function getVenueTagsWithUserStatus(
 
   // Get user's added tags
   const { data: userTags } = await (supabase as UntypedTable)
-    .from("venue_tags")
+    .from("place_tags")
     .select("tag_id")
-    .eq("venue_id", venueId)
+    .eq("place_id", venueId)
     .eq("added_by", userId);
 
   // We need to map venue_tag_id to tag_id through venue_tags
   const { data: venueTagMappings } = await (supabase as UntypedTable)
-    .from("venue_tags")
+    .from("place_tags")
     .select("id, tag_id")
-    .eq("venue_id", venueId);
+    .eq("place_id", venueId);
 
   type VoteRow = { venue_tag_id: string; vote_type: string };
   type MappingRow = { id: string; tag_id: string };
@@ -159,9 +159,9 @@ export async function getTopTagsForVenues(
   }
 
   const { data, error } = await (supabase as UntypedTable)
-    .from("venue_tag_summary")
+    .from("place_tag_summary")
     .select("*")
-    .in("venue_id", venueIds)
+    .in("place_id", venueIds)
     .gte("score", 3) // Only show tags with some engagement
     .order("score", { ascending: false });
 
@@ -200,7 +200,7 @@ export async function addTagToVenue(
   }
 
   const { error } = await (serviceClient as UntypedTable)
-    .from("venue_tags")
+    .from("place_tags")
     .insert({ venue_id: venueId, tag_id: tagId, added_by: userId });
 
   if (error) {
@@ -232,9 +232,9 @@ export async function removeTagFromVenue(
   }
 
   const { error } = await (serviceClient as UntypedTable)
-    .from("venue_tags")
+    .from("place_tags")
     .delete()
-    .eq("venue_id", venueId)
+    .eq("place_id", venueId)
     .eq("tag_id", tagId)
     .eq("added_by", userId);
 
@@ -265,9 +265,9 @@ export async function voteOnTag(
 
   // First, find the venue_tag record
   const { data: venueTags } = await (serviceClient as UntypedTable)
-    .from("venue_tags")
+    .from("place_tags")
     .select("id")
-    .eq("venue_id", venueId)
+    .eq("place_id", venueId)
     .eq("tag_id", tagId)
     .limit(1);
 
@@ -506,7 +506,7 @@ export async function approveSuggestion(
 
   // Add the tag to the venue
   await (serviceClient as UntypedTable)
-    .from("venue_tags")
+    .from("place_tags")
     .insert({
       venue_id: suggestionData.venue_id,
       tag_id: tagId,

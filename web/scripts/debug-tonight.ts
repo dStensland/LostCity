@@ -32,7 +32,7 @@ async function main() {
   // Show ALL events for next 3 days for debugging
   const { data: upcoming } = await supabase
     .from("events")
-    .select("id, title, category_id, start_date, start_time, venue:venues(name)")
+    .select("id, title, category_id, start_date, start_time, venue:places(name)")
     .in("start_date", [today, tomorrow, dayAfter])
     .is("canonical_event_id", null)
     .is("portal_id", null)
@@ -51,7 +51,7 @@ async function main() {
 
   const { data, count } = await supabase
     .from("events")
-    .select("id, title, category_id, start_time, image_url, description, venue_id, venue:venues(name)", { count: "exact" })
+    .select("id, title, category_id, start_time, image_url, description, venue_id, venue:places(name)", { count: "exact" })
     .eq("start_date", today)
     .is("canonical_event_id", null)
     .is("portal_id", null)

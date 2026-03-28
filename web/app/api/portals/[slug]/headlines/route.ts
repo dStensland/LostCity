@@ -79,7 +79,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
         const { data: event } = await supabase
           .from("events")
-          .select("id, title, start_date, start_time, venue:venues(name)")
+          .select("id, title, start_date, start_time, venue:places(name)")
           .eq("portal_id", portalId as never)
           .eq("is_active", true as never)
           .gte("start_date", today as never)

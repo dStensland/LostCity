@@ -64,7 +64,7 @@ def main():
     client = get_client()
 
     # Get venues without coordinates
-    result = client.table("venues").select("*").is_("lat", "null").execute()
+    result = client.table("places").select("*").is_("lat", "null").execute()
     venues = result.data
 
     logger.info(f"Found {len(venues)} venues without coordinates")
@@ -88,7 +88,7 @@ def main():
 
         if coords:
             lat, lng = coords
-            client.table("venues").update({
+            client.table("places").update({
                 "lat": lat,
                 "lng": lng
             }).eq("id", venue["id"]).execute()

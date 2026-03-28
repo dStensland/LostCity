@@ -32,7 +32,7 @@ PLACE_DATA = {
     "zip": "30263",
     "lat": 33.3807,
     "lng": -84.7997,
-    "venue_type": "attraction",
+    "place_type": "attraction",
     "spot_type": "attraction",
     "website": BASE_URL,
 }
@@ -161,7 +161,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at 13 Stories Haunted House",
                         "start_date": start_date,

@@ -54,7 +54,7 @@ PLACE_DATA = {
     "zip": "30306",
     "lat": 33.7758,
     "lng": -84.3534,
-    "venue_type": "cinema",
+    "place_type": "cinema",
     "spot_type": "cinema",
     "website": BASE_URL,
     "vibes": ["independent", "cult-cinema", "repertory", "historic", "date-night", "late-night"],
@@ -125,7 +125,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "cinema",
         "commitment_tier": "hour",
         "primary_activity": "Atlanta's last independent cinema — cult, indie, and repertory programming",
@@ -140,10 +140,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Standard movie ticket pricing. Special events and screenings may have different pricing.",
         "source_url": "https://plazaatlanta.com",
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "cinema", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "cinema", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "atlantas-last-independent-cinema",
         "title": "Atlanta's last independent cinema",
         "feature_type": "attraction",
@@ -153,7 +153,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "cult-indie-repertory",
         "title": "Cult, indie, and repertory programming",
         "feature_type": "experience",
@@ -163,7 +163,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "beer-wine-concessions",
         "title": "Beer, wine, and concessions",
         "feature_type": "amenity",
@@ -412,7 +412,7 @@ def extract_movies_for_date(
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": movie_title,
                         "description": None,
                         "start_date": date_str,
@@ -559,7 +559,7 @@ def _extract_movies_from_text(
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": None,
                 "start_date": date_str,
@@ -735,7 +735,7 @@ def extract_special_events(
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description,
                         "start_date": event_date,

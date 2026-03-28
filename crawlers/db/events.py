@@ -355,11 +355,11 @@ def _step_validate(event_data: dict, ctx: InsertContext) -> dict:
         logger.warning(f'Rejected bad title: "{title[:80]}"')
         raise ValueError(f'Invalid event title: "{title[:50]}"')
 
-    venue_id = event_data.get("venue_id")
+    venue_id = event_data.get("place_id") or event_data.get("venue_id")
     if venue_id and title:
         try:
             venue_row = (
-                ctx.client.table("venues")
+                ctx.client.table("places")
                 .select("name")
                 .eq("id", venue_id)
                 .maybe_single()
@@ -376,7 +376,7 @@ def _step_validate(event_data: dict, ctx: InsertContext) -> dict:
             pass
 
     # A5: Warn on missing venue_id for non-virtual events
-    if not event_data.get("venue_id"):
+    if not (event_data.get("place_id") or event_data.get("venue_id")):
         is_online = event_data.get("is_online") or event_data.get("is_virtual")
         if not is_online:
             logger.warning(f'Missing venue_id for non-virtual event: "{title[:80]}"')
@@ -432,7 +432,7 @@ def _step_validate_source_url(event_data: dict, ctx: InsertContext) -> dict:
 
 def _step_generate_hash(event_data: dict, ctx: InsertContext) -> dict:
     """Auto-generate content_hash if missing, fix recurrence day mismatch, pop producer_id."""
-    venue_id = event_data.get("venue_id")
+    venue_id = event_data.get("place_id") or event_data.get("venue_id")
     title = event_data.get("title", "")
     if not event_data.get("content_hash"):
         from dedupe import generate_content_hash
@@ -489,13 +489,15 @@ def _step_resolve_source(event_data: dict, ctx: InsertContext) -> dict:
 
 def _step_resolve_venue(event_data: dict, ctx: InsertContext) -> dict:
     """Load venue, check active state and geography, extract vibes/type into ctx."""
-    if event_data.get("venue_id"):
-        ctx.venue = get_venue_by_id_cached(event_data["venue_id"])
+    # Accept either place_id (new) or venue_id (legacy) — _step_finalize normalizes later
+    _vid = event_data.get("place_id") or event_data.get("venue_id")
+    if _vid:
+        ctx.venue = get_venue_by_id_cached(_vid)
         if ctx.venue:
             ctx.venue_vibes = ctx.venue.get("vibes") or []
-            ctx.venue_type = ctx.venue.get("venue_type")
+            ctx.venue_type = ctx.venue.get("place_type") or ctx.venue.get("venue_type")
             venue_slug = str(ctx.venue.get("slug") or "").strip().lower()
-            if ctx.venue.get("active") is False or venue_slug in CLOSED_VENUE_SLUGS:
+            if ctx.venue.get("is_active") is False or venue_slug in CLOSED_VENUE_SLUGS:
                 ctx.venue_inactive_or_closed = True
 
             venue_state = (ctx.venue.get("state") or "").upper().strip()
@@ -744,23 +746,24 @@ def _step_resolve_series(event_data: dict, ctx: InsertContext) -> dict:
             if ctx.source_url and not series_hint.get("festival_website"):
                 series_hint["festival_website"] = ctx.source_url
 
+    _vid_for_series = event_data.get("place_id") or event_data.get("venue_id")
     if not series_hint and ctx.is_class_flag:
         series_hint = {
             "series_type": "class_series",
             "series_title": event_data.get("title"),
-            "venue_id": event_data.get("venue_id"),
+            "place_id": _vid_for_series,
         }
 
     if not series_hint and event_data.get("is_recurring"):
         series_hint = {
             "series_type": "recurring_show",
             "series_title": event_data.get("title"),
-            "venue_id": event_data.get("venue_id"),
+            "place_id": _vid_for_series,
         }
 
     # Include venue_id for venue-scoped series matching (class_series, recurring_show)
-    if event_data.get("venue_id") and series_hint:
-        series_hint.setdefault("venue_id", event_data["venue_id"])
+    if _vid_for_series and series_hint:
+        series_hint.setdefault("venue_id", _vid_for_series)
 
     ctx.series_hint = series_hint
     return event_data
@@ -769,8 +772,9 @@ def _step_resolve_series(event_data: dict, ctx: InsertContext) -> dict:
 def _step_infer_genres(event_data: dict, ctx: InsertContext) -> dict:
     """Infer genres from event/venue data and merge with explicit genres."""
     venue_genres = None
-    if event_data.get("venue_id"):
-        venue = get_venue_by_id_cached(event_data["venue_id"])
+    _vid_genres = event_data.get("place_id") or event_data.get("venue_id")
+    if _vid_genres:
+        venue = get_venue_by_id_cached(_vid_genres)
         if venue:
             venue_genres = venue.get("genres")
 
@@ -1198,6 +1202,12 @@ def _step_finalize(event_data: dict, ctx: InsertContext) -> dict:
     elif "category" in event_data:
         event_data.pop("category")
 
+    # venue_id → place_id rename (Deploy 10: events table column renamed)
+    if "venue_id" in event_data and "place_id" not in event_data:
+        event_data["place_id"] = event_data.pop("venue_id")
+    elif "venue_id" in event_data:
+        event_data.pop("venue_id")
+
     event_data.pop("subcategory", None)
     event_data.pop("subcategory_id", None)
 
@@ -1331,7 +1341,7 @@ def _maybe_infer_importance(event_id: int, event_data: dict) -> None:
 
     # Path 2: venue capacity — tier 5 (arenas/stadiums) or tier 4 (amphitheaters)
     if not should_upgrade:
-        venue_id = event_data.get("venue_id")
+        venue_id = event_data.get("place_id") or event_data.get("venue_id")
         if venue_id:
             venue = get_venue_by_id_cached(int(venue_id))
             capacity_tier = venue.get("capacity_tier") if venue else None
@@ -1365,7 +1375,8 @@ def insert_event(
     event_data: dict, series_hint: dict = None, genres: list = None
 ) -> int:
     """Insert a new event with inferred tags, series linking, and genres. Returns event ID."""
-    venue_id = event_data.get("venue_id")
+    # Accept either venue_id (legacy) or place_id (new) — _step_finalize will normalize to place_id
+    venue_id = event_data.get("place_id") or event_data.get("venue_id")
     if venue_id is None or (isinstance(venue_id, int) and venue_id < 0):
         title = event_data.get("title", "untitled")
         logger.warning("Skipping event insert — invalid venue_id=%s for '%s'", venue_id, title[:80])
@@ -1564,9 +1575,9 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
             existing_source_id
             and incoming_source_id
             and existing_source_id == incoming_source_id
-            and existing.get("venue_id")
-            and incoming.get("venue_id")
-            and existing.get("venue_id") == incoming.get("venue_id")
+            and (existing.get("place_id") or existing.get("venue_id"))
+            and (incoming.get("place_id") or incoming.get("venue_id"))
+            and (existing.get("place_id") or existing.get("venue_id")) == (incoming.get("place_id") or incoming.get("venue_id"))
             and existing.get("start_date")
             and incoming.get("start_date")
             and existing.get("start_date") == incoming.get("start_date")
@@ -1694,11 +1705,11 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
 
     if events_support_is_active_column() and existing.get("is_active") is False:
         should_reactivate = True
-        venue_id = incoming.get("venue_id") or existing.get("venue_id")
+        venue_id = incoming.get("place_id") or incoming.get("venue_id") or existing.get("place_id") or existing.get("venue_id")
         if venue_id:
             venue = get_venue_by_id_cached(int(venue_id))
             venue_slug = str((venue or {}).get("slug") or "").strip().lower()
-            if (venue or {}).get("active") is False or venue_slug in CLOSED_VENUE_SLUGS:
+            if (venue or {}).get("is_active") is False or venue_slug in CLOSED_VENUE_SLUGS:
                 should_reactivate = False
         if should_reactivate:
             updates["is_active"] = True
@@ -1739,7 +1750,7 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
         from tag_inference import infer_genres as _infer_genres
         from genre_normalize import normalize_genres as _normalize_genres_su
 
-        venue_id = incoming.get("venue_id") or existing.get("venue_id")
+        venue_id = incoming.get("place_id") or incoming.get("venue_id") or existing.get("place_id") or existing.get("venue_id")
         venue = get_venue_by_id_cached(int(venue_id)) if venue_id else None
         inferred = _normalize_genres_su(
             _infer_genres(
@@ -1968,7 +1979,7 @@ def prefetch_hashes(source_id: int = None, venue_id: int = None) -> set[str]:
         if source_id:
             query = query.eq("source_id", source_id)
         if venue_id:
-            query = query.eq("venue_id", venue_id)
+            query = query.eq("place_id", venue_id)
         query = query.eq("is_active", True)
         result = query.execute()
         return {row["content_hash"] for row in (result.data or []) if row.get("content_hash")}
@@ -2007,7 +2018,7 @@ def prefetch_events_by_source(source_id: int) -> dict[str, dict]:
 def find_existing_event_by_natural_key(event_data: dict) -> Optional[dict]:
     """Find a likely duplicate event by natural key when hash lookup misses."""
     source_id = event_data.get("source_id")
-    venue_id = event_data.get("venue_id")
+    venue_id = event_data.get("place_id") or event_data.get("venue_id")
     start_date = event_data.get("start_date")
     title = event_data.get("title")
 
@@ -2024,7 +2035,7 @@ def find_existing_event_by_natural_key(event_data: dict) -> Optional[dict]:
         client.table("events")
         .select("*")
         .eq("source_id", source_id)
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("start_date", start_date)
     )
 
@@ -2052,7 +2063,7 @@ def find_existing_event_by_natural_key(event_data: dict) -> Optional[dict]:
         client.table("events")
         .select("*")
         .eq("source_id", source_id)
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("start_date", start_date)
     )
     fallback_result = fallback_query.execute()
@@ -2096,8 +2107,9 @@ def find_existing_event_for_insert(event_data: dict) -> Optional[dict]:
     """Dedupe guard for insert_event."""
     title = event_data.get("title")
     venue_name = ""
-    if event_data.get("venue_id"):
-        venue_info = get_venue_by_id_cached(event_data["venue_id"])
+    _vid_for_hash = event_data.get("place_id") or event_data.get("venue_id")
+    if _vid_for_hash:
+        venue_info = get_venue_by_id_cached(_vid_for_hash)
         if venue_info and isinstance(venue_info, dict):
             venue_name = venue_info.get("name", "") or ""
     start_date = event_data.get("start_date")
@@ -2168,7 +2180,7 @@ def _candidate_quality_score(event_row: dict) -> tuple[int, int, int]:
 def find_cross_source_canonical_for_insert(event_data: dict) -> Optional[int]:
     """Find canonical event ID for cross-source duplicate suppression."""
     source_id = event_data.get("source_id")
-    venue_id = event_data.get("venue_id")
+    venue_id = event_data.get("place_id") or event_data.get("venue_id")
     start_date = event_data.get("start_date")
     start_time = event_data.get("start_time")
     title = event_data.get("title")
@@ -2187,7 +2199,7 @@ def find_cross_source_canonical_for_insert(event_data: dict) -> Optional[int]:
         .select(
             "id,title,source_id,canonical_event_id,created_at,description,image_url,ticket_url,is_active"
         )
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("start_date", start_date)
         .neq("source_id", source_id)
     )
@@ -2295,7 +2307,7 @@ def find_events_by_date_and_venue(date: str, venue_id: int) -> list[dict]:
         client.table("events")
         .select("*")
         .eq("start_date", date)
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .execute()
     )
     return result.data or []

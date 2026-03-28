@@ -32,7 +32,7 @@ PLACE_DATA = {
     "zip": "30313",
     "lat": 33.7497,
     "lng": -84.3963,
-    "venue_type": "studio",
+    "place_type": "studio",
     "spot_type": "studio",
     "website": BASE_URL,
     "vibes": ["black-owned", "craft", "creative", "workshop", "byob"],
@@ -173,7 +173,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": venue_id,
+                                "place_id": venue_id,
                                 "title": title,
                                 "description": description,
                                 "start_date": start_date,
@@ -250,7 +250,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if not find_event_by_hash(content_hash):
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": "Learn how to make your own soy candle. Check website for available class times.",
                             "start_date": placeholder_date,

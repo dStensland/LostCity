@@ -55,7 +55,7 @@ PLACE_DATA = {
     "zip": "30076",
     "lat": 34.0232,
     "lng": -84.3616,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": BASE_URL,
     "vibes": [
@@ -675,7 +675,7 @@ def _upsert_event(
 
     event_record: dict[str, Any] = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": (item.get("description") or "")[:2000],
         "start_date": start_date,

@@ -39,7 +39,7 @@ BELTLINE_VENUE = {
     "zip": "30307",
     "lat": 33.7665,
     "lng": -84.3625,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": BASE_URL,
     "vibes": ["outdoor", "active", "scenic"],
@@ -222,7 +222,7 @@ def parse_event_cards(text: str, venue_id: int, source_id: int, image_map: dict)
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": event_title,
                     "description": description,
                     "start_date": start_date,

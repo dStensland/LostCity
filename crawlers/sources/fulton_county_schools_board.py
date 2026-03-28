@@ -66,7 +66,7 @@ VENUE_NORTH = {
     "zip": "30350",
     "lat": 33.9697,
     "lng": -84.3517,
-    "venue_type": "community_center",
+    "place_type": "community_center",
     "spot_type": "community_center",
     "website": "https://www.fultonschools.org",
 }
@@ -82,7 +82,7 @@ VENUE_SOUTH = {
     "zip": "30291",
     "lat": 33.5689,
     "lng": -84.3442,
-    "venue_type": "community_center",
+    "place_type": "community_center",
     "spot_type": "community_center",
     "website": "https://www.fultonschools.org",
 }
@@ -451,7 +451,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": start_date,

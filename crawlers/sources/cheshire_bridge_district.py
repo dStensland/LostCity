@@ -27,7 +27,7 @@ PLACE_DATA = {
     "zip": "30324",
     "lat": 33.8170,
     "lng": -84.3560,
-    "venue_type": "entertainment_district",
+    "place_type": "entertainment_district",
     "spot_type": "entertainment_district",
     "website": None,
     "description": "Atlanta's LGBTQ+ entertainment corridor with nightlife venues, drag shows, and unique businesses.",
@@ -80,7 +80,7 @@ def create_pride_week_events(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": event["title"],
             "description": event["description"],
             "start_date": start_date,

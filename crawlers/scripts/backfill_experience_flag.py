@@ -55,9 +55,9 @@ def main():
 
     # Find active venues with qualifying types that aren't flagged
     query = (
-        client.table("venues")
+        client.table("places")
         .select("id, name, venue_type, city, neighborhood, is_experience, typical_duration_minutes")
-        .in_("venue_type", EXPERIENCE_VENUE_TYPES)
+        .in_("place_type", EXPERIENCE_VENUE_TYPES)
         .neq("active", False)
     )
     if args.city:
@@ -101,7 +101,7 @@ def main():
         updated = 0
         for i in range(0, len(ids), 50):
             chunk = ids[i:i+50]
-            client.table("venues").update({"is_experience": True}).in_("id", chunk).execute()
+            client.table("places").update({"is_experience": True}).in_("id", chunk).execute()
             updated += len(chunk)
         print(f"\n  Applied is_experience=true to {updated} venues.")
 
@@ -110,7 +110,7 @@ def main():
             vt = v["venue_type"] or ""
             dur = DURATION_DEFAULTS.get(vt, 60)
             if not v.get("typical_duration_minutes"):
-                client.table("venues").update(
+                client.table("places").update(
                     {"typical_duration_minutes": dur}
                 ).eq("id", v["id"]).execute()
 
@@ -121,7 +121,7 @@ def main():
         for v in needs_duration:
             vt = v["venue_type"] or ""
             dur = DURATION_DEFAULTS.get(vt, 60)
-            client.table("venues").update(
+            client.table("places").update(
                 {"typical_duration_minutes": dur}
             ).eq("id", v["id"]).execute()
         print(f"  Backfilled duration for {len(needs_duration)} existing experience venues.")

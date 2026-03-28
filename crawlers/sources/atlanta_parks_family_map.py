@@ -114,42 +114,42 @@ VENUE_OVERRIDES = {
     "atl natatorium at washington park": {
         "name": "Washington Park Aquatic Center",
         "slug": "washington-park-aquatic-center",
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "destination_type": "aquatic_center",
     },
     "ct martin natatorium": {
         "name": "CT Martin Recreation & Aquatic Center",
         "slug": "ct-martin-recreation-center",
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "destination_type": "aquatic_center",
     },
     "mlk jr recreation & aquatic center": {
         "name": "Martin Luther King Jr Recreation & Aquatic Center",
         "slug": "mlk-recreation-center",
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "destination_type": "aquatic_center",
     },
     "rosel fann recreation center": {
         "name": "Rosel Fann Recreation & Aquatic Center",
         "slug": "rosel-fann-recreation-center",
-        "venue_type": "recreation",
+        "place_type": "recreation",
         "spot_type": "community_center",
         "destination_type": "aquatic_center",
     },
     "pittman park": {
         "name": "Pittman Park Recreation Center",
         "slug": "pittman-park-recreation-center",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "destination_type": "park",
     },
     "chastain park": {
         "name": "Chastain Park",
         "slug": "chastain-park",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "destination_type": "park",
         "official_lookup_name": "Chastain Memorial Park",
@@ -157,7 +157,7 @@ VENUE_OVERRIDES = {
     "john a. white park": {
         "name": "John A. White Park",
         "slug": "john-a-white-park",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "destination_type": "park",
     },
@@ -192,7 +192,7 @@ def _catalog_entries() -> list[dict]:
             {
                 "name": override.get("name", name),
                 "slug": override.get("slug", slugify(override.get("name", name))),
-                "venue_type": override.get("venue_type", "park"),
+                "place_type": override.get("venue_type", "park"),
                 "spot_type": override.get("spot_type", "park"),
                 "destination_type": override.get("destination_type", "park"),
                 "official_lookup_name": override.get("official_lookup_name"),
@@ -213,7 +213,7 @@ def _catalog_entries() -> list[dict]:
             {
                 "name": override.get("name", label),
                 "slug": override.get("slug", slugify(override.get("name", label))),
-                "venue_type": override.get("venue_type", "park"),
+                "place_type": override.get("venue_type", "park"),
                 "spot_type": override.get("spot_type", "park"),
                 "destination_type": override.get("destination_type", "park"),
                 "official_lookup_name": override.get("official_lookup_name"),
@@ -258,7 +258,7 @@ def _build_venue_record(entry: dict) -> dict:
         "lat": entry.get("lat"),
         "lng": entry.get("lng"),
         "neighborhood": entry.get("neighborhood"),
-        "venue_type": entry["venue_type"],
+        "place_type": entry["venue_type"],
         "spot_type": entry["spot_type"],
         "website": website,
         "description": description,
@@ -267,7 +267,7 @@ def _build_venue_record(entry: dict) -> dict:
 
 def _fetch_existing_venue(client, entry: dict) -> Optional[dict]:
     slug_result = (
-        client.table("venues")
+        client.table("places")
         .select("id,name,slug,address,city,state,zip,lat,lng,neighborhood,venue_type,spot_type")
         .eq("slug", entry["slug"])
         .limit(1)
@@ -277,7 +277,7 @@ def _fetch_existing_venue(client, entry: dict) -> Optional[dict]:
         return slug_result.data[0]
 
     name_result = (
-        client.table("venues")
+        client.table("places")
         .select("id,name,slug,address,city,state,zip,lat,lng,neighborhood,venue_type,spot_type")
         .eq("name", entry["name"])
         .limit(1)
@@ -489,7 +489,7 @@ def _maybe_patch_existing_venue(client, venue: dict, entry: dict) -> dict:
     if not updates:
         return venue
 
-    client.table("venues").update(updates).eq("id", venue["id"]).execute()
+    client.table("places").update(updates).eq("id", venue["id"]).execute()
     venue.update(updates)
     logger.info("Updated location details for %s", entry["name"])
     return venue
@@ -521,7 +521,7 @@ def _venue_has_destination_details(client, venue_id: int) -> bool:
     result = (
         client.table("venue_destination_details")
         .select("venue_id")
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .limit(1)
         .execute()
     )
@@ -532,7 +532,7 @@ def _venue_has_feature_signal(client, venue_id: int, keywords: tuple[str, ...]) 
     result = (
         client.table("venue_features")
         .select("slug, title, description")
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("is_active", True)
         .execute()
     )
@@ -565,7 +565,7 @@ def _build_overlay_envelope(
             envelope.add(
                 "destination_details",
                 {
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "destination_type": "aquatic_center",
                     "commitment_tier": "halfday",
                     "primary_activity": "family splash pad or aquatic center visit",
@@ -589,7 +589,7 @@ def _build_overlay_envelope(
             envelope.add(
                 "destination_details",
                 {
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "destination_type": "park",
                     "commitment_tier": "halfday",
                     "primary_activity": "family park visit",
@@ -614,7 +614,7 @@ def _build_overlay_envelope(
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "official-city-playground",
                 "title": "Official city playground",
                 "feature_type": "amenity",
@@ -633,7 +633,7 @@ def _build_overlay_envelope(
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "official-city-splash-pad",
                 "title": "Official city splash pad",
                 "feature_type": "amenity",

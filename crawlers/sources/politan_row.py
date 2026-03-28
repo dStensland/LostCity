@@ -20,7 +20,7 @@ PLACE_DATA = {
     "zip": "30361",
     "lat": 33.7886,
     "lng": -84.3834,
-    "venue_type": "food_hall",
+    "place_type": "food_hall",
     "spot_type": "food_hall",
     "website": "https://www.politanrow.com",
     "description": "Upscale food hall at Colony Square featuring 10+ chef-driven dining concepts, craft cocktails, and communal seating in Midtown Atlanta.",

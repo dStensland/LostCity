@@ -132,7 +132,7 @@ def check_venue_issues():
     
     print("Venues without coordinates")
     print("-" * 80)
-    result = client.table("venues") \
+    result = client.table("places") \
         .select("id, name, address, city, zip") \
         .or_("lat.is.null,lng.is.null") \
         .limit(10) \
@@ -148,7 +148,7 @@ def check_venue_issues():
             # Check how many events use this venue
             event_count = client.table("events") \
                 .select("id", count="exact") \
-                .eq("venue_id", venue['id']) \
+                .eq("place_id", venue['id']) \
                 .execute()
             print(f"  Events using this venue: {event_count.count}")
     

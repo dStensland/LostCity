@@ -58,7 +58,7 @@ KNOWN_VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "spot_type": "brewery",
         "website": "https://mondaynightbrewing.com/",
     },
@@ -70,7 +70,7 @@ KNOWN_VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "",
-        "venue_type": "landmark",
+        "place_type": "landmark",
         "spot_type": "landmark",
         "website": "https://www.undergroundatl.com/",
     },
@@ -82,7 +82,7 @@ KNOWN_VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "",
-        "venue_type": "event_space",
+        "place_type": "event_space",
         "spot_type": "event_space",
         "website": "https://www.novareevents.com/the-stave-room",
     },
@@ -94,7 +94,7 @@ KNOWN_VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "",
-        "venue_type": "landmark",
+        "place_type": "landmark",
         "spot_type": "landmark",
         "website": BASE_URL,
     },
@@ -106,7 +106,7 @@ KNOWN_VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "",
-        "venue_type": "organization",
+        "place_type": "organization",
         "spot_type": "organization",
         "website": BASE_URL,
     },
@@ -118,7 +118,7 @@ KNOWN_VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "",
-        "venue_type": "festival",
+        "place_type": "festival",
         "spot_type": "festival",
         "website": BASE_URL,
     },
@@ -132,7 +132,7 @@ KNOWN_VENUES = {
         "zip": "30309",
         "lat": 33.7873,
         "lng": -84.3733,
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "outdoor",
         "website": "https://piedmontpark.org",
     },
@@ -144,7 +144,7 @@ KNOWN_VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "",
-        "venue_type": "music_venue",
+        "place_type": "music_venue",
         "spot_type": "music_venue",
         "website": DAY_BASE_URL,
     },
@@ -404,7 +404,7 @@ def build_venue_data(name: str) -> dict:
         "city": "Atlanta",
         "state": "GA",
         "zip": "",
-        "venue_type": "organization",
+        "place_type": "organization",
         "spot_type": "organization",
         "website": BASE_URL,
     }
@@ -451,7 +451,7 @@ def build_parent_event(
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": (
             "Atlanta's annual 404 Day celebration: free music festival at Piedmont Park, "
@@ -558,7 +558,7 @@ def build_child_event(
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,
@@ -675,7 +675,7 @@ def _build_piedmont_park_child(source_id: int, card: dict, jsonld: Optional[dict
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": "404 Day 2026",
         "description": description,
         "start_date": start_date,
@@ -719,7 +719,7 @@ def _build_stankonia_child(source_id: int, card: dict) -> dict:
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,

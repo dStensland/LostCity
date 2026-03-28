@@ -32,7 +32,7 @@ class StudioMovieGrillAtlantaCrawler(ChainCinemaCrawler):
                 "city": "Alpharetta",
                 "state": "GA",
                 "zip": "30022",
-                "venue_type": "cinema",
+                "place_type": "cinema",
                 "website": "https://www.studiomoviegrill.com/locations/georgia/north-point",
                 "lat": 34.0475,
                 "lng": -84.2941,

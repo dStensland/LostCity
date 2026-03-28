@@ -26,7 +26,7 @@ COFFEE_SHOPS = [
         "zip": "30318",
         "lat": 33.7845,
         "lng": -84.4068,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://revelatorcoffee.com",
     },
     {
@@ -39,7 +39,7 @@ COFFEE_SHOPS = [
         "zip": "30307",
         "lat": 33.7581,
         "lng": -84.3636,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://revelatorcoffee.com",
     },
     {
@@ -52,7 +52,7 @@ COFFEE_SHOPS = [
         "zip": "30030",
         "lat": 33.7765,
         "lng": -84.2958,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://chromeyellow.com",
     },
     {
@@ -65,7 +65,7 @@ COFFEE_SHOPS = [
         "zip": "30313",
         "lat": 33.7668,
         "lng": -84.3918,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://eastpolecoffee.com",
     },
     {
@@ -78,7 +78,7 @@ COFFEE_SHOPS = [
         "zip": "30329",
         "lat": 33.8128,
         "lng": -84.3158,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://spillerpark.com",
     },
     {
@@ -91,7 +91,7 @@ COFFEE_SHOPS = [
         "zip": "30308",
         "lat": 33.7725,
         "lng": -84.3555,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://spillerpark.com",
     },
     {
@@ -104,7 +104,7 @@ COFFEE_SHOPS = [
         "zip": "30318",
         "lat": 33.7895,
         "lng": -84.4098,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://drinkbrash.com",
     },
     {
@@ -117,7 +117,7 @@ COFFEE_SHOPS = [
         "zip": "30317",
         "lat": 33.7558,
         "lng": -84.3258,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://taproomcoffee.com",
     },
     {
@@ -130,7 +130,7 @@ COFFEE_SHOPS = [
         "zip": "30307",
         "lat": 33.7581,
         "lng": -84.3636,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://littletartbakeshop.com",
     },
     {
@@ -143,7 +143,7 @@ COFFEE_SHOPS = [
         "zip": "30312",
         "lat": 33.7458,
         "lng": -84.3698,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://octanecoffee.com",
     },
     {
@@ -156,7 +156,7 @@ COFFEE_SHOPS = [
         "zip": "30318",
         "lat": 33.7798,
         "lng": -84.4108,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://octanecoffee.com",
     },
     {
@@ -169,7 +169,7 @@ COFFEE_SHOPS = [
         "zip": "30308",
         "lat": 33.7718,
         "lng": -84.3598,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://dancinggoats.com",
     },
     {
@@ -182,7 +182,7 @@ COFFEE_SHOPS = [
         "zip": "30030",
         "lat": 33.7745,
         "lng": -84.2945,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://dancinggoats.com",
     },
     {
@@ -195,7 +195,7 @@ COFFEE_SHOPS = [
         "zip": "30312",
         "lat": 33.7548,
         "lng": -84.3705,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://docentcoffee.com",
     },
     {
@@ -208,7 +208,7 @@ COFFEE_SHOPS = [
         "zip": "30316",
         "lat": 33.7398,
         "lng": -84.3388,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": None,
     },
     {
@@ -221,7 +221,7 @@ COFFEE_SHOPS = [
         "zip": "30306",
         "lat": 33.7898,
         "lng": -84.3508,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://sfcoffee.com",
     },
     {
@@ -234,7 +234,7 @@ COFFEE_SHOPS = [
         "zip": "30312",
         "lat": 33.7415,
         "lng": -84.3825,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://muchacho.coffee",
     },
     {
@@ -247,7 +247,7 @@ COFFEE_SHOPS = [
         "zip": "30312",
         "lat": 33.7578,
         "lng": -84.3728,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": None,
     },
     {
@@ -260,7 +260,7 @@ COFFEE_SHOPS = [
         "zip": "30316",
         "lat": 33.7358,
         "lng": -84.3468,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://hodgepodgecoffee.com",
     },
     {
@@ -273,7 +273,7 @@ COFFEE_SHOPS = [
         "zip": "30306",
         "lat": 33.7728,
         "lng": -84.3508,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": None,
     },
     {
@@ -286,7 +286,7 @@ COFFEE_SHOPS = [
         "zip": "30339",
         "lat": 33.8518,
         "lng": -84.4628,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://chattcoffee.com",
     },
     {
@@ -299,7 +299,7 @@ COFFEE_SHOPS = [
         "zip": "30309",
         "lat": 33.7785,
         "lng": -84.3828,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://prevailcoffee.com",
     },
     {
@@ -312,7 +312,7 @@ COFFEE_SHOPS = [
         "zip": "30307",
         "lat": 33.7648,
         "lng": -84.3488,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://auroracoffee.com",
     },
     {
@@ -325,7 +325,7 @@ COFFEE_SHOPS = [
         "zip": "30318",
         "lat": 33.7968,
         "lng": -84.4308,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://boldmonkbrewing.com",
     },
     {
@@ -338,7 +338,7 @@ COFFEE_SHOPS = [
         "zip": "30318",
         "lat": 33.7808,
         "lng": -84.4118,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://radioroasters.com",
     },
     {
@@ -351,7 +351,7 @@ COFFEE_SHOPS = [
         "zip": "30306",
         "lat": 33.7978,
         "lng": -84.3488,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://steadyhandpourhouse.com",
     },
     {
@@ -364,7 +364,7 @@ COFFEE_SHOPS = [
         "zip": "30314",
         "lat": 33.7848,
         "lng": -84.4318,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": None,
     },
     {
@@ -377,7 +377,7 @@ COFFEE_SHOPS = [
         "zip": "30363",
         "lat": 33.7868,
         "lng": -84.3858,
-        "venue_type": "coffee_shop",
+        "place_type": "coffee_shop",
         "website": "https://landofathousandhills.com",
     },
 ]

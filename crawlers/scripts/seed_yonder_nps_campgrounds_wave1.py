@@ -94,7 +94,7 @@ def build_payload(slug: str, row: dict, config: dict) -> dict:
         "state": "GA",
         "lat": float(row["latitude"]) if row.get("latitude") else None,
         "lng": float(row["longitude"]) if row.get("longitude") else None,
-        "venue_type": "campground",
+        "place_type": "campground",
         "spot_type": "campground",
         "explore_category": "outdoors",
         "active": True,
@@ -114,7 +114,7 @@ def find_existing_venue(slug: str, name: str) -> dict | None:
     if existing:
         return existing
     client = get_client()
-    result = client.table("venues").select("*").eq("name", name).limit(1).execute()
+    result = client.table("places").select("*").eq("name", name).limit(1).execute()
     if result.data:
         return result.data[0]
     return None
@@ -199,7 +199,7 @@ def main() -> None:
             continue
 
         if args.apply:
-            client.table("venues").update(updates).eq("id", existing["id"]).execute()
+            client.table("places").update(updates).eq("id", existing["id"]).execute()
         print(f"{'UPDATE' if args.apply else 'WOULD UPDATE'} venue: {slug} ({len(updates)} fields)")
         updated += 1
 

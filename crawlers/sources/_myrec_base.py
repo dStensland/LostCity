@@ -573,7 +573,7 @@ def _build_event_record(
 
     record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": _build_description(program_detail["description_text"], session),
         "start_date": session["start_date"],

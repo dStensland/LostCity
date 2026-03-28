@@ -32,7 +32,7 @@ PLACE_DATA = {
     "city": "Scottdale",
     "state": "GA",
     "zip": "30079",
-    "venue_type": "theater",
+    "place_type": "theater",
     "website": BASE_URL,
 }
 
@@ -183,7 +183,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": f"{title} by {playwright}. Live theater performance at OnStage Atlanta.",
                             "start_date": start_date_str,
@@ -262,7 +262,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": venue_id,
+                                "place_id": venue_id,
                                 "title": show_title,
                                 "description": f"{show_title} by {show_author.strip()}. Live theater at OnStage Atlanta.",
                                 "start_date": start_date_str,

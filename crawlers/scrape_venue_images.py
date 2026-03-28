@@ -247,7 +247,7 @@ def get_venues_needing_images(
     """Get venues that have websites but no images."""
     client = get_client()
 
-    query = client.table("venues").select(
+    query = client.table("places").select(
         "id, name, slug, website, image_url, venue_type"
     ).eq("active", True)
 
@@ -258,7 +258,7 @@ def get_venues_needing_images(
     query = query.is_("image_url", "null")
 
     if venue_type:
-        query = query.eq("venue_type", venue_type)
+        query = query.eq("place_type", venue_type)
 
     query = query.limit(limit)
 
@@ -273,7 +273,7 @@ def update_venue_image(venue_id: int, image_url: str, dry_run: bool = False) -> 
 
     client = get_client()
     try:
-        client.table("venues").update({"image_url": image_url}).eq("id", venue_id).execute()
+        client.table("places").update({"image_url": image_url}).eq("id", venue_id).execute()
         return True
     except Exception as e:
         logger.error(f"    Update error: {e}")

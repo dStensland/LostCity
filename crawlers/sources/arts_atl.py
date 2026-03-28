@@ -28,7 +28,7 @@ DEFAULT_VENUE = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30303",
-    "venue_type": "various",
+    "place_type": "various",
     "website": BASE_URL,
 }
 
@@ -162,7 +162,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "city": "Atlanta",
                     "state": "GA",
                     "zip": venue_info.get("address", {}).get("postalCode", ""),
-                    "venue_type": "various",
+                    "place_type": "various",
                     "website": venue_info.get("url", ""),
                 }
                 venue_id = get_or_create_place(place_data)
@@ -175,7 +175,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": event_data.get("description", "Arts event from ArtsATL calendar")[:500],
                 "start_date": start_date,
@@ -236,7 +236,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": "Arts event from ArtsATL calendar",
                     "start_date": start_date,

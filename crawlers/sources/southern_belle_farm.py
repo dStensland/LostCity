@@ -73,7 +73,7 @@ PLACE_DATA = {
     "zip": "30252",
     "lat": 33.4418,
     "lng": -84.1438,
-    "venue_type": "outdoor_venue",
+    "place_type": "outdoor_venue",
     "spot_type": "outdoor_venue",
     "website": BASE_URL,
     "vibes": ["family-friendly", "outdoor-seating", "good-for-groups", "free-parking"],
@@ -411,7 +411,7 @@ def scrape_season_page(
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description[:1500],
         "start_date": start_date,
@@ -560,7 +560,7 @@ def _extract_sub_events(
             events.append(
                 {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": "Donut Breakfast with Santa at Southern Belle Farm",
                     "description": (
                         "Start your morning with donuts and a visit with Santa at Southern "
@@ -624,7 +624,7 @@ def _extract_sub_events(
                     events.append(
                         {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": "Sunflower Weekend at Southern Belle Farm",
                             "description": (
                                 "A two-day summer celebration featuring Southern Belle Farm's "
@@ -683,7 +683,7 @@ def _extract_sub_events(
                             events.append(
                                 {
                                     "source_id": source_id,
-                                    "venue_id": venue_id,
+                                    "place_id": venue_id,
                                     "title": "Columbus Day at Southern Belle Farm",
                                     "description": (
                                         "Southern Belle Farm is open on Columbus Day (Monday) with "
@@ -901,7 +901,7 @@ def scrape_blog_special_events(
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description[:1000] if description else None,
                 "start_date": event_date,
@@ -955,7 +955,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "farm",
             "commitment_tier": "halfday",
             "primary_activity": "seasonal family farm visit",
@@ -976,7 +976,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "outdoor_venue",
+                "place_type": "outdoor_venue",
                 "city": "mcdonough",
             },
         },
@@ -984,7 +984,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "u-pick-fruit-and-flower-seasons",
             "title": "U-pick fruit and flower seasons",
             "feature_type": "amenity",
@@ -997,7 +997,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "fall-festival-corn-maze-and-pumpkin-patch",
             "title": "Fall festival, corn maze, and pumpkin patch",
             "feature_type": "amenity",
@@ -1010,7 +1010,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "seasonal-farm-fun-and-holiday-return-trips",
             "title": "Seasonal farm fun and holiday return trips",
             "feature_type": "amenity",

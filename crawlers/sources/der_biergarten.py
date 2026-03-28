@@ -22,7 +22,7 @@ PLACE_DATA = {
     "zip": "30313",
     "lat": 33.7579,
     "lng": -84.3950,
-    "venue_type": "restaurant",
+    "place_type": "restaurant",
     "spot_type": "bar",
     "website": BASE_URL,
     "vibes": ["beer-garden", "german", "outdoor-seating", "beer-hall"],

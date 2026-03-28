@@ -78,7 +78,7 @@ def _load_broken_venue_failures(audit_path: Path) -> tuple[set[int], set[str]]:
 
 def _fetch_active_venues(city: str | None) -> list[dict[str, Any]]:
     client = get_client()
-    query = client.table("venues").select(
+    query = client.table("places").select(
         "id,name,slug,address,city,state,website,image_url,hero_image_url,active"
     ).eq("active", True)
     if city:
@@ -171,7 +171,7 @@ def run(city: str | None, limit: int, include_missing: bool, dry_run: bool) -> i
             print(f"  UPGRADED via {source}: {candidate[:90]}...")
             rows.append(
                 {
-                    "venue_id": vid,
+                    "place_id": vid,
                     "slug": slug,
                     "name": venue.get("name"),
                     "status": "would_upgrade" if dry_run else "upgraded",
@@ -188,7 +188,7 @@ def run(city: str | None, limit: int, include_missing: bool, dry_run: bool) -> i
             print("  UNRESOLVED: no valid replacement candidate")
             rows.append(
                 {
-                    "venue_id": vid,
+                    "place_id": vid,
                     "slug": slug,
                     "name": venue.get("name"),
                     "status": "unresolved",

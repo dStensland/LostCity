@@ -125,6 +125,8 @@ export type Venue = {
     | null;
   vibes?: string[] | null;
   description?: string | null;
+  place_type?: string | null;
+  /** @deprecated Use place_type — DB column renamed in Deploy 10 */
   venue_type?: string | null;
   nearest_marta_station?: string | null;
   marta_walk_minutes?: number | null;
@@ -162,7 +164,7 @@ export async function getEventById(id: number): Promise<EventWithProducer | null
     .select(
       `
       *,
-      venue:venues(id, name, slug, image_url, address, neighborhood, city, state, location_designator, vibes, description, venue_type, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score, lat, lng),
+      venue:places(id, name, slug, image_url, address, neighborhood, city, state, location_designator, vibes, description, place_type, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score, lat, lng),
       organization:organizations(id, name, slug, org_type, website, instagram, logo_url, description),
       series:series_id(
         id,
@@ -205,10 +207,10 @@ export async function getRelatedEvents(
             .select(
               `
               *,
-              venue:venues(id, name, slug, address, neighborhood, city, state, location_designator)
+              venue:places(id, name, slug, address, neighborhood, city, state, location_designator)
             `
             )
-            .eq("venue_id", venueId)
+            .eq("place_id", venueId)
             .neq("id", event.id)
             .is("canonical_event_id", null)
             .gte("start_date", today);
@@ -233,7 +235,7 @@ export async function getRelatedEvents(
         .select(
           `
           *,
-          venue:venues!inner(id, name, slug, address, neighborhood, city, state, location_designator, lat, lng)
+          venue:places!inner(id, name, slug, address, neighborhood, city, state, location_designator, lat, lng)
         `
         )
         .eq("start_date", event.start_date)
@@ -286,7 +288,7 @@ export async function getPlatformStats(): Promise<{ eventCount: number; venueCou
       .select("id", { count: "exact", head: true })
       .gte("start_date", today),
     supabase
-      .from("venues")
+      .from("places")
       .select("id", { count: "exact", head: true }),
     supabase
       .from("sources")

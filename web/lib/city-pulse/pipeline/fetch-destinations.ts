@@ -168,8 +168,8 @@ export async function fetchDestinations(
 
   if (occasions.length > 0) {
     const { data: occasionRows } = await supabase
-      .from("venue_occasions")
-      .select("venue_id, occasion, confidence")
+      .from("place_occasions")
+      .select("place_id, occasion, confidence")
       .in("occasion", occasions)
       .gte("confidence", 0.5) as unknown as {
         data: { venue_id: number; occasion: string; confidence: number }[] | null;
@@ -194,15 +194,15 @@ export async function fetchDestinations(
   if (venueIds.length > 0) {
     const [venueResult, mentionResult] = await Promise.all([
       supabase
-        .from("venues")
-        .select("id, name, slug, neighborhood, venue_type, image_url, hours")
+        .from("places")
+        .select("id, name, slug, neighborhood, place_type, image_url, hours")
         .in("id", venueIds)
         .eq("active", true)
         .eq("city", "Atlanta") as unknown as Promise<{ data: PlaceRow[] | null }>,
       supabase
         .from("editorial_mentions")
-        .select("venue_id, source_key, snippet")
-        .in("venue_id", venueIds) as unknown as Promise<{ data: MentionRow[] | null }>,
+        .select("place_id, source_key, snippet")
+        .in("place_id", venueIds) as unknown as Promise<{ data: MentionRow[] | null }>,
     ]);
 
     venues = venueResult.data ?? [];
@@ -272,7 +272,7 @@ export async function fetchDestinations(
 
     const { data: fallbackMentions } = await supabase
       .from("editorial_mentions")
-      .select("venue_id, source_key, snippet")
+      .select("place_id, source_key, snippet")
       .limit(needed * 3) as unknown as {
         data: MentionRow[] | null;
       };
@@ -288,8 +288,8 @@ export async function fetchDestinations(
         // Fallback steps: place details + mention map in parallel
         const [fallbackPlaceResult] = await Promise.all([
           supabase
-            .from("venues")
-            .select("id, name, slug, neighborhood, venue_type, image_url, hours")
+            .from("places")
+            .select("id, name, slug, neighborhood, place_type, image_url, hours")
             .in("id", fallbackPlaceIds)
             .eq("active", true)
             .eq("city", "Atlanta") as unknown as Promise<{ data: PlaceRow[] | null }>,

@@ -123,7 +123,7 @@ async function getMatchedEvents(
   const { data, error } = await db
     .from("event_channel_matches")
     .select(
-      "event_id, events!inner(id, title, category, start_date, start_time, is_all_day, venue:venues(name, slug))",
+      "event_id, events!inner(id, title, category, start_date, start_time, is_all_day, venue:places(name, slug))",
     )
     .eq("channel_id", channelId)
     .eq("portal_id", portalId)

@@ -332,7 +332,7 @@ def _atlanta_quadrant(lat: float, lng: float) -> str:
 
 def fix_coords_no_neighborhood(client) -> dict:
     print("\n=== GAP 1: Venues with coords but no neighborhood ===")
-    r = client.table("venues").select(
+    r = client.table("places").select(
         "id, name, city, address, lat, lng, zip"
     ).is_("neighborhood", "null").not_.is_("lat", "null").not_.is_("lng", "null").execute()
 
@@ -347,7 +347,7 @@ def fix_coords_no_neighborhood(client) -> dict:
         nh = infer_neighborhood_for_venue(v)
         if nh:
             try:
-                client.table("venues").update({"neighborhood": nh}).eq("id", v["id"]).execute()
+                client.table("places").update({"neighborhood": nh}).eq("id", v["id"]).execute()
                 fixed += 1
                 print(f"  [+] {v['name'][:50]} -> {nh}")
             except Exception as e:
@@ -368,7 +368,7 @@ def fix_coords_no_neighborhood(client) -> dict:
 
 def fix_no_coords_no_neighborhood(client) -> dict:
     print("\n=== GAP 2: Venues without coords AND no neighborhood ===")
-    r = client.table("venues").select(
+    r = client.table("places").select(
         "id, name, city, address, lat, lng, zip"
     ).is_("neighborhood", "null").is_("lat", "null").execute()
 
@@ -383,7 +383,7 @@ def fix_no_coords_no_neighborhood(client) -> dict:
         nh = infer_neighborhood_for_venue(v)
         if nh:
             try:
-                client.table("venues").update({"neighborhood": nh}).eq("id", v["id"]).execute()
+                client.table("places").update({"neighborhood": nh}).eq("id", v["id"]).execute()
                 fixed += 1
                 print(f"  [+] {v['name'][:50]} -> {nh}")
             except Exception as e:
@@ -404,7 +404,7 @@ def fix_no_coords_no_neighborhood(client) -> dict:
 
 def fix_missing_descriptions(client, min_dq: int = 50) -> dict:
     print(f"\n=== GAP 3: Venues with website but no description (data_quality >= {min_dq}) ===")
-    r = client.table("venues").select(
+    r = client.table("places").select(
         "id, name, website, data_quality"
     ).is_("description", "null").not_.is_("website", "null").gte("data_quality", min_dq).execute()
 
@@ -435,7 +435,7 @@ def fix_missing_descriptions(client, min_dq: int = 50) -> dict:
             try:
                 desc = fetch_description_from_url(url, session=http)
                 if desc and len(desc) >= 30:
-                    client.table("venues").update({"description": desc}).eq("id", v["id"]).execute()
+                    client.table("places").update({"description": desc}).eq("id", v["id"]).execute()
                     fixed += 1
                     print(f"  [+] {name[:45]} (dq={v.get('data_quality')}) -> {len(desc)} chars")
                 else:

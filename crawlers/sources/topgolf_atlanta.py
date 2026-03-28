@@ -34,7 +34,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7920,
     "lng": -84.4310,
-    "venue_type": "entertainment",
+    "place_type": "entertainment",
     "spot_type": "entertainment",
     "website": HOMEPAGE,
     # Hours verified 2026-03-11 against topgolf.com/us/atlanta/
@@ -122,7 +122,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "entertainment",
         "commitment_tier": "halfday",
         "primary_activity": "Tech-driven golf entertainment with food, drinks, and games",
@@ -137,10 +137,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Hourly bay rental pricing. Food and drinks ordered per bay. Half-price play during off-peak hours.",
         "source_url": HOMEPAGE,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "entertainment", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "entertainment", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "climate-controlled-hitting-bays",
         "title": "Climate-controlled hitting bays on 3 levels",
         "feature_type": "experience",
@@ -150,7 +150,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "interactive-golf-games",
         "title": "Interactive point-scoring golf games",
         "feature_type": "experience",
@@ -160,7 +160,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "full-bar-food-every-bay",
         "title": "Full bar and food menu at every bay",
         "feature_type": "amenity",
@@ -170,7 +170,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "rooftop-terrace",
         "title": "Rooftop terrace",
         "feature_type": "amenity",
@@ -180,7 +180,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 40,
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "half-price-play",
         "title": "Half-price play during off-peak hours",
         "description": "Bay rental at half price during early weekday hours before the evening rush.",
@@ -252,7 +252,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning(
                 "Topgolf Atlanta Midtown: venue update failed: %s", exc

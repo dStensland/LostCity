@@ -92,7 +92,7 @@ PEBBLE_TOSSERS_VENUE: dict = {
     "zip": "30338",
     "lat": 33.9415,
     "lng": -84.3467,
-    "venue_type": "nonprofit_hq",
+    "place_type": "nonprofit_hq",
     "spot_type": "nonprofit_hq",
     "website": PEBBLETOSSERS_URL,
     "vibes": ["family-friendly", "all-ages"],
@@ -353,7 +353,7 @@ def _build_venue_data(raw_event: dict) -> dict:
         "slug": slugify(org_name),
         "city": "Atlanta",
         "state": "GA",
-        "venue_type": "nonprofit_hq",
+        "place_type": "nonprofit_hq",
         "spot_type": "nonprofit_hq",
     }
     if lat and lng:
@@ -569,7 +569,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record: dict = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title[:300],
             "description": raw_desc or None,
             "start_date": start_str,

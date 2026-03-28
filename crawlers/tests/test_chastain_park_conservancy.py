@@ -8,7 +8,7 @@ from sources.chastain_park_conservancy import (
 def test_build_destination_envelope_for_chastain_park() -> None:
     envelope = _build_destination_envelope(2601)
 
-    assert envelope.destination_details[0]["venue_id"] == 2601
+    assert envelope.destination_details[0]["place_id"] == 2601
     assert envelope.destination_details[0]["destination_type"] == "park"
     assert envelope.destination_details[0]["parking_type"] == "free_lot"
     assert "stroller" in envelope.destination_details[0]["practical_notes"].lower()

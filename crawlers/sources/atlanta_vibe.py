@@ -41,7 +41,7 @@ GAS_SOUTH_VENUE_DATA = {
     "zip": "30097",
     "lat": 33.9618,
     "lng": -84.0965,
-    "venue_type": "arena",
+    "place_type": "arena",
     "spot_type": "stadium",
     "active": True,
     "website": "https://www.gassouthdistrict.com/arena",
@@ -55,7 +55,7 @@ GSU_CONVOCATION_VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30303",
-    "venue_type": "arena",
+    "place_type": "arena",
     "spot_type": "arena",
     "active": True,
     "website": "https://convocationcenter.gsu.edu/",
@@ -214,7 +214,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": match["title"],
                 "description": (
                     f"{match['title']} at {place_data['name']}. "

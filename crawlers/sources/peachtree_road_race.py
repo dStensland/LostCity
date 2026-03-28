@@ -25,7 +25,7 @@ PLACE_DATA = {
     "zip": "30326",
     "lat": 33.8465,
     "lng": -84.3619,
-    "venue_type": "shopping",
+    "place_type": "shopping",
     "spot_type": "shopping",
     "website": "https://www.simon.com/mall/lenox-square",
 }
@@ -66,7 +66,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": "The world's largest 10K race, held every July 4th from Lenox Square to Piedmont Park. An Atlanta tradition since 1970.",
         "start_date": start_date.strftime("%Y-%m-%d"),

@@ -67,14 +67,14 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
     if not slug or slug == GENERIC_VENUE["slug"]:
         return None
 
-    venue_type = str(place_data.get("venue_type") or "").strip().lower()
+    venue_type = str(place_data.get("place_type") or place_data.get("venue_type") or "").strip().lower()
     envelope = TypedEntityEnvelope()
 
     if venue_type in {"recreation", "community_center"}:
         envelope.add(
             "destination_details",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "destination_type": "community_recreation_center",
                 "commitment_tier": "halfday",
                 "primary_activity": "family recreation center visit",
@@ -95,7 +95,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
                 "source_url": ACTIVITY_SEARCH_URL,
                 "metadata": {
                     "source_type": "family_destination_enrichment",
-                    "venue_type": venue_type,
+                    "place_type": venue_type,
                     "county": "dekalb",
                 },
             },
@@ -103,7 +103,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "indoor-family-recreation-space",
                 "title": "Indoor family recreation space",
                 "feature_type": "amenity",
@@ -117,7 +117,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "family-classes-and-seasonal-camps",
                 "title": "Family classes and seasonal camps",
                 "feature_type": "experience",
@@ -134,7 +134,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
         envelope.add(
             "destination_details",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "destination_type": "park",
                 "commitment_tier": "halfday",
                 "primary_activity": "family park visit",
@@ -155,7 +155,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
                 "source_url": ACTIVITY_SEARCH_URL,
                 "metadata": {
                     "source_type": "family_destination_enrichment",
-                    "venue_type": venue_type,
+                    "place_type": venue_type,
                     "county": "dekalb",
                 },
             },
@@ -163,7 +163,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "free-outdoor-play-space",
                 "title": "Free outdoor play space",
                 "feature_type": "amenity",
@@ -240,7 +240,7 @@ def _build_program_record(
 
     program_data: dict = {
         "source_id": source_id,
-        "venue_id": event_record.get("venue_id"),
+        "place_id": event_record.get("place_id") or event_record.get("venue_id"),
         "name": title,
         "description": event_record.get("description"),
         "program_type": program_type,
@@ -397,7 +397,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record: dict = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": name,
                     "description": description,
                     "start_date": start_raw or today.strftime("%Y-%m-%d"),

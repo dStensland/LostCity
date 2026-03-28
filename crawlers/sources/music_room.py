@@ -27,7 +27,7 @@ PLACE_DATA = {
     "zip": "30312",
     "lat": 33.7554,
     "lng": -84.3738,
-    "venue_type": "music_venue",
+    "place_type": "music_venue",
     "spot_type": "music_venue",
     "website": None,
     "vibes": ["live-music", "indie-rock", "punk", "hip-hop", "diy"],

@@ -353,7 +353,7 @@ def _build_venue_data(row: dict) -> dict:
         "state": row["state"] or "GA",
         "zip": row["zip"],
         "neighborhood": row["neighborhood"] or row["city"] or "Atlanta",
-        "venue_type": _infer_venue_type(venue_name),
+        "place_type": _infer_venue_type(venue_name),
         "spot_type": "education",
         "website": row["venue_url"] or SEASONAL_CAMPS_URL,
         "vibes": ["family-friendly", "educational"],
@@ -499,7 +499,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
 
     record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": _build_description(row),
         "start_date": row["start_date"],

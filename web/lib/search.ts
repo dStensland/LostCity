@@ -38,9 +38,9 @@ const EVENT_LIST_SELECT = `
   image_url, blurhash,
   source_url, ticket_url, ticket_status, ticket_status_checked_at,
   importance, on_sale_date, presale_date, early_bird_deadline, sellout_risk,
-  featured_blurb, series_id, venue_id, source_id,
+  featured_blurb, series_id, place_id, source_id,
   recurrence_rule, is_regular_ready,
-  venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, location_designator, blurhash, image_url, hero_image_url),
+  venue:places(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, place_type, location_designator, blurhash, image_url, hero_image_url),
   category_data:categories(typical_price_min, typical_price_max),
   series:series(id, slug, title, series_type, image_url, frequency, day_of_week, festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood))
 `;
@@ -295,7 +295,7 @@ async function batchFetchVenueIds(filters: {
     queries.push(
       (async () => {
         let q = supabase
-          .from("venues")
+          .from("places")
           .select("id")
           .ilike("name", `%${escapedTerm}%`);
         if (filters.portalCity) q = q.eq("city", filters.portalCity);
@@ -347,7 +347,7 @@ async function batchFetchVenueIds(filters: {
     queries.push(
       (async () => {
         let q = supabase
-          .from("venues")
+          .from("places")
           .select("id")
           .overlaps("vibes", moodVibes);
         if (filters.portalCity) q = q.eq("city", filters.portalCity);
@@ -364,7 +364,7 @@ async function batchFetchVenueIds(filters: {
     queries.push(
       (async () => {
         let q = supabase
-          .from("venues")
+          .from("places")
           .select("id")
           .overlaps("vibes", vibes);
         if (filters.portalCity) q = q.eq("city", filters.portalCity);
@@ -381,7 +381,7 @@ async function batchFetchVenueIds(filters: {
     queries.push(
       (async () => {
         let q = supabase
-          .from("venues")
+          .from("places")
           .select("id")
           .in("neighborhood", neighborhoods);
         if (filters.portalCity) q = q.eq("city", filters.portalCity);
@@ -398,7 +398,7 @@ async function batchFetchVenueIds(filters: {
     queries.push(
       (async () => {
         const { data } = await supabase
-          .from("venues")
+          .from("places")
           .select("id")
           .eq("city", city);
         return (data || []).map((v: { id: number }) => v.id);
@@ -706,7 +706,7 @@ async function applySearchFilters(
     const lngDelta = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
 
     const { data: nearbyVenues, error: geoError } = await supabase
-      .from("venues")
+      .from("places")
       .select("id")
       .gte("lat", lat - latDelta)
       .lte("lat", lat + latDelta)

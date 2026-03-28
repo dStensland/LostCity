@@ -79,7 +79,7 @@ def fetch_no_coord_venues(client) -> list[dict]:
     offset = 0
     while True:
         result = (
-            client.table("venues")
+            client.table("places")
             .select("id,name,slug,address,city,state,venue_type,neighborhood,lat,lng,website")
             .eq("active", True)
             .is_("lat", "null")
@@ -171,7 +171,7 @@ def phase1_deactivate_junk(client, venues: list[dict], event_counts: dict,
         })
 
         if not dry_run:
-            client.table("venues").update({"active": False}).eq("id", vid).execute()
+            client.table("places").update({"active": False}).eq("id", vid).execute()
 
         stats["deactivated"] += 1
 
@@ -240,7 +240,7 @@ def phase2_geocode(client, venues: list[dict], dry_run: bool = False,
             time.sleep(1.1)
             continue
 
-        client.table("venues").update({"lat": lat, "lng": lng}).eq("id", vid).execute()
+        client.table("places").update({"lat": lat, "lng": lng}).eq("id", vid).execute()
         stats["geocoded"] += 1
         stats["details"].append({"id": vid, "name": name, "lat": lat, "lng": lng})
         logger.info(f"[{i}/{total}] Geocoded: {name} -> ({lat:.4f}, {lng:.4f})")
@@ -264,7 +264,7 @@ def phase3_assign_neighborhoods(client, dry_run: bool = False) -> dict:
     offset = 0
     while True:
         result = (
-            client.table("venues")
+            client.table("places")
             .select("id,name,lat,lng")
             .eq("active", True)
             .not_.is_("lat", "null")
@@ -294,7 +294,7 @@ def phase3_assign_neighborhoods(client, dry_run: bool = False) -> dict:
             continue
 
         if not dry_run:
-            client.table("venues").update({"neighborhood": neighborhood}).eq("id", vid).execute()
+            client.table("places").update({"neighborhood": neighborhood}).eq("id", vid).execute()
 
         stats["assigned"] += 1
         stats["details"].append({"id": vid, "name": name, "neighborhood": neighborhood})
@@ -340,7 +340,7 @@ def phase4_report(client) -> None:
     offset = 0
     while True:
         result = (
-            client.table("venues")
+            client.table("places")
             .select("id", count="exact")
             .eq("active", True)
             .not_.is_("lat", "null")

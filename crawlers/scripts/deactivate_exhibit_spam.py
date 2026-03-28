@@ -65,7 +65,7 @@ _LONG_SPAN_OK_RE = re.compile(
 
 def reclassify_by_title_match(client, venue_slug: str, titles: set[str], apply: bool) -> int:
     """Reclassify events at a venue matching exact title set to content_kind='exhibit'."""
-    venue_result = client.table("venues").select("id, name").eq("slug", venue_slug).execute()
+    venue_result = client.table("places").select("id, name").eq("slug", venue_slug).execute()
     if not venue_result.data:
         logger.warning(f"Venue '{venue_slug}' not found")
         return 0
@@ -76,7 +76,7 @@ def reclassify_by_title_match(client, venue_slug: str, titles: set[str], apply: 
     result = (
         client.table("events")
         .select("id, title, start_date, content_kind")
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .neq("content_kind", "exhibit")
         .execute()
     )

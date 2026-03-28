@@ -32,7 +32,7 @@ PLACE_DATA = {
     "zip": "30337",
     "lat": 33.6407,
     "lng": -84.4276,
-    "venue_type": "convention",
+    "place_type": "convention",
     "spot_type": "convention",
     "website": BASE_URL,
 }
@@ -221,7 +221,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Daily pass window for Southern-Fried Gaming Expo.",
                         "start_date": start_date,

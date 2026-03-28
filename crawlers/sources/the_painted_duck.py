@@ -22,7 +22,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7824,
     "lng": -84.4119,
-    "venue_type": "bar",
+    "place_type": "bar",
     "spot_type": "bar",
     "website": BASE_URL,
     "vibes": ["bowling", "games", "cocktails", "date-night", "west-midtown"],

@@ -55,7 +55,7 @@ def analyze_top_venues():
     
     # Get events with venue info
     result = supabase.table("events")\
-        .select("venue_id, venues(name, website, venue_type)")\
+        .select("place_id, venues(name, website, venue_type)")\
         .eq("source_id", 1)\
         .gte("created_at", TODAY)\
         .execute()
@@ -110,7 +110,7 @@ def analyze_new_venues():
     print("QUERY 4: NEW VENUES CREATED TODAY")
     print("="*80)
     
-    result = supabase.table("venues")\
+    result = supabase.table("places")\
         .select("name, address, city, venue_type, website")\
         .gte("created_at", TODAY)\
         .execute()
@@ -132,7 +132,7 @@ def analyze_venues_with_websites():
     
     # Get distinct venues from Eventbrite events that have websites
     result = supabase.table("events")\
-        .select("venue_id, venues(name, website, venue_type)")\
+        .select("place_id, venues(name, website, venue_type)")\
         .eq("source_id", 1)\
         .execute()
     
@@ -172,7 +172,7 @@ def analyze_repeat_organizers():
     
     # Get all Eventbrite events
     result = supabase.table("events")\
-        .select("venue_id, venues(name, website, venue_type)")\
+        .select("place_id, venues(name, website, venue_type)")\
         .eq("source_id", 1)\
         .execute()
     

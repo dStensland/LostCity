@@ -44,7 +44,7 @@ PLACE_DATA = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30317",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
     },
     "The Pub at EAV": {
         "name": "The Pub at EAV",
@@ -54,7 +54,7 @@ PLACE_DATA = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "bar",
+        "place_type": "bar",
     },
     "Moe's and Joe's": {
         "name": "Moe's and Joe's",
@@ -64,7 +64,7 @@ PLACE_DATA = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "bar",
+        "place_type": "bar",
     },
     "Sweet Auburn BBQ": {
         "name": "Sweet Auburn BBQ",
@@ -74,7 +74,7 @@ PLACE_DATA = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
     },
     "Neighbor's Pub": {
         "name": "Neighbor's Pub",
@@ -84,7 +84,7 @@ PLACE_DATA = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "bar",
+        "place_type": "bar",
     },
     "Limerick Junction Pub": {
         "name": "Limerick Junction Pub",
@@ -94,7 +94,7 @@ PLACE_DATA = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "bar",
+        "place_type": "bar",
     },
     "Gino's New York Pizza Bar": {
         "name": "Gino's New York Pizza Bar",
@@ -104,7 +104,7 @@ PLACE_DATA = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30324",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
     },
     "The Independent": {
         "name": "The Independent",
@@ -114,7 +114,7 @@ PLACE_DATA = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "bar",
+        "place_type": "bar",
     },
 }
 
@@ -184,7 +184,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": start_date,

@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       is_all_day,
       category_id,
       tags,
-      venue:venues(id, name, neighborhood, city, lat, lng, image_url, location_designator),
+      venue:places(id, name, neighborhood, city, lat, lng, image_url, location_designator),
       organization:organizations(id, name)
     `
     )

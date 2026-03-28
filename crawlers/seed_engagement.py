@@ -227,7 +227,7 @@ def main():
 
     # Fetch venues with images for recommendations
     venue_result = (
-        sb.table("venues")
+        sb.table("places")
         .select("id, name, venue_type, neighborhood")
         .not_.is_("image_url", "null")
         .not_.is_("neighborhood", "null")
@@ -354,7 +354,7 @@ def main():
             note = pick_note(cats)
             all_recs.append({
                 "user_id": user_id,
-                "venue_id": venue["id"],
+                "place_id": venue["id"],
                 "note": note,
                 "visibility": "public",
                 "created_at": random_past_ts(14),
@@ -418,7 +418,7 @@ def main():
             for venue in random.sample(unique, min(venue_save_count, len(unique))):
                 all_saves.append({
                     "user_id": user_id,
-                    "venue_id": venue["id"],
+                    "place_id": venue["id"],
                     "created_at": random_past_ts(10),
                 })
 

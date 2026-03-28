@@ -76,7 +76,7 @@ PLACE_DATA = {
     "zip": "30309",
     "lat": 33.7879,
     "lng": -84.3916,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": BASE_URL,
     "vibes": ["family-friendly", "artsy", "all-ages"],
@@ -103,7 +103,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "puppetry_museum",
             "commitment_tier": "halfday",
             "primary_activity": "family puppetry museum and show visit",
@@ -126,7 +126,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "theater",
+                "place_type": "theater",
                 "city": "atlanta",
             },
         },
@@ -134,7 +134,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "jim-henson-collection-and-museum-galleries",
             "title": "Jim Henson Collection and museum galleries",
             "feature_type": "attraction",
@@ -147,7 +147,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "family-puppet-performances-and-workshops",
             "title": "Family puppet performances and workshops",
             "feature_type": "amenity",
@@ -160,7 +160,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "indoor-half-day-family-stack",
             "title": "Indoor half-day family stack",
             "feature_type": "experience",
@@ -521,7 +521,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if homepage_html:
                 og_image = _extract_og_image(homepage_html)
                 if og_image:
-                    get_client().table("venues").update(
+                    get_client().table("places").update(
                         {"image_url": og_image}
                     ).eq("id", venue_id).execute()
                     logger.debug(
@@ -671,7 +671,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record: dict = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description,
                         "start_date": start_date,

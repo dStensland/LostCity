@@ -24,7 +24,7 @@ PLACE_DATA = {
     "zip": "30075",
     "lat": 34.0230,
     "lng": -84.3580,
-    "venue_type": "entertainment_district",
+    "place_type": "entertainment_district",
     "spot_type": "entertainment_district",
     "website": "https://www.visitroswellga.com/canton-street",
     "description": "Historic downtown Roswell's main street with restaurants, boutiques, galleries, and walkable charm.",
@@ -71,7 +71,7 @@ def create_alive_after_five(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,
@@ -143,7 +143,7 @@ def create_holiday_events(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Annual holiday tree lighting ceremony on Canton Street. "

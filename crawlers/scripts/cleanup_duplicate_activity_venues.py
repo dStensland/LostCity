@@ -46,14 +46,14 @@ DUPLICATE_VENUE_PLANS: list[dict[str, Any]] = [
 
 VENUE_PATCHES: dict[str, dict[str, Any]] = {
     "puttshack-atlanta-dunwoody": {
-        "venue_type": "entertainment",
+        "place_type": "entertainment",
     }
 }
 
 
 def _get_venue(slug: str) -> dict[str, Any] | None:
     client = get_client()
-    result = client.table("venues").select("id,slug,name,active").eq("slug", slug).limit(1).execute()
+    result = client.table("places").select("id,slug,name,active").eq("slug", slug).limit(1).execute()
     if result.data:
         return result.data[0]
     return None
@@ -69,7 +69,7 @@ def cleanup_duplicates(apply: bool = False) -> None:
             logger.warning("Patch target venue '%s' not found; skipping", patch_slug)
             continue
         if apply:
-            client.table("venues").update(patch).eq("id", venue["id"]).execute()
+            client.table("places").update(patch).eq("id", venue["id"]).execute()
             logger.info("Updated %s (%s): %s", venue["name"], patch_slug, patch)
         else:
             logger.info("Would update %s (%s): %s", venue["name"], patch_slug, patch)
@@ -101,7 +101,7 @@ def cleanup_duplicates(apply: bool = False) -> None:
             )
 
         if apply:
-            client.table("venues").update({"active": False}).eq("id", duplicate["id"]).execute()
+            client.table("places").update({"active": False}).eq("id", duplicate["id"]).execute()
         logger.info("  %s duplicate venue row", "deactivated" if apply else "would deactivate")
 
 

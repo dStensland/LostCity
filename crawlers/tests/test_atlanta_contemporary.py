@@ -61,7 +61,7 @@ class TestBuildExhibitionLaneRecord:
         )
 
         assert record["source_id"] == 77
-        assert record["venue_id"] == 99
+        assert record["place_id"] == 99
         assert record["portal_id"] == "portal-arts"
         assert record["opening_date"] == "2026-02-01"
         assert record["closing_date"] == "2026-05-17"

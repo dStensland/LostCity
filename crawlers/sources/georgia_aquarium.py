@@ -50,7 +50,7 @@ PLACE_DATA = {
     "zip": "30313",
     "lat": 33.7634,
     "lng": -84.3951,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     # Admission: ~$45 adult, ~$38 child (ages 3-12), free under 3
@@ -86,7 +86,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "aquarium",
             "commitment_tier": "halfday",
             "primary_activity": "family aquarium visit",
@@ -111,7 +111,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "aquarium",
+                "place_type": "aquarium",
                 "city": "atlanta",
             },
         },
@@ -119,7 +119,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "weather-proof-marine-galleries",
             "title": "Weather-proof marine galleries",
             "feature_type": "amenity",
@@ -132,7 +132,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "stroller-friendly-downtown-anchor",
             "title": "Stroller-friendly downtown anchor",
             "feature_type": "amenity",
@@ -145,7 +145,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "easy-bathroom-and-cool-down-resets",
             "title": "Easy bathroom and cool-down resets",
             "feature_type": "amenity",
@@ -158,7 +158,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_specials",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "children-2-and-under-free",
             "title": "Children 2 and under free",
             "description": "Children age 2 and under receive free admission, which lowers the barrier for families using the aquarium as a major downtown indoor anchor with very young kids.",
@@ -171,7 +171,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_specials",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "community-access-discount-admission",
             "title": "Community Access discount admission",
             "description": "Georgia Aquarium offers a recurring lower-cost access path through its community admission program, which makes a high-ticket anchor more reachable for eligible families.",
@@ -330,7 +330,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if og_desc:
                     venue_update["description"] = og_desc[:500]
                 if venue_update:
-                    get_client().table("venues").update(venue_update).eq(
+                    get_client().table("places").update(venue_update).eq(
                         "id", venue_id
                     ).execute()
                     logger.info("Georgia Aquarium: enriched venue from homepage og: metadata")
@@ -458,7 +458,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": description,
                             "start_date": start_date,

@@ -49,7 +49,7 @@ PLACE_DATA = {
     "zip": "30701",
     "lat": 34.5067,
     "lng": -84.9344,
-    "venue_type": "hospital",
+    "place_type": "hospital",
     "spot_type": "hospital",
     "website": "https://www.adventhealth.com/hospital/adventhealth-gordon",
     "vibes": ["community-health", "hospital", "wellness"],
@@ -364,7 +364,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Create event record
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": start_date,

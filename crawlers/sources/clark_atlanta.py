@@ -95,7 +95,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30314",
-        "venue_type": "museum",
+        "place_type": "museum",
         "website": "https://cau.edu/museum",
     },
     "default": {
@@ -106,7 +106,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30314",
-        "venue_type": "university",
+        "place_type": "university",
         "website": "https://cau.edu",
     },
 }
@@ -262,7 +262,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description[:500],
                 "start_date": start_date,

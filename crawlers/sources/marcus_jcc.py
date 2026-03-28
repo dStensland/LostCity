@@ -30,7 +30,7 @@ PLACE_DATA = {
     "city": "Dunwoody",
     "state": "GA",
     "zip": "30338",
-    "venue_type": "community_center",
+    "place_type": "community_center",
     "website": BASE_URL,
 }
 
@@ -158,7 +158,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at Marcus Jewish Community Center",
                         "start_date": start_date,

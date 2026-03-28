@@ -246,7 +246,7 @@ export async function GET(request: NextRequest) {
           for (let i = 0; i < venueIds.length; i += 500) {
             const chunk = venueIds.slice(i, i + 500);
             const { data: venues } = await supabase
-              .from("venues")
+              .from("places")
               .select("id, name, neighborhood, city, lat, lng")
               .in("id", chunk);
             if (venues) {

@@ -41,7 +41,7 @@ WAVE_13_DESTINATIONS = [
             "lat": 36.2745,
             "lng": -85.6163,
             "website": "https://tnstateparks.com/parks/cummins-falls",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Tennessee's 8th largest waterfall, requiring a creek scramble through a gorge to reach the swimming hole at its base.",
             "description": "Cummins Falls is Tennessee's eighth largest waterfall, tucked at the end of a gorge that demands creek crossings and scrambling to reach. The payoff is a dramatic 75-foot falls with a deep gorge swimming hole below. Access requires a permit and wading through Blackburn Fork — no casual stroll to the overlook.",
             "typical_duration_minutes": 360,
@@ -74,7 +74,7 @@ WAVE_13_DESTINATIONS = [
             "lat": 36.0421,
             "lng": -85.6038,
             "website": "https://tnstateparks.com/parks/burgess-falls",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Four cascading waterfalls along Falling Water River, culminating in a 136-foot main falls — one of TN's most scenic hikes.",
             "description": "Burgess Falls State Natural Area strings four waterfalls along the Falling Water River into a single trail. The 136-foot main falls at the canyon floor is one of the most dramatic in the state. Three miles round trip with 250 feet of descent — well-graded and suitable for most hikers.",
             "typical_duration_minutes": 240,
@@ -106,7 +106,7 @@ WAVE_13_DESTINATIONS = [
             "lat": 35.8031,
             "lng": -85.6192,
             "website": "https://tnstateparks.com/parks/rock-island",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Great Falls dam, Twin Falls, and the legendary Blue Hole swimming spot where the Caney Fork emerges from Collins River.",
             "description": "Rock Island State Park sits at the confluence of the Collins and Caney Fork rivers below the Great Falls dam. Twin Falls drops 30 feet through twin channels into a gorge, and the Blue Hole — a crystalline pool where the Caney Fork emerges — is one of Tennessee's most famous swimming spots. Short trails, campground, and cabin rentals.",
             "typical_duration_minutes": 300,
@@ -139,7 +139,7 @@ WAVE_13_DESTINATIONS = [
             "lat": 36.4893,
             "lng": -84.7086,
             "website": "https://www.nps.gov/biso/index.htm",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Massive Cumberland Plateau gorge system with natural arches, rock shelters, whitewater, and 150,000 acres of backcountry.",
             "description": "Big South Fork National River and Recreation Area protects 150,000 acres of the Cumberland Plateau, carved by the Big South Fork of the Cumberland River. Dramatic sandstone bluffs, natural arches, rock shelters with petroglyphs, Class III-IV whitewater, and serious multi-day backpacking. The O&W Trail and John Muir Trail traverse the gorge.",
             "typical_duration_minutes": 480,
@@ -171,7 +171,7 @@ WAVE_13_DESTINATIONS = [
             "lat": 36.1131,
             "lng": -84.4421,
             "website": "https://tnstateparks.com/parks/frozen-head",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Remote Appalachian wilderness on the Cumberland Plateau — home of the legendary Barkley Marathons ultrarunning race.",
             "description": "Frozen Head State Park is one of Tennessee's most remote and rugged parks, covering 24,000 acres of old-growth forest and Appalachian peaks above 3,000 feet. 75+ miles of trail range from gentle creek walks to the grueling ascent of Frozen Head summit. Famous globally as the inspiration for and home of the Barkley Marathons, the nearly impossible ultramarathon race.",
             "typical_duration_minutes": 420,
@@ -203,7 +203,7 @@ WAVE_13_DESTINATIONS = [
             "lat": 35.2215,
             "lng": -85.8271,
             "website": "https://tnstateparks.com/parks/south-cumberland",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Fiery Gizzard Trail — consistently ranked among the best day hikes in the Southeast — through 12 miles of canyon and waterfalls.",
             "description": "South Cumberland State Park spans 35,000 acres across the Cumberland Plateau, but the Fiery Gizzard Trail is the headline. The 12-mile point-to-point route through Grundy Forest drops into a gorge with waterfalls, slot canyons, massive boulders, and an otherworldly rock shelter called the Blue Hole. Widely considered one of the five best hikes in the Southeast.",
             "typical_duration_minutes": 480,
@@ -235,7 +235,7 @@ WAVE_13_DESTINATIONS = [
             "lat": 35.5967,
             "lng": -83.8391,
             "website": "https://www.nps.gov/grsm/planyourvisit/cadescove.htm",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "11-mile scenic loop through a historic Appalachian valley in the Smokies — the best wildlife viewing in the eastern US.",
             "description": "Cades Cove is an 11-mile one-way loop through a broad valley in Great Smoky Mountains National Park, surrounded by preserved 19th-century homesteads, mills, and churches. The best place in the eastern US to reliably spot black bears, white-tailed deer, wild turkey, and coyotes. The loop is open to bicycles Wednesday and Saturday mornings before noon.",
             "typical_duration_minutes": 360,
@@ -268,7 +268,7 @@ WAVE_13_DESTINATIONS = [
             "lat": 36.1756,
             "lng": -82.0793,
             "website": "https://tnstateparks.com/parks/roan-mountain",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Grassy balds above 6,000 feet with the world's largest natural rhododendron gardens, Appalachian Trail access, and summit views.",
             "description": "Roan Mountain reaches 6,286 feet with expansive grassy balds and the world's largest natural rhododendron garden (600+ acres), which peaks in mid-June with a crimson bloom visible for miles. The Appalachian Trail runs along the ridge. State park below offers cabins, campground, and cultural programs. Spectacular in every season.",
             "typical_duration_minutes": 480,
@@ -300,7 +300,7 @@ WAVE_13_DESTINATIONS = [
             "lat": 36.2100,
             "lng": -84.0893,
             "website": "https://tnstateparks.com/parks/norris-dam",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "TVA's first dam, clear mountain biking trails through ridge country, and clean lake swimming — an underrated weekend escape.",
             "description": "Norris Dam State Park surrounds TVA's first major dam, built in 1936. The reservoir is famously clear and clean for swimming and paddling, and the park's 34 miles of trails are some of the best maintained in the Tennessee state park system. Mountain biking trails, campground, and the restored historical Lenoir Museum make for a full day.",
             "typical_duration_minutes": 300,
@@ -333,7 +333,7 @@ WAVE_13_DESTINATIONS = [
             "lat": 36.8380,
             "lng": -84.3399,
             "website": "https://parks.ky.gov/corbin/parks/resort/cumberland-falls-state-resort-park",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "The 'Niagara of the South' and the only moonbow in the Western Hemisphere — a 125-foot curtain of falls on the Cumberland River.",
             "description": "Cumberland Falls drops 125 feet in a 68-foot-wide curtain across the Cumberland River — the largest waterfall in the eastern United States south of Niagara. On full-moon nights it produces the only moonbow in the Western Hemisphere: a rainbow formed by moonlight through the mist. The state resort park has a lodge, cabins, and multiple hiking trails.",
             "typical_duration_minutes": 480,
@@ -365,7 +365,7 @@ WAVE_13_DESTINATIONS = [
             "lat": 37.7761,
             "lng": -83.6779,
             "website": "https://parks.ky.gov/slade/parks/resort/natural-bridge-state-resort-park",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "65-foot natural sandstone arch accessible by trail or sky lift, gateway to the Red River Gorge geological area.",
             "description": "Natural Bridge is a 65-foot natural sandstone arch formed by 70 million years of erosion in the Daniel Boone National Forest. A sky lift or moderate 2-mile trail reaches the arch. The state resort park serves as the southern gateway to the Red River Gorge and offers a lodge, cottages, and a pool. The whole area has world-class climbing, arches, and backcountry.",
             "typical_duration_minutes": 360,
@@ -398,7 +398,7 @@ WAVE_13_DESTINATIONS = [
             "lat": 37.8110,
             "lng": -83.6827,
             "website": "https://www.fs.usda.gov/recarea/dbnf/recarea/?recid=39458",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "World-class sport climbing with 3,000+ routes, natural arches, and sandstone towers in the Daniel Boone National Forest.",
             "description": "The Red River Gorge Geological Area in Daniel Boone National Forest is one of the premier rock climbing destinations in the world, with 3,000+ sport climbing routes on overhanging sandstone cliffs. Beyond climbing, the gorge has 100+ miles of trail, 100+ natural arches including Gray's Arch and Sky Bridge, and primitive camping throughout. A weekend getaway with serious depth.",
             "typical_duration_minutes": 480,
@@ -430,7 +430,7 @@ WAVE_13_DESTINATIONS = [
             "lat": 37.5281,
             "lng": -83.7964,
             "website": "https://www.fs.usda.gov/recarea/dbnf/recarea/?recid=39561",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Remote designated Wilderness in Daniel Boone NF with deep hemlock gorges, waterfalls, and no maintained trails — true backcountry.",
             "description": "Clifty Wilderness is a 13,000-acre designated Wilderness in the Daniel Boone National Forest, characterized by deep gorges, hemlock-lined creek drainages, and layered sandstone formations. There are no maintained trails — navigation is by map and compass. Waterfalls appear throughout the drainages in wet seasons. One of the most truly remote experiences accessible from Atlanta.",
             "typical_duration_minutes": 480,
@@ -462,7 +462,7 @@ WAVE_13_DESTINATIONS = [
             "lat": 36.1697,
             "lng": -82.0533,
             "website": "https://www.tva.com/energy/our-power-system/hydroelectric/watauga-dam-and-reservoir",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Consistently ranked the cleanest lake in Tennessee, surrounded by Cherokee NF — cliff jumping and crystal-clear swimming.",
             "description": "Watauga Lake is consistently measured as the cleanest lake in Tennessee, with exceptional clarity from its position entirely within Cherokee National Forest. At 6,430 acres and 900 feet elevation, the water stays cold even in summer. Popular for cliff jumping, kayaking, and primitive camping. The Iron Mountain trail system above provides serious ridge hiking.",
             "typical_duration_minutes": 360,
@@ -494,7 +494,7 @@ WAVE_13_DESTINATIONS = [
             "lat": 36.5397,
             "lng": -85.4524,
             "website": "https://www.recreation.gov/camping/gateways/2627",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Record-breaking smallmouth bass fishing, pristine Tennessee Highland Rim water, and houseboat rentals in a quiet TVA lake.",
             "description": "Dale Hollow Lake holds the world-record smallmouth bass catch (11 lbs 15 oz, 1955) and is one of the premier bass fishing lakes in the United States. The 27,700-acre TVA reservoir on the Tennessee-Kentucky border has exceptional water clarity and a quiet, unhurried character rare for lakes this size. Houseboat rentals, marinas, and primitive camping on federal land throughout.",
             "typical_duration_minutes": 480,
@@ -532,7 +532,7 @@ def find_existing_venue(venue_seed: dict) -> dict | None:
 
     client = get_client()
     result = (
-        client.table("venues")
+        client.table("places")
         .select("*")
         .eq("name", venue_seed["name"])
         .limit(1)
@@ -629,7 +629,7 @@ def main() -> None:
                 skipped += 1
             else:
                 if args.apply:
-                    client.table("venues").update(updates).eq("id", existing["id"]).execute()
+                    client.table("places").update(updates).eq("id", existing["id"]).execute()
                 logger.info(
                     "%s venue: %s (%s fields)",
                     "UPDATE" if args.apply else "WOULD UPDATE",

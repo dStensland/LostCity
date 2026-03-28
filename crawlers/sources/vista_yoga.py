@@ -52,7 +52,7 @@ PLACE_DATA = {
     "zip": "30033",
     "lat": 33.8161,
     "lng": -84.2845,
-    "venue_type": "studio",
+    "place_type": "studio",
     "spot_type": "studio",
     "website": BASE_URL,
     "description": "Vista Yoga studio hosting public workshops, camps, and wellness events.",
@@ -319,7 +319,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": parsed["title"],
             "description": parsed["description"],
             "start_date": parsed["start_date"],

@@ -300,7 +300,7 @@ def get_venues_needing_images(venue_ids: list[int], limit: int) -> list[dict]:
     for i in range(0, len(venue_ids), batch_size):
         batch = venue_ids[i : i + batch_size]
         resp = (
-            client_global.table("venues")
+            client_global.table("places")
             .select("id, name, slug, website, image_url")
             .in_("id", batch)
             .is_("image_url", "null")
@@ -318,7 +318,7 @@ def get_venues_needing_images(venue_ids: list[int], limit: int) -> list[dict]:
 def update_venue_image(client, venue_id: int, image_url: str) -> bool:
     """Write image_url to the venues table."""
     try:
-        client.table("venues").update({"image_url": image_url}).eq("id", venue_id).execute()
+        client.table("places").update({"image_url": image_url}).eq("id", venue_id).execute()
         return True
     except Exception as exc:
         logger.error("  DB update failed for venue_id=%d: %s", venue_id, exc)

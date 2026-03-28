@@ -59,7 +59,7 @@ WILD_HEAVEN_VENUE_DATA = {
     "zip": "30310",
     "lat": 33.7396,
     "lng": -84.4125,
-    "venue_type": "brewery",
+    "place_type": "brewery",
     "spot_type": "brewery",
     "website": "https://wildheavenbeer.com/west-end",
     "vibes": ["craft-beer", "brewery", "beltline", "west-end", "patio", "dog-friendly"],
@@ -76,7 +76,7 @@ PLYWOOD_PLACE_VENUE_DATA = {
     "zip": "30310",
     "lat": 33.7370,
     "lng": -84.4120,
-    "venue_type": "event_space",
+    "place_type": "event_space",
     "spot_type": "venue",
     "website": "https://www.plywoodpeople.com",
     "vibes": ["arts", "comedy", "community-space", "west-end"],
@@ -585,7 +585,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,

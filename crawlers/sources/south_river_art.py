@@ -29,7 +29,7 @@ SOUTH_RIVER_VENUE = {
     "slug": "south-river-art-studios",
     "city": "Atlanta",
     "state": "GA",
-    "venue_type": "art_studio",
+    "place_type": "art_studio",
     "website": BASE_URL,
 }
 
@@ -167,7 +167,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         'source_id': source_id,
-                        'venue_id': venue_id,
+                        'place_id': venue_id,
                         'producer_id': producer_id,
                         'title': title[:500],
                         'description': description,

@@ -103,12 +103,12 @@ def main():
     
     all_venues = []
     for city in cities:
-        result = client.table("venues").select("*").eq("city", city).execute()
+        result = client.table("places").select("*").eq("city", city).execute()
         all_venues.extend(result.data or [])
 
     # Also check for venues with these cities in the address
     for city in cities:
-        result = client.table("venues").select("*").ilike("address", f"%{city}%").execute()
+        result = client.table("places").select("*").ilike("address", f"%{city}%").execute()
         for venue in (result.data or []):
             if venue not in all_venues:
                 all_venues.append(venue)
@@ -196,7 +196,7 @@ def main():
 
             if coords:
                 lat, lng = coords
-                client.table("venues").update({
+                client.table("places").update({
                     "lat": lat,
                     "lng": lng
                 }).eq("id", venue["id"]).execute()

@@ -75,7 +75,7 @@ PLACE_DATA = {
     "zip": "30338",
     "lat": 33.9205,
     "lng": -84.3102,
-    "venue_type": "arts_center",
+    "place_type": "arts_center",
     "spot_type": "arts_center",
     "website": BASE_URL,
     "vibes": ["artsy", "family-friendly", "all-ages", "casual"],
@@ -497,7 +497,7 @@ def _crawl_classes(
 
         record: dict = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title[:200],
             "description": None,
             "start_date": start_date,
@@ -798,7 +798,7 @@ def _crawl_special_events(
 
             record: dict = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title[:200],
                 "description": description if description else None,
                 "start_date": start_date,

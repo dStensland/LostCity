@@ -34,7 +34,7 @@ PLACE_DATA = {
     "zip": "30308",
     "lat": 33.7721,
     "lng": -84.3893,
-    "venue_type": "church",
+    "place_type": "church",
     "spot_type": "church",
     "website": BASE_URL,
     "vibes": ["faith-christian", "episcopal", "live-music", "intimate"],
@@ -240,7 +240,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                                 event_record = {
                                     "source_id": source_id,
-                                    "venue_id": venue_id,
+                                    "place_id": venue_id,
                                     "title": title,
                                     "description": f"Jazz at All Saints featuring {title}. Part of the monthly jazz concert series at All Saints' Episcopal Church in Midtown Atlanta.",
                                     "start_date": start_date,
@@ -347,7 +347,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": description,
                             "start_date": start_date,

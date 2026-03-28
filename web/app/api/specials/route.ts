@@ -133,8 +133,8 @@ export async function GET(request: NextRequest) {
         const lngDelta =
           radius / (111 * Math.max(Math.cos((lat * Math.PI) / 180), 0.01));
         const { data: venues, error: venuesError } = await supabase
-          .from("venues")
-          .select("id, name, slug, address, neighborhood, venue_type, lat, lng, image_url, short_description")
+          .from("places")
+          .select("id, name, slug, address, neighborhood, place_type, lat, lng, image_url, short_description")
           .neq("active", false)
           .not("lat", "is", null)
           .not("lng", "is", null)
@@ -174,10 +174,10 @@ export async function GET(request: NextRequest) {
 
     const venueIds = Array.from(venueMap.keys());
     const { data: specials, error: specialsError } = await supabase
-      .from("venue_specials")
-      .select("id, venue_id, title, type, description, days_of_week, time_start, time_end, start_date, end_date, price_note, image_url, confidence, source_url")
+      .from("place_specials")
+      .select("id, place_id, title, type, description, days_of_week, time_start, time_end, start_date, end_date, price_note, image_url, confidence, source_url")
       .eq("is_active", true)
-      .in("venue_id", venueIds)
+      .in("place_id", venueIds)
       .limit(4000);
 
         if (specialsError) {

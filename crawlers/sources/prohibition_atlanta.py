@@ -26,7 +26,7 @@ PLACE_DATA = {
     "zip": "30305",
     "lat": 33.8371,
     "lng": -84.3811,
-    "venue_type": "nightclub",
+    "place_type": "nightclub",
     "spot_type": "bar",
     "website": BASE_URL,
     "vibes": ["cocktails", "nightclub", "late-night", "buckhead", "upscale"],

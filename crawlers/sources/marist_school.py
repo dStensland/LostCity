@@ -26,7 +26,7 @@ PLACE_DATA = {
     "zip": "30319",
     "lat": 33.8633,
     "lng": -84.3327,
-    "venue_type": "institution",
+    "place_type": "institution",
     "spot_type": "education",
     "website": "https://www.marist.com/",
     "vibes": ["family-friendly", "educational"],

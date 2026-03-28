@@ -35,7 +35,7 @@ PLACE_DATA = {
     "zip": "30307",
     "lat": 33.7635,
     "lng": -84.3509,
-    "venue_type": "music_venue",
+    "place_type": "music_venue",
     "website": BASE_URL,
 }
 
@@ -72,7 +72,7 @@ def build_event_record(
     hash_key = f"{start_date}|{start_time}" if start_time else start_date
     record: dict = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,

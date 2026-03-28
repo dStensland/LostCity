@@ -73,7 +73,7 @@ def fetch_event_batch(
         client.table("events")
         .select(
             "id, title, description, category_id, genres, source_id, "
-            "venue_id, venues(name, venue_type)"
+            "place_id, venues(name, venue_type)"
         )
         .eq("is_active", True)
         .gte("start_date", today)

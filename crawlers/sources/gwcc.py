@@ -43,7 +43,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30313",
-        "venue_type": "convention_center",
+        "place_type": "convention_center",
         "website": BASE_URL,
     },
     "centennial olympic park": {
@@ -54,7 +54,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30313",
-        "venue_type": "outdoor",
+        "place_type": "outdoor",
         "website": BASE_URL,
     },
     "mercedes-benz stadium": {
@@ -65,7 +65,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30313",
-        "venue_type": "stadium",
+        "place_type": "stadium",
         "website": "https://www.mercedesbenzstadium.com",
     },
     "state farm arena": {
@@ -76,7 +76,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30303",
-        "venue_type": "arena",
+        "place_type": "arena",
         "website": "https://www.statefarmarena.com",
     },
 }
@@ -296,7 +296,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": build_description(title, place_data, start_date, end_date, None),
                     "start_date": start_date,

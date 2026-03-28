@@ -39,7 +39,7 @@ SNDBATH_VENUE = {
     "zip": "30309",
     "lat": 33.7866,
     "lng": -84.3834,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": BASE_URL,
     "vibes": [],  # Organization venue has no physical vibes
@@ -57,7 +57,7 @@ KNOWN_VENUES = {
         "zip": "30030",
         "lat": 33.7746,
         "lng": -84.2963,
-        "venue_type": "event_space",
+        "place_type": "event_space",
         "spot_type": "event_space",
         "website": "https://www.thechapelonsycamore.com",
         "vibes": ["historic", "intimate"],  # Only valid vibes from tags.VALID_VIBES
@@ -255,7 +255,7 @@ def parse_event(article, source_id: int, image_map: dict) -> Optional[dict]:
         # Build event record
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description[:2000] if description else None,  # Limit length
             "start_date": start_date,

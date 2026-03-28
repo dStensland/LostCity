@@ -35,15 +35,15 @@ def test_persist_typed_entity_envelope_resolves_destination_anchors(monkeypatch)
     )
     monkeypatch.setattr(
         "entity_persistence.insert_program",
-        lambda record: calls.append(("program", record["venue_id"], record["_venue_name"])) or "program-1",
+        lambda record: calls.append(("program", record["place_id"], record["_venue_name"])) or "program-1",
     )
     monkeypatch.setattr(
         "entity_persistence.insert_event",
-        lambda record: calls.append(("event", record["venue_id"], record["title"])) or 12,
+        lambda record: calls.append(("event", record["place_id"], record["title"])) or 12,
     )
     monkeypatch.setattr(
         "entity_persistence.insert_exhibition",
-        lambda record, artists=None: calls.append(("exhibition", record["venue_id"], artists)) or "exh-1",
+        lambda record, artists=None: calls.append(("exhibition", record["place_id"], artists)) or "exh-1",
     )
     monkeypatch.setattr(
         "entity_persistence.insert_open_call",
@@ -63,7 +63,7 @@ def test_persist_typed_entity_envelope_resolves_destination_anchors(monkeypatch)
                 "slug": "high-museum",
                 "city": "Atlanta",
                 "state": "GA",
-                "venue_type": "museum",
+                "place_type": "museum",
             }
         ],
         destination_details=[

@@ -116,7 +116,7 @@ EMORY_VENUES = {
         "zip": "30033",
         "lat": 33.8181,
         "lng": -84.2897,
-        "venue_type": "hospital",
+        "place_type": "hospital",
         "website": "https://www.emoryhealthcare.org/locations/hospitals/decatur.html",
     },
     "emory hillandale": {
@@ -129,7 +129,7 @@ EMORY_VENUES = {
         "zip": "30058",
         "lat": 33.7103,
         "lng": -84.0781,
-        "venue_type": "hospital",
+        "place_type": "hospital",
         "website": "https://www.emoryhealthcare.org/locations/hospitals/hillandale.html",
     },
     "emory midtown": {
@@ -142,7 +142,7 @@ EMORY_VENUES = {
         "zip": "30308",
         "lat": 33.7719,
         "lng": -84.3852,
-        "venue_type": "hospital",
+        "place_type": "hospital",
         "website": "https://www.emoryhealthcare.org/locations/hospitals/midtown.html",
     },
     "emory johns creek": {
@@ -155,7 +155,7 @@ EMORY_VENUES = {
         "zip": "30097",
         "lat": 34.0389,
         "lng": -84.1988,
-        "venue_type": "hospital",
+        "place_type": "hospital",
         "website": "https://www.emoryhealthcare.org/locations/hospitals/johns-creek.html",
     },
     "emory saint josephs": {
@@ -168,7 +168,7 @@ EMORY_VENUES = {
         "zip": "30342",
         "lat": 33.9231,
         "lng": -84.3414,
-        "venue_type": "hospital",
+        "place_type": "hospital",
         "website": "https://www.emoryhealthcare.org/locations/hospitals/saint-josephs.html",
     },
     "emory university hospital": {
@@ -181,7 +181,7 @@ EMORY_VENUES = {
         "zip": "30322",
         "lat": 33.7925,
         "lng": -84.3234,
-        "venue_type": "hospital",
+        "place_type": "hospital",
         "website": "https://www.emoryhealthcare.org/locations/hospitals/university-hospital.html",
     },
 }
@@ -197,7 +197,7 @@ DEFAULT_VENUE = {
     "zip": "30322",
     "lat": 33.7925,
     "lng": -84.3234,
-    "venue_type": "organization",
+    "place_type": "organization",
     "website": "https://www.emoryhealthcare.org",
     "description": "Leading academic health system in metro Atlanta with hospitals, clinics, and community programs.",
 }
@@ -557,7 +557,7 @@ def crawl_group(page, group_key: str, group_name: str, source_id: int) -> tuple[
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description if description else None,
                 "start_date": start_date,

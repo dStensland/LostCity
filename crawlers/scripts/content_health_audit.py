@@ -643,7 +643,7 @@ def _extract_duplicate_clusters(
             {
                 "normalized_title": normalized_title,
                 "start_date": start_date,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "venue_name": venue_name_map.get(venue_id, str(venue_id)),
                 "event_ids": sorted([int(r.get("id") or 0) for r in group_rows if r.get("id") is not None]),
                 "canonical_event_ids": sorted(
@@ -1297,7 +1297,7 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
             "events",
             "start_date,start_time",
             query_builder=lambda q, vid=int(venue["id"]): apply_active_filter(
-                q.eq("venue_id", vid)
+                q.eq("place_id", vid)
             )
             .gte("start_date", as_of)
             .lte("start_date", end_date)

@@ -55,7 +55,7 @@ PLACE_DATA = {
     "lat": 34.0056,
     "lng": -84.3672,
     "neighborhood": "Sandy Springs",
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": "https://dunwoodynature.org/education/island-ford-2026/",
     "vibes": ["family-friendly", "outdoor", "educational"],
@@ -90,7 +90,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "park",
             "commitment_tier": "halfday",
             "primary_activity": "family river park visit",
@@ -111,7 +111,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": SOURCE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": PLACE_DATA.get("venue_type"),
+                "place_type": PLACE_DATA.get("venue_type"),
                 "city": "sandy springs",
             },
         },
@@ -119,7 +119,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "river-and-pond-exploration",
             "title": "River and pond exploration",
             "feature_type": "experience",
@@ -133,7 +133,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "forest-trails-and-outdoor-adventure",
             "title": "Forest trails and outdoor adventure",
             "feature_type": "amenity",
@@ -233,7 +233,7 @@ def _parse_rows_from_pdf() -> list[dict]:
 def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": row["title"],
         "description": row["description"],
         "start_date": row["start_date"],

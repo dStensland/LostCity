@@ -63,7 +63,7 @@ PLACE_DATA = {
     "zip": "30030",
     "lat": 33.7748,
     "lng": -84.2963,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     "vibes": ["history", "museum", "decatur", "educational"],
@@ -419,7 +419,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record: dict = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "portal_id": portal_id,
             "title": title,
             "description": description,

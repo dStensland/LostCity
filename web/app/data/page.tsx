@@ -48,9 +48,9 @@ async function getData() {
 
   // Fetch venues/spots with counts
   const { data: venues } = await supabase
-    .from("venues")
-    .select("id, name, slug, neighborhood, venue_type, venue_types, vibes, active")
-    .eq("active", true)
+    .from("places")
+    .select("id, name, slug, neighborhood, place_type, venue_types, vibes, is_active")
+    .eq("is_active", true)
     .order("name");
 
   // Fetch categories from DB

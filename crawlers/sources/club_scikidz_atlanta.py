@@ -234,7 +234,7 @@ def _build_venue_data(name: str, raw_address: str, anchor_name: Optional[str]) -
         "state": address_parts["state"],
         "zip": address_parts["zip"],
         "neighborhood": address_parts["city"],
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": (f"{LOCATIONS_URL}#{anchor_name}" if anchor_name else LOCATIONS_URL),
         "vibes": ["family-friendly", "educational"],
@@ -248,7 +248,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "community_center",
             "commitment_tier": "halfday",
             "primary_activity": "family STEM camp site visit",
@@ -269,7 +269,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
             "source_url": place_data.get("website") or LOCATIONS_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "community_center",
+                "place_type": "community_center",
                 "city": city.lower(),
                 "site_pattern": "club_scikidz",
             },
@@ -278,7 +278,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "registered-stem-camp-site",
             "title": "Registered STEM camp site",
             "feature_type": "amenity",
@@ -291,7 +291,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "planned-camp-day-not-casual-stop",
             "title": "Planned camp day, not casual stop",
             "feature_type": "amenity",
@@ -545,7 +545,7 @@ def _build_event_record(
 
     record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": camp.get("description"),
         "start_date": session["start_date"],

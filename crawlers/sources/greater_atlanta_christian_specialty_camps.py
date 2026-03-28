@@ -55,7 +55,7 @@ PLACE_DATA = {
     "lat": 33.9231,
     "lng": -84.2012,
     "neighborhood": "Norcross",
-    "venue_type": "school",
+    "place_type": "school",
     "spot_type": "school",
     "website": "https://www.greateratlantachristian.org/",
     "vibes": ["family-friendly", "educational"],
@@ -294,7 +294,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     title = f"{row['title']} at Greater Atlanta Christian"
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": row["description"],
         "start_date": row["start_date"],

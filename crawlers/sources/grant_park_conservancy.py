@@ -40,7 +40,7 @@ PLACE_DATA = {
     "zip": "30312",
     "lat": 33.7360,
     "lng": -84.3700,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": BASE_URL,
     "description": "Atlanta's oldest park (est. 1882), 80+ acres with walking trails, playgrounds, and community programming.",
@@ -57,7 +57,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "park",
             "commitment_tier": "halfday",
             "primary_activity": "family park visit",
@@ -90,7 +90,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "playgrounds-and-open-green-space",
             "title": "Playgrounds and open green space",
             "feature_type": "amenity",
@@ -104,7 +104,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "walking-trails-and-family-park-loops",
             "title": "Walking trails and family park loops",
             "feature_type": "experience",
@@ -118,7 +118,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "picnic-lawns-and-family-spread-out-space",
             "title": "Picnic lawns and family spread-out space",
             "feature_type": "amenity",
@@ -131,7 +131,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "flexible-free-park-reset-stop",
             "title": "Flexible free park reset stop",
             "feature_type": "amenity",
@@ -189,7 +189,7 @@ def create_volunteer_workdays(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,
@@ -364,7 +364,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": f"Event at Grant Park, Atlanta's oldest park",
                             "start_date": start_date,

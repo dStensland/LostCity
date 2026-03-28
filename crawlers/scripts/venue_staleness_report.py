@@ -32,7 +32,7 @@ def fetch_all_venues(client) -> list[dict]:
     offset = 0
     while True:
         r = (
-            client.table("venues")
+            client.table("places")
             .select("id, name, slug, venue_type, neighborhood, city, verified_at, created_at, active")
             .eq("active", True)
             .order("id")

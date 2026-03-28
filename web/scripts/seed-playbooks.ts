@@ -150,8 +150,8 @@ async function findNearbyVenues(
   venueTypes?: string[]
 ): Promise<VenueRow[]> {
   let query = supabase
-    .from("venues")
-    .select("id, name, slug, lat, lng, neighborhood, venue_type, address")
+    .from("places")
+    .select("id, name, slug, lat, lng, neighborhood, place_type, address")
     .not("lat", "is", null)
     .not("lng", "is", null)
     // Rough bounding box: ~5km radius around center (0.045 deg ≈ 5km)
@@ -162,7 +162,7 @@ async function findNearbyVenues(
     .limit(limit * 4); // fetch extra to sort by distance
 
   if (venueTypes && venueTypes.length > 0) {
-    query = query.in("venue_type", venueTypes);
+    query = query.in("place_type", venueTypes);
   }
 
   const { data, error } = await query;
@@ -186,8 +186,8 @@ async function findNearbyVenues(
  */
 async function findVenueByName(nameQuery: string): Promise<VenueRow | null> {
   const { data, error } = await supabase
-    .from("venues")
-    .select("id, name, slug, lat, lng, neighborhood, venue_type, address")
+    .from("places")
+    .select("id, name, slug, lat, lng, neighborhood, place_type, address")
     .ilike("name", `%${nameQuery}%`)
     .limit(1)
     .maybeSingle();
@@ -211,8 +211,8 @@ async function findUpcomingEventAtVenue(
 
   const query = supabase
     .from("events")
-    .select("id, title, start_date, start_time, venue_id")
-    .eq("venue_id", venueId)
+    .select("id, title, start_date, start_time, place_id")
+    .eq("place_id", venueId)
     .gte("start_date", today)
     .order("start_date", { ascending: true })
     .limit(20);

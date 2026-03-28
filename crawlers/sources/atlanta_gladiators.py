@@ -45,7 +45,7 @@ PLACE_DATA = {
     "zip": "30097",
     "lat": 33.9822,
     "lng": -84.0723,
-    "venue_type": "arena",
+    "place_type": "arena",
     "spot_type": "arena",
     "website": "https://www.gassouthdistrict.com/arena",
     "vibes": ["sports", "hockey", "family-friendly"],
@@ -190,7 +190,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": parsed["description"],
             "start_date": start_date,

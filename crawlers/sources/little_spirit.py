@@ -38,7 +38,7 @@ PLACE_DATA = {
     # Georgia Ave SE commercial strip, Summerhill
     "lat": 33.7367,
     "lng": -84.3748,
-    "venue_type": "bar",
+    "place_type": "bar",
     "spot_type": "bar",
     "website": BASE_URL,
     "instagram": "littlespiritbar",

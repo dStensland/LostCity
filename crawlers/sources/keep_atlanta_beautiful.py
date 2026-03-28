@@ -60,7 +60,7 @@ PLACE_DATA = {
     "zip": "30308",
     "lat": 33.7716,
     "lng": -84.3656,
-    "venue_type": "nonprofit",
+    "place_type": "nonprofit",
     "spot_type": "nonprofit",
     "website": BASE_URL,
     "description": "Environmental nonprofit dedicated to making Atlanta cleaner and greener through volunteer programs.",
@@ -363,7 +363,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title[:200],
                     "description": description[:800],
                     "start_date": start_date,

@@ -118,13 +118,13 @@ export async function GET(request: NextRequest, { params }: Props) {
     if (submission.potential_duplicate_type === "event") {
       const { data: event } = await supabase
         .from("events")
-        .select("id, title, start_date, venue:venues(name)")
+        .select("id, title, start_date, venue:places(name)")
         .eq("id", submission.potential_duplicate_id)
         .maybeSingle();
       duplicateDetails = event;
     } else if (submission.potential_duplicate_type === "venue") {
       const { data: venue } = await supabase
-        .from("venues")
+        .from("places")
         .select("id, name, address, neighborhood")
         .eq("id", submission.potential_duplicate_id)
         .maybeSingle();
@@ -144,7 +144,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       approvedEntity = { type: "event", data: event };
     } else if (submission.approved_venue_id) {
       const { data: venue } = await supabase
-        .from("venues")
+        .from("places")
         .select("id, name, slug")
         .eq("id", submission.approved_venue_id)
         .maybeSingle();

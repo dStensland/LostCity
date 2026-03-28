@@ -219,7 +219,7 @@ def find_series_by_title(
         if use_day:
             q = q.eq("day_of_week", day_of_week.strip().lower())
         if use_venue:
-            q = q.eq("venue_id", venue_id)
+            q = q.eq("place_id", venue_id)
         return q
 
     # Try exact match first
@@ -241,7 +241,7 @@ def find_series_by_title(
         if series_type == "festival_program" and festival_id:
             q = q.eq("festival_id", festival_id)
         if use_venue:
-            q = q.eq("venue_id", venue_id)
+            q = q.eq("place_id", venue_id)
         q = q.is_("day_of_week", "null")
         result = q.eq("title", title).execute()
         if result.data:
@@ -369,9 +369,9 @@ def get_or_create_series(
     if festival_id:
         series_data["festival_id"] = festival_id
 
-    # Persist venue_id on new class_series / recurring_show records
+    # Persist place_id on new class_series / recurring_show records
     if hint_venue_id and series_type in ("class_series", "recurring_show"):
-        series_data["venue_id"] = hint_venue_id
+        series_data["place_id"] = hint_venue_id
 
     # Add film-specific fields
     if series_type == "film":
@@ -396,7 +396,7 @@ def get_or_create_series(
     if not series_data.get("image_url") and hint_venue_id:
         try:
             venue_result = (
-                client.table("venues")
+                client.table("places")
                 .select("image_url")
                 .eq("id", hint_venue_id)
                 .maybe_single()

@@ -117,7 +117,7 @@ export async function getAllFilteredEvents(
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state)
+      venue:places(id, name, slug, address, neighborhood, city, state)
     `
     )
     .gte("start_date", today)

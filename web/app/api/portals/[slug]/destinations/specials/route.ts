@@ -315,8 +315,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       SPECIALS_CACHE_TTL_MS,
       async () => {
         let venuesQuery = supabase
-      .from("venues")
-      .select("id, name, slug, address, neighborhood, venue_type, lat, lng, city, image_url, short_description, vibes")
+      .from("places")
+      .select("id, name, slug, address, neighborhood, place_type, lat, lng, city, image_url, short_description, vibes")
       .neq("active", false)
       .not("lat", "is", null)
       .not("lng", "is", null)
@@ -377,9 +377,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const venueIds = candidateVenues.map((venue) => venue.id);
 
     let specialsQuery = supabase
-      .from("venue_specials")
-      .select("id, venue_id, title, type, description, days_of_week, time_start, time_end, start_date, end_date, price_note, image_url, confidence, source_url, last_verified_at")
-      .in("venue_id", venueIds)
+      .from("place_specials")
+      .select("id, place_id, title, type, description, days_of_week, time_start, time_end, start_date, end_date, price_note, image_url, confidence, source_url, last_verified_at")
+      .in("place_id", venueIds)
       .eq("is_active", true);
 
     if (typeFilter.length > 0) {
@@ -417,8 +417,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     let eventsQuery = portalClient
       .from("events")
-      .select("id, title, start_date, start_time, venue_id, source_id, category_id")
-      .in("venue_id", venueIds)
+      .select("id, title, start_date, start_time, place_id, source_id, category_id")
+      .in("place_id", venueIds)
       .gte("start_date", today)
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
@@ -462,7 +462,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       supabase
         .from("recommendations")
         .select("venue_id")
-        .in("venue_id", venueIds)
+        .in("place_id", venueIds)
         .eq("visibility", "public"),
     ]);
 

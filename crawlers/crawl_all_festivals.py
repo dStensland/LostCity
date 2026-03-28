@@ -96,7 +96,7 @@ def _ensure_venue(festival: dict, source: dict) -> Optional[int]:
     location = festival.get("location")
     if location:
         venue_slug = slugify(location)
-        result = client.table("venues").select("id").eq("slug", venue_slug).execute()
+        result = client.table("places").select("id").eq("slug", venue_slug).execute()
         if result.data:
             return result.data[0]["id"]
 
@@ -105,7 +105,7 @@ def _ensure_venue(festival: dict, source: dict) -> Optional[int]:
         if len(words) >= 2:
             pattern = f"%{words[0]}%{words[-1]}%"
             result = (
-                client.table("venues")
+                client.table("places")
                 .select("id, name")
                 .ilike("name", pattern)
                 .limit(1)
@@ -116,7 +116,7 @@ def _ensure_venue(festival: dict, source: dict) -> Optional[int]:
 
     # Try to find venue by festival name
     fest_venue_slug = slugify(festival["name"])
-    result = client.table("venues").select("id").eq("slug", fest_venue_slug).execute()
+    result = client.table("places").select("id").eq("slug", fest_venue_slug).execute()
     if result.data:
         return result.data[0]["id"]
 
@@ -126,7 +126,7 @@ def _ensure_venue(festival: dict, source: dict) -> Optional[int]:
         "slug": slugify(location or festival["name"]),
         "city": "Atlanta",
         "state": "GA",
-        "venue_type": "event_space",
+        "place_type": "event_space",
         "website": festival.get("website"),
     }
     try:

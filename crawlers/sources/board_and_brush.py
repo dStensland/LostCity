@@ -273,7 +273,7 @@ def crawl_location(
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": None,
                 "start_date": event_date,
@@ -359,7 +359,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "zip": location["zip"],
                 "lat": location["lat"],
                 "lng": location["lng"],
-                "venue_type": "studio",
+                "place_type": "studio",
                 "spot_type": "studio",
                 "website": f"{BASE_URL}/{location['slug']}/",
                 "vibes": ["workshop", "creative", "hands-on", "diy", "date-night", "craft"],

@@ -38,7 +38,7 @@ def fix_day_keys(dry_run: bool = False):
     client = get_client()
 
     # Fetch all venues that have hours
-    result = client.table("venues").select(
+    result = client.table("places").select(
         "id, name, hours, hours_source, last_verified_at"
     ).eq("active", True).not_.is_("hours", "null").execute()
 
@@ -79,7 +79,7 @@ def fix_day_keys(dry_run: bool = False):
                 updates = {"hours": normalized}
                 if display:
                     updates["hours_display"] = display
-                client.table("venues").update(updates).eq("id", venue_id).execute()
+                client.table("places").update(updates).eq("id", venue_id).execute()
                 logger.info(f"  FIXED: {name} (id={venue_id})")
 
             fixed += 1
@@ -90,7 +90,7 @@ def fix_day_keys(dry_run: bool = False):
             if source:
                 if not dry_run:
                     now = datetime.now(timezone.utc).isoformat()
-                    client.table("venues").update({
+                    client.table("places").update({
                         "hours_source": source,
                         "hours_updated_at": now,
                     }).eq("id", venue_id).execute()

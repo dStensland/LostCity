@@ -32,7 +32,7 @@ PLACE_DATA = {
     "zip": "30315",
     "lat": 33.7150,
     "lng": -84.3460,
-    "venue_type": "attraction",
+    "place_type": "attraction",
     "spot_type": "attraction",
     "website": HOMEPAGE,
     # Tours by reservation only — no fixed daily hours
@@ -113,7 +113,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning(
                 "Atlanta Alpaca Treehouse: venue update failed: %s", exc

@@ -60,7 +60,7 @@ PLACE_DATA = {
     "lat": 33.8756,
     "lng": -84.3784,
     "neighborhood": "Buckhead",
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": "https://bhnp.org/",
     "vibes": ["family-friendly", "outdoor", "educational"],
@@ -321,7 +321,7 @@ def _parse_rows(html: str) -> list[dict]:
 def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": row["title"],
         "description": row["description"],
         "start_date": row["start_date"],
@@ -355,7 +355,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "nature_preserve",
             "commitment_tier": "halfday",
             "primary_activity": "family nature preserve visit",
@@ -376,7 +376,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": "https://bhnp.org/",
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "park",
+                "place_type": "park",
                 "city": "atlanta",
             },
         },
@@ -384,7 +384,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "wetlands-trails-and-creekside-nature-play",
             "title": "Wetlands trails and creekside nature play",
             "feature_type": "amenity",
@@ -397,7 +397,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "nature-camps-and-kid-discovery-programming",
             "title": "Nature camps and kid discovery programming",
             "feature_type": "amenity",
@@ -410,7 +410,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "buckhead-outdoor-reset-with-real-nature-feel",
             "title": "Buckhead outdoor reset with real nature feel",
             "feature_type": "amenity",

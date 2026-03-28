@@ -29,7 +29,7 @@ BELTLINE_VENUE = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30307",
-    "venue_type": "outdoor",
+    "place_type": "outdoor",
     "website": BASE_URL,
 }
 
@@ -240,7 +240,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": None,
                         "start_date": start_date,

@@ -52,7 +52,7 @@ def fetch_all_events():
     for i in range(0, len(venue_ids), 200):
         batch = venue_ids[i:i+200]
         filter_str = ','.join(str(v) for v in batch)
-        vq = client.table('venues').select('id,name,neighborhood').in_('id', batch)
+        vq = client.table('places').select('id,name,neighborhood').in_('id', batch)
         vdata = fetch_events_paged(vq)
         for v in vdata:
             venue_map[v['id']] = v

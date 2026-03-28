@@ -112,7 +112,7 @@ def _safe_best_of_counts(client, venue_ids: list[int]) -> dict[int, int]:
 def run_audit(limit: int) -> dict[str, Any]:
     client = get_client()
     venues = (
-        client.table("venues")
+        client.table("places")
         .select("id,name,slug,active,description,is_event_venue")
         .limit(12000)
         .execute()
@@ -145,7 +145,7 @@ def run_audit(limit: int) -> dict[str, Any]:
                 {
                     "slug": entry.slug,
                     "issue": "venue_active",
-                    "venue_id": venue.get("id"),
+                    "place_id": venue.get("id"),
                     "source_active": source.get("is_active") if source else None,
                 }
             )
@@ -154,7 +154,7 @@ def run_audit(limit: int) -> dict[str, Any]:
                 {
                     "slug": entry.slug,
                     "issue": "source_active",
-                    "venue_id": venue.get("id"),
+                    "place_id": venue.get("id"),
                     "source_id": source.get("id"),
                 }
             )
@@ -197,7 +197,7 @@ def run_audit(limit: int) -> dict[str, Any]:
                     "source_slug": source.get("slug"),
                     "source_id": source.get("id"),
                     "venue_slug": venue.get("slug"),
-                    "venue_id": venue.get("id"),
+                    "place_id": venue.get("id"),
                     "venue_name": venue.get("name"),
                 }
             )

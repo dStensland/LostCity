@@ -77,7 +77,7 @@ def main():
     # Operation 4: Deduplicate Landmark Midtown (venue_id = 199)
     print("\n4. Deduplicating Landmark Midtown events (venue_id = 199)...")
     try:
-        landmark_events = client.table("events").select("id, title, start_date").eq("venue_id", 199).order("id").execute()
+        landmark_events = client.table("events").select("id, title, start_date").eq("place_id", 199).order("id").execute()
         
         if not landmark_events.data:
             print(f"   ✓ No events found at venue_id 199")

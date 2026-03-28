@@ -138,26 +138,26 @@ export const GET = withOptionalAuth(async (request: NextRequest, { user, supabas
         .from("best_of_votes")
         .select("venue_id")
         .eq("category_id", contest.categoryId)
-        .in("venue_id", nominatedVenueIds)
+        .in("place_id", nominatedVenueIds)
         .gte("created_at", startsAt)
         .lte("created_at", endsAt),
 
       // Only cases submitted within the contest window, best first
       supabase
         .from("best_of_cases")
-        .select("id, user_id, venue_id, content, upvote_count")
+        .select("id, user_id, place_id, content, upvote_count")
         .eq("category_id", contest.categoryId)
-        .in("venue_id", nominatedVenueIds)
+        .in("place_id", nominatedVenueIds)
         .gte("created_at", startsAt)
         .lte("created_at", endsAt)
         .order("upvote_count", { ascending: false }),
 
       // Venue metadata
       supabase
-        .from("venues")
-        .select("id, name, slug, neighborhood, image_url, hero_image_url, venue_type")
+        .from("places")
+        .select("id, name, slug, neighborhood, image_url, hero_image_url, place_type")
         .in("id", nominatedVenueIds)
-        .eq("active", true),
+        .eq("is_active", true),
     ]);
 
     // Build score maps

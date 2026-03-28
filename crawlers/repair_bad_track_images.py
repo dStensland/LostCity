@@ -168,7 +168,7 @@ def load_bad_image_targets(flags_path: Path) -> dict[str, dict[str, Any]]:
 def fetch_venues(slugs: list[str]) -> dict[str, dict[str, Any]]:
     client = get_client()
     rows = (
-        client.table("venues")
+        client.table("places")
         .select("id, name, slug, website, address, city, state, image_url, hero_image_url")
         .in_("slug", slugs)
         .execute()
@@ -468,7 +468,7 @@ def update_venue_image(venue_id: int, image_url: str, dry_run: bool) -> None:
     if dry_run:
         return
     client = get_client()
-    client.table("venues").update(
+    client.table("places").update(
         {
             "image_url": image_url,
             "hero_image_url": image_url,
@@ -532,7 +532,7 @@ def run(dry_run: bool, limit: int) -> int:
             rows.append(
                 {
                     "slug": slug,
-                    "venue_id": venue["id"],
+                    "place_id": venue["id"],
                     "venue_name": venue["name"],
                     "status": "repaired" if not dry_run else "would_repair",
                     "source": source,
@@ -550,7 +550,7 @@ def run(dry_run: bool, limit: int) -> int:
             rows.append(
                 {
                     "slug": slug,
-                    "venue_id": venue["id"],
+                    "place_id": venue["id"],
                     "venue_name": venue["name"],
                     "status": "unresolved",
                     "old_image_url": venue.get("image_url"),

@@ -22,7 +22,7 @@ PLACE_DATA = {
     "zip": "30308",
     "lat": 33.7709,
     "lng": -84.3748,
-    "venue_type": "brewery",
+    "place_type": "brewery",
     "spot_type": "bar",
     "website": BASE_URL,
     "vibes": ["craft-beer", "brewery", "gastropub", "midtown"],

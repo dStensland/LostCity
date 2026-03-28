@@ -234,7 +234,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "lat": meeting.get("latitude"),
                         "lng": meeting.get("longitude"),
                         "neighborhood": region,
-                        "venue_type": determine_venue_type(location_name),
+                        "place_type": determine_venue_type(location_name),
                         "spot_type": "community_center",
                         "website": meeting.get("location_url"),
                     }
@@ -302,7 +302,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Create event record
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description,
                         "start_date": start_date,

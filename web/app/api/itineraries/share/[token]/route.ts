@@ -59,8 +59,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     .select(
       `
       *,
-      event:events(id, title, start_date, start_time, image_url, category:category_id, venue:venues(name, lat, lng)),
-      venue:venues(id, slug, name, image_url, neighborhood, venue_type, lat, lng)
+      event:events(id, title, start_date, start_time, image_url, category:category_id, venue:places(name, lat, lng)),
+      venue:places(id, slug, name, image_url, neighborhood, place_type, lat, lng)
     `
     )
     .eq("itinerary_id", itineraryData.id)

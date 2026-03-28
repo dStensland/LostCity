@@ -22,7 +22,7 @@ PLACE_DATA = {
     "zip": "30030",
     "lat": 33.7748,
     "lng": -84.2947,
-    "venue_type": "restaurant",
+    "place_type": "restaurant",
     "spot_type": "bar",
     "website": BASE_URL,
     "vibes": ["gastropub", "oysters", "craft-cocktails", "patio", "date-night"],

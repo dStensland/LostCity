@@ -89,7 +89,7 @@ class _Crawler(GenericExhibitionCrawler):
         "zip": "30324",
         "lat": 33.8432,
         "lng": -84.3735,
-        "venue_type": "gallery",
+        "place_type": "gallery",
         "website": "https://www.alanaveryartcompany.com",
     }
 

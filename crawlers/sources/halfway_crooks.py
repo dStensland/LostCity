@@ -42,7 +42,7 @@ PLACE_DATA = {
     "zip": "30312",
     "lat": 33.7402,
     "lng": -84.3850,
-    "venue_type": "brewery",
+    "place_type": "brewery",
     "spot_type": "bar",
     "website": BASE_URL,
     "vibes": ["brewery", "craft-beer", "european-style", "rooftop", "summerhill"],
@@ -160,7 +160,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": template["title"],
                 "description": template["description"],
                 "start_date": start_date,
@@ -300,7 +300,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": "Event at Halfway Crooks",
                     "start_date": start_date,

@@ -52,7 +52,7 @@ ORG_DATA = {
     "zip": "30316",
     "lat": 33.7338,
     "lng": -84.3517,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": BASE_URL,
     "description": (
@@ -176,7 +176,7 @@ def _get_or_create_show_venue(venue_str: str) -> int:
             "zip": zip_code,
             "lat": None,
             "lng": None,
-            "venue_type": "event_space",
+            "place_type": "event_space",
             "spot_type": "event_space",
             "website": None,
             "vibes": ["artsy", "live-music", "lively"],
@@ -297,7 +297,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": show_name,
                     "description": (
                         description[:2000]

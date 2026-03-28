@@ -50,7 +50,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       is_all_day,
       category:category_id,
       series:series_id(slug),
-      venue:venues(city)
+      venue:places(city)
     `)
     .eq("venue_id", venueId)
     .gte("start_date", today)

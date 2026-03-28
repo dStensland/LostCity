@@ -46,7 +46,7 @@ MEDSHARE_VENUE = {
     "zip": "30034",
     "lat": 33.7260,
     "lng": -84.2531,
-    "venue_type": "nonprofit",
+    "place_type": "nonprofit",
     "spot_type": "nonprofit",
     "website": BASE_URL,
     "vibes": ["volunteer", "medical-supplies", "global-health", "near-emory"],
@@ -349,7 +349,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description if description else None,
                         "start_date": start_date,
@@ -420,7 +420,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": description,
                             "start_date": session_date,

@@ -69,7 +69,7 @@ def build_venue_data(api_venue: dict | None) -> dict:
             "city": "Norcross",
             "state": "GA",
             "zip": "30093",
-            "venue_type": "organization",
+            "place_type": "organization",
             "spot_type": "organization",
             "website": BASE_URL,
             "description": "Adaptive sports organization serving metro Atlanta.",
@@ -84,7 +84,7 @@ def build_venue_data(api_venue: dict | None) -> dict:
         "city": city or "Atlanta",
         "state": api_venue.get("state") or "GA",
         "zip": api_venue.get("zip") or "",
-        "venue_type": "fitness_center",
+        "place_type": "fitness_center",
         "spot_type": "fitness",
         "website": api_venue.get("url") or BASE_URL,
         "description": "Venue hosting BlazeSports adaptive sports programming.",
@@ -252,7 +252,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": parsed["title"],
             "description": parsed["description"],
             "start_date": parsed["start_date"],

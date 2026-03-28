@@ -51,7 +51,7 @@ print_section("1. DATABASE SCHEMA ANALYSIS")
 # Check venue_specials table
 print("\n[A] Checking if venue_specials table exists and structure...")
 try:
-    result = supabase.table('venue_specials').select('*').limit(1).execute()
+    result = supabase.table('place_specials').select('*').limit(1).execute()
     print("✓ venue_specials table EXISTS")
     print(f"  Sample record count: {len(result.data)}")
     if result.data:
@@ -62,7 +62,7 @@ except Exception as e:
 # Check venues table for specials-related columns
 print("\n[B] Checking venues table for specials/hours columns...")
 try:
-    result = supabase.table('venues').select('*').limit(1).execute()
+    result = supabase.table('places').select('*').limit(1).execute()
     if result.data:
         columns = list(result.data[0].keys())
         specials_cols = [c for c in columns if 'special' in c.lower() or 'hour' in c.lower()]
@@ -161,7 +161,7 @@ venue_types = ['bar', 'restaurant', 'nightclub', 'brewery', 'distillery', 'wine_
 
 print("\n[A] Venue count by type:")
 for vtype in venue_types:
-    result = supabase.table('venues').select('id', count='exact').eq('venue_type', vtype).execute()
+    result = supabase.table('places').select('id', count='exact').eq('place_type', vtype).execute()
     count = result.count if result.count else 0
     print(f"  {vtype:20} : {count:4} venues")
 
@@ -173,7 +173,7 @@ print_section("5. VIBES ANALYSIS - Specials-related Tags")
 
 print("\n[A] Checking vibes column for specials-related tags:")
 try:
-    result = supabase.table('venues').select('id, name, vibes').not_.is_('vibes', 'null').limit(500).execute()
+    result = supabase.table('places').select('id, name, vibes').not_.is_('vibes', 'null').limit(500).execute()
     if result.data:
         from collections import Counter
         vibe_counts = Counter()

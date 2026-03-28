@@ -35,7 +35,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7601,
     "lng": -84.3926,
-    "venue_type": "attraction",
+    "place_type": "attraction",
     "spot_type": "attraction",
     "website": HOMEPAGE,
     # Hours verified 2026-03-11 against skyviewatlanta.com
@@ -69,7 +69,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "attraction",
         "commitment_tier": "hour",
         "primary_activity": "Ferris wheel ride with downtown Atlanta skyline views",
@@ -88,10 +88,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Standard and VIP gondola tickets available. Online purchase saves vs. walk-up.",
         "source_url": HOMEPAGE,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "attraction", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "attraction", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "200-foot-ferris-wheel",
         "title": "200-foot Ferris wheel with climate-controlled gondolas",
         "feature_type": "attraction",
@@ -101,7 +101,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "vip-gondola-experience",
         "title": "VIP gondola with glass floor",
         "feature_type": "experience",
@@ -111,7 +111,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "centennial-park-skyline-views",
         "title": "Centennial Park and downtown skyline panorama",
         "feature_type": "experience",
@@ -121,7 +121,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "vip-gondola-upgrade",
         "title": "VIP gondola upgrade",
         "description": "Premium upgrade with glass floor, longer ride, and leather seating for a more exclusive experience.",
@@ -131,7 +131,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "category": "admission",
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "online-ticket-discount",
         "title": "Online ticket discount",
         "description": "Save by purchasing tickets online in advance vs. walk-up pricing at the ticket window.",
@@ -202,7 +202,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning("SkyView Atlanta: venue update failed: %s", exc)
 

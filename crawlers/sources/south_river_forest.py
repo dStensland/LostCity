@@ -40,7 +40,7 @@ SRFC_VENUE = {
     "zip": "30316",
     "lat": 33.6942,
     "lng": -84.3234,
-    "venue_type": "nonprofit",
+    "place_type": "nonprofit",
     "spot_type": "nonprofit",
     "website": DEFAULT_BASE_URL,
 }
@@ -333,7 +333,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": description if description else None,
                             "start_date": date_info["start_date"],
@@ -436,7 +436,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": venue_id,
+                                "place_id": venue_id,
                                 "title": title,
                                 "description": description if description else None,
                                 "start_date": date_info["start_date"],

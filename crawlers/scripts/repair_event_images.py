@@ -130,7 +130,7 @@ def fetch_venue_images(venue_ids: set[int]) -> dict[int, str]:
     for i in range(0, len(ids), batch):
         chunk_ids = ids[i : i + batch]
         rows = (
-            client.table("venues")
+            client.table("places")
             .select("id,image_url")
             .in_("id", chunk_ids)
             .execute()

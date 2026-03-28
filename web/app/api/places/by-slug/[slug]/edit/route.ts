@@ -89,7 +89,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   const serviceClient = createServiceClient();
   const { data: venue, error: venueError } = await serviceClient
-    .from("venues")
+    .from("places")
     .select(
       "id, name, slug, claimed_by, is_verified, description, website, hours, image_url, accessibility_notes, vibes, phone, menu_url, reservation_url, service_style, meal_duration_min_minutes, meal_duration_max_minutes, walk_in_wait_minutes, payment_buffer_minutes, accepts_reservations, reservation_recommended, planning_notes, planning_last_verified_at"
     )
@@ -176,7 +176,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
   // Get venue and verify ownership
   const { data: venue, error: venueError } = await serviceClient
-    .from("venues")
+    .from("places")
     .select("id, claimed_by, is_verified, meal_duration_min_minutes, meal_duration_max_minutes")
     .eq("slug", slug)
     .maybeSingle() as {
@@ -404,7 +404,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
   // Update the venue
   const { data: updatedVenue, error: updateError } = await serviceClient
-    .from("venues")
+    .from("places")
     .update(updates as never)
     .eq("id", venue.id)
     .select()

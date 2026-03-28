@@ -86,7 +86,7 @@ def seed_metalsome_events(source_id: int, weeks: int = 8, dry_run: bool = False)
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": VENUE_ID,
+                "place_id": VENUE_ID,
                 "title": EVENT_TITLE,
                 "description": DESCRIPTION,
                 "start_date": start_date,

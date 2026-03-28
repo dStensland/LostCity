@@ -141,8 +141,8 @@ export async function GET(request: NextRequest, { params }: Props) {
   const lngDelta = radiusKm / (111 * Math.max(Math.cos((centerLat * Math.PI) / 180), 0.01));
 
   const venueQuery = supabase
-    .from("venues")
-    .select("id, name, slug, neighborhood, venue_type, lat, lng, image_url, short_description, city")
+    .from("places")
+    .select("id, name, slug, neighborhood, place_type, lat, lng, image_url, short_description, city")
     .neq("active", false)
     .not("lat", "is", null)
     .not("lng", "is", null)
@@ -154,7 +154,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   let eventQuery = supabase
     .from("events")
-    .select("id, title, category_id, start_time, image_url, venue_id")
+    .select("id, title, category_id, start_time, image_url, place_id")
     .eq("start_date", date)
     .eq("is_active", true)
     .not("start_time", "is", null)

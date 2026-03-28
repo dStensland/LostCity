@@ -4,7 +4,7 @@ from sources.high_museum import _build_destination_envelope
 def test_build_destination_envelope_for_high_museum() -> None:
     envelope = _build_destination_envelope(1701)
 
-    assert envelope.destination_details[0]["venue_id"] == 1701
+    assert envelope.destination_details[0]["place_id"] == 1701
     assert envelope.destination_details[0]["destination_type"] == "art_museum"
     assert envelope.destination_details[0]["parking_type"] == "garage"
     assert "free second sunday" in envelope.destination_details[0]["fee_note"].lower()

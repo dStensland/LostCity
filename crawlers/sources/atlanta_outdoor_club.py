@@ -35,7 +35,7 @@ ORG_VENUE = {
     "slug": "atlanta-outdoor-club",
     "city": "Atlanta",
     "state": "GA",
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": BASE_URL,
 }
@@ -227,7 +227,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "state": "GA" if 30.5 <= lat <= 35.0 and -86.0 <= lng <= -80.5 else None,
                     "lat": lat,
                     "lng": lng,
-                    "venue_type": "park",
+                    "place_type": "park",
                     "spot_type": "trail",
                     "website": detail_url,
                 }
@@ -254,7 +254,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title[:500],
                 "description": description[:2000],
                 "start_date": start_date,

@@ -27,7 +27,7 @@ PLACE_DATA = {
     "zip": "30317",
     "lat": 33.7560,
     "lng": -84.3180,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": BASE_URL,
     "description": "7-acre community park and recreation center in historic Kirkwood neighborhood.",
@@ -76,7 +76,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": (
             "Kirkwood's annual Spring Fling festival featuring the Tour of Homes, "

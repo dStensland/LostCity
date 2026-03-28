@@ -46,7 +46,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // Fetch venues: either explicitly tagged with explore_category or matching explore venue types
     let venuesQuery = supabase
-      .from("venues")
+      .from("places")
       .select(`
         id,
         name,
@@ -108,8 +108,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const venueIds = venueRows.map((v) => v.id);
     let eventCountsQuery = portalClient
       .from("events")
-      .select("venue_id, id, title, start_date")
-      .in("venue_id", venueIds)
+      .select("place_id, id, title, start_date")
+      .in("place_id", venueIds)
       .gte("start_date", today)
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")

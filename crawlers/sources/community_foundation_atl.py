@@ -33,7 +33,7 @@ MONDAY_NIGHT_GARAGE = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30310",
-    "venue_type": "event_space",
+    "place_type": "event_space",
     "website": "https://mondaynightbrewing.com",
 }
 
@@ -45,7 +45,7 @@ DEFAULT_VENUE = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30303",
-    "venue_type": "nonprofit",
+    "place_type": "nonprofit",
     "website": BASE_URL,
 }
 
@@ -182,7 +182,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": event_data.get("description", "Community event from Community Foundation for Greater Atlanta"),
                 "start_date": start_date,

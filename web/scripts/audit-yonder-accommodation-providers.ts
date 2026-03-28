@@ -42,7 +42,7 @@ async function main() {
 
   const client = createServiceClient();
   const { data, error } = await client
-    .from("venues")
+    .from("places")
     .select("slug,name,reservation_url,accepts_reservations,reservation_recommended")
     .in("slug", weekendSlugs);
 

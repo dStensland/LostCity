@@ -66,7 +66,7 @@ export const POST = withAuthAndParams<Params>(
     // Get the next position (events don't have lat/lng — join through to venues)
     const { data: existingItems } = await serviceClient
       .from("itinerary_items")
-      .select("id, position, event:events(venue:venues(lat, lng)), venue:venues(lat, lng), custom_lat, custom_lng")
+      .select("id, position, event:events(venue:places(lat, lng)), venue:places(lat, lng), custom_lat, custom_lng")
       .eq("itinerary_id", params.id)
       .order("position", { ascending: false })
       .limit(1);
@@ -89,7 +89,7 @@ export const POST = withAuthAndParams<Params>(
       // Fetch event with venue coords (events don't have lat/lng — venues do)
       const { data: event, error: eventError } = await serviceClient
         .from("events")
-        .select("id, venue:venues(lat, lng)")
+        .select("id, venue:places(lat, lng)")
         .eq("id", eventId)
         .maybeSingle();
 
@@ -102,7 +102,7 @@ export const POST = withAuthAndParams<Params>(
       if (!venueId) return validationError("venue_id is required for venue items");
 
       const { data: venue } = await serviceClient
-        .from("venues")
+        .from("places")
         .select("id, lat, lng")
         .eq("id", venueId)
         .maybeSingle();
@@ -204,8 +204,8 @@ export const POST = withAuthAndParams<Params>(
       .select(
         `
         *,
-        event:events(id, title, start_date, start_time, image_url, category:category_id, venue:venues(name, lat, lng)),
-        venue:venues(id, slug, name, image_url, neighborhood, venue_type, lat, lng)
+        event:events(id, title, start_date, start_time, image_url, category:category_id, venue:places(name, lat, lng)),
+        venue:places(id, slug, name, image_url, neighborhood, place_type, lat, lng)
       `
       )
       .single();

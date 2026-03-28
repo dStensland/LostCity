@@ -1032,7 +1032,7 @@ def _build_event_record(
 
     record: dict = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date.strftime("%Y-%m-%d"),
@@ -1141,7 +1141,7 @@ def _build_program_record(
     # Build the record
     program: dict = {
         "source_id": event_record.get("source_id"),
-        "venue_id": event_record.get("venue_id"),
+        "place_id": event_record.get("place_id") or event_record.get("venue_id"),
         "name": title,
         "description": event_record.get("description"),
         "program_type": program_type,
@@ -1236,7 +1236,7 @@ def _resolve_venue(
         "zip": matched_venue.zip_code,
         "lat": matched_venue.lat,
         "lng": matched_venue.lng,
-        "venue_type": matched_venue.venue_type,
+        "place_type": matched_venue.venue_type,
         "spot_type": matched_venue.venue_type,
     }
 
@@ -1319,7 +1319,7 @@ def crawl_tenant(source: dict, tenant: TenantConfig) -> tuple[int, int, int]:
             "zip": tenant.default_venue.zip_code,
             "lat": tenant.default_venue.lat,
             "lng": tenant.default_venue.lng,
-            "venue_type": tenant.default_venue.venue_type,
+            "place_type": tenant.default_venue.venue_type,
             "spot_type": tenant.default_venue.venue_type,
         }
     )

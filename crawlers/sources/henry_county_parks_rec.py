@@ -211,7 +211,7 @@ def _build_destination_envelope(venue_info: VenueInfo, venue_id: int) -> TypedEn
         envelope.add(
             "destination_details",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "destination_type": "community_recreation_center",
                 "commitment_tier": "halfday",
                 "primary_activity": "family recreation center visit",
@@ -236,7 +236,7 @@ def _build_destination_envelope(venue_info: VenueInfo, venue_id: int) -> TypedEn
                 "source_url": "https://secure.rec1.com/GA/henry-county-ga/catalog",
                 "metadata": {
                     "source_type": "family_destination_enrichment",
-                    "venue_type": venue_info.venue_type,
+                    "place_type": venue_info.venue_type,
                     "county": "henry",
                 },
             },
@@ -244,7 +244,7 @@ def _build_destination_envelope(venue_info: VenueInfo, venue_id: int) -> TypedEn
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "indoor-family-recreation-space",
                 "title": "Indoor family recreation space",
                 "feature_type": "amenity",
@@ -261,7 +261,7 @@ def _build_destination_envelope(venue_info: VenueInfo, venue_id: int) -> TypedEn
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "family-classes-and-seasonal-camps",
                 "title": "Family classes and seasonal camps",
                 "feature_type": "experience",

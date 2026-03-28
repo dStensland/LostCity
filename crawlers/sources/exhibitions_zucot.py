@@ -56,7 +56,7 @@ class _Crawler(GenericExhibitionCrawler):
         "zip": "30313",
         "lat": 33.7597,
         "lng": -84.3976,
-        "venue_type": "gallery",
+        "place_type": "gallery",
         "website": "https://www.zucotgallery.com",
     }
 

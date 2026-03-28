@@ -35,7 +35,7 @@ PLACE_DATA = {
     "zip": "30322",
     "lat": 33.7920,
     "lng": -84.3210,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "trail",
     "website": HOMEPAGE,
     # Open daily from dawn to dusk
@@ -118,7 +118,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning("Lullwater Preserve: venue update failed: %s", exc)
 

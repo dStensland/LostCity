@@ -118,14 +118,14 @@ def fetch_venue_photos(
 
     # Build query
     query = (
-        client.table("venues")
+        client.table("places")
         .select("id,name,slug,address,city,state,website,image_url,venue_type")
         .eq("active", True)
         .is_("image_url", "null")
     )
 
     if venue_type:
-        query = query.eq("venue_type", venue_type)
+        query = query.eq("place_type", venue_type)
 
     if skip_with_website:
         # Only venues without websites (website scraping should handle those)
@@ -201,7 +201,7 @@ def fetch_venue_photos(
         print(f"  FOUND: {photo_url[:80]}...")
 
         if not dry_run:
-            client.table("venues").update({"image_url": photo_url}).eq("id", venue["id"]).execute()
+            client.table("places").update({"image_url": photo_url}).eq("id", venue["id"]).execute()
             print("  Updated!")
 
         stats["found"] += 1

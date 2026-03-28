@@ -177,7 +177,7 @@ def run_deactivate(dry_run: bool = False):
 
     print("Loading active venues...")
     result = (
-        client.table("venues")
+        client.table("places")
         .select("id,name,slug,venue_type,website,city,state,address")
         .eq("active", True)
         .order("name")
@@ -244,7 +244,7 @@ def run_deactivate(dry_run: bool = False):
     deactivated = 0
     for v, reason in to_deactivate:
         try:
-            client.table("venues").update({"active": False}).eq("id", v["id"]).execute()
+            client.table("places").update({"active": False}).eq("id", v["id"]).execute()
             deactivated += 1
         except Exception as e:
             print(f"  ERROR deactivating [{v['id']}] {v['name']}: {e}")
@@ -273,7 +273,7 @@ def run_merge_dupes(dry_run: bool = False):
 
     print("Loading active venues...")
     result = (
-        client.table("venues")
+        client.table("places")
         .select("id,name,slug,venue_type,website,city,state,address,neighborhood,"
                 "instagram,phone,description,image_url,lat,lng,hours,menu_url,"
                 "reservation_url,vibes,created_at")
@@ -338,8 +338,8 @@ def run_merge_dupes(dry_run: bool = False):
             if d_events > 0:
                 try:
                     client.table("events").update(
-                        {"venue_id": keeper["id"]}
-                    ).eq("venue_id", d["id"]).execute()
+                        {"place_id": keeper["id"]}
+                    ).eq("place_id", d["id"]).execute()
                     events_reassigned += d_events
                     print(f"      Reassigned {d_events} events from [{d['id']}] → [{keeper['id']}]")
                 except Exception as e:
@@ -347,7 +347,7 @@ def run_merge_dupes(dry_run: bool = False):
                     continue
 
             try:
-                client.table("venues").update({"active": False}).eq("id", d["id"]).execute()
+                client.table("places").update({"active": False}).eq("id", d["id"]).execute()
                 merged += 1
             except Exception as e:
                 print(f"      ERROR deactivating [{d['id']}]: {e}")
@@ -365,7 +365,7 @@ def run_merge_dupes(dry_run: bool = False):
                         break
         if updates:
             try:
-                client.table("venues").update(updates).eq("id", keeper["id"]).execute()
+                client.table("places").update(updates).eq("id", keeper["id"]).execute()
                 print(f"      Backfilled {list(updates.keys())} onto keeper [{keeper['id']}]")
             except Exception as e:
                 print(f"      ERROR backfilling [{keeper['id']}]: {e}")

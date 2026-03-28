@@ -44,15 +44,15 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
         .eq("is_active", true)
         .maybeSingle(),
       serviceClient
-        .from("venues")
-        .select("id, city, active")
+        .from("places")
+        .select("id, city, is_active")
         .eq("id", venueId)
         .maybeSingle(),
       serviceClient
         .from("best_of_nominations")
         .select("id")
         .eq("category_id", categoryId)
-        .eq("venue_id", venueId)
+        .eq("place_id", venueId)
         .maybeSingle(),
       serviceClient
         .from("best_of_nominations")

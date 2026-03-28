@@ -134,14 +134,14 @@ def scrape_descriptions(
     # Build query: active venues with website, missing description
     # Fetch all with websites, filter client-side to catch both null and empty string
     query = (
-        client.table("venues")
+        client.table("places")
         .select("id,name,slug,website,venue_type,description")
         .eq("active", True)
         .not_.is_("website", "null")
     )
 
     if venue_type:
-        query = query.eq("venue_type", venue_type)
+        query = query.eq("place_type", venue_type)
 
     result = query.order("name").limit(5000).execute()
     # Filter to venues missing descriptions (null or empty string)
@@ -170,7 +170,7 @@ def scrape_descriptions(
             if not dry_run:
                 for attempt in range(3):
                     try:
-                        client.table("venues").update({"description": desc}).eq("id", v["id"]).execute()
+                        client.table("places").update({"description": desc}).eq("id", v["id"]).execute()
                         break
                     except Exception as db_err:
                         if attempt < 2:

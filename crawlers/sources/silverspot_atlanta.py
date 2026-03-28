@@ -32,7 +32,7 @@ class SilverspotAtlantaCrawler(ChainCinemaCrawler):
                 "city": "Atlanta",
                 "state": "GA",
                 "zip": "30339",
-                "venue_type": "cinema",
+                "place_type": "cinema",
                 "website": "https://silverspot.net/location/battery-atlanta",
                 "lat": 33.8907,
                 "lng": -84.4678,

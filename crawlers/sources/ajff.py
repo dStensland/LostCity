@@ -68,7 +68,7 @@ FESTIVAL_VENUE = {
     "city": "Atlanta",
     "state": "GA",
     "zip": None,
-    "venue_type": "festival",
+    "place_type": "festival",
     "website": BASE_URL,
 }
 
@@ -248,7 +248,7 @@ def _build_venue_data(space: Optional[dict], venue: Optional[dict]) -> dict:
         "city": address.get("locality") or "Atlanta",
         "state": address.get("administrative_area") or "GA",
         "zip": address.get("postal_code") or None,
-        "venue_type": _infer_venue_type(name, parent_name),
+        "place_type": _infer_venue_type(name, parent_name),
         "website": _build_web_url(website_path) or BASE_URL,
     }
 

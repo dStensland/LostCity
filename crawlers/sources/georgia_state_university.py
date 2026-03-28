@@ -27,7 +27,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30303",
-        "venue_type": "university",
+        "place_type": "university",
         "website": "https://gsu.edu",
     },
     "rialto": {
@@ -38,7 +38,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30303",
-        "venue_type": "theater",
+        "place_type": "theater",
         "website": "https://rfrancishall.org",
     },
 }
@@ -222,7 +222,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": start_date,

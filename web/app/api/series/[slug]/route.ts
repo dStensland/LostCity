@@ -61,7 +61,7 @@ export async function GET(
     .from("events")
     .select(`
       id, title, start_date, start_time, ticket_url,
-      venue:venues(id, name, slug, neighborhood, city, image_url, address, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score)
+      venue:places(id, name, slug, neighborhood, city, image_url, address, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score)
     `)
     .eq("series_id", series.id)
     .gte("start_date", today)

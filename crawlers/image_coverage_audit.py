@@ -88,7 +88,7 @@ def audit_venue_coverage():
     for venue_id, stats in venue_stats.items():
         if stats["count"] >= 3:
             venues.append({
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "venue_name": stats["name"],
                 "venue_has_image": stats["has_image"],
                 "imageless_event_count": stats["count"]

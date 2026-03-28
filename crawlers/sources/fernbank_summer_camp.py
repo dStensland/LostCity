@@ -52,7 +52,7 @@ PLACE_DATA = {
     "lat": 33.7741,
     "lng": -84.3282,
     "neighborhood": "Druid Hills",
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": "https://fernbankmuseum.org/",
     "vibes": ["family-friendly", "all-ages", "educational"],
@@ -169,7 +169,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     title = f"{row['title']} at Fernbank Museum"
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": row["description"],
         "start_date": row["start_date"],

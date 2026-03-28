@@ -135,7 +135,7 @@ class TestDescriptionBackfill:
 class TestSimpleNullBackfill:
     @pytest.mark.parametrize("field", [
         "address", "zip", "neighborhood", "website",
-        "venue_type", "spot_type", "hours", "phone",
+        "place_type", "spot_type", "hours", "phone",
     ])
     def test_null_field_backfilled(self, field):
         current = {"id": 1, "name": "V", field: None}
@@ -146,7 +146,7 @@ class TestSimpleNullBackfill:
 
     @pytest.mark.parametrize("field", [
         "address", "zip", "neighborhood", "website",
-        "venue_type", "spot_type", "hours", "phone",
+        "place_type", "spot_type", "hours", "phone",
     ])
     def test_existing_field_not_overwritten(self, field):
         current = {"id": 1, "name": "V", field: "existing_value"}
@@ -335,7 +335,7 @@ class TestCombinedScenario:
             "description": None,
             "image_url": None,
             "website": None,
-            "venue_type": None,
+            "place_type": None,
             "vibes": None,
         }
         incoming = {
@@ -346,7 +346,7 @@ class TestCombinedScenario:
             "description": "A wonderful music venue in the heart of Atlanta.",
             "image_url": "https://example.com/img.jpg",
             "website": "https://venue.com",
-            "venue_type": "music_venue",
+            "place_type": "music_venue",
             "vibes": ["live-music", "rooftop"],
             # These should never make it into updates:
             "name": "Hacker Name",
@@ -374,7 +374,7 @@ class TestCombinedScenario:
         assert "description" in updates
         assert "image_url" in updates
         assert updates["website"] == "https://venue.com"
-        assert updates["venue_type"] == "music_venue"
+        assert updates["place_type"] == "music_venue"
         assert set(updates["vibes"]) == {"live-music", "rooftop"}
 
         # Protected fields absent

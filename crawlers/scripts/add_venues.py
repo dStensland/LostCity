@@ -73,7 +73,7 @@ def add_venues(venues: list, category: str, dry_run: bool = False) -> int:
         slug = slugify(venue["name"])
 
         # Check if already exists
-        existing = client.table("venues").select("id").eq("slug", slug).execute()
+        existing = client.table("places").select("id").eq("slug", slug).execute()
         if existing.data:
             print(f"  [SKIP] {venue['name']} (already exists)")
             skipped += 1
@@ -98,7 +98,7 @@ def add_venues(venues: list, category: str, dry_run: bool = False) -> int:
             print(f"  [DRY RUN] Would add: {venue['name']}")
         else:
             try:
-                client.table("venues").insert(record).execute()
+                client.table("places").insert(record).execute()
                 print(f"  [ADDED] {venue['name']}")
                 added += 1
             except Exception as e:

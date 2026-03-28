@@ -23,7 +23,7 @@ export default async function VenueDashboardPage({ params }: Props) {
 
   // Get venue and verify ownership
   const { data: venue, error: venueError } = await supabase
-    .from("venues")
+    .from("places")
     .select("id, name, slug, claimed_by, is_verified, address, city, state, image_url")
     .eq("slug", slug)
     .maybeSingle() as {
@@ -75,7 +75,7 @@ export default async function VenueDashboardPage({ params }: Props) {
   const { count: eventCount } = await supabase
     .from("events")
     .select("*", { count: "exact", head: true })
-    .eq("venue_id", venue.id)
+    .eq("place_id", venue.id)
     .gte("start_date", getLocalDateString());
 
   return (

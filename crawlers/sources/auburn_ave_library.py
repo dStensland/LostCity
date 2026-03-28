@@ -40,7 +40,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7552,
     "lng": -84.3839,
-    "venue_type": "library",
+    "place_type": "library",
     "spot_type": "library",
     "website": "https://www.afpls.org/auburn-avenue-research-library",
 }
@@ -330,7 +330,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": event_description,
                     "start_date": start_date,

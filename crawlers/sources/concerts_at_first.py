@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30309",
     "lat": 33.7889,
     "lng": -84.3834,
-    "venue_type": "church",
+    "place_type": "church",
     "spot_type": "church",
     "website": "https://www.firstpresatl.org/",
     "vibes": ["faith-christian", "presbyterian", "live-music", "historic"],
@@ -169,7 +169,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Build event record
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title[:500],
                     "description": description or f"Classical concert at First Presbyterian Church Atlanta.",
                     "start_date": start_date,

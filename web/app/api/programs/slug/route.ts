@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
         status,
         created_at,
         updated_at,
-        venue:venues(id, name, neighborhood, address, city, state, lat, lng, image_url, slug, phone, website)
+        venue:places(id, name, neighborhood, address, city, state, lat, lng, image_url, slug, phone, website)
       `
       )
       .eq("slug", slug)

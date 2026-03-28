@@ -35,7 +35,7 @@ _TRIBE_VENUE = {
     "zip": "30306",
     "lat": 33.7872,
     "lng": -84.3407,
-    "venue_type": "arts_center",
+    "place_type": "arts_center",
     "spot_type": "arts_center",
     "website": "https://callanwolde.org",
     "vibes": ["artsy"],

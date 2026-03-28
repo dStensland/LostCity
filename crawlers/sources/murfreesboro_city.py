@@ -29,7 +29,7 @@ PLACE_DATA = {
     "city": "Murfreesboro",
     "state": "TN",
     "zip": "37130",
-    "venue_type": "government",
+    "place_type": "government",
     "spot_type": "community_center",
     "website": BASE_URL,
 }
@@ -199,7 +199,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                                 event_record = {
                                     "source_id": source_id,
-                                    "venue_id": venue_id,
+                                    "place_id": venue_id,
                                     "title": title,
                                     "description": "Event at City of Murfreesboro",
                                     "start_date": start_date,
@@ -287,7 +287,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": None,
                             "start_date": start_date,

@@ -343,7 +343,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "slug": re.sub(r"[^a-z0-9-]", "", venue_name.lower().replace(" ", "-"))[:50],
                         "city": card["city"],
                         "state": card["state"],
-                        "venue_type": "event_space",
+                        "place_type": "event_space",
                     }
                     try:
                         venue_id = get_or_create_place(venue_record)
@@ -389,7 +389,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description[:2000],
                     "start_date": start_date,

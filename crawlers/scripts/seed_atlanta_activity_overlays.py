@@ -384,7 +384,7 @@ def seed_overlays(apply: bool = False) -> None:
 
     for venue_slug, features in ATLANTA_ACTIVITY_OVERLAYS.items():
         venue_res = (
-            client.table("venues")
+            client.table("places")
             .select("id,name,slug")
             .eq("slug", venue_slug)
             .limit(1)

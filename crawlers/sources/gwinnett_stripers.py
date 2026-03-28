@@ -36,7 +36,7 @@ PLACE_DATA = {
     "zip": "30043",
     "lat": 33.9601,
     "lng": -83.9891,
-    "venue_type": "stadium",
+    "place_type": "stadium",
     "spot_type": "arena",
     "website": "https://www.milb.com/gwinnett",
     "vibes": ["sports", "baseball", "family-friendly", "outdoor", "summer"],
@@ -156,7 +156,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": f"{title} at {venue_name}. AAA minor league baseball, Atlanta Braves affiliate.",
                         "start_date": game_date,

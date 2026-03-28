@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30043",
     "lat": 33.9595,
     "lng": -84.0722,
-    "venue_type": "entertainment",
+    "place_type": "entertainment",
     "spot_type": "entertainment",
     "website": HOMEPAGE,
     "vibes": ["family-friendly", "dinner-theater", "unique-experience", "interactive", "groups"],
@@ -55,7 +55,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "dinner_theater",
         "commitment_tier": "halfday",
         "primary_activity": "Live jousting tournament dinner show",
@@ -75,10 +75,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "All-inclusive ticket covers show and four-course dinner. Upgrades available.",
         "source_url": HOMEPAGE,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "entertainment", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "entertainment", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "live-jousting-tournament",
         "title": "Live jousting tournament with 6 knights",
         "feature_type": "experience",
@@ -91,7 +91,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "four-course-dinner",
         "title": "Four-course dinner — eat with your hands",
         "feature_type": "amenity",
@@ -104,7 +104,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "hall-of-arms-falcons",
         "title": "Pre-show Hall of Arms and falcon demonstrations",
         "feature_type": "experience",
@@ -117,7 +117,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "birthday-celebration-packages",
         "title": "Birthday celebration packages",
         "description": "Special birthday packages with recognition during the show and commemorative items.",
@@ -127,7 +127,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "category": "recurring_deal",
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "royalty-upgrade",
         "title": "Royalty upgrade — premium seating",
         "description": "Upgrade to front-row seating with a commemorative crown, program, and champagne toast.",
@@ -198,7 +198,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning("Medieval Times Atlanta: venue update failed: %s", exc)
 

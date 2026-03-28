@@ -81,7 +81,7 @@ ORG_VENUE_DATA = {
     "slug": "wewatchstuff",
     "city": "Atlanta",
     "state": "GA",
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "nonprofit",
     "website": BASE_URL,
 }
@@ -95,7 +95,7 @@ SCREENING_VENUE_DATA = {
     "state": "GA",
     "zip": "30307",
     "neighborhood": "Candler Park",
-    "venue_type": "studio",
+    "place_type": "studio",
     "spot_type": "arts",
     "website": "https://encyclomedia.net",
     "lat": 33.7550,
@@ -267,7 +267,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": screening_venue_id,
+                        "place_id": screening_venue_id,
                         "title": title,
                         "description": description,
                         "start_date": start_date,

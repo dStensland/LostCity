@@ -44,7 +44,7 @@ PLACE_DATA = {
     "zip": "30315",
     "lat": 33.7328,
     "lng": -84.3696,
-    "venue_type": "zoo",
+    "place_type": "zoo",
     "spot_type": "zoo",
     "website": BASE_URL,
     # Hours vary seasonally; 9:00-17:00 is the standard off-peak schedule.
@@ -80,7 +80,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "zoo",
             "commitment_tier": "halfday",
             "primary_activity": "family zoo visit",
@@ -104,7 +104,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "zoo",
+                "place_type": "zoo",
                 "city": "atlanta",
             },
         },
@@ -112,7 +112,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "animal-habitats-and-family-walking-circuits",
             "title": "Animal habitats and family walking circuits",
             "feature_type": "experience",
@@ -125,7 +125,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "grant-park-family-anchor",
             "title": "Grant Park family anchor",
             "feature_type": "amenity",
@@ -138,7 +138,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "shade-and-rest-break-pacing",
             "title": "Shade and rest-break pacing",
             "feature_type": "amenity",
@@ -325,7 +325,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if PLACE_DATA.get("description"):
                     venue_update["description"] = PLACE_DATA["description"]
                 if venue_update:
-                    get_client().table("venues").update(venue_update).eq("id", venue_id).execute()
+                    get_client().table("places").update(venue_update).eq("id", venue_id).execute()
                     logger.info("Zoo Atlanta: enriched venue record from homepage og: metadata")
             except Exception as _upd_exc:
                 logger.warning("Zoo Atlanta: venue update failed: %s", _upd_exc)
@@ -452,7 +452,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": description,
                             "start_date": start_date,

@@ -116,7 +116,7 @@ STATIC_VENUES = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://manuelstavern.com",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 1,  # Tuesday
@@ -130,7 +130,7 @@ STATIC_VENUES = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://wreckingbarbrewpub.com",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 2,  # Wednesday
@@ -144,7 +144,7 @@ STATIC_VENUES = [
         "city": "Decatur",
         "state": "GA",
         "zip": "30030",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://brickstorepub.com",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 0,  # Monday
@@ -158,7 +158,7 @@ STATIC_VENUES = [
         "city": "Decatur",
         "state": "GA",
         "zip": "30030",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://twains.net",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 1,  # Tuesday
@@ -172,7 +172,7 @@ STATIC_VENUES = [
         "city": "Decatur",
         "state": "GA",
         "zip": "30030",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://thinkingmantavern.com",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 3,  # Thursday
@@ -186,7 +186,7 @@ STATIC_VENUES = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://righteousroom.com",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 2,  # Wednesday
@@ -200,7 +200,7 @@ STATIC_VENUES = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://theporterbeerbar.com",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 0,  # Monday
@@ -214,7 +214,7 @@ STATIC_VENUES = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://maxlagers.com",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 1,  # Tuesday
@@ -228,7 +228,7 @@ STATIC_VENUES = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://argosybar.com",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 3,  # Thursday
@@ -242,7 +242,7 @@ STATIC_VENUES = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://facebook.com/marysatl",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 2,  # Wednesday
@@ -256,7 +256,7 @@ STATIC_VENUES = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30310",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://mondaynightbrewing.com",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 1,  # Tuesday
@@ -270,7 +270,7 @@ STATIC_VENUES = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://ormsbysatl.com",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 3,  # Thursday
@@ -284,7 +284,7 @@ STATIC_VENUES = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "bar",
+        "place_type": "bar",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 2,  # Wednesday
         "start_time": "20:00",
@@ -297,7 +297,7 @@ STATIC_VENUES = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://mellowmushroom.com",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 2,  # Wednesday
@@ -311,7 +311,7 @@ STATIC_VENUES = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://gordonbiersch.com",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 0,  # Monday
@@ -325,7 +325,7 @@ STATIC_VENUES = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30305",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://tacomac.com",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 3,  # Thursday
@@ -339,7 +339,7 @@ STATIC_VENUES = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30313",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://derbiergarten.com",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 1,  # Tuesday
@@ -353,7 +353,7 @@ STATIC_VENUES = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30341",
-        "venue_type": "bar",
+        "place_type": "bar",
         "gwd_url": "https://www.geekswhodrink.com/venues/",
         "day": 2,  # Wednesday
         "start_time": "20:00",
@@ -717,7 +717,7 @@ def venue_dict_to_db(v: dict) -> dict:
         "state": v.get("state", "GA"),
         "zip": v.get("zip", ""),
         "neighborhood": v.get("neighborhood", ""),
-        "venue_type": venue_type,
+        "place_type": venue_type,
         "spot_type": venue_type,
         "website": v.get("website", ""),
     }
@@ -777,7 +777,7 @@ def generate_events_for_venue(
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": "Geeks Who Drink Pub Quiz",
             "description": (
                 f"Weekly Geeks Who Drink pub quiz night at {venue_name}. "

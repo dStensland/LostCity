@@ -130,7 +130,7 @@ def main() -> None:
     # Fetch all active venues for the target city.
     # We pull name, slug, venue_type, city, neighborhood so we can report clearly.
     result = (
-        client.table("venues")
+        client.table("places")
         .select("id, name, slug, venue_type, city, neighborhood, address")
         .neq("active", False)
         .eq("city", args.city)
@@ -200,7 +200,7 @@ def main() -> None:
         # Batch in chunks of 50 to stay within Supabase URL limits
         for i in range(0, len(ids), 50):
             chunk = ids[i : i + 50]
-            client.table("venues").update({"venue_type": "trail"}).in_("id", chunk).execute()
+            client.table("places").update({"place_type": "trail"}).in_("id", chunk).execute()
             updated += len(chunk)
         print(f"\n  Applied venue_type='trail' to {updated} venues.")
     elif not args.apply and candidates:

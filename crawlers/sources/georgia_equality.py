@@ -39,7 +39,7 @@ PLACE_DATA = {
     "zip": "30301",
     "lat": 33.7545,
     "lng": -84.3898,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "nonprofit",
     "website": BASE_URL,
     "description": "LGBTQ+ advocacy organization advancing fairness, safety, and opportunity for LGBTQ Georgians.",
@@ -89,7 +89,7 @@ def extract_location_info(location_str: str) -> Optional[dict]:
             "zip": "30334",
             "lat": 33.7490,
             "lng": -84.3880,
-            "venue_type": "government",
+            "place_type": "government",
             "spot_type": "landmark",
             "website": "https://doas.ga.gov/state-properties/georgia-state-capitol",
         }
@@ -221,7 +221,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Build event record
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": summary[:200],
                     "description": description[:1000] if description else None,
                     "start_date": start_date,

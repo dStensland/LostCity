@@ -25,12 +25,12 @@ def main():
 
     # Get IDs of food venues missing cuisine that have websites
     result = (
-        client.table("venues")
+        client.table("places")
         .select("id")
         .eq("active", True)
         .is_("cuisine", "null")
         .not_.is_("website", "null")
-        .in_("venue_type", FOOD_TYPES)
+        .in_("place_type", FOOD_TYPES)
         .order("id")
         .limit(5000)
         .execute()

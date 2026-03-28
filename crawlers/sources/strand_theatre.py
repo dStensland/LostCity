@@ -28,7 +28,7 @@ PLACE_DATA = {
     "zip": "30060",
     "lat": 33.9526,
     "lng": -84.5499,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": BASE_URL,
     "description": "Historic 1935 art deco theater in Marietta Square presenting concerts, comedy, films, and live performances.",
@@ -301,7 +301,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": event.get("description", f"{title} at the historic Strand Theatre in Marietta Square"),
             "start_date": start_date,

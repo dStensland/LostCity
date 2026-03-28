@@ -184,7 +184,7 @@ def test_get_sibling_venue_ids_prefers_parent_linked_active_family():
     client = MagicMock()
     client.table.return_value = query
 
-    with patch("db.places.get_venue_by_id", return_value={"id": 104, "name": "The Masquerade - Hell", "parent_venue_id": 364}), patch(
+    with patch("db.places.get_venue_by_id", return_value={"id": 104, "name": "The Masquerade - Hell", "parent_place_id": 364}), patch(
         "db.places.get_client", return_value=client
     ):
         assert sorted(get_sibling_venue_ids(104)) == [104, 112, 364]
@@ -202,7 +202,7 @@ def test_get_sibling_venue_ids_falls_back_to_active_name_match_for_masquerade_fa
     client = MagicMock()
     client.table.return_value = query
 
-    with patch("db.places.get_venue_by_id", return_value={"id": 104, "name": "The Masquerade - Hell", "parent_venue_id": None}), patch(
+    with patch("db.places.get_venue_by_id", return_value={"id": 104, "name": "The Masquerade - Hell", "parent_place_id": None}), patch(
         "db.places.get_client", return_value=client
     ):
         assert sorted(get_sibling_venue_ids(104)) == [104, 112, 364]
@@ -220,7 +220,7 @@ def test_db_venues_get_sibling_venue_ids_prefers_parent_linked_active_family():
     client = MagicMock()
     client.table.return_value = query
 
-    with patch("db.places.get_venue_by_id", return_value={"id": 104, "name": "The Masquerade - Hell", "parent_venue_id": 364}), patch(
+    with patch("db.places.get_venue_by_id", return_value={"id": 104, "name": "The Masquerade - Hell", "parent_place_id": 364}), patch(
         "db.places.get_client", return_value=client
     ):
         assert sorted(get_sibling_venue_ids(104)) == [104, 112, 364]
@@ -248,7 +248,7 @@ def test_find_existing_event_by_natural_key_falls_back_when_start_time_changes(
                     "id": 1047,
                     "title": "Atlanta Hawks v. Dallas Mavericks",
                     "source_id": 11,
-                    "venue_id": 126,
+                    "place_id": 126,
                     "start_date": "2026-03-10",
                     "start_time": "20:00:00",
                     "ticket_url": "https://www.ticketmaster.com/event/abc",
@@ -262,7 +262,7 @@ def test_find_existing_event_by_natural_key_falls_back_when_start_time_changes(
     existing = find_existing_event_by_natural_key(
         {
             "source_id": 11,
-            "venue_id": 126,
+            "place_id": 126,
             "start_date": "2026-03-10",
             "start_time": "19:30:00",
             "title": "Atlanta Hawks vs. Dallas Mavericks",
@@ -297,7 +297,7 @@ def test_find_existing_event_by_natural_key_skips_ambiguous_same_day_url_matches
                     "id": 60220,
                     "title": "Harry Potter and the Cursed Child (Touring)",
                     "source_id": 11,
-                    "venue_id": 119,
+                    "place_id": 119,
                     "start_date": "2026-03-21",
                     "start_time": "13:00:00",
                     "ticket_url": "https://www.ticketmaster.com/event/Z7r9jZ1A7fEaf",
@@ -308,7 +308,7 @@ def test_find_existing_event_by_natural_key_skips_ambiguous_same_day_url_matches
                     "id": 13938,
                     "title": "Harry Potter and the Cursed Child (Touring)",
                     "source_id": 11,
-                    "venue_id": 119,
+                    "place_id": 119,
                     "start_date": "2026-03-21",
                     "start_time": "19:00:00",
                     "ticket_url": "https://www.ticketmaster.com/event/Z7r9jZ1A7fEaf",
@@ -322,7 +322,7 @@ def test_find_existing_event_by_natural_key_skips_ambiguous_same_day_url_matches
     existing = find_existing_event_by_natural_key(
         {
             "source_id": 11,
-            "venue_id": 119,
+            "place_id": 119,
             "start_date": "2026-03-21",
             "start_time": "15:00:00",
             "title": "Harry Potter and the Cursed Child (Touring)",
@@ -356,7 +356,7 @@ def test_find_existing_event_by_natural_key_skips_generic_calendar_for_repeated_
                     "id": 118479,
                     "title": "Delivery Driver Volunteer",
                     "source_id": 804,
-                    "venue_id": 162,
+                    "place_id": 162,
                     "start_date": "2026-03-10",
                     "start_time": "09:00",
                     "ticket_url": "https://donate.openhandatlanta.org/volunteer_calendar",
@@ -370,7 +370,7 @@ def test_find_existing_event_by_natural_key_skips_generic_calendar_for_repeated_
     existing = find_existing_event_by_natural_key(
         {
             "source_id": 804,
-            "venue_id": 162,
+            "place_id": 162,
             "start_date": "2026-03-10",
             "start_time": "10:00",
             "title": "Delivery Driver Volunteer",
@@ -441,7 +441,7 @@ class TestGetOrCreateVenue:
         venue_id = get_or_create_place(sample_venue_data)
 
         assert venue_id == 42
-        client.table.assert_called_with("venues")
+        client.table.assert_called_with("places")
 
     @patch("db.places._maybe_update_existing_venue")
     @patch("db.places.writes_enabled", return_value=True)
@@ -459,19 +459,19 @@ class TestGetOrCreateVenue:
         table.eq.return_value = table
         table.update.return_value = table
         table.execute.side_effect = [
-            MagicMock(data=[{"id": 42, "active": False}]),
+            MagicMock(data=[{"id": 42, "is_active": False}]),
             MagicMock(data=[{"id": 42}]),  # reactivate update
             MagicMock(data=[{"id": 42}]),  # verified_at touch
         ]
 
         from db import get_or_create_place
 
-        venue_id = get_or_create_place({**sample_venue_data, "active": True})
+        venue_id = get_or_create_place({**sample_venue_data, "is_active": True})
 
         assert venue_id == 42
         # First update call is reactivation, second is verified_at touch
         update_calls = table.update.call_args_list
-        assert any(call.args == ({"active": True},) for call in update_calls)
+        assert any(call.args == ({"is_active": True},) for call in update_calls)
 
     @patch("db.places._maybe_update_existing_venue")
     @patch("db.places.get_client")
@@ -871,9 +871,9 @@ class TestInsertEvent:
             "id": 123,
             "name": "Churchill Grounds",
             "slug": "churchill-grounds",
-            "active": False,
+            "is_active": False,
             "vibes": [],
-            "venue_type": "cafe",
+            "place_type": "cafe",
             "state": "GA",
         },
     )
@@ -1641,7 +1641,7 @@ class TestSmartUpdateExistingEvent:
 
     @patch("db.events.get_source_info", return_value=None)
     @patch(
-        "db.events.get_venue_by_id_cached", return_value={"active": True, "slug": "open-venue"}
+        "db.events.get_venue_by_id_cached", return_value={"is_active": True, "slug": "open-venue"}
     )
     @patch("db.events.events_support_content_kind_column", return_value=False)
     @patch("db.events.events_support_is_active_column", return_value=True)
@@ -1684,7 +1684,7 @@ class TestSmartUpdateExistingEvent:
     @patch("db.events.get_source_info", return_value=None)
     @patch(
         "db.events.get_venue_by_id_cached",
-        return_value={"active": False, "slug": "churchill-grounds"},
+        return_value={"is_active": False, "slug": "churchill-grounds"},
     )
     @patch("db.events.events_support_content_kind_column", return_value=False)
     @patch("db.events.events_support_is_active_column", return_value=True)
@@ -1719,9 +1719,9 @@ class TestSmartUpdateExistingEvent:
             "source_id": 1,
             "category_id": "music",
             "is_active": False,
-            "venue_id": 321,
+            "place_id": 321,
         }
-        incoming = {"title": "Jazz Night", "category": "music", "venue_id": 321}
+        incoming = {"title": "Jazz Night", "category": "music", "place_id": 321}
 
         updated = smart_update_existing_event(existing, incoming)
 
@@ -1789,12 +1789,14 @@ class TestSmartUpdateExistingEvent:
     @patch("db.events.events_support_content_kind_column", return_value=False)
     @patch("db.events.events_support_is_active_column", return_value=False)
     @patch("db.events.get_client")
+    @patch("db.events.get_venue_by_id_cached", return_value=None)
     @patch("genre_normalize.normalize_genres", return_value=[])
     @patch("tag_inference.infer_genres", return_value=[])
     def test_updates_start_time_when_same_source_event_time_is_corrected(
         self,
         _mock_infer_genres,
         _mock_normalize_genres,
+        _mock_venue_cached,
         mock_get_client,
         _mock_events_active,
         _mock_content_kind,
@@ -1815,7 +1817,7 @@ class TestSmartUpdateExistingEvent:
             "id": 1047,
             "title": "Atlanta Hawks v. Dallas Mavericks",
             "source_id": 11,
-            "venue_id": 126,
+            "place_id": 126,
             "start_date": "2026-03-10",
             "start_time": "20:00:00",
             "ticket_url": "https://www.ticketmaster.com/event/abc",
@@ -1825,7 +1827,7 @@ class TestSmartUpdateExistingEvent:
         incoming = {
             "title": "Atlanta Hawks vs. Dallas Mavericks",
             "source_id": 11,
-            "venue_id": 126,
+            "place_id": 126,
             "start_date": "2026-03-10",
             "start_time": "19:30:00",
             "ticket_url": "https://www.ticketmaster.com/event/abc",
@@ -2259,7 +2261,7 @@ class TestCrossSourceCanonicalSelection:
         canonical_id = find_cross_source_canonical_for_insert(
             {
                 "source_id": 2000,
-                "venue_id": 333,
+                "place_id": 333,
                 "start_date": "2026-02-18",
                 "start_time": "19:00",
                 "title": "Bocce League at The Painted Duck",

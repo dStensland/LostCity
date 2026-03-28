@@ -42,7 +42,7 @@ PLACE_DATA = {
     "zip": "30313",
     "lat": 33.7606,
     "lng": -84.3930,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": HOMEPAGE,
     # Hours verified 2026-03-11 — park open daily 07:00-23:00
@@ -74,7 +74,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "park",
             "commitment_tier": "halfday",
             "primary_activity": "family downtown park visit",
@@ -107,7 +107,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "fountain-rings-and-water-play",
             "title": "Fountain Rings and water play",
             "feature_type": "amenity",
@@ -120,7 +120,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "free-downtown-open-lawn-and-gather-space",
             "title": "Free downtown open lawn and gather space",
             "feature_type": "amenity",
@@ -133,7 +133,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "flat-paved-downtown-stroller-loop",
             "title": "Flat paved downtown stroller loop",
             "feature_type": "experience",
@@ -146,7 +146,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "free-water-play-downtown-reset",
             "title": "Free water-play downtown reset",
             "feature_type": "amenity",
@@ -228,7 +228,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning(
                 "Centennial Olympic Park: venue update failed: %s", exc

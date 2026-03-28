@@ -55,7 +55,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30314",
-        "venue_type": "stadium",
+        "place_type": "stadium",
         "website": "https://morehousemaroontigers.com",
     },
     "default": {
@@ -66,7 +66,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30314",
-        "venue_type": "university",
+        "place_type": "university",
         "website": "https://morehouse.edu",
     },
 }
@@ -206,7 +206,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description[:500] if description else "Event at Morehouse College, a historic HBCU in Atlanta.",
                 "start_date": start_date,

@@ -55,7 +55,7 @@ def update_venues():
     
     for slug, updates in VENUE_UPDATES.items():
         # Get current venue data
-        result = client.table("venues").select("id, name, lat, lng, vibes, neighborhood").eq("slug", slug).execute()
+        result = client.table("places").select("id, name, lat, lng, vibes, neighborhood").eq("slug", slug).execute()
         
         if not result.data or len(result.data) == 0:
             logger.warning(f"Venue '{slug}' not found, skipping")
@@ -79,7 +79,7 @@ def update_venues():
                     logger.info(f"  Merging {key}: {merged_vibes}")
         
         if updates_to_apply:
-            client.table("venues").update(updates_to_apply).eq("slug", slug).execute()
+            client.table("places").update(updates_to_apply).eq("slug", slug).execute()
             logger.info(f"✓ Updated {venue['name']} (ID: {venue['id']})\n")
         else:
             logger.info(f"✓ {venue['name']} already has all data\n")

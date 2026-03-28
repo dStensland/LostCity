@@ -90,7 +90,7 @@ def _extract_venue_data(soup: BeautifulSoup) -> dict:
             "lat": geo.get("latitude"),
             "lng": geo.get("longitude"),
             "neighborhood": "Alpharetta",
-            "venue_type": "fitness_center",
+            "place_type": "fitness_center",
             "spot_type": "fitness",
             "website": SOURCE_URL,
             "phone": payload.get("telephone"),
@@ -252,7 +252,7 @@ def _build_event_record(
     description = _build_description(row, venue)
     record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,

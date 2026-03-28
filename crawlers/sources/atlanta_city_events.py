@@ -529,7 +529,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "city": city,
                         "state": state,
                         "zip": zip_code,
-                        "venue_type": venue_type,
+                        "place_type": venue_type,
                         "website": BASE_URL,
                     }
 
@@ -568,7 +568,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Create event record
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": event_data["title"],
                         "description": enrichment["description"],
                         "start_date": start_date,

@@ -149,7 +149,7 @@ def _make_event(
         "title": title,
         "start_date": start_date,
         "start_time": None,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "source_id": source_id,
         "canonical_event_id": None,
         "image_url": None,

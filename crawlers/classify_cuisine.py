@@ -261,16 +261,16 @@ def run_classification(
 
     # Fetch active food/drink venues missing cuisine
     query = (
-        client.table("venues")
+        client.table("places")
         .select("id, name, slug, venue_type, website, price_level, service_style")
         .eq("active", True)
         .is_("cuisine", "null")
     )
 
     if venue_type:
-        query = query.eq("venue_type", venue_type)
+        query = query.eq("place_type", venue_type)
     else:
-        query = query.in_("venue_type", list(FOOD_VENUE_TYPES))
+        query = query.in_("place_type", list(FOOD_VENUE_TYPES))
 
     result = query.order("name").limit(5000).execute()
     venues = result.data or []
@@ -311,7 +311,7 @@ def run_classification(
                 updates = {"cuisine": cuisines}
                 if service_style and not v.get("service_style"):
                     updates["service_style"] = service_style
-                client.table("venues").update(updates).eq("id", v["id"]).execute()
+                client.table("places").update(updates).eq("id", v["id"]).execute()
 
             stats["rule_cuisine"] += 1
             if service_style and not v.get("service_style"):
@@ -320,7 +320,7 @@ def run_classification(
             # Still set service_style if we can infer it
             if service_style and not v.get("service_style"):
                 if not dry_run:
-                    client.table("venues").update(
+                    client.table("places").update(
                         {"service_style": service_style}
                     ).eq("id", v["id"]).execute()
                 stats["service_style_set"] += 1
@@ -367,7 +367,7 @@ def run_classification(
                             updates = {"cuisine": cuisines}
                             if style and not v.get("service_style"):
                                 updates["service_style"] = style
-                            client.table("venues").update(updates).eq("id", vid).execute()
+                            client.table("places").update(updates).eq("id", vid).execute()
 
                         stats["llm_cuisine"] += 1
                         if style and not v.get("service_style"):
@@ -376,7 +376,7 @@ def run_classification(
                         # LLM returned unknown — still set service style
                         if style and not v.get("service_style"):
                             if not dry_run:
-                                client.table("venues").update(
+                                client.table("places").update(
                                     {"service_style": style}
                                 ).eq("id", vid).execute()
                             stats["service_style_set"] += 1

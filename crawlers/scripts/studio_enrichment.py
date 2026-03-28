@@ -116,9 +116,9 @@ def enrich_studio(venue: dict, dry_run: bool = True) -> dict:
 def run_enrichment(dry_run: bool = True):
     client = get_client()
 
-    result = client.table("venues").select(
+    result = client.table("places").select(
         "id, name, website, venue_type, studio_type"
-    ).eq("venue_type", "studio").is_("studio_type", "null").execute()
+    ).eq("place_type", "studio").is_("studio_type", "null").execute()
 
     venues = result.data
     logger.info("Unenriched studio venues: %d", len(venues))
@@ -129,7 +129,7 @@ def run_enrichment(dry_run: bool = True):
         updates = enrich_studio(venue, dry_run=dry_run)
 
         if updates and not dry_run:
-            client.table("venues").update(updates).eq("id", venue["id"]).execute()
+            client.table("places").update(updates).eq("id", venue["id"]).execute()
             enriched += 1
         elif updates:
             enriched += 1

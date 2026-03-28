@@ -23,7 +23,7 @@ PLACE_DATA = {
     "zip": "30316",
     "lat": 33.7381,
     "lng": -84.3444,
-    "venue_type": "bookstore",
+    "place_type": "bookstore",
     "website": BASE_URL,
 }
 
@@ -36,7 +36,7 @@ BOOK_CLUB_VENUE_HOLY_TACO = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30316",
-    "venue_type": "restaurant",
+    "place_type": "restaurant",
     "website": "https://holytacoatl.com",
 }
 
@@ -48,7 +48,7 @@ BOOK_CLUB_VENUE_MANUELS = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30307",
-    "venue_type": "bar",
+    "place_type": "bar",
     "website": "https://manuelstavern.com",
 }
 
@@ -113,7 +113,7 @@ def generate_book_club_events(source_id: int, months_ahead: int = 3) -> list[dic
 
             events.append({
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": start_date,

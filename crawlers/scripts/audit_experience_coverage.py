@@ -169,7 +169,7 @@ def main():
     client = get_client()
 
     # Fetch all active venues
-    result = client.table("venues").select(
+    result = client.table("places").select(
         "id, name, venue_type, city, neighborhood, active"
     ).eq("active", True).execute()
     all_venues = result.data or []

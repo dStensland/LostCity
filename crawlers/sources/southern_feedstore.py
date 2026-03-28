@@ -31,7 +31,7 @@ PLACE_DATA = {
     "zip": "30316",
     "lat": 33.7400,
     "lng": -84.3420,
-    "venue_type": "food_hall",
+    "place_type": "food_hall",
     "spot_type": "food_hall",
     "website": BASE_URL,
     "description": "EAV food hall with 6 kitchens, full bar, and stage for live music and comedy. Open til 4am weekends.",
@@ -206,7 +206,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": venue_id,
+                                "place_id": venue_id,
                                 "title": title,
                                 "description": f"Event at Southern Feedstore, EAV's food hall and entertainment venue",
                                 "start_date": start_date,

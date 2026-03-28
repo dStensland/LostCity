@@ -36,7 +36,7 @@ PLACE_DATA = {
     "zip": "30606",
     "lat": 33.9159,
     "lng": -83.4651,
-    "venue_type": "hospital",
+    "place_type": "hospital",
     "website": f"{BASE_URL}/locations/piedmont-athens",
 }
 
@@ -235,7 +235,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                         if not existing:
                                             event_record = {
                                                 "source_id": source_id,
-                                                "venue_id": venue_id,
+                                                "place_id": venue_id,
                                                 "portal_id": portal_id,
                                                 "title": title,
                                                 "description": None,
@@ -298,7 +298,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "portal_id": portal_id,
                     "title": title,
                     "description": description,

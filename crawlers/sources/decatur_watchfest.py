@@ -26,7 +26,7 @@ PLACE_DATA = {
     "zip": "30030",
     "lat": 33.7749,
     "lng": -84.2961,
-    "venue_type": "public_space",
+    "place_type": "public_space",
     "spot_type": "public_space",
     "website": "https://www.decaturga.com/",
 }
@@ -62,7 +62,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": (
             "Decatur WatchFest is a free citywide World Cup fan experience on and around "

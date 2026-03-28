@@ -32,7 +32,7 @@ class NCGAtlantaCrawler(ChainCinemaCrawler):
                 "city": "Acworth",
                 "state": "GA",
                 "zip": "30101",
-                "venue_type": "cinema",
+                "place_type": "cinema",
                 "website": "https://www.ncgmovies.com/movie-theater/acworth",
                 "lat": 34.0649,
                 "lng": -84.6671,

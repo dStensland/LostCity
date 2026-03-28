@@ -40,7 +40,7 @@ PLACE_DATA = {
     "zip": "30307",
     "lat": 33.7583,
     "lng": -84.3560,
-    "venue_type": "venue",
+    "place_type": "venue",
     "spot_type": "shop",
     "website": BASE_URL,
 }
@@ -205,7 +205,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title[:500],
                         "description": None,
                         "start_date": start_date,
@@ -255,7 +255,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": "Free drop-in knit and crochet session. All crafts welcome. In-person and virtual (Zoom). Bring your project, meet other crafters.",
                     "start_date": None,

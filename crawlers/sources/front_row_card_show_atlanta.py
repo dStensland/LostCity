@@ -37,7 +37,7 @@ SHOW_VENUE = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30339",
-    "venue_type": "convention_center",
+    "place_type": "convention_center",
     "spot_type": "convention_center",
     "website": "https://cobbgalleria.com/",
 }
@@ -49,7 +49,7 @@ TRADE_NIGHT_VENUE = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30339",
-    "venue_type": "event_space",
+    "place_type": "event_space",
     "spot_type": "event_space",
     "website": "https://cardshq.com/",
 }
@@ -194,7 +194,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_ids[venue_slug],
+            "place_id": venue_ids[venue_slug],
             "title": title,
             "description": description,
             "start_date": session["start_date"],

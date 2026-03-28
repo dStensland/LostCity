@@ -309,13 +309,13 @@ def fetch_target_venues(
 ) -> list[dict]:
     """Query Supabase venues for bars/restaurants/etc. in Atlanta with a website."""
     query = (
-        client_sb.table("venues")
+        client_sb.table("places")
         .select("id, name, slug, website, venue_type, city, state")
         .eq("city", "Atlanta")
         .eq("state", "GA")
         .not_.is_("website", "null")
         .neq("website", "")
-        .in_("venue_type", list(TARGET_VENUE_TYPES))
+        .in_("place_type", list(TARGET_VENUE_TYPES))
         .order("name")
     )
 
@@ -404,7 +404,7 @@ def insert_recurring_event(
             "description": description or None,
             "category": category,
             "subcategory": subcategory,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "source_url": website,
             "is_recurring": True,
             "content_hash": content_hash,
@@ -535,7 +535,7 @@ def process_venues(
                 )
 
             result_entry: dict = {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "venue_name": venue_name,
                 "venue_slug": venue_slug,
                 "website": website,

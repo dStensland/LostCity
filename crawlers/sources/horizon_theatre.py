@@ -55,7 +55,7 @@ PLACE_DATA = {
     "zip": "30307",
     "lat": 33.7645,
     "lng": -84.3485,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": BASE_URL,
 }
@@ -257,7 +257,7 @@ def _crawl_horizon_education(source_id: int, venue_id: int) -> tuple[int, int, i
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,
@@ -463,7 +463,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description or f"{title} at Horizon Theatre",
                         "start_date": start_date,

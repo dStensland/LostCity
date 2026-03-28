@@ -29,7 +29,7 @@ class _Crawler(GenericExhibitionCrawler):
         "zip": "30310",
         "lat": 33.7257,
         "lng": -84.4302,
-        "venue_type": "gallery",
+        "place_type": "gallery",
         "website": "https://www.atlantaphotography.org",
     }
 

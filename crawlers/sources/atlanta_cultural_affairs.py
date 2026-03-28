@@ -27,7 +27,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "park",
+        "place_type": "park",
         "website": "https://piedmontpark.org",
     },
     "chastain": {
@@ -38,7 +38,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30327",
-        "venue_type": "amphitheater",
+        "place_type": "amphitheater",
         "website": "https://www.livenation.com",
     },
     "woodruff_park": {
@@ -49,7 +49,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30303",
-        "venue_type": "park",
+        "place_type": "park",
         "website": "https://www.atlantaga.gov",
     },
 }
@@ -97,7 +97,7 @@ def generate_annual_events(source_id: int, year: int) -> list[dict]:
 
             event_data = {
                 "source_id": source_id,
-                "venue_id": piedmont_venue_id,
+                "place_id": piedmont_venue_id,
                 "title": title,
                 "description": day_description,
                 "start_date": day_date,

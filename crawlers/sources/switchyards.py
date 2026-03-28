@@ -32,7 +32,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7589,
     "lng": -84.3944,
-    "venue_type": "coworking",
+    "place_type": "coworking",
     "spot_type": "coworking",
     "website": BASE_URL,
 }
@@ -161,7 +161,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at Switchyards",
                         "start_date": start_date,

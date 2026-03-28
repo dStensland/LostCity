@@ -33,7 +33,7 @@ PLACE_DATA = {
     "city": "Riverdale",
     "state": "GA",
     "zip": "30274",
-    "venue_type": "nonprofit_hq",
+    "place_type": "nonprofit_hq",
     "spot_type": "community_center",
     "website": BASE_URL,
     "vibes": ["faith-muslim"],
@@ -292,7 +292,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": venue_id,
+                                "place_id": venue_id,
                                 "title": title,
                                 "description": description if description else None,
                                 "start_date": start_date,

@@ -39,7 +39,7 @@ PLACE_DATA = {
     "zip": "30308",
     "lat": 33.7724,
     "lng": -84.3654,
-    "venue_type": "music_venue",
+    "place_type": "music_venue",
     "spot_type": "music_venue",
     "website": BASE_URL + "/atlanta",
 }
@@ -231,7 +231,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description or f"{title} at City Winery Atlanta",
                     "start_date": start_date,

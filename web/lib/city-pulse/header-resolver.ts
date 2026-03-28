@@ -444,11 +444,11 @@ async function countVenues(
 ): Promise<number> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let q = (supabase as any)
-    .from("venues")
+    .from("places")
     .select("id", { count: "exact", head: true })
     .eq("active", true);
 
-  if (query.venue_type) q = q.eq("venue_type", query.venue_type);
+  if (query.venue_type) q = q.eq("place_type", query.venue_type);
   if (query.category) q = q.contains("venue_types", [query.category]);
   if (portalCity) q = q.ilike("city", `%${portalCity}%`);
 

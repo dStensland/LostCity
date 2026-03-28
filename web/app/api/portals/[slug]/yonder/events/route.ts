@@ -230,7 +230,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       price_max,
       source_id,
       tags,
-      venue:venues(name, slug, image_url, hero_image_url, neighborhood),
+      venue:places(name, slug, image_url, hero_image_url, neighborhood),
       source:sources!events_source_id_fkey(name)
       `,
     )

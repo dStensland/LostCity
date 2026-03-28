@@ -501,7 +501,7 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
 
             event_record = {
                 "source_id": source["id"],
-                "venue_id": default_venue_id,
+                "place_id": default_venue_id,
                 "title": title,
                 "description": enriched.get("description") or seed.get("description"),
                 "start_date": start_date,
@@ -689,7 +689,7 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
 
         event_record = {
             "source_id": source["id"],
-            "venue_id": default_venue_id,
+            "place_id": default_venue_id,
             "title": title,
             "description": enriched.get("description") or seed.get("description"),
             "start_date": start_date,
@@ -877,7 +877,7 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
 
         event_record = {
             "source_id": source["id"],
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": enriched.get("description") or event.get("description"),
             "start_date": start_date,
@@ -1021,7 +1021,7 @@ def _process_api_events(events: list[dict], source: dict, profile, default_venue
 
         event_record = {
             "source_id": source["id"],
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": event.get("description"),
             "start_date": start_date,

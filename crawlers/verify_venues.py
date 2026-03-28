@@ -30,7 +30,7 @@ def verify_venues():
     logger.info("\n=== VENUE VERIFICATION ===\n")
     
     for slug, name in VENUES_TO_CHECK:
-        result = client.table("venues").select("id, name, slug, neighborhood, lat, lng, vibes").eq("slug", slug).execute()
+        result = client.table("places").select("id, name, slug, neighborhood, lat, lng, vibes").eq("slug", slug).execute()
         
         if result.data and len(result.data) > 0:
             venue = result.data[0]
@@ -42,7 +42,7 @@ def verify_venues():
             logger.info(f"  Vibes: {vibes_str}\n")
         else:
             # Try finding by name
-            result = client.table("venues").select("id, name, slug, neighborhood, lat, lng, vibes").eq("name", name).execute()
+            result = client.table("places").select("id, name, slug, neighborhood, lat, lng, vibes").eq("name", name).execute()
             if result.data and len(result.data) > 0:
                 venue = result.data[0]
                 vibes = venue.get('vibes', [])

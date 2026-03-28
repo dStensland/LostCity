@@ -63,7 +63,7 @@ PLACE_DATA = {
     # 437 Moreland Ave NE — directly across from The Vortex (438 Moreland)
     "lat": 33.7636,
     "lng": -84.3499,
-    "venue_type": "bar",
+    "place_type": "bar",
     "spot_type": "bar",
     "website": BASE_URL,
     "vibes": [
@@ -357,7 +357,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": excerpt_text or None,
                 "start_date": start_date,
@@ -431,7 +431,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": template["title"],
                 "description": template["description"],
                 "start_date": start_date,

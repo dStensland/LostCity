@@ -81,7 +81,7 @@ PLACE_DATA = {
     "zip": "30097",
     "lat": 33.9726,
     "lng": -84.1450,
-    "venue_type": "arts_center",
+    "place_type": "arts_center",
     "spot_type": "arts_center",
     "website": "https://www.thehudgens.org",
     "vibes": ["family-friendly", "artsy", "all-ages"],
@@ -631,7 +631,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record: dict = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,

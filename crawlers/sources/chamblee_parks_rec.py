@@ -29,7 +29,7 @@ PLACE_DATA = {
     "zip": "30341",
     "lat": 33.8892,
     "lng": -84.2997,
-    "venue_type": "community_center",
+    "place_type": "community_center",
     "spot_type": "community_center",
     "website": "https://www.chambleega.com/157/Parks-Recreation",
     "vibes": ["family-friendly", "educational"],
@@ -49,7 +49,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "community_recreation_center",
             "commitment_tier": "halfday",
             "primary_activity": "family recreation center visit",
@@ -70,7 +70,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": ACTIVITIES_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": PLACE_DATA.get("venue_type"),
+                "place_type": PLACE_DATA.get("venue_type"),
                 "city": "chamblee",
             },
         },
@@ -78,7 +78,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "indoor-family-recreation-space",
             "title": "Indoor family recreation space",
             "feature_type": "amenity",
@@ -92,7 +92,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "family-classes-and-seasonal-camps",
             "title": "Family classes and seasonal camps",
             "feature_type": "experience",

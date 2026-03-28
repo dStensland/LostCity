@@ -55,7 +55,7 @@ def crawl_ryman_auditorium(source: dict) -> tuple[int, int, int]:
         "zip": "37219",
         "lat": 36.1611,
         "lng": -86.7785,
-        "venue_type": "music_venue",
+        "place_type": "music_venue",
         "website": "https://www.ryman.com",
         "vibes": ["historic", "legendary", "acoustic", "iconic", "mother-church"]
     }
@@ -89,7 +89,7 @@ def crawl_ryman_auditorium(source: dict) -> tuple[int, int, int]:
             # Create event record
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": None,  # Extract if available
                 "start_date": start_date,
@@ -190,7 +190,7 @@ def create_honky_tonk_continuous_events(source: dict) -> tuple[int, int, int]:
             "neighborhood": "Downtown",
             "city": "Nashville",
             "state": "TN",
-            "venue_type": "honky_tonk",
+            "place_type": "honky_tonk",
             "website": f"https://{honky_tonk['slug']}.com",  # Update with actual URLs
             "vibes": ["honky-tonk", "country", "live-music", "no-cover", "walk-ins"]
         }
@@ -218,7 +218,7 @@ def create_honky_tonk_continuous_events(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": f"Live Music at {honky_tonk['name']}",
                 "description": f"{honky_tonk['description']} Continuous live country music featuring rotating artists. Check venue social media for today's lineup.",
                 "start_date": event_date,
@@ -302,7 +302,7 @@ def crawl_nashville_scene_events(source: dict) -> tuple[int, int, int]:
                 "slug": slugify(venue_name),
                 "city": "Nashville",
                 "state": "TN",
-                "venue_type": "venue",  # Generic for now
+                "place_type": "venue",  # Generic for now
             }
             venue_id = get_or_create_place(place_data)
 
@@ -317,7 +317,7 @@ def crawl_nashville_scene_events(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "start_date": start_date,
                 "category": category,
@@ -383,7 +383,7 @@ def crawl_bluebird_cafe(source: dict) -> tuple[int, int, int]:
         "city": "Nashville",
         "state": "TN",
         "zip": "37215",
-        "venue_type": "listening_room",
+        "place_type": "listening_room",
         "website": "https://www.bluebirdcafe.com",
         "vibes": ["songwriter", "acoustic", "intimate", "legendary", "reservations"]
     }
@@ -425,7 +425,7 @@ def crawl_bluebird_cafe(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": "Intimate acoustic songwriter round featuring Nashville's finest tunesmiths. Reservations required.",
                 "start_date": start_date,
@@ -502,7 +502,7 @@ def crawl_cma_fest(source: dict) -> tuple[int, int, int]:
                 "slug": slugify(venue_name),
                 "city": "Nashville",
                 "state": "TN",
-                "venue_type": "festival_stage",
+                "place_type": "festival_stage",
             }
             venue_id = get_or_create_place(place_data)
 
@@ -526,7 +526,7 @@ def crawl_cma_fest(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "start_date": start_date,
                 "start_time": start_time,

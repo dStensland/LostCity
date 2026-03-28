@@ -109,7 +109,7 @@ def _build_venue_data(location: dict) -> dict:
         "lat": location["lat"],
         "lng": location["lng"],
         "neighborhood": location["short_name"],
-        "venue_type": "fitness_center",
+        "place_type": "fitness_center",
         "spot_type": "fitness",
         "website": location["website"],
         "vibes": ["family-friendly", "all-ages"],
@@ -364,7 +364,7 @@ def _build_event_record(
     description = _build_description(row, location)
     record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,

@@ -484,7 +484,7 @@ def _build_event_record(
 
     record: dict = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date_str,

@@ -48,7 +48,7 @@ PLACE_DATA = {
     "zip": "30307",
     "lat": 33.7735,
     "lng": -84.3237,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     "description": (
@@ -76,7 +76,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "science_center",
             "commitment_tier": "halfday",
             "primary_activity": "family science center visit",
@@ -99,7 +99,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": EVENTS_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "museum",
+                "place_type": "museum",
                 "city": "atlanta",
             },
         },
@@ -107,7 +107,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "free-planetarium-and-science-hall",
             "title": "Free planetarium and science hall",
             "feature_type": "amenity",
@@ -120,7 +120,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "observatory-and-free-learning-anchor",
             "title": "Observatory and free learning anchor",
             "feature_type": "amenity",
@@ -133,7 +133,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "free-stem-stop-with-real-depth",
             "title": "Free STEM stop with real depth",
             "feature_type": "amenity",
@@ -146,7 +146,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_specials",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "always-free-general-admission",
             "title": "Always-free general admission",
             "description": "General admission is free, making Fernbank Science Center one of the strongest recurring no-ticket STEM outings for families in the city.",
@@ -388,7 +388,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description[:1000] if description else None,
                     "start_date": start_date,

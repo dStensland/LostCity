@@ -607,7 +607,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
-        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, image_url, hero_image_url, active)
+        venue:places(id, name, neighborhood, slug, place_type, location_designator, city, lat, lng, image_url, hero_image_url, is_active)
       `;
 
   const sectionEventsCacheKey = buildSectionEventsCacheKey({
@@ -827,7 +827,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
         source_id,
-        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, image_url, hero_image_url, active)
+        venue:places(id, name, neighborhood, slug, place_type, location_designator, city, lat, lng, image_url, hero_image_url, is_active)
     `;
 
     // Merge all buckets into the pool
@@ -1066,7 +1066,7 @@ export async function GET(request: NextRequest, { params }: Props) {
             festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
           ),
           source_id,
-          venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, hero_image_url, active)
+          venue:places(id, name, neighborhood, slug, place_type, location_designator, city, image_url, hero_image_url, is_active)
         `,
           )
           .or(`start_date.gte.${today},end_date.gte.${today}`)
@@ -1140,7 +1140,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           .from("events")
           .select(
             eventSelect.replace(
-              "venue:venues(",
+              "venue:places(",
               "venue:venues!inner(",
             ),
           )
@@ -1305,7 +1305,7 @@ export async function GET(request: NextRequest, { params }: Props) {
               id,
               start_date,
               tags,
-              venue:venues(id, city, active)
+              venue:places(id, city, is_active)
           `,
             )
             .overlaps("tags", groupTags)
@@ -1395,7 +1395,7 @@ export async function GET(request: NextRequest, { params }: Props) {
                   day_of_week,
                   festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
                 ),
-                venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, hero_image_url, active)
+                venue:places(id, name, neighborhood, slug, place_type, location_designator, city, image_url, hero_image_url, is_active)
             `,
               )
               .in("id", holidayCandidateIds);

@@ -126,7 +126,7 @@ def main(dry_run: bool = False):
     slugs = list(REMAINING_ARTIFACTS.keys())
 
     # Fetch venues by slug
-    result = client.table("venues").select(
+    result = client.table("places").select(
         "id, name, slug, image_url"
     ).in_("slug", slugs).execute()
 
@@ -178,7 +178,7 @@ def main(dry_run: bool = False):
         found += 1
 
         if not dry_run:
-            client.table("venues").update(
+            client.table("places").update(
                 {"image_url": photo_url}
             ).eq("id", venue["id"]).execute()
             print(f"    Updated venue {venue['id']}")

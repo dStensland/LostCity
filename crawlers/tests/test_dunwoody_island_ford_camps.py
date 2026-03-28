@@ -51,7 +51,7 @@ def test_build_event_record_shapes_program_event() -> None:
 def test_build_destination_envelope_for_island_ford() -> None:
     envelope = _build_destination_envelope(4201)
 
-    assert envelope.destination_details[0]["venue_id"] == 4201
+    assert envelope.destination_details[0]["place_id"] == 4201
     assert envelope.destination_details[0]["destination_type"] == "park"
     assert envelope.destination_details[0]["parking_type"] == "free_lot"
     assert envelope.destination_details[0]["accessibility_notes"]

@@ -48,7 +48,7 @@ WAVE_15_DESTINATIONS = [
             "lat": 34.9607,
             "lng": -82.9237,
             "website": "https://southcarolinaparks.com/devils-fork",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Only public access to Lake Jocassee — crystal blue mountain reservoir with kayak rentals and waterfall hikes.",
             "description": "Devils Fork State Park is the sole public gateway to Lake Jocassee, a 7,500-acre mountain reservoir with exceptional water clarity and boat-access-only waterfalls. Kayak and boat rentals are available on-site. The park also connects to the Foothills Trail for serious waterfall hiking, and lakeside camping brings people back year after year.",
             "typical_duration_minutes": 480,
@@ -81,7 +81,7 @@ WAVE_15_DESTINATIONS = [
             "lat": 34.8261,
             "lng": -83.1472,
             "website": "https://www.clemson.edu/public/stumphouse/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Unfinished pre-Civil War railroad tunnel and adjacent 100-foot waterfall — two oddities in one short stop.",
             "description": "Stumphouse Tunnel is an unfinished antebellum railroad tunnel bored 1,617 feet into a granite mountain before the Civil War halted construction. A short walk away, Issaqueena Falls drops 100 feet over a series of cascades. Both sites are free to visit and make for a quick but genuinely unusual stop in the SC upstate.",
             "typical_duration_minutes": 90,
@@ -114,7 +114,7 @@ WAVE_15_DESTINATIONS = [
             "lat": 34.9956,
             "lng": -82.8803,
             "website": "https://southcarolinaparks.com/keowee-toxaway",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Cherokee interpretation center, lakeside trails along Lake Keowee, and a quiet escape from the more-visited SC parks.",
             "description": "Keowee-Toxaway State Park preserves the history of the Cherokee Lower Towns along the shores of Lake Keowee, with an interpretation center dedicated to the Cherokee people who called the area home. The park offers lakeside hiking trails, a primitive campground, and a cabin — far less crowded than nearby Table Rock or Caesars Head.",
             "typical_duration_minutes": 210,
@@ -147,7 +147,7 @@ WAVE_15_DESTINATIONS = [
             "lat": 34.9462,
             "lng": -82.3596,
             "website": "https://southcarolinaparks.com/paris-mountain",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Mountain lake, swimming, and 15 miles of trails minutes from downtown Greenville — a rare urban wilderness.",
             "description": "Paris Mountain State Park sits just five miles from downtown Greenville with a mountain lake, swimming, 15 miles of trails, and a mountain bike network. The park's proximity to a thriving city makes it one of the more accessible mountain escapes in the Southeast. CCC-built facilities add to the charm.",
             "typical_duration_minutes": 240,
@@ -180,7 +180,7 @@ WAVE_15_DESTINATIONS = [
             "lat": 35.1394,
             "lng": -81.3797,
             "website": "https://southcarolinaparks.com/kings-mountain",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Adjacent to the Revolutionary War battlefield, with a 16-mile backcountry trail and a working living history farm.",
             "description": "Kings Mountain State Park shares a border with Kings Mountain National Military Park, site of a pivotal 1780 Revolutionary War battle. The park itself offers a 16-mile backcountry trail, a living history farm with costumed interpreters, and camping. A good destination for combining outdoor recreation with American history.",
             "typical_duration_minutes": 240,
@@ -213,7 +213,7 @@ WAVE_15_DESTINATIONS = [
             "lat": 34.9168,
             "lng": -81.8701,
             "website": "https://southcarolinaparks.com/croft",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Former WWII army training camp converted into a state park with equestrian trails and Lake Craig fishing.",
             "description": "Croft State Park occupies the grounds of Camp Croft, a WWII infantry training camp. The park's 7,000 acres include 20 miles of equestrian trails (with stable facilities), hiking and mountain bike trails, and Lake Craig for fishing. The transformation from military base to public land gives it a distinctive, spacious character.",
             "typical_duration_minutes": 210,
@@ -249,7 +249,7 @@ WAVE_15_DESTINATIONS = [
             "lat": 34.3853,
             "lng": -85.6185,
             "website": "https://www.nps.gov/liri/index.htm",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Deepest canyon east of the Mississippi — 22-mile rim drive, multiple waterfalls, and swimming at Canyon Mouth Park.",
             "description": "Little River Canyon is one of the deepest canyons east of the Mississippi, carved by the only river in the US that flows for most of its length atop a mountain. The 22-mile Canyon Rim Drive connects overlooks, waterfalls, and swimming areas. Canyon Mouth Park at the southern end has excellent river access and flat-water swimming.",
             "typical_duration_minutes": 240,
@@ -282,7 +282,7 @@ WAVE_15_DESTINATIONS = [
             "lat": 34.0409,
             "lng": -86.0275,
             "website": "https://www.gadsdenal.gov/noccalula-falls-park",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "90-foot waterfall in a city park with botanical gardens, a pioneer village, and Black Creek trail gorge.",
             "description": "Noccalula Falls Park centers on a 90-foot waterfall plunging into Black Creek Gorge within city limits. Below the falls, a 2-mile gorge trail follows the creek through a dramatic rock canyon. The park also has botanical gardens, a pioneer village with living history buildings, and a campground — a full afternoon's worth of activity.",
             "typical_duration_minutes": 210,
@@ -315,7 +315,7 @@ WAVE_15_DESTINATIONS = [
             "lat": 34.3106,
             "lng": -87.7172,
             "website": "https://www.dismalscanyon.com/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "National Natural Landmark with bioluminescent glowworms on night tours and a pristine sandstone canyon.",
             "description": "Dismals Canyon is a federally designated National Natural Landmark — a privately owned 85-acre sandstone canyon harboring rare Phytophthora americana plants and a population of Orfelia fultoni, tiny bioluminescent larvae known as 'dismalites.' Night tours reveal the canyon floor lit by thousands of glowing organisms. Day hikes wind past waterfalls, swimming holes, and ancient petroglyphs.",
             "typical_duration_minutes": 360,
@@ -348,7 +348,7 @@ WAVE_15_DESTINATIONS = [
             "lat": 34.2336,
             "lng": -87.3908,
             "website": "https://www.fs.usda.gov/recarea/alabama/recarea/?recid=30159",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Largest wilderness area east of the Mississippi with 100+ waterfalls and old-growth forest in Bankhead National Forest.",
             "description": "The Sipsey Wilderness in Bankhead National Forest is the largest federally designated wilderness area east of the Mississippi River. Its canyon system contains more than 100 documented waterfalls, old-growth hardwood forest, and slot canyons with steep sandstone walls. A legitimate backcountry destination that remains largely unknown outside Alabama.",
             "typical_duration_minutes": 480,
@@ -381,7 +381,7 @@ WAVE_15_DESTINATIONS = [
             "lat": 34.7467,
             "lng": -86.5122,
             "website": "https://www.alapark.com/parks/monte-sano-state-park",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Trails above Huntsville with a natural bridge, Japanese tea garden ruins, and sweeping valley views.",
             "description": "Monte Sano State Park sits atop a mountain overlooking Huntsville with 20 miles of trails, a natural bridge formation, and the overgrown ruins of a Japanese tea garden built in the 1920s. The park serves as the backyard wilderness for the Rocket City and connects to a regional trail network. Cabins and a campground are available.",
             "typical_duration_minutes": 240,
@@ -414,7 +414,7 @@ WAVE_15_DESTINATIONS = [
             "lat": 33.3523,
             "lng": -86.7461,
             "website": "https://www.alapark.com/parks/oak-mountain-state-park",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Alabama's largest state park — 50+ miles of trails, a lake, BMX track, golf, and a wildlife rescue center.",
             "description": "Oak Mountain State Park is Alabama's largest at 9,940 acres, with 50+ miles of trails including serious mountain biking, a swimming lake, BMX track, golf course, treetop adventure course, and a wildlife rescue demonstration area. Just 25 miles south of Birmingham, it handles enormous visitor volume while still offering genuine wilderness in the back sections.",
             "typical_duration_minutes": 300,
@@ -447,7 +447,7 @@ WAVE_15_DESTINATIONS = [
             "lat": 34.5789,
             "lng": -86.1961,
             "website": "https://www.alapark.com/parks/cathedral-caverns-state-park",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "One of the largest cave openings in the world (25 ft high, 126 ft wide) with a massive interior stalagmite forest.",
             "description": "Cathedral Caverns has one of the largest cave entrances in the world — 25 feet high and 126 feet wide — opening into a cathedral-like chamber. The 1.5-mile guided tour passes through massive stalagmite formations including 'Goliath,' one of the world's largest stalagmites at 45 feet tall and 243 feet in circumference. A genuinely awe-inspiring cave without the tourist-trap atmosphere of some commercial caves.",
             "typical_duration_minutes": 150,
@@ -480,7 +480,7 @@ WAVE_15_DESTINATIONS = [
             "lat": 32.6827,
             "lng": -85.9857,
             "website": "https://www.lakemartin.org/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "44,000-acre lake with 750 miles of shoreline, Chimney Rock hiking trail, and Alabama's premier eagle nesting habitat.",
             "description": "Lake Martin is one of the largest man-made lakes in the US — 44,000 acres with 750 miles of shoreline and exceptionally clear water. Chimney Rock provides one of Alabama's best short hikes with panoramic lake views. The lake supports one of the Southeast's densest concentrations of nesting bald eagles. Public boat launches, marinas, and waterfront dining are available throughout.",
             "typical_duration_minutes": 240,
@@ -518,7 +518,7 @@ def find_existing_venue(venue_seed: dict) -> dict | None:
 
     client = get_client()
     result = (
-        client.table("venues")
+        client.table("places")
         .select("*")
         .eq("name", venue_seed["name"])
         .limit(1)
@@ -615,7 +615,7 @@ def main() -> None:
                 skipped += 1
             else:
                 if args.apply:
-                    client.table("venues").update(updates).eq("id", existing["id"]).execute()
+                    client.table("places").update(updates).eq("id", existing["id"]).execute()
                 logger.info(
                     "%s venue: %s (%s fields)",
                     "UPDATE" if args.apply else "WOULD UPDATE",

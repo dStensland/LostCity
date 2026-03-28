@@ -24,7 +24,7 @@ PLACE_DATA = {
     "zip": "30317",
     "lat": 33.7530,
     "lng": -84.3100,
-    "venue_type": "neighborhood",
+    "place_type": "neighborhood",
     "spot_type": "neighborhood",
     "website": None,
     "description": "Growing neighborhood with East Lake Golf Club (TOUR Championship), parks, and emerging dining scene.",
@@ -72,7 +72,7 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,
@@ -148,7 +148,7 @@ def create_tour_championship(source_id: int, venue_id: int) -> tuple[int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": (
             "The TOUR Championship at East Lake Golf Club - the finale of the PGA TOUR's FedExCup Playoffs. "

@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30030",
     "lat": 33.7740,
     "lng": -84.2890,
-    "venue_type": "food_hall",
+    "place_type": "food_hall",
     "spot_type": "food_hall",
     "website": HOMEPAGE,
     # Hours verified 2026-03-11
@@ -113,7 +113,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning("DeKalb Farmers Market: venue update failed: %s", exc)
 

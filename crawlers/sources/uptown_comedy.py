@@ -34,7 +34,7 @@ PLACE_DATA = {
     "zip": "30297",
     "lat": 33.6209,
     "lng": -84.3602,
-    "venue_type": "comedy_club",
+    "place_type": "comedy_club",
     "spot_type": "comedy_club",
     "website": BASE_URL,
 }
@@ -161,7 +161,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": clean_title,
                             "description": f"{clean_title} at Uptown Comedy Corner",
                             "start_date": start_date,

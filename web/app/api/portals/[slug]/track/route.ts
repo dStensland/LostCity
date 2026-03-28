@@ -74,7 +74,7 @@ export async function POST(
 
   if (pageType === "spot" && entityId) {
     const { data: venue } = await supabase
-      .from("venues")
+      .from("places")
       .select("id")
       .eq("id", entityId)
       .maybeSingle();

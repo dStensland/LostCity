@@ -145,7 +145,7 @@ def get_menu_venues(
     client = get_client()
 
     q = (
-        client.table("venues")
+        client.table("places")
         .select("id, name, slug, website, menu_url, venue_type, price_level")
         .not_.is_("menu_url", "null")
         .is_("menu_highlights", "null")
@@ -155,7 +155,7 @@ def get_menu_venues(
     if venue_ids:
         q = q.in_("id", venue_ids)
     elif venue_type:
-        q = q.eq("venue_type", venue_type)
+        q = q.eq("place_type", venue_type)
 
     result = q.order("name").limit(limit).execute()
     venues = result.data or []
@@ -242,10 +242,10 @@ def dump_menu_pages(venues, dump_dir, use_playwright=True, enhanced=False):
                 logger.info(f"  Improved! {old_len} → {new_len} chars")
 
             dump_file.write_text(json.dumps({
-                "venue_id": venue["id"],
+                "place_id": venue["id"],
                 "venue_slug": slug,
                 "venue_name": venue["name"],
-                "venue_type": venue.get("venue_type"),
+                "place_type": venue.get("venue_type"),
                 "menu_url": menu_url,
                 "menu_text": f"--- Menu Page: {menu_url} ---\n{text}",
                 "meta": {},
@@ -303,7 +303,7 @@ def get_retry_venues(slugs, dump_dir):
             "name": d.get("venue_name", slug),
             "slug": d["venue_slug"],
             "menu_url": url,
-            "venue_type": d.get("venue_type"),
+            "place_type": d.get("venue_type"),
         })
     if skipped:
         logger.info(f"  Filtered out {skipped} hopeless domains/URLs")

@@ -163,7 +163,7 @@ Return valid JSON matching this schema:
   "description": "1-2 sentence venue description" | null,
   "vibes": ["vibe1", "vibe2"] | null,
   "activities": ["activity1", "activity2"] | null,
-  "venue_type": "type" | null,
+  "place_type": "type" | null,
   "price_level": 1-4 | null,
   "is_event_venue": true | false | null,
   "confidence": 0.0-1.0,
@@ -577,7 +577,7 @@ def enrich_venue(venue_id: int, google_place: dict, dry_run: bool = False) -> di
 
     if not dry_run:
         client = get_client()
-        client.table("venues").update(updates).eq("id", venue_id).execute()
+        client.table("places").update(updates).eq("id", venue_id).execute()
 
     return updates
 
@@ -623,7 +623,7 @@ def enrich_incomplete_venues(limit: int = 50, dry_run: bool = False) -> dict:
     client = get_client()
 
     # Find incomplete venues (missing neighborhood, type, or coordinates)
-    result = client.table("venues").select("*").eq("active", True).or_(
+    result = client.table("places").select("*").eq("active", True).or_(
         "neighborhood.is.null,venue_type.is.null,lat.is.null"
     ).order("name").limit(limit).execute()
 
@@ -675,14 +675,14 @@ def enrich_hours_only(limit: int = 50, venue_type: Optional[str] = None, dry_run
     """
     client = get_client()
 
-    query = (client.table("venues")
+    query = (client.table("places")
              .select("id, name, slug, address, city, state, lat, lng, hours, phone, venue_type")
              .eq("active", True)
              .is_("hours", "null")
              .not_.is_("name", "null"))
 
     if venue_type:
-        query = query.eq("venue_type", venue_type)
+        query = query.eq("place_type", venue_type)
 
     result = query.order("name").limit(limit).execute()
     venues = result.data or []
@@ -731,7 +731,7 @@ def enrich_hours_only(limit: int = 50, venue_type: Optional[str] = None, dry_run
             updates["phone"] = phone
 
         if not dry_run:
-            client.table("venues").update(updates).eq("id", venue["id"]).execute()
+            client.table("places").update(updates).eq("id", venue["id"]).execute()
             print(f"  Updated hours: {len(hours)} days")
         else:
             print(f"  [DRY RUN] Would set hours: {len(hours)} days")
@@ -749,7 +749,7 @@ def enrich_address_venues(limit: int = 50, dry_run: bool = False) -> dict:
     client = get_client()
 
     # Get all incomplete venues
-    result = client.table("venues").select("*").eq("active", True).or_(
+    result = client.table("places").select("*").eq("active", True).or_(
         "neighborhood.is.null,venue_type.is.null"
     ).order("name").execute()
 
@@ -797,7 +797,7 @@ def enrich_address_venues(limit: int = 50, dry_run: bool = False) -> dict:
                     if not dry_run:
                         # Generate new slug
                         new_slug = re.sub(r'[^a-z0-9]+', '-', found_name.lower()).strip('-')
-                        client.table("venues").update({
+                        client.table("places").update({
                             "name": found_name,
                             "slug": new_slug,
                         }).eq("id", venue["id"]).execute()
@@ -836,7 +836,7 @@ def enrich_websites_only(limit: int = 50, dry_run: bool = False) -> dict:
     # Find venues with websites that need enrichment
     # Query: active=true, website IS NOT NULL, (vibes IS NULL OR venue_type IS NULL OR price_level IS NULL)
     # Note: is_event_venue check is done in Python to handle case where column doesn't exist yet
-    result = client.table("venues").select("*").eq("active", True).not_.is_("website", "null").or_(
+    result = client.table("places").select("*").eq("active", True).not_.is_("website", "null").or_(
         "vibes.is.null,venue_type.is.null,price_level.is.null"
     ).order("name").limit(limit).execute()
 
@@ -931,7 +931,7 @@ def enrich_websites_only(limit: int = 50, dry_run: bool = False) -> dict:
                 if dry_run:
                     print(f"  [DRY RUN] Would update: {updates}")
                 else:
-                    client.table("venues").update(updates).eq("id", venue["id"]).execute()
+                    client.table("places").update(updates).eq("id", venue["id"]).execute()
                     print("  Updated successfully")
                 stats["enriched"] += 1
             else:

@@ -75,7 +75,7 @@ export type NearbyDestination = {
   id: number;
   name: string;
   slug: string;
-  venue_type: string | null;
+  place_type: string | null;
   location_designator: "standard" | "private_after_signup" | "virtual" | "recovery_meeting" | null;
   neighborhood: string | null;
   lat: number | null;
@@ -168,7 +168,7 @@ export type AttachedChildDestinationRow = {
   id: number;
   name: string;
   slug: string | null;
-  venue_type: string | null;
+  place_type: string | null;
   image_url: string | null;
   short_description: string | null;
 };
@@ -331,18 +331,18 @@ async function fetchNearbyDestinations(
 
   const allDestinationTypes = Object.values(DESTINATION_CATEGORIES).flat();
   const selectFields =
-    "id, name, slug, venue_type, location_designator, neighborhood, lat, lng, image_url, short_description, hours, hours_display, vibes";
+    "id, name, slug, place_type, location_designator, neighborhood, lat, lng, image_url, short_description, hours, hours_display, vibes";
 
   let spots: NearbyDestination[] | null = null;
 
   if (spot.neighborhood) {
     const { data, error } = await supabase
-      .from("venues")
+      .from("places")
       .select(selectFields)
       .eq("neighborhood", spot.neighborhood)
       .eq("city", spot.city as string)
-      .in("venue_type", allDestinationTypes)
-      .eq("active", true)
+      .in("place_type", allDestinationTypes)
+      .eq("is_active", true)
       .neq("id", spot.id)
       .limit(100);
     if (error) {
@@ -355,10 +355,10 @@ async function fetchNearbyDestinations(
     const latDelta = 1.5 / 69; // ~1.5 miles in degrees latitude
     const lngDelta = 1.5 / (69 * Math.cos((spot.lat * Math.PI) / 180));
     let geoQuery = supabase
-      .from("venues")
+      .from("places")
       .select(selectFields)
-      .in("venue_type", allDestinationTypes)
-      .eq("active", true)
+      .in("place_type", allDestinationTypes)
+      .eq("is_active", true)
       .neq("id", spot.id)
       .gte("lat", spot.lat - latDelta)
       .lte("lat", spot.lat + latDelta)
@@ -391,7 +391,7 @@ async function fetchNearbyDestinations(
       continue;
     }
 
-    const venueType = dest.venue_type || "";
+    const venueType = dest.place_type || "";
     const destWithDistance = { ...dest, distance };
     for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
       if (types.includes(venueType) && nearbyDestinations[cat]) {
@@ -422,7 +422,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
   const supabase = await createClient();
 
   const { data: spotData, error } = await supabase
-    .from("venues")
+    .from("places")
     .select("*")
     .eq("slug", slug)
     .maybeSingle();
@@ -445,46 +445,46 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
   const highlightsPromise = supabase
     .from("venue_highlights")
     .select("id, highlight_type, title, description, image_url, sort_order, url")
-    .eq("venue_id", spot.id)
+    .eq("place_id", spot.id)
     .order("sort_order", { ascending: true });
   const artifactsPromise = supabase
-    .from("venues")
-    .select("id, name, slug, venue_type, image_url, short_description")
-    .eq("parent_venue_id", spot.id)
-    .in("venue_type", [...ATTACHED_CHILD_DESTINATION_VENUE_TYPES])
-    .eq("active", true)
+    .from("places")
+    .select("id, name, slug, place_type, image_url, short_description")
+    .eq("parent_place_id", spot.id)
+    .in("place_type", [...ATTACHED_CHILD_DESTINATION_VENUE_TYPES])
+    .eq("is_active", true)
     .order("name", { ascending: true });
   const featuresPromise = supabase
     .from("venue_features")
     .select("id, slug, title, feature_type, description, image_url, is_seasonal, start_date, end_date, price_note, is_free, sort_order, url")
-    .eq("venue_id", spot.id)
+    .eq("place_id", spot.id)
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
   const specialsPromise = supabase
-    .from("venue_specials")
+    .from("place_specials")
     .select("id, title, type, description, days_of_week, time_start, time_end, price_note, image_url, source_url")
-    .eq("venue_id", spot.id)
+    .eq("place_id", spot.id)
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
   const editorialMentionsPromise = supabase
     .from("editorial_mentions")
     .select("id, source_key, article_url, article_title, mention_type, published_at, guide_name, snippet, relevance")
-    .eq("venue_id", spot.id)
+    .eq("place_id", spot.id)
     .eq("is_active", true)
     .eq("relevance", "primary")
     .order("published_at", { ascending: false })
     .limit(10);
   const occasionsPromise = supabase
-    .from("venue_occasions")
+    .from("place_occasions")
     .select("occasion, confidence, source")
-    .eq("venue_id", spot.id)
+    .eq("place_id", spot.id)
     .gte("confidence", 0.5)
     .order("confidence", { ascending: false });
 
   const exhibitionsPromise = supabase
     .from("exhibitions")
     .select("id, title, description, image_url, opening_date, closing_date, exhibition_type, admission_type, source_url")
-    .eq("venue_id", spot.id)
+    .eq("place_id", spot.id)
     .eq("is_active", true)
     .or(`closing_date.gte.${today},closing_date.is.null`)
     .order("opening_date", { ascending: true })
@@ -501,13 +501,13 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     walkableNeighborCount > 0
       ? supabase
           .from("walkable_neighbors" as never)
-          .select(`walk_minutes, neighbor:neighbor_id(id, name, slug)`)
-          .eq("venue_id", spot.id)
+          .select(`walk_minutes, neighbor:neighbor_place_id(id, name, slug)`)
+          .eq("place_id", spot.id)
           .order("walk_minutes", { ascending: true })
           .limit(10)
       : Promise.resolve({ data: [] as WalkableRow[] });
 
-  const isCinema = (spotData as Record<string, unknown>).venue_type === "cinema";
+  const isCinema = (spotData as Record<string, unknown>).place_type === "cinema";
 
   // Over-fetch to allow post-query slot dedupe and quality ranking.
   const { data: upcomingEvents } = await applyVenueGate(
@@ -518,7 +518,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
         series_id, image_url, content_kind,
         series:series!events_series_id_fkey(id, slug, title, series_type, image_url)
       `)
-      .eq("venue_id", spot.id)
+      .eq("place_id", spot.id)
       .is("canonical_event_id", null)
       .or(`start_date.gte.${today},end_date.gte.${today}`)
       .order("start_date", { ascending: true })

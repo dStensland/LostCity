@@ -56,7 +56,7 @@ async function getRelatedMeetings(
 
   const { data } = await supabase
     .from("events")
-    .select("id, title, start_date, start_time, venue:venues(name, address)")
+    .select("id, title, start_date, start_time, venue:places(name, address)")
     .neq("id", currentEventId)
     .gte("start_date", today)
     .or(categoryFilter)

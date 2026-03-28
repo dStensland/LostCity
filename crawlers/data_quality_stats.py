@@ -53,7 +53,7 @@ def main():
     print()
     
     # 6. Total venues
-    result = client.table("venues").select("id", count="exact").execute()
+    result = client.table("places").select("id", count="exact").execute()
     total_venues = result.count
     print(f"6. Total venues: {total_venues:,}")
     print()

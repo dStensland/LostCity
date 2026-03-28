@@ -55,7 +55,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 const CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=600";
 
 const VENUE_SELECT = `
-  id, name, slug, address, neighborhood, city, venue_type,
+  id, name, slug, address, neighborhood, city, place_type,
   venue_types, lat, lng, image_url, short_description,
   vibes, genres, price_level, hours_display,
   hours, featured, active,
@@ -145,10 +145,10 @@ export async function GET(request: NextRequest, { params }: Props) {
   allTypes.push("outdoor_venue", "entertainment");
 
   let venueQuery = supabase
-    .from("venues")
+    .from("places")
     .select(VENUE_SELECT)
-    .in("venue_type", allTypes)
-    .eq("active", true)
+    .in("place_type", allTypes)
+    .eq("is_active", true)
     .neq("location_designator", "recovery_meeting");
 
   if (geoCenter) {
@@ -190,7 +190,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     let evQ = portalClient
       .from("events")
       .select("venue_id")
-      .in("venue_id", batch)
+      .in("place_id", batch)
       .gte("start_date", today)
       .is("canonical_event_id", null);
     evQ = applyPortalScope(evQ);

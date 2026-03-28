@@ -50,7 +50,7 @@ PLACE_DATA = {
     "zip": "30307",
     "lat": 33.7575,
     "lng": -84.3641,
-    "venue_type": "food_hall",
+    "place_type": "food_hall",
     "spot_type": "food_hall",
     "website": BASE_URL,
     "vibes": ["food-hall", "inman-park", "beltline", "krog-street"],
@@ -67,7 +67,7 @@ BREWDOG_VENUE_DATA = {
     "zip": "30307",
     "lat": 33.7581,
     "lng": -84.3636,
-    "venue_type": "brewery",
+    "place_type": "brewery",
     "spot_type": "brewery",
     "website": "https://www.brewdog.com/usa/bars/atlanta",
     "vibes": ["brewery", "craft-beer", "krog-street", "inman-park", "patio", "dog-friendly"],
@@ -83,7 +83,7 @@ GUAC_Y_MARGYS_VENUE_DATA = {
     "zip": "30307",
     "lat": 33.7575,
     "lng": -84.3641,
-    "venue_type": "restaurant",
+    "place_type": "restaurant",
     "spot_type": "restaurant",
     "website": "https://www.guacymargys.com",
     "vibes": ["mexican", "margaritas", "krog-street", "inman-park", "trivia"],
@@ -140,7 +140,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "food_hall",
         "commitment_tier": "hour",
         "primary_activity": "Beltline food hall with local vendors and restaurants",
@@ -155,10 +155,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Free to enter. Pay-as-you-go at individual vendors.",
         "source_url": "https://krogstreetmarket.com",
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "food_hall", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "food_hall", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "local-vendor-stalls",
         "title": "Local vendor stalls and restaurants",
         "feature_type": "amenity",
@@ -168,7 +168,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "beltline-trail-access",
         "title": "Beltline Eastside Trail access",
         "feature_type": "experience",
@@ -178,7 +178,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "indoor-outdoor-seating",
         "title": "Indoor and outdoor seating",
         "feature_type": "amenity",
@@ -401,7 +401,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description or f"Event at {matched_venue['name']}",
                     "start_date": start_date,
@@ -507,7 +507,7 @@ def _generate_recurring_events(
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": template["title"],
                 "description": template["description"],
                 "start_date": start_date,

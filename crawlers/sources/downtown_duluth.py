@@ -24,7 +24,7 @@ PLACE_DATA = {
     "zip": "30096",
     "lat": 34.0029,
     "lng": -84.1446,
-    "venue_type": "entertainment_district",
+    "place_type": "entertainment_district",
     "spot_type": "entertainment_district",
     "website": "https://exploreduluth.org",
     "description": "Historic downtown Duluth with restaurants, shops, and vibrant community events.",
@@ -72,7 +72,7 @@ def create_monthly_events(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,
@@ -144,7 +144,7 @@ def create_seasonal_events(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Annual holiday tree lighting in downtown Duluth. "

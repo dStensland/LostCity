@@ -46,7 +46,7 @@ PLACE_DATA = {
     "neighborhood": "Atlanta",
     "city": "Atlanta",
     "state": "GA",
-    "venue_type": "festival",
+    "place_type": "festival",
     "website": BASE_URL,
 }
 
@@ -262,7 +262,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Official Atlanta Black Pride program event.",
                         "start_date": start_date,
@@ -311,7 +311,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     event_url = selected_url
                     fallback_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": (
                             "Official Atlanta Black Pride annual weekend programming window. "

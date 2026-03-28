@@ -38,7 +38,7 @@ PLACE_DATA = {
     "zip": "30327",
     "lat": 33.8705,
     "lng": -84.3879,
-    "venue_type": "music_venue",
+    "place_type": "music_venue",
     "spot_type": "music_venue",
     "website": "https://www.livenation.com/venue/KovZpZAEkAaA/synovus-bank-amphitheater-at-chastain-park-events",
     "vibes": ["outdoor", "concert", "date-night", "picnic", "iconic", "summer"],
@@ -208,7 +208,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title[:500],
                         "description": f"{title} at Chastain Park Amphitheatre, Atlanta's beloved outdoor concert venue.",
                         "start_date": start_date,

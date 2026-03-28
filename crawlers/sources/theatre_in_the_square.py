@@ -31,7 +31,7 @@ PLACE_DATA = {
     "zip": "30064",
     "lat": 33.9527,
     "lng": -84.5503,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": BASE_URL,
     "description": "Home of Marietta Theatre Company - Broadway-style musicals in historic Marietta Square.",
@@ -116,7 +116,7 @@ def create_show_events(source_id: int, venue_id: int, shows: list[dict]) -> tupl
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": show["description"],
                 "start_date": start_date,

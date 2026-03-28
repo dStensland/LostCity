@@ -37,7 +37,7 @@ PLACE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30309",
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "lat": 33.7906,
     "lng": -84.3846,
@@ -287,7 +287,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": venue_id if not is_virtual else None,
+                                "place_id": venue_id if not is_virtual else None,
                                 "title": title,
                                 "description": None,
                                 "start_date": start_date,

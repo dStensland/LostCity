@@ -72,13 +72,13 @@ def main():
     
     # Try to check for is_chain column
     try:
-        result = client.table("venues").select("id").eq("is_chain", True).limit(1).execute()
+        result = client.table("places").select("id").eq("is_chain", True).limit(1).execute()
         has_chain_column = True
     except:
         has_chain_column = False
     
     if has_chain_column:
-        result = client.table("venues").select("id").eq("is_chain", True).execute()
+        result = client.table("places").select("id").eq("is_chain", True).execute()
         chain_venue_ids = [v["id"] for v in result.data] if result.data else []
         print(f"   Chain venues found: {len(chain_venue_ids)}")
         

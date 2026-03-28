@@ -37,7 +37,7 @@ VENUE_WEIGHTS = {
     "image_url": 15,
     "hero_image_url": 10,
     "description": 20,
-    "venue_type": 15,
+    "place_type": 15,
     "neighborhood": 10,
     "website": 10,
     "hours": 5,
@@ -50,7 +50,7 @@ VENUE_WEIGHTS = {
 EVENT_WEIGHTS = {
     "description": 25,
     "start_time": 8,
-    "venue_id": 15,
+    "place_id": 15,
     "category": 10,
     "image_url": 15,
     "source_url": 5,

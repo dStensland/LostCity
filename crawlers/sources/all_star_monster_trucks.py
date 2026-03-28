@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30008",
     "lat": 33.9271,
     "lng": -84.5868,
-    "venue_type": "event_space",
+    "place_type": "event_space",
     "website": "https://www.cobbcounty.org",
 }
 
@@ -215,7 +215,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "slug": re.sub(r'[^\w\s-]', '', venue_line.lower()).replace(' ', '-').strip('-'),
                     "city": city,
                     "state": state,
-                    "venue_type": "event_space",
+                    "place_type": "event_space",
                 }
 
                 # Get or create venue
@@ -238,7 +238,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Build event record
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": current_venue_id,
+                    "place_id": current_venue_id,
                     "title": title,
                     "description": f"All Star Monster Truck Tour featuring monster truck racing, stunts, and entertainment at {venue_line}, {city_state_line}.",
                     "start_date": parsed_date,

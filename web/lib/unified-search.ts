@@ -1083,7 +1083,7 @@ export async function unifiedSearch(
         ? client
             .from("recommendations")
             .select("venue_id")
-            .in("venue_id", venueIds)
+            .in("place_id", venueIds)
             .eq("visibility", "public")
         : Promise.resolve({ data: null }),
       organizerIds.length > 0
@@ -1332,7 +1332,7 @@ async function searchEvents(
 }
 
 /**
- * Search venues using the search_venues_ranked RPC function.
+ * Search venues using the search_places_ranked RPC function.
  */
 async function searchVenues(
   client: ReturnType<typeof createServiceClient>,
@@ -1347,7 +1347,7 @@ async function searchVenues(
   }
 ): Promise<SearchResult[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (client.rpc as any)("search_venues_ranked", {
+  const { data, error } = await (client.rpc as any)("search_places_ranked", {
     p_query: query,
     p_limit: options.limit,
     p_offset: options.offset,

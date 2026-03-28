@@ -62,7 +62,7 @@ PLACE_DATA = {
     "zip": "30213",
     "lat": 33.5365,
     "lng": -84.5960,
-    "venue_type": "festival",
+    "place_type": "festival",
     "spot_type": "festival",
     "website": BASE_URL,
     "vibes": [
@@ -339,7 +339,7 @@ def scrape_themed_weekends(
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": full_title,
                 "description": description[:1500],
                 "start_date": start_date,
@@ -471,7 +471,7 @@ def scrape_season_event(
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description[:1500],
         "start_date": season_start,

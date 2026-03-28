@@ -59,7 +59,7 @@ def build_client():
 
 def load_venue_map(client, slugs: list[str]) -> dict[str, int]:
     result = (
-        client.table("venues")
+        client.table("places")
         .select("id,slug")
         .in_("slug", slugs)
         .eq("active", True)
@@ -183,7 +183,7 @@ def main() -> None:
 
         payload.append(
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "provider_id": "ga_state_parks",
                 "inventory_scope": "overnight",
                 "arrival_date": arrival_date_iso,
@@ -208,11 +208,11 @@ def main() -> None:
 
     if payload:
         (
-            client.table("venue_inventory_snapshots")
+            client.table("place_inventory_snapshots")
             .upsert(
                 payload,
                 on_conflict=(
-                    "venue_id,provider_id,inventory_scope,arrival_date,nights,captured_for_date"
+                    "place_id,provider_id,inventory_scope,arrival_date,nights,captured_for_date"
                 ),
             )
             .execute()

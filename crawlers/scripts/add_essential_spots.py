@@ -22,7 +22,7 @@ ICONIC_SPOTS = [
         "zip": "30308",
         "lat": 33.7718,
         "lng": -84.3758,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://marymacs.com",
     },
     {
@@ -35,7 +35,7 @@ ICONIC_SPOTS = [
         "zip": "30324",
         "lat": 33.8108,
         "lng": -84.3548,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://colonnadeatlanta.com",
     },
     {
@@ -48,7 +48,7 @@ ICONIC_SPOTS = [
         "zip": "30308",
         "lat": 33.7725,
         "lng": -84.3555,
-        "venue_type": "event_space",
+        "place_type": "event_space",
         "website": "https://poncecitymarket.com",
     },
     {
@@ -61,7 +61,7 @@ ICONIC_SPOTS = [
         "zip": "30307",
         "lat": 33.7581,
         "lng": -84.3636,
-        "venue_type": "event_space",
+        "place_type": "event_space",
         "website": "https://krogstreetmarket.com",
     },
     {
@@ -74,7 +74,7 @@ ICONIC_SPOTS = [
         "zip": "30303",
         "lat": 33.7538,
         "lng": -84.3808,
-        "venue_type": "event_space",
+        "place_type": "event_space",
         "website": "https://thecurbmarket.com",
     },
     {
@@ -87,7 +87,7 @@ ICONIC_SPOTS = [
         "zip": "30340",
         "lat": 33.9038,
         "lng": -84.2818,
-        "venue_type": "retail",
+        "place_type": "retail",
         "website": "https://aofwc.com",
     },
 ]
@@ -104,7 +104,7 @@ ROOFTOPS = [
         "zip": "30308",
         "lat": 33.7725,
         "lng": -84.3555,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://9milestation.com",
     },
     {
@@ -117,7 +117,7 @@ ROOFTOPS = [
         "zip": "30326",
         "lat": 33.8488,
         "lng": -84.3628,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://gerbergroup.com/venue/whiskey-blue-atlanta",
     },
     {
@@ -130,7 +130,7 @@ ROOFTOPS = [
         "zip": "30318",
         "lat": 33.7855,
         "lng": -84.4078,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://o-kusushi.com",
     },
     {
@@ -143,7 +143,7 @@ ROOFTOPS = [
         "zip": "30308",
         "lat": 33.7628,
         "lng": -84.3818,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
 ]
@@ -160,7 +160,7 @@ BUFORD_HWY = [
         "zip": "30341",
         "lat": 33.8858,
         "lng": -84.2948,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -173,7 +173,7 @@ BUFORD_HWY = [
         "zip": "30341",
         "lat": 33.8808,
         "lng": -84.2968,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -186,7 +186,7 @@ BUFORD_HWY = [
         "zip": "30341",
         "lat": 33.8878,
         "lng": -84.2928,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://crawfishshackseafood.com",
     },
     {
@@ -199,7 +199,7 @@ BUFORD_HWY = [
         "zip": "30340",
         "lat": 33.8968,
         "lng": -84.2878,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -212,7 +212,7 @@ BUFORD_HWY = [
         "zip": "30341",
         "lat": 33.8868,
         "lng": -84.2938,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -225,7 +225,7 @@ BUFORD_HWY = [
         "zip": "30345",
         "lat": 33.8818,
         "lng": -84.2958,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -238,7 +238,7 @@ BUFORD_HWY = [
         "zip": "30340",
         "lat": 33.8948,
         "lng": -84.2888,
-        "venue_type": "retail",
+        "place_type": "retail",
         "website": None,
     },
     {
@@ -251,7 +251,7 @@ BUFORD_HWY = [
         "zip": "30340",
         "lat": 33.8968,
         "lng": -84.2898,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -264,7 +264,7 @@ BUFORD_HWY = [
         "zip": "30340",
         "lat": 33.8968,
         "lng": -84.2895,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
 ]
@@ -281,7 +281,7 @@ DATE_SPOTS = [
         "zip": "30318",
         "lat": 33.7798,
         "lng": -84.4108,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://barcelonawinebar.com",
     },
     {
@@ -294,7 +294,7 @@ DATE_SPOTS = [
         "zip": "30307",
         "lat": 33.7608,
         "lng": -84.3548,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://sottosottoatl.com",
     },
     {
@@ -307,7 +307,7 @@ DATE_SPOTS = [
         "zip": "30305",
         "lat": 33.8398,
         "lng": -84.3778,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://umiatlanta.com",
     },
     {
@@ -320,7 +320,7 @@ DATE_SPOTS = [
         "zip": "30308",
         "lat": 33.7748,
         "lng": -84.3848,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://ecco-atlanta.com",
     },
     {
@@ -333,7 +333,7 @@ DATE_SPOTS = [
         "zip": "30324",
         "lat": 33.8088,
         "lng": -84.3558,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://nakatojapaneserestaurant.com",
     },
     {
@@ -346,7 +346,7 @@ DATE_SPOTS = [
         "zip": "30313",
         "lat": 33.7508,
         "lng": -84.4048,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://nomascantina.com",
     },
 ]
@@ -363,7 +363,7 @@ PIZZA = [
         "zip": "30312",
         "lat": 33.7558,
         "lng": -84.3658,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://ammazza.com",
     },
     {
@@ -376,7 +376,7 @@ PIZZA = [
         "zip": "30308",
         "lat": 33.7698,
         "lng": -84.3638,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://o4wpizza.com",
     },
     {
@@ -389,7 +389,7 @@ PIZZA = [
         "zip": "30309",
         "lat": 33.8128,
         "lng": -84.3618,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://varasanos.com",
     },
 ]

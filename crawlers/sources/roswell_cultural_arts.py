@@ -32,7 +32,7 @@ PLACE_DATA = {
     "zip": "30075",
     "lat": 34.0232,
     "lng": -84.3616,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": BASE_URL,
 }
@@ -161,7 +161,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at Roswell Cultural Arts Center",
                         "start_date": start_date,

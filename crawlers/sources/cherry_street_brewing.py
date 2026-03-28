@@ -31,7 +31,7 @@ PLACE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30318",
-    "venue_type": "brewery",
+    "place_type": "brewery",
     "website": BASE_URL,
     "_destination_details": {
         "commitment_tier": "hour",
@@ -201,7 +201,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at Cherry Street Brewing",
                         "start_date": start_date,

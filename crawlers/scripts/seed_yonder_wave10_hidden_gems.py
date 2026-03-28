@@ -40,7 +40,7 @@ WAVE_10_DESTINATIONS = [
             "lat": 34.9756,
             "lng": -85.6283,
             "website": "https://www.fws.gov/refuge/nickajack-cave",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Hundreds of thousands of gray bats emerge at dusk from a cave mouth on the Tennessee River — accessible by kayak.",
             "description": "Nickajack Cave is a US Fish & Wildlife refuge protecting one of the largest gray bat colonies in North America. The evening bat emergence — hundreds of thousands of bats spiraling out at dusk — is a genuine natural spectacle. Best viewed by kayak (1-mile paddle to the cave mouth). No interior access (bat sanctuary).",
             "typical_duration_minutes": 180,
@@ -73,7 +73,7 @@ WAVE_10_DESTINATIONS = [
             "lat": 36.5566,
             "lng": -84.7992,
             "website": "https://tnstateparks.com/parks/pickett",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "Natural arches, sandstone bluffs, and 58+ miles of backcountry trails — the best state park no one from Atlanta visits.",
             "description": "Pickett CCC Memorial State Park is a backcountry wilderness gem with natural arches (Natural Bridge, Hazard Cave), sandstone bluffs, 58+ miles of trails, and swimming holes. Consistently rated one of Tennessee's best parks but draws almost zero Atlanta visitors. CCC-built cabins, campground, and lake.",
             "typical_duration_minutes": 480,
@@ -105,7 +105,7 @@ WAVE_10_DESTINATIONS = [
             "lat": 35.6414,
             "lng": -85.7419,
             "website": "https://cumberlandcaverns.com/",
-            "venue_type": "museum",
+            "place_type": "museum",
             "short_description": "30 miles of cave passages with underground concert hall — Tennessee's largest show cave.",
             "description": "Cumberland Caverns has 30 miles of explored passages, making it Tennessee's largest show cave. Regular tours and adventure spelunking options. The main hall hosts underground concerts with remarkable acoustics. Unique event venue for an unforgettable experience.",
             "typical_duration_minutes": 120,
@@ -138,7 +138,7 @@ WAVE_10_DESTINATIONS = [
             "lat": 34.7146,
             "lng": -84.3867,
             "website": "https://www.bjreeceorchards.com/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "200+ acre apple orchard with u-pick, corn maze, pony rides, and giant slides — North Georgia's fall destination.",
             "description": "BJ Reece Orchards spans 200+ acres in the Apple Capital of Georgia. U-pick apples, pony rides, corn maze, wagon rides, giant slides, and farm animals. One of the top fall agritourism experiences in Georgia. Peak season September-November.",
             "typical_duration_minutes": 240,
@@ -170,7 +170,7 @@ WAVE_10_DESTINATIONS = [
             "lat": 34.9150,
             "lng": -84.5400,
             "website": "https://www.fs.usda.gov/recarea/conf/recarea/?recid=10477",
-            "venue_type": "trail",
+            "place_type": "trail",
             "short_description": "37,000-acre wilderness with 40+ river crossings on the Jacks River Trail to an 80-foot waterfall swimming hole.",
             "description": "The Cohutta Wilderness is 37,000 acres of Georgia's most remote backcountry. The Jacks River Trail (9 miles to Jacks River Falls) involves 40+ river crossings and leads to an 80-foot waterfall with a deep swimming hole. Conasauga River Trail is equally popular. No permits required. Serious backpacking territory.",
             "typical_duration_minutes": 480,
@@ -204,7 +204,7 @@ WAVE_10_DESTINATIONS = [
             "lat": 33.3272,
             "lng": -86.3239,
             "website": "https://www.desotocaverns.com/",
-            "venue_type": "museum",
+            "place_type": "museum",
             "short_description": "Commercial cavern with onyx formations and light shows — used by Native Americans for 2,000+ years.",
             "description": "DeSoto Caverns is a commercial cave attraction in central Alabama with spectacular onyx formations and multi-colored light shows. Archaeological evidence shows use by Native Americans for over 2,000 years. Above-ground adventure park with maze, gem mining, and go-karts.",
             "typical_duration_minutes": 120,
@@ -237,7 +237,7 @@ WAVE_10_DESTINATIONS = [
             "lat": 34.8603,
             "lng": -83.1118,
             "website": "https://foothillstrail.org/",
-            "venue_type": "trail",
+            "place_type": "trail",
             "short_description": "76-mile thru-hike through South Carolina's mountain parks — the best backpacking trail in the state.",
             "description": "The Foothills Trail is a 76-mile trail through South Carolina's Blue Ridge mountains, connecting Oconee State Park to Table Rock State Park. Considered the best backpacking trail in South Carolina. Waterfalls, gorges, lake views, and mountain summits. Can be done as a week-long thru-hike or in sections.",
             "typical_duration_minutes": 480,
@@ -269,7 +269,7 @@ WAVE_10_DESTINATIONS = [
             "lat": 35.0696,
             "lng": -81.6553,
             "website": "https://discoversouthcarolina.com/articles/cherokee-foothills-scenic-highway",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "130-mile scenic route along the Blue Ridge foothills connecting 7 state parks with outstanding fall color.",
             "description": "SC Highway 11 is a 130-mile scenic route along the base of the Blue Ridge in South Carolina. Connects Table Rock, Caesars Head, Oconee, and 4 other state parks. Outstanding fall color and wildflower viewing. Peach orchards and farm stands along the route. No commercial development.",
             "typical_duration_minutes": 300,
@@ -301,7 +301,7 @@ WAVE_10_DESTINATIONS = [
             "lat": 34.4150,
             "lng": -84.2250,
             "website": "https://georgiawildlife.com/dawson-forest-wma",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "15+ miles of mountain bike and hiking trails with Etowah River access — less crowded than Blankets Creek.",
             "description": "Dawson Forest Wildlife Management Area offers 15+ miles of mountain bike and hiking trails through managed forestland. Etowah River access for paddling. Significantly less crowded than Blankets Creek while offering similar quality singletrack. Hunting seasons may restrict access.",
             "typical_duration_minutes": 240,
@@ -335,7 +335,7 @@ WAVE_10_DESTINATIONS = [
             "lat": 34.8127,
             "lng": -84.2751,
             "website": "https://www.zipblueridge.com/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": "165-acre aerial adventure park with 6,000+ feet of zip lines through Blue Ridge mountain forest.",
             "description": "Blue Ridge Aerial Adventure Park spans 165 acres with 6,000+ feet of zip line cable and over a mile of total zip distance. Multiple tour options from 7-zip introductory to 13-zip full mountain experience. Aerial challenge course adds obstacles and bridges. Mountain forest canopy setting near Blue Ridge.",
             "typical_duration_minutes": 180,
@@ -373,7 +373,7 @@ def find_existing_venue(venue_seed: dict) -> dict | None:
 
     client = get_client()
     result = (
-        client.table("venues")
+        client.table("places")
         .select("*")
         .eq("name", venue_seed["name"])
         .limit(1)
@@ -470,7 +470,7 @@ def main() -> None:
                 skipped += 1
             else:
                 if args.apply:
-                    client.table("venues").update(updates).eq("id", existing["id"]).execute()
+                    client.table("places").update(updates).eq("id", existing["id"]).execute()
                 logger.info(
                     "%s venue: %s (%s fields)",
                     "UPDATE" if args.apply else "WOULD UPDATE",

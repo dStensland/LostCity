@@ -44,7 +44,7 @@ PLACE_DATA = {
     "zip": "30311",
     "lat": 33.7190,
     "lng": -84.4520,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "trail",
     "website": HOMEPAGE,
     # Open daily from dawn to dusk
@@ -80,7 +80,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "nature_preserve",
             "commitment_tier": "halfday",
             "primary_activity": "family nature preserve walk",
@@ -101,7 +101,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": HOMEPAGE,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "park",
+                "place_type": "park",
                 "city": "atlanta",
             },
         },
@@ -109,7 +109,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "waterfall-and-forest-trails",
             "title": "Waterfall and forest trails",
             "feature_type": "amenity",
@@ -123,7 +123,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "free-southwest-atlanta-nature-reset",
             "title": "Free Southwest Atlanta nature reset",
             "feature_type": "experience",
@@ -190,7 +190,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning(
                 "Cascade Springs Nature Preserve: venue update failed: %s", exc

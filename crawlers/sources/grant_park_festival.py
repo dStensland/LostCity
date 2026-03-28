@@ -25,7 +25,7 @@ PLACE_DATA = {
     "zip": "30312",
     "lat": 33.7360,
     "lng": -84.3700,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": "https://www.gpconservancy.org",
 }
@@ -74,7 +74,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": "Atlanta's second-largest arts festival featuring over 175 artists, live music, food, and children's activities in historic Grant Park.",
         "start_date": start_date.strftime("%Y-%m-%d"),

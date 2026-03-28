@@ -31,7 +31,7 @@ PLACE_DATA = {
     "zip": "30306",
     "lat": 33.7830,
     "lng": -84.3530,
-    "venue_type": "neighborhood",
+    "place_type": "neighborhood",
     "spot_type": "neighborhood",
     "website": BASE_URL,
     "description": "Historic walkable urban village with vibrant business district, legacy bars, and annual festivals.",
@@ -85,7 +85,7 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,
@@ -161,7 +161,7 @@ def create_summerfest(source_id: int, venue_id: int) -> tuple[int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": (
             "Annual Virginia-Highland Summerfest celebrating the neighborhood's vibrant culture. "
@@ -226,7 +226,7 @@ def create_winterfest(source_id: int, venue_id: int) -> tuple[int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": (
             "Annual Virginia-Highland Winterfest featuring the neighborhood Tour of Homes. "
@@ -379,7 +379,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": f"Community event in Virginia-Highland neighborhood",
                             "start_date": start_date,

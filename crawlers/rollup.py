@@ -35,7 +35,7 @@ def get_event_rollup_stats(
 
     # Get venue rollups (venues with many events from 'venue' rollup sources)
     venue_query = client.table("events").select(
-        "venue_id, venues(id, name, slug), source_id, sources(rollup_behavior)"
+        "place_id, venues(id, name, slug), source_id, sources(rollup_behavior)"
     ).eq("start_date", date_str)
 
     if category:
@@ -52,7 +52,7 @@ def get_event_rollup_stats(
             vid = venue["id"]
             if vid not in venue_counts:
                 venue_counts[vid] = {
-                    "venue_id": vid,
+                    "place_id": vid,
                     "venue_name": venue["name"],
                     "venue_slug": venue["slug"],
                     "count": 0

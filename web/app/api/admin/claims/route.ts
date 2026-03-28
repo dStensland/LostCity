@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       reviewer:profiles!entity_claim_requests_reviewed_by_fkey (
         id, username, display_name
       ),
-      venue:venues(id, name, slug),
+      venue:places(id, name, slug),
       organization:organizations(id, name, slug)
     `,
       { count: "exact" }

@@ -121,9 +121,9 @@ export async function getYonderDestinationNodePayload(
     ),
   ];
   const { data: venueRows } = await supabase
-    .from("venues")
+    .from("places")
     .select(
-      "id, slug, name, venue_type, city, neighborhood, image_url, hero_image_url, short_description",
+      "id, slug, name, place_type, city, neighborhood, image_url, hero_image_url, short_description",
     )
     .in("slug", slugs)
     .eq("active", true);
@@ -147,8 +147,8 @@ export async function getYonderDestinationNodePayload(
     venueIds.length > 0
       ? await supabase
           .from("editorial_mentions")
-          .select("venue_id, source_key, article_title, article_url, is_active")
-          .in("venue_id", venueIds)
+          .select("place_id, source_key, article_title, article_url, is_active")
+          .in("place_id", venueIds)
           .eq("is_active", true)
       : { data: [] };
 

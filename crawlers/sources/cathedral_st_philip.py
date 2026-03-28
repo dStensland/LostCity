@@ -41,7 +41,7 @@ PLACE_DATA = {
     "zip": "30305",
     "lat": 33.8429,
     "lng": -84.3818,
-    "venue_type": "church",
+    "place_type": "church",
     "spot_type": "church",
     "website": BASE_URL,
     "vibes": ["historic", "faith-christian", "episcopal", "live-music", "upscale"],
@@ -272,7 +272,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                                         event_record = {
                                             "source_id": source_id,
-                                            "venue_id": venue_id,
+                                            "place_id": venue_id,
                                             "title": title,
                                             "description": f"Event at The Cathedral of St. Philip, a historic Episcopal cathedral in Buckhead.",
                                             "start_date": start_date,
@@ -380,7 +380,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                                 event_record = {
                                     "source_id": source_id,
-                                    "venue_id": venue_id,
+                                    "place_id": venue_id,
                                     "title": title,
                                     "description": description,
                                     "start_date": start_date,

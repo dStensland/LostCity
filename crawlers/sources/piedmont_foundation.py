@@ -174,15 +174,15 @@ def find_venue_for_event(title: str, location_text: str) -> dict:
     # Check external venues first
     for key, place_data in EXTERNAL_VENUES.items():
         if key in search_text:
-            return {**place_data, "venue_type": "event_venue", "website": None}
+            return {**place_data, "place_type": "event_venue", "website": None}
 
     # Check hospital names
     for key, place_data in VENUE_MAP.items():
         if key in search_text:
-            return {**place_data, "venue_type": "hospital", "website": BASE_URL}
+            return {**place_data, "place_type": "hospital", "website": BASE_URL}
 
     # Default to Piedmont Atlanta
-    return {**VENUE_MAP["piedmont atlanta"], "venue_type": "hospital", "website": BASE_URL}
+    return {**VENUE_MAP["piedmont atlanta"], "place_type": "hospital", "website": BASE_URL}
 
 
 def determine_category(title: str) -> tuple[str, Optional[str], list[str]]:
@@ -374,7 +374,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "portal_id": portal_id,  # Piedmont-exclusive event
                         "title": title,
                         "description": description,

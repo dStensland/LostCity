@@ -34,7 +34,7 @@ PARADE_VENUE = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30309",
-    "venue_type": "outdoor_venue",
+    "place_type": "outdoor_venue",
     "website": BASE_URL,
 }
 
@@ -46,7 +46,7 @@ RACE_VENUE = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30309",
-    "venue_type": "bar",
+    "place_type": "bar",
     "website": "https://www.fadoirishpub.com/atlanta",
 }
 
@@ -261,7 +261,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             race_hash = generate_content_hash(race_title, RACE_VENUE["name"], race_date)
             race_record = {
                 "source_id": source_id,
-                "venue_id": race_venue_id,
+                "place_id": race_venue_id,
                 "title": race_title,
                 "description": (
                     "Official Atlanta St. Patrick's Parade 5K through Midtown, "
@@ -298,7 +298,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         parade_hash = generate_content_hash(parade_title, PARADE_VENUE["name"], parade_date)
         parade_record = {
             "source_id": source_id,
-            "venue_id": parade_venue_id,
+            "place_id": parade_venue_id,
             "title": parade_title,
             "description": (
                 "Annual Midtown parade celebrating Irish heritage in Atlanta, "

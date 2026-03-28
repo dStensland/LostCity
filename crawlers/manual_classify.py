@@ -259,7 +259,7 @@ def apply_manual(dry_run: bool = False):
 
     for vid, action in sorted(all_changes.items()):
         # Get current venue info
-        result = client.table("venues").select("id,name,venue_type,active").eq("id", vid).execute()
+        result = client.table("places").select("id,name,venue_type,active").eq("id", vid).execute()
         if not result.data:
             print(f"  SKIP [{vid}] — not found")
             errors += 1
@@ -273,7 +273,7 @@ def apply_manual(dry_run: bool = False):
                 continue  # already deactivated
             print(f"  DEACTIVATE [{vid}] {name}")
             if not dry_run:
-                client.table("venues").update({"active": False}).eq("id", vid).execute()
+                client.table("places").update({"active": False}).eq("id", vid).execute()
             deactivated += 1
         else:
             current = venue.get("venue_type") or "(none)"
@@ -281,7 +281,7 @@ def apply_manual(dry_run: bool = False):
                 continue  # already correct
             print(f"  CLASSIFY [{vid}] {name}: {current} → {action}")
             if not dry_run:
-                client.table("venues").update({"venue_type": action}).eq("id", vid).execute()
+                client.table("places").update({"place_type": action}).eq("id", vid).execute()
             classified += 1
 
     print(f"\n{'=' * 60}")

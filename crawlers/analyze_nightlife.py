@@ -55,7 +55,7 @@ def analyze_nightlife():
     ]
     
     # Get venue IDs with nightlife types
-    venues_result = client.table("venues").select("id,name,venue_type").in_(
+    venues_result = client.table("places").select("id,name,venue_type").in_(
         "venue_type", nightlife_venue_types
     ).execute()
     

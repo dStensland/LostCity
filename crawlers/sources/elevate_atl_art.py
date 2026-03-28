@@ -33,7 +33,7 @@ PLACE_DATA = {
     "state": "GA",
     "lat": 33.7490,
     "lng": -84.3880,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": BASE_URL,
     "description": "Annual temporary public art festival activating Atlanta neighborhoods with murals, installations, performances, and community engagement.",
@@ -486,7 +486,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             # Build event record
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": venue_id,
+                                "place_id": venue_id,
                                 "title": title,
                                 "description": description if description else None,
                                 "start_date": start_date,

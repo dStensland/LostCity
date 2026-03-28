@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
   // New filters
   const openNow = searchParams.get("open_now") === "true";
   const priceLevel = searchParams.get("price_level"); // "1", "2", "3", "4" or comma-separated
-  const venueTypes = searchParams.get("venue_type")?.split(",").filter(Boolean);
+  const venueTypes = searchParams.get("place_type")?.split(",").filter(Boolean);
   const neighborhoods = searchParams.get("neighborhood")?.split(",").filter(Boolean);
   const vibes = searchParams.get("vibes")?.split(",").filter(Boolean);
   const genres = searchParams.get("genres")?.split(",").filter(Boolean);
@@ -268,8 +268,8 @@ export async function GET(request: NextRequest) {
     // Fetch all active venues with enhanced data
     // Note: is_24_hours column may not exist in all environments
     let query = supabase
-      .from("venues")
-      .select("id, name, slug, address, neighborhood, venue_type, location_designator, city, image_url, lat, lng, price_level, hours, hours_display, vibes, short_description, genres")
+      .from("places")
+      .select("id, name, slug, address, neighborhood, place_type, location_designator, city, image_url, lat, lng, price_level, hours, hours_display, vibes, short_description, genres")
       .neq("active", false); // Exclude deactivated venues
 
     // Venues table has no portal_id column, so we scope by city.
@@ -291,7 +291,7 @@ export async function GET(request: NextRequest) {
 
     // Apply venue type filter — expand through alias map to catch legacy DB types
     if (venueTypes && venueTypes.length > 0) {
-      query = query.in("venue_type", expandVenueTypes(venueTypes));
+      query = query.in("place_type", expandVenueTypes(venueTypes));
     }
 
     // Apply neighborhood filter
@@ -421,7 +421,7 @@ export async function GET(request: NextRequest) {
           allNeighborhoods = cachedNeighborhoods;
         } else {
           let neighborhoodsQuery = supabase
-            .from("venues")
+            .from("places")
             .select("neighborhood")
             .neq("active", false);
           if (portalCityFilter.length > 0) {
@@ -474,7 +474,7 @@ export async function GET(request: NextRequest) {
           .gte("start_date", today)
           .lte("start_date", eventsWindowEnd)
           .not("venue_id", "is", null)
-          .in("venue_id", venueIds);
+          .in("place_id", venueIds);
 
         scopedQuery = applyPortalScopeToQuery(scopedQuery, {
           portalId,
@@ -647,8 +647,8 @@ export async function GET(request: NextRequest) {
     if (includeEvents && venueIds.length > 0) {
       let eventDetailsQuery = portalClient
         .from("events")
-        .select("venue_id, id, title, start_date, start_time")
-        .in("venue_id", venueIds)
+        .select("place_id, id, title, start_date, start_time")
+        .in("place_id", venueIds)
         .gte("start_date", today)
         .lte("start_date", eventsWindowEnd)
         .is("canonical_event_id", null)

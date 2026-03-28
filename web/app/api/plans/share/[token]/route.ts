@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       items:plan_items(
         id, title, sort_order, event_id, venue_id, note, start_time,
         event:events(id, title, start_date, start_time, image_url),
-        venue:venues(id, name, slug, image_url, neighborhood)
+        venue:places(id, name, slug, image_url, neighborhood)
       ),
       participants:plan_participants(
         id, status,

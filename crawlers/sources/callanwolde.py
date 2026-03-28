@@ -43,7 +43,7 @@ _VENUE_DATA = {
     "zip": "30306",
     "lat": 33.7872,
     "lng": -84.3407,
-    "venue_type": "arts_center",
+    "place_type": "arts_center",
     "spot_type": "arts_center",
     "website": _BASE_URL,
     "vibes": ["artsy", "family-friendly", "historic", "all-ages"],
@@ -67,7 +67,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "arts_center",
             "commitment_tier": "halfday",
             "primary_activity": "family arts center visit",
@@ -88,7 +88,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": _BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "arts_center",
+                "place_type": "arts_center",
                 "city": "atlanta",
             },
         },
@@ -96,7 +96,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "historic-arts-campus-and-grounds",
             "title": "Historic arts campus and grounds",
             "feature_type": "amenity",
@@ -109,7 +109,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "family-classes-camps-and-arts-events",
             "title": "Family classes, camps, and arts events",
             "feature_type": "amenity",
@@ -122,7 +122,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "slower-pace-creative-campus-stop",
             "title": "Slower-pace creative campus stop",
             "feature_type": "amenity",

@@ -24,7 +24,7 @@ PLACE_DATA = {
     "zip": "30309",
     "lat": 33.7811,
     "lng": -84.3810,
-    "venue_type": "restaurant",
+    "place_type": "restaurant",
     "website": BASE_URL,
 }
 
@@ -74,7 +74,7 @@ def generate_recurring_events(source_id: int, venue_id: int, weeks_ahead: int = 
 
             events.append({
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": recurring["title"],
                 "description": recurring["description"],
                 "start_date": start_date,

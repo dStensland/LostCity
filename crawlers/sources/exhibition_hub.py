@@ -43,7 +43,7 @@ PLACE_DATA = {
     "zip": "30309",
     "lat": 33.7883,
     "lng": -84.3831,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
 }
@@ -273,7 +273,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": None,  # Eventbrite cards don't show full description
                         "start_date": start_date,

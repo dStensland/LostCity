@@ -76,7 +76,7 @@ def fetch_venue_presence() -> tuple[set[str], set[str]]:
     offset = 0
     while True:
         batch = (
-            client.table("venues")
+            client.table("places")
             .select("name,slug,state,active")
             .order("id")
             .range(offset, offset + 999)
@@ -207,7 +207,7 @@ def main() -> int:
     offset = 0
     while True:
         batch = (
-            client.table("venues")
+            client.table("places")
             .select("name,slug,state,active")
             .order("id")
             .range(offset, offset + 999)

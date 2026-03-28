@@ -38,7 +38,7 @@ PLACE_DATA = {
     "zip": "30309",
     "lat": 33.8337,
     "lng": -84.4064,
-    "venue_type": "venue",
+    "place_type": "venue",
     "spot_type": "theater",
     "website": BASE_URL,
     "vibes": ["dance", "ballet", "performing-arts", "west-midtown"],
@@ -176,7 +176,7 @@ def parse_venue_from_text(text: str) -> Optional[dict]:
             "city": city,
             "state": state,
             "zip": zip_code,
-            "venue_type": venue_type,
+            "place_type": venue_type,
             "spot_type": spot_type,
             "neighborhood": None,  # Will be geocoded later
         }
@@ -358,7 +358,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": description,
                             "start_date": start_date,

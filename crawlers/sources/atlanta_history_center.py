@@ -66,7 +66,7 @@ PLACE_DATA = {
     "zip": "30305",
     "lat": 33.8422,
     "lng": -84.3864,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     "description": (
@@ -159,7 +159,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "history_museum",
             "commitment_tier": "halfday",
             "primary_activity": "family history campus visit",
@@ -181,7 +181,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "museum",
+                "place_type": "museum",
                 "city": "atlanta",
             },
         },
@@ -189,7 +189,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "historic-houses-gardens-and-galleries",
             "title": "Historic houses, gardens, and galleries",
             "feature_type": "amenity",
@@ -202,7 +202,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "buckhead-history-campus-day",
             "title": "Buckhead history campus day",
             "feature_type": "amenity",
@@ -215,7 +215,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "longer-walking-campus-with-indoor-reset-points",
             "title": "Longer walking campus with indoor reset points",
             "feature_type": "amenity",
@@ -393,7 +393,7 @@ def _parse_exhibition_record(url: str, soup: BeautifulSoup, source_id: int, venu
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": today,
@@ -485,7 +485,7 @@ def _parse_summer_camp_records(url: str, soup: BeautifulSoup, source_id: int, ve
             records.append(
                 {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": full_title,
                     "description": (
                         f"{title} session for grades {grade_band} at Atlanta History Center. "
@@ -601,7 +601,7 @@ def _normalize_timed_program_rows(source_id: int, venue_id: int) -> int:
         client.table("events")
         .select("id")
         .eq("source_id", source_id)
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("is_active", True)
         .gte("start_date", today)
         .not_.is_("start_time", "null")
@@ -695,7 +695,7 @@ def _deactivate_redundant_rows(source_id: int, venue_id: int) -> int:
         client.table("events")
         .select("id,title,start_date,start_time,source_url")
         .eq("source_id", source_id)
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("is_active", True)
         .gte("start_date", today)
         .execute()

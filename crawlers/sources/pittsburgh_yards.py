@@ -23,7 +23,7 @@ _CONFIG = TribeConfig(
         "zip": "30310",
         "lat": 33.7358,
         "lng": -84.4106,
-        "venue_type": "cultural_center",
+        "place_type": "cultural_center",
         "spot_type": "cultural_center",
         "website": "https://pittsburghyards.com",
         "description": (

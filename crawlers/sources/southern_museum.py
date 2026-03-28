@@ -35,7 +35,7 @@ PLACE_DATA = {
     "zip": "30144",
     "lat": 34.0237,
     "lng": -84.6163,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     "description": "Museum featuring The General locomotive, Civil War history, and railroad heritage exhibits.",
@@ -47,7 +47,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "history_museum",
             "commitment_tier": "halfday",
             "primary_activity": "train and history museum visit",
@@ -68,7 +68,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "history_museum",
+                "place_type": "history_museum",
                 "city": "kennesaw",
             },
         },
@@ -76,7 +76,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "the-general-locomotive-anchor",
             "title": "The General locomotive anchor",
             "feature_type": "amenity",
@@ -89,7 +89,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "railroad-history-family-stop",
             "title": "Railroad history family stop",
             "feature_type": "amenity",
@@ -131,7 +131,7 @@ def create_museum_programs(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Annual model train exhibition at the Southern Museum. "
@@ -183,7 +183,7 @@ def create_museum_programs(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Commemoration of the Great Locomotive Chase (April 12, 1862). "
@@ -247,7 +247,7 @@ def create_museum_programs(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,

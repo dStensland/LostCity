@@ -38,7 +38,7 @@ PLACE_DATA = {
     "zip": "30337",
     "lat": 33.6410,
     "lng": -84.4361,
-    "venue_type": "convention_center",
+    "place_type": "convention_center",
     "spot_type": "convention_center",
     "website": "https://www.gicc.com/",
 }
@@ -119,7 +119,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": event["title"],
         "description": (
             "GROOM'D is a pet-grooming trade show focused on competitions, education, exhibitors, "

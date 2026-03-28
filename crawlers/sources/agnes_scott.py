@@ -28,7 +28,7 @@ PLACE_DATA = {
     "zip": "30030",
     "lat": 33.7696,
     "lng": -84.2936,
-    "venue_type": "university",
+    "place_type": "university",
     "spot_type": "arts-culture",
     "website": "https://agnesscott.edu",
 }
@@ -153,7 +153,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": (event.get("description_text") or f"Public event at Agnes Scott College")[:500],
                 "start_date": start_date,

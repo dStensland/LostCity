@@ -37,7 +37,7 @@ def test_insert_exhibition_rejects_junk_titles():
         "Learn More",
     ]
     for title in junk_titles:
-        result = insert_exhibition({"title": title, "venue_id": 1})
+        result = insert_exhibition({"title": title, "place_id": 1})
         assert result is None, f"Junk title {title!r} should be rejected"
 
 

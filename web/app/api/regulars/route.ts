@@ -41,7 +41,7 @@ const EVENT_SELECT = `
   is_all_day,
   category:category_id, genres, tags,
   series:series_id(day_of_week, frequency),
-  venue:venues(name, neighborhood, city, active)
+  venue:places(name, neighborhood, city, is_active)
 `;
 
 export async function GET(request: NextRequest) {

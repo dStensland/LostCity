@@ -8,7 +8,7 @@ def main():
     supabase = get_client()
 
     # Check if venue exists
-    venue = supabase.table("venues").select("*").eq("slug", "fernbank-science-center").execute()
+    venue = supabase.table("places").select("*").eq("slug", "fernbank-science-center").execute()
     if not venue.data:
         print("ERROR: Venue 'fernbank-science-center' (ID 225) must exist first")
         return

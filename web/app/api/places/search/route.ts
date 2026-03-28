@@ -283,7 +283,7 @@ export async function GET(request: NextRequest) {
   const sanitizedArrayQuery = normalizedQuery.replace(/[{},"\\/]/g, "");
 
   let searchQuery = supabase
-    .from("venues")
+    .from("places")
     .select(
       `
       id,

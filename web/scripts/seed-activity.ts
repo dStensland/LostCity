@@ -218,7 +218,7 @@ async function getVenueBySlug(
 
   // Try exact match
   const { data } = await supabase
-    .from("venues")
+    .from("places")
     .select("id, name")
     .eq("slug", slugHint)
     .maybeSingle();
@@ -238,7 +238,7 @@ async function getVenueBySlug(
 
   for (const variant of variations) {
     const { data: varData } = await supabase
-      .from("venues")
+      .from("places")
       .select("id, name")
       .ilike("slug", `%${variant}%`)
       .limit(1)
@@ -253,7 +253,7 @@ async function getVenueBySlug(
   // Try name search
   const searchName = slugHint.replace(/-/g, " ").replace(/_/g, " ");
   const { data: nameData } = await supabase
-    .from("venues")
+    .from("places")
     .select("id, name")
     .ilike("name", `%${searchName}%`)
     .limit(1)
@@ -328,7 +328,7 @@ async function getEventsForCategories(
 
   const { data, error } = await supabase
     .from("events")
-    .select("id, category_id, start_date, title, venue_id")
+    .select("id, category_id, start_date, title, place_id")
     .in("category_id", mapped)
     .gte("start_date", today)
     .lte("start_date", monthFromNow)

@@ -30,7 +30,7 @@ PLACE_DATA = {
     "zip": "30075",
     "lat": 34.0180,
     "lng": -84.3410,
-    "venue_type": "brewery",
+    "place_type": "brewery",
     "spot_type": "brewery",
     "website": BASE_URL,
     "description": "Roswell craft brewery with rotating taps, taproom, live music, and food trucks.",
@@ -152,7 +152,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": venue_id,
+                                "place_id": venue_id,
                                 "title": title,
                                 "description": f"Event at Variant Brewing in Roswell",
                                 "start_date": start_date,

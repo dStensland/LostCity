@@ -50,7 +50,7 @@ def test_build_destination_envelope_marks_aquatic_center() -> None:
     place_data = {
         "name": "East Central DeKalb Community & Senior Center",
         "slug": "east-central-dekalb-community-senior-center",
-        "venue_type": "community_center",
+        "place_type": "community_center",
     }
 
     envelope = _build_destination_envelope(place_data, 2203)

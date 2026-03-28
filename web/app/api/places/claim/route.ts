@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
   // Check if venue exists
   const { data: venue, error: venueError } = await serviceClient
-    .from("venues")
+    .from("places")
     .select("id, name, website, claimed_by")
     .eq("id", venue_id)
     .maybeSingle() as {
@@ -103,9 +103,9 @@ export async function POST(request: NextRequest) {
 
   // Check if user already has a pending claim for this venue
   const { data: existingClaim, error: existingClaimError } = await serviceClient
-    .from("venue_claims")
+    .from("place_claims")
     .select("id, status")
-    .eq("venue_id", venue_id)
+    .eq("place_id", venue_id)
     .eq("user_id", user.id)
     .eq("status", "pending")
     .maybeSingle();
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
 
   // Create the claim
   const { data: claim, error: claimError } = await serviceClient
-    .from("venue_claims")
+    .from("place_claims")
     .insert({
       venue_id,
       user_id: user.id,
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
   // If auto-approved, update the venue
   if (status === "approved") {
     const { error: updateError } = await serviceClient
-      .from("venues")
+      .from("places")
       .update({
         claimed_by: user.id,
         claimed_at: new Date().toISOString(),
@@ -200,7 +200,7 @@ export async function GET(request: NextRequest) {
   const serviceClient = createServiceClient();
 
   const { data: claims, error: claimsError } = await serviceClient
-    .from("venue_claims")
+    .from("place_claims")
     .select(`
       id,
       venue_id,

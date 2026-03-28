@@ -42,7 +42,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7612,
     "lng": -84.3928,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": HOMEPAGE,
     # Hours verified 2026-03-11 against museumofillusions.us/atlanta/
@@ -72,7 +72,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "interactive_museum",
             "commitment_tier": "hour",
             "primary_activity": "family illusion museum visit",
@@ -94,7 +94,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": HOMEPAGE,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "museum",
+                "place_type": "museum",
                 "city": "atlanta",
             },
         },
@@ -102,7 +102,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "interactive-photo-illusion-galleries",
             "title": "Interactive photo-illusion galleries",
             "feature_type": "amenity",
@@ -115,7 +115,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "short-downtown-family-reset-stop",
             "title": "Short downtown family reset stop",
             "feature_type": "amenity",
@@ -128,7 +128,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "predictable-short-stop-indoor-novelty",
             "title": "Predictable short-stop indoor novelty",
             "feature_type": "amenity",
@@ -200,7 +200,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning(
                 "Museum of Illusions Atlanta: venue update failed: %s", exc

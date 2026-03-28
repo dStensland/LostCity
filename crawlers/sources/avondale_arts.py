@@ -31,7 +31,7 @@ AVONDALE_VENUE = {
     "city": "Avondale Estates",
     "state": "GA",
     "zip": "30002",
-    "venue_type": "arts_center",
+    "place_type": "arts_center",
     "website": BASE_URL,
 }
 
@@ -201,7 +201,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         'source_id': source_id,
-                        'venue_id': venue_id,
+                        'place_id': venue_id,
                         'producer_id': producer_id,
                         'title': title[:500],
                         'description': description,

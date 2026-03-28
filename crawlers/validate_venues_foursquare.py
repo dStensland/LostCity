@@ -184,7 +184,7 @@ def get_venues_to_validate(
     """Get venues to validate against Foursquare."""
     client = get_client()
 
-    query = client.table("venues").select(
+    query = client.table("places").select(
         "id, name, slug, address, city, lat, lng, website, foursquare_id, venue_type"
     ).eq("active", True).eq("city", "Atlanta")
 
@@ -194,7 +194,7 @@ def get_venues_to_validate(
         query = query.not_.is_("website", "null")
 
     if venue_type:
-        query = query.eq("venue_type", venue_type)
+        query = query.eq("place_type", venue_type)
 
     query = query.limit(limit)
 
@@ -206,7 +206,7 @@ def update_venue(venue_id: int, updates: dict) -> bool:
     """Update venue with corrections."""
     client = get_client()
     try:
-        client.table("venues").update(updates).eq("id", venue_id).execute()
+        client.table("places").update(updates).eq("id", venue_id).execute()
         return True
     except Exception as e:
         logger.error(f"Update error: {e}")
@@ -223,7 +223,7 @@ def validate_venue(venue: dict, fix: bool = False, find_missing: bool = False) -
     - suggestions: dict of suggested fixes
     """
     result = {
-        "venue_id": venue["id"],
+        "place_id": venue["id"],
         "venue_name": venue["name"],
         "status": "unknown",
         "issues": [],

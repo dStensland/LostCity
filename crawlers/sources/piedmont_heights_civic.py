@@ -31,7 +31,7 @@ PLACE_DATA = {
     "zip": "30309",
     "lat": 33.8000,
     "lng": -84.3700,
-    "venue_type": "neighborhood",
+    "place_type": "neighborhood",
     "spot_type": "neighborhood",
     "website": BASE_URL,
     "description": "Atlanta's oldest neighborhood (settled 1822), adjacent to Piedmont Park. 'Small Town in a Big City' identity.",
@@ -94,7 +94,7 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,
@@ -177,7 +177,7 @@ def create_npu_f_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,
@@ -261,7 +261,7 @@ def create_community_cleanup(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,

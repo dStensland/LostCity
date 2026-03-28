@@ -31,7 +31,7 @@ PLACE_DATA = {
     "zip": "30009",
     "lat": 34.0754,
     "lng": -84.2941,
-    "venue_type": "city",
+    "place_type": "city",
     "spot_type": "city",
     "website": BASE_URL,
     "description": "City of Alpharetta - upscale North Fulton suburb with vibrant downtown, Avalon, and family-friendly events.",
@@ -81,7 +81,7 @@ def create_recurring_events(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,
@@ -145,7 +145,7 @@ def create_recurring_events(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Annual singer-songwriter music festival in downtown Alpharetta. "
@@ -259,7 +259,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": f"City of Alpharetta event",
                             "start_date": start_date,

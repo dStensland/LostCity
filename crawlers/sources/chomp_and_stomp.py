@@ -26,7 +26,7 @@ PLACE_DATA = {
     "zip": "30312",
     "lat": 33.7495,
     "lng": -84.3535,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": "https://cabbagetown.com",
 }
@@ -73,7 +73,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": (
             "Atlanta's beloved Chomp & Stomp festival features 30+ bluegrass and Americana bands "

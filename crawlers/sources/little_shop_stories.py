@@ -68,7 +68,7 @@ PLACE_DATA = {
     "zip": "30030",
     "lat": 33.7748,
     "lng": -84.2963,
-    "venue_type": "bookstore",
+    "place_type": "bookstore",
     "spot_type": "bookstore",
     "website": BASE_URL,
     "vibes": ["family-friendly", "all-ages", "cozy", "intimate"],
@@ -563,7 +563,7 @@ def _parse_event_card(
 
     record: dict = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date_str,

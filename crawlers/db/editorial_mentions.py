@@ -70,7 +70,7 @@ def upsert_editorial_mention(
         return None
 
     row = {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         **{
             key: value
             for key, value in mention_data.items()

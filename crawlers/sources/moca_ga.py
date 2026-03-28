@@ -43,7 +43,7 @@ PLACE_DATA = {
     "zip": "30309",
     "lat": 33.7920,
     "lng": -84.4078,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     # Description populated dynamically at crawl time from og:description.
@@ -356,7 +356,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 try:
                     exhibition_record = {
                         "title": record["title"],
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "source_id": source_id,
                         "_venue_name": PLACE_DATA["name"],
                         "opening_date": hash_start_date,
@@ -377,7 +377,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             content_hash = generate_content_hash(record["title"], PLACE_DATA["name"], hash_start_date)
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": record["title"],
                 "description": record["description"],
                 "start_date": record["start_date"],

@@ -47,10 +47,10 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
 
     // Fetch existing venue
     const { data: venue, error: fetchError } = await serviceClient
-      .from("venues")
+      .from("places")
       .select("id, vibes")
       .eq("id", venue_id)
-      .eq("active", true)
+      .eq("is_active", true)
       .maybeSingle();
 
     if (fetchError) {
@@ -74,7 +74,7 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
     const mergedVibes = [...new Set([...existingVibes, ...vibes])];
 
     const { error: updateError } = await serviceClient
-      .from("venues")
+      .from("places")
       .update({ vibes: mergedVibes, updated_at: new Date().toISOString() } as never)
       .eq("id", venue_id);
 

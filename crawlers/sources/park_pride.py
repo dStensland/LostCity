@@ -52,7 +52,7 @@ FALLBACK_VENUE_DATA = {
     "zip": "30303",
     "lat": 33.7590,
     "lng": -84.3880,
-    "venue_type": "nonprofit",
+    "place_type": "nonprofit",
     "spot_type": "nonprofit",
     "website": BASE_URL,
     "vibes": ["volunteer", "outdoors", "family-friendly"],
@@ -169,14 +169,14 @@ def build_venue_from_api(place_data: dict) -> Optional[dict]:
         "city": city,
         "state": state,
         "zip": zip_code or None,
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "website": None,
     }
 
 
 def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityEnvelope | None:
-    venue_type = str(place_data.get("venue_type") or "").strip().lower()
+    venue_type = str(place_data.get("place_type") or place_data.get("venue_type") or "").strip().lower()
     if venue_type != "park":
         return None
 
@@ -184,7 +184,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "park",
             "commitment_tier": "halfday",
             "primary_activity": "family park visit",
@@ -197,7 +197,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": venue_type,
+                "place_type": venue_type,
                 "city": str(place_data.get("city") or "atlanta").lower(),
                 "supports_org": "park_pride",
             },
@@ -206,7 +206,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "free-outdoor-play-space",
             "title": "Free outdoor play space",
             "feature_type": "amenity",
@@ -420,7 +420,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title[:200],
                         "description": description if description else None,
                         "start_date": start_date,

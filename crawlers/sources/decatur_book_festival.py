@@ -32,7 +32,7 @@ PLACE_DATA = {
     "zip": "30030",
     "lat": 33.7748,
     "lng": -84.2963,
-    "venue_type": "plaza",
+    "place_type": "plaza",
     "spot_type": "plaza",
     "website": "https://www.decaturga.com",
 }
@@ -161,7 +161,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at Decatur Square",
                         "start_date": start_date,

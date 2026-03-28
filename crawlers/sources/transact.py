@@ -102,7 +102,7 @@ def parse_homepage(html: str, today: date | None = None) -> dict:
         "city": address.get("addressLocality") or "Atlanta",
         "state": address.get("addressRegion") or "GA",
         "zip": address.get("postalCode") or "30313",
-        "venue_type": "convention_center",
+        "place_type": "convention_center",
         "spot_type": "convention_center",
         "website": "https://www.gwcca.org/",
     }
@@ -179,7 +179,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": session["title"],
             "description": event["description"],
             "start_date": session["start_date"],

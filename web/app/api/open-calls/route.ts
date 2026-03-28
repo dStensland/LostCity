@@ -217,7 +217,7 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at,
         organization:organizations(id, name, slug, website),
-        venue:venues(id, name, slug, neighborhood, city)
+        venue:places(id, name, slug, neighborhood, city)
       `
       )
       .eq("is_active", true)

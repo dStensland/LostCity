@@ -16,7 +16,7 @@ def test_render_markdown_includes_core_sections() -> None:
                     {
                         "slug": "sparkles-family-fun-center-kennesaw",
                         "city": "Kennesaw",
-                        "venue_type": "games",
+                        "place_type": "games",
                         "website": "https://www.sparkles.com",
                     }
                 ]

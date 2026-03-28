@@ -26,7 +26,7 @@ PLACE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30303",
-    "venue_type": "bar",
+    "place_type": "bar",
     "website": SKYLOUNGE_URL,
 }
 

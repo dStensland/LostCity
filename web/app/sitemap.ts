@@ -128,7 +128,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Fetch venues/spots
   const { data: spotsData } = await supabase
-    .from("venues")
+    .from("places")
     .select("slug, updated_at, portal_id");
 
   const spots = ((spotsData || []) as SpotRow[]).slice(0, 500);

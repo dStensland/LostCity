@@ -72,7 +72,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30314",
-        "venue_type": "museum",
+        "place_type": "museum",
         "website": "https://museum.spelman.edu",
     },
     "default": {
@@ -83,7 +83,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30314",
-        "venue_type": "university",
+        "place_type": "university",
         "website": "https://spelman.edu",
     },
 }
@@ -94,7 +94,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "art_museum",
             "commitment_tier": "hour",
             "primary_activity": "campus art museum visit",
@@ -115,7 +115,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": MUSEUM_BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "museum",
+                "place_type": "museum",
                 "city": "atlanta",
             },
         },
@@ -123,7 +123,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "hbcu-art-museum-and-rotating-exhibitions",
             "title": "HBCU art museum and rotating exhibitions",
             "feature_type": "experience",
@@ -136,7 +136,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "west-end-cultural-pairing-stop",
             "title": "West End cultural pairing stop",
             "feature_type": "amenity",
@@ -585,7 +585,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Create event record
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": start_date,
@@ -660,7 +660,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 content_hash = generate_content_hash(title, place_data["name"], start_date)
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": start_date,

@@ -103,7 +103,7 @@ def test_build_program_record_captures_rec1_schedule_and_registration_fields(mon
     program = _build_program_record(
         event_record={
             "source_id": 123,
-            "venue_id": 5624,
+            "place_id": 5624,
             "title": "Spring Break Musical: Junie B. Jones Jr.",
             "description": "Camp description",
             "start_date": "2026-04-06",
@@ -163,7 +163,7 @@ def test_build_program_record_clamps_stale_registration_status_to_closed(monkeyp
     program = _build_program_record(
         event_record={
             "source_id": 123,
-            "venue_id": 5624,
+            "place_id": 5624,
             "title": "Fall Swim Lessons: Beginner",
             "description": "Beginner swim lessons",
             "start_date": "2025-10-01",
@@ -236,7 +236,7 @@ def test_resolve_venue_persists_enrichment_envelope(monkeypatch) -> None:
 
     def build_envelope(_venue_info: VenueInfo, venue_id: int) -> TypedEntityEnvelope:
         envelope = TypedEntityEnvelope()
-        envelope.add("destination_details", {"venue_id": venue_id, "destination_type": "community_recreation_center"})
+        envelope.add("destination_details", {"place_id": venue_id, "destination_type": "community_recreation_center"})
         return envelope
 
     tenant = TenantConfig(
@@ -253,7 +253,7 @@ def test_resolve_venue_persists_enrichment_envelope(monkeypatch) -> None:
     assert venue_id == 77
     assert venue_name == "Bogan Park Community Recreation Center"
     assert persisted
-    assert persisted[0].destination_details[0]["venue_id"] == 77
+    assert persisted[0].destination_details[0]["place_id"] == 77
 
 
 # ---------------------------------------------------------------------------

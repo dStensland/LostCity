@@ -56,7 +56,7 @@ PLACE_DATA = {
     "zip": "30064",
     "lat": 33.9526,
     "lng": -84.5547,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": "https://www.cobbcounty.gov/elections",
 }
@@ -185,7 +185,7 @@ def _build_election_day_event(
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": election_date,
@@ -231,7 +231,7 @@ def _build_registration_deadline_event(
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": reg_deadline,

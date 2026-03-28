@@ -84,7 +84,7 @@ PLACE_DATA = {
     "zip": "30083",
     "lat": 33.8081,
     "lng": -84.1460,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": BASE_URL,
     "vibes": ["family-friendly", "outdoor-seating", "good-for-groups", "free-parking"],
@@ -112,7 +112,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "regional_park",
             "commitment_tier": "fullday",
             "primary_activity": "family outdoor destination visit",
@@ -136,7 +136,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "park",
+                "place_type": "park",
                 "city": "stone mountain",
             },
         },
@@ -144,7 +144,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "summit-skyride-and-mountain-attractions",
             "title": "Summit Skyride and mountain attractions",
             "feature_type": "attraction",
@@ -157,7 +157,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "seasonal-family-festivals-and-holiday-programming",
             "title": "Seasonal family festivals and holiday programming",
             "feature_type": "amenity",
@@ -170,7 +170,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "geyser-splash-pad-and-water-play",
             "title": "Geyser splash pad and water play",
             "feature_type": "amenity",
@@ -184,7 +184,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "choose-your-range-with-rest-breaks",
             "title": "Choose your range with rest breaks",
             "feature_type": "amenity",
@@ -197,7 +197,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "dinotorium-and-dinosaur-explore",
             "title": "Dinotorium and Dinosaur Explore",
             "feature_type": "attraction",
@@ -210,7 +210,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "scenic-railroad-and-lower-walk-family-loop",
             "title": "Scenic Railroad and lower-walk family loop",
             "feature_type": "experience",
@@ -680,7 +680,7 @@ def _build_event_record(
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,
@@ -859,7 +859,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         soup = BeautifulSoup(resp.text, "html.parser")
         og_img = soup.find("meta", property="og:image")
         if og_img and og_img.get("content"):
-            get_client().table("venues").update(
+            get_client().table("places").update(
                 {"image_url": og_img["content"].strip()}
             ).eq("id", venue_id).execute()
             logger.debug("Stone Mountain Park: updated venue image from og:image")

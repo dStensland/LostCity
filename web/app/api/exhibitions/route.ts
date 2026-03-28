@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
         metadata,
         created_at,
         updated_at,
-        venue:venues(id, name, slug, neighborhood, address, city, lat, lng, image_url),
+        venue:places(id, name, slug, neighborhood, address, city, lat, lng, image_url),
         artists:exhibition_artists(exhibition_id, artist_name, artist_url, artist_id, role)
       `
       )

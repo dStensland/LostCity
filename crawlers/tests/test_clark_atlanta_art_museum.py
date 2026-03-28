@@ -16,7 +16,7 @@ def test_build_exhibition_lane_record_projects_clark_exhibition() -> None:
 
     assert record["title"] == "Legacy in Color"
     assert record["source_id"] == 18
-    assert record["venue_id"] == 404
+    assert record["place_id"] == 404
     assert record["portal_id"] == "portal-arts"
     assert record["opening_date"] == "2026-02-12"
     assert record["closing_date"] == "2026-05-01"

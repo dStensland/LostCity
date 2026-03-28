@@ -567,7 +567,7 @@ export async function loadPortalFeed(
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
-        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, image_url, active)
+        venue:places(id, name, neighborhood, slug, place_type, location_designator, city, lat, lng, image_url, is_active)
       `;
 
   const sectionEventsCacheKey = buildSectionEventsCacheKey({
@@ -777,7 +777,7 @@ export async function loadPortalFeed(
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
         source_id,
-        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, image_url, active)
+        venue:places(id, name, neighborhood, slug, place_type, location_designator, city, lat, lng, image_url, is_active)
     `;
 
     const addToPool = (events: FeedEvent[]) => {
@@ -1025,7 +1025,7 @@ export async function loadPortalFeed(
             festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
           ),
           source_id,
-          venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, active)
+          venue:places(id, name, neighborhood, slug, place_type, location_designator, city, image_url, is_active)
         `,
           )
           .or(`start_date.gte.${today},end_date.gte.${today}`)
@@ -1113,7 +1113,7 @@ export async function loadPortalFeed(
           .from("events")
           .select(
             eventSelect.replace(
-              "venue:venues(",
+              "venue:places(",
               "venue:venues!inner(",
             ),
           )

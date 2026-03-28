@@ -69,7 +69,7 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
     // If venueId is provided, verify it exists
     if (venueId) {
       const { data: venue } = await serviceClient
-        .from("venues")
+        .from("places")
         .select("id, name")
         .eq("id", venueId)
         .maybeSingle();
@@ -83,7 +83,7 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
         .from("explore_track_venues")
         .select("id, status")
         .eq("track_id", trackId)
-        .eq("venue_id", venueId)
+        .eq("place_id", venueId)
         .maybeSingle();
 
       if (existingTrackVenue) {

@@ -40,7 +40,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       created_at,
       updated_at,
       reviewed_at,
-      venue:venues(id, name, slug),
+      venue:places(id, name, slug),
       organization:organizations(id, name, slug)
     `
     )

@@ -25,7 +25,7 @@ BREWERIES = [
         "zip": "30318",
         "lat": 33.7858,
         "lng": -84.4128,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://mondaynightbrewing.com",
     },
     {
@@ -38,7 +38,7 @@ BREWERIES = [
         "zip": "30310",
         "lat": 33.7318,
         "lng": -84.4158,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://mondaynightbrewing.com",
     },
     {
@@ -51,7 +51,7 @@ BREWERIES = [
         "zip": "30324",
         "lat": 33.8098,
         "lng": -84.3658,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://sweetwaterbrew.com",
     },
     {
@@ -64,7 +64,7 @@ BREWERIES = [
         "zip": "30030",
         "lat": 33.7715,
         "lng": -84.2898,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://threetavernsbrewery.com",
     },
     {
@@ -77,7 +77,7 @@ BREWERIES = [
         "zip": "30030",
         "lat": 33.7715,
         "lng": -84.2895,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://wildheavenbeer.com",
     },
     {
@@ -90,7 +90,7 @@ BREWERIES = [
         "zip": "30306",
         "lat": 33.7748,
         "lng": -84.3578,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://newrealmbrewing.com",
     },
     {
@@ -103,7 +103,7 @@ BREWERIES = [
         "zip": "30312",
         "lat": 33.7415,
         "lng": -84.3818,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://halfwaycrooks.beer",
     },
     {
@@ -116,7 +116,7 @@ BREWERIES = [
         "zip": "30318",
         "lat": 33.7998,
         "lng": -84.4258,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://scofflawbeer.com",
     },
     {
@@ -129,7 +129,7 @@ BREWERIES = [
         "zip": "30318",
         "lat": 33.7928,
         "lng": -84.4158,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://secondselfbeer.com",
     },
     {
@@ -142,7 +142,7 @@ BREWERIES = [
         "zip": "30308",
         "lat": 33.7728,
         "lng": -84.3738,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://torchedhopbrewing.com",
     },
     {
@@ -155,7 +155,7 @@ BREWERIES = [
         "zip": "30307",
         "lat": 33.7668,
         "lng": -84.3508,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://wreckingbarbrewpub.com",
     },
     {
@@ -168,7 +168,7 @@ BREWERIES = [
         "zip": "30318",
         "lat": 33.7978,
         "lng": -84.4328,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://firemakerbrewing.com",
     },
     {
@@ -181,7 +181,7 @@ BREWERIES = [
         "zip": "30084",
         "lat": 33.8458,
         "lng": -84.2128,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://tuckerbrewing.com",
     },
     {
@@ -194,7 +194,7 @@ BREWERIES = [
         "zip": "30318",
         "lat": 33.8028,
         "lng": -84.4118,
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://roundtripbrew.com",
     },
 ]
@@ -211,7 +211,7 @@ NIGHTLIFE = [
         "zip": "30306",
         "lat": 33.7728,
         "lng": -84.3528,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://clermontlounge.net",
     },
     {
@@ -224,7 +224,7 @@ NIGHTLIFE = [
         "zip": "30312",
         "lat": 33.7548,
         "lng": -84.3698,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://sisterlouisaschurch.com",
     },
     {
@@ -237,7 +237,7 @@ NIGHTLIFE = [
         "zip": "30312",
         "lat": 33.7545,
         "lng": -84.3718,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://joystickgamebar.com",
     },
     {
@@ -250,7 +250,7 @@ NIGHTLIFE = [
         "zip": "30316",
         "lat": 33.7398,
         "lng": -84.3398,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://badearl.com",
     },
     {
@@ -263,7 +263,7 @@ NIGHTLIFE = [
         "zip": "30307",
         "lat": 33.7628,
         "lng": -84.3458,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -276,7 +276,7 @@ NIGHTLIFE = [
         "zip": "30306",
         "lat": 33.7748,
         "lng": -84.3548,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -289,7 +289,7 @@ NIGHTLIFE = [
         "zip": "30306",
         "lat": 33.7758,
         "lng": -84.3478,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -302,7 +302,7 @@ NIGHTLIFE = [
         "zip": "30306",
         "lat": 33.7718,
         "lng": -84.3568,
-        "venue_type": "nightclub",
+        "place_type": "nightclub",
         "website": None,
     },
     {
@@ -315,7 +315,7 @@ NIGHTLIFE = [
         "zip": "30342",
         "lat": 33.8598,
         "lng": -84.3648,
-        "venue_type": "nightclub",
+        "place_type": "nightclub",
         "website": "https://johnnyshideaway.com",
     },
     {
@@ -328,7 +328,7 @@ NIGHTLIFE = [
         "zip": "30316",
         "lat": 33.7405,
         "lng": -84.3418,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -341,7 +341,7 @@ NIGHTLIFE = [
         "zip": "30316",
         "lat": 33.7398,
         "lng": -84.3398,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://argosyeav.com",
     },
     {
@@ -354,7 +354,7 @@ NIGHTLIFE = [
         "zip": "30306",
         "lat": 33.7728,
         "lng": -84.3558,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://thelocalatlanta.com",
     },
     {
@@ -367,7 +367,7 @@ NIGHTLIFE = [
         "zip": "30316",
         "lat": 33.7388,
         "lng": -84.3378,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://midwaypub.com",
     },
     {
@@ -380,7 +380,7 @@ NIGHTLIFE = [
         "zip": "30307",
         "lat": 33.7638,
         "lng": -84.3488,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -393,7 +393,7 @@ NIGHTLIFE = [
         "zip": "30312",
         "lat": 33.7658,
         "lng": -84.3658,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://venkmans.com",
     },
     {
@@ -406,7 +406,7 @@ NIGHTLIFE = [
         "zip": "30303",
         "lat": 33.7618,
         "lng": -84.3848,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://tradervicsatl.com",
     },
     {
@@ -419,7 +419,7 @@ NIGHTLIFE = [
         "zip": "30306",
         "lat": 33.7718,
         "lng": -84.3578,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
 ]

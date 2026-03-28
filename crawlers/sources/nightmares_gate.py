@@ -32,7 +32,7 @@ PLACE_DATA = {
     "zip": "30122",
     "lat": 33.7739,
     "lng": -84.6356,
-    "venue_type": "attraction",
+    "place_type": "attraction",
     "spot_type": "attraction",
     "website": BASE_URL,
 }
@@ -161,7 +161,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at Nightmare's Gate",
                         "start_date": start_date,

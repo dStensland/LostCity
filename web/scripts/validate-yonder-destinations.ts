@@ -32,7 +32,7 @@ async function main() {
   const slugs = YONDER_DESTINATION_INTELLIGENCE.map((item) => item.slug);
 
   const { data, error } = await client
-    .from("venues")
+    .from("places")
     .select(
       "slug,name,city,state,venue_type,website,image_url,hero_image_url,short_description,typical_duration_minutes,planning_notes",
     )

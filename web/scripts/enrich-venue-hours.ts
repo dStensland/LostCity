@@ -170,9 +170,9 @@ async function main() {
 
   // Get venues without hours, prioritizing bars, restaurants, coffee shops
   const { data: venues, error } = await supabase
-    .from("venues")
+    .from("places")
     .select("id, name, address, city, state, lat, lng, spot_type, hours")
-    .eq("active", true)
+    .eq("is_active", true)
     .is("hours", null)
     .in("spot_type", ["bar", "restaurant", "nightclub", "brewery"])
     .order("name")
@@ -228,7 +228,7 @@ async function main() {
 
       if (!dryRun) {
         const { error: updateError } = await supabase
-          .from("venues")
+          .from("places")
           .update({
             hours,
             hours_display: hoursDisplay,

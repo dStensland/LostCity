@@ -37,7 +37,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "hospital",
+        "place_type": "hospital",
         "website": BASE_URL,
     },
     "stockbridge": {
@@ -48,7 +48,7 @@ VENUES = {
         "city": "Stockbridge",
         "state": "GA",
         "zip": "30281",
-        "venue_type": "hospital",
+        "place_type": "hospital",
         "website": BASE_URL,
     },
 }
@@ -244,7 +244,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "portal_id": portal_id,  # Piedmont-exclusive event
                     "title": title,
                     "description": description,

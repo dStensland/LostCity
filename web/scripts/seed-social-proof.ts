@@ -458,7 +458,7 @@ async function main() {
 
   const { data: upcomingEvents, error: eventsErr } = await supabase
     .from("events")
-    .select("id, title, start_date, venue_id")
+    .select("id, title, start_date, place_id")
     .eq("is_active", true)
     .gte("start_date", today.toISOString())
     .lte("start_date", in30Days.toISOString())
@@ -549,9 +549,9 @@ async function main() {
   // ------------------------------------------------------------------
   process.stdout.write("Fetching venues for hangs...");
   const { data: venueRows } = await supabase
-    .from("venues")
+    .from("places")
     .select("id, name, neighborhood")
-    .eq("active", true)
+    .eq("is_active", true)
     .not("neighborhood", "is", null)
     .limit(100);
 
@@ -751,7 +751,7 @@ async function main() {
   // Fetch existing spots to avoid dupes
   const { data: existingSpots } = await supabase
     .from("user_regular_spots")
-    .select("user_id, venue_id");
+    .select("user_id, place_id");
 
   const spotSet = new Set<string>();
   for (const s of existingSpots ?? []) {
@@ -785,7 +785,7 @@ async function main() {
         const key = `${userId}:${venue.id}`;
         if (spotSet.has(key)) continue;
         spotSet.add(key);
-        spotsToAdd.push({ user_id: userId, venue_id: venue.id });
+        spotsToAdd.push({ user_id: userId, place_id: venue.id });
         added++;
       }
     }
@@ -802,7 +802,7 @@ async function main() {
   // Fetch existing saved items to avoid unique conflicts
   const { data: existingSaved } = await supabase
     .from("saved_items")
-    .select("user_id, event_id, venue_id");
+    .select("user_id, event_id, place_id");
 
   const savedEventSet = new Set<string>();
   const savedVenueSet = new Set<string>();
@@ -850,7 +850,7 @@ async function main() {
       const key = `${userId}:${venue.id}`;
       if (savedVenueSet.has(key)) continue;
       savedVenueSet.add(key);
-      savedItemsToAdd.push({ user_id: userId, venue_id: venue.id });
+      savedItemsToAdd.push({ user_id: userId, place_id: venue.id });
       vAdded++;
       savedAdded++;
     }

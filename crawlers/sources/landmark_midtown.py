@@ -34,7 +34,7 @@ PLACE_DATA = {
     "zip": "30308",
     "lat": 33.7803,
     "lng": -84.3688,
-    "venue_type": "cinema",
+    "place_type": "cinema",
     "website": VENUE_PAGE_URL,
     "_destination_details": {
         "commitment_tier": "hour",
@@ -280,7 +280,7 @@ def extract_movies_for_date(
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": movie["title"],
                     "description": movie["rating_duration"],
                     "start_date": date_str,

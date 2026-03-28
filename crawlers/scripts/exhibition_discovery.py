@@ -22,7 +22,7 @@ def run_discovery():
 
     # Get venues with editorial mentions
     mentions = client.table("editorial_mentions").select(
-        "venue_id, venues(id, name, venue_type, website, city)"
+        "place_id, venues(id, name, venue_type, website, city)"
     ).execute()
 
     # Group by venue
@@ -35,7 +35,7 @@ def run_discovery():
         if vid not in venue_mentions:
             venue_mentions[vid] = {
                 "name": venue["name"],
-                "venue_type": venue.get("venue_type"),
+                "place_type": venue.get("venue_type"),
                 "website": venue.get("website"),
                 "mention_count": 0,
             }
@@ -63,7 +63,7 @@ def run_discovery():
         if vid in venues_with_exhibitions:
             continue
         gaps.append({
-            "venue_id": vid,
+            "place_id": vid,
             **info,
         })
 
@@ -91,7 +91,7 @@ def run_discovery():
             continue
         if vid in crawled_venue_ids or vid in venues_with_exhibitions:
             covered.append({
-                "venue_id": vid,
+                "place_id": vid,
                 **info,
             })
     covered.sort(key=lambda x: -x["mention_count"])

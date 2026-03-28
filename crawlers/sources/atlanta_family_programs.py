@@ -119,7 +119,7 @@ def _build_program_record(
 
     program_data: dict = {
         "source_id": source_id,
-        "venue_id": event_record.get("venue_id"),
+        "place_id": event_record.get("place_id") or event_record.get("venue_id"),
         "name": title,
         "description": event_record.get("description"),
         "program_type": program_type,
@@ -351,7 +351,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record: dict = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": name,
                 "description": description,
                 "start_date": start_raw or today.strftime("%Y-%m-%d"),

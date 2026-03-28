@@ -37,7 +37,7 @@ LNFY_HQ = {
     "zip": "30324",
     "lat": 33.8163,
     "lng": -84.3536,
-    "venue_type": "nonprofit",
+    "place_type": "nonprofit",
     "spot_type": "nonprofit",
     "website": BASE_URL,
     "vibes": ["volunteer", "lgbtq", "lgbtq-friendly"],
@@ -306,7 +306,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                                     event_record = {
                                         "source_id": source_id,
-                                        "venue_id": venue_id,
+                                        "place_id": venue_id,
                                         "title": title,
                                         "description": description if description else None,
                                         "start_date": date_data["start_date"],
@@ -388,7 +388,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                                 event_record = {
                                     "source_id": source_id,
-                                    "venue_id": venue_id,
+                                    "place_id": venue_id,
                                     "title": title,
                                     "description": description if description else None,
                                     "start_date": date_data["start_date"],

@@ -54,7 +54,7 @@ def test_parse_park_page_extracts_address_and_amenities():
     assert parsed["city"] == "Norcross"
     assert "Splash pad" in parsed["amenities"]
     assert "Playground" in parsed["amenities"]
-    assert parsed["venue_type"] == "park"
+    assert parsed["place_type"] == "park"
     assert parsed["destination_type"] == "park"
 
 
@@ -80,7 +80,7 @@ def test_parse_aquatic_page_infers_aquatic_center():
         "https://www.gwinnettcounty.com/government/departments/parks-recreation/parks/explore/bethesda/aquatic-center",
     )
 
-    assert parsed["venue_type"] == "recreation"
+    assert parsed["place_type"] == "recreation"
     assert parsed["destination_type"] == "aquatic_center"
 
 

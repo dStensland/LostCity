@@ -50,7 +50,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7900,
     "lng": -84.4200,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": None,  # No known website
     "vibes": ["tourette", "neurological", "support-group", "tic-disorders"],

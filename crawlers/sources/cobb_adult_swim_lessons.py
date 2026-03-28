@@ -88,7 +88,7 @@ PLACE_DATA = {
     "zip": "30127",
     "lat": 33.8673,
     "lng": -84.6868,
-    "venue_type": "community_center",
+    "place_type": "community_center",
     "spot_type": "community_center",
     "website": CATALOG_URL,
     "description": "Cobb County aquatic center hosting public adult swim lessons.",
@@ -258,7 +258,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": parsed["title"],
                 "description": parsed["description"],
                 "start_date": start_date,

@@ -108,7 +108,7 @@ def parse_venue_from_text(location_text: str) -> dict:
         "zip": "30075",
         "lat": 34.0232,
         "lng": -84.3616,
-        "venue_type": "theater",
+        "place_type": "theater",
         "spot_type": "theater",
         "website": "https://www.roswellgov.com/cultural-arts",
     }
@@ -129,7 +129,7 @@ def parse_venue_from_text(location_text: str) -> dict:
             "zip": "30075",
             "lat": 34.0595,
             "lng": -84.3214,
-            "venue_type": "community_center",
+            "place_type": "community_center",
             "spot_type": "community_center",
             "website": "https://www.roswellgov.com/recreation",
         }
@@ -144,7 +144,7 @@ def parse_venue_from_text(location_text: str) -> dict:
             "zip": "30075",
             "lat": 34.0209,
             "lng": -84.3454,
-            "venue_type": "church",
+            "place_type": "church",
             "spot_type": "church",
             "website": "https://roswellpres.org",
         }
@@ -159,7 +159,7 @@ def parse_venue_from_text(location_text: str) -> dict:
             "zip": "30075",
             "lat": 34.0523,
             "lng": -84.3625,
-            "venue_type": "park",
+            "place_type": "park",
             "spot_type": "park",
             "website": "https://www.roswellgov.com/recreation",
         }
@@ -174,7 +174,7 @@ def parse_venue_from_text(location_text: str) -> dict:
             "zip": "30075",
             "lat": 34.0229,
             "lng": -84.3619,
-            "venue_type": "library",
+            "place_type": "library",
             "spot_type": "library",
             "website": "https://www.roswelllibrary.org",
         }
@@ -467,7 +467,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Prepare event record
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": event_data["title"],
                     "description": event_data["description"],
                     "start_date": event_data["start_date"],

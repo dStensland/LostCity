@@ -54,7 +54,7 @@ PLACE_DATA = {
     "zip": "30313",
     "lat": 33.7635,
     "lng": -84.3933,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     "description": (
@@ -83,7 +83,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "history_museum",
             "commitment_tier": "halfday",
             "primary_activity": "civil rights museum visit",
@@ -104,7 +104,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "museum",
+                "place_type": "museum",
                 "city": "atlanta",
             },
         },
@@ -112,7 +112,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "civil-rights-history-and-dialogue-stop",
             "title": "Civil rights history and dialogue stop",
             "feature_type": "amenity",
@@ -125,7 +125,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "school-age-history-anchor",
             "title": "School-age history anchor",
             "feature_type": "amenity",
@@ -138,7 +138,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "purposeful-downtown-museum-stop",
             "title": "Purposeful downtown museum stop",
             "feature_type": "amenity",
@@ -420,7 +420,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": listing["title"],
                 "description": description[:5000],
                 "start_date": start_date,

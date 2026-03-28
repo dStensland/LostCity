@@ -68,7 +68,7 @@ PLACE_DATA = {
     "lat": 33.8798,
     "lng": -84.4241,
     "neighborhood": "Sandy Springs",
-    "venue_type": "college",
+    "place_type": "college",
     "spot_type": "education",
     "website": "https://www.springmont.com",
     "vibes": ["family-friendly", "educational", "kids"],
@@ -224,7 +224,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     title = row["title"]
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": row["description"],
         "start_date": row["start_date"],

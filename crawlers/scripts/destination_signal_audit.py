@@ -172,7 +172,7 @@ def build_source_primary_venue_map(
         venue = venue_by_id.get(venue_id)
         if venue:
             primary[source_id] = {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "event_count": event_count,
                 "venue": venue,
             }

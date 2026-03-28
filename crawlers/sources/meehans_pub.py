@@ -25,7 +25,7 @@ PLACE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30303",
-    "venue_type": "bar",
+    "place_type": "bar",
     "website": BASE_URL,
 }
 
@@ -108,7 +108,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": event_data.get("description", "Event at Meehan's Public House, downtown Irish pub near Georgia Aquarium")[:500],
                         "start_date": start_date,

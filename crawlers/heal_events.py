@@ -203,7 +203,7 @@ def deactivate_closed_venue_events(client, dry_run=False) -> int:
         return 0
 
     venue_result = (
-        client.table("venues")
+        client.table("places")
         .select("id, slug")
         .in_("slug", list(CLOSED_VENUE_SLUGS))
         .execute()

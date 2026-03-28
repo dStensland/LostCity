@@ -256,7 +256,7 @@ async function fetchPersistedSnapshot(
   try {
     const supabase = createServiceClient();
     const venueResult = await supabase
-      .from("venues")
+      .from("places")
       .select("id")
       .eq("slug", destinationSlug)
       .eq("active", true)
@@ -277,7 +277,7 @@ async function fetchPersistedSnapshot(
     const currentResult = await supabase
       .from("current_venue_inventory_snapshots")
       .select(selectColumns)
-      .eq("venue_id", venueRow.id)
+      .eq("place_id", venueRow.id)
       .eq("provider_id", source.providerId)
       .eq("inventory_scope", inventoryScope)
       .eq("arrival_date", arrivalDateIso)
@@ -291,9 +291,9 @@ async function fetchPersistedSnapshot(
 
     if (!snapshotData) {
       const snapshotResult = await supabase
-        .from("venue_inventory_snapshots")
+        .from("place_inventory_snapshots")
         .select(selectColumns + ", captured_for_date, captured_at")
-        .eq("venue_id", venueRow.id)
+        .eq("place_id", venueRow.id)
         .eq("provider_id", source.providerId)
         .eq("inventory_scope", inventoryScope)
         .eq("arrival_date", arrivalDateIso)

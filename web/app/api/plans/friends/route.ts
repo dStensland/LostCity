@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
     .select(`
       id, title, description, plan_date, plan_time, status, visibility, created_at,
       creator:profiles!plans_creator_id_fkey(id, username, display_name, avatar_url),
-      items:plan_items(id, title, sort_order, venue_id, event_id, start_time, venue:venues(id, name, slug)),
+      items:plan_items(id, title, sort_order, venue_id, event_id, start_time, venue:places(id, name, slug)),
       participants:plan_participants(
         id, status,
         user:profiles!plan_participants_user_id_fkey(id, username, display_name, avatar_url)

@@ -168,8 +168,8 @@ describe("Portal attribution coverage", () => {
     const searchFile = path.join(libRoot, "lib", "unified-search.ts");
     const content = fs.readFileSync(searchFile, "utf-8");
 
-    // Every call to search_venues_ranked should include p_city
-    const rpcCalls = content.match(/search_venues_ranked.*?\}\)/gs) || [];
+    // Every call to search_places_ranked should include p_city
+    const rpcCalls = content.match(/search_places_ranked.*?\}\)/gs) || [];
     for (const call of rpcCalls) {
       expect(call).toContain("p_city");
     }

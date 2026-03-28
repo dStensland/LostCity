@@ -6,13 +6,13 @@ def test_build_destination_envelope_for_rec_center() -> None:
         {
             "name": "Mason Mill Recreation Center",
             "slug": "mason-mill-recreation-center",
-            "venue_type": "recreation",
+            "place_type": "recreation",
         },
         1401,
     )
 
     assert envelope is not None
-    assert envelope.destination_details[0]["venue_id"] == 1401
+    assert envelope.destination_details[0]["place_id"] == 1401
     assert envelope.destination_details[0]["destination_type"] == "community_recreation_center"
     assert envelope.destination_details[0]["family_suitability"] == "yes"
     assert envelope.destination_details[0]["parking_type"] == "free_lot"
@@ -29,13 +29,13 @@ def test_build_destination_envelope_for_park() -> None:
         {
             "name": "Young Deer Park",
             "slug": "young-deer-park",
-            "venue_type": "park",
+            "place_type": "park",
         },
         1402,
     )
 
     assert envelope is not None
-    assert envelope.destination_details[0]["venue_id"] == 1402
+    assert envelope.destination_details[0]["place_id"] == 1402
     assert envelope.destination_details[0]["destination_type"] == "park"
     assert envelope.destination_details[0]["parking_type"] == "free_lot"
     assert envelope.destination_details[0]["practical_notes"]
@@ -49,7 +49,7 @@ def test_build_destination_envelope_skips_generic_org() -> None:
             {
                 "name": "DeKalb County Recreation, Parks & Cultural Affairs",
                 "slug": "dekalb-county-recreation",
-                "venue_type": "organization",
+                "place_type": "organization",
             },
             1403,
         )

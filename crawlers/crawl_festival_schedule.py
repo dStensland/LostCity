@@ -2066,7 +2066,7 @@ def insert_sessions(
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": session.title,
             "description": session.description,
             "start_date": session.start_date,
@@ -2092,7 +2092,7 @@ def insert_sessions(
             smart_update_existing_event(existing, incoming_update)
 
             if session.venue_name and existing.get("venue_id") != venue_id:
-                update_event(existing["id"], {"venue_id": venue_id})
+                update_event(existing["id"], {"place_id": venue_id})
                 logger.info(
                     "Updated venue for existing session: %s (%s -> %s)",
                     session.title,

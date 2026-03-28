@@ -42,7 +42,7 @@ def _resolve_venue_id(
     record: dict,
     venue_ids_by_slug: dict[str, int],
 ) -> Optional[int]:
-    venue_id = record.get("venue_id")
+    venue_id = record.get("place_id") or record.get("venue_id")
     if isinstance(venue_id, int) and venue_id > 0:
         return venue_id
 
@@ -143,7 +143,7 @@ def persist_typed_entity_envelope(
         event_record = dict(event)
         venue_id = _resolve_venue_id(event_record, venue_ids_by_slug)
         if venue_id:
-            event_record["venue_id"] = venue_id
+            event_record["place_id"] = venue_id
         persisted = insert_event(event_record)
         if persisted:
             result.bump_persisted("events")
@@ -157,7 +157,7 @@ def persist_typed_entity_envelope(
             result.bump_skipped("programs")
             result.unresolved.append("programs")
             continue
-        program_record["venue_id"] = venue_id
+        program_record["place_id"] = venue_id
         if "_venue_name" not in program_record:
             for key in ("venue_slug", "destination_slug", "_destination_slug"):
                 slug = program_record.get(key)
@@ -177,7 +177,7 @@ def persist_typed_entity_envelope(
             result.bump_skipped("exhibitions")
             result.unresolved.append("exhibitions")
             continue
-        exhibition_record["venue_id"] = venue_id
+        exhibition_record["place_id"] = venue_id
         if "_venue_name" not in exhibition_record:
             for key in ("venue_slug", "destination_slug", "_destination_slug"):
                 slug = exhibition_record.get(key)

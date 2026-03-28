@@ -33,7 +33,7 @@ ODDITIES_MUSEUM_VENUE = {
     "city": "Chamblee",
     "state": "GA",
     "zip": "30341",
-    "venue_type": "museum",
+    "place_type": "museum",
     "website": BASE_URL,
 }
 
@@ -251,7 +251,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Prepare event record
                     event_record = {
                         'source_id': source_id,
-                        'venue_id': venue_id,
+                        'place_id': venue_id,
                         'producer_id': producer_id,
                         'title': title[:500],
                         'description': description,

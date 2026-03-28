@@ -46,7 +46,7 @@ PLACE_DATA = {
     "lat": 33.7948,
     "lng": -84.4327,
     "neighborhood": "Upper Westside",
-    "venue_type": "fitness_center",
+    "place_type": "fitness_center",
     "spot_type": "fitness",
     "website": "https://www.nellyafencers.com/",
     "vibes": ["family-friendly", "competitive"],
@@ -165,7 +165,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     title = f"{row['title']} ({row['week_label']})"
     record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": row["description"],
         "start_date": row["start_date"],

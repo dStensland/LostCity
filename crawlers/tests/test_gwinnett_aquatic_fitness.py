@@ -61,7 +61,7 @@ def test_build_destination_envelope_marks_aquatic_center() -> None:
     place_data = {
         "name": "Collins Hill Park Aquatic Center",
         "slug": "collins-hill-park-aquatic-center",
-        "venue_type": "community_center",
+        "place_type": "community_center",
     }
 
     envelope = _build_destination_envelope(place_data, 2202)

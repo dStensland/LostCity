@@ -448,7 +448,7 @@ async function getVenueIdBySlug(
 ): Promise<{ id: number; name: string } | null> {
   // Try exact match first
   const { data } = await supabase
-    .from("venues")
+    .from("places")
     .select("id, name")
     .eq("slug", slugHint)
     .maybeSingle();
@@ -466,7 +466,7 @@ async function getVenueIdBySlug(
 
   for (const variant of variations) {
     const { data: varData } = await supabase
-      .from("venues")
+      .from("places")
       .select("id, name")
       .ilike("slug", `%${variant}%`)
       .limit(1)
@@ -478,7 +478,7 @@ async function getVenueIdBySlug(
   // Try name search as fallback
   const searchName = slugHint.replace(/-/g, " ").replace(/_/g, " ");
   const { data: nameData } = await supabase
-    .from("venues")
+    .from("places")
     .select("id, name")
     .ilike("name", `%${searchName}%`)
     .limit(1)

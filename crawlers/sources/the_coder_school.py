@@ -148,7 +148,7 @@ def _build_venue_data(loc: dict) -> dict:
         "neighborhood": loc["neighborhood"],
         "lat": loc["lat"],
         "lng": loc["lng"],
-        "venue_type": "education",
+        "place_type": "education",
         "spot_type": "education",
         "website": f"{BASE_URL}/locations/{loc['location_slug']}/",
         "vibes": ["family-friendly", "kids", "educational"],
@@ -541,7 +541,7 @@ def _crawl_location(loc: dict, source_id: int) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "content_hash": content_hash,
             "raw_text": raw_for_hash,
             **{k: v for k, v in ev.items()},

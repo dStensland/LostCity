@@ -86,7 +86,7 @@ class ExhibitionCrawlerBase(ABC):
             artists = ex.pop("artists", None) or []
             exhibition_data = {
                 "title": ex["title"],
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "source_id": source_id,
                 "opening_date": ex.get("opening_date"),
                 "closing_date": closing,

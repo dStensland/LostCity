@@ -42,8 +42,8 @@ export const GET = withAuthAndParams<{ id: string }>(
         .from("list_items")
         .select(`
           *,
-          venue:venues(id, name, slug, neighborhood, venue_type),
-          event:events(id, title, start_date, venue:venues(name)),
+          venue:places(id, name, slug, neighborhood, place_type),
+          event:events(id, title, start_date, venue:places(name)),
           organization:organizations(id, name, slug)
         `)
         .eq("list_id", listId)

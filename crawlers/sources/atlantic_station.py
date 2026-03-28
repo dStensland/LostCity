@@ -42,7 +42,7 @@ PLACE_DATA = {
     "zip": "30363",
     "lat": 33.7920,
     "lng": -84.3950,
-    "venue_type": "entertainment_complex",
+    "place_type": "entertainment_complex",
     "spot_type": "entertainment_complex",
     "website": BASE_URL,
     "description": "Urban mixed-use retail and entertainment destination with outdoor plaza, concerts, and seasonal events.",
@@ -346,7 +346,7 @@ def build_event_record(
     raw_parts = [part for part in [detail.get("date_label"), detail.get("repeat_type"), detail.get("time_label"), detail.get("location")] if part]
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": detail["title"],
         "description": detail.get("description"),
         "start_date": start_date,

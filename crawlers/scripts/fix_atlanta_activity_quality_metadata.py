@@ -45,7 +45,7 @@ VENUE_METADATA_FIXES: dict[str, dict[str, Any]] = {
         "website": "https://www.mainevent.com/locations/georgia/alpharetta/",
     },
     "main-event-atlanta": {
-        "venue_type": "entertainment",
+        "place_type": "entertainment",
         "website": "https://www.mainevent.com/locations/georgia/atlanta/",
     },
     "main-event-sandy-springs": {
@@ -58,16 +58,16 @@ VENUE_METADATA_FIXES: dict[str, dict[str, Any]] = {
         "website": "https://www.skyzone.com/atlanta",
     },
     "sparkles-family-fun-center-kennesaw": {
-        "venue_type": "games",
+        "place_type": "games",
     },
     "sparkles-kennesaw": {
-        "venue_type": "games",
+        "place_type": "games",
     },
     "stars-and-strikes-cumming": {
-        "venue_type": "games",
+        "place_type": "games",
     },
     "stars-and-strikes-dacula": {
-        "venue_type": "games",
+        "place_type": "games",
     },
     "world-of-coca-cola": {
         "website": "https://www.worldofcoca-cola.com",
@@ -82,7 +82,7 @@ def apply_metadata_fixes(apply: bool = False) -> int:
 
     for slug, patch in VENUE_METADATA_FIXES.items():
         venue_res = (
-            client.table("venues")
+            client.table("places")
             .select("id,slug,name,venue_type,website")
             .eq("slug", slug)
             .limit(1)
@@ -103,7 +103,7 @@ def apply_metadata_fixes(apply: bool = False) -> int:
             continue
 
         if apply:
-            client.table("venues").update(changes).eq("id", venue["id"]).execute()
+            client.table("places").update(changes).eq("id", venue["id"]).execute()
             logger.info("Updated %s (%s): %s", venue["name"], slug, changes)
         else:
             logger.info("Would update %s (%s): %s", venue["name"], slug, changes)

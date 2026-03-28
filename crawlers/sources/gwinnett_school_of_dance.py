@@ -40,7 +40,7 @@ _CONFIG = JackRabbitConfig(
         "zip": "30017",
         "lat": 33.8908,
         "lng": -83.9779,
-        "venue_type": "fitness_center",
+        "place_type": "fitness_center",
         "spot_type": "fitness",
         "website": "https://www.gwinnettschoolofdance.com",
         "phone": "(770) 962-8078",

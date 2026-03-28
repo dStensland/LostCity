@@ -43,7 +43,7 @@ export default function PortalHappeningNow({ portalId, portalSlug, isExclusive =
         .from("events")
         .select(`
           *,
-          venue:venues(id, name, slug, address, neighborhood)
+          venue:places(id, name, slug, address, neighborhood)
         `)
         .eq("start_date", today)
         .lte("start_time", currentTime)

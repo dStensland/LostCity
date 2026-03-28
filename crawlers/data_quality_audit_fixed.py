@@ -60,7 +60,7 @@ def get_all_venues():
     
     print("Fetching all venues from database...")
     while True:
-        response = supabase.table('venues').select(
+        response = supabase.table('places').select(
             'id, name, lat, lng, city, venue_type'
         ).range(offset, offset + page_size - 1).execute()
         
@@ -195,7 +195,7 @@ def run_audit():
     null_checks = {
         'title': 0,
         'start_date': 0,
-        'venue_id': 0,
+        'place_id': 0,
         'source_id': 0,
         'category': 0
     }

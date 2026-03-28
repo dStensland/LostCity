@@ -262,7 +262,7 @@ def _parse_detail_page(detail_html: str, detail_url: str) -> Optional[dict]:
         "state": _clean_text(address.get("addressRegion")) or "GA",
         "zip": _clean_text(address.get("postalCode")),
         "neighborhood": _clean_text(address.get("addressLocality")),
-        "venue_type": "institution",
+        "place_type": "institution",
         "spot_type": "education",
         "website": detail_url,
         "vibes": ["family-friendly", "educational"],
@@ -291,7 +291,7 @@ def _parse_detail_page(detail_html: str, detail_url: str) -> Optional[dict]:
 def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": row["title"],
         "description": row["description"],
         "start_date": row["start_date"],

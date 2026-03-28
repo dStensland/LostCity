@@ -275,7 +275,7 @@ export async function getArtistExhibitions(
       role,
       exhibitions (
         id, title, slug, opening_date, closing_date, exhibition_type, image_url,
-        venue:venues(id, name, slug, neighborhood)
+        venue:places(id, name, slug, neighborhood)
       )
     `
     )

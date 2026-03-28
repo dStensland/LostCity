@@ -31,7 +31,7 @@ PLACE_DATA = {
     "zip": "30309",
     "lat": 33.7900,
     "lng": -84.3830,
-    "venue_type": "neighborhood",
+    "place_type": "neighborhood",
     "spot_type": "neighborhood",
     "website": BASE_URL,
     "description": "Historic neighborhood (1905-1908) on National Register, known for winding tree-lined streets and beautiful architecture.",
@@ -79,7 +79,7 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Ansley Park Civic Association monthly meeting. "
@@ -165,7 +165,7 @@ def create_tour_of_homes(source_id: int, venue_id: int) -> tuple[int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,
@@ -221,7 +221,7 @@ def create_july_4th_parade(source_id: int, venue_id: int) -> tuple[int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": (
             "Annual July 4th neighborhood parade through the historic streets of Ansley Park. "
@@ -287,7 +287,7 @@ def create_easter_egg_hunt(source_id: int, venue_id: int) -> tuple[int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": (
             "Annual Easter Egg Hunt for neighborhood children in Ansley Park. "

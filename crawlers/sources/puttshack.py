@@ -32,7 +32,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7867,
     "lng": -84.4139,
-    "venue_type": "entertainment",
+    "place_type": "entertainment",
     "spot_type": "entertainment",
     "website": f"{BASE_URL}/locations/atlanta",
 }
@@ -161,7 +161,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at Puttshack Atlanta",
                         "start_date": start_date,

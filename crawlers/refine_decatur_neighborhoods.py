@@ -54,7 +54,7 @@ def refine_decatur_neighborhoods(dry_run: bool = False):
 
     # Get all venues with generic "Decatur" neighborhood
     print("Fetching venues with generic 'Decatur' neighborhood...")
-    result = client.table('venues').select(
+    result = client.table('places').select(
         'id, name, neighborhood, lat, lng, zip'
     ).eq('neighborhood', 'Decatur').execute()
 
@@ -88,7 +88,7 @@ def refine_decatur_neighborhoods(dry_run: bool = False):
 
             if not dry_run:
                 try:
-                    client.table('venues').update({
+                    client.table('places').update({
                         'neighborhood': specific_hood
                     }).eq('id', venue_id).execute()
                     updated += 1

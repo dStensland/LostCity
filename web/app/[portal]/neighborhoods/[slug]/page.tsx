@@ -44,10 +44,10 @@ async function getNeighborhoodSpots(neighborhoodName: string): Promise<(Spot & {
   const today = getLocalDateString();
 
   const { data: venues, error } = await supabase
-    .from("venues")
+    .from("places")
     .select("*")
     .eq("neighborhood", neighborhoodName)
-    .eq("active", true)
+    .eq("is_active", true)
     .order("name");
 
   if (error || !venues) return [];
@@ -59,7 +59,7 @@ async function getNeighborhoodSpots(neighborhoodName: string): Promise<(Spot & {
   const { data: eventCounts } = await supabase
     .from("events")
     .select("venue_id")
-    .in("venue_id", venueIds)
+    .in("place_id", venueIds)
     .gte("start_date", today)
     .or("is_sensitive.eq.false,is_sensitive.is.null");
 
@@ -80,7 +80,7 @@ async function getNeighborhoodEvents(neighborhoodName: string): Promise<Event[]>
     .from("events")
     .select(`
       *,
-      venue:venues!inner(id, name, slug, address, neighborhood, city, state),
+      venue:places!inner(id, name, slug, address, neighborhood, city, state),
       series:series(id, slug, title, series_type, image_url)
     `)
     .eq("venue.neighborhood", neighborhoodName)

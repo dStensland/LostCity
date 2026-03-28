@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30326",
     "lat": 33.8457,
     "lng": -84.3615,
-    "venue_type": "attraction",
+    "place_type": "attraction",
     "spot_type": "attraction",
     "website": BASE_URL,
 }
@@ -320,7 +320,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": description or f"{title} at LEGO Discovery Center Atlanta",
                             "start_date": date,
@@ -411,7 +411,7 @@ def process_event(
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": event_data.get("description") or f"{title} at LEGO Discovery Center Atlanta",
         "start_date": date,

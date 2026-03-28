@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7701,
     "lng": -84.4189,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     # Hours verified from trapmusicmuseum.com (subject to seasonal variation)
@@ -173,7 +173,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 venue_update["description"] = og_desc
                 logger.debug("Trap Music Museum: og:description captured")
             if venue_update:
-                get_client().table("venues").update(venue_update).eq("id", venue_id).execute()
+                get_client().table("places").update(venue_update).eq("id", venue_id).execute()
                 logger.info("Trap Music Museum: enriched venue record from homepage og: metadata")
         except Exception as _enrich_exc:
             logger.warning("Trap Music Museum: og: enrichment failed: %s", _enrich_exc)
@@ -250,7 +250,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Special event at the Trap Music Museum",
                         "start_date": start_date,

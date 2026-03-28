@@ -242,7 +242,7 @@ export async function GET(request: Request) {
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
-        venue:venues(id, name, slug, neighborhood, location_designator, blurhash, city, image_url, active)
+        venue:places(id, name, slug, neighborhood, location_designator, blurhash, city, image_url, is_active)
       `,
               )
               .gte("start_date", todayForTrending)
@@ -413,7 +413,7 @@ export async function GET(request: Request) {
         day_of_week,
         festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
       ),
-      venue:venues(id, name, neighborhood, slug, location_designator, blurhash, city, lat, lng, image_url, active)
+      venue:places(id, name, neighborhood, slug, location_designator, blurhash, city, lat, lng, image_url, is_active)
     `,
       )
       .or(`start_date.gte.${startDateFilter},end_date.gte.${startDateFilter}`) // Include ongoing events (multi-day events with end_date)
@@ -507,7 +507,7 @@ export async function GET(request: Request) {
       day_of_week,
       festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
     ),
-    venue:venues(id, name, neighborhood, slug, location_designator, blurhash, city, image_url, active)
+    venue:places(id, name, neighborhood, slug, location_designator, blurhash, city, image_url, is_active)
   `;
 
     const shouldRunSupplementalQueries =

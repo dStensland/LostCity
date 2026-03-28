@@ -281,7 +281,7 @@ def _table_has_column(client: Any, table: str, column: str) -> bool:
 
 def _get_venue_by_id(client: Any, venue_id: int) -> Optional[Dict[str, Any]]:
     result = (
-        client.table("venues")
+        client.table("places")
         .select("id, slug, name, active, aliases")
         .eq("id", venue_id)
         .limit(1)
@@ -358,14 +358,14 @@ def _append_alias_slug(
     if dry_run:
         logger.info("    [dry-run] would append alias slug '%s' to keeper", slug_to_add)
         return
-    client.table("venues").update({"aliases": merged}).eq("id", keeper["id"]).execute()
+    client.table("places").update({"aliases": merged}).eq("id", keeper["id"]).execute()
 
 
 def _deactivate_venue(client: Any, venue_id: int, dry_run: bool) -> None:
     if dry_run:
         logger.info("    [dry-run] would set active=false on venue %d", venue_id)
         return
-    client.table("venues").update({"active": False}).eq("id", venue_id).execute()
+    client.table("places").update({"active": False}).eq("id", venue_id).execute()
 
 
 def _probe_tables(client: Any) -> Dict[str, bool]:

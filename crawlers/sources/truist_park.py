@@ -35,7 +35,7 @@ PLACE_DATA = {
     "zip": "30339",
     "lat": 33.8907,
     "lng": -84.4678,
-    "venue_type": "stadium",
+    "place_type": "stadium",
     "spot_type": "stadium",
     "website": BASE_URL,
 }
@@ -143,7 +143,7 @@ def _fetch_schedule(start: date, end: date) -> list[dict]:
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "stadium",
         "commitment_tier": "halfday",
         "primary_activity": "Atlanta Braves MLB games and The Battery entertainment district",
@@ -162,10 +162,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Game tickets vary. The Battery district is free to visit.",
         "source_url": BASE_URL,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "stadium", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "stadium", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "battery-atlanta-district",
         "title": "The Battery Atlanta entertainment district",
         "feature_type": "attraction",
@@ -175,7 +175,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "braves-museum-monument-garden",
         "title": "Braves museum and Monument Garden",
         "feature_type": "experience",
@@ -185,7 +185,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "ballpark-tours",
         "title": "Ballpark tours",
         "feature_type": "experience",
@@ -195,7 +195,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "battery-restaurants-taproom",
         "title": "Terrapin Taproom, Antico Pizza, and Battery restaurants",
         "feature_type": "amenity",
@@ -205,7 +205,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 40,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "the-sandlot-kids-area",
         "title": "The Sandlot kids' play area",
         "feature_type": "amenity",
@@ -215,7 +215,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 50,
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "truist-park-ballpark-tours",
         "title": "Truist Park ballpark tours",
         "description": "Guided ballpark tours available on non-game days with access to the dugout, press box, and more.",
@@ -274,7 +274,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             content_hash = generate_content_hash(title, "Truist Park", start_date)
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": build_truist_description(
                     title=title,

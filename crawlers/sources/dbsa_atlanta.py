@@ -35,7 +35,7 @@ VENUES = {
         "zip": "30338",
         "lat": 33.9346,
         "lng": -84.3346,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": BASE_URL,
         "vibes": ["mental-health", "support-group", "inclusive"],
@@ -50,7 +50,7 @@ VENUES = {
         "zip": "30329",
         "lat": 33.7954,
         "lng": -84.3194,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": BASE_URL,
         "vibes": ["mental-health", "support-group", "inclusive"],
@@ -65,7 +65,7 @@ VENUES = {
         "zip": "30068",
         "lat": 33.9729,
         "lng": -84.4434,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": BASE_URL,
         "vibes": ["mental-health", "support-group", "inclusive"],
@@ -190,7 +190,7 @@ def generate_events_for_schedule(
         )
 
         event_record = {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": schedule_item["title"],
             "description": DESCRIPTION,
             "start_date": start_date,

@@ -52,7 +52,7 @@ SCHEDULES = [
             "zip": "30311",
             "lat": 33.7549,
             "lng": -84.4967,
-            "venue_type": "community_center",
+            "place_type": "community_center",
             "spot_type": "community_center",
             "website": SOURCE_URL,
             "description": "City of Atlanta natatorium with published Saturday open-swim hours.",
@@ -82,7 +82,7 @@ SCHEDULES = [
             "zip": "30312",
             "lat": 33.7638,
             "lng": -84.3759,
-            "venue_type": "community_center",
+            "place_type": "community_center",
             "spot_type": "community_center",
             "website": (
                 "https://www.atlantaga.gov/government/departments/department-parks-recreation/"
@@ -115,7 +115,7 @@ SCHEDULES = [
             "zip": "30354",
             "lat": 33.6807,
             "lng": -84.3806,
-            "venue_type": "community_center",
+            "place_type": "community_center",
             "spot_type": "community_center",
             "website": (
                 "https://www.atlantaga.gov/government/departments/department-parks-recreation/"
@@ -148,7 +148,7 @@ SCHEDULES = [
             "zip": "30314",
             "lat": 33.7561,
             "lng": -84.4153,
-            "venue_type": "community_center",
+            "place_type": "community_center",
             "spot_type": "community_center",
             "website": (
                 "https://www.atlantaga.gov/government/departments/department-parks-recreation/"
@@ -201,7 +201,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": template["title"],
                 "description": template["description"],
                 "start_date": start_date,

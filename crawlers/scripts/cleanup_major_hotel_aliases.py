@@ -59,7 +59,7 @@ def _table_has_column(client: Any, table: str, column: str) -> bool:
 
 
 def _get_venue_by_slug(client: Any, slug: str) -> Optional[Dict[str, Any]]:
-    result = client.table("venues").select("*").eq("slug", slug).limit(1).execute()
+    result = client.table("places").select("*").eq("slug", slug).limit(1).execute()
     rows = result.data or []
     return rows[0] if rows else None
 
@@ -108,13 +108,13 @@ def _append_aliases(client: Any, keeper: Dict[str, Any], aliases: List[str], dry
         return
     if dry_run:
         return
-    client.table("venues").update({"aliases": merged}).eq("id", keeper["id"]).execute()
+    client.table("places").update({"aliases": merged}).eq("id", keeper["id"]).execute()
 
 
 def _deactivate_alias(client: Any, alias_id: int, dry_run: bool) -> None:
     if dry_run:
         return
-    client.table("venues").update({"active": False}).eq("id", alias_id).execute()
+    client.table("places").update({"active": False}).eq("id", alias_id).execute()
 
 
 def run(apply_changes: bool) -> None:

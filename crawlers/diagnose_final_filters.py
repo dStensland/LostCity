@@ -69,7 +69,7 @@ def main():
     
     # Filter: chain venues (is_chain = true venues excluded)
     # First get chain venue IDs
-    result = client.table("venues").select("id").eq("is_chain", True).execute()
+    result = client.table("places").select("id").eq("is_chain", True).execute()
     chain_venue_ids = [v["id"] for v in result.data] if result.data else []
     
     print(f"   Chain venues found: {len(chain_venue_ids)}")

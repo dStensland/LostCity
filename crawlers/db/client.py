@@ -411,7 +411,7 @@ def venues_support_destination_details_table() -> bool:
 
     client = get_client()
     try:
-        client.table("venue_destination_details").select("venue_id").limit(1).execute()
+        client.table("venue_destination_details").select("place_id").limit(1).execute()
         _VENUES_HAS_DESTINATION_DETAILS_TABLE = True
     except Exception as e:
         error_str = str(e).lower()
@@ -482,7 +482,7 @@ def venues_support_location_designator() -> bool:
 
     client = get_client()
     try:
-        client.table("venues").select("location_designator").limit(1).execute()
+        client.table("places").select("location_designator").limit(1).execute()
         _VENUES_HAS_LOCATION_DESIGNATOR = True
     except Exception as e:
         error_str = str(e).lower()

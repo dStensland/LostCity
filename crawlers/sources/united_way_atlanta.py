@@ -63,7 +63,7 @@ UNITED_WAY_ATLANTA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30303",
-    "venue_type": "nonprofit",
+    "place_type": "nonprofit",
     "website": "https://www.unitedwayatlanta.org",
 }
 
@@ -579,7 +579,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": parsed["title"],
                 "description": parsed["description"],
                 "start_date": parsed["start_date"],

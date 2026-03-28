@@ -45,7 +45,7 @@ CAMPGROUND_TARGETS = [
         "parking_note": "Use current Recreation.gov and local access guidance before promotion.",
         "typical_duration_minutes": 1440,
         "explore_blurb": "Blue Ridge-area public campground with Recreation.gov booking.",
-        "venue_type": "campground",
+        "place_type": "campground",
         "spot_type": "campground",
         "explore_category": "outdoors",
         "active": True,
@@ -66,7 +66,7 @@ CAMPGROUND_TARGETS = [
         "parking_note": "Use current operator guidance for site setup, arrival, and amenities before promotion.",
         "typical_duration_minutes": 1440,
         "explore_blurb": "South-Georgia full-hookup RV resort with direct booking.",
-        "venue_type": "campground",
+        "place_type": "campground",
         "spot_type": "campground",
         "explore_category": "outdoors",
         "active": True,
@@ -87,7 +87,7 @@ CAMPGROUND_TARGETS = [
         "parking_note": "Use current operator guidance for hookups, arrival, and resort rules before promotion.",
         "typical_duration_minutes": 1440,
         "explore_blurb": "East Ellijay RV resort with direct operator booking.",
-        "venue_type": "campground",
+        "place_type": "campground",
         "spot_type": "campground",
         "explore_category": "outdoors",
         "active": True,
@@ -108,7 +108,7 @@ CAMPGROUND_TARGETS = [
         "parking_note": "Use current operator guidance for hookups, arrival, and reservation policy before promotion.",
         "typical_duration_minutes": 1440,
         "explore_blurb": "South-Georgia RV and campground operation with direct booking.",
-        "venue_type": "campground",
+        "place_type": "campground",
         "spot_type": "campground",
         "explore_category": "outdoors",
         "active": True,
@@ -129,7 +129,7 @@ CAMPGROUND_TARGETS = [
         "parking_note": "Use current operator guidance for arrival and campground rules before promotion.",
         "typical_duration_minutes": 1440,
         "explore_blurb": "Middle-Georgia campground with a distinct operator identity.",
-        "venue_type": "campground",
+        "place_type": "campground",
         "spot_type": "campground",
         "explore_category": "outdoors",
         "active": True,
@@ -146,7 +146,7 @@ def find_existing_venue(seed: dict) -> dict | None:
     if existing:
         return existing
     client = get_client()
-    result = client.table("venues").select("*").eq("name", seed["name"]).limit(1).execute()
+    result = client.table("places").select("*").eq("name", seed["name"]).limit(1).execute()
     if result.data:
         return result.data[0]
     return None
@@ -186,7 +186,7 @@ def compute_updates(existing: dict, payload: dict) -> dict:
 
 def insert_venue_direct(payload: dict) -> int | None:
     client = get_client()
-    result = client.table("venues").insert(payload).execute()
+    result = client.table("places").insert(payload).execute()
     if result.data:
         return result.data[0].get("id")
     return None
@@ -233,7 +233,7 @@ def main() -> None:
             skipped += 1
             continue
         if args.apply:
-            client.table("venues").update(updates).eq("id", existing["id"]).execute()
+            client.table("places").update(updates).eq("id", existing["id"]).execute()
         print(f"{'UPDATE' if args.apply else 'WOULD UPDATE'} venue: {seed['slug']} ({len(updates)} fields)")
         updated += 1
 

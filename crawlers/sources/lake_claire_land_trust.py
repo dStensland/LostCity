@@ -32,7 +32,7 @@ PLACE_DATA = {
     "zip": "30307",
     "lat": 33.7670,
     "lng": -84.3220,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": BASE_URL,
     "description": "1.7-acre community green space with 50+ garden beds, amphitheater, and monthly drum circles since 1991.",
@@ -84,7 +84,7 @@ def create_drum_circle_events(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,
@@ -278,7 +278,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": f"Community event at Lake Claire Land Trust",
                         "start_date": start_date,

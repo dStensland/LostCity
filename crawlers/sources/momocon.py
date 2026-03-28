@@ -32,7 +32,7 @@ PLACE_DATA = {
     "zip": "30313",
     "lat": 33.7606,
     "lng": -84.3963,
-    "venue_type": "convention_center",
+    "place_type": "convention_center",
     "spot_type": "convention_center",
     "website": "https://www.gwcca.org",
 }
@@ -161,7 +161,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at Georgia World Congress Center",
                         "start_date": start_date,

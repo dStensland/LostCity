@@ -40,7 +40,7 @@ WAVE_9_DESTINATIONS = [
             "lat": 35.6881,
             "lng": -83.5346,
             "website": "https://www.nps.gov/grsm/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "America's most visited national park — 800+ miles of trails, "
                 "72 miles of the AT, and the highest peaks in the eastern US."
@@ -86,7 +86,7 @@ WAVE_9_DESTINATIONS = [
             "lat": 35.3342,
             "lng": -83.5937,
             "website": "https://noc.com/nantahala-river-rafting/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "NOC's flagship river — 8 miles of Class I-II rapids finishing "
                 "with the Class III Nantahala Falls at the takeout."
@@ -129,7 +129,7 @@ WAVE_9_DESTINATIONS = [
             "lat": 35.2766,
             "lng": -82.7688,
             "website": "https://www.fs.usda.gov/recarea/nfsnc/recarea/?recid=48112",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "Natural 60-foot waterslide into an 8-foot swimming pool in Pisgah "
                 "National Forest — a Southeast summer bucket list item."
@@ -172,7 +172,7 @@ WAVE_9_DESTINATIONS = [
             "lat": 35.2017,
             "lng": -82.6117,
             "website": "https://dupontstaterecreationalforest.com/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "10,400 acres with 90+ miles of multi-use trails and 3 major "
                 "waterfalls — Hunger Games filming location."
@@ -214,7 +214,7 @@ WAVE_9_DESTINATIONS = [
             "lat": 35.3605,
             "lng": -83.5696,
             "website": "https://www.fs.usda.gov/recarea/nfsnc/recarea/?recid=48975",
-            "venue_type": "trail",
+            "place_type": "trail",
             "short_description": (
                 "Top-tier mountain biking on four trail loops with Lake Fontana views "
                 "in Nantahala National Forest."
@@ -257,7 +257,7 @@ WAVE_9_DESTINATIONS = [
             "lat": 35.4444,
             "lng": -83.8042,
             "website": "https://www.nps.gov/grsm/planyourvisit/fontana-lake.htm",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "30-mile reservoir surrounded entirely by GSMNP and Nantahala NF — "
                 "backcountry boat camping at its finest."
@@ -299,7 +299,7 @@ WAVE_9_DESTINATIONS = [
             "lat": 35.3583,
             "lng": -84.0569,
             "website": "https://cherohala.com/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "36-mile high-elevation scenic drive reaching 5,400 feet between "
                 "Cherokee and Nantahala National Forests."
@@ -341,7 +341,7 @@ WAVE_9_DESTINATIONS = [
             "lat": 35.2966,
             "lng": -82.7709,
             "website": "https://www.fs.usda.gov/recarea/nfsnc/recarea/?recid=48112",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "60-foot roadside waterfall in Pisgah National Forest — one of the "
                 "most accessible and photographed waterfalls in the Southeast."
@@ -383,7 +383,7 @@ WAVE_9_DESTINATIONS = [
             "lat": 35.0878,
             "lng": -82.9541,
             "website": "https://www.ncparks.gov/state-parks/gorges-state-park",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "4 waterfalls including Turtleback Falls natural slide, Class V river, "
                 "and some of NC's most dramatic gorge scenery."
@@ -425,7 +425,7 @@ WAVE_9_DESTINATIONS = [
             "lat": 35.5117,
             "lng": -82.4884,
             "website": "https://www.nps.gov/blri/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "America's most-visited National Parkway — Craggy Gardens, Mount "
                 "Pisgah, Graveyard Fields, and 469 miles of mountain ridge driving."
@@ -467,7 +467,7 @@ WAVE_9_DESTINATIONS = [
             "lat": 33.7948,
             "lng": -80.7821,
             "website": "https://www.nps.gov/cong/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "The only old-growth bottomland hardwood forest in the Southeast — "
                 "boardwalk trails through ancient record-size trees."
@@ -509,7 +509,7 @@ WAVE_9_DESTINATIONS = [
             "lat": 35.2764,
             "lng": -82.7447,
             "website": "https://www.fs.usda.gov/nfsnc",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "Bucket-list mountain biking, 3 major waterfalls, and Sliding Rock "
                 "in the heart of Western North Carolina."
@@ -551,7 +551,7 @@ WAVE_9_DESTINATIONS = [
             "lat": 35.4592,
             "lng": -83.9297,
             "website": "https://tailofthedragon.com/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "11 miles, 318 curves — the most famous driving road in America "
                 "at the Tennessee/North Carolina border."
@@ -593,7 +593,7 @@ WAVE_9_DESTINATIONS = [
             "lat": 37.1870,
             "lng": -86.1006,
             "website": "https://www.nps.gov/maca/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "World's longest known cave system at 400+ miles — UNESCO World "
                 "Heritage Site with multiple tour options."
@@ -636,7 +636,7 @@ WAVE_9_DESTINATIONS = [
             "lat": 35.3215,
             "lng": -82.8479,
             "website": "https://www.nps.gov/blri/",
-            "venue_type": "trail",
+            "place_type": "trail",
             "short_description": (
                 "Highland bog and waterfall trail off the Blue Ridge Parkway with "
                 "wild blueberries in season at 5,100 feet."
@@ -683,7 +683,7 @@ def find_existing_venue(seed: dict) -> dict | None:
 
     client = get_client()
     result = (
-        client.table("venues")
+        client.table("places")
         .select("*")
         .eq("name", seed["name"])
         .limit(1)
@@ -781,7 +781,7 @@ def main() -> None:
             skipped += 1
         else:
             if args.apply:
-                client.table("venues").update(updates).eq("id", venue_id).execute()
+                client.table("places").update(updates).eq("id", venue_id).execute()
             logger.info(
                 "%s venue: %s (%s fields)",
                 "UPDATE" if args.apply else "WOULD UPDATE",

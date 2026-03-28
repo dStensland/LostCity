@@ -375,7 +375,7 @@ def get_venues(
     client = get_client()
 
     query = (
-        client.table("venues")
+        client.table("places")
         .select("id, name, slug, city, lat, lng, vibes, cuisine, hours, hours_display, menu_url, reservation_url, price_level, phone, last_verified_at")
         .eq("active", True)
         .not_.is_("lat", "null")
@@ -408,7 +408,7 @@ def get_venues(
 def enrich_venue(venue: dict, dry_run: bool = False) -> dict:
     """Enrich a single venue with Google Places attributes."""
     result = {
-        "venue_id": venue["id"],
+        "place_id": venue["id"],
         "venue_name": venue["name"],
         "matched": False,
         "updates": {},
@@ -502,7 +502,7 @@ def enrich_venue(venue: dict, dry_run: bool = False) -> dict:
     # Write to database
     if updates and not dry_run:
         client = get_client()
-        client.table("venues").update(updates).eq("id", venue["id"]).execute()
+        client.table("places").update(updates).eq("id", venue["id"]).execute()
 
     return result
 

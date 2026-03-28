@@ -76,7 +76,7 @@ export async function POST(request: NextRequest, { params }: Props) {
 
   // Get venue and verify ownership
   const { data: venue, error: venueError } = await serviceClient
-    .from("venues")
+    .from("places")
     .select("id, name, claimed_by, is_verified")
     .eq("slug", slug)
     .maybeSingle() as {

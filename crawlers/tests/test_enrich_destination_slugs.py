@@ -491,7 +491,7 @@ def test_extract_meta_description_text_collects_description_variants():
 def test_maybe_website_hours_enrich_uses_candidate_pages(monkeypatch):
     venue = {
         "website": "https://www.georgiaaquarium.org/",
-        "venue_type": "aquarium",
+        "place_type": "aquarium",
         "hours": None,
         "hours_source": None,
     }
@@ -542,7 +542,7 @@ def test_fetch_page_with_fallback_uses_curl_when_fetch_page_fails(monkeypatch):
 def test_maybe_planning_enrich_clears_stale_hospitality_note_when_only_boilerplate_remains(monkeypatch):
     venue = {
         "website": "https://example.com",
-        "venue_type": "bar",
+        "place_type": "bar",
         "planning_notes": "Old noisy note",
         "phone": None,
     }
@@ -562,7 +562,7 @@ def test_maybe_planning_enrich_clears_stale_hospitality_note_when_only_boilerpla
 def test_maybe_planning_enrich_clears_stale_hospitality_note_even_when_phone_matches(monkeypatch):
     venue = {
         "website": "https://example.com",
-        "venue_type": "bar",
+        "place_type": "bar",
         "planning_notes": "Old noisy note",
         "phone": "(404) 555-0100",
     }

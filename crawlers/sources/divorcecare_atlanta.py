@@ -382,7 +382,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "address": street if street else None,
                     "city": city,
                     "state": state,
-                    "venue_type": "church",
+                    "place_type": "church",
                     "spot_type": "church",
                     "vibes": ["faith-christian"],  # Using valid vibe from tags.py
                 }
@@ -437,7 +437,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Create event record
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title[:200],
                     "description": description[:1000],
                     "start_date": start_date,

@@ -37,7 +37,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7780,
     "lng": -84.4127,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
 }
@@ -216,7 +216,7 @@ def _crawl_events(source_id: int, venue_id: int) -> tuple[int, int, int]:
                 # Build event record
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": start_date,

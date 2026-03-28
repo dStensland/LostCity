@@ -52,7 +52,7 @@ def get_venue_event_count(client, venue_id: int) -> int:
     """Count upcoming events for a venue."""
     from datetime import date
     today = date.today().isoformat()
-    result = client.table("events").select("id", count="exact").eq("venue_id", venue_id).gte("start_date", today).execute()
+    result = client.table("events").select("id", count="exact").eq("place_id", venue_id).gte("start_date", today).execute()
     return result.count or 0
 
 
@@ -67,7 +67,7 @@ def triage_venues(limit: int = None, include_all: bool = False) -> list[VenueTri
     client = get_client()
 
     # Query venues
-    query = client.table("venues").select("*").eq("active", True).order("name")
+    query = client.table("places").select("*").eq("active", True).order("name")
 
     if not include_all:
         # Focus on incomplete venues
@@ -204,7 +204,7 @@ def export_triage_json(triaged: list[VenueTriage], filename: str = "venue_triage
             "name": t.name,
             "slug": t.slug,
             "neighborhood": t.neighborhood,
-            "venue_type": t.venue_type,
+            "place_type": t.venue_type,
             "category": t.category,
             "issue": t.issue,
             "suggested_action": t.suggested_action,

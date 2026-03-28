@@ -36,7 +36,7 @@ ENSURE_VENUES: dict[str, dict[str, Any]] = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30339",
-        "venue_type": "entertainment",
+        "place_type": "entertainment",
         "spot_type": "entertainment",
         "website": "https://www.mainevent.com/locations/georgia/atlanta/",
     },
@@ -47,7 +47,7 @@ ENSURE_VENUES: dict[str, dict[str, Any]] = {
         "city": "Woodstock",
         "state": "GA",
         "zip": "30188",
-        "venue_type": "games",
+        "place_type": "games",
         "spot_type": "games",
         "website": "https://starsandstrikes.com/locations/woodstock-ga/",
     },
@@ -58,7 +58,7 @@ ENSURE_VENUES: dict[str, dict[str, Any]] = {
         "city": "LaGrange",
         "state": "GA",
         "zip": "30240",
-        "venue_type": "attraction",
+        "place_type": "attraction",
         "spot_type": "attraction",
         "website": "https://www.greatwolf.com/georgia",
     },
@@ -159,7 +159,7 @@ ATLANTA_ACTIVITY_OVERLAYS_WAVE10: dict[str, list[dict[str, Any]]] = {
 def _get_or_create_target_venue(venue_slug: str, apply: bool) -> dict[str, Any] | None:
     client = get_client()
     venue_res = (
-        client.table("venues").select("id,name,slug").eq("slug", venue_slug).limit(1).execute()
+        client.table("places").select("id,name,slug").eq("slug", venue_slug).limit(1).execute()
     )
     if venue_res.data:
         return venue_res.data[0]
@@ -172,7 +172,7 @@ def _get_or_create_target_venue(venue_slug: str, apply: bool) -> dict[str, Any] 
     temp_or_real_id = get_or_create_place(payload)
     if apply:
         venue_res = (
-            client.table("venues").select("id,name,slug").eq("slug", venue_slug).limit(1).execute()
+            client.table("places").select("id,name,slug").eq("slug", venue_slug).limit(1).execute()
         )
         if venue_res.data:
             return venue_res.data[0]

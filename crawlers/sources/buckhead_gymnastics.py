@@ -32,7 +32,7 @@ _CONFIG = IClassProConfig(
         "zip": "30318",
         "lat": 33.8302,
         "lng": -84.4073,
-        "venue_type": "fitness_center",
+        "place_type": "fitness_center",
         "spot_type": "fitness",
         "website": "https://portal.iclasspro.com/buckheadgymnastics/classes",
         "phone": "404-367-4414",

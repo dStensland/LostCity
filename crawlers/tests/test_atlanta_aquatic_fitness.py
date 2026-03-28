@@ -76,7 +76,7 @@ def test_build_destination_envelope_marks_aquatic_center() -> None:
     place_data = {
         "name": "CT Martin Recreation & Aquatic Center",
         "slug": "ct-martin-recreation-aquatic-center",
-        "venue_type": "recreation",
+        "place_type": "recreation",
     }
 
     envelope = _build_destination_envelope(place_data, 2201)

@@ -368,7 +368,7 @@ async function fetchSignatureVenueSpecials(
 
     // 1. Resolve slugs → venue IDs
     const { data: venueRows, error: venueErr } = await supabase
-      .from("venues")
+      .from("places")
       .select("id, slug")
       .in("slug", slugs);
 
@@ -383,9 +383,9 @@ async function fetchSignatureVenueSpecials(
 
     // 2. Fetch active specials for those venue IDs
     const { data: specialsRows, error: specialsErr } = await supabase
-      .from("venue_specials")
-      .select("venue_id, title, time_start, time_end, days_of_week")
-      .in("venue_id", venueIds)
+      .from("place_specials")
+      .select("place_id, title, time_start, time_end, days_of_week")
+      .in("place_id", venueIds)
       .eq("is_active", true);
 
     if (specialsErr || !specialsRows) return result;

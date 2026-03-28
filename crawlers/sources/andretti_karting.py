@@ -35,7 +35,7 @@ PLACE_DATA = {
     "zip": "30062",
     "lat": 33.9530,
     "lng": -84.5200,
-    "venue_type": "entertainment",
+    "place_type": "entertainment",
     "spot_type": "entertainment",
     "website": HOMEPAGE,
     # Hours verified 2026-03-11 against andrettikarting.com/atlanta/
@@ -130,7 +130,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "entertainment_complex",
         "commitment_tier": "halfday",
         "primary_activity": "Indoor go-karts, arcade, bowling, laser tag, and dining",
@@ -145,10 +145,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Pay-per-activity or buy activity packages. Full-service restaurant and bar on-site.",
         "source_url": HOMEPAGE,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "entertainment", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "entertainment", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "indoor-go-kart-racing",
         "title": "Indoor go-kart racing",
         "feature_type": "experience",
@@ -158,7 +158,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "arcade-floor",
         "title": "Arcade floor with 200+ games",
         "feature_type": "experience",
@@ -168,7 +168,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "bowling-lanes",
         "title": "Bowling lanes",
         "feature_type": "experience",
@@ -178,7 +178,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "laser-tag-arena",
         "title": "Laser tag arena",
         "feature_type": "experience",
@@ -188,7 +188,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 40,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "full-service-restaurant-bar",
         "title": "Full-service restaurant and bar",
         "feature_type": "amenity",
@@ -198,7 +198,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 50,
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "weekday-activity-packages",
         "title": "Weekday activity packages",
         "description": "Discounted activity packages available Monday through Thursday.",
@@ -272,7 +272,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning(
                 "Andretti Indoor Karting Atlanta: venue update failed: %s", exc

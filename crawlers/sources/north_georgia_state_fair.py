@@ -32,7 +32,7 @@ PLACE_DATA = {
     "zip": "30008",
     "lat": 33.9271,
     "lng": -84.5868,
-    "venue_type": "event_space",
+    "place_type": "event_space",
     "spot_type": "event_space",
     "website": BASE_URL,
 }
@@ -196,7 +196,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": f"Event at North Georgia State Fair - {title}",
                             "start_date": start_date,
@@ -289,7 +289,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if not find_event_by_hash(content_hash):
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": venue_id,
+                                "place_id": venue_id,
                                 "title": title,
                                 "description": "Annual state fair featuring rides, food, entertainment, demolition derby, monster trucks, and more at Jim R. Miller Park in Marietta.",
                                 "start_date": start_date,

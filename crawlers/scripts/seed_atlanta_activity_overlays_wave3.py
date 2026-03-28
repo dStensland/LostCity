@@ -248,7 +248,7 @@ def seed_overlays(apply: bool = False) -> None:
 
     for venue_slug, features in ATLANTA_ACTIVITY_OVERLAYS_WAVE3.items():
         venue_res = (
-            client.table("venues").select("id,name,slug").eq("slug", venue_slug).limit(1).execute()
+            client.table("places").select("id,name,slug").eq("slug", venue_slug).limit(1).execute()
         )
         if not venue_res.data:
             logger.warning("Venue slug '%s' not found; skipping", venue_slug)

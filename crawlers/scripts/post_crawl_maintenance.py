@@ -399,7 +399,7 @@ def sweep_null_source_short_descriptions(
     venue_map: dict[int, dict] = {}
     if venue_ids:
         venue_rows = (
-            client.table("venues")
+            client.table("places")
             .select("id,name,neighborhood,city,state")
             .in_("id", venue_ids)
             .execute()

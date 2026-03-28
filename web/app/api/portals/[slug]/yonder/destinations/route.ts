@@ -78,12 +78,12 @@ export async function GET(request: NextRequest, { params }: Props) {
   const supabase = await createClient();
   const slugs = YONDER_DESTINATION_INTELLIGENCE.map((entry) => entry.slug);
   const { data } = await supabase
-    .from("venues")
+    .from("places")
     .select(
-      "id, slug, city, state, image_url, hero_image_url, short_description, venue_type, reservation_url, accepts_reservations, reservation_recommended",
+      "id, slug, city, state, image_url, hero_image_url, short_description, place_type, reservation_url, accepts_reservations, reservation_recommended",
     )
     .in("slug", slugs)
-    .eq("active", true);
+    .eq("is_active", true);
 
   const rowsBySlug = new Map(
     ((data ?? []) as Array<{

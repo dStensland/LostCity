@@ -188,7 +188,7 @@ def main() -> None:
         source_rows = [s for s in source_rows if s.get("owner_portal_id") == portal_id]
 
     venue_rows = (
-        client.table("venues")
+        client.table("places")
         .select("id,slug,name,venue_type,spot_type")
         .execute()
         .data

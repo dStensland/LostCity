@@ -183,7 +183,7 @@ def test_build_election_day_event_structure() -> None:
         election_date="2026-05-19",
     )
     assert event["source_id"] == 99
-    assert event["venue_id"] == 42
+    assert event["place_id"] == 42
     assert event["start_date"] == "2026-05-19"
     assert event["start_time"] == "07:00"
     assert event["end_time"] == "19:00"
@@ -237,7 +237,7 @@ def test_build_registration_deadline_event_structure() -> None:
         reg_deadline="2026-04-20",
     )
     assert event["source_id"] == 99
-    assert event["venue_id"] == 42
+    assert event["place_id"] == 42
     assert event["start_date"] == "2026-04-20"
     assert event["is_all_day"] is True
     assert event["start_time"] is None
@@ -293,7 +293,7 @@ def test_venue_data_has_required_fields() -> None:
         "zip",
         "lat",
         "lng",
-        "venue_type",
+        "place_type",
         "spot_type",
         "website",
     ]

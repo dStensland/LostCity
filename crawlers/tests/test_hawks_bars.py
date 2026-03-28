@@ -62,7 +62,7 @@ def test_parse_watch_parties_uses_schedule_tipoff_for_start_time():
                 "city": "Atlanta",
                 "state": "GA",
                 "zip": "30316",
-                "venue_type": "sports_bar",
+                "place_type": "sports_bar",
                 "spot_type": "sports_bar",
                 "website": "https://www.thebeverlyatl.com/",
             },

@@ -468,7 +468,7 @@ def main():
     BATCH = 200
     for i in range(0, len(venue_id_list), BATCH):
         batch = venue_id_list[i:i + BATCH]
-        result = client.table("venues").select(
+        result = client.table("places").select(
             "id,name,slug,neighborhood,venue_type,city,state"
         ).in_("id", batch).execute()
         for v in (result.data or []):

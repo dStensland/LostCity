@@ -42,7 +42,7 @@ PLACE_DATA = {
     "zip": "30305",
     "lat": 33.8388,
     "lng": -84.3798,
-    "venue_type": "venue",
+    "place_type": "venue",
     "spot_type": "venue",
     "website": BASE_URL,
     "vibes": ["buckhead", "upscale", "dining", "shopping", "nightlife"],
@@ -189,7 +189,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description or f"Event at Buckhead Village District",
                 "start_date": start_date,

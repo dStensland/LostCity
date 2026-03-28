@@ -370,7 +370,7 @@ def _build_venue_data(opp: dict) -> dict:
         "slug": venue_slug,
         "city": city,
         "state": state,
-        "venue_type": "organization",
+        "place_type": "organization",
         "spot_type": "organization",
     }
 
@@ -554,7 +554,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record: dict = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": event_title,
                 "description": description,
                 "start_date": start_date_str,

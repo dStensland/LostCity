@@ -6,7 +6,7 @@ from db import get_client
 client = get_client()
 
 # Get venues without neighborhoods
-result = client.table('venues').select('id, name, address, city, state, lat, lng, zip').execute()
+result = client.table('places').select('id, name, address, city, state, lat, lng, zip').execute()
 all_venues = result.data
 missing_venues = [v for v in all_venues if not v.get('neighborhood')]
 

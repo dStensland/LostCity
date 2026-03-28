@@ -80,7 +80,7 @@ class _Crawler(GenericExhibitionCrawler):
         "zip": "30313",
         "lat": 33.7470,
         "lng": -84.3985,
-        "venue_type": "gallery",
+        "place_type": "gallery",
         "website": "https://www.besharatcontemporary.com",
     }
 

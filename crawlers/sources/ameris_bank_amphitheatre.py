@@ -34,7 +34,7 @@ PLACE_DATA = {
     "zip": "30009",
     "lat": 34.0514,
     "lng": -84.2461,
-    "venue_type": "amphitheater",
+    "place_type": "amphitheater",
     "spot_type": "music_venue",
     "website": BASE_URL,
 }
@@ -168,7 +168,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             content_hash = generate_content_hash(title, "Ameris Bank Amphitheatre", hash_key)
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description or "Event at Ameris Bank Amphitheatre",
                 "start_date": start_date,

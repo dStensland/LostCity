@@ -98,7 +98,7 @@ class _Crawler(GenericExhibitionCrawler):
         "zip": "30309",
         "lat": 33.8009,
         "lng": -84.4011,
-        "venue_type": "museum",
+        "place_type": "museum",
         "website": "https://www.mocaga.org",
     }
 

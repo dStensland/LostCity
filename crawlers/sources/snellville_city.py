@@ -26,7 +26,7 @@ PLACE_DATA = {
     "zip": "30078",
     "lat": 33.8573,
     "lng": -84.0199,
-    "venue_type": "city",
+    "place_type": "city",
     "spot_type": "city",
     "website": BASE_URL,
     "description": "East Gwinnett suburb known for Snellville Days Festival, Briscoe Park, and growing Towne Center district.",
@@ -62,7 +62,7 @@ def create_snellville_days(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Major annual arts and crafts festival at T.W. Briscoe Park. "
@@ -110,7 +110,7 @@ def create_snellville_days(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Day 2 of Snellville Days Festival at T.W. Briscoe Park. "
@@ -173,7 +173,7 @@ def create_seasonal_events(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Fall celebration at Briscoe Park with pumpkin patches, "
@@ -241,7 +241,7 @@ def create_seasonal_events(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,

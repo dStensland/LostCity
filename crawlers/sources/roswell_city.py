@@ -31,7 +31,7 @@ PLACE_DATA = {
     "zip": "30075",
     "lat": 34.0234,
     "lng": -84.3616,
-    "venue_type": "city",
+    "place_type": "city",
     "spot_type": "city",
     "website": BASE_URL,
     "description": "City of Roswell - Georgia's oldest European settlement with historic charm, Canton Street, and vibrant arts scene.",
@@ -76,7 +76,7 @@ def create_recurring_events(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,
@@ -140,7 +140,7 @@ def create_recurring_events(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Annual music and food festival celebrating Roswell's roots and culture. "
@@ -204,7 +204,7 @@ def create_recurring_events(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,

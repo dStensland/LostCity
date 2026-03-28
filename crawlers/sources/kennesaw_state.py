@@ -55,7 +55,7 @@ VENUES = {
         "city": "Kennesaw",
         "state": "GA",
         "zip": "30144",
-        "venue_type": "performing_arts",
+        "place_type": "performing_arts",
         "website": "https://arts.kennesaw.edu",
     },
     "zuckerman": {
@@ -66,7 +66,7 @@ VENUES = {
         "city": "Kennesaw",
         "state": "GA",
         "zip": "30144",
-        "venue_type": "museum",
+        "place_type": "museum",
         "website": "https://zuckerman.kennesaw.edu",
     },
     "fine_arts": {
@@ -77,7 +77,7 @@ VENUES = {
         "city": "Kennesaw",
         "state": "GA",
         "zip": "30144",
-        "venue_type": "gallery",
+        "place_type": "gallery",
         "website": "https://arts.kennesaw.edu",
     },
     "stadium": {
@@ -88,7 +88,7 @@ VENUES = {
         "city": "Kennesaw",
         "state": "GA",
         "zip": "30144",
-        "venue_type": "stadium",
+        "place_type": "stadium",
         "website": "https://ksuowls.com",
     },
 }
@@ -101,7 +101,7 @@ def _build_destination_envelope(venue_key: str, venue_id: int) -> TypedEntityEnv
         envelope.add(
             "destination_details",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "destination_type": "art_museum",
                 "commitment_tier": "hour",
                 "primary_activity": "campus art museum visit",
@@ -123,7 +123,7 @@ def _build_destination_envelope(venue_key: str, venue_id: int) -> TypedEntityEnv
                 "source_url": VENUES[venue_key]["website"],
                 "metadata": {
                     "source_type": "family_destination_enrichment",
-                    "venue_type": "museum",
+                    "place_type": "museum",
                     "city": "kennesaw",
                 },
             },
@@ -131,7 +131,7 @@ def _build_destination_envelope(venue_key: str, venue_id: int) -> TypedEntityEnv
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "free-campus-art-museum-stop",
                 "title": "Free campus art museum stop",
                 "feature_type": "amenity",
@@ -144,7 +144,7 @@ def _build_destination_envelope(venue_key: str, venue_id: int) -> TypedEntityEnv
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "temporary-art-exhibitions-and-campus-culture",
                 "title": "Temporary art exhibitions and campus culture",
                 "feature_type": "experience",
@@ -160,7 +160,7 @@ def _build_destination_envelope(venue_key: str, venue_id: int) -> TypedEntityEnv
         envelope.add(
             "destination_details",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "destination_type": "art_gallery",
                 "commitment_tier": "hour",
                 "primary_activity": "campus gallery visit",
@@ -181,7 +181,7 @@ def _build_destination_envelope(venue_key: str, venue_id: int) -> TypedEntityEnv
                 "source_url": VENUES[venue_key]["website"],
                 "metadata": {
                     "source_type": "family_destination_enrichment",
-                    "venue_type": "gallery",
+                    "place_type": "gallery",
                     "city": "kennesaw",
                 },
             },
@@ -189,7 +189,7 @@ def _build_destination_envelope(venue_key: str, venue_id: int) -> TypedEntityEnv
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "student-and-regional-art-gallery-stop",
                 "title": "Student and regional art gallery stop",
                 "feature_type": "experience",
@@ -202,7 +202,7 @@ def _build_destination_envelope(venue_key: str, venue_id: int) -> TypedEntityEnv
         envelope.add(
             "venue_features",
             {
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "slug": "short-campus-exhibition-pairing-stop",
                 "title": "Short campus exhibition pairing stop",
                 "feature_type": "amenity",
@@ -373,7 +373,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": description,
                             "start_date": start_date,

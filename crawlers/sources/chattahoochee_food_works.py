@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7963,
     "lng": -84.4313,
-    "venue_type": "food_hall",
+    "place_type": "food_hall",
     "spot_type": "food_hall",
     "website": HOMEPAGE,
     # Hours verified 2026-03-22 against chattahoocheefoodworks.com
@@ -65,7 +65,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "food_hall",
         "commitment_tier": "hour",
         "primary_activity": "Multi-vendor food hall with 20+ local chef-driven stalls",
@@ -84,10 +84,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Pay-as-you-go at individual vendor stalls. No entrance fee.",
         "source_url": HOMEPAGE,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "food_hall", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "food_hall", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "20-plus-vendor-stalls",
         "title": "20+ chef-driven vendor stalls",
         "feature_type": "amenity",
@@ -100,7 +100,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "central-bar-patio",
         "title": "Central bar and outdoor patio",
         "feature_type": "amenity",
@@ -113,7 +113,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "west-midtown-walkability",
         "title": "West Midtown location and walkability",
         "feature_type": "experience",
@@ -187,7 +187,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning("Chattahoochee Food Works: venue update failed: %s", exc)
 

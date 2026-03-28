@@ -55,7 +55,7 @@ VENUE_ALPHARETTA = {
     "zip": "30009",
     "lat": 34.0754,
     "lng": -84.2941,
-    "venue_type": "studio",
+    "place_type": "studio",
     "website": BASE_URL,
     "vibes": ["family-friendly", "all-ages"],
 }
@@ -70,7 +70,7 @@ VENUE_EMORY_VILLAGE = {
     "zip": "30307",
     "lat": 33.7952,
     "lng": -84.3283,
-    "venue_type": "studio",
+    "place_type": "studio",
     "website": BASE_URL,
     "vibes": ["family-friendly", "all-ages"],
 }
@@ -85,7 +85,7 @@ VENUE_MARIETTA = {
     "zip": "30066",
     "lat": 34.0070,
     "lng": -84.4741,
-    "venue_type": "studio",
+    "place_type": "studio",
     "website": BASE_URL,
     "vibes": ["family-friendly", "all-ages"],
 }
@@ -442,7 +442,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": clean_title,
                 "description": description,
                 "start_date": start_date,

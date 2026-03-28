@@ -268,7 +268,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "slug": slugify(venue_name),
                         "city": "Atlanta",
                         "state": "GA",
-                        "venue_type": "venue",
+                        "place_type": "venue",
                     }
                     venue_id = get_or_create_place(place_data)
 
@@ -279,7 +279,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description,
                         "start_date": start_date,

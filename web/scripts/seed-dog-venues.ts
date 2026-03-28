@@ -97,9 +97,9 @@ async function tagExistingVenues() {
 
   for (const rule of EXISTING_VENUE_RULES) {
     let query = supabase
-      .from("venues")
+      .from("places")
       .select("id, name, vibes")
-      .eq("active", true);
+      .eq("is_active", true);
 
     if (rule.match.nameContains) {
       query = query.ilike("name", `%${rule.match.nameContains}%`);
@@ -126,7 +126,7 @@ async function tagExistingVenues() {
 
       if (!DRY_RUN) {
         const { error: updateError } = await supabase
-          .from("venues")
+          .from("places")
           .update({ vibes: merged } as never)
           .eq("id", venue.id);
 
@@ -150,10 +150,10 @@ async function tagParksAsDogFriendly() {
   console.log("\n--- Step 2: Tagging all parks as dog-friendly ---");
 
   const { data: parks, error } = await supabase
-    .from("venues")
+    .from("places")
     .select("id, name, vibes")
-    .eq("venue_type", "park")
-    .eq("active", true);
+    .eq("place_type", "park")
+    .eq("is_active", true);
 
   if (error || !parks) {
     console.error("  Error fetching parks:", error?.message);
@@ -169,7 +169,7 @@ async function tagParksAsDogFriendly() {
 
     if (!DRY_RUN) {
       await supabase
-        .from("venues")
+        .from("places")
         .update({ vibes: merged } as never)
         .eq("id", park.id);
     }
@@ -503,10 +503,10 @@ async function insertNewVenues() {
   for (const venue of NEW_VENUES) {
     // Check if venue already exists by name (fuzzy)
     const { data: existing } = await supabase
-      .from("venues")
+      .from("places")
       .select("id, name")
       .ilike("name", `%${venue.name.split(" - ")[0].split(" – ")[0].trim()}%`)
-      .eq("active", true)
+      .eq("is_active", true)
       .limit(1);
 
     if (existing && existing.length > 0) {
@@ -515,7 +515,7 @@ async function insertNewVenues() {
       // Still merge vibes
       const ex = existing[0] as { id: number; name: string; vibes?: string[] | null };
       const { data: full } = await supabase
-        .from("venues")
+        .from("places")
         .select("vibes")
         .eq("id", ex.id)
         .single();
@@ -524,7 +524,7 @@ async function insertNewVenues() {
         const merged = mergeVibes((full as { vibes: string[] | null }).vibes, venue.vibes);
         if (!DRY_RUN) {
           await supabase
-            .from("venues")
+            .from("places")
             .update({ vibes: merged } as never)
             .eq("id", ex.id);
         }
@@ -537,7 +537,7 @@ async function insertNewVenues() {
     console.log(`  INSERT: ${venue.name} (${venue.venue_type})`);
 
     if (!DRY_RUN) {
-      const { error } = await supabase.from("venues").insert({
+      const { error } = await supabase.from("places").insert({
         name: venue.name,
         slug: slugify(venue.name),
         address: venue.address,
@@ -573,9 +573,9 @@ async function tagDogFriendlyEvents() {
 
   // Tag events at known dog-friendly venues
   const { data: dogVenues } = await supabase
-    .from("venues")
+    .from("places")
     .select("id")
-    .eq("active", true)
+    .eq("is_active", true)
     .contains("vibes", ["dog-friendly"]);
 
   if (!dogVenues || dogVenues.length === 0) {
@@ -588,8 +588,8 @@ async function tagDogFriendlyEvents() {
   // Find upcoming events at those venues that don't already have dog tags
   const { data: events } = await supabase
     .from("events")
-    .select("id, title, tags, venue_id")
-    .in("venue_id", venueIds)
+    .select("id, title, tags, place_id")
+    .in("place_id", venueIds)
     .gte("start_date", today)
     .is("canonical_event_id", null);
 
@@ -671,10 +671,10 @@ async function tagBreweriesAsDogFriendly() {
   console.log("\n--- Step 5: Tagging breweries/bars with outdoor seating ---");
 
   const { data: breweries } = await supabase
-    .from("venues")
+    .from("places")
     .select("id, name, vibes")
-    .eq("active", true)
-    .in("venue_type", ["brewery", "bar", "taproom"])
+    .eq("is_active", true)
+    .in("place_type", ["brewery", "bar", "taproom"])
     .contains("vibes", ["outdoor-seating"]);
 
   if (!breweries || breweries.length === 0) {
@@ -691,7 +691,7 @@ async function tagBreweriesAsDogFriendly() {
 
     if (!DRY_RUN) {
       await supabase
-        .from("venues")
+        .from("places")
         .update({ vibes: merged } as never)
         .eq("id", brewery.id);
     }

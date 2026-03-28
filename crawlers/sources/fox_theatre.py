@@ -36,7 +36,7 @@ PLACE_DATA = {
     "zip": "30308",
     "lat": 33.7725,
     "lng": -84.3856,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": BASE_URL,
     # Box office: Mon–Fri 10am–6pm, Sat 10am–2pm, closed Sunday
@@ -119,7 +119,7 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "historic_theater",
         "commitment_tier": "halfday",
         "primary_activity": "Broadway shows, concerts, and performing arts in a National Historic Landmark",
@@ -138,10 +138,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Ticket prices vary by show. Building tours available separately.",
         "source_url": BASE_URL,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "theater", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "theater", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "moorish-egyptian-architecture",
         "title": "Moorish-Egyptian architecture",
         "feature_type": "attraction",
@@ -151,7 +151,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "behind-the-scenes-tours",
         "title": "Behind-the-scenes tours",
         "feature_type": "experience",
@@ -161,7 +161,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "egyptian-ballroom-grand-salon",
         "title": "Egyptian Ballroom and Grand Salon",
         "feature_type": "amenity",
@@ -171,7 +171,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "marquee-club-vip",
         "title": "Marquee Club VIP experience",
         "feature_type": "amenity",
@@ -230,7 +230,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if PLACE_DATA.get("description"):
                     venue_update["description"] = PLACE_DATA["description"]
                 if venue_update:
-                    get_client().table("venues").update(venue_update).eq("id", venue_id).execute()
+                    get_client().table("places").update(venue_update).eq("id", venue_id).execute()
                     logger.info("Fox Theatre: enriched venue record from homepage og: metadata")
             except Exception as _upd_exc:
                 logger.warning("Fox Theatre: venue update failed: %s", _upd_exc)
@@ -423,7 +423,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": category_line,
                         "start_date": start_date,

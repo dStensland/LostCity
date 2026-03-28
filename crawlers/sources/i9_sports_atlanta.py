@@ -285,7 +285,7 @@ def _build_venue_data(program: dict) -> dict:
         "zip": zip_code or None,
         "lat": lat if lat and lat != 0 else None,
         "lng": lng if lng and lng != 0 else None,
-        "venue_type": "sports_facility",
+        "place_type": "sports_facility",
         "website": "https://www.i9sports.com",
         "vibes": ["youth-sports", "family-friendly"],
     }
@@ -469,7 +469,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record: dict = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_dt.strftime("%Y-%m-%d"),
@@ -521,7 +521,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             season_val = infer_season(title, start_dt)
             program_data: dict = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "name": title,
                 "description": description,
                 "program_type": prog_type,

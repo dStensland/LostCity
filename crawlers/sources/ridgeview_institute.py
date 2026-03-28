@@ -31,7 +31,7 @@ PLACE_DATA = {
     "zip": "30080",
     "lat": 33.8567,
     "lng": -84.5179,
-    "venue_type": "hospital",
+    "place_type": "hospital",
     "spot_type": "hospital",
     "website": BASE_URL,
     "vibes": ["mental-health", "recovery", "support-group"],
@@ -187,7 +187,7 @@ def generate_events_for_meeting(
         )
 
         event_record = {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": meeting["title"],
             "description": meeting["description"],
             "start_date": start_date,

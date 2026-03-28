@@ -159,7 +159,7 @@ def fetch_editorial_snippets(client, venue_ids: list[int]) -> dict[int, str]:
     for offset in range(0, len(venue_ids), 500):
         batch = venue_ids[offset:offset + 500]
         r = (client.table("editorial_mentions")
-             .select("venue_id,snippet,source_key,mention_type,article_title")
+             .select("place_id,snippet,source_key,mention_type,article_title")
              .in_("venue_id", batch)
              .eq("is_active", True)
              .not_.is_("snippet", "null")
@@ -203,13 +203,13 @@ def fetch_venues_needing_descriptions(client, *, venue_type=None, limit=0):
     all_venues = []
     offset = 0
     while True:
-        q = (client.table("venues")
+        q = (client.table("places")
              .select("id,name,venue_type,city,lat,lng,description")
              .eq("active", True)
              .order("id")
              .range(offset, offset + 999))
         if venue_type:
-            q = q.eq("venue_type", venue_type)
+            q = q.eq("place_type", venue_type)
         r = q.execute()
         if not r.data:
             break
@@ -288,7 +288,7 @@ def main():
 
             if write:
                 try:
-                    client.table("venues").update({"description": desc}).eq("id", vid).execute()
+                    client.table("places").update({"description": desc}).eq("id", vid).execute()
                 except Exception as e:
                     errors += 1
                     logger.error(f"  Error {vid}: {e}")

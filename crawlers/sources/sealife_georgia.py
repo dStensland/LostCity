@@ -57,7 +57,7 @@ PLACE_DATA = {
     "state": "GA",
     "zip": "30326",
     # lat/lng: TBD — fill in once exact unit in Phipps Plaza is confirmed
-    "venue_type": "aquarium",
+    "place_type": "aquarium",
     "spot_type": "aquarium",
     "website": f"{BASE_URL}/{LOCATION_SLUG}/",
     "vibes": ["family-friendly", "all-ages"],
@@ -303,7 +303,7 @@ def _parse_events_from_page_text(
             tags = _infer_tags(title, "")
             events.append({
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": None,
                 "start_date": start_date,

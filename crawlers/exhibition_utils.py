@@ -66,7 +66,7 @@ def build_exhibition_record(
     """
     record: dict = {
         "title": title,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "source_id": source_id,
         "opening_date": opening_date,
         "closing_date": closing_date,

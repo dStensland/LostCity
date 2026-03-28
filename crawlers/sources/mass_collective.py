@@ -35,7 +35,7 @@ PLACE_DATA = {
     "zip": "30313",
     "lat": 33.7450,
     "lng": -84.4020,
-    "venue_type": "studio",
+    "place_type": "studio",
     "spot_type": "studio",
     "website": "https://www.masscollective.org",
     "vibes": ["workshop", "hands-on", "makerspace", "woodworking", "welding", "leatherwork"],
@@ -246,7 +246,7 @@ def process_event(event_data: dict, source_id: int, venue_id: int) -> Optional[d
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title[:200],
             "description": description if description else None,
             "start_date": start_date,

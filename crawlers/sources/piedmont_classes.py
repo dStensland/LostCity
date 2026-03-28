@@ -195,7 +195,7 @@ def _get_or_create_class_venue(occurrence: dict) -> Optional[int]:
         "city": occurrence.get("City") or "Atlanta",
         "state": occurrence.get("State") or "GA",
         "zip": occurrence.get("ZipCode") or "",
-        "venue_type": "hospital",
+        "place_type": "hospital",
         "website": "https://www.piedmont.org",
     }
     return get_or_create_place(place_data)
@@ -247,7 +247,7 @@ def crawl_category(
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "portal_id": portal_id,
             "title": title,
             "description": description,

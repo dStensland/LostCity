@@ -65,7 +65,7 @@ PLACE_DATA = {
     "lat": 33.8724,
     "lng": -84.4278,
     "neighborhood": "Buckhead",
-    "venue_type": "institution",
+    "place_type": "institution",
     "spot_type": "education",
     "website": "https://www.trinityatl.org/",
     "vibes": ["family-friendly", "educational"],
@@ -464,7 +464,7 @@ def _build_event_record(
     )
     record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": row["title"],
         "description": description,
         "start_date": row["start_date"],

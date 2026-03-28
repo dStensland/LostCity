@@ -42,9 +42,9 @@ _VENUE_SPECIAL_COLUMNS = {
 @retry_on_network_error(max_retries=4, base_delay=0.5)
 def _select_existing_special(client, row: dict):
     query = (
-        client.table("venue_specials")
+        client.table("place_specials")
         .select("id")
-        .eq("venue_id", row["venue_id"])
+        .eq("place_id", row["venue_id"])
         .eq("title", row["title"])
         .eq("type", row["type"])
     )
@@ -69,12 +69,12 @@ def _select_existing_special(client, row: dict):
 
 @retry_on_network_error(max_retries=4, base_delay=0.5)
 def _insert_special_record(client, row: dict):
-    return client.table("venue_specials").insert(row).execute()
+    return client.table("place_specials").insert(row).execute()
 
 
 @retry_on_network_error(max_retries=4, base_delay=0.5)
 def _update_special_record(client, special_id: int, row: dict):
-    return client.table("venue_specials").update(row).eq("id", special_id).execute()
+    return client.table("place_specials").update(row).eq("id", special_id).execute()
 
 
 def upsert_place_special(venue_id: int, special_data: dict) -> Optional[int]:
@@ -89,7 +89,7 @@ def upsert_place_special(venue_id: int, special_data: dict) -> Optional[int]:
         return None
 
     row = {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         **{
             key: value
             for key, value in special_data.items()

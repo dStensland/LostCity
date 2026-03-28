@@ -31,7 +31,7 @@ PLACE_DATA = {
     "zip": "30306",
     "lat": 33.7789,
     "lng": -84.3734,
-    "venue_type": "music_venue",
+    "place_type": "music_venue",
     "spot_type": "music_venue",
     "website": BASE_URL,
     "vibes": ["live-music", "intimate", "acoustic", "singer-songwriter"],
@@ -185,7 +185,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Build event record
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": excerpt if excerpt else None,
                         "start_date": start_date,
@@ -297,7 +297,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": template["title"],
                 "description": template["description"],
                 "start_date": start_date,

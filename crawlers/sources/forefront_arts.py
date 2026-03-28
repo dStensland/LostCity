@@ -925,7 +925,7 @@ def _parse_mini_musicals(
                 events.append(
                     {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": event_title,
                         "description": description,
                         "start_date": session_start,
@@ -1008,7 +1008,7 @@ def _build_show_event(
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,
@@ -1073,7 +1073,7 @@ def _ensure_venues() -> dict[str, int]:
             "neighborhood": loc.get("neighborhood", ""),
             "lat": loc.get("lat"),
             "lng": loc.get("lng"),
-            "venue_type": "arts_center",
+            "place_type": "arts_center",
             "website": BASE_URL,
             "vibes": ["family-friendly", "all-ages"],
         }
@@ -1096,7 +1096,7 @@ def _ensure_venues() -> dict[str, int]:
             "neighborhood": extra.get("neighborhood", ""),
             "lat": extra.get("lat"),
             "lng": extra.get("lng"),
-            "venue_type": "community_center",
+            "place_type": "community_center",
             "website": BASE_URL,
         }
         try:

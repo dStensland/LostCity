@@ -24,7 +24,7 @@ export async function GET(
 
   // Resolve venue ID from slug
   const { data: venueData } = await supabase
-    .from("venues")
+    .from("places")
     .select("id")
     .eq("slug", slug)
     .maybeSingle();
@@ -41,7 +41,7 @@ export async function GET(
       walk_minutes,
       neighbor:neighbor_id(id, name, slug)
     `)
-    .eq("venue_id", venue.id)
+    .eq("place_id", venue.id)
     .order("walk_minutes", { ascending: true })
     .limit(10);
 

@@ -52,7 +52,7 @@ PLACE_DATA = {
     "lat": 33.7634,
     "lng": -84.3951,
     "neighborhood": "Downtown",
-    "venue_type": "aquarium",
+    "place_type": "aquarium",
     "spot_type": "aquarium",
     "website": "https://www.georgiaaquarium.org/",
     "vibes": ["family-friendly", "all-ages", "educational"],
@@ -167,7 +167,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     title = f"{row['title']} at Georgia Aquarium"
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": row["description"],
         "start_date": row["start_date"],

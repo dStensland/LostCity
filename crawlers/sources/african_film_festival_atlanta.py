@@ -71,7 +71,7 @@ FESTIVAL_VENUE = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "",
-    "venue_type": "festival",
+    "place_type": "festival",
     "spot_type": "festival",
     "website": BASE_URL,
 }
@@ -85,7 +85,7 @@ KNOWN_VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30303",
-        "venue_type": "movie_theater",
+        "place_type": "movie_theater",
         "spot_type": "movie_theater",
         "website": "https://calendar.gsu.edu/rialto",
     },
@@ -97,7 +97,7 @@ KNOWN_VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30303",
-        "venue_type": "library",
+        "place_type": "library",
         "spot_type": "library",
         "website": "https://www.fulcolibrary.org/central-library/auburn-avenue-research-library/",
     },
@@ -261,7 +261,7 @@ def _build_venue_data(event: dict) -> dict:
         "city": str(address.get("city") or "").strip() or "Atlanta",
         "state": str(address.get("region") or "").strip() or "GA",
         "zip": str(address.get("postal_code") or "").strip(),
-        "venue_type": "movie_theater",
+        "place_type": "movie_theater",
         "spot_type": "movie_theater",
         "website": BASE_URL,
     }
@@ -316,7 +316,7 @@ def build_tentpole_event_record(
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": " ".join(description_parts),
         "start_date": start_date,
@@ -383,7 +383,7 @@ def build_screening_event_record(source_id: int, event: dict) -> Optional[dict]:
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description[:1000],
         "start_date": start_date,

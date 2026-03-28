@@ -34,7 +34,7 @@ PLACE_DATA = {
     "zip": "30308",
     "lat": 33.7648,
     "lng": -84.3851,
-    "venue_type": "church",
+    "place_type": "church",
     "spot_type": "church",
     "website": BASE_URL,
     "vibes": ["faith-christian", "episcopal", "live-music", "historic"],
@@ -272,7 +272,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                                 event_record = {
                                     "source_id": source_id,
-                                    "venue_id": venue_id,
+                                    "place_id": venue_id,
                                     "title": title,
                                     "description": f"Event at St. Luke's Episcopal Church, a historic downtown Atlanta church known for its music program.",
                                     "start_date": start_date,
@@ -389,7 +389,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": description,
                             "start_date": start_date,

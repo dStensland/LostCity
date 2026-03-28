@@ -35,7 +35,7 @@ def _parse_iso_datetime(value: Optional[str]) -> Optional[datetime]:
 def _fetch_venue_row(venue_id: int) -> Optional[dict[str, Any]]:
     client = get_client()
     result = (
-        client.table("venues")
+        client.table("places")
         .select(_VENUE_SELECT)
         .eq("id", venue_id)
         .limit(1)
@@ -88,7 +88,7 @@ def ensure_venue_destination_fields(
         _log_write_skip(f"update venues id={venue_id} destination fields")
         return True
 
-    get_client().table("venues").update(updates).eq("id", venue_id).execute()
+    get_client().table("places").update(updates).eq("id", venue_id).execute()
     logger.info(
         "Updated venue destination fields for %s",
         venue.get("slug") or venue.get("name") or venue_id,

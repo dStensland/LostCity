@@ -35,7 +35,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7817,
     "lng": -84.4130,
-    "venue_type": "gallery",
+    "place_type": "gallery",
     "website": BASE_URL,
 }
 

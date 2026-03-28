@@ -39,7 +39,7 @@ DEFAULT_VENUE = {
     "zip": "30303",
     "lat": 33.7514,
     "lng": -84.3866,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": BASE_URL,
     "vibes": ["all-ages", "family-friendly"],
@@ -222,7 +222,7 @@ def _build_venue(location: Optional[str]) -> dict:
         "address": location,
         "city": "Atlanta",
         "state": "GA",
-        "venue_type": "organization",
+        "place_type": "organization",
         "spot_type": "organization",
         "website": BASE_URL,
     }
@@ -285,7 +285,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description[:500],
             "start_date": start_date,

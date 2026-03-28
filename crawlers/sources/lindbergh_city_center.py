@@ -30,7 +30,7 @@ PLACE_DATA = {
     "zip": "30324",
     "lat": 33.8230,
     "lng": -84.3690,
-    "venue_type": "shopping_center",
+    "place_type": "shopping_center",
     "spot_type": "shopping_center",
     "website": BASE_URL,
     "description": "Mixed-use development at MARTA Lindbergh station with retail, dining, and transit access.",
@@ -89,7 +89,7 @@ def create_seasonal_events(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": event["title"],
             "description": event["description"],
             "start_date": start_date,

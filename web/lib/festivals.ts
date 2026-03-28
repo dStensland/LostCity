@@ -355,7 +355,7 @@ export async function getTentpoleEvents(portalId?: string): Promise<TentpoleEven
       is_tentpole,
       source_url,
       ticket_url,
-      venue:venues(id, name, slug, neighborhood),
+      venue:places(id, name, slug, neighborhood),
       festival:festivals!events_festival_id_fkey(id, slug, name, image_url, festival_type, location, neighborhood)
     `)
     .eq("is_tentpole", true)

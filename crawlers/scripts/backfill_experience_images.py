@@ -108,11 +108,11 @@ def main():
     # Get venues needing images
     print("Querying venues...")
     result = (
-        client.table("venues")
+        client.table("places")
         .select("id,name,slug,address,city,state,venue_type")
         .eq("active", True)
         .is_("image_url", "null")
-        .in_("venue_type", EXPERIENCE_VENUE_TYPES)
+        .in_("place_type", EXPERIENCE_VENUE_TYPES)
         .order("name")
         .limit(300)
         .execute()
@@ -137,7 +137,7 @@ def main():
         photo_url = search_place_photo(query)
 
         if photo_url:
-            client.table("venues").update({"image_url": photo_url}).eq(
+            client.table("places").update({"image_url": photo_url}).eq(
                 "id", v["id"]
             ).execute()
             found += 1

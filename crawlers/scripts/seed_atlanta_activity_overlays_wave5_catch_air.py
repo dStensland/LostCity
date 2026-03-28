@@ -36,7 +36,7 @@ ENSURE_VENUES: dict[str, dict[str, Any]] = {
         "city": "Marietta",
         "state": "GA",
         "zip": "30066",
-        "venue_type": "games",
+        "place_type": "games",
         "spot_type": "games",
         "website": "https://catchair.com/geo_location/marietta-ga/",
     },
@@ -47,7 +47,7 @@ ENSURE_VENUES: dict[str, dict[str, Any]] = {
         "city": "Dacula",
         "state": "GA",
         "zip": "30019",
-        "venue_type": "games",
+        "place_type": "games",
         "spot_type": "games",
         "website": "https://catchair.com/geo_location/dacula-ga/",
     },
@@ -58,7 +58,7 @@ ENSURE_VENUES: dict[str, dict[str, Any]] = {
         "city": "Johns Creek",
         "state": "GA",
         "zip": "30022",
-        "venue_type": "games",
+        "place_type": "games",
         "spot_type": "games",
         "website": "https://catchair.com/geo_location/johns-creek-ga/",
     },
@@ -69,7 +69,7 @@ ENSURE_VENUES: dict[str, dict[str, Any]] = {
         "city": "Snellville",
         "state": "GA",
         "zip": "30078",
-        "venue_type": "games",
+        "place_type": "games",
         "spot_type": "games",
         "website": "https://catchair.com/geo_location/snellville-ga/",
     },
@@ -80,7 +80,7 @@ ENSURE_VENUES: dict[str, dict[str, Any]] = {
         "city": "Tucker",
         "state": "GA",
         "zip": "30084",
-        "venue_type": "games",
+        "place_type": "games",
         "spot_type": "games",
         "website": "https://catchair.com/geo_location/tucker-ga/",
     },
@@ -239,7 +239,7 @@ CATCH_AIR_OVERLAYS: dict[str, list[dict[str, Any]]] = {
 def _get_or_create_target_venue(venue_slug: str, apply: bool) -> dict[str, Any] | None:
     client = get_client()
     venue_res = (
-        client.table("venues").select("id,name,slug").eq("slug", venue_slug).limit(1).execute()
+        client.table("places").select("id,name,slug").eq("slug", venue_slug).limit(1).execute()
     )
     if venue_res.data:
         return venue_res.data[0]
@@ -252,7 +252,7 @@ def _get_or_create_target_venue(venue_slug: str, apply: bool) -> dict[str, Any] 
     temp_or_real_id = get_or_create_place(payload)
     if apply:
         venue_res = (
-            client.table("venues").select("id,name,slug").eq("slug", venue_slug).limit(1).execute()
+            client.table("places").select("id,name,slug").eq("slug", venue_slug).limit(1).execute()
         )
         if venue_res.data:
             return venue_res.data[0]

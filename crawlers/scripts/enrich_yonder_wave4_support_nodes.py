@@ -102,7 +102,7 @@ def main() -> None:
             continue
 
         if args.apply:
-            client.table("venues").update(updates).eq("id", row["id"]).execute()
+            client.table("places").update(updates).eq("id", row["id"]).execute()
         logger.info(
             "%s venue: %s (%s fields)",
             "UPDATE" if args.apply else "WOULD UPDATE",

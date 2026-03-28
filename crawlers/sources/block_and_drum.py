@@ -45,7 +45,7 @@ PLACE_DATA = {
     "zip": "30341",
     "lat": 33.8879,
     "lng": -84.3005,
-    "venue_type": "distillery",
+    "place_type": "distillery",
     "spot_type": "distillery",
     "website": "https://www.blockanddrum.com/",
     "vibes": ["craft-cocktails", "live-music", "lounge", "latin-night", "hi-fi", "distillery"],
@@ -212,7 +212,7 @@ def process_event(event_data: dict, source_id: int, venue_id: int) -> Optional[d
 
         return {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title[:500],
             "description": description,
             "start_date": start_date,

@@ -60,7 +60,7 @@ PLACE_DATA = {
     "zip": "30342",
     "lat": 33.8664598,
     "lng": -84.3894217,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": BASE_URL,
     "description": (
@@ -123,7 +123,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "park",
             "commitment_tier": "halfday",
             "primary_activity": "family park visit",
@@ -148,7 +148,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": ABOUT_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "park",
+                "place_type": "park",
                 "city": "atlanta",
             },
         },
@@ -156,7 +156,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "playground-and-open-green-space",
             "title": "Playground and open green space",
             "feature_type": "amenity",
@@ -169,7 +169,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "walking-trails-and-path-loops",
             "title": "Walking trails and path loops",
             "feature_type": "experience",
@@ -182,7 +182,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "athletic-swimming-pool-and-summer-aquatics",
             "title": "Athletic swimming pool and summer aquatics",
             "feature_type": "amenity",
@@ -196,7 +196,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "outdoor-classroom-and-park-programs",
             "title": "Outdoor classroom and park programs",
             "feature_type": "amenity",
@@ -209,7 +209,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "slow-pace-meetup-park-day",
             "title": "Slow-pace meetup park day",
             "feature_type": "amenity",
@@ -222,7 +222,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "family-meetup-lawns-and-pavilion-space",
             "title": "Family meetup lawns and pavilion space",
             "feature_type": "amenity",
@@ -335,7 +335,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": item["title"],
             "description": item["description"],
             "start_date": item["start_date"],

@@ -85,7 +85,7 @@ VENUE_DATA_BY_LOCATION = {
         "zip": "30043",
         "lat": 33.9941,
         "lng": -84.0045,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": CATALOG_URL,
         "description": "Gwinnett County aquatic center hosting public aquatics fitness classes.",
@@ -100,7 +100,7 @@ VENUE_DATA_BY_LOCATION = {
         "zip": "30047",
         "lat": 33.8929,
         "lng": -84.0864,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": CATALOG_URL,
         "description": "Gwinnett County aquatic center hosting public aquatics fitness classes.",
@@ -114,7 +114,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "aquatic_center",
             "commitment_tier": "halfday",
             "primary_activity": "family aquatic center visit",
@@ -129,7 +129,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
             "source_url": CATALOG_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": place_data.get("venue_type"),
+                "place_type": place_data.get("place_type") or place_data.get("venue_type"),
                 "county": "gwinnett",
             },
         },
@@ -137,7 +137,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "public-pool-and-aquatics-programs",
             "title": "Public pool and aquatics programs",
             "feature_type": "amenity",
@@ -310,7 +310,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": parsed["title"],
                 "description": parsed["description"],
                 "start_date": start_date,

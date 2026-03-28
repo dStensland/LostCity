@@ -39,7 +39,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Midtown',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Speakeasy-style cocktail bar with craft cocktails and upscale atmosphere.',
         'vibes': ['speakeasy', 'cocktails', 'upscale', 'craft-cocktails']
     },
@@ -49,7 +49,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Midtown',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'No-menu cocktail bar. Tell the bartender what you like and trust them.',
         'vibes': ['cocktails', 'no-menu', 'intimate', 'craft-cocktails']
     },
@@ -59,7 +59,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': '12 South',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Vintage cocktail bar in 12 South with craft drinks and mid-century vibe.',
         'vibes': ['cocktails', 'vintage', 'craft-cocktails', '12south']
     },
@@ -69,7 +69,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Melrose',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Upscale honky-tonk with live music, craft cocktails, and Nashville spirit.',
         'vibes': ['honky-tonk', 'live-music', 'cocktails', 'upscale-casual']
     },
@@ -79,7 +79,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Germantown',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Cocktail bar and restaurant in Germantown with Southern charm.',
         'vibes': ['cocktails', 'southern', 'germantown', 'food']
     },
@@ -91,7 +91,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Iconic honky-tonk on Broadway. Famous for fried bologna sandwiches and live country music all day.',
         'vibes': ['honky-tonk', 'live-music', 'broadway', 'country', 'dive-bar', 'local-favorite']
     },
@@ -101,7 +101,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'The most famous honky-tonk in Nashville. Live music on multiple floors 7 days a week.',
         'vibes': ['honky-tonk', 'live-music', 'broadway', 'iconic', 'tourist-favorite']
     },
@@ -111,7 +111,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': '3-floor honky-tonk on Broadway with bluegrass music and rooftop bar.',
         'vibes': ['honky-tonk', 'live-music', 'broadway', 'bluegrass', 'rooftop']
     },
@@ -121,7 +121,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Multi-level bar and restaurant on Broadway with rooftop views of downtown.',
         'vibes': ['honky-tonk', 'live-music', 'broadway', 'rooftop', 'food', 'views']
     },
@@ -131,7 +131,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Broadway honky-tonk with Johnny Cash and Waylon Jennings memorabilia.',
         'vibes': ['honky-tonk', 'live-music', 'broadway', 'historic', 'memorabilia']
     },
@@ -143,7 +143,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Berry Hill',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Double-wide trailer dive bar. Karaoke, cheap drinks, and pure Nashville weird.',
         'vibes': ['dive-bar', 'karaoke', 'unique-space', 'local-favorite', 'cash-only']
     },
@@ -153,7 +153,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Classic East Nashville dive bar with cheap beer and pool tables.',
         'vibes': ['dive-bar', 'pool-tables', 'local-favorite', 'cheap']
     },
@@ -163,7 +163,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Midtown',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Historic dive bar since 1950s. Cash-only, vintage vibes.',
         'vibes': ['dive-bar', 'historic', 'cash-only', 'vintage', 'local-favorite']
     },
@@ -173,7 +173,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Live music venue and bar in Five Points. Eclectic lineup of indie, rock, and local bands.',
         'vibes': ['live-music', 'dive-bar', 'indie', 'local-music', 'five-points']
     },
@@ -185,7 +185,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'The Gulch',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Intimate jazz club in The Gulch. Live jazz nightly.',
         'vibes': ['jazz', 'live-music', 'intimate', 'upscale']
     },
@@ -195,7 +195,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Blues bar in historic Printers Alley. Live blues music nightly.',
         'vibes': ['blues', 'live-music', 'historic', 'printers-alley']
     },
@@ -207,7 +207,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Midtown',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'LGBTQ+ dance club with DJs, drag shows, and dance parties.',
         'vibes': ['lgbtq', 'dance-club', 'drag-shows', 'nightclub']
     },
@@ -217,7 +217,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Lesbian bar and music venue in East Nashville. Live music and DJ nights.',
         'vibes': ['lgbtq', 'lesbian-bar', 'live-music', 'dive-bar', 'local-favorite']
     },
@@ -227,7 +227,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Midtown',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'LGBTQ+ dance club and bar. DJs and themed nights.',
         'vibes': ['lgbtq', 'dance-club', 'nightclub']
     },
@@ -237,7 +237,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Midtown',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'LGBTQ+ lounge with craft cocktails and relaxed atmosphere.',
         'vibes': ['lgbtq', 'lounge', 'cocktails']
     },
@@ -249,7 +249,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Punk rock dive bar with live music. Local and touring indie/punk bands.',
         'vibes': ['dive-bar', 'punk', 'live-music', 'local-music']
     },
@@ -259,7 +259,7 @@ BARS_NIGHTLIFE = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Sylvan Park',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Neighborhood bar with bike shop. Patio and casual vibes.',
         'vibes': ['neighborhood-bar', 'patio', 'bike-shop', 'casual']
     },
@@ -274,7 +274,7 @@ COFFEE_SHOPS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'coffee_shop',
+        'place_type': 'coffee_shop',
         'description': 'High-end coffee roaster in converted transmission shop. Multiple locations.',
         'vibes': ['specialty-coffee', 'roastery', 'industrial', 'hipster', 'local-roaster']
     },
@@ -284,7 +284,7 @@ COFFEE_SHOPS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Germantown',
-        'venue_type': 'coffee_shop',
+        'place_type': 'coffee_shop',
         'description': 'Barista Parlor location in Germantown. Craft coffee and unique space.',
         'vibes': ['specialty-coffee', 'roastery', 'germantown', 'local-roaster']
     },
@@ -294,7 +294,7 @@ COFFEE_SHOPS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'The Gulch',
-        'venue_type': 'coffee_shop',
+        'place_type': 'coffee_shop',
         'description': 'Barista Parlor in The Gulch. Espresso bar and coffee cocktails.',
         'vibes': ['specialty-coffee', 'roastery', 'the-gulch', 'local-roaster']
     },
@@ -304,7 +304,7 @@ COFFEE_SHOPS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': '12 South',
-        'venue_type': 'coffee_shop',
+        'place_type': 'coffee_shop',
         'description': 'Local coffee chain. Coffee, brunch, and all-day cafe. Multiple locations.',
         'vibes': ['coffee', 'brunch', 'cafe', 'local-chain', '12south']
     },
@@ -314,7 +314,7 @@ COFFEE_SHOPS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'The Gulch',
-        'venue_type': 'coffee_shop',
+        'place_type': 'coffee_shop',
         'description': 'Frothy Monkey location in The Gulch. Coffee and all-day dining.',
         'vibes': ['coffee', 'brunch', 'cafe', 'local-chain']
     },
@@ -324,7 +324,7 @@ COFFEE_SHOPS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Melrose',
-        'venue_type': 'coffee_shop',
+        'place_type': 'coffee_shop',
         'description': 'Specialty coffee roaster with small-batch roasting and espresso bar.',
         'vibes': ['specialty-coffee', 'roastery', 'local-roaster', 'small-batch']
     },
@@ -334,7 +334,7 @@ COFFEE_SHOPS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'coffee_shop',
+        'place_type': 'coffee_shop',
         'description': 'Local coffee roaster with downtown location. Espresso and pour-overs.',
         'vibes': ['specialty-coffee', 'roastery', 'local-roaster', 'downtown']
     },
@@ -344,7 +344,7 @@ COFFEE_SHOPS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Belmont',
-        'venue_type': 'coffee_shop',
+        'place_type': 'coffee_shop',
         'description': 'Nashville coffee institution since 1993. Community hub near Belmont University.',
         'vibes': ['coffee', 'community', 'historic', 'belmont']
     },
@@ -354,7 +354,7 @@ COFFEE_SHOPS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'coffee_shop',
+        'place_type': 'coffee_shop',
         'description': 'East Nashville location of Bongo Java. Coffee and community events.',
         'vibes': ['coffee', 'community', 'east-nashville']
     },
@@ -364,7 +364,7 @@ COFFEE_SHOPS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Edgehill Village',
-        'venue_type': 'coffee_shop',
+        'place_type': 'coffee_shop',
         'description': 'Coffee shop and creperie in historic Edgehill Village trolley barns.',
         'vibes': ['coffee', 'crepes', 'historic', 'unique-space']
     },
@@ -374,7 +374,7 @@ COFFEE_SHOPS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Sylvan Park',
-        'venue_type': 'coffee_shop',
+        'place_type': 'coffee_shop',
         'description': 'Neighborhood coffee shop in Sylvan Park. Coffee, tea, and light food.',
         'vibes': ['coffee', 'tea', 'neighborhood', 'sylvan-park']
     },
@@ -384,7 +384,7 @@ COFFEE_SHOPS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'coffee_shop',
+        'place_type': 'coffee_shop',
         'description': 'East Nashville coffee shop with outdoor seating and community vibe.',
         'vibes': ['coffee', 'tea', 'community', 'patio']
     },
@@ -394,7 +394,7 @@ COFFEE_SHOPS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Germantown',
-        'venue_type': 'coffee_shop',
+        'place_type': 'coffee_shop',
         'description': 'Specialty coffee in Germantown. Pour-overs and espresso.',
         'vibes': ['specialty-coffee', 'germantown', 'pour-over']
     },
@@ -404,7 +404,7 @@ COFFEE_SHOPS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'coffee_shop',
+        'place_type': 'coffee_shop',
         'description': 'East Nashville coffee shop with vintage vibes and all-day breakfast.',
         'vibes': ['coffee', 'breakfast', 'vintage', 'all-day']
     },
@@ -414,7 +414,7 @@ COFFEE_SHOPS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Hillsboro Village',
-        'venue_type': 'coffee_shop',
+        'place_type': 'coffee_shop',
         'description': 'New York-style bagels and coffee. Multiple locations.',
         'vibes': ['bagels', 'coffee', 'ny-style', 'breakfast']
     },
@@ -429,7 +429,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'The Gulch',
-        'venue_type': 'brewery',
+        'place_type': 'brewery',
         'description': "Nashville's original craft brewery since 2003. Taproom and tours.",
         'vibes': ['brewery', 'taproom', 'tours', 'local-brewery', 'the-gulch']
     },
@@ -439,7 +439,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Germantown',
-        'venue_type': 'brewery',
+        'place_type': 'brewery',
         'description': 'Known for hazy IPAs and innovative beers. Multiple locations.',
         'vibes': ['brewery', 'taproom', 'hazy-ipa', 'craft-beer']
     },
@@ -449,7 +449,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Sylvan Heights',
-        'venue_type': 'brewery',
+        'place_type': 'brewery',
         'description': 'Second Bearded Iris location with taproom and outdoor space.',
         'vibes': ['brewery', 'taproom', 'patio', 'craft-beer']
     },
@@ -459,7 +459,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'brewery',
+        'place_type': 'brewery',
         'description': 'Innovative craft brewery with experimental beers. Multiple locations.',
         'vibes': ['brewery', 'taproom', 'experimental', 'craft-beer']
     },
@@ -469,7 +469,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Germantown',
-        'venue_type': 'brewery',
+        'place_type': 'brewery',
         'description': 'Southern Grist taproom in Germantown neighborhood.',
         'vibes': ['brewery', 'taproom', 'germantown', 'craft-beer']
     },
@@ -479,7 +479,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Wedgewood Houston',
-        'venue_type': 'brewery',
+        'place_type': 'brewery',
         'description': 'Local brewery in The Nations. Known for Bearwalker Maple Brown.',
         'vibes': ['brewery', 'taproom', 'local-brewery', 'wedgewood-houston']
     },
@@ -489,7 +489,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Music Row',
-        'venue_type': 'brewery',
+        'place_type': 'brewery',
         'description': 'Brewery with food and rooftop patio. Multiple locations.',
         'vibes': ['brewery', 'taproom', 'food', 'rooftop', 'music-row']
     },
@@ -499,7 +499,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'brewery',
+        'place_type': 'brewery',
         'description': 'East Nashville TailGate location with full menu.',
         'vibes': ['brewery', 'taproom', 'food', 'east-nashville']
     },
@@ -509,7 +509,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'The Nations',
-        'venue_type': 'brewery',
+        'place_type': 'brewery',
         'description': 'Brewery in The Nations with taproom and beer garden.',
         'vibes': ['brewery', 'taproom', 'beer-garden', 'the-nations']
     },
@@ -519,7 +519,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'The Gulch',
-        'venue_type': 'brewery',
+        'place_type': 'brewery',
         'description': 'Craft brewery in old trolley barn. Tours and taproom.',
         'vibes': ['brewery', 'taproom', 'tours', 'historic-building']
     },
@@ -529,7 +529,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'brewery',
+        'place_type': 'brewery',
         'description': 'Small-batch brewery in East Nashville. German-inspired beers.',
         'vibes': ['brewery', 'taproom', 'german-beer', 'small-batch']
     },
@@ -539,7 +539,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'brewery',
+        'place_type': 'brewery',
         'description': 'Neighborhood brewery with rotating taps and food trucks.',
         'vibes': ['brewery', 'taproom', 'neighborhood', 'food-trucks']
     },
@@ -549,7 +549,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'South Nashville',
-        'venue_type': 'brewery',
+        'place_type': 'brewery',
         'description': 'Belgian-inspired craft brewery. Award-winning beers.',
         'vibes': ['brewery', 'taproom', 'belgian-beer', 'award-winning']
     },
@@ -559,7 +559,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Germantown',
-        'venue_type': 'brewery',
+        'place_type': 'brewery',
         'description': 'German lager specialists. Taproom in Germantown.',
         'vibes': ['brewery', 'taproom', 'german-lager', 'germantown']
     },
@@ -571,7 +571,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Marathon Village',
-        'venue_type': 'distillery',
+        'place_type': 'distillery',
         'description': 'Award-winning craft distillery. Whiskey, gin, vodka. Tours and tastings.',
         'vibes': ['distillery', 'whiskey', 'tours', 'tastings', 'craft-spirits']
     },
@@ -581,7 +581,7 @@ BREWERIES_DISTILLERIES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Marathon Village',
-        'venue_type': 'distillery',
+        'place_type': 'distillery',
         'description': 'Historic Tennessee whiskey brand revived. Tours and tastings.',
         'vibes': ['distillery', 'whiskey', 'tours', 'tastings', 'historic']
     },
@@ -596,7 +596,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Music Valley',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'The most famous country music venue in the world. Weekly live radio show since 1925.',
         'vibes': ['iconic', 'country-music', 'live-music', 'historic', 'family-friendly']
     },
@@ -606,7 +606,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'The Mother Church of Country Music. Historic venue with incredible acoustics.',
         'vibes': ['iconic', 'historic', 'live-music', 'all-genres', 'downtown']
     },
@@ -616,7 +616,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Green Hills',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Intimate songwriter venue. In-the-round performances by hit songwriters.',
         'vibes': ['songwriter-rounds', 'intimate', 'acoustic', 'iconic']
     },
@@ -626,7 +626,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Midtown',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Legendary rock club since 1971. Indie, rock, and alternative music.',
         'vibes': ['rock', 'indie', 'historic', 'live-music']
     },
@@ -636,7 +636,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Midtown',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Underground music venue. Rock, indie, and singer-songwriter shows.',
         'vibes': ['rock', 'indie', 'underground', 'live-music']
     },
@@ -646,7 +646,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Sister venue to The Basement. Rebuilt after 2020 tornado. Local and touring acts.',
         'vibes': ['rock', 'indie', 'local-music', 'live-music']
     },
@@ -656,7 +656,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Cannery Row',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Multi-level venue complex with Mercy Lounge, Cannery Ballroom, and High Watt.',
         'vibes': ['rock', 'indie', 'multi-venue', 'live-music']
     },
@@ -666,7 +666,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Cannery Row',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Larger room in Mercy Lounge complex. Touring acts and local shows.',
         'vibes': ['rock', 'indie', 'concert-venue', 'live-music']
     },
@@ -676,7 +676,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Cannery Row',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Smallest room in Mercy Lounge complex. Intimate shows.',
         'vibes': ['indie', 'intimate', 'live-music']
     },
@@ -686,7 +686,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'SoBro',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Bar and grill with live music stage. Rock, blues, and Americana.',
         'vibes': ['rock', 'blues', 'americana', 'live-music', 'food']
     },
@@ -696,7 +696,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'The Gulch',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Legendary bluegrass venue since 1974. Intimate and authentic.',
         'vibes': ['bluegrass', 'intimate', 'historic', 'iconic']
     },
@@ -706,7 +706,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Germantown',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Music venue, bowling alley, and restaurant. National touring acts.',
         'vibes': ['concert-venue', 'bowling', 'food', 'live-music']
     },
@@ -716,7 +716,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Marathon Village',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Large venue in converted auto factory. Touring acts and events.',
         'vibes': ['concert-venue', 'industrial', 'live-music']
     },
@@ -726,7 +726,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Germantown',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Wine bar and music venue. Intimate concerts and wine tastings.',
         'vibes': ['wine', 'live-music', 'intimate', 'upscale']
     },
@@ -736,7 +736,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Songwriter venue with dinner service. In-the-round performances.',
         'vibes': ['songwriter-rounds', 'acoustic', 'dinner-show', 'intimate']
     },
@@ -746,7 +746,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Melrose',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Songwriter venue and restaurant. Intimate acoustic shows.',
         'vibes': ['songwriter-rounds', 'acoustic', 'food', 'intimate']
     },
@@ -756,7 +756,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'arena',
+        'place_type': 'arena',
         'description': 'NHL arena (Nashville Predators) and major concert venue.',
         'vibes': ['arena', 'concerts', 'sports', 'large-venue']
     },
@@ -766,7 +766,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Riverfront',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Outdoor amphitheater on the riverfront. Summer concert series.',
         'vibes': ['amphitheater', 'outdoor', 'concerts', 'riverfront']
     },
@@ -776,7 +776,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Edgehill Village',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Intimate venue in historic trolley barn. Indie and experimental music.',
         'vibes': ['indie', 'experimental', 'intimate', 'historic-building']
     },
@@ -786,7 +786,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Pizza restaurant with live music stage. Local bands and singer-songwriters.',
         'vibes': ['pizza', 'live-music', 'casual', 'neighborhood']
     },
@@ -796,7 +796,7 @@ MUSIC_VENUES = [
         'city': 'Madison',
         'state': 'TN',
         'neighborhood': 'Madison',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Legendary dive bar and music venue. Country music and honky-tonk.',
         'vibes': ['dive-bar', 'country-music', 'live-music', 'historic']
     },
@@ -806,7 +806,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Large country music venue with dance floor. Line dancing lessons.',
         'vibes': ['country-music', 'dance-club', 'live-music', 'line-dancing']
     },
@@ -816,7 +816,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Music Valley',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Country music venue near Grand Ole Opry. Live music nightly.',
         'vibes': ['country-music', 'live-music', 'honky-tonk']
     },
@@ -826,7 +826,7 @@ MUSIC_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'music_venue',
+        'place_type': 'music_venue',
         'description': 'Electronic music venue in East Nashville. DJs and experimental music.',
         'vibes': ['electronic', 'experimental', 'dj', 'nightclub']
     },
@@ -842,7 +842,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'museum',
+        'place_type': 'museum',
         'description': 'The premier museum of country music history. Exhibits, artifacts, and concerts.',
         'vibes': ['museum', 'country-music', 'historic', 'family-friendly', 'iconic']
     },
@@ -852,7 +852,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'museum',
+        'place_type': 'museum',
         'description': 'Art museum in Art Deco post office building. Rotating exhibitions.',
         'vibes': ['museum', 'art', 'art-deco', 'family-friendly']
     },
@@ -862,7 +862,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'museum',
+        'place_type': 'museum',
         'description': 'NMAAM. Interactive museum celebrating African American music history.',
         'vibes': ['museum', 'music-history', 'interactive', 'family-friendly']
     },
@@ -872,7 +872,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'museum',
+        'place_type': 'museum',
         'description': 'Museum dedicated to Johnny Cash. Memorabilia and artifacts.',
         'vibes': ['museum', 'johnny-cash', 'music-history', 'downtown']
     },
@@ -882,7 +882,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'museum',
+        'place_type': 'museum',
         'description': 'Honoring musicians of all genres. Studio instruments and exhibits.',
         'vibes': ['museum', 'music-history', 'all-genres']
     },
@@ -892,7 +892,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Centennial Park',
-        'venue_type': 'attraction',
+        'place_type': 'attraction',
         'description': 'Full-scale replica of Athens Parthenon. Art museum and Nashville icon.',
         'vibes': ['museum', 'art', 'architecture', 'unique', 'family-friendly']
     },
@@ -902,7 +902,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'museum',
+        'place_type': 'museum',
         'description': 'Tennessee history museum. Free admission.',
         'vibes': ['museum', 'history', 'free', 'family-friendly']
     },
@@ -912,7 +912,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'South Nashville',
-        'venue_type': 'museum',
+        'place_type': 'museum',
         'description': 'Unique car museum featuring European vehicles and microcars.',
         'vibes': ['museum', 'cars', 'unique', 'family-friendly']
     },
@@ -924,7 +924,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Belle Meade',
-        'venue_type': 'attraction',
+        'place_type': 'attraction',
         'description': 'Botanical garden and art museum on historic estate. Seasonal events.',
         'vibes': ['gardens', 'art-museum', 'historic', 'family-friendly', 'seasonal']
     },
@@ -934,7 +934,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Belle Meade',
-        'venue_type': 'attraction',
+        'place_type': 'attraction',
         'description': 'Historic plantation and winery. Tours and wine tastings.',
         'vibes': ['historic', 'winery', 'tours', 'tastings']
     },
@@ -944,7 +944,7 @@ ATTRACTIONS = [
         'city': 'Hermitage',
         'state': 'TN',
         'neighborhood': 'Hermitage',
-        'venue_type': 'attraction',
+        'place_type': 'attraction',
         'description': 'Andrew Jackson\'s historic home and estate. Tours and events.',
         'vibes': ['historic', 'tours', 'presidential', 'family-friendly']
     },
@@ -954,7 +954,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Belmont',
-        'venue_type': 'attraction',
+        'place_type': 'attraction',
         'description': 'Antebellum mansion on Belmont University campus. Tours available.',
         'vibes': ['historic', 'tours', 'architecture', 'belmont']
     },
@@ -966,7 +966,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'South Nashville',
-        'venue_type': 'attraction',
+        'place_type': 'attraction',
         'description': 'Zoo with over 3,000 animals. Family-friendly attraction.',
         'vibes': ['zoo', 'family-friendly', 'kids', 'outdoor']
     },
@@ -976,7 +976,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'South Nashville',
-        'venue_type': 'attraction',
+        'place_type': 'attraction',
         'description': 'Interactive science museum with planetarium. Great for kids.',
         'vibes': ['science', 'planetarium', 'family-friendly', 'kids', 'interactive']
     },
@@ -986,7 +986,7 @@ ATTRACTIONS = [
         'city': 'Hermitage',
         'state': 'TN',
         'neighborhood': 'Hermitage',
-        'venue_type': 'attraction',
+        'place_type': 'attraction',
         'description': 'Water park on Percy Priest Lake. Summer attraction.',
         'vibes': ['water-park', 'family-friendly', 'kids', 'summer', 'seasonal']
     },
@@ -996,7 +996,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Music Valley',
-        'venue_type': 'hotel',
+        'place_type': 'hotel',
         'description': 'Massive resort hotel with indoor gardens. Famous for Christmas at Gaylord.',
         'vibes': ['hotel', 'resort', 'family-friendly', 'gardens', 'holiday']
     },
@@ -1006,7 +1006,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Music Valley',
-        'venue_type': 'shopping',
+        'place_type': 'shopping',
         'description': 'Large outlet mall near Opry. Shopping and dining.',
         'vibes': ['shopping', 'mall', 'outlet', 'family-friendly']
     },
@@ -1018,7 +1018,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'theater',
+        'place_type': 'theater',
         'description': 'Major performing arts venue. Broadway tours, ballet, opera.',
         'vibes': ['theater', 'broadway', 'performing-arts', 'downtown']
     },
@@ -1028,7 +1028,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Downtown',
-        'venue_type': 'concert_hall',
+        'place_type': 'concert_hall',
         'description': 'Home of Nashville Symphony. Classical music and special events.',
         'vibes': ['symphony', 'classical', 'concert-hall', 'upscale']
     },
@@ -1038,7 +1038,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Hillsboro Village',
-        'venue_type': 'theater',
+        'place_type': 'theater',
         'description': 'Historic indie movie theater. Art films, classics, and live music.',
         'vibes': ['movie-theater', 'indie-films', 'historic', 'live-music']
     },
@@ -1048,7 +1048,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'The Nations',
-        'venue_type': 'theater',
+        'place_type': 'theater',
         'description': 'Contemporary arts venue. Dance, theater, visual arts.',
         'vibes': ['contemporary-arts', 'dance', 'theater', 'visual-arts']
     },
@@ -1060,7 +1060,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Midtown',
-        'venue_type': 'comedy_club',
+        'place_type': 'comedy_club',
         'description': 'Stand-up comedy club with national and local comics.',
         'vibes': ['comedy', 'stand-up', 'nightlife']
     },
@@ -1070,7 +1070,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Melrose',
-        'venue_type': 'comedy_club',
+        'place_type': 'comedy_club',
         'description': 'National comedy club chain. Stand-up shows nightly.',
         'vibes': ['comedy', 'stand-up', 'nightlife']
     },
@@ -1080,7 +1080,7 @@ ATTRACTIONS = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'West Nashville',
-        'venue_type': 'theater',
+        'place_type': 'theater',
         'description': 'Dinner theater in converted barn. Musicals and comedy shows.',
         'vibes': ['dinner-theater', 'musicals', 'family-friendly']
     },
@@ -1125,17 +1125,17 @@ def import_all_venues():
             place_data['vibes'] = list(set(existing_vibes + curator_vibes))
             
             # Check if venue exists
-            existing = client.table('venues').select('id, name').eq('slug', place_data['slug']).execute()
+            existing = client.table('places').select('id, name').eq('slug', place_data['slug']).execute()
             
             if existing.data:
                 # Update existing venue
                 venue_id = existing.data[0]['id']
-                result = client.table('venues').update(place_data).eq('id', venue_id).execute()
+                result = client.table('places').update(place_data).eq('id', venue_id).execute()
                 logger.info(f"[{i}/{total}] Updated: {place_data['name']} ({place_data['venue_type']})")
                 updated += 1
             else:
                 # Insert new venue
-                result = client.table('venues').insert(place_data).execute()
+                result = client.table('places').insert(place_data).execute()
                 logger.info(f"[{i}/{total}] Created: {place_data['name']} ({place_data['venue_type']})")
                 created += 1
         

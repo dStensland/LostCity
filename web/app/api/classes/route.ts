@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
   let matchingVenueIds: number[] = [];
   if (search.length >= 2) {
     let venueSearchQuery = supabase
-      .from("venues")
+      .from("places")
       .select("id")
       .ilike("name", `%${escapePostgrestLikeValue(search)}%`)
       .limit(40);
@@ -201,7 +201,7 @@ export async function GET(request: NextRequest) {
         recurrence_rule,
         series_id,
         venue_id,
-        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng),
+        venue:places(id, name, slug, address, neighborhood, city, state, lat, lng),
         ${seriesSelect}
       `,
         { count: "exact" }

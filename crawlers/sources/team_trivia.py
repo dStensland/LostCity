@@ -42,7 +42,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
     },
     "kpot-howell-mill": {
         "name": "KPOT Korean BBQ & Hot Pot",
@@ -52,7 +52,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
     },
     "politan-row-colony-sq": {
         "name": "Politan Row at Colony Square",
@@ -62,7 +62,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30361",
-        "venue_type": "food_hall",
+        "place_type": "food_hall",
     },
     "whelan-west-midtown": {
         "name": "Whelan",
@@ -72,7 +72,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "bar",
+        "place_type": "bar",
     },
     "emmy-squared-glenwood": {
         "name": "Emmy Squared Pizza",
@@ -82,7 +82,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
     },
     "hobnob-atlantic-station": {
         "name": "HobNob Neighborhood Tavern",
@@ -92,7 +92,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30324",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
     },
     "milltown-arms": {
         "name": "Milltown Arms Tavern",
@@ -102,7 +102,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30312",
-        "venue_type": "bar",
+        "place_type": "bar",
     },
     "ponko-midtown": {
         "name": "Ponko Chicken",
@@ -112,7 +112,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
     },
     "pour-taproom-midtown": {
         "name": "Pour Taproom",
@@ -122,7 +122,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "bar",
+        "place_type": "bar",
     },
     "side-saddle-grant-park": {
         "name": "Side Saddle Wine Saloon & Bar",
@@ -132,7 +132,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30312",
-        "venue_type": "bar",
+        "place_type": "bar",
     },
     "westside-pizzeria": {
         "name": "Westside Pizzeria & Bar",
@@ -142,7 +142,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
     },
     "the-albert-inman-park": {
         "name": "The Albert",
@@ -152,7 +152,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "bar",
+        "place_type": "bar",
     },
     "nook-piedmont-park": {
         "name": "The Nook on Piedmont Park",
@@ -162,7 +162,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "bar",
+        "place_type": "bar",
     },
     "fire-maker-brewing": {
         "name": "Fire Maker Brewing",
@@ -172,7 +172,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "brewery",
+        "place_type": "brewery",
     },
     "mellow-mushroom-grant-park": {
         "name": "Mellow Mushroom Grant Park",
@@ -182,7 +182,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
     },
     "peacherie-midtown": {
         "name": "Peacherie Atlanta",
@@ -192,7 +192,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
     },
     "rocky-mountain-pizza-midtown": {
         "name": "Rocky Mountain Pizza Company",
@@ -202,7 +202,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
     },
     "johnnys-pizza-midtown": {
         "name": "Johnny's NY Style Pizza",
@@ -212,7 +212,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
     },
 }
 
@@ -372,7 +372,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": start_date,

@@ -232,7 +232,7 @@ def backfill(
     # Try with parking columns first; fall back if migration hasn't run yet
     has_parking_cols = True
     try:
-        query = client.table("venues").select(
+        query = client.table("places").select(
             "id, name, slug, website, lat, lng, parking_note, parking_source"
         )
         if slug:
@@ -243,7 +243,7 @@ def backfill(
     except Exception:
         has_parking_cols = False
         logger.info("parking columns not found — run migration first for filtering")
-        query = client.table("venues").select(
+        query = client.table("places").select(
             "id, name, slug, website, lat, lng"
         )
         if slug:
@@ -321,7 +321,7 @@ def backfill(
             if parking_info.get("transit_note"):
                 update_data["transit_note"] = parking_info["transit_note"]
 
-            client.table("venues").update(update_data).eq("id", vid).execute()
+            client.table("places").update(update_data).eq("id", vid).execute()
 
             if source == "scraped":
                 stats["scraped"] += 1

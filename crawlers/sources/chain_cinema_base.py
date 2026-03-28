@@ -240,7 +240,7 @@ class ChainCinemaCrawler:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": None,
                             "start_date": date_str,

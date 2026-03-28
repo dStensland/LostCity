@@ -32,7 +32,7 @@ PLACE_DATA = {
     "zip": "30328",
     "lat": 33.9240,
     "lng": -84.3562,
-    "venue_type": "restaurant",
+    "place_type": "restaurant",
     "spot_type": "restaurant",
     "website": BASE_URL,
 }
@@ -114,7 +114,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": template["title"],
                 "description": template["description"],
                 "start_date": start_date,
@@ -338,7 +338,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": f"{title} at Battle & Brew - Atlanta's premier geek bar and restaurant.",
                         "start_date": start_date,

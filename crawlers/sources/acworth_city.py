@@ -26,7 +26,7 @@ PLACE_DATA = {
     "zip": "30101",
     "lat": 34.0654,
     "lng": -84.6769,
-    "venue_type": "city",
+    "place_type": "city",
     "spot_type": "city",
     "website": BASE_URL,
     "description": "Historic 'Lake City' with charming Main Street, Lake Acworth beach, and year-round community events.",
@@ -42,7 +42,7 @@ LOGAN_FARM_VENUE = {
     "zip": "30101",
     "lat": 34.0598,
     "lng": -84.6832,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "outdoor_space",
     "website": "https://acworth-ga.gov",
     "description": "Community park hosting concerts, festivals, and July 4th fireworks.",
@@ -85,7 +85,7 @@ def create_taste_of_acworth(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Acworth's signature food and arts festival on historic Main Street. "
@@ -146,7 +146,7 @@ def create_logan_farm_concerts(source_id: int, logan_venue_id: int) -> tuple[int
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": logan_venue_id,
+            "place_id": logan_venue_id,
             "title": title,
             "description": (
                 "Acworth's Independence Day celebration at Logan Farm Park. "
@@ -203,7 +203,7 @@ def create_logan_farm_concerts(source_id: int, logan_venue_id: int) -> tuple[int
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": logan_venue_id,
+            "place_id": logan_venue_id,
             "title": title,
             "description": (
                 "Juneteenth celebration concert at Logan Farm Park. "
@@ -257,7 +257,7 @@ def create_logan_farm_concerts(source_id: int, logan_venue_id: int) -> tuple[int
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": logan_venue_id,
+            "place_id": logan_venue_id,
             "title": title,
             "description": (
                 "Concert celebrating Hispanic Heritage Month at Logan Farm Park. "
@@ -317,7 +317,7 @@ def create_seasonal_events(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Annual spring art festival in downtown Acworth. "

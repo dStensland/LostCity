@@ -31,7 +31,7 @@ PLACE_DATA = {
     "zip": "30306",
     "lat": 33.7920,
     "lng": -84.3560,
-    "venue_type": "neighborhood",
+    "place_type": "neighborhood",
     "spot_type": "neighborhood",
     "website": BASE_URL,
     "description": "Family-friendly neighborhood with 33-acre nature preserve, organic farmers market, and strong civic association.",
@@ -84,7 +84,7 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,
@@ -161,7 +161,7 @@ def create_morningside_mile(source_id: int, venue_id: int) -> tuple[int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": (
             "Annual Morningside Mile neighborhood running event. "
@@ -236,7 +236,7 @@ def create_concerts_in_park(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,
@@ -393,7 +393,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": f"Community event in Morningside neighborhood",
                             "start_date": start_date,

@@ -21,11 +21,7 @@ import { dedupeEventsById, filterOutInactiveVenueEvents } from "@/lib/event-feed
 // Flat row type from feed_events_ready
 // ---------------------------------------------------------------------------
 
-/** Row from feed_events_ready.
- *
- *  DB column names still use venue_* naming for place fields.
- *  These will be renamed to place_* in the final table rename (Deploy 10).
- */
+/** Row from feed_events_ready (Deploy 10: venue_* columns renamed to place_*). */
 type FeedReadyRow = {
   event_id: number;
   portal_id: string;
@@ -58,15 +54,15 @@ type FeedReadyRow = {
   sellout_risk: string | null;
   attendee_count: number | null;
 
-  // Place fields (DB column names are still venue_* until final table rename)
-  venue_id: number | null;      // → place_id after Deploy 10
-  venue_name: string | null;    // → place_name after Deploy 10
-  venue_slug: string | null;    // → place_slug after Deploy 10
-  venue_neighborhood: string | null; // → place_neighborhood after Deploy 10
-  venue_city: string | null;    // → place_city after Deploy 10
-  venue_type: string | null;    // → place_type after Deploy 10
-  venue_image_url: string | null; // → place_image_url after Deploy 10
-  venue_active: boolean | null; // → place_active after Deploy 10
+  // Place fields (renamed from venue_* in Deploy 10)
+  place_id: number | null;
+  place_name: string | null;
+  place_slug: string | null;
+  place_neighborhood: string | null;
+  place_city: string | null;
+  place_type: string | null;
+  place_image_url: string | null;
+  place_active: boolean | null;
 
   series_name: string | null;
   series_type: string | null;
@@ -103,17 +99,17 @@ function reshapeToFeedEvent(row: FeedReadyRow): FeedEventData {
     series_id: row.series_id,
     is_recurring: row.is_recurring ?? false,
     importance: row.importance as FeedEventData["importance"],
-    venue: row.venue_id != null
+    venue: row.place_id != null
       ? {
-          id: row.venue_id,
-          name: row.venue_name ?? "",
-          slug: row.venue_slug,
-          neighborhood: row.venue_neighborhood,
-          image_url: row.venue_image_url,
-          // venue_type and venue_city are not part of FeedEventData's venue
+          id: row.place_id,
+          name: row.place_name ?? "",
+          slug: row.place_slug,
+          neighborhood: row.place_neighborhood,
+          image_url: row.place_image_url,
+          // place_type and place_city are not part of FeedEventData's venue
           // shape but downstream consumers cast via `as unknown as` — the
           // extra properties are harmless and help section builders that do
-          // access them via casts (e.g. venue_type filtering in build-sections).
+          // access them via casts (e.g. place_type filtering in build-sections).
           // We spread them in via the cast below.
         }
       : null,
@@ -129,15 +125,15 @@ function reshapeToFeedEvent(row: FeedReadyRow): FeedEventData {
 }
 
 /**
- * Reshape with extra venue fields attached (venue_type, city, active) so that
+ * Reshape with extra place fields attached (place_type, city, active) so that
  * downstream pipeline stages that cast to extended types still work.
  */
 function reshapeWithExtras(row: FeedReadyRow): FeedEventData {
   const base = reshapeToFeedEvent(row);
-  if (base.venue && row.venue_id != null) {
-    (base.venue as Record<string, unknown>).venue_type = row.venue_type;
-    (base.venue as Record<string, unknown>).city = row.venue_city;
-    (base.venue as Record<string, unknown>).active = row.venue_active ?? true;
+  if (base.venue && row.place_id != null) {
+    (base.venue as Record<string, unknown>).venue_type = row.place_type;
+    (base.venue as Record<string, unknown>).city = row.place_city;
+    (base.venue as Record<string, unknown>).active = row.place_active ?? true;
   }
   // Attach source_id at the event level (used by applySourceDiversity)
   (base as Record<string, unknown>).source_id = row.source_id;

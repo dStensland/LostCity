@@ -282,7 +282,7 @@ def get_artifact_venues_missing_images() -> list[dict]:
 
     # Get all track venues missing images
     result = client.table("explore_track_venues").select(
-        "venue_id, sort_order, venue:venues(id, name, slug, image_url, hero_image_url, city, neighborhood)"
+        "place_id, sort_order, venue:venues(id, name, slug, image_url, hero_image_url, city, neighborhood)"
     ).eq("track_id", track_id).order("sort_order").execute()
 
     venues = []
@@ -339,7 +339,7 @@ def enrich_images(dry_run: bool = False, limit: int = 0):
             logger.info(f"    FOUND: {img_url[:80]}...")
             found += 1
             if not dry_run and client:
-                client.table("venues").update(
+                client.table("places").update(
                     {"image_url": img_url}
                 ).eq("id", v["id"]).execute()
                 logger.info(f"    Updated venue {v['id']}")

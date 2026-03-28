@@ -39,7 +39,7 @@ WAVE_7_DESTINATIONS = [
             "lat": 34.7574,
             "lng": -83.4559,
             "website": "https://gastateparks.org/Moccasin-Creek",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "Turquoise mountain lake surrounded by Chattahoochee National Forest "
                 "with kayaking, swimming, and Minnehaha Falls nearby."
@@ -80,7 +80,7 @@ WAVE_7_DESTINATIONS = [
             "lat": 34.8160,
             "lng": -83.5241,
             "website": "https://gastateparks.org/Moccasin-Creek",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "Emerald green 2,775-acre lake surrounded by Chattahoochee National "
                 "Forest in Rabun County."
@@ -121,7 +121,7 @@ WAVE_7_DESTINATIONS = [
             "lat": 34.8622,
             "lng": -84.2830,
             "website": "https://www.tva.com/environment/recreation/lake-blue-ridge",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "TVA reservoir with marina access and Georgia's best trout fishing "
                 "on the Toccoa River tailwater below the dam."
@@ -165,7 +165,7 @@ WAVE_7_DESTINATIONS = [
                 "https://www.sam.usace.army.mil/Missions/Civil-Works/Recreation/"
                 "Carters-Lake/"
             ),
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "Georgia's deepest lake at 450 feet with marina, camping, and a "
                 "quieter alternative to Lake Lanier."
@@ -206,7 +206,7 @@ WAVE_7_DESTINATIONS = [
             "lat": 34.7029,
             "lng": -83.7282,
             "website": "https://www.coolrivertubing.com/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "Gentle 1.5-2.5 hour float through Alpine Helen on the "
                 "Chattahoochee River headwaters."
@@ -251,7 +251,7 @@ WAVE_7_DESTINATIONS = [
                 "https://www.mtbproject.com/trail/523830/"
                 "bull-and-jake-mountain-imba-epic"
             ),
-            "venue_type": "trail",
+            "place_type": "trail",
             "short_description": (
                 "IMBA Epic-designated mountain biking with 30+ miles of singletrack "
                 "through Chattahoochee National Forest."
@@ -292,7 +292,7 @@ WAVE_7_DESTINATIONS = [
             "lat": 34.5830,
             "lng": -83.3339,
             "website": "https://tfrec.com/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "186-foot single-drop waterfall on Toccoa Falls College campus — "
                 "taller than Niagara by drop height."
@@ -336,7 +336,7 @@ WAVE_7_DESTINATIONS = [
             "website": (
                 "https://www.fs.usda.gov/recarea/conf/recarea/?recid=10505"
             ),
-            "venue_type": "trail",
+            "place_type": "trail",
             "short_description": (
                 "Rare double waterfall — Curtis Creek at 150 feet and York Creek at "
                 "50 feet — via a 0.5-mile paved trail near Helen."
@@ -379,7 +379,7 @@ WAVE_7_DESTINATIONS = [
             "lat": 34.3505,
             "lng": -84.3762,
             "website": "https://www.gibbsgardens.com/",
-            "venue_type": "garden",
+            "place_type": "garden",
             "short_description": (
                 "300-acre private botanical garden with one of America's largest "
                 "daffodil displays and an award-winning Japanese Garden."
@@ -421,7 +421,7 @@ WAVE_7_DESTINATIONS = [
             "lat": 32.8421,
             "lng": -84.8534,
             "website": "https://www.callawaygardens.com/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "2,500-acre resort with formal gardens, butterfly center, beach, and "
                 "miles of nature trails southwest of Atlanta."
@@ -463,7 +463,7 @@ WAVE_7_DESTINATIONS = [
             "lat": 34.8275,
             "lng": -84.2964,
             "website": "https://www.mercier-orchards.com/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "North Georgia's largest apple orchard with u-pick fruit, massive "
                 "market, cider house, and mountain views."
@@ -504,7 +504,7 @@ WAVE_7_DESTINATIONS = [
             "lat": 34.6603,
             "lng": -85.3698,
             "website": "https://www.seclimbers.org/project/rocktown/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "One of the Southeast's best bouldering areas with sandstone problems "
                 "on Pigeon Mountain in Walker County."
@@ -549,7 +549,7 @@ WAVE_7_DESTINATIONS = [
             "website": (
                 "https://www.fs.usda.gov/recarea/conf/recarea/?recid=10530"
             ),
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "Quiet 18-acre mountain lake with camping and Appalachian Trail "
                 "access via Jarrard Gap Trail."
@@ -591,7 +591,7 @@ WAVE_7_DESTINATIONS = [
             "lat": 33.9010,
             "lng": -83.3855,
             "website": "https://botgarden.uga.edu/",
-            "venue_type": "garden",
+            "place_type": "garden",
             "short_description": (
                 "313-acre botanical garden on the UGA campus with 5 miles of nature "
                 "trails and themed display gardens."
@@ -632,7 +632,7 @@ WAVE_7_DESTINATIONS = [
             "lat": 34.8671,
             "lng": -84.2927,
             "website": "https://www.georgiawildtrout.com/",
-            "venue_type": "park",
+            "place_type": "park",
             "short_description": (
                 "Georgia's best trout fishing on the cold-water tailrace below "
                 "Lake Blue Ridge Dam."
@@ -679,7 +679,7 @@ def find_existing_venue(seed: dict) -> dict | None:
 
     client = get_client()
     result = (
-        client.table("venues")
+        client.table("places")
         .select("*")
         .eq("name", seed["name"])
         .limit(1)
@@ -777,7 +777,7 @@ def main() -> None:
             skipped += 1
         else:
             if args.apply:
-                client.table("venues").update(updates).eq("id", venue_id).execute()
+                client.table("places").update(updates).eq("id", venue_id).execute()
             logger.info(
                 "%s venue: %s (%s fields)",
                 "UPDATE" if args.apply else "WOULD UPDATE",

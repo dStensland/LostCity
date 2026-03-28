@@ -57,7 +57,7 @@ PRIORITY_RESTAURANTS = [
         "zip": "30337",
         "lat": 33.6460,
         "lng": -84.4493,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://virgilsgullah.com",
     },
     {
@@ -70,7 +70,7 @@ PRIORITY_RESTAURANTS = [
         "zip": "30337",
         "lat": 33.6450,
         "lng": -84.4483,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -83,7 +83,7 @@ PRIORITY_RESTAURANTS = [
         "zip": "30337",
         "lat": 33.6451,
         "lng": -84.4484,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
     {
@@ -96,7 +96,7 @@ PRIORITY_RESTAURANTS = [
         "zip": "30337",
         "lat": 33.6468,
         "lng": -84.4501,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -109,7 +109,7 @@ PRIORITY_RESTAURANTS = [
         "zip": "30337",
         "lat": 33.6459,
         "lng": -84.4492,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
 ]
@@ -126,7 +126,7 @@ RESTAURANTS = [
         "zip": "30349",
         "lat": 33.6358,
         "lng": -84.4578,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -139,7 +139,7 @@ RESTAURANTS = [
         "zip": "30337",
         "lat": 33.6412,
         "lng": -84.4445,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -152,7 +152,7 @@ RESTAURANTS = [
         "zip": "30337",
         "lat": 33.6460,
         "lng": -84.4493,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -165,7 +165,7 @@ RESTAURANTS = [
         "zip": "30337",
         "lat": 33.6405,
         "lng": -84.4438,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
     {
@@ -178,7 +178,7 @@ RESTAURANTS = [
         "zip": "30337",
         "lat": 33.6455,
         "lng": -84.4488,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": None,
     },
 ]
@@ -195,7 +195,7 @@ BARS = [
         "zip": "30337",
         "lat": 33.6464,
         "lng": -84.4497,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": None,
     },
 ]
@@ -212,7 +212,7 @@ VENUES = [
         "zip": "30337",
         "lat": 33.6520,
         "lng": -84.4425,
-        "venue_type": "performing_arts",
+        "place_type": "performing_arts",
         "website": "https://www.gatewaycenterarena.com",
     },
     {
@@ -225,7 +225,7 @@ VENUES = [
         "zip": "30337",
         "lat": 33.6428,
         "lng": -84.4458,
-        "venue_type": "performing_arts",
+        "place_type": "performing_arts",
         "website": "https://pushpusharts.org",
     },
     {
@@ -238,7 +238,7 @@ VENUES = [
         "zip": "30349",
         "lat": 33.6238,
         "lng": -84.4658,
-        "venue_type": "performing_arts",
+        "place_type": "performing_arts",
         "website": None,
     },
 ]

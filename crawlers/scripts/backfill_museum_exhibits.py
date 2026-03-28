@@ -143,7 +143,7 @@ def main() -> int:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 f"Ongoing exhibition highlights and on-view gallery programming at {source_name}. "

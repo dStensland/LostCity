@@ -37,7 +37,7 @@ def fetch_unlinked_events(client, venue_id=None):
     )
 
     if venue_id:
-        query = query.eq("venue_id", venue_id)
+        query = query.eq("place_id", venue_id)
 
     # Paginate to get all results
     all_events = []

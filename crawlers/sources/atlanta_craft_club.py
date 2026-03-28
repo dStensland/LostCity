@@ -186,7 +186,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": None,  # Org-based — venue varies per event
+                        "place_id": None,  # Org-based — venue varies per event
                         "producer_id": producer_id,
                         "title": title[:500],
                         "description": description[:2000] if description else None,
@@ -210,7 +210,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
-                        "venue_name_hint": location_name,
+                        "place_name_hint": location_name,
                         "venue_address_hint": location_address,
                     }
 

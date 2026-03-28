@@ -41,7 +41,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7780,
     "lng": -84.4127,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     # Description populated dynamically from og:description on first Playwright visit.
@@ -79,7 +79,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "art_museum",
             "commitment_tier": "hour",
             "primary_activity": "free contemporary art visit",
@@ -100,7 +100,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "museum",
+                "place_type": "museum",
                 "city": "atlanta",
             },
         },
@@ -108,7 +108,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "free-contemporary-art-center",
             "title": "Free contemporary art center",
             "feature_type": "amenity",
@@ -121,7 +121,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "west-midtown-cultural-pairing-stop",
             "title": "West Midtown cultural pairing stop",
             "feature_type": "experience",
@@ -134,7 +134,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_specials",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "always-free-gallery-admission",
             "title": "Always-free gallery admission",
             "description": "General gallery admission is free, which makes Atlanta Contemporary one of the easiest recurring no-ticket culture stops for older kids and family add-on outings.",
@@ -329,7 +329,7 @@ def build_exhibition_lane_record(
 
     exhibition_record = {
         "title": exhibition["title"],
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "source_id": source_id,
         "_venue_name": PLACE_DATA["name"],
         "opening_date": exhibition["canonical_start_date"],
@@ -590,7 +590,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description if description else None,
                         "start_date": start_date,

@@ -44,7 +44,7 @@ OPEN_HAND_HQ = {
     "zip": "30318",
     "lat": 33.8077,
     "lng": -84.4272,
-    "venue_type": "nonprofit",
+    "place_type": "nonprofit",
     "spot_type": "nonprofit",
     "website": BASE_URL,
     "vibes": ["volunteer", "food"],
@@ -182,7 +182,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title[:200],
                 "description": description,
                 "start_date": start_date_str,

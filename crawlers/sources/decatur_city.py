@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30030",
     "lat": 33.7747,
     "lng": -84.2956,
-    "venue_type": "government",
+    "place_type": "government",
     "spot_type": "community_center",
     "website": BASE_URL,
 }
@@ -312,7 +312,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         # Build event record
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": f"Event at City of Decatur. Visit the event page for more details.",
                             "start_date": start_date,
@@ -420,7 +420,7 @@ def parse_text_content(
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at City of Decatur",
                         "start_date": start_date,

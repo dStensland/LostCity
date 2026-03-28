@@ -27,7 +27,7 @@ VENUES = [
         "website": "https://www.justkeepwaitingroom.com/",
         "lat": 33.7728122,
         "lng": -84.3803674,
-        "venue_type": "lounge",
+        "place_type": "lounge",
         "spot_type": "lounge",
         "description": "Late-night Midtown cocktail lounge and event space with recurring DJ nights and parties.",
         "active": True,
@@ -43,7 +43,7 @@ VENUES = [
         "website": "https://www.communeatl.com/",
         "lat": 33.7758847,
         "lng": -84.2737868,
-        "venue_type": "lounge",
+        "place_type": "lounge",
         "spot_type": "lounge",
         "description": "Avondale listening room and bar focused on DJ sets, live performances, and cultural programming.",
         "active": True,
@@ -75,7 +75,7 @@ def upsert_venue(payload: dict) -> tuple[str, int | None]:
     client = get_client()
 
     existing = (
-        client.table("venues")
+        client.table("places")
         .select("id,slug")
         .eq("slug", payload["slug"])
         .limit(1)
@@ -84,10 +84,10 @@ def upsert_venue(payload: dict) -> tuple[str, int | None]:
 
     if existing.data:
         venue_id = existing.data[0]["id"]
-        client.table("venues").update(payload).eq("id", venue_id).execute()
+        client.table("places").update(payload).eq("id", venue_id).execute()
         return "updated", venue_id
 
-    inserted = client.table("venues").insert(payload).execute()
+    inserted = client.table("places").insert(payload).execute()
     venue_id = inserted.data[0]["id"] if inserted.data else None
     return "created", venue_id
 

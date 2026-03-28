@@ -39,7 +39,7 @@ TRUIST_PARK = {
     "zip": "30339",
     "lat": 33.8908,
     "lng": -84.4677,
-    "venue_type": "stadium",
+    "place_type": "stadium",
     "spot_type": "stadium",
     "website": "https://www.mlb.com/braves/ballpark",
 }
@@ -129,7 +129,7 @@ def maybe_adopt_existing_public_title(
     query = (
         client.table("events")
         .select("title,source_id")
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("start_date", start_date)
         .eq("is_active", True)
         .neq("source_id", source_id)
@@ -188,7 +188,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": game["date"],

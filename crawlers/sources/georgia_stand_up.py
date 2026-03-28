@@ -45,7 +45,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7490,
     "lng": -84.3880,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": BASE_URL,
     "description": "Georgia STAND-UP civic organizing group focused on worker power, civic engagement, and community advocacy across metro Atlanta.",
@@ -241,7 +241,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title[:200],
             "description": description[:1200],
             "start_date": start_date,

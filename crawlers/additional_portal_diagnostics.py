@@ -193,7 +193,7 @@ def run_diagnostics():
             
             if venue_ids:
                 venues_data = (
-                    client.table("venues")
+                    client.table("places")
                     .select("id, name, neighborhood, venue_type")
                     .in_("id", venue_ids)
                     .execute()
@@ -208,7 +208,7 @@ def run_diagnostics():
                     query_results.append({
                         "venue_name": venue["name"] if venue else "UNKNOWN",
                         "neighborhood": venue.get("neighborhood", "") if venue else "",
-                        "venue_type": venue.get("venue_type", "") if venue else "",
+                        "place_type": venue.get("venue_type", "") if venue else "",
                         "event_count": count
                     })
                 

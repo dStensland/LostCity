@@ -39,7 +39,7 @@ ATLANTA_HOME_DEPOT_LOCATIONS = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "retail",
+        "place_type": "retail",
         "website": "https://www.homedepot.com",
     },
     {
@@ -50,7 +50,7 @@ ATLANTA_HOME_DEPOT_LOCATIONS = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "retail",
+        "place_type": "retail",
         "website": "https://www.homedepot.com",
     },
     {
@@ -61,7 +61,7 @@ ATLANTA_HOME_DEPOT_LOCATIONS = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30363",
-        "venue_type": "retail",
+        "place_type": "retail",
         "website": "https://www.homedepot.com",
     },
     {
@@ -72,7 +72,7 @@ ATLANTA_HOME_DEPOT_LOCATIONS = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30305",
-        "venue_type": "retail",
+        "place_type": "retail",
         "website": "https://www.homedepot.com",
     },
     {
@@ -83,7 +83,7 @@ ATLANTA_HOME_DEPOT_LOCATIONS = [
         "city": "Decatur",
         "state": "GA",
         "zip": "30032",
-        "venue_type": "retail",
+        "place_type": "retail",
         "website": "https://www.homedepot.com",
     },
     {
@@ -94,7 +94,7 @@ ATLANTA_HOME_DEPOT_LOCATIONS = [
         "city": "Atlanta",
         "state": "GA",
         "zip": "30324",
-        "venue_type": "retail",
+        "place_type": "retail",
         "website": "https://www.homedepot.com",
     },
 ]
@@ -182,7 +182,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": event_date,

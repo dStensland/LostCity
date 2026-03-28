@@ -31,7 +31,7 @@ PLACE_DATA = {
     "city": "Roswell",
     "state": "GA",
     "zip": "30075",
-    "venue_type": "esports_arena",
+    "place_type": "esports_arena",
     "website": BASE_URL,
 }
 
@@ -149,7 +149,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Esports event at EEG Arena",
                         "start_date": start_date,

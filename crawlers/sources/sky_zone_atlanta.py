@@ -75,7 +75,7 @@ SKY_ZONE_LOCATIONS = [
 EVENTS_API_URL = "https://www.skyzone.com/wp-json/skyzone/v1/park/events"
 
 VENUE_DATA_TEMPLATE = {
-    "venue_type": "entertainment",
+    "place_type": "entertainment",
     "vibes": ["family-friendly", "kids", "active", "indoor", "trampoline"],
 }
 
@@ -241,7 +241,7 @@ def parse_events_from_calendar_html(
             events.append(
                 {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": event_name,
                     "description": description,
                     "start_date": start_date,

@@ -31,7 +31,7 @@ PLACE_DATA = {
     "city": "Avondale Estates",
     "state": "GA",
     "zip": "30030",
-    "venue_type": "brewery",
+    "place_type": "brewery",
     "spot_type": "brewery",
     "website": BASE_URL,
     "_destination_details": {
@@ -340,7 +340,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description,
                         "start_date": start_date,

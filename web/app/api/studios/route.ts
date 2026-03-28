@@ -23,11 +23,11 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
 
     let query = supabase
-      .from("venues")
+      .from("places")
       .select(
         `
         id, name, slug, address, neighborhood, city, state,
-        lat, lng, venue_type, website, description, image_url, vibes,
+        lat, lng, place_type, website, description, image_url, vibes,
         studio_type, availability_status, monthly_rate_range, studio_application_url
       `
       )

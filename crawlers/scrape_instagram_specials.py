@@ -506,7 +506,7 @@ def upsert_specials(
 
     if not dry_run:
         # Delete existing Instagram-sourced specials for this venue (idempotent re-runs)
-        client.table("venue_specials").delete().eq(
+        client.table("place_specials").delete().eq(
             "venue_id", venue_id
         ).like("source_url", "%instagram.com%").execute()
 
@@ -514,7 +514,7 @@ def upsert_specials(
     for special in specials:
         days = parse_days(special.get("days") or []) or None
         row = {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": special.get("title", "Special"),
             "type": special.get("type", "daily_special"),
             "description": special.get("description"),
@@ -529,7 +529,7 @@ def upsert_specials(
         }
 
         if not dry_run:
-            client.table("venue_specials").insert(row).execute()
+            client.table("place_specials").insert(row).execute()
 
         count += 1
 
@@ -579,7 +579,7 @@ def insert_events(
             "title": title,
             "start_date": ev_date,
             "start_time": ev.get("start_time"),
-            "venue_id": venue["id"],
+            "place_id": venue["id"],
             "source_id": source_id or 0,
             "source_url": source_url,
             "category": category,
@@ -628,7 +628,7 @@ def update_venue_vibes(
         return False
 
     client = get_client()
-    result = client.table("venues").select("vibes").eq("id", venue_id).execute()
+    result = client.table("places").select("vibes").eq("id", venue_id).execute()
     existing = (result.data[0].get("vibes") or []) if result.data else []
     merged = sorted(set(existing) | set(new_vibes))
 
@@ -636,7 +636,7 @@ def update_venue_vibes(
         return False
 
     if not dry_run:
-        client.table("venues").update({"vibes": merged}).eq("id", venue_id).execute()
+        client.table("places").update({"vibes": merged}).eq("id", venue_id).execute()
 
     return True
 
@@ -651,7 +651,7 @@ def get_venues_with_instagram(
     client = get_client()
 
     query = (
-        client.table("venues")
+        client.table("places")
         .select("id, name, slug, instagram, venue_type, website")
         .neq("active", False)
         .not_.is_("instagram", "null")
@@ -660,7 +660,7 @@ def get_venues_with_instagram(
     if venue_ids:
         query = query.in_("id", venue_ids)
     elif venue_type:
-        query = query.eq("venue_type", venue_type)
+        query = query.eq("place_type", venue_type)
 
     result = query.order("name").limit(5000).execute()
     venues = result.data or []
@@ -669,7 +669,7 @@ def get_venues_with_instagram(
         # Filter to only venues with zero active specials
         venue_ids_with_specials = set()
         specials_result = (
-            client.table("venue_specials")
+            client.table("place_specials")
             .select("venue_id")
             .eq("is_active", True)
             .execute()

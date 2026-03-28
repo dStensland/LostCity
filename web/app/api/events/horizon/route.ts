@@ -59,7 +59,7 @@ export async function GET(request: Request) {
         ticket_status, ticket_status_checked_at, sellout_risk,
         ticket_url, price_min, price_max, is_free,
         series_id, festival_id,
-        venue:venues(id, name, slug, neighborhood, city, image_url, hero_image_url)
+        venue:places(id, name, slug, neighborhood, city, image_url, hero_image_url)
       `,
       )
       .in("importance", importance)

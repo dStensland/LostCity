@@ -24,7 +24,7 @@ PLACE_DATA = {
     "zip": "30314",
     "lat": 33.7580,
     "lng": -84.4180,
-    "venue_type": "neighborhood",
+    "place_type": "neighborhood",
     "spot_type": "neighborhood",
     "website": None,
     "description": "Historic Westside neighborhood with rich civil rights heritage, adjacent to Mercedes-Benz Stadium.",
@@ -72,7 +72,7 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,

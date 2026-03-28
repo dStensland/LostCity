@@ -56,7 +56,7 @@ PLACE_DATA = {
     "zip": "30316",
     "lat": 33.7407,
     "lng": -84.3582,
-    "venue_type": "nonprofit",
+    "place_type": "nonprofit",
     "spot_type": "nonprofit",
     "website": BASE_URL,
     "vibes": ["volunteer", "family-friendly"],
@@ -171,7 +171,7 @@ def _make_event_record(
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title[:200],
         "description": None,
         "start_date": start_date,

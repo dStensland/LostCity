@@ -31,7 +31,7 @@ PLACE_DATA = {
     "zip": "30096",
     "lat": 34.0029,
     "lng": -84.1446,
-    "venue_type": "city",
+    "place_type": "city",
     "spot_type": "city",
     "website": BASE_URL,
     "description": "City of Duluth - diverse Gwinnett suburb with vibrant Korean community, Gas South District, and family programming.",
@@ -73,7 +73,7 @@ def create_recurring_events(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Annual Duluth Fall Festival in downtown featuring live music, "
@@ -126,7 +126,7 @@ def create_recurring_events(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Lunar New Year celebration honoring Duluth's vibrant Korean and Asian communities. "
@@ -185,7 +185,7 @@ def create_recurring_events(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,

@@ -55,7 +55,7 @@ VENUE_MAIN = {
     "state": "GA",
     "zip": "30337",
     "neighborhood": "College Park",
-    "venue_type": "school",
+    "place_type": "school",
     "spot_type": "school",
     "website": "https://www.woodward.edu/summer",
     "vibes": ["family-friendly", "all-ages"],
@@ -69,7 +69,7 @@ VENUE_NORTH = {
     "state": "GA",
     "zip": "30097",
     "neighborhood": "Johns Creek",
-    "venue_type": "school",
+    "place_type": "school",
     "spot_type": "school",
     "website": "https://www.woodward.edu/summer",
     "vibes": ["family-friendly", "all-ages"],
@@ -247,7 +247,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     title = f"{row['title']} at Woodward Academy"
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": row["description"],
         "start_date": row["start_date"],

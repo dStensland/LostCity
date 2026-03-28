@@ -37,7 +37,7 @@ PLACE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30315",
-    "venue_type": "event_space",
+    "place_type": "event_space",
     "spot_type": "event_space",
     "website": BASE_URL,
 }
@@ -162,7 +162,7 @@ def build_event_record(source_id: int, homepage_html: str, hours_html: str, pric
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,

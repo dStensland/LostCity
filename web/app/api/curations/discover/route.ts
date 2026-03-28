@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
           *,
           list_items(
             position,
-            venue:venues(image_url),
+            venue:places(image_url),
             event:events(image_url)
           )
         `)

@@ -44,7 +44,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7812,
     "lng": -84.4107,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": BASE_URL,
     "description": (
@@ -319,7 +319,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description or f"{title} at Out Front Theatre Company",
                         "start_date": start_date,

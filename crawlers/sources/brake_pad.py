@@ -32,7 +32,7 @@ PLACE_DATA = {
     "city": "College Park",
     "state": "GA",
     "zip": "30337",
-    "venue_type": "bar",
+    "place_type": "bar",
     "website": BASE_URL,
 }
 
@@ -271,7 +271,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title[:200],
                         "description": (description.strip() or f"Event at Brake Pad, College Park's neighborhood pub with live music")[:500],
                         "start_date": start_date,

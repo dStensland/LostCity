@@ -6,11 +6,11 @@ def test_build_branch_destination_envelope_projects_library_branch_details() -> 
         venue_id=1501,
         place_data={
             "name": "Sewell Mill Library & Cultural Center",
-            "venue_type": "library",
+            "place_type": "library",
         },
     )
 
-    assert envelope.destination_details[0]["venue_id"] == 1501
+    assert envelope.destination_details[0]["place_id"] == 1501
     assert envelope.destination_details[0]["destination_type"] == "library_branch"
     assert envelope.destination_details[0]["commitment_tier"] == "hour"
     assert envelope.destination_details[0]["parking_type"] == "free_lot"

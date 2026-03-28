@@ -72,7 +72,7 @@ def find_duplicate_clusters(days_ahead: int = 30) -> list[list[dict]]:
         result = (
             client.table("events")
             .select(
-                "id, title, start_date, start_time, venue_id, source_id, "
+                "id, title, start_date, start_time, place_id, source_id, "
                 "canonical_event_id, image_url, description, ticket_url, "
                 "created_at, is_active, data_quality"
             )
@@ -92,18 +92,18 @@ def find_duplicate_clusters(days_ahead: int = 30) -> list[list[dict]]:
 
     logger.info("Loaded %d future active events for dedup analysis", len(events))
 
-    # Group by (normalized_title, start_date, venue_id)
+    # Group by (normalized_title, start_date, place_id)
     groups: dict[tuple, list[dict]] = {}
     for event in events:
         norm = normalize_title(event.get("title") or "")
         start_date = event.get("start_date")
-        venue_id = event.get("venue_id")
+        place_id = event.get("place_id") or event.get("venue_id")
 
         # Skip if any key component is missing — can't reliably match
-        if not norm or not start_date or not venue_id:
+        if not norm or not start_date or not place_id:
             continue
 
-        key = (norm, start_date, venue_id)
+        key = (norm, start_date, place_id)
         groups.setdefault(key, []).append(event)
 
     # Filter to clusters with events from at least 2 distinct sources

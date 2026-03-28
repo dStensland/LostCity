@@ -48,7 +48,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7880,
     "lng": -84.4010,
-    "venue_type": "comedy_club",
+    "place_type": "comedy_club",
     "spot_type": "comedy_club",
     "website": BASE_URL,
     "description": (
@@ -512,7 +512,7 @@ def _build_event_record(
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,

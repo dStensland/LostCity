@@ -34,7 +34,7 @@ PLACE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30303",
-    "venue_type": "event_space",
+    "place_type": "event_space",
     "website": BASE_URL,
 }
 
@@ -277,7 +277,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
             record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": start_date,
@@ -362,7 +362,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
             record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": start_date,

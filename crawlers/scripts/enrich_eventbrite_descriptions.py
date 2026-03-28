@@ -119,7 +119,7 @@ def fetch_venue_map(client, venue_ids: list[int]) -> dict[int, dict]:
     if not venue_ids:
         return {}
     rows = (
-        client.table("venues")
+        client.table("places")
         .select("id,name,neighborhood,city,state")
         .in_("id", venue_ids)
         .execute()

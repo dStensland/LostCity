@@ -86,7 +86,7 @@ _FESTIVAL_ORG_VENUE: dict = {
     "zip": "30308",
     "lat": 33.7730,
     "lng": -84.3658,
-    "venue_type": "organization",
+    "place_type": "organization",
     "website": "https://atlantasciencefestival.org",
     "vibes": ["educational", "family-friendly"],
 }
@@ -693,7 +693,7 @@ def _get_or_create_event_venue(
         "city": venue_city or "Atlanta",
         "state": venue_state or "GA",
         "zip": venue_zip or "",
-        "venue_type": venue_type,
+        "place_type": venue_type,
         "website": None,
         "neighborhood": None,  # Will be resolved by geo enrichment
         "vibes": ["educational", "family-friendly"],
@@ -1114,7 +1114,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         record: dict = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description if description else None,
             "start_date": start_date,

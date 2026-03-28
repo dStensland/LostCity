@@ -378,7 +378,7 @@ def main() -> None:
         for i in range(0, len(venue_ids), CHUNK):
             chunk = venue_ids[i : i + CHUNK]
             vresp = (
-                sb.table("venues")
+                sb.table("places")
                 .select("id, venue_type")
                 .in_("id", chunk)
                 .execute()

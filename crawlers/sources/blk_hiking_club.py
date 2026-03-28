@@ -37,7 +37,7 @@ ORG_VENUE = {
     "slug": "blk-hiking-club",
     "city": "Atlanta",
     "state": "GA",
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": EVENTS_URL,
 }
@@ -229,7 +229,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "slug": re.sub(r"[^a-z0-9]+", "-", location_name.lower()).strip("-")[:80],
                     "city": "Atlanta",
                     "state": "GA",
-                    "venue_type": "park",
+                    "place_type": "park",
                     "spot_type": "trail",
                     "website": detail_url,
                 }
@@ -244,7 +244,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title[:500],
                 "description": (description_text or f"{title} hosted by BLK Hiking Club Atlanta.")[:2000],
                 "start_date": start_dt.strftime("%Y-%m-%d"),

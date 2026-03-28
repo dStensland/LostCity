@@ -35,7 +35,7 @@ PLACE_DATA = {
     "zip": "30354",
     "lat": 33.6420,
     "lng": -84.4040,
-    "venue_type": "attraction",
+    "place_type": "attraction",
     "spot_type": "attraction",
     "website": HOMEPAGE,
     # Hours verified 2026-03-11 — closed Sun/Mon
@@ -92,7 +92,7 @@ def _extract_og_meta(html: str) -> tuple[Optional[str], Optional[str]]:
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "driving_experience",
         "commitment_tier": "halfday",
         "primary_activity": "Porsche track driving experiences, heritage gallery, and fine dining",
@@ -111,10 +111,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Track experience packages start at several hundred dollars. Gallery and restaurant visits are free.",
         "source_url": HOMEPAGE,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "attraction", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "attraction", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "track-driving-experience",
         "title": "Track driving experience",
         "feature_type": "experience",
@@ -124,7 +124,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "heritage-gallery",
         "title": "Heritage gallery and historic vehicles",
         "feature_type": "collection",
@@ -134,7 +134,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "restaurant-356",
         "title": "Restaurant 356",
         "feature_type": "amenity",
@@ -144,7 +144,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "simulator-lab-off-road",
         "title": "Simulator lab and off-road course",
         "feature_type": "experience",
@@ -154,7 +154,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 40,
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "track-experience-packages",
         "title": "Track experience packages",
         "description": "Multiple experience tiers from 90-minute introductory drives to full-day advanced programs.",
@@ -202,7 +202,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning(
                 "Porsche Experience Center Atlanta: venue update failed: %s", exc

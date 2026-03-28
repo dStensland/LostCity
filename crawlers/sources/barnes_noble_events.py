@@ -146,7 +146,7 @@ def _build_venue_data(store: dict) -> dict:
         "zip": store.get("zip", ""),
         "lat": store.get("latitude"),
         "lng": store.get("longitude"),
-        "venue_type": "bookstore",
+        "place_type": "bookstore",
         "website": f"{BASE_URL}/store/{store_id}",
         "phone": store.get("phone"),
     }
@@ -291,7 +291,7 @@ def _parse_event(
 
     record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date,

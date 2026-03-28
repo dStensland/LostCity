@@ -28,7 +28,7 @@ SFQP_VENUE = {
     "slug": "southern-fried-queer-pride",
     "city": "Atlanta",
     "state": "GA",
-    "venue_type": "event_producer",
+    "place_type": "event_producer",
     "website": BASE_URL,
 }
 
@@ -218,7 +218,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "producer_id": producer_id,
                         "title": title[:500],
                         "description": description,

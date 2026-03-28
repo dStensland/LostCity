@@ -50,7 +50,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7490,
     "lng": -84.3880,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": BASE_URL,
     "description": "Atlanta chapter of Democratic Socialists of America organizing issue campaigns, chapter meetings, and civic action across metro Atlanta.",
@@ -244,7 +244,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": summary[:200],
                     "description": description[:1200],
                     "start_date": start_date,

@@ -45,7 +45,7 @@ WAVE_2_DESTINATIONS = [
         "lat": 34.7079,
         "lng": -83.9151,
         "website": "https://www.recreation.gov/camping/gateways/2555",
-        "venue_type": "trail",
+        "place_type": "trail",
         "spot_type": "trail",
         "short_description": "A classic North Georgia waterfall stop that helps Yonder build a deeper scenic day-trip shelf.",
         "description": "DeSoto Falls gives Yonder another high-signal waterfall destination close enough to reuse often and distinctive enough to support future waterfall clusters and seasonal recommendation logic.",
@@ -66,7 +66,7 @@ WAVE_2_DESTINATIONS = [
         "lat": 34.7482,
         "lng": -83.9074,
         "website": "https://www.atlantatrails.com/hiking-trails/helton-creek-falls/",
-        "venue_type": "trail",
+        "place_type": "trail",
         "spot_type": "trail",
         "short_description": "A lower-friction waterfall destination with fast payoff and wide audience appeal.",
         "description": "Helton Creek Falls broadens Yonder's waterfall inventory with a scenic hit that feels more accessible than some harder North Georgia hikes. It is strategically useful for recommendations that need mountain energy without full-on summit effort.",
@@ -87,7 +87,7 @@ WAVE_2_DESTINATIONS = [
         "lat": 34.9634,
         "lng": -83.2971,
         "website": "https://www.atlantatrails.com/hiking-trails/rabun-bald-bartram-trail/",
-        "venue_type": "trail",
+        "place_type": "trail",
         "spot_type": "trail",
         "short_description": "A true summit mission with tower-view payoff for high-intent hikers.",
         "description": "Rabun Bald gives Yonder a harder-hike summit anchor that deepens the portal's mountain ladder beyond the most obvious North Georgia benchmarks. It matters for serving users who want a more committed effort-reward day.",
@@ -108,7 +108,7 @@ WAVE_2_DESTINATIONS = [
         "lat": 34.9067,
         "lng": -83.4116,
         "website": "https://gastateparks.org/BlackRockMountain",
-        "venue_type": "park",
+        "place_type": "park",
         "spot_type": "park",
         "short_description": "An overlook-heavy mountain park that expands Yonder's scenic weekend and full-day range.",
         "description": "Black Rock Mountain gives Yonder another camp-capable mountain-park anchor with overlook payoff, foliage strength, and wider scenic appeal than a hike-only destination. It keeps the weekend layer from feeling too narrow.",
@@ -129,7 +129,7 @@ WAVE_2_DESTINATIONS = [
         "lat": 34.7852,
         "lng": -84.6269,
         "website": "https://www.exploregeorgia.org/chatsworth/outdoors-nature/scenic-drives-trails-tours/cohutta-overlook",
-        "venue_type": "viewpoint",
+        "place_type": "viewpoint",
         "spot_type": "trail",
         "short_description": "A high-payoff overlook that starts to make Yonder's wilderness-edge weekend layer feel broader.",
         "description": "Cohutta Overlook gives Yonder a scenic-drive and viewpoint anchor tied to larger wilderness identity. It is especially useful because it expands weekend and overlook recommendations without depending on a hard hike every time.",
@@ -196,7 +196,7 @@ def find_existing_venue(seed: dict) -> dict | None:
 
     client = get_client()
     result = (
-        client.table("venues")
+        client.table("places")
         .select("*")
         .eq("name", seed["name"])
         .limit(1)
@@ -280,7 +280,7 @@ def main() -> None:
                 continue
 
             if args.apply:
-                client.table("venues").update(updates).eq("id", existing["id"]).execute()
+                client.table("places").update(updates).eq("id", existing["id"]).execute()
             logger.info(
                 "%s existing: %s (%s fields)",
                 "UPDATE" if args.apply else "WOULD UPDATE",

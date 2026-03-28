@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30312",
     "lat": 33.7540,
     "lng": -84.3720,
-    "venue_type": "bar",
+    "place_type": "bar",
     "spot_type": "bar",
     "website": BASE_URL,
     "description": "Edgewood Avenue bar and event space with live music, comedy, and community programming.",
@@ -212,7 +212,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": f"Event at Our Bar ATL on Edgewood Avenue",
                         "start_date": start_date,

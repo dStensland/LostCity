@@ -36,7 +36,7 @@ def get_overall_stats(client):
     total_events = events_result.count
     
     # Total venues
-    venues_result = client.table("venues").select("id", count="exact").execute()
+    venues_result = client.table("places").select("id", count="exact").execute()
     total_venues = venues_result.count
     
     # Active sources
@@ -248,11 +248,11 @@ def get_poorest_quality_sources(client):
 
 def get_venue_stats(client):
     """Get venue completeness statistics."""
-    total_result = client.table("venues").select("id", count="exact").execute()
+    total_result = client.table("places").select("id", count="exact").execute()
     total_venues = total_result.count
     
     # Count venues with coordinates
-    coords_result = client.table("venues").select("id", count="exact").not_.is_("lat", "null").not_.is_("lng", "null").execute()
+    coords_result = client.table("places").select("id", count="exact").not_.is_("lat", "null").not_.is_("lng", "null").execute()
     with_coords = coords_result.count
     
     return {

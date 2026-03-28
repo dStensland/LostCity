@@ -752,7 +752,7 @@ def fetch_t2_venues_missing_details(client, *, venue_type=None):
     all_venues = []
     offset = 0
     while True:
-        q = (client.table("venues")
+        q = (client.table("places")
              .select("id,name,slug,venue_type,vibes")
              .eq("active", True)
              .order("id")
@@ -824,7 +824,7 @@ def main():
             for v in type_venues:
                 try:
                     # Upsert destination_details
-                    details = {"venue_id": v["id"], **template["destination_details"]}
+                    details = {"place_id": v["id"], **template["destination_details"]}
                     client.table("venue_destination_details").upsert(
                         details, on_conflict="venue_id"
                     ).execute()
@@ -832,7 +832,7 @@ def main():
                     # Upsert venue_features
                     for feature in template["venue_features"]:
                         row = {
-                            "venue_id": v["id"],
+                            "place_id": v["id"],
                             "slug": feature["slug"],
                             "title": feature["title"],
                             "feature_type": feature.get("feature_type", "experience"),
@@ -841,7 +841,7 @@ def main():
                         if "description" in feature:
                             row["description"] = feature["description"]
                         client.table("venue_features").upsert(
-                            row, on_conflict="venue_id,slug"
+                            row, on_conflict="place_id,slug"
                         ).execute()
 
                     total_filled += 1

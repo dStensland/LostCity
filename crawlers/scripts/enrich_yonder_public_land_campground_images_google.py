@@ -151,7 +151,7 @@ def main(dry_run: bool = False) -> None:
 
     client = get_client()
     result = (
-        client.table("venues")
+        client.table("places")
         .select("id,slug,name,image_url,hero_image_url")
         .in_("slug", list(PUBLIC_CAMPGROUND_QUERIES.keys()))
         .execute()
@@ -196,7 +196,7 @@ def main(dry_run: bool = False) -> None:
         print(f"{'WOULD UPDATE' if dry_run else 'UPDATE'} image: {venue['name']} -> {photo_url[:110]}")
         found += 1
         if not dry_run:
-            client.table("venues").update(updates).eq("id", venue["id"]).execute()
+            client.table("places").update(updates).eq("id", venue["id"]).execute()
             updated += 1
         time.sleep(0.4)
 

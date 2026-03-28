@@ -116,7 +116,7 @@ LEGACY_PACKS: dict[str, dict[str, Any]] = {
 
 def _get_venue(slug: str) -> dict[str, Any] | None:
     client = get_client()
-    result = client.table("venues").select("id,name,slug").eq("slug", slug).limit(1).execute()
+    result = client.table("places").select("id,name,slug").eq("slug", slug).limit(1).execute()
     if result.data:
         return result.data[0]
     return None
@@ -134,7 +134,7 @@ def _deactivate_features(venue_id: int, feature_slugs: list[str], apply: bool) -
     result = (
         client.table("venue_features")
         .update({"is_active": False})
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .in_("slug", feature_slugs)
         .execute()
     )

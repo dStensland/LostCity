@@ -36,7 +36,7 @@ MOWA_HQ = {
     "zip": "30303",
     "lat": 33.7577,
     "lng": -84.3880,
-    "venue_type": "nonprofit",
+    "place_type": "nonprofit",
     "spot_type": "nonprofit",
     "website": BASE_URL,
 }
@@ -220,7 +220,7 @@ def crawl_url(page, url: str, source_id: int, venue_id: int) -> tuple[int, int, 
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description[:500] if description else None,
                     "start_date": event_date,

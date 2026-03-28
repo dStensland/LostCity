@@ -100,7 +100,7 @@ URBAN_AIR_LOCATIONS = [
 ]
 
 VENUE_DATA_TEMPLATE = {
-    "venue_type": "entertainment",
+    "place_type": "entertainment",
     "vibes": ["family-friendly", "kids", "active", "indoor"],
 }
 
@@ -191,7 +191,7 @@ def parse_ical_events(
         events.append(
             {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": summary,
                 "description": description or f"{summary} at {location['name']}.",
                 "start_date": start_date,

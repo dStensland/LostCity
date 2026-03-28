@@ -78,11 +78,11 @@ def _resolve_venue(venue_id: Optional[int] = None, instagram: Optional[str] = No
     client = get_client()
 
     if venue_id:
-        result = client.table("venues").select(
+        result = client.table("places").select(
             "id, name, slug, instagram, venue_type, website"
         ).eq("id", venue_id).execute()
     elif instagram:
-        result = client.table("venues").select(
+        result = client.table("places").select(
             "id, name, slug, instagram, venue_type, website"
         ).eq("instagram", instagram).execute()
     else:
@@ -210,7 +210,7 @@ def main():
         # Check which targets have venue records and IG handles in DB
         client = get_client()
         handles = [t["instagram"] for t in targets]
-        result = client.table("venues").select("id, instagram").in_("instagram", handles).execute()
+        result = client.table("places").select("id, instagram").in_("instagram", handles).execute()
         db_handles = {r["instagram"] for r in (result.data or [])}
         matched = sum(1 for t in targets if t["instagram"] in db_handles)
 

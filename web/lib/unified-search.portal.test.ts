@@ -68,7 +68,7 @@ describe("unifiedSearch portal city behavior", () => {
 
     expect(fromCalls).toContain("portals");
 
-    const venueCall = rpcCalls.find((call) => call.fn === "search_venues_ranked");
+    const venueCall = rpcCalls.find((call) => call.fn === "search_places_ranked");
     expect(venueCall).toBeTruthy();
     expect(venueCall?.args.p_city).toBe("Atlanta");
   });
@@ -87,7 +87,7 @@ describe("unifiedSearch portal city behavior", () => {
 
     expect(fromCalls).toHaveLength(0);
 
-    const venueCall = rpcCalls.find((call) => call.fn === "search_venues_ranked");
+    const venueCall = rpcCalls.find((call) => call.fn === "search_places_ranked");
     expect(venueCall).toBeTruthy();
     expect(venueCall?.args.p_city).toBe("Decatur");
   });

@@ -41,7 +41,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://hotelclermont.com",
     },
     "wild-heaven-decatur": {
@@ -52,7 +52,7 @@ VENUES = {
         "city": "Avondale Estates",
         "state": "GA",
         "zip": "30030",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://wildheavenbeer.com",
     },
     "round-trip-brewing": {
@@ -63,7 +63,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://roundtripbrewing.com",
     },
     "sweet-auburn-bbq": {
@@ -74,7 +74,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://sweetauburnbbq.com",
     },
     "eventide-brewing": {
@@ -85,7 +85,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30315",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://eventidebrewing.com",
     },
     "midtown-tavern": {
@@ -96,7 +96,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "bar",
+        "place_type": "bar",
     },
 }
 
@@ -191,7 +191,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": "Dirty South Trivia",
                 "description": (
                     f"Weekly Dirty South Trivia at {venue_name}. "

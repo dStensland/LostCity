@@ -52,7 +52,7 @@ def migrate(apply: bool = False) -> None:
     for venue_slug in TARGET_VENUES:
         # Look up venue
         venue_res = (
-            client.table("venues")
+            client.table("places")
             .select("id, name, venue_type")
             .eq("slug", venue_slug)
             .limit(1)
@@ -71,7 +71,7 @@ def migrate(apply: bool = False) -> None:
         exhibit_res = (
             client.table("events")
             .select("title, description, image_url")
-            .eq("venue_id", venue_id)
+            .eq("place_id", venue_id)
             .eq("content_kind", "exhibit")
             .execute()
         )

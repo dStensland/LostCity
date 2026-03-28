@@ -68,7 +68,7 @@ FESTIVAL_VENUE_DATA = {
     "zip": "30318",
     "lat": 33.7706,
     "lng": -84.4110,
-    "venue_type": "festival",
+    "place_type": "festival",
     "website": "https://www.atlantafilmfestival.com",
 }
 
@@ -147,7 +147,7 @@ def _get_or_cache_venue(eventive_venue: dict) -> int:
         "city": city,
         "state": state,
         "zip": zip_code,
-        "venue_type": "cinema",
+        "place_type": "cinema",
         "website": "https://www.atlantafilmfestival.com",
     }
 
@@ -244,7 +244,7 @@ def _crawl_films(source_id: int, festival_venue_id: int) -> tuple[int, int, int]
 
         event_record = {
             "source_id": source_id,
-            "venue_id": festival_venue_id,
+            "place_id": festival_venue_id,
             "title": name,
             "description": description,
             "start_date": FESTIVAL_START,
@@ -377,7 +377,7 @@ def _crawl_scheduled_events(source_id: int, festival_venue_id: int) -> tuple[int
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": name,
             "description": description,
             "start_date": start_date,

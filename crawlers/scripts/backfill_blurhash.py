@@ -159,7 +159,7 @@ def backfill_venues(limit: Optional[int] = None):
 
     # Query venues with images but no blurhash
     query = (
-        client.table("venues")
+        client.table("places")
         .select("id, image_url")
         .neq("image_url", "null")
         .is_("blurhash", "null")
@@ -194,7 +194,7 @@ def backfill_venues(limit: Optional[int] = None):
         if hash_str:
             # Update venue with blurhash
             try:
-                client.table("venues").update({"blurhash": hash_str}).eq("id", venue_id).execute()
+                client.table("places").update({"blurhash": hash_str}).eq("id", venue_id).execute()
                 updated += 1
                 logger.info(f"  ✓ Updated venue {venue_id} with blurhash: {hash_str}")
             except Exception as e:

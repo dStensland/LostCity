@@ -220,7 +220,7 @@ def test_build_main_festival_event_is_free_all_day():
     assert event["subcategory"] == "festival"
     assert "piedmont-park" in event["tags"]
     assert event["is_tentpole"] is True
-    assert event["venue_id"] == 100
+    assert event["place_id"] == 100
     assert event["source_id"] == 1
 
 
@@ -270,7 +270,7 @@ def test_build_stankonia_event_is_ticketed():
     assert event["category"] == "music"
     assert event["subcategory"] == "concert"
     assert event["ticket_url"] == "https://404day.com/tickets"
-    assert event["venue_id"] == 200
+    assert event["place_id"] == 200
 
 
 def test_build_stankonia_event_content_hash_differs_from_main():
@@ -330,7 +330,7 @@ def test_crawl_main_event_uses_piedmont_park_venue():
         crawl({"id": 42, "slug": "404-day"})
 
     main = next(e for e in inserted if e["title"] == "404 Day 2026")
-    assert main["venue_id"] == 100  # Piedmont Park gets the first venue ID
+    assert main["place_id"] == 100  # Piedmont Park gets the first venue ID
 
 
 def test_crawl_groups_both_events_under_same_series():

@@ -8507,7 +8507,7 @@ export type Database = {
           title: string
         }[]
       }
-      search_venues_ranked: {
+      search_places_ranked: {
         Args: {
           p_city?: string
           p_limit?: number

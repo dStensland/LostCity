@@ -54,7 +54,7 @@ MORGAN_CONCERT_HALL = {
     "zip": "30144",
     "lat": 34.0373,
     "lng": -84.5810,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": "https://arts.kennesaw.edu",
 }
@@ -70,7 +70,7 @@ STILLWELL_THEATER = {
     "zip": "30144",
     "lat": 34.0373,
     "lng": -84.5810,
-    "venue_type": "theater",
+    "place_type": "theater",
     "website": "https://arts.kennesaw.edu",
 }
 
@@ -85,7 +85,7 @@ ONYX_THEATER = {
     "zip": "30144",
     "lat": 34.0373,
     "lng": -84.5810,
-    "venue_type": "theater",
+    "place_type": "theater",
     "website": "https://arts.kennesaw.edu",
 }
 
@@ -100,7 +100,7 @@ MARIETTA_DANCE = {
     "zip": "30060",
     "lat": 33.9526,
     "lng": -84.5499,
-    "venue_type": "theater",
+    "place_type": "theater",
     "website": "https://arts.kennesaw.edu",
 }
 
@@ -115,7 +115,7 @@ ZUCKERMAN_MUSEUM = {
     "zip": "30144",
     "lat": 34.0373,
     "lng": -84.5810,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": "https://arts.kennesaw.edu/zuckerman",
 }
@@ -131,7 +131,7 @@ FINE_ARTS_GALLERY = {
     "zip": "30144",
     "lat": 34.0373,
     "lng": -84.5810,
-    "venue_type": "gallery",
+    "place_type": "gallery",
     "website": "https://arts.kennesaw.edu",
 }
 
@@ -472,7 +472,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": name,
                 "description": description,
                 "start_date": start_date,

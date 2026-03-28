@@ -42,7 +42,7 @@ export default function AdminEventsPage() {
           is_featured,
           is_trending,
           is_live,
-          venue:venues(name)
+          venue:places(name)
         `)
         .gte("start_date", today)
         .order("start_date", { ascending: true })

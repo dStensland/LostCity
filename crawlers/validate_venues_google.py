@@ -163,7 +163,7 @@ def get_venues_to_validate(
     """Get venues to validate."""
     client = get_client()
 
-    query = client.table("venues").select(
+    query = client.table("places").select(
         "id, name, slug, address, city, lat, lng, website, hours, venue_type"
     ).eq("active", True).eq("city", "Atlanta")
 
@@ -171,7 +171,7 @@ def get_venues_to_validate(
     query = query.not_.is_("website", "null")
 
     if venue_type:
-        query = query.eq("venue_type", venue_type)
+        query = query.eq("place_type", venue_type)
 
     query = query.limit(limit)
 
@@ -182,7 +182,7 @@ def get_venues_to_validate(
 def validate_venue(venue: dict) -> dict:
     """Validate a venue against Google Places."""
     result = {
-        "venue_id": venue["id"],
+        "place_id": venue["id"],
         "venue_name": venue["name"],
         "status": "unknown",
         "issues": [],

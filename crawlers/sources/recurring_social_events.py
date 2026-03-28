@@ -60,7 +60,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "http://metalsomelivebandkaraoke.com/",
     },
     "copper-cove": {
@@ -71,7 +71,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30324",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.coppercoveatl.com/",
     },
     # "boggs" — handled by dedicated source (sources/boggs_social.py)
@@ -83,7 +83,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://tenatl.com/",
     },
     "daiquiriville": {
@@ -94,7 +94,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30303",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://daiquiriville.myportfolio.com/menu",
     },
     "roll-1-cafe": {
@@ -105,7 +105,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30315",
-        "venue_type": "cafe",
+        "place_type": "cafe",
         "website": "http://roll1cafe.com/",
     },
     "your-3rd-spot": {
@@ -116,7 +116,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "http://www.your3rdspot.com/",
     },
     "smiths-olde-bar": {
@@ -127,7 +127,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30324",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.sobatl.com",
     },
     # "metro-fun-center" — PERMANENTLY CLOSED (Sept 2022)
@@ -139,7 +139,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30315",
-        "venue_type": "entertainment_venue",
+        "place_type": "entertainment_venue",
         # CLOSED — do not add website
     },
     # Open mic venues
@@ -151,7 +151,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "cafe",
+        "place_type": "cafe",
         "website": "https://www.joescoffeehouseeav.com/",
     },
     "our-bar-atl": {
@@ -162,7 +162,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30312",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.ourbaratl.com/",
     },
     "southern-feed-store": {
@@ -173,7 +173,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.sfseav.com/",
     },
     # "laughing-skull" — handled by dedicated source (sources/laughing_skull.py)
@@ -185,7 +185,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.limerickjunction.com",
     },
     "limelight-theater": {
@@ -196,7 +196,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30312",
-        "venue_type": "theater",
+        "place_type": "theater",
         "website": "https://limelight.tix.page/",
     },
     "farm-burger": {
@@ -207,7 +207,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://farmburger.com",
     },
     "red-light-cafe": {
@@ -218,7 +218,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "cafe",
+        "place_type": "cafe",
         "website": "https://redlightcafe.com",
     },
     "pullman-yards": {
@@ -229,7 +229,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30317",
-        "venue_type": "event_venue",
+        "place_type": "event_venue",
         "website": "https://pullmanyards.com",
     },
     "asw-whiskey": {
@@ -240,7 +240,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30310",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://aswdistillery.com",
     },
     "atlantucky": {
@@ -251,7 +251,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30313",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://atlantucky.com",
     },
     "urban-grind": {
@@ -262,7 +262,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "cafe",
+        "place_type": "cafe",
         "website": "https://urbangrindatlanta.com",
     },
     "kats-cafe": {
@@ -273,7 +273,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "cafe",
+        "place_type": "cafe",
         "website": "https://katscafeatlanta.com",
     },
     "battery-atlanta": {
@@ -284,7 +284,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30339",
-        "venue_type": "entertainment_venue",
+        "place_type": "entertainment_venue",
         "website": "https://batteryatl.com",
     },
     "park-bench-battery": {
@@ -297,7 +297,7 @@ VENUES = {
         "zip": "30339",
         "lat": 33.8905,
         "lng": -84.4680,
-        "venue_type": "bar",
+        "place_type": "bar",
         "spot_type": "bar",
         "website": "https://parkbenchbattery.com",
         "vibes": ["live-music", "karaoke", "dueling-pianos", "late-night", "21+"],
@@ -310,7 +310,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30312",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://joystickgamebar.com",
     },
     "peters-street": {
@@ -321,7 +321,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30313",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.instagram.com/petersstreetstation/",
     },
     "dynamic-el-dorado": {
@@ -332,7 +332,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30312",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "http://dynamiceldorado.com/",
     },
     "529-bar": {
@@ -343,7 +343,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://529atlanta.com",
     },
     # Game night venues
@@ -355,7 +355,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30338",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://jasonsdeli.com",
     },
     "manuels-tavern": {
@@ -366,7 +366,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://manuelstavern.com",
     },
     "church-epiphany": {
@@ -377,7 +377,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "website": "http://www.epiphany.org/",
     },
     # Bingo venues
@@ -389,7 +389,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30339",
-        "venue_type": "entertainment_venue",
+        "place_type": "entertainment_venue",
         "website": "https://punchbowlsocial.com",
     },
     # "blue-martini" — PERMANENTLY CLOSED (mid-2025)
@@ -401,7 +401,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30305",
-        "venue_type": "bar",
+        "place_type": "bar",
         # CLOSED — do not add website
     },
     # Jazz & Blues venues
@@ -413,7 +413,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30312",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.cafecircaatlanta.com/",
     },
     "churchill-grounds": {
@@ -424,7 +424,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "cafe",
+        "place_type": "cafe",
         "website": "https://churchillgrounds.com",
     },
     "elliott-street-pub": {
@@ -435,7 +435,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30313",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.facebook.com/elliottstreetdeli",
     },
     # Additional trivia venues
@@ -447,7 +447,7 @@ VENUES = {
         "city": "Decatur",
         "state": "GA",
         "zip": "30030",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://brickstorepub.com",
     },
     "the-porter": {
@@ -458,7 +458,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://theporterbeerbar.com",
     },
     "wrecking-bar": {
@@ -469,7 +469,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://wreckingbarbrewpub.com",
     },
     # Sister Louisa's — handled entirely by dedicated source (sister_louisas.py)
@@ -483,7 +483,7 @@ VENUES = {
         "city": "Decatur",
         "state": "GA",
         "zip": "30030",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://thinkingmantavern.com",
     },
     "righteous-room": {
@@ -494,7 +494,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "http://www.stayrighteous.com",
     },
     "the-local": {
@@ -505,7 +505,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "http://thelocalkaraoke.com/home.php",
     },
     "twains": {
@@ -516,7 +516,7 @@ VENUES = {
         "city": "Decatur",
         "state": "GA",
         "zip": "30030",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://twains.net",
     },
     # DJ / nightclub venues
@@ -528,7 +528,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30303",
-        "venue_type": "nightclub",
+        "place_type": "nightclub",
         "website": "https://www.mjqofficial.com/",
     },
     # The Music Room — CLOSED permanently (COVID casualty, Sep 2020)
@@ -541,7 +541,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30342",
-        "venue_type": "nightclub",
+        "place_type": "nightclub",
         "website": "https://johnnyshideaway.com",
     },
     # Drag venues
@@ -553,7 +553,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.burkharts.com",
     },
     "my-sisters-room": {
@@ -564,7 +564,7 @@ VENUES = {
         "city": "Decatur",
         "state": "GA",
         "zip": "30030",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.mysistersroom.com",
     },
     # Fontaine's Oyster House — CLOSED permanently (removed 2026-03)
@@ -577,7 +577,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30313",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://apachexlr.com/",
     },
     "dieselfillingstation": {
@@ -588,7 +588,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.dieselfillingstation.com",
     },
     # Farmers markets
@@ -600,7 +600,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "farmers_market",
+        "place_type": "farmers_market",
         "website": "https://piedmontpark.org/green-market",
     },
     "peachtree-road-farmers-market": {
@@ -611,7 +611,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30305",
-        "venue_type": "farmers_market",
+        "place_type": "farmers_market",
         "website": "https://peachtreeroadfarmersmarket.com",
     },
     # Brunch / food-scene venues
@@ -623,7 +623,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30312",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "http://www.ladybirdatl.com/",
     },
     # ========== Phase 2: Neighborhood + day gap fills ==========
@@ -636,7 +636,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://elmyr.com",
     },
     # Inman Park
@@ -648,7 +648,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://barcelonawinebar.com",
     },
     "victory-sandwich-bar": {
@@ -659,7 +659,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.vicsandwich.com",
     },
     "new-realm-brewing": {
@@ -670,7 +670,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://newrealmbrewing.com",
     },
     "krog-street-market": {
@@ -681,7 +681,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "food_hall",
+        "place_type": "food_hall",
         "website": "https://www.thekrogdistrict.com",
     },
     # East Atlanta Village (expanding existing thin coverage)
@@ -694,7 +694,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://flatironatl.com",
     },
     "marys-bar": {
@@ -705,7 +705,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.marysatlanta.com",
     },
     # Sunday gap fills
@@ -717,7 +717,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://northsidetavern.com",
     },
     "park-tavern": {
@@ -728,7 +728,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://parktavern.com",
     },
     "the-painted-pin": {
@@ -739,7 +739,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30324",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://thepaintedpin.com",
     },
     # star-community-bar: handled by dedicated source (id=456) with recurring upgrade
@@ -751,7 +751,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30305",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://fadoirishpub.com/atlanta",
     },
     "steady-hand-beer": {
@@ -762,7 +762,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://www.steadyhandbeer.com",
     },
     "cherry-street-brewing": {
@@ -773,7 +773,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://www.cherrystreetbrewing.com",
     },
     "three-taverns": {
@@ -784,7 +784,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30312",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://www.threetavernsbrewery.com",
     },
     "genes-bbq": {
@@ -795,7 +795,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30317",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.genesgenesgenes.com",
     },
     "brewhouse-cafe": {
@@ -806,7 +806,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.brewhousecafe.com",
     },
     "whitehall-tavern": {
@@ -819,7 +819,7 @@ VENUES = {
         "zip": "30305",
         "lat": 33.8424,
         "lng": -84.3786,
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://whitehall-tavern.com",
     },
     "irbys-tavern": {
@@ -830,7 +830,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30305",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://irbystavern.com",
     },
     "woofs-atlanta": {
@@ -841,7 +841,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://woofsatlanta.com",
     },
     # atlanta-eagle: handled by dedicated source (id=138) with recurring upgrade
@@ -855,7 +855,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "record_store",
+        "place_type": "record_store",
         "website": "https://www.eastatlantacomics.com",
     },
     "giga-bites-cafe": {
@@ -866,7 +866,7 @@ VENUES = {
         "city": "Marietta",
         "state": "GA",
         "zip": "30062",
-        "venue_type": "gaming",
+        "place_type": "gaming",
         "website": "http://www.giga-bitescafe.com/",
     },
     "bone-lick-bbq": {
@@ -877,7 +877,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://bonelickbarbecue.com",
     },
     "my-parents-basement": {
@@ -888,7 +888,7 @@ VENUES = {
         "city": "Avondale Estates",
         "state": "GA",
         "zip": "30002",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.myparentsbasementcbcb.com",
     },
     # ========== RUN CLUB VENUES ==========
@@ -901,7 +901,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "organization",
+        "place_type": "organization",
         "website": "https://www.bigpeachrunningco.com",
     },
     "milltown-arms-tavern": {
@@ -912,7 +912,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30312",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.milltownarmstavern.com/",
     },
     "elbow-room-buckhead": {
@@ -923,7 +923,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30305",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.elbowroomatlanta.com",
     },
     # ========== DANCE VENUES ==========
@@ -935,7 +935,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30324",
-        "venue_type": "nightclub",
+        "place_type": "nightclub",
         "website": "https://www.tandgclub.com",
     },
     # "the-heretic": handled by dedicated source (sources/the_heretic.py)
@@ -947,7 +947,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30312",
-        "venue_type": "event_space",
+        "place_type": "event_space",
         "website": "https://www.instagram.com/hotjamatl/",
     },
     # ========== SPORTS / WELLNESS VENUES ==========
@@ -960,7 +960,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30303",
-        "venue_type": "park",
+        "place_type": "park",
         "website": "https://www.woodruffpark.org",
     },
     # ========== CYCLING / OUTDOOR VENUES ==========
@@ -972,7 +972,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "park",
+        "place_type": "park",
         "website": "https://www.instagram.com/bonafideriders/",
     },
     "97-estoria": {
@@ -983,7 +983,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.estoriabar.com/",  # 97estoria.com was hijacked; estoriabar.com is official
     },
     "avondale-estates-art-lot": {
@@ -996,7 +996,7 @@ VENUES = {
         "zip": "30002",
         "lat": 33.7712,
         "lng": -84.2668,
-        "venue_type": "park",
+        "place_type": "park",
         "website": "https://atlptn.com/rides/pizza-ride",
     },
     "glenlake-tennis-center": {
@@ -1007,7 +1007,7 @@ VENUES = {
         "city": "Decatur",
         "state": "GA",
         "zip": "30030",
-        "venue_type": "fitness_center",
+        "place_type": "fitness_center",
         "website": "https://www.decaturga.com/parks-recreation",
     },
     "broad-street-boardwalk": {
@@ -1020,7 +1020,7 @@ VENUES = {
         "zip": "30303",
         "lat": 33.7568,
         "lng": -84.3912,
-        "venue_type": "park",
+        "place_type": "park",
         "website": "https://www.atlantadowntown.com/broad-street-boardwalk",
     },
     "grant-park": {
@@ -1031,7 +1031,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30315",
-        "venue_type": "park",
+        "place_type": "park",
         "website": "https://www.atlantaga.gov/?navid=470",
     },
     # ========== FOOD & DRINK SPECIALS VENUES ==========
@@ -1043,7 +1043,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.theoptimistrestaurant.com",
     },
     "watchmans-seafood": {
@@ -1054,7 +1054,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.watchmans.com",
     },
     "iberian-pig-decatur": {
@@ -1065,7 +1065,7 @@ VENUES = {
         "city": "Decatur",
         "state": "GA",
         "zip": "30030",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.iberianpig.com",
     },
     "lloyds-atl": {
@@ -1076,7 +1076,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.facebook.com/lloydsinmanpark",
     },
     "antico-pizza": {
@@ -1087,7 +1087,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://littleitalia.com/antico/",
     },
     "bartaco-inman-park": {
@@ -1098,7 +1098,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.bartaco.com",
     },
     "taverna-buckhead": {
@@ -1109,7 +1109,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30305",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.instagram.com/tavernarestaurantgroup/",
     },
     "pure-taqueria-inman-park": {
@@ -1120,7 +1120,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.puretaqueria.com",
     },
     "tin-lizzys-midtown": {
@@ -1131,7 +1131,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://tinlizzyscantina.com",
     },
     "forza-storico": {
@@ -1142,7 +1142,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://forzastorico.com",
     },
     "cypress-street-pint": {
@@ -1153,7 +1153,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "http://cypressatl.com/",
     },
     "beso-buckhead": {
@@ -1164,7 +1164,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30305",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://besoatl.com",
     },
     # "fontaines-oyster-house" — use existing key "fontaines" (added in Phase 0b)
@@ -1176,7 +1176,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://beetlecatatl.com",
     },
     "pielands": {
@@ -1187,7 +1187,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.pielands.com",
     },
     "wild-heaven-avondale": {
@@ -1198,7 +1198,7 @@ VENUES = {
         "city": "Avondale Estates",
         "state": "GA",
         "zip": "30030",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://wildheavenbeer.com",
     },
     "wild-heaven-toco-hills": {
@@ -1209,7 +1209,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30329",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://wildheavenbeer.com",
     },
     "superica-krog": {
@@ -1220,7 +1220,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://superica.com",
     },
     # "fado-irish-pub" key = Buckhead location (273 Buckhead Ave NE) — already exists
@@ -1232,7 +1232,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.fadoirishpub.com/atlanta",
     },
     # ========== Regular Hangs buildout ==========
@@ -1246,7 +1246,7 @@ VENUES = {
         "city": "Decatur",
         "state": "GA",
         "zip": "30030",
-        "venue_type": "music_venue",
+        "place_type": "music_venue",
         "website": "https://eddiesattic.com",
     },
     # Improv venues
@@ -1258,7 +1258,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30312",
-        "venue_type": "theater",
+        "place_type": "theater",
         "website": "https://dadsgarage.com",
     },
     # "village-theatre" — REMOVED, cannot verify (Squarespace expired, no evidence of current operation)
@@ -1270,7 +1270,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "theater",
+        "place_type": "theater",
         "website": "https://wholeworldtheatre.com",
     },
     # Skate venues
@@ -1282,7 +1282,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30331",
-        "venue_type": "entertainment_venue",
+        "place_type": "entertainment_venue",
         "website": "https://cascadefamilyskating.com",
     },
     "sparkles-kennesaw": {
@@ -1293,7 +1293,7 @@ VENUES = {
         "city": "Kennesaw",
         "state": "GA",
         "zip": "30144",
-        "venue_type": "entertainment_venue",
+        "place_type": "entertainment_venue",
         "website": "https://www.sparkles.com",
     },
     # Latin night venues — uses same slug as dedicated crawler (havana_club.py)
@@ -1305,7 +1305,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30305",
-        "venue_type": "nightclub",
+        "place_type": "nightclub",
         "website": "https://www.havanaclubatl.com",
     },
     # "el-bar" — PERMANENTLY CLOSED, replaced by Bar ANA (2026-03)
@@ -1317,7 +1317,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "bar",
+        "place_type": "bar",
         # CLOSED — do not add website
     },
     # Viewing party / sports bar venues
@@ -1329,7 +1329,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "sports_bar",
+        "place_type": "sports_bar",
         "website": "https://hudsongrille.com",
     },
     "stats-brewpub": {
@@ -1340,7 +1340,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30313",
-        "venue_type": "sports_bar",
+        "place_type": "sports_bar",
         "website": "http://www.statsatl.com/",
     },
     # Additional bingo venue
@@ -1352,7 +1352,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30310",
-        "venue_type": "brewery",
+        "place_type": "brewery",
         "website": "https://mondaynightbrewing.com",
     },
     # ========== LISTENING BARS / VINYL ==========
@@ -1364,7 +1364,7 @@ VENUES = {
         "city": "Avondale Estates",
         "state": "GA",
         "zip": "30002",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.communeatl.com",
     },
     "westside-motor-lounge": {
@@ -1375,7 +1375,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.westsidemotorlounge.com",
     },
     "stereo-atl": {
@@ -1386,7 +1386,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.stereoatl.com",
     },
     # ========== PUB RUNS / CYCLING ==========
@@ -1398,7 +1398,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.themidwaypub.com",
     },
     # ========== BOOKSTORES ==========
@@ -1410,7 +1410,7 @@ VENUES = {
         "city": "Decatur",
         "state": "GA",
         "zip": "30030",
-        "venue_type": "bookstore",
+        "place_type": "bookstore",
         "website": "https://www.charisbooksandmore.com",
     },
     "a-cappella-books": {
@@ -1421,7 +1421,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "bookstore",
+        "place_type": "bookstore",
         "website": "https://www.acappellabooks.com",
     },
     # ========== OUTDOOR MOVIES ==========
@@ -1433,7 +1433,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30361",
-        "venue_type": "event_space",
+        "place_type": "event_space",
         "website": "https://www.colonysquare.com",
     },
     "atlantic-station": {
@@ -1444,7 +1444,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30363",
-        "venue_type": "event_space",
+        "place_type": "event_space",
         "website": "https://www.atlanticstation.com",
     },
     # ========== Tasting venues ==========
@@ -1456,7 +1456,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://reverenceatlanta.com",
     },
     "3-parks-wine-shop": {
@@ -1467,7 +1467,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
-        "venue_type": "wine_bar",
+        "place_type": "wine_bar",
         "website": "https://3parkswine.com",
     },
     "city-winery-atlanta": {
@@ -1478,7 +1478,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30308",
-        "venue_type": "wine_bar",
+        "place_type": "wine_bar",
         "website": "https://citywinery.com/atlanta",
     },
     "vinoteca-atl": {
@@ -1489,7 +1489,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
-        "venue_type": "wine_bar",
+        "place_type": "wine_bar",
         "website": "https://www.shopvinoteca.com",
     },
     "taste-wine-bar": {
@@ -1500,7 +1500,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "wine_bar",
+        "place_type": "wine_bar",
         "website": "https://www.tastewinebarandmarket.com",
     },
     # ========== Sports watch party venues ==========
@@ -1512,7 +1512,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30313",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://derbiergarten.com",
     },
     "ri-ra-midtown": {
@@ -1523,7 +1523,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "https://www.rirairishpub.com",
     },
     # "hudson-grille-midtown" — duplicate key removed (already defined at line 1320)
@@ -1536,7 +1536,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30329",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.petitevioletterestaurant.com",
     },
     "the-pigalle": {
@@ -1547,7 +1547,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30303",
-        "venue_type": "theater",
+        "place_type": "theater",
         "website": "https://thepigalle.com",
     },
     "national-anthem": {
@@ -1558,7 +1558,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30339",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.omnihotels.com/hotels/atlanta-battery/dining/national-anthem",
     },
     "the-supermarket-bakery": {
@@ -1569,7 +1569,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
-        "venue_type": "event_space",
+        "place_type": "event_space",
         "website": "https://www.thebakeryatlanta.com",
     },
     "wwa4": {
@@ -1580,7 +1580,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30336",
-        "venue_type": "venue",
+        "place_type": "venue",
         "website": "https://www.wwa4.com",
     },
     # ========== REDDIT RESTAURANT VENUES WITH RECURRING EVENTS ==========
@@ -1592,7 +1592,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30312",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.jenchans.com",
     },
     "whelan": {
@@ -1603,7 +1603,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "bar",
+        "place_type": "bar",
         "website": "http://www.thewhelan.com/",
     },
     "piassa-ethiopian": {
@@ -1614,7 +1614,7 @@ VENUES = {
         "city": "Scottdale",
         "state": "GA",
         "zip": "30079",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.piassaethiopianrestaurant.com",
     },
     "hamp-and-harrys": {
@@ -1625,7 +1625,7 @@ VENUES = {
         "city": "Marietta",
         "state": "GA",
         "zip": "30060",
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": "https://www.hampandharrys.com",
     },
 }
@@ -3809,7 +3809,7 @@ def _remove_suppressed_future_events(
                 client.table("events")
                 .delete(count="exact")
                 .eq("source_id", source_id)
-                .eq("venue_id", venue_id)
+                .eq("place_id", venue_id)
                 .gte("start_date", today_date)
                 .execute()
             )
@@ -3935,7 +3935,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": display_title,
                 "description": description,
                 "start_date": start_date,

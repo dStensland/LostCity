@@ -296,7 +296,7 @@ def analyze_venue_completeness(client):
     """Check venue data quality issues."""
     print_section("VENUE DATA COMPLETENESS")
     
-    result = client.table("venues").select(
+    result = client.table("places").select(
         "id,name,lat,lng,neighborhood,website,venue_type,image_url"
     ).execute()
     

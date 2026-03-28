@@ -68,7 +68,7 @@ def propose(
     client = get_client()
 
     # Fetch current value for context
-    resp = client.table("venues").select(field_name).eq("id", venue_id).single().execute()
+    resp = client.table("places").select(field_name).eq("id", venue_id).single().execute()
     current_value = None
     if resp.data:
         raw = resp.data.get(field_name)
@@ -77,13 +77,13 @@ def propose(
     # Supersede existing pending proposals for this venue+field
     client.table("venue_enrichment_proposals").update(
         {"status": "superseded"}
-    ).eq("venue_id", venue_id).eq("field_name", field_name).eq("status", "pending").execute()
+    ).eq("place_id", venue_id).eq("field_name", field_name).eq("status", "pending").execute()
 
     # Serialize proposed value
     serialized = json.dumps(proposed_value) if not isinstance(proposed_value, str) else proposed_value
 
     row = {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "field_name": field_name,
         "current_value": current_value,
         "proposed_value": serialized,
@@ -179,15 +179,15 @@ def approve_proposal(proposal_id: int, *, reviewed_by: str = "cli") -> bool:
         pass  # keep as string
 
     # Snapshot current value
-    venue_resp = client.table("venues").select(field_name).eq("id", venue_id).single().execute()
+    venue_resp = client.table("places").select(field_name).eq("id", venue_id).single().execute()
     previous = venue_resp.data.get(field_name) if venue_resp.data else None
 
     # Apply update
-    client.table("venues").update({field_name: proposed}).eq("id", venue_id).execute()
+    client.table("places").update({field_name: proposed}).eq("id", venue_id).execute()
 
     # Log in enrichment_log
     client.table("venue_enrichment_log").insert({
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "enrichment_type": f"proposal:{field_name}",
         "status": "success",
         "source": p.get("source", "agent"),
@@ -205,7 +205,7 @@ def approve_proposal(proposal_id: int, *, reviewed_by: str = "cli") -> bool:
 
     # Recompute data_quality
     fields = ",".join(["id"] + list(VENUE_WEIGHTS.keys()))
-    v_resp = client.table("venues").select(fields).eq("id", venue_id).single().execute()
+    v_resp = client.table("places").select(fields).eq("id", venue_id).single().execute()
     if v_resp.data:
         score = score_record(v_resp.data, VENUE_WEIGHTS)
         update_scores(client, "venues", {venue_id: score})

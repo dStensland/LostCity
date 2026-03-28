@@ -94,7 +94,7 @@ _COUNCIL_VENUE: dict = {
     "zip": "30339",
     "lat": 33.9003,
     "lng": -84.5618,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": _BASE_URL,
     "vibes": ["family-friendly", "all-ages"],
@@ -202,7 +202,7 @@ def _resolve_venue(location: str) -> dict:
                 "zip": zipcode,
                 "lat": lat,
                 "lng": lng,
-                "venue_type": "venue",
+                "place_type": "venue",
                 "spot_type": "venue",
                 "website": _BASE_URL,
                 "vibes": ["family-friendly", "all-ages"],
@@ -404,7 +404,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record: dict = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": name,
             "description": description,
             "start_date": start_date,

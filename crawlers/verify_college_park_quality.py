@@ -54,7 +54,7 @@ def check_venue_completeness(venues: List[Dict]) -> Dict:
             'hours': 0,
             'image_url': 0,
             'neighborhood': 0,
-            'venue_type': 0,
+            'place_type': 0,
         },
         'generic_addresses': [],
     }
@@ -96,7 +96,7 @@ def main():
     all_venues = []
     
     for city in cities:
-        result = client.table("venues").select("*").eq("city", city).execute()
+        result = client.table("places").select("*").eq("city", city).execute()
         all_venues.extend(result.data or [])
     
     logger.info(f"Analyzing {len(all_venues)} venues...")
@@ -177,7 +177,7 @@ def main():
 
     venue_event_counts = {}
     for venue in all_venues:
-        event_result = client.table("events").select("id", count="exact").eq("venue_id", venue['id']).execute()
+        event_result = client.table("events").select("id", count="exact").eq("place_id", venue['id']).execute()
         event_count = event_result.count or 0
         if event_count > 0:
             venue_event_counts[venue['name']] = event_count

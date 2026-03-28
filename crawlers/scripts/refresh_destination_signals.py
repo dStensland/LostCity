@@ -110,7 +110,7 @@ def _venue_rows_by_slug(venue_slugs: list[str]) -> dict[str, dict]:
         return {}
     rows = (
         get_client()
-        .table("venues")
+        .table("places")
         .select("id,slug,name")
         .in_("slug", venue_slugs)
         .execute()

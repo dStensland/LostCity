@@ -108,7 +108,7 @@ def fetch_venue_rows() -> list[dict]:
     offset = 0
     while True:
         batch = (
-            client.table("venues")
+            client.table("places")
             .select("name,slug,state,active,venue_type")
             .order("id")
             .range(offset, offset + 999)

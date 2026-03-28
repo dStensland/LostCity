@@ -44,7 +44,7 @@ PLACE_DATA = {
     "zip": "30046",
     "lat": 33.9555,
     "lng": -83.9887,
-    "venue_type": "historic_site",
+    "place_type": "historic_site",
     "spot_type": "historic_site",
     "website": CATALOG_URL,
     "description": "Gwinnett County historic venue hosting public ballroom workshops.",
@@ -165,7 +165,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": parsed["title"],
             "description": parsed["description"],
             "start_date": parsed["start_date"],

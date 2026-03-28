@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   filterVenueFeaturesForPortal,
   type VenueFeature,
-} from "@/lib/venue-features";
+} from "@/lib/place-features";
 
 const baseFeature: VenueFeature = {
   id: 1,

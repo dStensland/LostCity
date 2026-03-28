@@ -66,7 +66,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7537,
     "lng": -84.3863,
-    "venue_type": "gallery",
+    "place_type": "gallery",
     "spot_type": "gallery",
     "website": "https://artdesign.gsu.edu/galleries/",
     "vibes": ["artsy", "all-ages", "casual"],

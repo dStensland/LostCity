@@ -42,7 +42,7 @@ AGGREGATE_VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": None,
-    "venue_type": "organization",
+    "place_type": "organization",
     "website": BASE_URL,
 }
 
@@ -398,7 +398,7 @@ def build_venue_data(
         "city": "Atlanta",
         "state": "GA",
         "zip": None,
-        "venue_type": "restaurant",
+        "place_type": "restaurant",
         "website": article_url,
     }, True
 
@@ -489,7 +489,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description or "Restaurant opening update from Eater Atlanta.",
                 "start_date": start_date,

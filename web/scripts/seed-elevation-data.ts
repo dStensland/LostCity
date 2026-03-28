@@ -413,7 +413,7 @@ async function seed() {
 
   const { data: upcomingEvents, error: eventsError } = await supabase
     .from("events")
-    .select("id, title, start_date, category_id, venue_id, image_url")
+    .select("id, title, start_date, category_id, place_id, image_url")
     .gte("start_date", today)
     .lte("start_date", twoWeeksOut)
     .eq("is_active", true)
@@ -533,10 +533,10 @@ async function seed() {
 
   // ── Step 6: Regular spots ─────────────────────────────────────────────────
   const { data: venueRows, error: venuesError } = await supabase
-    .from("venues")
+    .from("places")
     .select("id, name, slug")
     .eq("city", "Atlanta")
-    .eq("active", true)
+    .eq("is_active", true)
     .order("name", { ascending: true })
     .limit(50);
 
@@ -551,7 +551,7 @@ async function seed() {
     // Check existing spots for seed users
     const { data: existingSpots } = await supabase
       .from("user_regular_spots")
-      .select("user_id, venue_id")
+      .select("user_id, place_id")
       .in("user_id", SEED_IDS);
     const existingSpotKeys = new Set(
       (existingSpots || []).map((s) => `${s.user_id}:${s.venue_id}`)
@@ -582,7 +582,7 @@ async function seed() {
     function addSpot(userId: string, venueId: number) {
       const key = `${userId}:${venueId}`;
       if (!existingSpotKeys.has(key)) {
-        spotsToInsert.push({ user_id: userId, venue_id: venueId });
+        spotsToInsert.push({ user_id: userId, place_id: venueId });
         existingSpotKeys.add(key);
       }
     }

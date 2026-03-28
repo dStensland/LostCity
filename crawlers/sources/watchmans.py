@@ -26,7 +26,7 @@ PLACE_DATA = {
     "zip": "30307",
     "lat": 33.7536,
     "lng": -84.3594,
-    "venue_type": "bar",
+    "place_type": "bar",
     "spot_type": "bar",
     "website": BASE_URL,
     "vibes": ["cocktails", "craft-cocktails", "inman-park", "krog-street-market", "date-night"],

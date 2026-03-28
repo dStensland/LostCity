@@ -34,7 +34,7 @@ BELTLINE_HQ = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30303",
-    "venue_type": "nonprofit",
+    "place_type": "nonprofit",
     "website": BASE_URL,
 }
 
@@ -51,7 +51,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "park",
             "commitment_tier": "halfday",
             "primary_activity": "family trail and park visit",
@@ -68,7 +68,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": f"{BASE_URL}/visit/",
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": BELTLINE_HQ.get("venue_type"),
+                "place_type": BELTLINE_HQ.get("venue_type"),
                 "city": "atlanta",
             },
         },
@@ -76,7 +76,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "connected-trails-and-parks",
             "title": "Connected trails and parks",
             "feature_type": "amenity",
@@ -90,7 +90,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "free-public-art-and-explore-stops",
             "title": "Free public art and explore stops",
             "feature_type": "experience",
@@ -350,7 +350,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": None,
                         "start_date": event_date,

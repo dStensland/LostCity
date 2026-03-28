@@ -45,7 +45,7 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30309",
-        "venue_type": "fitness_center",
+        "place_type": "fitness_center",
         "website": "https://www.piedmont.org/locations/fitness-centers/atlanta-fitness-center",
         "schedules": {
             "studio": "https://www.piedmont.org/-/media/files/locations/2025-03-pah-studio-schedule.pdf",
@@ -59,7 +59,7 @@ VENUES = {
         "city": "Newnan",
         "state": "GA",
         "zip": "30265",
-        "venue_type": "fitness_center",
+        "place_type": "fitness_center",
         "website": "https://www.piedmont.org/locations/fitness-centers/newnan-fitness-center",
         "schedules": {
             "fitness": "https://www.piedmont.org/-/media/files/locations/2025-pnh-online-fitness-calendar.pdf",
@@ -72,7 +72,7 @@ VENUES = {
         "city": "Fayetteville",
         "state": "GA",
         "zip": "30214",
-        "venue_type": "fitness_center",
+        "place_type": "fitness_center",
         "website": "https://www.piedmontwellnesscenter.com/",
         "calendar_url": "https://www.piedmontwellnesscenter.com/calendar/",
     },
@@ -256,7 +256,7 @@ def crawl_pdf_schedule(pdf_url: str, place_data: dict, source_id: int, portal_id
 
                             event_record = {
                                 "source_id": source_id,
-                                "venue_id": venue_id,
+                                "place_id": venue_id,
                                 "portal_id": portal_id,
                                 "title": class_name,
                                 "description": description,
@@ -472,7 +472,7 @@ def crawl_fayetteville_calendar(place_data: dict, source_id: int, portal_id: Opt
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "portal_id": portal_id,
                             "title": class_name,
                             "description": description,

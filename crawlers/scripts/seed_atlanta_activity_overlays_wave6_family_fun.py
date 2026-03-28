@@ -36,7 +36,7 @@ ENSURE_VENUES: dict[str, dict[str, Any]] = {
         "city": "Fayetteville",
         "state": "GA",
         "zip": "30214",
-        "venue_type": "attraction",
+        "place_type": "attraction",
         "spot_type": "attraction",
         "website": "https://funspotamericaatlanta.com/",
     },
@@ -47,7 +47,7 @@ ENSURE_VENUES: dict[str, dict[str, Any]] = {
         "city": "McDonough",
         "state": "GA",
         "zip": "30252",
-        "venue_type": "outdoor_venue",
+        "place_type": "outdoor_venue",
         "spot_type": "outdoor_venue",
         "website": "https://www.southernbellefarm.com/",
     },
@@ -58,7 +58,7 @@ ENSURE_VENUES: dict[str, dict[str, Any]] = {
         "city": "Marietta",
         "state": "GA",
         "zip": "30066",
-        "venue_type": "entertainment",
+        "place_type": "entertainment",
         "spot_type": "games",
         "website": "https://monsterminigolf.com/locations/us/ga/marietta/",
     },
@@ -69,7 +69,7 @@ ENSURE_VENUES: dict[str, dict[str, Any]] = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30318",
-        "venue_type": "entertainment",
+        "place_type": "entertainment",
         "spot_type": "games",
         "website": "https://www.puttshack.com/locations/atlanta/",
     },
@@ -199,7 +199,7 @@ ATLANTA_ACTIVITY_OVERLAYS_WAVE6: dict[str, list[dict[str, Any]]] = {
 def _get_or_create_target_venue(venue_slug: str, apply: bool) -> dict[str, Any] | None:
     client = get_client()
     venue_res = (
-        client.table("venues").select("id,name,slug").eq("slug", venue_slug).limit(1).execute()
+        client.table("places").select("id,name,slug").eq("slug", venue_slug).limit(1).execute()
     )
     if venue_res.data:
         return venue_res.data[0]
@@ -212,7 +212,7 @@ def _get_or_create_target_venue(venue_slug: str, apply: bool) -> dict[str, Any] 
     temp_or_real_id = get_or_create_place(payload)
     if apply:
         venue_res = (
-            client.table("venues").select("id,name,slug").eq("slug", venue_slug).limit(1).execute()
+            client.table("places").select("id,name,slug").eq("slug", venue_slug).limit(1).execute()
         )
         if venue_res.data:
             return venue_res.data[0]

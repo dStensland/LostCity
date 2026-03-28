@@ -47,7 +47,7 @@ JTA_VENUE_DATA = {
     "zip": "30060",
     "lat": 33.9429,
     "lng": -84.5469,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": "https://www.cobbcounty.org/parks/performing-arts/jennie-t-anderson-theatre",
     "vibes": ["all-ages", "family-friendly"],
@@ -64,7 +64,7 @@ STUDIO_VENUE_DATA = {
     "zip": "30066",
     "lat": 34.0241,
     "lng": -84.4957,
-    "venue_type": "dance_studio",
+    "place_type": "dance_studio",
     "spot_type": "theater",
     "website": BASE_URL,
     "vibes": ["all-ages", "family-friendly"],
@@ -495,7 +495,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description,
                         "start_date": start_date,

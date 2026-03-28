@@ -40,7 +40,7 @@ PLACE_DATA = {
     "zip": "30144",
     "lat": 34.0234,
     "lng": -84.6155,
-    "venue_type": "games",
+    "place_type": "games",
     "spot_type": "games",
     "website": "https://www.sparkles.com",
     "description": "Family entertainment center with roller skating rink, bowling, laser tag, and arcade games. Home venue for Peach State Roller Derby.",
@@ -320,7 +320,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if existing:
                 smart_update_existing_event(existing, {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": start_date,
@@ -350,7 +350,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Create event record
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": start_date,

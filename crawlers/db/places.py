@@ -47,7 +47,7 @@ VIRTUAL_VENUE_DATA = {
     "slug": VIRTUAL_VENUE_SLUG,
     "city": "Atlanta",
     "state": "GA",
-    "venue_type": "virtual",
+    "place_type": "virtual",
     "location_designator": "virtual",
 }
 
@@ -214,8 +214,8 @@ def _with_closed_note(description: Optional[str]) -> str:
 def _lock_closed_venue_record(client, venue_id: int, existing: dict) -> None:
     """Ensure a permanently-closed venue remains inactive."""
     update_data = {}
-    if existing.get("active") is not False:
-        update_data["active"] = False
+    if existing.get("is_active") is not False:
+        update_data["is_active"] = False
     next_description = _with_closed_note(existing.get("description"))
     if next_description != (existing.get("description") or "").strip():
         update_data["description"] = next_description
@@ -227,14 +227,14 @@ def _lock_closed_venue_record(client, venue_id: int, existing: dict) -> None:
         _log_write_skip(f"update venues id={venue_id} set closed lock")
         return
 
-    client.table("venues").update(update_data).eq("id", venue_id).execute()
+    client.table("places").update(update_data).eq("id", venue_id).execute()
 
 
 def infer_location_designator(venue_data: dict) -> str:
     """Infer location designator for venue-level rendering/quality logic."""
     slug = (venue_data.get("slug") or "").strip().lower()
     name = _normalize_venue_name(venue_data.get("name"))
-    venue_type = (venue_data.get("venue_type") or "").strip().lower()
+    venue_type = (venue_data.get("place_type") or venue_data.get("venue_type") or "").strip().lower()
 
     if (
         venue_type == "virtual"
@@ -366,7 +366,7 @@ def _sanitize_venue_payload(venue_data: dict) -> dict:
 # Identity/administrative fields (name, slug, city, state, active) are excluded.
 _VENUE_BACKFILL_FIELDS = {
     "address", "zip", "neighborhood", "description", "image_url",
-    "hero_image_url", "website", "venue_type", "vibes", "spot_type",
+    "hero_image_url", "website", "place_type", "vibes", "spot_type",
     "hours", "phone",
 }
 
@@ -377,7 +377,7 @@ def _maybe_update_existing_venue(venue_id: int, venue_data: dict) -> None:
         return
 
     client = get_client()
-    existing = client.table("venues").select("*").eq("id", venue_id).execute()
+    existing = client.table("places").select("*").eq("id", venue_id).execute()
     if not existing.data:
         return
     current = existing.data[0]
@@ -417,19 +417,19 @@ def _maybe_update_existing_venue(venue_id: int, venue_data: dict) -> None:
         if valid:
             updates["vibes"] = valid
 
-    # venue_type: crawler VENUE_DATA is a higher-trust signal than early LLM
+    # place_type: crawler VENUE_DATA is a higher-trust signal than early LLM
     # classification — allow override even when current is non-NULL.
-    incoming_type = venue_data.get("venue_type")
-    current_type = current.get("venue_type")
+    incoming_type = venue_data.get("place_type")
+    current_type = current.get("place_type")
     if (
         incoming_type
         and current_type
         and incoming_type != current_type
         and incoming_type in VALID_VENUE_TYPES
     ):
-        updates["venue_type"] = incoming_type
+        updates["place_type"] = incoming_type
         logger.info(
-            "Correcting venue_type for '%s': %s -> %s (crawler override)",
+            "Correcting place_type for '%s': %s -> %s (crawler override)",
             current.get("name") or "unknown",
             current_type,
             incoming_type,
@@ -438,7 +438,7 @@ def _maybe_update_existing_venue(venue_id: int, venue_data: dict) -> None:
     if not updates:
         return
 
-    client.table("venues").update(updates).eq("id", venue_id).execute()
+    client.table("places").update(updates).eq("id", venue_id).execute()
     logger.info(
         "Backfilled venue %s (id=%d): %s",
         current.get("name") or venue_data.get("name") or "unknown",
@@ -501,7 +501,7 @@ def get_or_create_virtual_venue() -> int:
     """Get or create canonical virtual venue. Returns venue ID."""
     client = get_client()
     result = (
-        client.table("venues").select("id").eq("slug", VIRTUAL_VENUE_SLUG).execute()
+        client.table("places").select("id").eq("slug", VIRTUAL_VENUE_SLUG).execute()
     )
     if result.data:
         return result.data[0]["id"]
@@ -511,7 +511,7 @@ def get_or_create_virtual_venue() -> int:
     payload = _sanitize_venue_payload(VIRTUAL_VENUE_DATA)
     if not venues_support_location_designator():
         payload.pop("location_designator", None)
-    result = client.table("venues").insert(payload).execute()
+    result = client.table("places").insert(payload).execute()
     return result.data[0]["id"]
 
 
@@ -553,8 +553,8 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
         existing = None
         if slug:
             res = (
-                client.table("venues")
-                .select("id, active, description")
+                client.table("places")
+                .select("id, is_active, description")
                 .eq("slug", slug)
                 .limit(1)
                 .execute()
@@ -564,8 +564,8 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
 
         if not existing and name:
             res = (
-                client.table("venues")
-                .select("id, active, description")
+                client.table("places")
+                .select("id, is_active, description")
                 .eq("name", name)
                 .limit(1)
                 .execute()
@@ -578,7 +578,7 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
             return existing["id"]
 
         blocked_venue_data = _sanitize_venue_payload(venue_data)
-        blocked_venue_data["active"] = False
+        blocked_venue_data["is_active"] = False
         blocked_venue_data["description"] = _with_closed_note(
             blocked_venue_data.get("description")
         )
@@ -588,7 +588,7 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
                 f"insert venues name={blocked_venue_data.get('name', 'unknown')} (closed guard)"
             )
             return _next_temp_id()
-        result = client.table("venues").insert(blocked_venue_data).execute()
+        result = client.table("places").insert(blocked_venue_data).execute()
         return result.data[0]["id"]
 
     def _touch_verified_at(venue_id: int) -> None:
@@ -596,19 +596,19 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
         if not writes_enabled():
             return
         try:
-            client.table("venues").update(
+            client.table("places").update(
                 {"verified_at": datetime.now(timezone.utc).isoformat()}
-            ).eq("id", venue_id).execute()
+            ).eq("id", venue_id).execute()  # verified_at column unchanged
         except Exception:
             pass  # Non-critical — don't fail the crawl
 
     def _maybe_reactivate_existing_venue(existing: dict) -> int:
         venue_id = existing["id"]
-        if existing.get("active") is False and venue_data.get("active") is True:
+        if existing.get("is_active") is False and venue_data.get("is_active") is True:
             if not writes_enabled():
-                _log_write_skip(f"update venues id={venue_id} reactivate")
+                _log_write_skip(f"update places id={venue_id} reactivate")
             else:
-                client.table("venues").update({"active": True}).eq("id", venue_id).execute()
+                client.table("places").update({"is_active": True}).eq("id", venue_id).execute()
                 logger.info(
                     "Reactivated venue %s from explicit crawler signal",
                     venue_data.get("slug") or venue_data.get("name") or venue_id,
@@ -626,7 +626,7 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
     # ── Existing venue lookup (before creation-only validation) ──
     slug = venue_data.get("slug")
     if slug:
-        result = client.table("venues").select("id, active").eq("slug", slug).execute()
+        result = client.table("places").select("id, is_active").eq("slug", slug).execute()
         if result.data and len(result.data) > 0:
             venue_id = _maybe_reactivate_existing_venue(result.data[0])
             _maybe_update_existing_venue(venue_id, venue_data)
@@ -635,7 +635,7 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
 
     name = venue_data.get("name")
     if name:
-        result = client.table("venues").select("id, active").eq("name", name).execute()
+        result = client.table("places").select("id, is_active").eq("name", name).execute()
         if result.data and len(result.data) > 0:
             venue_id = _maybe_reactivate_existing_venue(result.data[0])
             _maybe_update_existing_venue(venue_id, venue_data)
@@ -643,7 +643,7 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
             return venue_id
 
         for alias in _venue_name_aliases(name):
-            result = client.table("venues").select("id, active").eq("name", alias).execute()
+            result = client.table("places").select("id, is_active").eq("name", alias).execute()
             if result.data and len(result.data) > 0:
                 logger.info(
                     "Venue alias match: reusing '%s' for '%s'",
@@ -677,7 +677,7 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
         lng_delta = 0.001
         try:
             nearby = (
-                client.table("venues")
+                client.table("places")
                 .select("id, name")
                 .gte("lat", lat - lat_delta)
                 .lte("lat", lat + lat_delta)
@@ -742,10 +742,10 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
             venue_data.get("hero_image_url")
         )
 
-    vtype = venue_data.get("venue_type")
+    vtype = venue_data.get("place_type")
     if vtype and vtype not in VALID_VENUE_TYPES:
         logger.warning(
-            f"Unknown venue_type '{vtype}' for '{venue_data.get('name', '?')}'"
+            f"Unknown place_type '{vtype}' for '{venue_data.get('name', '?')}'"
         )
 
     if venue_data.get("vibes"):
@@ -788,7 +788,7 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
             "proximity dedup cannot catch future duplicates.",
             venue_data.get("name", "unknown"),
         )
-        if not venue_data.get("city") or not venue_data.get("venue_type"):
+        if not venue_data.get("city") or not venue_data.get("place_type"):
             logger.warning(
                 "Skipping venue creation for '%s' — insufficient data.",
                 venue_data.get("name", "unknown"),
@@ -800,7 +800,7 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
     if not writes_enabled():
         _log_write_skip(f"insert venues name={venue_data.get('name', 'unknown')}")
         return _next_temp_id()
-    result = client.table("venues").insert(venue_data).execute()
+    result = client.table("places").insert(venue_data).execute()
     new_venue_id = result.data[0]["id"]
     _persist_venue_enrichment(new_venue_id, _enrichment_details, _enrichment_features, _enrichment_specials)
     return new_venue_id
@@ -810,7 +810,7 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
 def get_venue_by_id(venue_id: int) -> Optional[dict]:
     """Fetch a venue by its ID."""
     client = get_client()
-    result = client.table("venues").select("*").eq("id", venue_id).execute()
+    result = client.table("places").select("*").eq("id", venue_id).execute()
     if result.data and len(result.data) > 0:
         return result.data[0]
     return None
@@ -835,7 +835,7 @@ def clear_venue_cache() -> None:
 def get_venue_by_slug(slug: str) -> Optional[dict]:
     """Fetch a venue by its slug."""
     client = get_client()
-    result = client.table("venues").select("*").eq("slug", slug).execute()
+    result = client.table("places").select("*").eq("slug", slug).execute()
     if result.data and len(result.data) > 0:
         return result.data[0]
     return None
@@ -862,7 +862,7 @@ def upsert_venue_feature(venue_id: int, feature_data: dict) -> Optional[int]:
         return None
 
     row = {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": slug,
         "title": title,
         "feature_type": feature_data.get("feature_type", "attraction"),
@@ -887,7 +887,7 @@ def upsert_venue_feature(venue_id: int, feature_data: dict) -> Optional[int]:
     try:
         result = (
             client.table("venue_features")
-            .upsert(row, on_conflict="venue_id,slug")
+            .upsert(row, on_conflict="place_id,slug")
             .execute()
         )
         if result.data:
@@ -907,14 +907,14 @@ def get_sibling_venue_ids(venue_id: int) -> list[int]:
 
     venue_name = venue.get("name", "").lower()
 
-    parent_venue_id = venue.get("parent_venue_id")
+    parent_place_id = venue.get("parent_place_id")
 
-    if parent_venue_id:
+    if parent_place_id:
         result = (
-            client.table("venues")
+            client.table("places")
             .select("id")
-            .or_(f"id.eq.{parent_venue_id},parent_venue_id.eq.{parent_venue_id}")
-            .eq("active", True)
+            .or_(f"id.eq.{parent_place_id},parent_place_id.eq.{parent_place_id}")
+            .eq("is_active", True)
             .execute()
         )
         if result.data:
@@ -922,10 +922,10 @@ def get_sibling_venue_ids(venue_id: int) -> list[int]:
 
     if "masquerade" in venue_name:
         result = (
-            client.table("venues")
+            client.table("places")
             .select("id")
             .ilike("name", "%masquerade%")
-            .eq("active", True)
+            .eq("is_active", True)
             .execute()
         )
         if result.data:

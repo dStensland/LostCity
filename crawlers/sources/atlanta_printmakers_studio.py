@@ -42,7 +42,7 @@ PLACE_DATA = {
     "zip": "30354",
     "lat": 33.6697,
     "lng": -84.4118,
-    "venue_type": "studio",
+    "place_type": "studio",
     "spot_type": "studio",
     "website": BASE_URL,
     "description": (
@@ -311,7 +311,7 @@ def _sync_exhibition_record(
     """Persist an exhibition record and return (found, new, updated)."""
     exhibition_record = {
         "title": candidate.title,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "source_id": source_id,
         "_venue_name": PLACE_DATA["name"],
         "opening_date": candidate.opening_date,

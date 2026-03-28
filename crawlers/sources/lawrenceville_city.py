@@ -26,7 +26,7 @@ PLACE_DATA = {
     "zip": "30046",
     "lat": 33.9562,
     "lng": -83.9880,
-    "venue_type": "city",
+    "place_type": "city",
     "spot_type": "city",
     "website": BASE_URL,
     "description": "Historic Gwinnett County seat with vibrant downtown square, Aurora Theatre, and year-round festivals.",
@@ -76,7 +76,7 @@ def create_annual_festivals(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Free annual music and arts festival in downtown Lawrenceville. "
@@ -128,7 +128,7 @@ def create_annual_festivals(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Free family fall festival in downtown Lawrenceville. "
@@ -183,7 +183,7 @@ def create_annual_festivals(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Halloween celebration in downtown Lawrenceville. "
@@ -236,7 +236,7 @@ def create_annual_festivals(source_id: int, venue_id: int) -> tuple[int, int]:
     if not find_event_by_hash(content_hash):
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": (
                 "Independence Day eve celebration in downtown Lawrenceville. "
@@ -310,7 +310,7 @@ def create_summer_concerts(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,

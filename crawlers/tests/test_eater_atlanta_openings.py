@@ -44,7 +44,7 @@ def test_build_venue_data_uses_restaurant_venue_when_identified():
     )
     assert is_specific is True
     assert place_data["name"] == "Ikara"
-    assert place_data["venue_type"] == "restaurant"
+    assert place_data["place_type"] == "restaurant"
     assert place_data["neighborhood"] == "Atlantic Station"
 
 

@@ -53,9 +53,9 @@ export async function GET(request: NextRequest) {
     };
 
     const result = await supabase
-      .from("venues")
-      .select("id, name, slug, venue_type, neighborhood, image_url, short_description, library_pass")
-      .eq("active", true)
+      .from("places")
+      .select("id, name, slug, place_type, neighborhood, image_url, short_description, library_pass")
+      .eq("is_active", true)
       .in("city", portalCities)
       .not("library_pass", "is", null)
       .order("name", { ascending: true });

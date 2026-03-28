@@ -115,7 +115,7 @@ def get_venues_with_websites(
 ) -> list[dict]:
     """Fetch venues with websites to crawl."""
 
-    query = client.table("venues").select(
+    query = client.table("places").select(
         "id, name, slug, website, venue_type, address, neighborhood, city, state, zip, vibes"
     ).eq("active", True).not_.is_("website", "null")
 
@@ -148,7 +148,7 @@ def get_venues_missing_events(client: Client, limit: int = 100) -> list[dict]:
     """Get event venues with websites but no crawled events."""
 
     # Get all event venues with websites
-    venues_result = client.table("venues").select(
+    venues_result = client.table("places").select(
         "id, name, slug, website, venue_type, address, neighborhood, city, state, zip, vibes"
     ).eq("active", True).eq("is_event_venue", True).not_.is_("website", "null").execute()
 
@@ -400,7 +400,7 @@ def crawl_venue(
             # Build event record
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": event.title,
                 "description": event.description,
                 "start_date": event.start_date,

@@ -34,7 +34,7 @@ PLACE_DATA = {
     "zip": "30305",
     "lat": 33.8440,
     "lng": -84.3690,
-    "venue_type": "church",
+    "place_type": "church",
     "spot_type": "church",
     "website": "https://www.prumc.org/",
     "vibes": ["faith-christian", "methodist", "live-music", "historic", "upscale"],
@@ -249,7 +249,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Build event record
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title[:500],
                     "description": description or f"Music event at Peachtree Road United Methodist Church.",
                     "start_date": start_date,

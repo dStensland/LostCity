@@ -29,7 +29,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Award-winning brisket, Texas-style BBQ. Featured on Eater Nashville Essential 38.',
         'vibes': ['bbq', 'casual', 'local-favorite']
     },
@@ -39,7 +39,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'James Beard finalist Josh Habiger. Tasting menu and bar. Featured on Eater Nashville Essential 38.',
         'vibes': ['upscale', 'tasting-menu', 'chef-driven', 'award-winning']
     },
@@ -49,7 +49,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Sean Brock. Neopolitan-Tokyo fusion pizza. Featured on Eater Nashville Essential 38.',
         'vibes': ['pizza', 'fusion', 'chef-driven']
     },
@@ -59,7 +59,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Thai fried chicken at the Wash food hall. Featured on Eater Nashville Essential 38.',
         'vibes': ['thai', 'food-hall', 'casual']
     },
@@ -69,7 +69,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Milk bread sandwiches, katsu. Featured on Eater Nashville Essential 38.',
         'vibes': ['asian', 'sandwiches', 'casual']
     },
@@ -79,7 +79,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Vietnamese sandwiches. Featured on Eater Nashville Essential 38.',
         'vibes': ['vietnamese', 'sandwiches', 'casual']
     },
@@ -89,7 +89,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Pretzels and sandwiches. Featured on Eater Nashville Essential 38.',
         'vibes': ['pretzels', 'sandwiches', 'casual']
     },
@@ -99,7 +99,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Pan-Asian, bao buns, hand-pulled noodles. Featured on Eater Nashville Essential 38.',
         'vibes': ['pan-asian', 'bao', 'noodles']
     },
@@ -109,7 +109,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Philip Krajeck, pizza-focused. Featured on Eater Nashville Essential 38.',
         'vibes': ['pizza', 'chef-driven', 'casual']
     },
@@ -119,7 +119,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'New Orleans spirit, beer garden. Featured on Eater Nashville Essential 38.',
         'vibes': ['beer-garden', 'new-orleans', 'casual']
     },
@@ -129,7 +129,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Spanish/Iberian, moody, wine-focused. Featured on Eater Nashville Essential 38.',
         'vibes': ['spanish', 'wine-bar', 'moody']
     },
@@ -139,7 +139,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Wood-fired Asian, brunch. Featured on Eater Nashville Essential 38.',
         'vibes': ['asian', 'brunch', 'wood-fired']
     },
@@ -149,7 +149,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Heirloom corn, fresh masa. Also has Gulch location. Featured on Eater Nashville Essential 38.',
         'vibes': ['mexican', 'masa', 'chef-driven']
     },
@@ -159,7 +159,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': "Nashville's oldest dive bar, burgers. Featured on Eater Nashville Essential 38.",
         'vibes': ['dive-bar', 'burgers', 'historic', 'local-favorite']
     },
@@ -169,7 +169,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Top hot chicken spot. Featured on Eater Nashville Essential 38.',
         'vibes': ['hot-chicken', 'casual', 'local-favorite']
     },
@@ -179,7 +179,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Wood-fired pizza, seasonal. Featured on Eater Nashville Essential 38.',
         'vibes': ['pizza', 'wood-fired', 'seasonal']
     },
@@ -189,7 +189,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'East Nashville',
-        'venue_type': 'bar',
+        'place_type': 'bar',
         'description': 'Wine-focused, former church, late night til 1am. Featured on Eater Nashville Essential 38.',
         'vibes': ['wine-bar', 'late-night', 'unique-space']
     },
@@ -201,7 +201,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Germantown',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Tandy Wilson, James Beard winner 2016. Italian and wood-fired pizza. Featured on Eater Nashville Essential 38.',
         'vibes': ['italian', 'pizza', 'award-winning', 'chef-driven']
     },
@@ -211,7 +211,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Germantown',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Italian deli and market. 3 locations. Featured on Eater Nashville Essential 38.',
         'vibes': ['italian', 'deli', 'market']
     },
@@ -223,7 +223,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Salemtown',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Homestyle breakfast/lunch, Southern staples. Featured on Eater Nashville Essential 38.',
         'vibes': ['breakfast', 'lunch', 'southern', 'deli']
     },
@@ -235,7 +235,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Midtown',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Chef Vivek Surti, South Asian American, dinner party style, $130-150. Featured on Eater Nashville Essential 38.',
         'vibes': ['south-asian', 'tasting-menu', 'upscale', 'chef-driven']
     },
@@ -245,7 +245,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': '12 South',
-        'venue_type': 'cafe',
+        'place_type': 'cafe',
         'description': 'Bakehouse, cafe, breakfast. Featured on Eater Nashville Essential 38.',
         'vibes': ['bakery', 'breakfast', 'cafe']
     },
@@ -255,7 +255,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': '12 South',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': "Chef Trevor Moran, dumplings, kakigori. World's 50 Best North America list. Featured on Eater Nashville Essential 38.",
         'vibes': ['asian', 'award-winning', 'chef-driven', 'dumplings']
     },
@@ -267,7 +267,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Wedgewood Houston',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Italian, inventive. Featured on Eater Nashville Essential 38.',
         'vibes': ['italian', 'inventive', 'chef-driven']
     },
@@ -277,7 +277,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Wedgewood Houston',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Sicilian sfincione/focaccia pizza. Featured on Eater Nashville Essential 38.',
         'vibes': ['sicilian', 'pizza', 'focaccia']
     },
@@ -287,7 +287,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'The Gulch',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Joseph hotel, Italian fine dining, cheese cave. Featured on Eater Nashville Essential 38.',
         'vibes': ['italian', 'fine-dining', 'upscale', 'hotel']
     },
@@ -299,7 +299,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'West Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Vietnamese, cash-only. Note: moving to Mt. Juliet 2026. Featured on Eater Nashville Essential 38.',
         'vibes': ['vietnamese', 'pho', 'cash-only']
     },
@@ -309,7 +309,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'West Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Pizza. 3 locations: West, Hendersonville, Franklin. Featured on Eater Nashville Essential 38.',
         'vibes': ['pizza', 'casual']
     },
@@ -319,7 +319,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'West Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Since 1952, meat-and-three. Featured on Eater Nashville Essential 38.',
         'vibes': ['meat-and-three', 'southern', 'historic']
     },
@@ -331,7 +331,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Belmont',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'James Beard semifinalist Arnold Myint, Thai. Featured on Eater Nashville Essential 38.',
         'vibes': ['thai', 'award-winning', 'chef-driven']
     },
@@ -343,7 +343,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Belle Meade',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': "All-day, oysters, Julia Jaksic's West Nashville spot. Featured on Eater Nashville Essential 38.",
         'vibes': ['all-day', 'oysters', 'upscale']
     },
@@ -355,7 +355,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'South Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Ethiopian, coffee service. Featured on Eater Nashville Essential 38.',
         'vibes': ['ethiopian', 'coffee']
     },
@@ -365,7 +365,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'South Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Thai, from food truck to 2 locations. Featured on Eater Nashville Essential 38.',
         'vibes': ['thai', 'casual']
     },
@@ -375,7 +375,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'South Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Egyptian/NY flair, falafel. Featured on Eater Nashville Essential 38.',
         'vibes': ['egyptian', 'middle-eastern', 'falafel']
     },
@@ -385,7 +385,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'South Nashville',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Kurdish and Turkish, halal. Featured on Eater Nashville Essential 38.',
         'vibes': ['kurdish', 'turkish', 'halal']
     },
@@ -397,7 +397,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Antioch',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Korean, over a decade. Featured on Eater Nashville Essential 38.',
         'vibes': ['korean', 'casual']
     },
@@ -409,7 +409,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Germantown',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Victorian home, all-you-can-eat family-style, fried chicken. Featured on Eater Nashville Essential 38.',
         'vibes': ['southern', 'family-style', 'fried-chicken', 'unique-space']
     },
@@ -419,7 +419,7 @@ EATER_NASHVILLE_VENUES = [
         'city': 'Nashville',
         'state': 'TN',
         'neighborhood': 'Jefferson Street',
-        'venue_type': 'restaurant',
+        'place_type': 'restaurant',
         'description': 'Caribbean/Jamaican, near Jefferson St. Featured on Eater Nashville Essential 38.',
         'vibes': ['caribbean', 'jamaican', 'casual']
     },
@@ -449,17 +449,17 @@ def import_venues():
             place_data['vibes'] = list(set(existing_vibes + curator_vibes))
 
             # Check if venue exists
-            existing = client.table('venues').select('id, name').eq('slug', place_data['slug']).execute()
+            existing = client.table('places').select('id, name').eq('slug', place_data['slug']).execute()
 
             if existing.data:
                 # Update existing venue
                 venue_id = existing.data[0]['id']
-                result = client.table('venues').update(place_data).eq('id', venue_id).execute()
+                result = client.table('places').update(place_data).eq('id', venue_id).execute()
                 logger.info(f"[{i}/{total}] Updated: {place_data['name']}")
                 updated += 1
             else:
                 # Insert new venue
-                result = client.table('venues').insert(place_data).execute()
+                result = client.table('places').insert(place_data).execute()
                 logger.info(f"[{i}/{total}] Created: {place_data['name']}")
                 created += 1
 

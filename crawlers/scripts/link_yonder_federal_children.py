@@ -102,7 +102,7 @@ def main() -> None:
                 skipped += 1
                 continue
             if args.apply:
-                client.table("venues").update({"parent_venue_id": parent["id"]}).eq("id", child["id"]).execute()
+                client.table("places").update({"parent_venue_id": parent["id"]}).eq("id", child["id"]).execute()
             print(
                 f"{'LINK' if args.apply else 'WOULD LINK'} child: {child_slug} -> {parent_slug}"
             )

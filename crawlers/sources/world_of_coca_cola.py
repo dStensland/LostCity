@@ -32,7 +32,7 @@ PLACE_DATA = {
     "zip": "30313",
     "lat": 33.7626,
     "lng": -84.3927,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
     # Admission: $21 adult, $17 child (ages 3-12), free under 3
@@ -175,7 +175,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if og_desc:
                             venue_update["description"] = og_desc[:500]
                         if venue_update:
-                            get_client().table("venues").update(venue_update).eq(
+                            get_client().table("places").update(venue_update).eq(
                                 "id", venue_id
                             ).execute()
                             logger.info(
@@ -275,7 +275,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": None,
                         "start_date": start_date,

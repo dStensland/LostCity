@@ -40,7 +40,7 @@ VENUES = {
         "city": "Kennesaw",
         "state": "GA",
         "zip": "30144",
-        "venue_type": "stadium",
+        "place_type": "stadium",
         "website": "https://ksuowls.com",
     },
     "mens-basketball": {
@@ -51,7 +51,7 @@ VENUES = {
         "city": "Kennesaw",
         "state": "GA",
         "zip": "30144",
-        "venue_type": "arena",
+        "place_type": "arena",
         "website": "https://ksuowls.com",
     },
     "womens-basketball": {
@@ -62,7 +62,7 @@ VENUES = {
         "city": "Kennesaw",
         "state": "GA",
         "zip": "30144",
-        "venue_type": "arena",
+        "place_type": "arena",
         "website": "https://ksuowls.com",
     },
     "baseball": {
@@ -75,7 +75,7 @@ VENUES = {
         "zip": "30144",
         "lat": 34.02893980,
         "lng": -84.56760790,
-        "venue_type": "stadium",
+        "place_type": "stadium",
         "website": "https://ksuowls.com",
     },
     "softball": {
@@ -86,7 +86,7 @@ VENUES = {
         "city": "Kennesaw",
         "state": "GA",
         "zip": "30144",
-        "venue_type": "stadium",
+        "place_type": "stadium",
         "website": "https://ksuowls.com",
     },
     "default": {
@@ -97,7 +97,7 @@ VENUES = {
         "city": "Kennesaw",
         "state": "GA",
         "zip": "30144",
-        "venue_type": "university",
+        "place_type": "university",
         "website": "https://kennesaw.edu",
     },
 }
@@ -291,7 +291,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id if is_home else None,
+                    "place_id": venue_id if is_home else None,
                     "title": title,
                     "description": build_ksu_description(
                         sport_display=sport_display,

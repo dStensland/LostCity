@@ -32,7 +32,7 @@ PLACE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30306",
-    "venue_type": "music_venue",
+    "place_type": "music_venue",
     "website": "https://www.songkick.com/venues/3517036-drunken-unicorn",
 }
 
@@ -189,7 +189,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": f"Live music at The Drunken Unicorn featuring {title}",
                             "start_date": start_date,
@@ -296,7 +296,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": f"Live music at The Drunken Unicorn featuring {title}",
                             "start_date": start_date,

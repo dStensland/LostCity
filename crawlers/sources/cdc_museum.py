@@ -37,7 +37,7 @@ PLACE_DATA = {
     "zip": "30329",
     "lat": 33.7986,
     "lng": -84.3251,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": "https://www.cdc.gov/museum",
     "vibes": ["science", "health", "education", "free"],
@@ -49,7 +49,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "science_museum",
             "commitment_tier": "hour",
             "primary_activity": "family public-health museum visit",
@@ -69,7 +69,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": "museum",
+                "place_type": "museum",
                 "city": "atlanta",
             },
         },
@@ -77,7 +77,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "free-public-health-exhibitions",
             "title": "Free public health exhibitions",
             "feature_type": "amenity",
@@ -90,7 +90,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "venue_specials",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "always-free-museum-admission",
             "title": "Always-free museum admission",
             "description": "Museum admission is free, which makes the CDC Museum a reliable no-ticket educational stop for older kids and school-age family outings.",

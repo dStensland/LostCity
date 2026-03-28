@@ -46,9 +46,9 @@ def fetch_destination_venues(client) -> list[dict]:
 
     for vtype in DESTINATION_TYPES:
         batch = (
-            client.table("venues")
+            client.table("places")
             .select("id,name,slug,description,neighborhood,website,image_url,lat,lng,venue_type")
-            .eq("venue_type", vtype)
+            .eq("place_type", vtype)
             .eq("state", "GA")
             .eq("active", True)
             .limit(1000)
@@ -76,7 +76,7 @@ def backfill_neighborhoods(client, venues: list[dict], *, dry_run: bool) -> dict
             if dry_run:
                 logger.debug(f"  [DRY] {v['name']}: → {hood}")
             else:
-                client.table("venues").update({"neighborhood": hood}).eq("id", v["id"]).execute()
+                client.table("places").update({"neighborhood": hood}).eq("id", v["id"]).execute()
             stats["filled"] += 1
         else:
             stats["no_match"] += 1
@@ -181,7 +181,7 @@ def backfill_web_metadata(client, venues: list[dict], *, dry_run: bool, limit: i
             if dry_run:
                 logger.debug(f"  [DRY] {v['name']}: {list(update.keys())}")
             else:
-                client.table("venues").update(update).eq("id", v["id"]).execute()
+                client.table("places").update(update).eq("id", v["id"]).execute()
         else:
             stats["no_data"] += 1
 

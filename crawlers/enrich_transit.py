@@ -289,10 +289,10 @@ def backfill(
     # Fetch venues with coordinates
     select_fields = "id, name, slug, lat, lng, parking_free, parking_note"
     try:
-        query = client.table("venues").select(select_fields)
+        query = client.table("places").select(select_fields)
     except Exception:
         # parking columns might not exist
-        query = client.table("venues").select("id, name, slug, lat, lng")
+        query = client.table("places").select("id, name, slug, lat, lng")
 
     if slug:
         query = query.eq("slug", slug)
@@ -358,7 +358,7 @@ def backfill(
             continue
 
         try:
-            client.table("venues").update(update).eq("id", vid).execute()
+            client.table("places").update(update).eq("id", vid).execute()
         except Exception as e:
             logger.warning(f"  Failed to update {name}: {e}")
 
@@ -383,7 +383,7 @@ def backfill_walkable(dry_run: bool = False) -> dict:
 
     # Fetch all venues with coordinates
     result = (
-        client.table("venues")
+        client.table("places")
         .select("id, name, slug, lat, lng")
         .not_.is_("lat", "null")
         .order("id")
@@ -426,7 +426,7 @@ def backfill_walkable(dry_run: bool = False) -> dict:
                 # Only store one direction (lower id -> higher id) to avoid dupes in insert
                 if v["id"] < neighbor["id"]:
                     pairs.append({
-                        "venue_id": v["id"],
+                        "place_id": v["id"],
                         "neighbor_id": neighbor["id"],
                         "walk_minutes": _walk_minutes(dist),
                         "distance_miles": round(dist, 3),
@@ -463,7 +463,7 @@ def backfill_walkable(dry_run: bool = False) -> dict:
     for p in pairs:
         all_rows.append(p)
         all_rows.append({
-            "venue_id": p["neighbor_id"],
+            "place_id": p["neighbor_id"],
             "neighbor_id": p["venue_id"],
             "walk_minutes": p["walk_minutes"],
             "distance_miles": p["distance_miles"],
@@ -479,9 +479,9 @@ def backfill_walkable(dry_run: bool = False) -> dict:
     # Update neighbor counts on venues
     logger.info("  Updating walkable_neighbor_count on venues...")
     # Reset all to 0 first
-    client.table("venues").update({"walkable_neighbor_count": 0}).gte("id", 0).execute()
+    client.table("places").update({"walkable_neighbor_count": 0}).gte("id", 0).execute()
     for vid, count in neighbor_counts.items():
-        client.table("venues").update({"walkable_neighbor_count": count}).eq("id", vid).execute()
+        client.table("places").update({"walkable_neighbor_count": count}).eq("id", vid).execute()
 
     logger.info(f"\nWalkable neighbors done: {len(pairs)} pairs, {len(neighbor_counts)} venues")
     return stats

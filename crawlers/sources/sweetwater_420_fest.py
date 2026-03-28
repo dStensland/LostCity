@@ -26,7 +26,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7956,
     "lng": -84.4336,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": None,
 }
@@ -86,7 +86,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": "Annual music festival presented by SweetWater Brewing featuring live music, craft beer, and good vibes. 2026 marks the 21st year and a new home at Westside Park.",
         "start_date": start_date.strftime("%Y-%m-%d"),

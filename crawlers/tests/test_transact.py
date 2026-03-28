@@ -74,7 +74,7 @@ def test_parse_homepage_extracts_transact_sessions_from_jsonld() -> None:
             "city": "Atlanta",
             "state": "GA",
             "zip": "30313",
-            "venue_type": "convention_center",
+            "place_type": "convention_center",
             "spot_type": "convention_center",
             "website": "https://www.gwcca.org/",
         },

@@ -33,7 +33,7 @@ KNOWN_VENUES = {
         "city": "Roswell",
         "state": "GA",
         "zip": "30076",
-        "venue_type": "hotel",
+        "place_type": "hotel",
     },
     "chess zone": {
         "name": "Chess Zone",
@@ -43,7 +43,7 @@ KNOWN_VENUES = {
         "city": "Roswell",
         "state": "GA",
         "zip": "30076",
-        "venue_type": "community_center",
+        "place_type": "community_center",
     },
     "shiloh high school": {
         "name": "Shiloh High School",
@@ -53,7 +53,7 @@ KNOWN_VENUES = {
         "city": "Snellville",
         "state": "GA",
         "zip": "30039",
-        "venue_type": "school",
+        "place_type": "school",
     },
     "new life atlanta": {
         "name": "New Life Atlanta",
@@ -63,7 +63,7 @@ KNOWN_VENUES = {
         "city": "Suwanee",
         "state": "GA",
         "zip": "30024",
-        "venue_type": "community_center",
+        "place_type": "community_center",
     },
 }
 
@@ -241,7 +241,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": f"{title} - USCF rated chess tournament organized by the Georgia Chess Association. " +
                                       ("Open to K-12 students." if is_scholastic else "Open to all players."),
@@ -338,7 +338,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": None,
+                    "place_id": None,
                     "title": title,
                     "description": f"{title} - USCF rated chess tournament organized by the Georgia Chess Association.",
                     "start_date": start_date,

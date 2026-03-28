@@ -37,9 +37,9 @@ def run_diagnostic():
     client = get_client()
 
     venues = (
-        client.table("venues")
+        client.table("places")
         .select("id, name, venue_type")
-        .in_("venue_type", list(ARTS_VENUE_TYPES))
+        .in_("place_type", list(ARTS_VENUE_TYPES))
         .execute()
     )
     venue_ids = [v["id"] for v in venues.data]

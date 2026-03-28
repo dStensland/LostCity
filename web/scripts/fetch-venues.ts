@@ -7,9 +7,9 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function main() {
   const { data, error } = await supabase
-    .from("venues")
+    .from("places")
     .select("id, name, slug, spot_type, neighborhood")
-    .eq("active", true)
+    .eq("is_active", true)
     .order("name");
 
   if (error) {

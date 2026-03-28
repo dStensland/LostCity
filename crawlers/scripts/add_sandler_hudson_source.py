@@ -10,7 +10,7 @@ db_config = config.database
 supabase = create_client(db_config.supabase_url, db_config.supabase_service_key)
 
 # Get the venue ID
-venue_result = supabase.table('venues').select('id').eq('slug', 'sandler-hudson-gallery').execute()
+venue_result = supabase.table('places').select('id').eq('slug', 'sandler-hudson-gallery').execute()
 if not venue_result.data:
     print("ERROR: Venue 'sandler-hudson-gallery' not found")
     exit(1)

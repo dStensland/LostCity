@@ -111,7 +111,7 @@ export async function getPCMEvents(limit = 30): Promise<PCMEvent[]> {
 
   // Get PCM-related venue IDs first (venues with ponce-city-market vibe or in geo-box)
   const { data: venueData } = await supabase
-    .from("venues")
+    .from("places")
     .select("id")
     .or(
       `vibes.cs.{ponce-city-market},and(lat.gte.${PCM_GEO_BOX.minLat},lat.lte.${PCM_GEO_BOX.maxLat},lng.gte.${PCM_GEO_BOX.minLng},lng.lte.${PCM_GEO_BOX.maxLng})`
@@ -125,9 +125,9 @@ export async function getPCMEvents(limit = 30): Promise<PCMEvent[]> {
     .select(`
       id, title, start_date, start_time, end_time,
       image_url, category, description, tags,
-      venue:venues!events_venue_id_fkey(name, slug)
+      venue:places!events_venue_id_fkey(name, slug)
     `)
-    .in("venue_id", venueIds)
+    .in("place_id", venueIds)
     .gte("start_date", today)
     .or("is_sensitive.eq.false,is_sensitive.is.null")
     .order("start_date", { ascending: true })
@@ -156,8 +156,8 @@ export async function getPCMTenants(): Promise<PCMTenant[]> {
   const supabase = await createClient();
 
   const { data } = await supabase
-    .from("venues")
-    .select("id, name, slug, venue_type, spot_type, description, image_url, website, vibes")
+    .from("places")
+    .select("id, name, slug, place_type, spot_type, description, image_url, website, vibes")
     .or(
       `vibes.cs.{ponce-city-market},and(lat.gte.${PCM_GEO_BOX.minLat},lat.lte.${PCM_GEO_BOX.maxLat},lng.gte.${PCM_GEO_BOX.minLng},lng.lte.${PCM_GEO_BOX.maxLng})`
     )
@@ -194,7 +194,7 @@ export async function getNeighborhoodEvents(limit = 20): Promise<NeighborhoodEve
 
   // Get PCM venue IDs to exclude
   const { data: pcmVenues } = await supabase
-    .from("venues")
+    .from("places")
     .select("id")
     .or(
       `vibes.cs.{ponce-city-market},and(lat.gte.${PCM_GEO_BOX.minLat},lat.lte.${PCM_GEO_BOX.maxLat},lng.gte.${PCM_GEO_BOX.minLng},lng.lte.${PCM_GEO_BOX.maxLng})`
@@ -204,7 +204,7 @@ export async function getNeighborhoodEvents(limit = 20): Promise<NeighborhoodEve
 
   // Get nearby venues (wider box)
   const { data: nearbyVenues } = await supabase
-    .from("venues")
+    .from("places")
     .select("id")
     .gte("lat", minLat)
     .lte("lat", maxLat)
@@ -222,9 +222,9 @@ export async function getNeighborhoodEvents(limit = 20): Promise<NeighborhoodEve
     .select(`
       id, title, start_date, start_time,
       image_url, category, tags,
-      venue:venues!events_venue_id_fkey(name, slug)
+      venue:places!events_venue_id_fkey(name, slug)
     `)
-    .in("venue_id", neighborhoodVenueIds)
+    .in("place_id", neighborhoodVenueIds)
     .gte("start_date", today)
     .or("is_sensitive.eq.false,is_sensitive.is.null")
     .order("start_date", { ascending: true })
@@ -256,8 +256,8 @@ export async function getNeighborhoodVenues(limit = 12): Promise<NeighborhoodVen
   const lngDelta = PCM_PROXIMITY_RADIUS_KM / (111 * Math.cos((PCM_CENTER_LAT * Math.PI) / 180));
 
   const { data } = await supabase
-    .from("venues")
-    .select("id, name, slug, venue_type, image_url, neighborhood, vibes, lat, lng")
+    .from("places")
+    .select("id, name, slug, place_type, image_url, neighborhood, vibes, lat, lng")
     .gte("lat", PCM_CENTER_LAT - latDelta)
     .lte("lat", PCM_CENTER_LAT + latDelta)
     .gte("lng", PCM_CENTER_LNG - lngDelta)

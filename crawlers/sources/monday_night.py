@@ -35,7 +35,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7841,
     "lng": -84.4192,
-    "venue_type": "brewery",
+    "place_type": "brewery",
     "website": BASE_URL,
 }
 
@@ -49,7 +49,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "brewery",
         "commitment_tier": "hour",
         "primary_activity": "Craft brewery taproom with rotating taps and community events",
@@ -64,10 +64,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Free to visit. Beer priced per pour or flight.",
         "source_url": "https://mondaynightbrewing.com",
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "brewery", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "brewery", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "craft-taproom-rotating-taps",
         "title": "Craft taproom with rotating taps",
         "feature_type": "experience",
@@ -77,7 +77,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "outdoor-patio-space",
         "title": "Outdoor patio and gathering space",
         "feature_type": "amenity",
@@ -87,7 +87,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "multiple-atlanta-locations",
         "title": "Multiple Atlanta locations",
         "feature_type": "amenity",
@@ -224,7 +224,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": f"Event at {PLACE_DATA['name']}",
                         "start_date": start_date,

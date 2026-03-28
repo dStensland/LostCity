@@ -53,7 +53,7 @@ PLACE_DATA = {
     "zip": "30318",
     "lat": 33.7816,
     "lng": -84.4156,
-    "venue_type": "music_venue",
+    "place_type": "music_venue",
     "website": BASE_URL,
 }
 
@@ -374,7 +374,7 @@ def _find_existing_event_in_slot(
         client.table("events")
         .select("*")
         .eq("source_id", source_id)
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("start_date", start_date)
     )
     if start_time:
@@ -407,7 +407,7 @@ def _find_title_conflict_in_slot(
         client.table("events")
         .select("*")
         .eq("source_id", source_id)
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("start_date", start_date)
     )
     if start_time:
@@ -585,7 +585,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 content_hash = generate_content_hash(title, PLACE_DATA["name"], hash_key)
                 event_record: dict[str, Any] = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": start_date,

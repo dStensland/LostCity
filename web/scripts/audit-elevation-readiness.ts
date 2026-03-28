@@ -56,14 +56,14 @@ async function audit() {
 
   // ── Fetch all active events in the next 14 days ───────────────────────────
   // We need: id, importance, is_tentpole, festival_id, featured_blurb,
-  //          image_url, venue_id, and the venue's image_url
+  //          image_url, place_id, and the venue's image_url
   // Supabase JS doesn't support raw subqueries so we fetch events + venues
   // separately to avoid N+1 and then join in memory.
 
   const { data: events, error: eventsError } = await supabase
     .from("events")
     .select(
-      "id, importance, is_tentpole, festival_id, featured_blurb, image_url, venue_id"
+      "id, importance, is_tentpole, festival_id, featured_blurb, image_url, place_id"
     )
     .gte("start_date", start)
     .lte("start_date", end)
@@ -91,7 +91,7 @@ async function audit() {
     for (let i = 0; i < venueIds.length; i += batchSize) {
       const batch = venueIds.slice(i, i + batchSize);
       const { data: venueRows, error: venuesError } = await supabase
-        .from("venues")
+        .from("places")
         .select("id, image_url")
         .in("id", batch);
 
@@ -109,7 +109,7 @@ async function audit() {
     const { data: mentions, error: mentionsError } = await supabase
       .from("editorial_mentions")
       .select("venue_id")
-      .in("venue_id", venueIds)
+      .in("place_id", venueIds)
       .eq("is_active", true);
 
     if (mentionsError) {

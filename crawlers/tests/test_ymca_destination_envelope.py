@@ -10,7 +10,7 @@ def test_build_destination_envelope_for_ymca_branch() -> None:
 
     envelope = _build_destination_envelope(2602, place_data)
 
-    assert envelope.destination_details[0]["venue_id"] == 2602
+    assert envelope.destination_details[0]["place_id"] == 2602
     assert envelope.destination_details[0]["destination_type"] == "community_center"
     assert envelope.destination_details[0]["parking_type"] == "free_lot"
     assert {feature["slug"] for feature in envelope.venue_features} == {

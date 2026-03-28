@@ -22,7 +22,7 @@ PLACE_DATA = {
     "zip": "30307",
     "lat": 33.7616,
     "lng": -84.3518,
-    "venue_type": "restaurant",
+    "place_type": "restaurant",
     "spot_type": "bar",
     "website": BASE_URL,
     "vibes": ["sandwiches", "craft-beer", "late-night", "dive-bar", "patio"],

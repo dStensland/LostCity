@@ -43,7 +43,7 @@ PLACE_DATA = {
     "zip": "30307",
     "lat": 33.7655,
     "lng": -84.3369,
-    "venue_type": "park",
+    "place_type": "park",
     "spot_type": "park",
     "website": "https://www.candlerpark.org",
 }
@@ -54,7 +54,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope.add(
         "destination_details",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "destination_type": "park",
             "commitment_tier": "halfday",
             "primary_activity": "family neighborhood park visit",
@@ -68,14 +68,14 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "metadata": {
                 "source_type": "family_destination_enrichment",
                 "city": "atlanta",
-                "venue_type": "park",
+                "place_type": "park",
             },
         },
     )
     envelope.add(
         "venue_features",
         {
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "slug": "public-pool-and-summer-aquatics",
             "title": "Public pool and summer aquatics",
             "feature_type": "amenity",
@@ -213,7 +213,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at Candler Park",
                         "start_date": start_date,

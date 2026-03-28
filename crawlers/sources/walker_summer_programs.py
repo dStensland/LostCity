@@ -53,7 +53,7 @@ PLACE_DATA = {
     "lat": 33.9678,
     "lng": -84.5207,
     "neighborhood": "Marietta",
-    "venue_type": "institution",
+    "place_type": "institution",
     "spot_type": "education",
     "website": "https://www.thewalkerschool.org/",
     "vibes": ["family-friendly", "educational"],
@@ -605,7 +605,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     )
     record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": row["title"],
         "description": row["description"],
         "start_date": row["start_date"],

@@ -34,7 +34,7 @@ PLACE_DATA = {
     "zip": "30339",
     "lat": 33.8908,
     "lng": -84.4678,
-    "venue_type": "entertainment",
+    "place_type": "entertainment",
     "spot_type": "eatertainment",
     "website": BASE_URL,
 }
@@ -51,7 +51,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "entertainment",
         "commitment_tier": "halfday",
         "primary_activity": "Bowling, arcade, karaoke, and scratch kitchen dining at The Battery",
@@ -66,10 +66,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Activities priced per game/hour. Full restaurant and bar menu.",
         "source_url": BASE_URL,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "entertainment", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "entertainment", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "bowling-lanes",
         "title": "Bowling lanes",
         "feature_type": "experience",
@@ -79,7 +79,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "retro-arcade-ping-pong",
         "title": "Retro arcade, ping pong, and board games",
         "feature_type": "experience",
@@ -89,7 +89,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "karaoke-rooms",
         "title": "Karaoke rooms",
         "feature_type": "experience",
@@ -99,7 +99,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "scratch-kitchen-craft-cocktails",
         "title": "Scratch kitchen and craft cocktails",
         "feature_type": "amenity",
@@ -109,7 +109,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 40,
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "weekday-happy-hour",
         "title": "Weekday happy hour",
         "description": "Discounted drinks and appetizers during weekday happy hour.",
@@ -119,7 +119,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "category": "happy_hour",
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "weekend-brunch-games",
         "title": "Weekend brunch and games",
         "description": "Weekend brunch service with games available — combine food and fun.",
@@ -255,7 +255,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Event at Punch Bowl Social",
                         "start_date": start_date,

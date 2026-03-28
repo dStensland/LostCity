@@ -76,7 +76,7 @@ VENUE_DATA_BY_LOCATION = {
         "zip": "30024",
         "lat": 34.0443,
         "lng": -84.0678,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": CATALOG_URL,
         "description": "Gwinnett County recreation center hosting public pickleball classes.",
@@ -91,7 +91,7 @@ VENUE_DATA_BY_LOCATION = {
         "zip": "30046",
         "lat": 33.9524,
         "lng": -83.9877,
-        "venue_type": "community_center",
+        "place_type": "community_center",
         "spot_type": "community_center",
         "website": CATALOG_URL,
         "description": "Gwinnett County recreation center hosting public pickleball classes.",
@@ -266,7 +266,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": parsed["title"],
                 "description": parsed["description"],
                 "start_date": start_date,

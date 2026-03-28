@@ -77,7 +77,7 @@ def find_exhibition_by_title_venue(title: str, venue_id: int) -> Optional[dict]:
     result = (
         client.table("exhibitions")
         .select("id, title, venue_id, opening_date, updated_at")
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .ilike("title", normalized)
         .limit(1)
         .execute()

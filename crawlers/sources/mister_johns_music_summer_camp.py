@@ -51,7 +51,7 @@ PLACE_DATA = {
     "lat": 33.7744,
     "lng": -84.2666,
     "neighborhood": "Avondale Estates",
-    "venue_type": "studio",
+    "place_type": "studio",
     "spot_type": "studio",
     "website": "https://misterjohnsmusic.com/atlanta/",
     "vibes": ["family-friendly", "artsy", "all-ages"],
@@ -179,7 +179,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     title = f"{row['title']} at Mister John's Music"
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": row["description"],
         "start_date": row["start_date"],

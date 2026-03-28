@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30307",
     "lat": 33.7679,
     "lng": -84.3582,
-    "venue_type": "museum",
+    "place_type": "museum",
     "spot_type": "museum",
     "website": "https://www.jimmycarterlibrary.gov/",
     "vibes": ["historic", "museum", "presidential", "gardens", "free-parking"],
@@ -66,7 +66,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "presidential_library",
         "commitment_tier": "halfday",
         "primary_activity": "Presidential museum, rotating exhibitions, and Japanese gardens",
@@ -85,10 +85,10 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Admission charged for adults. Children 15 and under free.",
         "source_url": BASE_URL,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "museum", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "museum", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "presidential-museum-permanent-exhibits",
         "title": "Presidential museum permanent exhibits",
         "feature_type": "collection",
@@ -98,7 +98,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "oval-office-replica",
         "title": "Oval Office replica",
         "feature_type": "attraction",
@@ -108,7 +108,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "japanese-garden-grounds",
         "title": "Japanese garden and grounds",
         "feature_type": "amenity",
@@ -118,7 +118,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "rotating-special-exhibitions",
         "title": "Rotating special exhibitions",
         "feature_type": "experience",
@@ -128,7 +128,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 40,
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "children-15-and-under-free",
         "title": "Children 15 and under free",
         "description": "Free admission for all visitors age 15 and under, making it a family-friendly museum destination.",
@@ -404,7 +404,7 @@ def crawl(source: dict) -> Tuple[int, int, int]:
                 # Create event record
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": start_date,

@@ -54,7 +54,7 @@ PLACE_DATA = {
     "zip": "30324",
     "lat": 33.8231,
     "lng": -84.3641,
-    "venue_type": "dance_studio",
+    "place_type": "dance_studio",
     "spot_type": "theater",
     "website": BASE_URL,
     "vibes": ["artsy", "intimate", "all-ages"],
@@ -523,7 +523,7 @@ def _get_or_create_event_venue(event_data: dict, home_venue_id: int) -> tuple[in
         "state": state,
         "zip": zip_code,
         "neighborhood": city if city != "Atlanta" else "Atlanta",
-        "venue_type": "venue",
+        "place_type": "venue",
         "spot_type": "theater",
     }
 
@@ -589,7 +589,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": event_data.get("description"),
                     "start_date": start_date,

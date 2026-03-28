@@ -54,7 +54,7 @@ PLACE_DATA = {
     "lat": 33.8527,
     "lng": -84.4452,
     "neighborhood": "Buckhead",
-    "venue_type": "school",
+    "place_type": "school",
     "spot_type": "school",
     "website": "https://www.lovett.org/",
     "vibes": ["family-friendly", "educational"],
@@ -316,7 +316,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     title = f"{row['title']} at The Lovett School"
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": row["description"],
         "start_date": row["start_date"],

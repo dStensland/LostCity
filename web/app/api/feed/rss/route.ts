@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
       start_date, start_time, end_date, is_all_day,
       is_free, price, category_id, image_url,
       created_at, updated_at, portal_id, source_id,
-      venue:venues(name, city, state, lat, lng)
+      venue:places(name, city, state, lat, lng)
     `
     )
     .gte("start_date", today)

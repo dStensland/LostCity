@@ -31,7 +31,7 @@ PLACE_DATA = {
     "zip": "30310",
     "lat": 33.7400,
     "lng": -84.4130,
-    "venue_type": "neighborhood",
+    "place_type": "neighborhood",
     "spot_type": "neighborhood",
     "website": BASE_URL,
     "description": "Historic African-American neighborhood home to Atlanta University Center and rich cultural heritage.",
@@ -85,7 +85,7 @@ def create_monthly_events(source_id: int, venue_id: int) -> tuple[int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": title,
             "description": description,
             "start_date": start_date,
@@ -155,7 +155,7 @@ def create_juneteenth(source_id: int, venue_id: int) -> tuple[int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": (
             "Annual Juneteenth celebration in Historic West End. "
@@ -215,7 +215,7 @@ def create_black_history_month(source_id: int, venue_id: int) -> tuple[int, int]
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": (
             "Black History Month kickoff celebration in Historic West End. "

@@ -39,7 +39,7 @@ VENUE_DATA_SIXFLAGS = {
     "zip": "30168",
     "lat": 33.7677,
     "lng": -84.5514,
-    "venue_type": "theme_park",
+    "place_type": "theme_park",
     "spot_type": "theme_park",
     "website": BASE_URL,
 }
@@ -55,7 +55,7 @@ VENUE_DATA_WHITEWATER = {
     "zip": "30062",
     "lat": 33.9562,
     "lng": -84.5192,
-    "venue_type": "water_park",
+    "place_type": "water_park",
     "spot_type": "water_park",
     "website": "https://www.sixflags.com/whitewater",
 }
@@ -116,7 +116,7 @@ EVENT_KEYWORDS = {
 def _build_sixflags_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "theme_park",
         "commitment_tier": "fullday",
         "primary_activity": "Roller coasters, water rides, seasonal festivals, and family attractions",
@@ -136,10 +136,10 @@ def _build_sixflags_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "permit_required": False,
         "fee_note": "Park admission required for all attractions. Season passes and single-day tickets available.",
         "source_url": BASE_URL,
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "theme_park", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "theme_park", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "roller-coasters",
         "title": "Roller coasters — Goliath, Twisted Cyclone, Superman, and more",
         "feature_type": "attraction",
@@ -149,7 +149,7 @@ def _build_sixflags_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "water-rides-splash",
         "title": "Water rides and splash areas",
         "feature_type": "attraction",
@@ -159,7 +159,7 @@ def _build_sixflags_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "seasonal-festivals",
         "title": "Seasonal festivals — Fright Fest, Holiday in the Park, July 4th",
         "feature_type": "experience",
@@ -169,7 +169,7 @@ def _build_sixflags_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 30,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "dining-food-stands",
         "title": "Dining and food stands throughout park",
         "feature_type": "amenity",
@@ -179,7 +179,7 @@ def _build_sixflags_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 40,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "kids-area",
         "title": "Kids' area — Bugs Bunny World and DC Super Friends",
         "feature_type": "attraction",
@@ -189,7 +189,7 @@ def _build_sixflags_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "sort_order": 50,
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "season-pass-pricing",
         "title": "Season pass pricing",
         "description": "Season passes include unlimited visits, free parking, and discounts on food and merchandise.",
@@ -199,7 +199,7 @@ def _build_sixflags_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "category": "admission",
     })
     envelope.add("venue_specials", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "bring-a-friend-free-days",
         "title": "Bring-a-friend free days",
         "description": "Season pass holders can bring friends for free on select promotional days throughout the season.",
@@ -214,7 +214,7 @@ def _build_sixflags_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
 def _build_whitewater_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add("destination_details", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "destination_type": "water_park",
         "commitment_tier": "fullday",
         "primary_activity": "Water slides, wave pools, and lazy rivers",
@@ -233,10 +233,10 @@ def _build_whitewater_destination_envelope(venue_id: int) -> TypedEntityEnvelope
         "permit_required": False,
         "fee_note": "Park admission required. Season passes and single-day tickets available.",
         "source_url": "https://www.sixflags.com/whitewater",
-        "metadata": {"source_type": "venue_enrichment", "venue_type": "water_park", "city": "atlanta"},
+        "metadata": {"source_type": "venue_enrichment", "place_type": "water_park", "city": "atlanta"},
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "water-slides-and-attractions",
         "title": "Water slides and attractions",
         "feature_type": "attraction",
@@ -246,7 +246,7 @@ def _build_whitewater_destination_envelope(venue_id: int) -> TypedEntityEnvelope
         "sort_order": 10,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "kids-splash-areas",
         "title": "Kids' splash areas",
         "feature_type": "attraction",
@@ -256,7 +256,7 @@ def _build_whitewater_destination_envelope(venue_id: int) -> TypedEntityEnvelope
         "sort_order": 20,
     })
     envelope.add("venue_features", {
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "slug": "cabana-rentals",
         "title": "Cabana rentals",
         "feature_type": "amenity",
@@ -524,7 +524,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         event_record = {
                             "source_id": source_id,
-                            "venue_id": venue_id,
+                            "place_id": venue_id,
                             "title": title,
                             "description": description[:1000] if description else None,  # Limit length
                             "start_date": start_date,

@@ -20,7 +20,7 @@ def main():
     all_venues = []
     offset = 0
     while True:
-        r = (client.table('venues')
+        r = (client.table('places')
              .select('id,name,lat,lng,city')
              .eq('active', True)
              .not_.is_('lat', 'null')
@@ -43,7 +43,7 @@ def main():
     for v in all_venues:
         hood = find_neighborhood(v['lat'], v['lng'])
         if hood:
-            client.table('venues').update({'neighborhood': hood}).eq('id', v['id']).execute()
+            client.table('places').update({'neighborhood': hood}).eq('id', v['id']).execute()
             assigned += 1
         else:
             unmatched.append(v)

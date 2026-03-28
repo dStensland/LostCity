@@ -31,7 +31,7 @@ PLACE_DATA = {
     "zip": "30312",
     "lat": 33.7476,
     "lng": -84.3705,
-    "venue_type": "festival",
+    "place_type": "festival",
     "website": BASE_URL,
 }
 
@@ -104,7 +104,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": "Underground filmmaking and independent horror film festival. Features screenings, awards, and filmmaker events.",
                         "start_date": start_date,

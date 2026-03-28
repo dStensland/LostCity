@@ -51,7 +51,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7490,
     "lng": -84.3888,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "organization",
     "website": "https://www.lwvaf.org",
 }
@@ -124,7 +124,7 @@ def _find_existing_by_date_and_url(
         client.table("events")
         .select("*")
         .eq("source_id", source_id)
-        .eq("venue_id", venue_id)
+        .eq("place_id", venue_id)
         .eq("start_date", date_str)
         .execute()
     )
@@ -350,7 +350,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": title,
                 "description": description,
                 "start_date": date_str,

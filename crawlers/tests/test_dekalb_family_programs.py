@@ -4,7 +4,7 @@ from sources.dekalb_family_programs import _build_program_record
 def test_build_program_record_projects_event_into_program_lane() -> None:
     record = _build_program_record(
         event_record={
-            "venue_id": 42,
+            "place_id": 42,
             "title": "Spring Break Art Camp",
             "description": "A weeklong mixed-media camp for kids.",
             "start_date": "2026-04-06",
@@ -39,7 +39,7 @@ def test_build_program_record_projects_event_into_program_lane() -> None:
 
     assert record is not None
     assert record["source_id"] == 55
-    assert record["venue_id"] == 42
+    assert record["place_id"] == 42
     assert record["name"] == "Spring Break Art Camp"
     assert record["program_type"] == "camp"
     assert record["season"] == "spring"

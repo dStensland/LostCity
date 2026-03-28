@@ -47,7 +47,7 @@ ACDC_ORG_VENUE_DATA = {
     "zip": "30308",
     "lat": 33.7490,
     "lng": -84.3880,
-    "venue_type": "organization",
+    "place_type": "organization",
     "spot_type": "theater",
     "website": BASE_URL,
     "vibes": ["artsy", "all-ages"],
@@ -64,7 +64,7 @@ KSU_VENUE_DATA = {
     "zip": "30060",
     "lat": 33.9360,
     "lng": -84.5218,
-    "venue_type": "theater",
+    "place_type": "theater",
     "spot_type": "theater",
     "website": "https://dance.kennesaw.edu",
     "vibes": ["artsy"],
@@ -453,7 +453,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "city": vcity,
                                 "state": "GA",
                                 "zip": vzip,
-                                "venue_type": "venue",
+                                "place_type": "venue",
                                 "website": BASE_URL,
                             }
                             try:
@@ -475,7 +475,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id,
+                    "place_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": start_date,

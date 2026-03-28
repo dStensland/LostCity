@@ -64,7 +64,7 @@ PLACE_DATA = {
     "zip": "30127",
     "lat": 33.8629,
     "lng": -84.7087,
-    "venue_type": "community_center",
+    "place_type": "community_center",
     "spot_type": "community_center",
     "website": CATALOG_URL,
     "description": "Cobb County recreation center hosting public belly dance classes.",
@@ -234,7 +234,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": parsed["title"],
                 "description": parsed["description"],
                 "start_date": start_date,

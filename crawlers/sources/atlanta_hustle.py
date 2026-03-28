@@ -38,7 +38,7 @@ PLACE_DATA = {
     "zip": "30340",
     "lat": 33.8409,
     "lng": -84.2513,
-    "venue_type": "stadium",
+    "place_type": "stadium",
     "spot_type": "stadium",
     "website": "https://silverbackspark.com/",
     "active": True,
@@ -151,7 +151,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         event_record = {
             "source_id": source_id,
-            "venue_id": venue_id,
+            "place_id": venue_id,
             "title": game["title"],
             "description": description,
             "start_date": game["start_date"],

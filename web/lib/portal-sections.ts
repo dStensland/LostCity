@@ -93,7 +93,7 @@ export async function getPortalSections(portalId: string): Promise<PortalSection
               start_time,
               category_id,
               is_free,
-              venue:venues(id, name, slug)
+              venue:places(id, name, slug)
             `)
             .in("id", eventIds)
             .or("is_sensitive.eq.false,is_sensitive.is.null")

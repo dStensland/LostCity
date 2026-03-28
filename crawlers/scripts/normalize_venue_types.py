@@ -77,19 +77,19 @@ def main():
     # Step 1: Direct remaps
     print("=== Venue Type Normalization ===\n")
     for old_type, new_type in REMAPS.items():
-        r = client.table("venues").select("id", count="exact").eq("venue_type", old_type).execute()
+        r = client.table("places").select("id", count="exact").eq("place_type", old_type).execute()
         if r.count > 0:
             if not dry_run:
-                batch = client.table("venues").select("id").eq("venue_type", old_type).limit(500).execute()
+                batch = client.table("places").select("id").eq("place_type", old_type).limit(500).execute()
                 ids = [v["id"] for v in batch.data]
-                client.table("venues").update({"venue_type": new_type}).in_("id", ids).execute()
+                client.table("places").update({"place_type": new_type}).in_("id", ids).execute()
             print(f"  {old_type:25s} -> {new_type:20s}: {r.count} venues {'updated' if not dry_run else '(dry run)'}")
             total_updated += r.count
 
     # Step 2: Remove non-venue entities
     print(f"\n=== Non-Venue Entities ===")
     for del_type in DELETE_TYPES:
-        r = client.table("venues").select("id,name", count="exact").eq("venue_type", del_type).execute()
+        r = client.table("places").select("id,name", count="exact").eq("place_type", del_type).execute()
         if r.count > 0:
             print(f"  {del_type:25s}: {r.count} entries")
             for v in r.data[:5]:
@@ -97,12 +97,12 @@ def main():
             if not dry_run:
                 # Don't delete, just set to inactive — they may have events pointing to them
                 ids = [v["id"] for v in r.data]
-                client.table("venues").update({"active": False, "venue_type": "venue"}).in_("id", ids).execute()
+                client.table("places").update({"active": False, "place_type": "venue"}).in_("id", ids).execute()
                 print(f"    -> Deactivated and set type to 'venue'")
             total_deleted += r.count
 
     # Step 3: Check remaining null types
-    r = client.table("venues").select("id", count="exact").is_("venue_type", "null").execute()
+    r = client.table("places").select("id", count="exact").is_("venue_type", "null").execute()
     print(f"\n=== Remaining null venue_type: {r.count} ===")
 
     print(f"\nTotal: {total_updated} remapped, {total_deleted} deactivated")

@@ -46,7 +46,7 @@ CORE_DANCE_VENUE_DATA = {
     "zip": "30030",
     "lat": 33.7749,
     "lng": -84.2963,
-    "venue_type": "dance_studio",
+    "place_type": "dance_studio",
     "spot_type": "theater",
     "website": BASE_URL,
     "vibes": ["artsy", "all-ages"],
@@ -257,7 +257,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record = {
                 "source_id": source_id,
-                "venue_id": home_venue_id,
+                "place_id": home_venue_id,
                 "title": title,
                 "description": description,
                 "start_date": start_date,

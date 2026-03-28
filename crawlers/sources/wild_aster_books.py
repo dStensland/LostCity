@@ -27,7 +27,7 @@ PLACE_DATA = {
     "zip": "30341",
     "lat": 33.7484,
     "lng": -84.3450,
-    "venue_type": "bookstore",
+    "place_type": "bookstore",
     "website": BASE_URL,
 }
 
@@ -62,7 +62,7 @@ def generate_storytime_events(source_id: int, venue_id: int, weeks_ahead: int = 
 
             events.append({
                 "source_id": source_id,
-                "venue_id": venue_id,
+                "place_id": venue_id,
                 "title": recurring["title"],
                 "description": description,
                 "start_date": start_date,

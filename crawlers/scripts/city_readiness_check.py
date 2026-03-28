@@ -60,7 +60,7 @@ def _marker(passing: bool) -> str:
 def _fetch_city_venue_ids(client, city: str, state: str) -> set[int]:
     """Return the set of venue IDs in the target city (case-insensitive)."""
     rows = (
-        client.table("venues")
+        client.table("places")
         .select("id,city,state")
         .execute()
         .data
@@ -186,7 +186,7 @@ def check_image_coverage(events: list[dict]) -> tuple[bool, dict]:
 def check_neighborhood_attribution(client, city: str, state: str) -> tuple[bool, dict]:
     """Less than 10% of city venues should have a null neighborhood."""
     rows = (
-        client.table("venues")
+        client.table("places")
         .select("id,neighborhood,city,state")
         .execute()
         .data

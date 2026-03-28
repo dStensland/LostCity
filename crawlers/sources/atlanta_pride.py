@@ -36,7 +36,7 @@ PIEDMONT_PARK = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30306",
-    "venue_type": "park",
+    "place_type": "park",
     "website": "https://piedmontpark.org",
 }
 
@@ -259,7 +259,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     content_hash = generate_content_hash(title, PIEDMONT_PARK["name"], start_date.isoformat())
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": description,
         "start_date": start_date.isoformat(),

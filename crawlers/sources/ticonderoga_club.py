@@ -31,7 +31,7 @@ PLACE_DATA = {
     # Krog Street Market building — Suite W (west end)
     "lat": 33.7575,
     "lng": -84.3641,
-    "venue_type": "bar",
+    "place_type": "bar",
     "spot_type": "bar",
     "website": BASE_URL,
     "phone": "(404) 458-4534",

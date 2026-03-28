@@ -62,7 +62,7 @@ PLACE_DATA = {
     "zip": "30303",
     "lat": 33.7484,
     "lng": -84.3912,
-    "venue_type": "nightclub",
+    "place_type": "nightclub",
     "spot_type": "nightclub",
     "website": "https://www.eventbrite.com/o/pigalle-theater-speakeasy-70832902633",
     "description": (
@@ -263,7 +263,7 @@ def process_event(
                 "city": address_data.get("city", "Atlanta"),
                 "state": "GA",
                 "zip": address_data.get("postal_code"),
-                "venue_type": "event_space",
+                "place_type": "event_space",
                 "website": None,
             }
             venue_id = get_or_create_place(venue_record)
@@ -285,7 +285,7 @@ def process_event(
 
     return {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title[:500],
         "description": description[:2000],
         "start_date": start_date,

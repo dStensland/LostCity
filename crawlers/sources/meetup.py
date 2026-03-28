@@ -404,7 +404,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "slug": re.sub(r"[^a-z0-9]+", "-", group_name.lower()).strip("-"),
                             "city": "Atlanta",
                             "state": "GA",
-                            "venue_type": "organization",
+                            "place_type": "organization",
                         }
                         try:
                             venue_id = get_or_create_place(fallback_venue)
@@ -430,7 +430,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Build event record
                     event_record = {
                         "source_id": source_id,
-                        "venue_id": venue_id,
+                        "place_id": venue_id,
                         "title": title,
                         "description": description,
                         "start_date": start_date,

@@ -400,7 +400,7 @@ def fix_venue_neighborhoods(dry_run: bool = False) -> Tuple[int, int, int]:
     offset = 0
 
     while True:
-        result = client.table('venues').select(
+        result = client.table('places').select(
             'id, name, neighborhood, address, city, state, lat, lng, zip'
         ).range(offset, offset + page_size - 1).execute()
 
@@ -440,7 +440,7 @@ def fix_venue_neighborhoods(dry_run: bool = False) -> Tuple[int, int, int]:
 
             if not dry_run:
                 try:
-                    client.table('venues').update({
+                    client.table('places').update({
                         'neighborhood': neighborhood
                     }).eq('id', venue_id).execute()
                     updated += 1
@@ -474,7 +474,7 @@ def refine_college_park_neighborhoods(dry_run: bool = False) -> Tuple[int, int, 
     offset = 0
 
     while True:
-        result = client.table('venues').select(
+        result = client.table('places').select(
             'id, name, neighborhood, address, city, state, lat, lng, zip'
         ).eq('neighborhood', 'College Park').range(offset, offset + page_size - 1).execute()
 
@@ -513,7 +513,7 @@ def refine_college_park_neighborhoods(dry_run: bool = False) -> Tuple[int, int, 
 
             if not dry_run:
                 try:
-                    client.table('venues').update({
+                    client.table('places').update({
                         'neighborhood': new_neighborhood
                     }).eq('id', venue_id).execute()
                     updated += 1

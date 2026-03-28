@@ -30,7 +30,7 @@ class _Crawler(GenericExhibitionCrawler):
         "zip": "30305",
         "lat": 33.8421,
         "lng": -84.3711,
-        "venue_type": "gallery",
+        "place_type": "gallery",
         "website": "http://www.poem88.com",
     }
 

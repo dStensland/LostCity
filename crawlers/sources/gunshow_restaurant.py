@@ -33,7 +33,7 @@ PLACE_DATA = {
     "zip": "30316",
     "lat": 33.7350,
     "lng": -84.3560,
-    "venue_type": "restaurant",
+    "place_type": "restaurant",
     "spot_type": "restaurant",
     "website": HOMEPAGE,
     # Hours verified 2026-03-11
@@ -111,7 +111,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         update["description"] = place_data["description"]
     if update:
         try:
-            get_client().table("venues").update(update).eq("id", venue_id).execute()
+            get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
             logger.warning("Gunshow: venue update failed: %s", exc)
 

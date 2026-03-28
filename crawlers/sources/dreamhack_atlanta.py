@@ -25,7 +25,7 @@ PLACE_DATA = {
     "zip": "30313",
     "lat": 33.7607,
     "lng": -84.3976,
-    "venue_type": "convention_center",
+    "place_type": "convention_center",
     "spot_type": "convention_center",
     "website": "https://www.gwcca.org",
 }
@@ -88,7 +88,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     event_record = {
         "source_id": source_id,
-        "venue_id": venue_id,
+        "place_id": venue_id,
         "title": title,
         "description": "Gaming lifestyle festival featuring esports tournaments, BYOC LAN party, cosplay, artist alley, and the latest in gaming culture. Part of Games Week Georgia.",
         "start_date": start_date.strftime("%Y-%m-%d"),

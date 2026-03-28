@@ -24,7 +24,7 @@ PLACE_DATA = {
     "zip": "30312",
     "lat": 33.7541,
     "lng": -84.3699,
-    "venue_type": "bar",
+    "place_type": "bar",
     "spot_type": "bar",
     "website": None,
     "vibes": ["dive-bar", "edgewood", "late-night", "old-fourth-ward"],

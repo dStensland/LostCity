@@ -276,13 +276,13 @@ def fetch_venues_missing_descriptions(client, *, venue_type=None, limit=0):
     all_venues = []
     offset = 0
     while True:
-        q = (client.table("venues")
+        q = (client.table("places")
              .select("id,name,venue_type,neighborhood,city,vibes,description")
              .eq("active", True)
              .order("id")
              .range(offset, offset + 999))
         if venue_type:
-            q = q.eq("venue_type", venue_type)
+            q = q.eq("place_type", venue_type)
         r = q.execute()
         if not r.data:
             break
@@ -345,7 +345,7 @@ def main():
 
             if write:
                 try:
-                    client.table("venues").update({"description": desc}).eq("id", v["id"]).execute()
+                    client.table("places").update({"description": desc}).eq("id", v["id"]).execute()
                     written += 1
                 except Exception as e:
                     errors += 1
