@@ -1229,3 +1229,23 @@ export interface SubmissionRateLimits {
 
 /** @deprecated Use OrganizationSubmissionData instead */
 export type ProducerSubmissionData = OrganizationSubmissionData;
+
+// ============================================
+// PLACE TYPES (new canonical names)
+// ============================================
+
+export type {
+  Place,
+  PlaceCard,
+  PlaceProfile,
+  PlaceDiningDetails,
+  PlaceOutdoorDetails,
+  PlaceDetail,
+  PlaceWithProfile,
+  PlaceWithDining,
+  PlaceWithOutdoor,
+} from "./types/places";
+
+// Backward compatibility — remove in cleanup phase
+export type { Place as Venue } from "./types/places";
+export type { PlaceCard as VenueCard } from "./types/places";
