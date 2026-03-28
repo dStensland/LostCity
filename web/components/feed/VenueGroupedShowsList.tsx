@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
-import { MusicNote, MaskHappy, Ticket } from "@phosphor-icons/react";
+import { MusicNote, MaskHappy, SmileyWink, Ticket } from "@phosphor-icons/react";
 import { formatTime } from "@/lib/formats";
 import SmartImage from "@/components/SmartImage";
 
@@ -36,7 +36,8 @@ interface ShowsApiResponse {
 
 export interface VenueGroupedShowsListProps {
   portalSlug: string;
-  categories: string; // "music" or "theater,comedy,dance"
+  categories: string; // "music", "theater,dance", or "comedy"
+  accentColor?: string; // CSS variable like "var(--neon-magenta)"
 }
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -44,14 +45,20 @@ export interface VenueGroupedShowsListProps {
 const CARD_WIDTH = 256; // w-64
 const GAP = 12; // gap-3
 const MAX_SHOWS_PER_CARD = 5;
+const MAX_DOTS = 7;
 
 // ── Component ────────────────────────────────────────────────────────
 
 export function VenueGroupedShowsList({
   portalSlug,
   categories,
+  accentColor = "var(--neon-magenta)",
 }: VenueGroupedShowsListProps) {
-  const vertical = categories === "music" ? "music" : "stage";
+  const vertical: "music" | "theater" | "clowns" =
+    categories === "music" ? "music" : categories === "comedy" ? "clowns" : "theater";
+  // URL-compatible vertical for Find view links
+  const linkVertical = categories === "music" ? "music" : "stage";
+
   const [venues, setVenues] = useState<ShowVenueData[]>([]);
   const [todayCount, setTodayCount] = useState(0);
   const [thisWeekCount, setThisWeekCount] = useState(0);
@@ -121,24 +128,48 @@ export function VenueGroupedShowsList({
     };
   }, [updateScrollState]);
 
+  // ── Loading skeleton ─────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex gap-3 overflow-hidden">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="flex-shrink-0 w-64 rounded-card overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/40 animate-pulse"
+          >
+            <div className="h-36 bg-[var(--twilight)]/30" />
+            <div className="p-3 space-y-2.5">
+              <div className="h-4 bg-[var(--twilight)]/30 rounded w-3/4" />
+              <div className="h-3 bg-[var(--twilight)]/20 rounded w-1/2" />
+              <div className="space-y-1.5">
+                <div className="h-3 bg-[var(--twilight)]/15 rounded w-full" />
+                <div className="h-3 bg-[var(--twilight)]/15 rounded w-5/6" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   // ── Render gates ─────────────────────────────────────────────────
 
-  // While loading, return null — SeeShowsSection's LazySection holds space
-  if (loading) return null;
-
-  // If no shows today but shows this week, show a "this week" note instead of empty
   const restOfWeekCount = thisWeekCount - todayCount;
 
   if (failed) return null;
 
   if (venues.length === 0 && restOfWeekCount > 0) {
     return (
-      <div className="feed-section-enter px-1 py-4">
+      <div
+        className="feed-section-enter px-1 py-4"
+        style={{ "--show-accent": accentColor } as React.CSSProperties}
+      >
         <p className="text-sm text-[var(--soft)]">
           No shows tonight ·{" "}
           <Link
-            href={`/${portalSlug}?view=happening&content=showtimes&vertical=${vertical}`}
-            className="text-[var(--neon-magenta)] hover:underline font-mono text-xs"
+            href={`/${portalSlug}?view=happening&content=showtimes&vertical=${linkVertical}`}
+            className="text-[var(--show-accent)] hover:underline font-mono text-xs"
           >
             {restOfWeekCount} more this week →
           </Link>
@@ -150,7 +181,10 @@ export function VenueGroupedShowsList({
   if (venues.length === 0) return null;
 
   return (
-    <div className="relative feed-section-enter">
+    <div
+      className="relative feed-section-enter"
+      style={{ "--show-accent": accentColor } as React.CSSProperties}
+    >
       <div
         ref={scrollRef}
         className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory scroll-smooth"
@@ -161,44 +195,51 @@ export function VenueGroupedShowsList({
             item={item}
             portalSlug={portalSlug}
             vertical={vertical}
+            linkVertical={linkVertical}
           />
         ))}
       </div>
 
-      {/* "N more this week" note */}
+      {/* "N tonight · M more this week" link */}
       {restOfWeekCount > 0 && (
         <div className="mt-2 px-1">
           <Link
-            href={`/${portalSlug}?view=happening&content=showtimes&vertical=${vertical}`}
-            className="text-xs font-mono text-[var(--neon-magenta)] hover:underline"
+            href={`/${portalSlug}?view=happening&content=showtimes&vertical=${linkVertical}`}
+            className="text-xs font-mono text-[var(--show-accent)] hover:underline"
           >
             {todayCount} tonight · {restOfWeekCount} more this week →
           </Link>
         </div>
       )}
 
-      {/* Mobile dot indicators */}
+      {/* Mobile scroll indicator — dots for small sets, counter for large */}
       {totalCards > 1 && (
-        <div className="flex sm:hidden justify-center gap-1.5 mt-3">
-          {Array.from({ length: totalCards }).map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => {
-                if (scrollRef.current) {
-                  scrollRef.current.scrollTo({
-                    left: idx * (CARD_WIDTH + GAP),
-                    behavior: "smooth",
-                  });
-                }
-              }}
-              className={`h-1.5 rounded-full transition-all ${
-                idx === activeIndex
-                  ? "bg-[var(--neon-magenta)] w-4"
-                  : "bg-[var(--twilight)] hover:bg-[var(--muted)] w-1.5"
-              }`}
-              aria-label={`Go to card ${idx + 1}`}
-            />
-          ))}
+        <div className="flex sm:hidden justify-center items-center gap-1.5 mt-3">
+          {totalCards <= MAX_DOTS ? (
+            Array.from({ length: totalCards }).map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => {
+                  if (scrollRef.current) {
+                    scrollRef.current.scrollTo({
+                      left: idx * (CARD_WIDTH + GAP),
+                      behavior: "smooth",
+                    });
+                  }
+                }}
+                className={`h-1.5 rounded-full transition-all ${
+                  idx === activeIndex
+                    ? "bg-[var(--show-accent)] w-4"
+                    : "bg-[var(--twilight)] hover:bg-[var(--muted)] w-1.5"
+                }`}
+                aria-label={`Go to card ${idx + 1}`}
+              />
+            ))
+          ) : (
+            <span className="text-2xs font-mono tabular-nums text-[var(--muted)]">
+              {activeIndex + 1} / {totalCards}
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -211,17 +252,22 @@ function VenueShowCard({
   item,
   portalSlug,
   vertical,
+  linkVertical,
 }: {
   item: ShowVenueData;
   portalSlug: string;
-  vertical: "music" | "stage";
+  vertical: "music" | "theater" | "clowns";
+  linkVertical: string;
 }) {
   const { venue, shows } = item;
   const displayShows = shows.slice(0, MAX_SHOWS_PER_CARD);
   const overflow = shows.length - MAX_SHOWS_PER_CARD;
 
+  const FallbackIcon =
+    vertical === "music" ? MusicNote : vertical === "clowns" ? SmileyWink : MaskHappy;
+
   return (
-    <div className="flex-shrink-0 w-64 snap-start rounded-card overflow-hidden bg-[var(--night)] shadow-card-sm hover-lift border-t-2 border border-[var(--twilight)]/40 border-t-[var(--neon-magenta)]/25">
+    <div className="flex-shrink-0 w-64 snap-start rounded-card overflow-hidden bg-[var(--night)] shadow-card-sm hover-lift border-t-2 border border-[var(--twilight)]/40 border-t-[var(--show-accent)]/25">
       {/* Venue image header */}
       <div className="relative h-36 bg-[var(--dusk)] overflow-hidden">
         {venue.image_url ? (
@@ -237,17 +283,10 @@ function VenueShowCard({
           </>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            {vertical === "music" ? (
-              <MusicNote
-                weight="duotone"
-                className="w-10 h-10 text-[var(--neon-magenta)]/30"
-              />
-            ) : (
-              <MaskHappy
-                weight="duotone"
-                className="w-10 h-10 text-[var(--neon-magenta)]/30"
-              />
-            )}
+            <FallbackIcon
+              weight="duotone"
+              className="w-10 h-10 text-[var(--show-accent)]/30"
+            />
           </div>
         )}
         {/* Show count pill */}
@@ -261,7 +300,7 @@ function VenueShowCard({
         href={`/${portalSlug}?spot=${venue.slug}`}
         className="group block px-3 pt-3 pb-2"
       >
-        <span className="text-base font-semibold text-[var(--cream)] group-hover:text-[var(--neon-magenta)] transition-colors truncate block">
+        <span className="text-base font-semibold text-[var(--cream)] group-hover:text-[var(--show-accent)] transition-colors truncate block">
           {venue.name}
         </span>
         {venue.neighborhood && (
@@ -279,7 +318,7 @@ function VenueShowCard({
         {overflow > 0 && (
           <Link
             href={`/${portalSlug}?spot=${venue.slug}`}
-            className="block px-3 py-1 text-xs text-[var(--neon-magenta)]/70 hover:text-[var(--neon-magenta)] transition-colors"
+            className="block px-3 py-1 text-xs text-[var(--show-accent)]/70 hover:text-[var(--show-accent)] transition-colors"
           >
             + {overflow} more →
           </Link>
@@ -321,8 +360,8 @@ function ShowRow({ show }: { show: VenueShow }) {
       </div>
       {timeLabel && (
         <div className="flex items-center gap-1 mt-1">
-          <Ticket weight="duotone" className="w-3 h-3 text-[var(--neon-magenta)]/60 shrink-0" />
-          <span className="text-2xs font-mono tabular-nums text-[var(--neon-magenta)]/70">
+          <Ticket weight="duotone" className="w-3 h-3 text-[var(--show-accent)]/60 shrink-0" />
+          <span className="text-2xs font-mono tabular-nums text-[var(--show-accent)]/70">
             {timeLabel}
           </span>
         </div>

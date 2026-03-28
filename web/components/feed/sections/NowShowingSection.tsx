@@ -250,8 +250,37 @@ export default function NowShowingSection({ portalSlug }: NowShowingSectionProps
 
   // ── Render gates ───────────────────────────────────────────────────
 
-  // While loading, return null — SeeShowsSection's LazySection holds space
-  if (loading) return null;
+  if (loading) {
+    return (
+      <section className="pb-2">
+        <FeedSectionHeader
+          title="Now Showing"
+          priority="secondary"
+          accentColor="var(--vibe)"
+          icon={<FilmSlate weight="duotone" className="w-5 h-5" />}
+          seeAllHref={`/${portalSlug}?view=happening&content=showtimes`}
+        />
+        <div className="flex gap-3 overflow-hidden">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="flex-shrink-0 w-64 rounded-card overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/40 animate-pulse"
+            >
+              <div className="h-40 bg-[var(--twilight)]/30" />
+              <div className="p-3 space-y-2.5">
+                <div className="h-4 bg-[var(--twilight)]/30 rounded w-3/4" />
+                <div className="space-y-1.5">
+                  <div className="h-3 bg-[var(--twilight)]/15 rounded w-full" />
+                  <div className="h-3 bg-[var(--twilight)]/15 rounded w-5/6" />
+                  <div className="h-3 bg-[var(--twilight)]/15 rounded w-2/3" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
   if (failed) return null;
 
   // Hide if no indie theaters have showtimes (and user hasn't added any chains)
@@ -292,28 +321,34 @@ export default function NowShowingSection({ portalSlug }: NowShowingSectionProps
           ))}
         </div>
 
-        {/* Mobile dot indicators */}
+        {/* Mobile scroll indicator */}
         {totalCards > 1 && (
-          <div className="flex sm:hidden justify-center gap-1.5 mt-3">
-            {Array.from({ length: totalCards }).map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  if (scrollRef.current) {
-                    scrollRef.current.scrollTo({
-                      left: idx * (CARD_WIDTH + GAP),
-                      behavior: "smooth",
-                    });
-                  }
-                }}
-                className={`w-1.5 h-1.5 rounded-full transition-all ${
-                  idx === activeIndex
-                    ? "bg-[var(--vibe)] w-4"
-                    : "bg-[var(--twilight)] hover:bg-[var(--muted)]"
-                }`}
-                aria-label={`Go to card ${idx + 1}`}
-              />
-            ))}
+          <div className="flex sm:hidden justify-center items-center gap-1.5 mt-3">
+            {totalCards <= 7 ? (
+              Array.from({ length: totalCards }).map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    if (scrollRef.current) {
+                      scrollRef.current.scrollTo({
+                        left: idx * (CARD_WIDTH + GAP),
+                        behavior: "smooth",
+                      });
+                    }
+                  }}
+                  className={`h-1.5 rounded-full transition-all ${
+                    idx === activeIndex
+                      ? "bg-[var(--vibe)] w-4"
+                      : "bg-[var(--twilight)] hover:bg-[var(--muted)] w-1.5"
+                  }`}
+                  aria-label={`Go to card ${idx + 1}`}
+                />
+              ))
+            ) : (
+              <span className="text-2xs font-mono tabular-nums text-[var(--muted)]">
+                {activeIndex + 1} / {totalCards}
+              </span>
+            )}
           </div>
         )}
       </div>

@@ -1,31 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { Popcorn } from "@phosphor-icons/react";
+import { Ticket } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import NowShowingSection from "./NowShowingSection";
 import { VenueGroupedShowsList } from "@/components/feed/VenueGroupedShowsList";
 
 // ── Types ─────────────────────────────────────────────────────────
 
-type ShowTab = "film" | "music" | "stage";
+type ShowTab = "film" | "music" | "theater" | "clowns";
 
 interface SeeShowsSectionProps {
   portalSlug: string;
 }
 
-// Tab labels and their first-viewed state (for lazy loading)
-const TABS: { id: ShowTab; label: string }[] = [
-  { id: "film", label: "Film" },
-  { id: "music", label: "Music" },
-  { id: "stage", label: "Stage" },
+const TABS: { id: ShowTab; label: string; accent: string }[] = [
+  { id: "film", label: "Film", accent: "var(--vibe)" },
+  { id: "music", label: "Music", accent: "#E855A0" },
+  { id: "theater", label: "Theater", accent: "var(--neon-cyan)" },
+  { id: "clowns", label: "Clowns", accent: "var(--gold)" },
 ];
 
 // ── Component ─────────────────────────────────────────────────────
 
 export default function SeeShowsSection({ portalSlug }: SeeShowsSectionProps) {
   const [activeTab, setActiveTab] = useState<ShowTab>("film");
-  // Track which tabs have been visited so we only mount them once
   const [visited, setVisited] = useState<Set<ShowTab>>(new Set(["film"]));
 
   function handleTabClick(tab: ShowTab) {
@@ -44,32 +43,35 @@ export default function SeeShowsSection({ portalSlug }: SeeShowsSectionProps) {
       <FeedSectionHeader
         title="See Shows"
         priority="secondary"
-        accentColor="var(--neon-magenta)"
-        icon={<Popcorn weight="duotone" className="w-5 h-5" />}
+        accentColor="var(--coral)"
+        icon={<Ticket weight="duotone" className="w-5 h-5" />}
         seeAllHref={`/${portalSlug}?view=happening&content=showtimes`}
       />
 
-      {/* Tab bar */}
+      {/* Tab bar — each tab gets its own accent color */}
       <div className="flex gap-1 mb-4">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => handleTabClick(tab.id)}
-            className={`px-3 py-1.5 rounded-lg font-mono text-xs font-medium transition-colors ${
-              activeTab === tab.id
-                ? "bg-[var(--neon-magenta)]/15 text-[var(--neon-magenta)] border border-[var(--neon-magenta)]/30"
-                : "text-[var(--muted)] hover:text-[var(--soft)] hover:bg-[var(--twilight)]/40 border border-transparent"
-            }`}
-            aria-pressed={activeTab === tab.id}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleTabClick(tab.id)}
+              style={{ "--tab-accent": tab.accent } as React.CSSProperties}
+              className={`px-3 py-1.5 rounded-lg font-mono text-xs font-medium transition-colors ${
+                isActive
+                  ? "bg-[var(--tab-accent)]/15 text-[var(--tab-accent)] border border-[var(--tab-accent)]/30"
+                  : "text-[var(--muted)] hover:text-[var(--soft)] hover:bg-[var(--twilight)]/40 border border-transparent"
+              }`}
+              aria-pressed={isActive}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Tab panels — kept in DOM once visited, hidden when not active */}
       <div className={activeTab === "film" ? "block" : "hidden"}>
-        {/* Film: NowShowingSection is always mounted (it's the default tab) */}
         <NowShowingSection portalSlug={portalSlug} />
       </div>
 
@@ -78,15 +80,27 @@ export default function SeeShowsSection({ portalSlug }: SeeShowsSectionProps) {
           <VenueGroupedShowsList
             portalSlug={portalSlug}
             categories="music"
+            accentColor="#E855A0"
           />
         )}
       </div>
 
-      <div className={activeTab === "stage" ? "block" : "hidden"}>
-        {visited.has("stage") && (
+      <div className={activeTab === "theater" ? "block" : "hidden"}>
+        {visited.has("theater") && (
           <VenueGroupedShowsList
             portalSlug={portalSlug}
-            categories="theater,comedy,dance"
+            categories="theater,dance"
+            accentColor="var(--neon-cyan)"
+          />
+        )}
+      </div>
+
+      <div className={activeTab === "clowns" ? "block" : "hidden"}>
+        {visited.has("clowns") && (
+          <VenueGroupedShowsList
+            portalSlug={portalSlug}
+            categories="comedy"
+            accentColor="var(--gold)"
           />
         )}
       </div>
