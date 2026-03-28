@@ -82,13 +82,13 @@ function SpotCardContent({ spot, distance, portalSlug, showDistance = true, insi
   const minsLeft = minutesUntilClose(spot.closesAt);
   const closingSoon = minsLeft !== null && minsLeft <= 60;
   const accentColor = closingSoon ? "var(--amber, #f59e0b)" : "var(--neon-green)";
-  const reflectionClass = spot.venue_type ? getSpotReflectionClass(spot.venue_type) : "";
+  const reflectionClass = spot.place_type ? getSpotReflectionClass(spot.place_type) : "";
 
   return (
     <Link
       href={portalSlug ? `/${portalSlug}?spot=${spot.slug}` : `/spots/${spot.slug}`}
       scroll={false}
-      data-category={spot.venue_type || "other"}
+      data-category={spot.place_type || "other"}
       data-accent="spot"
       className={`block find-row-card rounded-xl border border-[var(--twilight)]/75 ${reflectionClass} overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] border-l-[2px] border-l-[var(--accent-color)]`}
       style={
@@ -110,10 +110,10 @@ function SpotCardContent({ spot, distance, portalSlug, showDistance = true, insi
             {closingSoon ? "Closing soon" : "Open"}
           </span>
           <span
-            data-category={spot.venue_type || undefined}
+            data-category={spot.place_type || undefined}
             className="inline-flex items-center justify-center w-8 h-8 rounded category-chip"
           >
-            <CategoryIcon type={spot.venue_type || "venue"} size={18} glow="subtle" />
+            <CategoryIcon type={spot.place_type || "venue"} size={18} glow="subtle" />
           </span>
         </div>
 

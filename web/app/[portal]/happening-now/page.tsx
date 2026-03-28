@@ -28,7 +28,7 @@ function filterItemsByCategory(items: AroundMeItem[], category: FilterCategory):
   return items.filter((item) => {
     if (item.type === "spot") {
       const spot = item.data as AroundMeSpot;
-      return spot.venue_type ? filter.spotTypes.includes(spot.venue_type) : false;
+      return spot.place_type ? filter.spotTypes.includes(spot.place_type) : false;
     }
     const event = item.data as AroundMeEvent;
     return event.category ? filter.eventCategories.includes(event.category) : false;
@@ -187,7 +187,7 @@ export default function WhatsOpenPage() {
         spots.push({
           id: d.id, name: d.name, slug: d.slug, address: d.address,
           neighborhood: d.neighborhood, city: "", state: "",
-          lat: d.lat, lng: d.lng, venue_type: d.venue_type,
+          lat: d.lat, lng: d.lng, place_type: d.place_type,
           venue_types: d.venue_types, description: null,
           short_description: null, price_level: d.price_level,
           website: null, instagram: null, hours_display: null,

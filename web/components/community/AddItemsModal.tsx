@@ -25,7 +25,7 @@ interface VenueResult {
   name: string;
   slug: string;
   neighborhood: string | null;
-  venue_type: string | null;
+  place_type: string | null;
 }
 
 interface EventResult {

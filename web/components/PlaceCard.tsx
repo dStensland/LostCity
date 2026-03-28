@@ -110,7 +110,7 @@ function DiscoveryCard({
   const { navigate } = useViewTransition();
   const hasImage = venue.image_url && !imageError;
   const isFeatured = (venue.event_count ?? 0) >= FEATURED_EVENT_THRESHOLD;
-  const categoryKey = venue.venue_type || "other";
+  const categoryKey = venue.place_type || "other";
   const accentColor = getCategoryColor(categoryKey);
   const locationDesignator = venue.location_designator || "standard";
   const locationLabel = LOCATION_DESIGNATOR_LABELS[locationDesignator];
@@ -153,7 +153,7 @@ function DiscoveryCard({
                 </>
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <CategoryIcon type={venue.venue_type || "venue"} size={28} glow="subtle" weight="light" />
+                  <CategoryIcon type={venue.place_type || "venue"} size={28} glow="subtle" weight="light" />
                 </div>
               )}
             </div>
@@ -174,14 +174,14 @@ function DiscoveryCard({
                   </span>
                 ) : (
                   <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-accent-20 border border-[var(--twilight)]/50">
-                    <CategoryIcon type={venue.venue_type || "venue"} size={14} glow="subtle" />
+                    <CategoryIcon type={venue.place_type || "venue"} size={14} glow="subtle" />
                   </span>
                 )}
               </div>
 
               <div className="flex items-center gap-2.5 mb-1">
                 <span className="hidden sm:inline-flex flex-shrink-0 items-center justify-center w-8 h-8 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
-                  <CategoryIcon type={venue.venue_type || "venue"} size={16} glow="subtle" />
+                  <CategoryIcon type={venue.place_type || "venue"} size={16} glow="subtle" />
                 </span>
                 <span className="text-[var(--cream)] font-semibold text-base sm:text-lg transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
                   {venue.name}
@@ -317,7 +317,7 @@ function CompactCard({
 }) {
   const staggerClass = index < 10 ? `stagger-${index + 1}` : "";
   const priceDisplay = formatPriceLevel(venue.price_level);
-  const venueType = venue.venue_type || "music_venue";
+  const venueType = venue.place_type || "music_venue";
   const { navigate } = useViewTransition();
   const distance = getDistanceMiles(venue, showDistance);
   const compactVenueHref = `/${portalSlug}?spot=${venue.slug}`;

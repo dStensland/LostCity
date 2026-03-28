@@ -493,9 +493,9 @@ export type Spot = {
   state: string;
   lat: number | null;
   lng: number | null;
-  venue_type: string | null;
-  /** @deprecated Alias for venue_type — DB column renamed to place_type in Deploy 10 */
-  place_type?: string | null;
+  place_type: string | null;
+  /** @deprecated Use place_type instead — DB column was renamed from venue_type in Deploy 10 */
+  venue_type?: string | null;
   location_designator?: "standard" | "private_after_signup" | "virtual" | "recovery_meeting" | null;
   venue_types: string[] | null;
   description: string | null;

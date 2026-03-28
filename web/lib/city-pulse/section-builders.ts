@@ -632,7 +632,7 @@ export function buildWeatherDiscoverySection(
       contextual_label: getWeatherContextLabel(
         weather,
         (venue.vibes as string[] | null) ?? null,
-        (venue.venue_type as string | null) ?? null,
+        (venue.place_type as string | null) ?? null,
       ),
       is_open: openCheck.isOpen || undefined,
     });
@@ -1087,7 +1087,7 @@ export function buildExperiencesSection(
 
   const items: CityPulseItem[] = sorted.map((venue) =>
     makeDestinationItem(venue, {
-      contextual_label: categorizeVenueType(venue.venue_type),
+      contextual_label: categorizeVenueType(venue.place_type),
     }),
   );
 
@@ -1096,7 +1096,7 @@ export function buildExperiencesSection(
   const categoryCounts: Record<string, number> = {};
   const venueEventCounts: Record<number, number> = {};
   for (const venue of unique) {
-    const cat = categorizeVenueType(venue.venue_type);
+    const cat = categorizeVenueType(venue.place_type);
     categoryCounts[cat] = (categoryCounts[cat] ?? 0) + 1;
     const evCount = eventCountMap.get(venue.id) ?? 0;
     if (evCount > 0) venueEventCounts[venue.id] = evCount;

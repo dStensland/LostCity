@@ -136,7 +136,7 @@ export type EveningStop = {
     slug: string;
     lat: number;
     lng: number;
-    venue_type: string | null;
+    place_type: string | null;
     image_url: string | null;
     neighborhood: string | null;
   };

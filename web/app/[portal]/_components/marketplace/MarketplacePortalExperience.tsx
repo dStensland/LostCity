@@ -146,7 +146,7 @@ function groupTenantsByCategory(
   const buckets = new Map<TenantCategory, PCMTenant[]>();
 
   for (const tenant of tenants) {
-    const cat = classifyTenant(tenant.venue_type, tenant.vibes);
+    const cat = classifyTenant(tenant.place_type, tenant.vibes);
     const existing = buckets.get(cat) || [];
     existing.push(tenant);
     buckets.set(cat, existing);

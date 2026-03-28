@@ -44,7 +44,7 @@ export default function DogMapViewClient({ spots }: Props) {
 
   const filteredSpots = useMemo(() => {
     if (activeFilter === "all") return spots;
-    return spots.filter((s) => matchesFilter(s.venue_type, activeFilter));
+    return spots.filter((s) => matchesFilter(s.place_type, activeFilter));
   }, [spots, activeFilter]);
 
   return (

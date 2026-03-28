@@ -35,7 +35,7 @@ export type ListItem = {
     name: string;
     slug: string;
     neighborhood: string | null;
-    venue_type: string | null;
+    place_type: string | null;
     image_url?: string | null;
   } | null;
   event?: {
@@ -116,8 +116,8 @@ export default function ListItemCard({
     if (item.item_type === "venue" && item.venue) {
       return {
         name: item.venue.name,
-        subtitle: item.venue.venue_type
-          ? SPOT_TYPE_LABELS[item.venue.venue_type] || item.venue.venue_type
+        subtitle: item.venue.place_type
+          ? SPOT_TYPE_LABELS[item.venue.place_type] || item.venue.place_type
           : null,
         location: item.venue.neighborhood,
         href: `/${portalSlug}?spot=${item.venue.slug}`,

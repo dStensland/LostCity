@@ -41,7 +41,7 @@ export type ConciergeDestination = {
     name: string;
     slug: string;
     neighborhood: string | null;
-    venue_type: string | null;
+    place_type: string | null;
   };
   proximity_tier: "walkable" | "close" | "destination";
   proximity_label: string;

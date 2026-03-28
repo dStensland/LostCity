@@ -31,7 +31,7 @@ interface EventQuickActionsProps {
       address?: string | null;
       city?: string;
       state?: string;
-      venue_type?: string | null;
+      place_type?: string | null;
     } | null;
   };
   isLive?: boolean;
@@ -152,7 +152,7 @@ export default function EventQuickActions({ event, isLive, className = "", extra
             eventId={event.id}
             venueId={event.venue?.id}
             venueName={event.venue?.name}
-            venueType={event.venue?.venue_type}
+            venueType={event.venue?.place_type}
             variant="primary"
             className="flex-1 justify-center py-3.5 text-base"
           />
@@ -164,7 +164,7 @@ export default function EventQuickActions({ event, isLive, className = "", extra
             eventId={event.id}
             venueId={event.venue?.id}
             venueName={event.venue?.name}
-            venueType={event.venue?.venue_type}
+            venueType={event.venue?.place_type}
             variant="compact"
           />
         )}

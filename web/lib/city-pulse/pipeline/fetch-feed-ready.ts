@@ -131,7 +131,7 @@ function reshapeToFeedEvent(row: FeedReadyRow): FeedEventData {
 function reshapeWithExtras(row: FeedReadyRow): FeedEventData {
   const base = reshapeToFeedEvent(row);
   if (base.venue && row.place_id != null) {
-    (base.venue as Record<string, unknown>).venue_type = row.place_type;
+    (base.venue as Record<string, unknown>).place_type = row.place_type;
     (base.venue as Record<string, unknown>).city = row.place_city;
     (base.venue as Record<string, unknown>).active = row.place_active ?? true;
   }

@@ -9,7 +9,7 @@ type DogNearbySpot = {
   id: number;
   name: string;
   slug: string;
-  venue_type: string | null;
+  place_type: string | null;
   vibes: string[] | null;
   short_description: string | null;
 };
@@ -63,7 +63,7 @@ export default function DogNearbySection({
       <SectionHeader title="Dog-Friendly Nearby" />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {spots.map((s) => {
-          const contentType = classifyDogContentType(s.venue_type, s.vibes, null, false);
+          const contentType = classifyDogContentType(s.place_type, s.vibes, null, false);
           const color = DOG_CONTENT_COLORS[contentType];
           return (
             <button

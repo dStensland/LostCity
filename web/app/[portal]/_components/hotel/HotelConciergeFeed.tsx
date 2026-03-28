@@ -35,7 +35,7 @@ type Destination = {
     slug: string;
     name: string;
     neighborhood: string | null;
-    venue_type: string | null;
+    place_type: string | null;
     image_url: string | null;
     short_description: string | null;
   };
@@ -94,7 +94,7 @@ function isLikelyHotelAmenity(destination: Destination, portalName: string): boo
   const nameLower = destination.venue.name.toLowerCase();
   const tokenMatch = tokens.some((token) => nameLower.includes(token));
   const veryClose = destination.distance_km <= 0.35;
-  const typeMatch = destination.venue.venue_type ? HOTEL_AMENITY_TYPES.has(destination.venue.venue_type) : false;
+  const typeMatch = destination.venue.place_type ? HOTEL_AMENITY_TYPES.has(destination.venue.place_type) : false;
 
   return tokenMatch || (veryClose && typeMatch);
 }
@@ -204,7 +204,7 @@ export default function HotelConciergeFeed({ portal }: HotelConciergeFeedProps) 
     };
 
     for (const destination of destinations) {
-      result[getCategory(destination.venue.venue_type)].push(destination);
+      result[getCategory(destination.venue.place_type)].push(destination);
     }
 
     return result;

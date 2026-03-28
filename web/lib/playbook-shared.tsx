@@ -58,7 +58,7 @@ export function getBufferLabel(level: DangerLevel, bufferMinutes: number): strin
 
 export function getItemCategory(item: ItineraryItem | LocalItineraryItem): string {
   if ("event" in item && item.event?.category) return item.event.category;
-  if ("venue" in item && item.venue?.venue_type) return item.venue.venue_type;
+  if ("venue" in item && item.venue?.place_type) return item.venue.place_type;
   return "default";
 }
 

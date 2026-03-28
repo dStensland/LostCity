@@ -10,7 +10,7 @@ interface VenueResult {
   address: string | null;
   neighborhood: string | null;
   city: string | null;
-  venue_type: string | null;
+  place_type: string | null;
 }
 
 interface GooglePlaceResult {

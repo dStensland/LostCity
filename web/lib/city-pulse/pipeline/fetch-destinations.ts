@@ -30,7 +30,7 @@ export interface DestinationItem {
     name: string;
     slug: string | null;
     neighborhood: string | null;
-    venue_type: string | null;
+    place_type: string | null;
     image_url: string | null;
   };
   occasion: string;
@@ -224,7 +224,7 @@ export async function fetchDestinations(
         name: place.name,
         slug: place.slug,
         neighborhood: place.neighborhood,
-        venue_type: place.place_type,
+        place_type: place.place_type,
         image_url: place.image_url,
       },
       occasion,
@@ -310,7 +310,7 @@ export async function fetchDestinations(
                 name: place.name,
                 slug: place.slug,
                 neighborhood: place.neighborhood,
-                venue_type: place.place_type,
+                place_type: place.place_type,
                 image_url: place.image_url,
               },
               occasion: "date_night",

@@ -122,7 +122,7 @@ export type EventWithLocation = Event & {
     lng: number | null;
     typical_price_min: number | null;
     typical_price_max: number | null;
-    venue_type?: string | null;
+    place_type?: string | null;
     location_designator?:
       | "standard"
       | "private_after_signup"

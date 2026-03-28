@@ -535,7 +535,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
             slug: venue.slug,
             address: venue.address,
             neighborhood: venue.neighborhood,
-            venue_type: venue.place_type, // bridge: place_type → venue_type
+            place_type: venue.place_type,
             image_url: venue.image_url,
             short_description: venue.short_description,
             vibes: venue.vibes,

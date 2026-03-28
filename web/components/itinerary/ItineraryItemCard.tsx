@@ -32,7 +32,7 @@ function getItemSubtitle(item: ItineraryItem | LocalItineraryItem): string {
     return item.event.venue_name || item.event.category || "Event";
   }
   if (item.item_type === "venue" && "venue" in item && item.venue) {
-    return item.venue.neighborhood || item.venue.venue_type || "Venue";
+    return item.venue.neighborhood || item.venue.place_type || "Venue";
   }
   if (item.item_type === "custom" && item.custom_address) {
     return item.custom_address;

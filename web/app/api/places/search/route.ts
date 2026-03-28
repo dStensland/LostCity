@@ -359,7 +359,7 @@ export async function GET(request: NextRequest) {
     neighborhood: venue.neighborhood,
     city: venue.city,
     state: venue.state,
-    venue_type: venue.place_type, // bridge: place_type → venue_type
+    place_type: venue.place_type,
     lat: venue.lat,
     lng: venue.lng,
     image_url: venue.image_url,

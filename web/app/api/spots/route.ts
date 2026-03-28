@@ -242,7 +242,7 @@ export async function GET(request: NextRequest) {
       name: string;
       slug: string;
       neighborhood: string | null;
-      venue_type: string | null;
+      place_type: string | null;
       location_designator: string;
       image_url: string | null;
       event_count: number;
@@ -552,7 +552,7 @@ export async function GET(request: NextRequest) {
         name: venue.name,
         slug: venue.slug,
         neighborhood: venue.neighborhood,
-        venue_type: venue.place_type,
+        place_type: venue.place_type,
         location_designator: venue.location_designator || "standard",
         image_url: venue.image_url,
         event_count: eventCounts.get(venue.id) || 0,

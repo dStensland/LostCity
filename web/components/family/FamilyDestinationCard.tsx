@@ -24,7 +24,7 @@ export interface FamilyDestination {
   address: string | null;
   neighborhood: string | null;
   image_url: string | null;
-  venue_type: string | null;
+  place_type: string | null;
   indoor_outdoor: string | null;
   description: string | null;
   editorial_mention_count: number;
@@ -165,7 +165,7 @@ export const FamilyDestinationCard = memo(function FamilyDestinationCard({
     slug,
     neighborhood,
     image_url,
-    venue_type,
+    place_type: venue_type,
     indoor_outdoor,
     description,
     editorial_mention_count,

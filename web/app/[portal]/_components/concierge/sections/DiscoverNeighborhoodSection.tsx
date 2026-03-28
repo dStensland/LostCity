@@ -54,7 +54,7 @@ export default function DiscoverNeighborhoodSection({ destinations, onDestinatio
       if (activeCategory === "all") return true;
       const category = CATEGORIES.find((c) => c.id === activeCategory);
       if (!category || category.types.length === 0) return true;
-      return category.types.includes((dest.venue.venue_type ?? "") as never);
+      return category.types.includes((dest.venue.place_type ?? "") as never);
     })
     .slice(0, 12);
 

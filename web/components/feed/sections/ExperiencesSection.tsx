@@ -60,7 +60,7 @@ interface ExperienceVenue {
   id: number;
   name: string;
   slug: string;
-  venue_type: string | null;
+  place_type: string | null;
   neighborhood: string | null;
   image_url: string | null;
   category: string;
@@ -148,7 +148,7 @@ function extractExperiences(section: CityPulseSectionData): ExperienceVenue[] {
         id: venueId,
         name: venue.name as string,
         slug: venue.slug as string,
-        venue_type: venue.venue_type as string | null,
+        place_type: venue.place_type as string | null,
         neighborhood: venue.neighborhood as string | null,
         image_url: venue.image_url as string | null,
         category: (dest.contextual_label as string) ?? "museums",
@@ -505,7 +505,7 @@ function ExperienceRow({
           {exp.name}
         </h3>
         <p className="text-2xs text-[var(--muted)] truncate mt-0.5">
-          {exp.neighborhood || getVenueTypeLabel(exp.venue_type)}
+          {exp.neighborhood || getVenueTypeLabel(exp.place_type)}
         </p>
       </div>
     </Link>

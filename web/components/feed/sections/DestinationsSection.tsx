@@ -14,7 +14,7 @@ interface DestinationVenue {
   name: string;
   slug: string | null;
   neighborhood: string | null;
-  venue_type: string | null;
+  place_type: string | null;
   image_url: string | null;
 }
 
@@ -91,9 +91,9 @@ function DestinationCard({ item, portalSlug }: DestinationCardProps) {
         </p>
 
         {/* Neighborhood + venue type */}
-        {(venue.neighborhood || venue.venue_type) && (
+        {(venue.neighborhood || venue.place_type) && (
           <p className="text-xs text-[var(--muted)] leading-tight">
-            {[venue.neighborhood, venue.venue_type]
+            {[venue.neighborhood, venue.place_type]
               .filter(Boolean)
               .join(" · ")}
           </p>

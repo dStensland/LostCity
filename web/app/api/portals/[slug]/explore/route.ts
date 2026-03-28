@@ -152,7 +152,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         name: sanitizedVenue.name,
         slug: sanitizedVenue.slug,
         neighborhood: sanitizedVenue.neighborhood,
-        venue_type: sanitizedVenue.place_type, // bridge: place_type → venue_type
+        place_type: sanitizedVenue.place_type,
         short_description: sanitizedVenue.short_description,
         explore_category: sanitizedVenue.explore_category,
         explore_featured: sanitizedVenue.explore_featured ?? false,
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const collections = EXPLORE_CATEGORIES.map((category) => {
       const categoryVenues = enrichedVenues.filter((v) => {
         if (v.explore_category === category.id) return true;
-        if (!v.explore_category && v.venue_type && category.venueTypes.includes(v.venue_type as string)) return true;
+        if (!v.explore_category && v.place_type && category.venueTypes.includes(v.place_type as string)) return true;
         return false;
       });
 

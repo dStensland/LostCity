@@ -11,7 +11,7 @@ interface VenueResult {
   slug: string;
   address: string | null;
   neighborhood: string | null;
-  venue_type: string | null;
+  place_type: string | null;
 }
 
 interface PlaceResult {

@@ -239,7 +239,7 @@ function scoreDestinationForFoodFocus(
   }
 
   const config = FOOD_FOCUS_CONFIG[focus];
-  const venueType = normalizeText(destination.venue.venue_type);
+  const venueType = normalizeText(destination.venue.place_type);
   const nameBlob = `${normalizeText(destination.venue.name)} ${normalizeText(destination.top_special?.title || "")}`;
   if (config.venueTypes.includes(venueType)) {
     score += 6;
@@ -380,7 +380,7 @@ export function runConciergeOrchestration(input: ConciergeOrchestrationInput): C
     });
   } else if (mode === "elevated") {
     const premium = scoredDestinations
-      .filter((item) => ["rooftop", "bar", "restaurant"].includes(normalizeText(item.destination.venue.venue_type)))
+      .filter((item) => ["rooftop", "bar", "restaurant"].includes(normalizeText(item.destination.venue.place_type)))
       .map((item) => item.destination.venue.id);
     const chosen = premium.concat(topDestinationIds).slice(0, 3);
     chosen.forEach((destinationId) => {

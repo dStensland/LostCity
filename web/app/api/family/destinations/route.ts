@@ -285,7 +285,7 @@ export async function GET(request: NextRequest) {
       address: v.address,
       neighborhood: v.neighborhood,
       image_url: v.hero_image_url ?? v.image_url,
-      venue_type: v.place_type, // bridge: place_type → venue_type for API consumers
+      place_type: v.place_type,
       indoor_outdoor: v.indoor_outdoor,
       description: v.short_description,
       editorial_mention_count: editorialCountMap.get(v.id) ?? 0,

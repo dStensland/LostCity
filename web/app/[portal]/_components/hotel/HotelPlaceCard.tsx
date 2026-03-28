@@ -7,7 +7,7 @@ interface HotelPlaceCardProps {
     slug: string;
     name: string;
     image_url?: string | null;
-    venue_type?: string | null;
+    place_type?: string | null;
     neighborhood?: string | null;
     vibes?: string[] | null;
     distance_km?: number | null;
@@ -36,7 +36,7 @@ export default function HotelPlaceCard({ venue, portalSlug, variant = "default" 
     : null;
 
   // Format venue type for display
-  const venueType = venue.venue_type?.replace(/_/g, " ");
+  const venueType = venue.place_type?.replace(/_/g, " ");
 
   // Get first vibe tag if available
   const vibeTag = venue.vibes?.[0];

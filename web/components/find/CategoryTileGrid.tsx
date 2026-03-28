@@ -46,7 +46,7 @@ export default function CategoryTileGrid({ spots, onCategorySelect, loading }: C
   const tiles = useMemo<ResolvedTile[]>(() => {
     const typeMap = new Map<string, Spot[]>();
     for (const spot of spots) {
-      const vt = spot.venue_type;
+      const vt = spot.place_type;
       if (!vt) continue;
       if (!typeMap.has(vt)) typeMap.set(vt, []);
       typeMap.get(vt)!.push(spot);

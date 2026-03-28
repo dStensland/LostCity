@@ -29,7 +29,7 @@ export function venueFromDestination(dest: Destination): VenueModalData {
   return {
     id: dest.venue.id,
     name: dest.venue.name,
-    typeLabel: dest.venue.venue_type,
+    typeLabel: dest.venue.place_type,
     imageUrl: dest.venue.image_url,
     neighborhood: dest.venue.neighborhood,
     distanceKm: dest.distance_km,

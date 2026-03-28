@@ -119,7 +119,7 @@ const EventMapMarker = memo(function EventMapMarker({
       }}
     >
       <MapPin
-        category={event.venue?.venue_type || event.category || null}
+        category={(event.venue as unknown as { place_type?: string | null } | null)?.place_type || event.category || null}
         isLive={event.is_live || false}
         isSelected={isSelected}
         isHovered={isHovered}
@@ -153,7 +153,7 @@ const SpotMapMarker = memo(function SpotMapMarker({
       }}
     >
       <MapPin
-        category={spot.venue_type || "venue"}
+        category={spot.place_type || "venue"}
         isSelected={isSelected}
         isHovered={isHovered}
       />
@@ -269,7 +269,7 @@ export default function MapView({
         itemType: "event" as const,
         lng: coords[0],
         lat: coords[1],
-        category: event.venue?.venue_type || event.category || null,
+        category: (event.venue as unknown as { place_type?: string | null } | null)?.place_type || event.category || null,
         isLive: !!event.is_live,
       }];
     });
@@ -282,7 +282,7 @@ export default function MapView({
         itemType: "spot" as const,
         lng: coords[0],
         lat: coords[1],
-        category: spot.venue_type || "venue",
+        category: spot.place_type || "venue",
         isLive: false,
       }];
     });
@@ -761,7 +761,7 @@ export default function MapView({
               type="spot"
               slug={selectedSpot.slug}
               name={selectedSpot.name}
-              venueType={selectedSpot.venue_type}
+              venueType={selectedSpot.place_type}
               locationDesignator={selectedSpot.location_designator}
               address={selectedSpot.address}
               neighborhood={selectedSpot.neighborhood}

@@ -73,7 +73,7 @@ type SpecialResult = {
     slug: string;
     address: string | null;
     neighborhood: string | null;
-    venue_type: string | null;
+    place_type: string | null;
     image_url: string | null;
   };
   distance_km: number;
@@ -263,7 +263,7 @@ export async function GET(request: NextRequest) {
           slug: venue.slug,
           address: venue.address,
           neighborhood: venue.neighborhood,
-          venue_type: venue.place_type, // bridge: place_type → venue_type
+          place_type: venue.place_type,
           image_url: venue.image_url,
         },
         distance_km: Math.round(venue.distance_km * 100) / 100,

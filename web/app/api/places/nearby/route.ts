@@ -20,7 +20,8 @@ export async function GET(req: NextRequest) {
   // Parse and validate numeric parameters
   const lat = parseFloatParam(params.get("lat"));
   const lng = parseFloatParam(params.get("lng"));
-  const radius = parseIntParam(params.get("radius"), 2000);
+  const rawRadius = parseIntParam(params.get("radius"), 2000);
+  const radius = rawRadius !== null ? Math.min(rawRadius, 50000) : null;
   const category = params.get("category");
   const minScore = parseIntParam(params.get("minScore"), 40);
 

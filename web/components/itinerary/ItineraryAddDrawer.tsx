@@ -147,9 +147,9 @@ export default function ItineraryAddDrawer({
               id: Number(v.id),
               type: "venue",
               title: String(v.name || ""),
-              subtitle: String(v.neighborhood || v.venue_type || ""),
+              subtitle: String(v.neighborhood || v.place_type || ""),
               image_url: v.image_url ? String(v.image_url) : null,
-              category: v.venue_type ? String(v.venue_type) : null,
+              category: v.place_type ? String(v.place_type) : null,
               lat: typeof v.lat === "number" ? v.lat : null,
               lng: typeof v.lng === "number" ? v.lng : null,
             });

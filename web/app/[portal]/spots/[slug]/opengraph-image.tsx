@@ -28,10 +28,10 @@ export default async function Image({
     return new ImageResponse(ogFallbackCard("Venue Not Found", size), size);
   }
 
-  const accentStyle = getVenueTypeOgStyle(spot.venue_type);
+  const accentStyle = getVenueTypeOgStyle(spot.place_type);
   const hasImage = spot.image_url && spot.image_url.length > 0;
   const titleSize = spot.name.length > 40 ? "text-[44px]" : "text-[56px]";
-  const typeLabel = getSpotTypeLabel(spot.venue_type);
+  const typeLabel = getSpotTypeLabel(spot.place_type);
   const locationParts = [spot.neighborhood, spot.city].filter(Boolean);
   const locationText = locationParts.join(" · ");
 

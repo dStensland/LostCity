@@ -164,7 +164,7 @@ export default async function PortalSpotPage({ params }: Props) {
   const spotData = detail.spot;
   const spotName = spotData.name as string;
   const schemaType =
-    mapVenueTypeToSchemaType(spotData.venue_type as string | null) ||
+    mapVenueTypeToSchemaType(spotData.place_type as string | null) ||
     "LocalBusiness";
   const spotHours = spotData.hours as
     | Record<string, { open: string; close: string } | null>

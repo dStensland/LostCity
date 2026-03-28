@@ -132,7 +132,7 @@ export async function getYonderDestinationNodePayload(
     id: number;
     slug: string;
     name: string;
-    venue_type: string | null;
+    place_type: string | null;
     city: string | null;
     neighborhood: string | null;
     image_url: string | null;
@@ -197,7 +197,7 @@ export async function getYonderDestinationNodePayload(
         id: venue.id,
         slug: venue.slug,
         name: venue.name,
-        venueType: venue.venue_type,
+        venueType: venue.place_type,
         city: venue.city,
         neighborhood: venue.neighborhood,
         imageUrl: venue.image_url || venue.hero_image_url,

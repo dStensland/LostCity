@@ -26,7 +26,7 @@ export default function MarketplaceTenantCard({
   tenant,
   portalSlug,
 }: MarketplaceTenantCardProps) {
-  const category = classifyTenant(tenant.venue_type, tenant.vibes);
+  const category = classifyTenant(tenant.place_type, tenant.vibes);
   const label = TENANT_CATEGORY_LABELS[category];
   const colorClass = CATEGORY_COLORS[category];
 

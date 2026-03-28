@@ -172,7 +172,7 @@ export function resolveCuratedSections(
           if (e.category === "games" || e.category === "dance") return true;
           const vType = (e as unknown as Record<string, unknown>).venue &&
             typeof (e as unknown as Record<string, unknown>).venue === "object"
-            ? ((e as unknown as Record<string, unknown>).venue as Record<string, unknown>)?.venue_type as string | undefined
+            ? ((e as unknown as Record<string, unknown>).venue as Record<string, unknown>)?.place_type as string | undefined
             : undefined;
           const atNightlifeVenue = vType && nightlifeVenueTypes.has(vType);
           const atEntertainmentVenue = vType && entertainmentVenueTypes.has(vType);

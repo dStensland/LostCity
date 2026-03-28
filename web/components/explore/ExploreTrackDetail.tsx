@@ -202,7 +202,7 @@ export default function ExploreTrackDetail({
                   isFeatured: v.is_featured ?? false,
                   aliveBadge: v.alive_badge ?? null,
                   topTip: v.top_tip ?? null,
-                  venueType: v.venue?.venue_type ?? null,
+                  venueType: v.venue?.place_type ?? null,
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   highlights: (v.highlights || []).map((h: any) => ({
                     id: h.id,

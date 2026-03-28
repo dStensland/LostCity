@@ -137,7 +137,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       }
       return {
         name: String(v.name || ""),
-        venue_type: typeof v.venue_type === "string" ? v.venue_type : null,
+        venue_type: typeof v.place_type === "string" ? v.place_type : null,
         neighborhood: typeof v.neighborhood === "string" ? v.neighborhood : null,
         distance_km: Math.round(distKm * 10) / 10,
       };

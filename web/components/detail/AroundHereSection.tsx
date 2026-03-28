@@ -17,7 +17,7 @@ export type NearbyDestination = {
   id: number;
   name: string;
   slug: string;
-  venue_type: string | null;
+  place_type: string | null;
   neighborhood: string | null;
   distance?: number;
   proximity_label?: string;
@@ -36,7 +36,7 @@ export type RelatedEvent = {
   end_time?: string | null;
   distance?: number;
   proximity_label?: string;
-  venue?: { id: number; name: string; slug: string; city?: string; location_designator?: string; venue_type?: string } | null;
+  venue?: { id: number; name: string; slug: string; city?: string; location_designator?: string; place_type?: string } | null;
   going_count?: number;
   interested_count?: number;
   recommendation_count?: number;
@@ -321,8 +321,8 @@ function SpotCard({
   onClick: () => void;
   mobile?: boolean;
 }) {
-  const typeLabel = getSpotTypeLabel(spot.venue_type || "");
-  const accentColor = VENUE_TYPE_COLORS[spot.venue_type || ""] || "var(--coral)";
+  const typeLabel = getSpotTypeLabel(spot.place_type || "");
+  const accentColor = VENUE_TYPE_COLORS[spot.place_type || ""] || "var(--coral)";
 
   // Detect open status from hours
   const isOpen = useMemo(() => {
@@ -355,7 +355,7 @@ function SpotCard({
             className="absolute inset-0 flex items-center justify-center"
             style={{ backgroundColor: `color-mix(in srgb, ${accentColor} 15%, var(--night))` }}
           >
-            <CategoryIcon type={spot.venue_type || "restaurant"} size={28} glow="subtle" />
+            <CategoryIcon type={spot.place_type || "restaurant"} size={28} glow="subtle" />
           </div>
         )}
 

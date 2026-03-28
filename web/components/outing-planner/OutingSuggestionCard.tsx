@@ -70,7 +70,7 @@ export default function OutingSuggestionCard({
   disabled,
 }: OutingSuggestionCardProps) {
   const isEvent = suggestion.type === "event";
-  const typeLabel = getSpotTypeLabel(suggestion.venue.venue_type);
+  const typeLabel = getSpotTypeLabel(suggestion.venue.place_type);
   const subtitleText = isEvent ? `at ${suggestion.venue.name}` : typeLabel;
   const [justAdded, setJustAdded] = useState(false);
   const wasAddingRef = useRef(false);

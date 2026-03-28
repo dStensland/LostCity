@@ -204,7 +204,7 @@ export default function HappeningNowPage() {
           state: "GA",
           lat: spot.lat,
           lng: spot.lng,
-          venue_type: spot.venue_type,
+          place_type: spot.place_type,
           venue_types: spot.venue_types,
           description: null,
           short_description: null,

@@ -33,7 +33,7 @@ export type Destination = {
     slug: string;
     name: string;
     neighborhood: string | null;
-    venue_type: string | null;
+    place_type: string | null;
     image_url: string | null;
     short_description: string | null;
   };

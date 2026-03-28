@@ -109,7 +109,7 @@ export default function MobileMapSheet({ event, spot, portalSlug, onClose }: Mob
               type="spot"
               slug={spot.slug}
               name={spot.name}
-              venueType={spot.venue_type}
+              venueType={spot.place_type}
               address={spot.address}
               neighborhood={spot.neighborhood}
               portalSlug={portalSlug}

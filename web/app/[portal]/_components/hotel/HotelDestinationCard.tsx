@@ -140,7 +140,7 @@ export default function HotelDestinationCard({
             </svg>
             {destination.proximity_label}
           </span>
-          <span>{destination.venue.neighborhood || "Nearby"}{destination.venue.venue_type ? ` · ${destination.venue.venue_type.replace(/_/g, " ")}` : ""}</span>
+          <span>{destination.venue.neighborhood || "Nearby"}{destination.venue.place_type ? ` · ${destination.venue.place_type.replace(/_/g, " ")}` : ""}</span>
         </div>
 
         {destination.top_special ? (

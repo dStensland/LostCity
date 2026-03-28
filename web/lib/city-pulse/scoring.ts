@@ -346,7 +346,7 @@ export function scoreDestination(
     id: number;
     neighborhood: string | null;
     vibes: string[] | null;
-    venue_type: string | null;
+    place_type: string | null;
   },
   signals: UserSignals | null,
 ): number {

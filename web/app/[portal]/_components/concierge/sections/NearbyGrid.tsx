@@ -72,7 +72,7 @@ function getWeatherAdjustedScore(
   modifiers: { indoor: number; outdoor: number; rooftop: number; cozy: number }
 ): number {
   let score = 0;
-  const venueType = dest.venue.venue_type?.toLowerCase() || "";
+  const venueType = dest.venue.place_type?.toLowerCase() || "";
 
   // Base proximity score
   if (dest.proximity_tier === "walkable") score += 1;

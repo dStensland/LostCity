@@ -27,13 +27,22 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(50, parseIntParam(params.get("limit"), 20) ?? 20);
   const offset = parseIntParam(params.get("offset"), 0) ?? 0;
 
+  const city = params.get("city");
+
   let query = supabase
     .from("places")
-    .select("*", { count: "exact" })
+    .select(
+      "id, slug, name, address, neighborhood, city, state, zip, lat, lng, place_type, indoor_outdoor, website, phone, image_url, is_active, created_at, updated_at",
+      { count: "exact" }
+    )
     .eq("hidden", false)
     .gte("final_score", minScore)
     .order("final_score", { ascending: false })
     .range(offset, offset + limit - 1);
+
+  if (city) {
+    query = query.eq("city", city);
+  }
 
   if (category) {
     query = query.eq("category_id", category);

@@ -27,7 +27,7 @@ type Venue = {
   name: string;
   slug: string;
   neighborhood: string | null;
-  venue_type: string | null;
+  place_type: string | null;
   venue_types: string[] | null;
   vibes: string[] | null;
   active: boolean;
@@ -114,7 +114,7 @@ export default async function DataPage() {
       name: v.name,
       slug: v.slug,
       neighborhood: v.neighborhood,
-      types: v.venue_types || (v.venue_type ? [v.venue_type] : []),
+      types: v.venue_types || (v.place_type ? [v.place_type] : []),
       vibes: v.vibes || [],
     })),
     stats: {

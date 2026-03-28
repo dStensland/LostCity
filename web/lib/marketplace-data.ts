@@ -31,7 +31,7 @@ export type PCMTenant = {
   id: number;
   name: string;
   slug: string;
-  venue_type: string | null;
+  place_type: string | null;
   spot_type: string | null;
   description: string | null;
   image_url: string | null;
@@ -55,7 +55,7 @@ export type NeighborhoodVenue = {
   id: number;
   name: string;
   slug: string;
-  venue_type: string | null;
+  place_type: string | null;
   image_url: string | null;
   neighborhood: string | null;
   vibes: string[];
@@ -167,7 +167,7 @@ export async function getPCMTenants(): Promise<PCMTenant[]> {
     id: row.id,
     name: row.name,
     slug: row.slug,
-    venue_type: row.place_type, // bridge: place_type → venue_type
+    place_type: row.place_type,
     spot_type: row.spot_type,
     description: row.description,
     image_url: row.image_url,
@@ -270,7 +270,7 @@ export async function getNeighborhoodVenues(limit = 12): Promise<NeighborhoodVen
     id: row.id,
     name: row.name,
     slug: row.slug,
-    venue_type: row.place_type, // bridge: place_type → venue_type
+    place_type: row.place_type,
     image_url: row.image_url,
     neighborhood: row.neighborhood,
     vibes: row.vibes || [],

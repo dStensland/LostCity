@@ -1266,12 +1266,12 @@ export const WeekendPlanner = memo(function WeekendPlanner({
   const filteredEvents = useMemo(() => {
     if (indoorActive) {
       return allEvents.filter((e) =>
-        matchesEnvironmentFilter(e.venue?.venue_type, "indoor")
+        matchesEnvironmentFilter(e.venue?.place_type, "indoor")
       );
     }
     if (outdoorActive) {
       return allEvents.filter((e) =>
-        matchesEnvironmentFilter(e.venue?.venue_type, "outdoor")
+        matchesEnvironmentFilter(e.venue?.place_type, "outdoor")
       );
     }
     return allEvents;

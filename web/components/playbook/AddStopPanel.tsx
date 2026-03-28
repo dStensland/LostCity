@@ -49,7 +49,7 @@ type VenueSearchResult = {
   slug: string;
   address: string | null;
   neighborhood: string | null;
-  venue_type: string | null;
+  place_type: string | null;
   lat: number | null;
   lng: number | null;
   image_url: string | null;
@@ -220,7 +220,7 @@ export default function AddStopPanel({
   // Filtered search results based on category
   const filteredSearchResults = useMemo(() => {
     if (categoryFilter === "all") return effectiveSearchResults;
-    return effectiveSearchResults.filter((v) => venueTypeToFilter(v.venue_type) === categoryFilter);
+    return effectiveSearchResults.filter((v) => venueTypeToFilter(v.place_type) === categoryFilter);
   }, [effectiveSearchResults, categoryFilter]);
 
   const handleAddSuggestion = useCallback(
@@ -356,7 +356,7 @@ export default function AddStopPanel({
                   className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
                   style={{ background: "rgba(255, 255, 255, 0.04)", border: "1px solid rgba(255, 255, 255, 0.06)" }}
                 >
-                  <CategoryIcon type={venue.venue_type || "venue"} size={16} glow="subtle" />
+                  <CategoryIcon type={venue.place_type || "venue"} size={16} glow="subtle" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p
@@ -369,7 +369,7 @@ export default function AddStopPanel({
                     className="text-[10px] truncate"
                     style={{ color: "var(--muted)", opacity: 0.5, fontFamily: "var(--font-mono)" }}
                   >
-                    {venue.venue_type || "venue"}{venue.neighborhood ? ` · ${venue.neighborhood}` : ""}
+                    {venue.place_type || "venue"}{venue.neighborhood ? ` · ${venue.neighborhood}` : ""}
                   </p>
                 </div>
                 <div
@@ -472,7 +472,7 @@ export default function AddStopPanel({
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <CategoryIcon type={s.venue?.venue_type || s.category} size={16} glow="subtle" />
+                      <CategoryIcon type={s.venue?.place_type || s.category} size={16} glow="subtle" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">

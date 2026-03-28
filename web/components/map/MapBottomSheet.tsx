@@ -108,7 +108,7 @@ export default function MapBottomSheet({
       id: event.id,
       title: decodeHtmlEntities(event.title),
       subtitle: [event.venue?.name ? decodeHtmlEntities(event.venue.name) : null, formatTime(event.start_time ?? null, event.is_all_day)].filter(Boolean).join(" · "),
-      accent: getCategoryColor(event.venue?.venue_type || event.category || "other"),
+      accent: getCategoryColor((event.venue as unknown as { place_type?: string | null } | null)?.place_type || event.category || "other"),
     }));
 
     const openSlots = PREVIEW_LIMIT - eventCards.length;
@@ -119,7 +119,7 @@ export default function MapBottomSheet({
       id: spot.id,
       title: decodeHtmlEntities(spot.name),
       subtitle: spot.neighborhood ? decodeHtmlEntities(spot.neighborhood) : "Spot",
-      accent: getCategoryColor(spot.venue_type || "other"),
+      accent: getCategoryColor(spot.place_type || "other"),
     }));
 
     return [...eventCards, ...spotCards];
@@ -257,7 +257,7 @@ export default function MapBottomSheet({
                       id={event.id}
                       type="event"
                       title={event.title}
-                      category={event.venue?.venue_type || event.category}
+                      category={(event.venue as unknown as { place_type?: string | null } | null)?.place_type || event.category}
                       venueName={event.venue?.name || null}
                       neighborhood={event.venue?.neighborhood || null}
                       startDate={event.start_date}
@@ -285,7 +285,7 @@ export default function MapBottomSheet({
                       id={spot.id}
                       type="spot"
                       title={spot.name}
-                      category={spot.venue_type}
+                      category={spot.place_type}
                       venueName={null}
                       neighborhood={spot.neighborhood}
                       isSelected={spot.id === selectedItemId}

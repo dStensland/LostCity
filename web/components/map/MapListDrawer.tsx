@@ -156,7 +156,7 @@ export default function MapListDrawer({
             type="event"
             optionId={`map-item-event-${item.event.id}`}
             title={item.event.title}
-            category={item.event.venue?.venue_type || item.event.category}
+            category={(item.event.venue as unknown as { place_type?: string | null } | null)?.place_type || item.event.category}
             venueName={item.event.venue?.name || null}
             neighborhood={item.event.venue?.neighborhood || null}
             startDate={item.event.start_date}
@@ -180,7 +180,7 @@ export default function MapListDrawer({
           type="spot"
           optionId={`map-item-spot-${item.spot.id}`}
           title={item.spot.name}
-          category={item.spot.venue_type}
+          category={item.spot.place_type}
           venueName={null}
           neighborhood={item.spot.neighborhood}
           isSelected={isSelected}

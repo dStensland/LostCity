@@ -152,10 +152,10 @@ export const TodayView = memo(function TodayView({
   const filteredTodayEvents = useMemo(() => {
     if (!todayEvents) return [];
     if (indoorActive) {
-      return todayEvents.filter((e) => matchesEnvironmentFilter(e.venue?.venue_type, "indoor"));
+      return todayEvents.filter((e) => matchesEnvironmentFilter(e.venue?.place_type, "indoor"));
     }
     if (outdoorActive) {
-      return todayEvents.filter((e) => matchesEnvironmentFilter(e.venue?.venue_type, "outdoor"));
+      return todayEvents.filter((e) => matchesEnvironmentFilter(e.venue?.place_type, "outdoor"));
     }
     return todayEvents;
   }, [todayEvents, indoorActive, outdoorActive]);

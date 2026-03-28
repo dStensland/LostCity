@@ -120,7 +120,7 @@ type EventData = {
     city: string;
     state: string;
     vibes: string[] | null;
-    venue_type?: string | null;
+    place_type?: string | null;
     nearest_marta_station?: string | null;
     marta_walk_minutes?: number | null;
     marta_lines?: string[] | null;
@@ -655,7 +655,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
             eventId={event.id}
             venueId={event.venue?.id}
             venueName={event.venue?.name}
-            venueType={event.venue?.venue_type}
+            venueType={event.venue?.place_type}
             variant="primary"
             className="w-full justify-center py-3 text-base"
           />
@@ -668,7 +668,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
               eventId={event.id}
               venueId={event.venue?.id}
               venueName={event.venue?.name}
-              venueType={event.venue?.venue_type}
+              venueType={event.venue?.place_type}
               size="sm"
               className="flex-1 min-h-[36px]"
             />
@@ -876,7 +876,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
           eventId={event.id}
           venueId={event.venue?.id}
           venueName={event.venue?.name}
-          venueType={event.venue?.venue_type}
+          venueType={event.venue?.place_type}
           variant="compact"
         />
       }

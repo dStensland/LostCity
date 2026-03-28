@@ -931,7 +931,7 @@ async function fetchDestinationsDirect(
           slug: venue.slug,
           name: venue.name,
           neighborhood: venue.neighborhood,
-          venue_type: venue.place_type, // bridge: place_type → venue_type
+          place_type: venue.place_type,
           image_url: venue.image_url,
           short_description: venue.short_description,
         },

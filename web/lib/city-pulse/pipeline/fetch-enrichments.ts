@@ -170,7 +170,7 @@ export async function fetchPhaseAEnrichments(
   // Process specials: compute live status and filter to active/soon
   const rawSpecials = (specialsResult.data || []) as unknown as Array<
     SpecialRow & {
-      venue: Pick<Spot, "id" | "name" | "slug" | "neighborhood" | "venue_type" | "image_url">;
+      venue: Pick<Spot, "id" | "name" | "slug" | "neighborhood" | "place_type" | "image_url">;
     }
   >;
 

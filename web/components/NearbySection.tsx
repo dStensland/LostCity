@@ -15,6 +15,8 @@ export type NearbySpot = {
   name: string;
   slug: string;
   spot_type?: string | null;
+  place_type?: string | null;
+  /** @deprecated Use place_type — DB column renamed in Deploy 10 */
   venue_type?: string | null;
   neighborhood?: string | null;
   distance?: number;
@@ -220,7 +222,7 @@ export default function NearbySection({
 // --- Subcomponents ---
 
 function NearbySpotCard({ spot, onClick }: { spot: NearbySpot; onClick: () => void }) {
-  const spotType = spot.spot_type || spot.venue_type;
+  const spotType = spot.spot_type || spot.place_type || spot.venue_type;
   const typeLabel = SPOT_TYPE_LABELS[spotType || ""] || spotType;
 
   return (

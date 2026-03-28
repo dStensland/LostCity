@@ -162,7 +162,7 @@ export type AroundMeSpot = {
   neighborhood: string | null;
   lat: number;
   lng: number;
-  venue_type: string | null;
+  place_type: string | null;
   venue_types: string[] | null;
   icon: string;
   label: string;
@@ -561,7 +561,7 @@ export async function GET(request: NextRequest) {
           neighborhood: spot.neighborhood,
           lat: spot.lat,
           lng: spot.lng,
-          venue_type: spot.place_type,
+          place_type: spot.place_type,
           venue_types: spot.venue_types,
           icon: venueTypeInfo?.icon || "📍",
           label: venueTypeInfo?.label || "Spot",

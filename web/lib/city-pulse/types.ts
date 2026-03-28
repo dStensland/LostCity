@@ -132,7 +132,7 @@ export interface CityPulseSpecialItem {
   item_type: "special";
   special: {
     id: number;
-    venue: Pick<Spot, "id" | "name" | "slug" | "neighborhood" | "venue_type" | "image_url">;
+    venue: Pick<Spot, "id" | "name" | "slug" | "neighborhood" | "place_type" | "image_url">;
     title: string;
     type: string;
     state: "active_now" | "starting_soon";

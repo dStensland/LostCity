@@ -14,7 +14,7 @@ export type OutingSuggestion = {
     slug: string;
     lat: number | null;
     lng: number | null;
-    venue_type: string | null;
+    place_type: string | null;
   };
   suggested_time: string;
   distance_km: number;

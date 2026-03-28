@@ -112,8 +112,8 @@ export default function PlaceListView({
       });
     } else {
       sorted.sort((a, b) => {
-        const aType = a.venue_type || "other";
-        const bType = b.venue_type || "other";
+        const aType = a.place_type || "other";
+        const bType = b.place_type || "other";
         const aOrder = (SPOT_TYPE_ORDER as readonly string[]).indexOf(aType);
         const bOrder = (SPOT_TYPE_ORDER as readonly string[]).indexOf(bType);
         const aIdx = aOrder === -1 ? 999 : aOrder;
@@ -140,7 +140,7 @@ export default function PlaceListView({
 
     const groups: Record<string, Spot[]> = {};
     for (const spot of sortedSpots) {
-      const key = sortBy === "category" ? spot.venue_type || "other" : spot.neighborhood || "Other";
+      const key = sortBy === "category" ? spot.place_type || "other" : spot.neighborhood || "Other";
       if (!groups[key]) groups[key] = [];
       groups[key].push(spot);
     }

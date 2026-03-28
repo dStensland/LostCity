@@ -15,7 +15,7 @@ export default async function DogMapView() {
     state: "GA",
     lat: v.lat,
     lng: v.lng,
-    venue_type: v.place_type,
+    place_type: v.place_type,
     venue_types: null,
     description: v.short_description,
     short_description: v.short_description,
