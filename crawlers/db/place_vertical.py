@@ -1,12 +1,9 @@
 """
 Place vertical detail extension writes for venue_destination_details.
 
-Renamed from destination_details.py. upsert_place_vertical_details is the
-canonical name; upsert_venue_destination_details is kept as a backward-
-compatible alias.
-
-This keeps Yonder/Adventure-style destination intelligence in a shared 1:1
-place extension instead of portal-specific seed scripts.
+Renamed from destination_details.py (Task 8 — places refactor).
+Keeps Adventure-style destination intelligence in a shared 1:1 place
+extension instead of portal-specific seed scripts.
 """
 
 import logging
@@ -91,7 +88,3 @@ def upsert_place_vertical_details(venue_id: int, details: dict) -> Optional[int]
         )
         return None
 
-
-# ===== BACKWARD-COMPATIBLE ALIASES =====
-# Remove in cleanup phase (Task 9+)
-upsert_venue_destination_details = upsert_place_vertical_details

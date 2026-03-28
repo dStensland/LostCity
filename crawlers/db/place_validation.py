@@ -1,9 +1,7 @@
 """
 Place validation — name quality, geo-scope, and minimum field checks.
 
-Renamed from venue_validation.py. Exported functions renamed to place_*
-with backward-compatible venue_* aliases at the bottom of this file.
-
+Renamed from venue_validation.py (Task 8 — places refactor).
 Analogous to db/validation.py for events. Called from get_or_create_place()
 to reject junk places before they enter the database.
 """
@@ -216,9 +214,3 @@ def validate_place_minimum_fields(venue_data: dict) -> tuple[bool, list[str]]:
 
     return passes, warnings
 
-
-# ===== BACKWARD-COMPATIBLE ALIASES =====
-# Remove in cleanup phase (Task 9+)
-validate_venue_name = validate_place_name
-validate_venue_geo_scope = validate_place_geo_scope
-validate_venue_minimum_fields = validate_place_minimum_fields

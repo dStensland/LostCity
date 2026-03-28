@@ -1,9 +1,7 @@
 """
-db package — backward-compatible re-export of all public symbols.
+db package — re-export of all public symbols.
 
-All existing `from db import X` statements continue to work unchanged.
-
-Module rename map (Task 8 — places refactor):
+Module rename history (Task 8 — places refactor):
   venues.py            -> places.py
   venue_validation.py  -> place_validation.py
   venue_occasions.py   -> place_occasions.py
@@ -96,7 +94,6 @@ from db.places import (
     _persist_venue_enrichment,
     get_or_create_virtual_venue,
     get_or_create_place,
-    get_or_create_venue,  # backward-compat alias
     get_venue_by_id,
     get_venue_by_id_cached,
     clear_venue_cache,
@@ -197,13 +194,11 @@ from db.open_calls import (
 # ===== place_vertical.py (formerly destination_details.py) =====
 from db.place_vertical import (
     upsert_place_vertical_details,
-    upsert_venue_destination_details,  # backward-compat alias
 )
 
 # ===== place_specials.py (formerly venue_specials.py) =====
 from db.place_specials import (
     upsert_place_special,
-    upsert_venue_special,  # backward-compat alias
 )
 
 # ===== editorial_mentions.py =====
@@ -214,7 +209,6 @@ from db.editorial_mentions import (
 # ===== place_occasions.py (formerly venue_occasions.py) =====
 from db.place_occasions import (
     upsert_place_occasion,
-    upsert_venue_occasion,  # backward-compat alias
 )
 
 # ===== volunteer_opportunities.py =====

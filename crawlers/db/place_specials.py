@@ -1,10 +1,8 @@
 """
-Shared writes for venue_specials (place specials).
+Shared writes for place specials (venue_specials table).
 
-Renamed from venue_specials.py. upsert_place_special is the canonical name;
-upsert_venue_special is kept as a backward-compatible alias.
-
-This gives typed crawler envelopes a real persistence path for time-sensitive
+Renamed from venue_specials.py (Task 8 — places refactor).
+Gives typed crawler envelopes a real persistence path for time-sensitive
 place offerings instead of advertising the lane and dropping it.
 """
 
@@ -125,7 +123,3 @@ def upsert_place_special(venue_id: int, special_data: dict) -> Optional[int]:
         )
         return None
 
-
-# ===== BACKWARD-COMPATIBLE ALIASES =====
-# Remove in cleanup phase (Task 9+)
-upsert_venue_special = upsert_place_special

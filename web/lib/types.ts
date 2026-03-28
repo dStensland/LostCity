@@ -1245,7 +1245,3 @@ export type {
   PlaceWithDining,
   PlaceWithOutdoor,
 } from "./types/places";
-
-// Backward compatibility — remove in cleanup phase
-export type { Place as Venue } from "./types/places";
-export type { PlaceCard as VenueCard } from "./types/places";

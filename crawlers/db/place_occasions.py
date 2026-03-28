@@ -1,12 +1,10 @@
 """
-Shared writes for venue_occasions (place occasions).
+Shared writes for place_occasions.
 
-Renamed from venue_occasions.py. upsert_place_occasion is the canonical name;
-upsert_venue_occasion is kept as a backward-compatible alias.
-
-This preserves the same source-protection semantics used by occasion inference:
-manual and editorial rows are authoritative, inferred rows can refresh their
-confidence when the signal materially changes.
+Renamed from venue_occasions.py (Task 8 — places refactor).
+Preserves source-protection semantics: manual and editorial rows are
+authoritative, inferred rows can refresh their confidence when the signal
+materially changes.
 """
 
 import logging
@@ -113,7 +111,3 @@ def upsert_place_occasion(venue_id: int, occasion_data: dict) -> Optional[int]:
         )
         return None
 
-
-# ===== BACKWARD-COMPATIBLE ALIASES =====
-# Remove in cleanup phase (Task 9+)
-upsert_venue_occasion = upsert_place_occasion

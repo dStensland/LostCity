@@ -1,8 +1,7 @@
 """
 Place CRUD, proximity dedup, and caching.
 
-Renamed from venues.py. Exported function get_or_create_place replaces
-get_or_create_venue. Backward-compatible alias kept at bottom of file.
+Renamed from venues.py (Task 8 — places refactor).
 """
 
 import re
@@ -951,7 +950,3 @@ def get_sibling_venue_ids(venue_id: int) -> list[int]:
 
     return [venue_id]
 
-
-# ===== BACKWARD-COMPATIBLE ALIASES =====
-# Remove in cleanup phase (Task 9+)
-get_or_create_venue = get_or_create_place
