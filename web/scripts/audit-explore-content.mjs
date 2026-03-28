@@ -447,8 +447,8 @@ async function main() {
     venueIds.length
       ? supabase
           .from("events")
-          .select("id, venue_id, title, start_date, is_free")
-          .in("venue_id", venueIds)
+          .select("id, place_id, title, start_date, is_free")
+          .in("place_id", venueIds)
           .gte("start_date", todayStr)
           .lte("start_date", futureStr)
           .is("canonical_event_id", null)
@@ -457,7 +457,7 @@ async function main() {
           .or("is_sensitive.eq.false,is_sensitive.is.null")
       : Promise.resolve({ data: [], error: null }),
     venueIds.length
-      ? supabase.from("venue_highlights").select("id, venue_id, highlight_type, title")
+      ? supabase.from("venue_highlights").select("id, place_id, highlight_type, title")
       : Promise.resolve({ data: [], error: null }),
     venueIds.length
       ? supabase.from("explore_tips").select("id, venue_id").eq("status", "approved")
@@ -474,15 +474,15 @@ async function main() {
 
   const eventsByVenue = new Map();
   for (const event of events) {
-    const list = eventsByVenue.get(event.venue_id) ?? [];
+    const list = eventsByVenue.get(event.place_id) ?? [];
     list.push(event);
-    eventsByVenue.set(event.venue_id, list);
+    eventsByVenue.set(event.place_id, list);
   }
   const highlightsByVenue = new Map();
   for (const highlight of highlights) {
-    const list = highlightsByVenue.get(highlight.venue_id) ?? [];
+    const list = highlightsByVenue.get(highlight.place_id) ?? [];
     list.push(highlight);
-    highlightsByVenue.set(highlight.venue_id, list);
+    highlightsByVenue.set(highlight.place_id, list);
   }
   const tipsByVenue = new Set(tips.map((tip) => tip.venue_id));
 

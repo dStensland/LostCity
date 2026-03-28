@@ -151,7 +151,7 @@ export async function GET(request: Request) {
           is_all_day,
           description,
           source_url,
-          venue:venues!left(
+          venue:places!left(
             name,
             address,
             city,

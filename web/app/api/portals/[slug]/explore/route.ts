@@ -52,7 +52,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         name,
         slug,
         neighborhood,
-        venue_type,
+        place_type,
         short_description,
         explore_category,
         explore_featured,
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         image_url
       `)
       .or(
-        `explore_category.not.is.null,venue_type.in.(${Array.from(exploreVenueTypes).join(",")})`
+        `explore_category.not.is.null,place_type.in.(${Array.from(exploreVenueTypes).join(",")})`
       );
 
     // Scope venues to portal's city (prevent Nashville venues in Atlanta explore)
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       name: string;
       slug: string | null;
       neighborhood: string | null;
-      venue_type: string | null;
+      place_type: string | null;
       short_description: string | null;
       explore_category: string | null;
       explore_featured: boolean | null;
@@ -129,12 +129,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // Build per-venue event data
     const venueEventData = new Map<number, { count: number; nextTitle: string | null; nextDate: string | null }>();
     if (eventCounts) {
-      for (const event of eventCounts as { venue_id: number; id: number; title: string; start_date: string }[]) {
-        const existing = venueEventData.get(event.venue_id);
+      for (const event of eventCounts as { place_id: number; id: number; title: string; start_date: string }[]) {
+        const existing = venueEventData.get(event.place_id);
         if (existing) {
           existing.count++;
         } else {
-          venueEventData.set(event.venue_id, {
+          venueEventData.set(event.place_id, {
             count: 1,
             nextTitle: event.title,
             nextDate: event.start_date,
@@ -152,7 +152,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         name: sanitizedVenue.name,
         slug: sanitizedVenue.slug,
         neighborhood: sanitizedVenue.neighborhood,
-        venue_type: sanitizedVenue.venue_type,
+        venue_type: sanitizedVenue.place_type, // bridge: place_type → venue_type
         short_description: sanitizedVenue.short_description,
         explore_category: sanitizedVenue.explore_category,
         explore_featured: sanitizedVenue.explore_featured ?? false,
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const collections = EXPLORE_CATEGORIES.map((category) => {
       const categoryVenues = enrichedVenues.filter((v) => {
         if (v.explore_category === category.id) return true;
-        if (!v.explore_category && v.venue_type && category.venueTypes.includes(v.venue_type)) return true;
+        if (!v.explore_category && v.venue_type && category.venueTypes.includes(v.venue_type as string)) return true;
         return false;
       });
 

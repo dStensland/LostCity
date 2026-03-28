@@ -446,7 +446,7 @@ async function countVenues(
   let q = (supabase as any)
     .from("places")
     .select("id", { count: "exact", head: true })
-    .eq("active", true);
+    .eq("is_active", true);
 
   if (query.venue_type) q = q.eq("place_type", query.venue_type);
   if (query.category) q = q.contains("venue_types", [query.category]);

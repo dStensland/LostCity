@@ -42,7 +42,7 @@ export type DogVenue = {
   slug: string;
   address: string | null;
   neighborhood: string | null;
-  venue_type: string | null;
+  place_type: string | null;
   vibes: string[] | null;
   image_url: string | null;
   short_description: string | null;
@@ -156,7 +156,7 @@ export async function getDogVenues(): Promise<DogVenue[]> {
     .from("places")
     .select(VENUE_SELECT)
     .contains("vibes", ["dog-friendly"])
-    .eq("active", true)
+    .eq("is_active", true)
     .order("name");
 
   return (data || []) as DogVenue[];
@@ -168,7 +168,7 @@ export async function getDogMapVenues(): Promise<DogVenue[]> {
     .from("places")
     .select(VENUE_SELECT)
     .contains("vibes", ["dog-friendly"])
-    .eq("active", true)
+    .eq("is_active", true)
     .not("lat", "is", null)
     .not("lng", "is", null)
     .order("name");
@@ -182,7 +182,7 @@ export async function getDogParks(limit = 15): Promise<DogVenue[]> {
     .from("places")
     .select(VENUE_SELECT)
     .in("place_type", PARK_TYPES)
-    .eq("active", true)
+    .eq("is_active", true)
     .order("name")
     .limit(limit);
 
@@ -196,7 +196,7 @@ export async function getDogPatios(limit = 15): Promise<DogVenue[]> {
     .select(VENUE_SELECT)
     .contains("vibes", ["dog-friendly"])
     .in("place_type", PATIO_TYPES)
-    .eq("active", true)
+    .eq("is_active", true)
     .order("name")
     .limit(limit);
 
@@ -208,8 +208,8 @@ export async function getDogTrails(limit = 10): Promise<DogVenue[]> {
   const { data } = await supabase
     .from("places")
     .select(VENUE_SELECT)
-    .eq("active", true)
-    .or(PARK_TYPES.map((t) => `venue_type.eq.${t}`).join(","))
+    .eq("is_active", true)
+    .or(PARK_TYPES.map((t) => `place_type.eq.${t}`).join(","))
     .overlaps("vibes", ["nature", "hiking", "outdoor", "scenic", "dog-friendly"])
     .order("name")
     .limit(limit);
@@ -228,8 +228,8 @@ export async function getDogOffLeashParks(
   let query = supabase
     .from("places")
     .select(VENUE_SELECT)
-    .eq("active", true)
-    .or(PARK_TYPES.map((t) => `venue_type.eq.${t}`).join(","))
+    .eq("is_active", true)
+    .or(PARK_TYPES.map((t) => `place_type.eq.${t}`).join(","))
     .contains("vibes", ["off-leash"])
     .order("name");
 
@@ -246,7 +246,7 @@ export async function getDogPupCupSpots(): Promise<DogVenue[]> {
   const { data } = await supabase
     .from("places")
     .select(VENUE_SELECT)
-    .eq("active", true)
+    .eq("is_active", true)
     .overlaps("vibes", ["pup-cup", "dog-menu", "treats-available"])
     .order("name");
 
@@ -285,7 +285,7 @@ export async function getDogAdoptionOrgs(): Promise<DogOrg[]> {
     const { data: venueOrgs } = await supabase
       .from("places")
       .select(VENUE_SELECT)
-      .eq("active", true)
+      .eq("is_active", true)
       .in("place_type", ["animal_shelter", "nonprofit_hq"])
       .overlaps("vibes", ["dog-friendly", "adoption"])
       .order("name");
@@ -295,7 +295,7 @@ export async function getDogAdoptionOrgs(): Promise<DogOrg[]> {
       id: String((v as DogVenue).id),
       name: (v as DogVenue).name,
       slug: (v as DogVenue).slug,
-      org_type: (v as DogVenue).venue_type || "shelter",
+      org_type: (v as DogVenue).place_type || "shelter",
       description: (v as DogVenue).short_description,
       website: (v as DogVenue).website,
       instagram: null,
@@ -348,7 +348,7 @@ export async function getDogServices(
   let query = supabase
     .from("places")
     .select(VENUE_SELECT)
-    .eq("active", true)
+    .eq("is_active", true)
     .order("name");
 
   if (typeFilter && typeFilter !== "all") {

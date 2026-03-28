@@ -26,7 +26,7 @@ type LiveEventRow = {
     city: string | null;
     lat: number | null;
     lng: number | null;
-    venue_type: string | null;
+    place_type: string | null;
   } | null;
 };
 
@@ -76,14 +76,14 @@ export async function GET(request: Request) {
             is_free,
             ticket_url,
             is_live,
-            venue:venues!events_venue_id_fkey(
+            venue:places!events_place_id_fkey(
               id,
               name,
               neighborhood,
               city,
               lat,
               lng,
-              venue_type
+              place_type
             )
           `)
           .eq("is_live", true)

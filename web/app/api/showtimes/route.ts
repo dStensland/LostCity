@@ -315,7 +315,7 @@ export async function GET(request: NextRequest) {
       image_url,
       tags,
       series_id,
-      venue:venues!events_venue_id_fkey(
+      venue:places!events_place_id_fkey(
         id,
         name,
         slug,
@@ -430,7 +430,7 @@ export async function GET(request: NextRequest) {
         .select(
           `
           start_date,
-          venue:venues!events_venue_id_fkey(
+          venue:places!events_place_id_fkey(
             name,
             slug,
             city

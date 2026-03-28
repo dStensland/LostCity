@@ -53,7 +53,7 @@ type VenueRow = {
   name: string;
   slug: string;
   neighborhood: string | null;
-  venue_type: string | null;
+  place_type: string | null;
   lat: number;
   lng: number;
   image_url: string | null;
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   const venueQuery = supabase
     .from("places")
     .select("id, name, slug, neighborhood, place_type, lat, lng, image_url, short_description, city")
-    .neq("active", false)
+    .neq("is_active", false)
     .not("lat", "is", null)
     .not("lng", "is", null)
     .gte("lat", centerLat - latDelta)
@@ -256,7 +256,7 @@ export async function GET(request: NextRequest, { params }: Props) {
             slug: venue.slug,
             lat: venue.lat,
             lng: venue.lng,
-            venue_type: venue.venue_type,
+            venue_type: venue.place_type,
             image_url: venue.image_url,
             neighborhood: venue.neighborhood,
           },
@@ -290,7 +290,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       const candidates = Array.from(venueMap.values())
         .filter((v) => {
           if (usedVenueIds.has(v.id)) return false;
-          return targetTypes.has(v.venue_type || "");
+          return targetTypes.has(v.place_type || "");
         })
         .map((v) => ({
           venue: v,
@@ -321,7 +321,7 @@ export async function GET(request: NextRequest, { params }: Props) {
             slug: best.venue.slug,
             lat: best.venue.lat,
             lng: best.venue.lng,
-            venue_type: best.venue.venue_type,
+            venue_type: best.venue.place_type,
             image_url: best.venue.image_url,
             neighborhood: best.venue.neighborhood,
           },

@@ -52,7 +52,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       series:series_id(slug),
       venue:places(city)
     `)
-    .eq("venue_id", venueId)
+    .eq("place_id", venueId)
     .gte("start_date", today)
     .is("canonical_event_id", null) // Only show canonical events, not duplicates
     .order("start_date", { ascending: true })

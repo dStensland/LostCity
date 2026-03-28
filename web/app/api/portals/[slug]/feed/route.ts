@@ -293,7 +293,7 @@ type Event = {
     name: string;
     neighborhood: string | null;
     slug: string | null;
-    venue_type: string | null;
+    place_type: string | null;
     location_designator:
       | "standard"
       | "private_after_signup"
@@ -1077,12 +1077,12 @@ export async function GET(request: NextRequest, { params }: Props) {
 
         if (constrainedSourceIds.length > 0 && constrainedVenueIds.length > 0) {
           constrainedQuery = constrainedQuery.or(
-            `source_id.in.(${constrainedSourceIds.join(",")}),venue_id.in.(${constrainedVenueIds.join(",")})`,
+            `source_id.in.(${constrainedSourceIds.join(",")}),place_id.in.(${constrainedVenueIds.join(",")})`,
           );
         } else if (constrainedSourceIds.length > 0) {
           constrainedQuery = constrainedQuery.in("source_id", constrainedSourceIds);
         } else if (constrainedVenueIds.length > 0) {
-          constrainedQuery = constrainedQuery.in("venue_id", constrainedVenueIds);
+          constrainedQuery = constrainedQuery.in("place_id", constrainedVenueIds);
         }
 
         constrainedQuery = applyFeedGate(constrainedQuery);
@@ -1141,7 +1141,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           .select(
             eventSelect.replace(
               "venue:places(",
-              "venue:venues!inner(",
+              "venue:places!inner(",
             ),
           )
           .or(`start_date.gte.${today},end_date.gte.${today}`)
@@ -1149,7 +1149,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           .is("canonical_event_id", null)
           .or("is_class.eq.false,is_class.is.null")
           .or("is_sensitive.eq.false,is_sensitive.is.null")
-          .in("venues.venue_type", nightlifeVenueFilter)
+          .in("places.place_type", nightlifeVenueFilter)
           .gte("start_time", "17:00:00");
         venueBasedQuery = applyFeedGate(venueBasedQuery);
         venueBasedQuery = applyPortalEventScope(venueBasedQuery);

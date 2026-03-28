@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
         followed_venue_id,
         followed_organization_id,
         user:profiles!follows_follower_id_fkey(id, username, display_name, avatar_url),
-        venue:venues!follows_followed_venue_id_fkey(id, name, slug, neighborhood),
+        venue:places!follows_followed_venue_id_fkey(id, name, slug, neighborhood),
         organization:organizations!follows_followed_organization_id_fkey(id, name, slug)
       `)
       .in("follower_id", friendIds)

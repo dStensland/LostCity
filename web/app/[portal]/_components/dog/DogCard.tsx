@@ -149,7 +149,7 @@ export function DogVenueCard({
   showTags?: boolean;
 }) {
   const contentType = classifyDogContentType(
-    venue.venue_type,
+    venue.place_type,
     venue.vibes,
     null,
     false
@@ -180,7 +180,7 @@ export function DogVenueCard({
               className="text-2xl font-extrabold uppercase tracking-tight"
               style={{ color: accentColor, opacity: 0.5 }}
             >
-              {getVenueTypeLabel(venue.venue_type)}
+              {getVenueTypeLabel(venue.place_type)}
             </span>
           </div>
         )}
@@ -190,7 +190,7 @@ export function DogVenueCard({
           className="absolute top-3 left-3 dog-pill"
           style={{ background: accentColor, color: "#fff" }}
         >
-          {getVenueTypeLabel(venue.venue_type)}
+          {getVenueTypeLabel(venue.place_type)}
         </span>
       </div>
 
@@ -234,7 +234,7 @@ export function DogVenueRow({
   portalSlug: string;
 }) {
   const contentType = classifyDogContentType(
-    venue.venue_type,
+    venue.place_type,
     venue.vibes,
     null,
     false
@@ -272,7 +272,7 @@ export function DogVenueRow({
           {venue.name}
         </h3>
         <p className="text-xs truncate" style={{ color: "var(--dog-stone)" }}>
-          {getVenueTypeLabel(venue.venue_type)}
+          {getVenueTypeLabel(venue.place_type)}
           {venue.neighborhood && ` · ${venue.neighborhood}`}
         </p>
       </div>

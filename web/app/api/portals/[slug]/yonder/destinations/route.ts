@@ -94,7 +94,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       image_url: string | null;
       hero_image_url: string | null;
       short_description: string | null;
-      venue_type: string | null;
+      place_type: string | null;
       reservation_url: string | null;
       accepts_reservations: boolean | null;
       reservation_recommended: boolean | null;
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       state: row.state,
       imageUrl: row.image_url || row.hero_image_url,
       shortDescription: row.short_description,
-      venueType: row.venue_type,
+      venueType: row.place_type,
       reservationUrl: row.reservation_url,
       acceptsReservations: row.accepts_reservations,
       reservationRecommended: row.reservation_recommended,

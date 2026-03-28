@@ -529,7 +529,7 @@ export async function GET(request: Request) {
       let venueQuery = portalClient
         .from("events")
         .select(eventSelect)
-        .in("venue_id", followedVenueIds)
+        .in("place_id", followedVenueIds)
         .gte("start_date", today)
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")

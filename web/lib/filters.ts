@@ -26,7 +26,7 @@ export async function getFilteredEvents(
     .select(
       `
       *,
-      venue:venues!inner(id, name, slug, address, neighborhood, city, state)
+      venue:places!inner(id, name, slug, address, neighborhood, city, state)
     `,
       { count: "exact" }
     )
@@ -63,7 +63,7 @@ export async function getFilteredEvents(
 
   // Apply venue filter
   if (filters.venue_ids && filters.venue_ids.length > 0) {
-    query = query.in("venue_id", filters.venue_ids);
+    query = query.in("place_id", filters.venue_ids);
   }
 
   // Apply price filter
@@ -137,7 +137,7 @@ export async function getAllFilteredEvents(
       .select(
         `
         *,
-        venue:venues!inner(id, name, slug, address, neighborhood, city, state)
+        venue:places!inner(id, name, slug, address, neighborhood, city, state)
       `
       )
       .ilike("venue.city", filters.city)

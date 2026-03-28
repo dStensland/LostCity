@@ -65,7 +65,7 @@ type TrackVenueRow = {
 };
 
 type EventRow = {
-  venue_id: number;
+  place_id: number;
   start_date: string;
   is_free: boolean | null;
 };
@@ -168,7 +168,7 @@ async function getCompData(): Promise<CompData> {
 
   const { data: rawTrackVenues } = await supabase
     .from("explore_track_venues")
-    .select("track_id, venue_id, editorial_blurb, is_featured, sort_order, venues (id, name, neighborhood, image_url, hero_image_url)")
+    .select("track_id, venue_id, editorial_blurb, is_featured, sort_order, venues:places (id, name, neighborhood, image_url, hero_image_url)")
     .in("track_id", trackIds)
     .eq("status", "approved")
     .order("is_featured", { ascending: false })
@@ -186,8 +186,8 @@ async function getCompData(): Promise<CompData> {
   const { data: rawEvents } = venueIds.length
     ? await supabase
         .from("events")
-        .select("venue_id, start_date, is_free")
-        .in("venue_id", venueIds)
+        .select("place_id, start_date, is_free")
+        .in("place_id", venueIds)
         .gte("start_date", today)
         .lte("start_date", date14)
         .is("canonical_event_id", null)
@@ -200,9 +200,9 @@ async function getCompData(): Promise<CompData> {
 
   const eventsByVenue = new Map<number, EventRow[]>();
   for (const event of events) {
-    const list = eventsByVenue.get(event.venue_id) ?? [];
+    const list = eventsByVenue.get(event.place_id) ?? [];
     list.push(event);
-    eventsByVenue.set(event.venue_id, list);
+    eventsByVenue.set(event.place_id, list);
   }
 
   const rowsByTrack = new Map<number, TrackVenueRow[]>();

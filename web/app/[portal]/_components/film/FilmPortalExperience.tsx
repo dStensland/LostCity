@@ -205,7 +205,7 @@ async function getOpeningThisWeek(): Promise<OpeningFilm[]> {
       id,
       start_date,
       series_id,
-      venue:venues!events_venue_id_fkey(id, name),
+      venue:places!events_place_id_fkey(id, name),
       series:series!events_series_id_fkey(id, slug, title, image_url, genres)
     `)
     .eq("category", "film")
@@ -286,7 +286,7 @@ async function getLastChance(): Promise<LastChanceFilm[]> {
       id,
       start_date,
       series_id,
-      venue:venues!events_venue_id_fkey(id, name),
+      venue:places!events_place_id_fkey(id, name),
       series:series!events_series_id_fkey(id, slug, title, image_url, genres)
     `)
     .eq("category", "film")
@@ -382,7 +382,7 @@ async function getUpcomingFilmEvents(limit = 40): Promise<UpcomingFilmEvent[]> {
         slug,
         url
       ),
-      venue:venues!events_venue_id_fkey(
+      venue:places!events_place_id_fkey(
         name,
         slug,
         neighborhood
@@ -456,7 +456,7 @@ async function getFilmCommunityGroups(limit = 4): Promise<FilmCommunityGroup[]> 
         source_id,
         source_url,
         source:sources!events_source_id_fkey(name, slug, url),
-        venue:venues!events_venue_id_fkey(name, slug, neighborhood),
+        venue:places!events_place_id_fkey(name, slug, neighborhood),
         organization:organizations!events_organization_id_fkey(name, slug, logo_url)
       `)
       .in("category", ["community", "film"])
@@ -551,7 +551,7 @@ async function getNetworkFilmEvents(portalId: string, limit = 80): Promise<Upcom
       source_id,
       source_url,
       source:sources!events_source_id_fkey(name, slug, url),
-      venue:venues!events_venue_id_fkey(name, slug, neighborhood),
+      venue:places!events_place_id_fkey(name, slug, neighborhood),
       organization:organizations!events_organization_id_fkey(name, slug, logo_url)
     `)
     .eq("category", "film")

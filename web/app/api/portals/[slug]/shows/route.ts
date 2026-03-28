@@ -86,7 +86,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         price_max,
         image_url,
         is_free,
-        venue:venues!inner(id, name, slug, neighborhood, image_url, venue_type)
+        venue:places!inner(id, name, slug, neighborhood, image_url, place_type)
       `)
       .in("category_id", categories)
       .gte("start_date", today)
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // query = applyPortalCategoryFilters(query, portalContentFilters);
 
     const { data: rawEvents, error: queryError } = await query;
-    const events = rawEvents as { id: number; title: string; start_date: string; start_time: string | null; price_min: number | null; image_url: string | null; is_free: boolean; venue: { id: number; name: string; slug: string; neighborhood: string; image_url: string | null; venue_type: string | null } }[] | null;
+    const events = rawEvents as { id: number; title: string; start_date: string; start_time: string | null; price_min: number | null; image_url: string | null; is_free: boolean; venue: { id: number; name: string; slug: string; neighborhood: string; image_url: string | null; place_type: string | null } }[] | null;
 
     if (queryError) {
       logger.error("Error fetching shows:", queryError);
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // Post-query: filter to genuine live performances
     const filteredEvents = (events ?? []).filter(event =>
-      !isNoiseEvent(event.title, event.venue?.venue_type ?? null)
+      !isNoiseEvent(event.title, event.venue?.place_type ?? null)
     );
 
     // Split into today vs rest of week

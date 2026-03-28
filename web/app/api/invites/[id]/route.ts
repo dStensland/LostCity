@@ -38,7 +38,7 @@ export async function GET(
       ),
       event:events (
         id, title, start_date, start_time, is_all_day, image_url,
-        venue:venues (id, name, neighborhood)
+        venue:places (id, name, neighborhood)
       )
     `)
     .eq("id", id)

@@ -40,7 +40,7 @@ type StageVenue = {
   image_url: string | null;
   lat: number | null;
   lng: number | null;
-  venue_type: string | null;
+  place_type: string | null;
 };
 
 type StageSeries = {
@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
           category_id,
           age_policy,
           series_id,
-          venue:venues!events_venue_id_fkey(
+          venue:places!events_place_id_fkey(
             id,
             name,
             slug,
@@ -183,7 +183,7 @@ export async function GET(request: NextRequest) {
             image_url,
             lat,
             lng,
-            venue_type
+            place_type
           ),
           series:series!events_series_id_fkey(
             id,
@@ -222,7 +222,7 @@ export async function GET(request: NextRequest) {
       // Filter: must have venue, venue must be in portal city scope, exclude noise
       const shows: StageShow[] = typedEvents
         .filter((e) => isVenueInScope(e.venue, portalCity))
-        .filter((e) => !isNoiseEvent(e.title, e.venue?.venue_type ?? null))
+        .filter((e) => !isNoiseEvent(e.title, e.venue?.place_type ?? null))
         .map(toShow);
 
       const responsePayload: Record<string, unknown> = { date, shows };
@@ -236,7 +236,7 @@ export async function GET(request: NextRequest) {
           .select(
             `
             start_date,
-            venue:venues!events_venue_id_fkey(city)
+            venue:places!events_place_id_fkey(city)
           `,
           )
           .or("is_feed_ready.eq.true,is_feed_ready.is.null")

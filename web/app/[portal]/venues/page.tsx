@@ -101,7 +101,7 @@ async function getVenuePulse(limit = 36): Promise<VenueCard[]> {
       start_date,
       start_time,
       image_url,
-      venue:venues!events_venue_id_fkey(name,slug,neighborhood)
+      venue:places!events_place_id_fkey(name,slug,neighborhood)
     `)
     .eq("category", "film")
     .gte("start_date", today)

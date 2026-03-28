@@ -51,7 +51,7 @@ async function main() {
 
   const { data, count } = await supabase
     .from("events")
-    .select("id, title, category_id, start_time, image_url, description, venue_id, venue:places(name)", { count: "exact" })
+    .select("id, title, category_id, start_time, image_url, description, place_id, venue:places(name)", { count: "exact" })
     .eq("start_date", today)
     .is("canonical_event_id", null)
     .is("portal_id", null)
@@ -75,7 +75,7 @@ async function main() {
   }
 
   // Get venue recommendation counts
-  const venueIds = (data || []).map(e => e.venue_id).filter(Boolean);
+  const venueIds = (data || []).map(e => e.place_id).filter(Boolean);
   const { data: venueRecs } = await supabase
     .from("recommendations")
     .select("venue_id")
@@ -124,11 +124,11 @@ async function main() {
     // RSVPs
     score += (rsvpCounts[e.id] || 0) * 4;
     // Venue recs
-    score += Math.min((venueRecCounts[e.venue_id] || 0) * 3, 15);
+    score += Math.min((venueRecCounts[e.place_id] || 0) * 3, 15);
     // Image +5
     if (e.image_url) score += 5;
 
-    return { ...e, score, rsvps: rsvpCounts[e.id] || 0, venueRecs: venueRecCounts[e.venue_id] || 0 };
+    return { ...e, score, rsvps: rsvpCounts[e.id] || 0, venueRecs: venueRecCounts[e.place_id] || 0 };
   });
 
   scored.sort((a, b) => b.score - a.score);

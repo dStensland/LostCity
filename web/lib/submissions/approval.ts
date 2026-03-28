@@ -218,7 +218,7 @@ export async function createVenueFromSubmission(
       state: data.state || "GA",
       zip: data.zip || null,
       website: data.website || null,
-      venue_type: data.venue_type || null,
+      place_type: data.venue_type || null,
       submitted_by: submittedBy,
       from_submission: submissionId,
     } as never)

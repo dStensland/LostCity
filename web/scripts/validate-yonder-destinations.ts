@@ -18,7 +18,7 @@ type VenueRow = {
   name: string;
   city: string | null;
   state: string | null;
-  venue_type: string | null;
+  place_type: string | null;
   website: string | null;
   image_url: string | null;
   hero_image_url: string | null;
@@ -34,7 +34,7 @@ async function main() {
   const { data, error } = await client
     .from("places")
     .select(
-      "slug,name,city,state,venue_type,website,image_url,hero_image_url,short_description,typical_duration_minutes,planning_notes",
+      "slug,name,city,state,place_type,website,image_url,hero_image_url,short_description,typical_duration_minutes,planning_notes",
     )
     .in("slug", slugs);
 
@@ -80,7 +80,7 @@ async function main() {
         `${item.driveTimeMinutes}m`,
         `${item.typicalDurationMinutes}m`,
         row.city || "[no-city]",
-        row.venue_type || "[no-venue-type]",
+        row.place_type || "[no-venue-type]",
       ].join(" | "),
     );
   }

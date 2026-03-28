@@ -156,7 +156,7 @@ async function getFilmCommunityData() {
         category_id,
         tags,
         organization:organizations!events_organization_id_fkey(name,slug),
-        venue:venues!events_venue_id_fkey(name,slug,neighborhood)
+        venue:places!events_place_id_fkey(name,slug,neighborhood)
       `)
       .in("category_id", ["community", "film"])
       .gte("start_date", today)

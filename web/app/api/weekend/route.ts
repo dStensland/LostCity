@@ -82,7 +82,7 @@ type VenueShape = {
   lat: number | null;
   lng: number | null;
   image_url: string | null;
-  venue_type: string | null;
+  place_type: string | null;
 } | null;
 
 type WeekendEvent = {
@@ -127,8 +127,8 @@ const INDOOR_VENUE_TYPES = new Set([
 
 function isIndoorVenue(venue: VenueShape): boolean {
   if (!venue) return false;
-  // Infer from venue_type (is_indoor column not yet in schema)
-  return venue.venue_type ? INDOOR_VENUE_TYPES.has(venue.venue_type) : false;
+  // Infer from place_type (is_indoor column not yet in schema)
+  return venue.place_type ? INDOOR_VENUE_TYPES.has(venue.place_type) : false;
 }
 
 function isNearAtlantaCenter(venue: VenueShape): boolean {

@@ -43,7 +43,7 @@ type VenueRow = {
   slug: string;
   address: string | null;
   neighborhood: string | null;
-  venue_type: string | null;
+  place_type: string | null;
   lat: number | null;
   lng: number | null;
   city: string | null;
@@ -317,7 +317,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         let venuesQuery = supabase
       .from("places")
       .select("id, name, slug, address, neighborhood, place_type, lat, lng, city, image_url, short_description, vibes")
-      .neq("active", false)
+      .neq("is_active", false)
       .not("lat", "is", null)
       .not("lng", "is", null)
       .gte("lat", centerLat - latDelta)
@@ -535,7 +535,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
             slug: venue.slug,
             address: venue.address,
             neighborhood: venue.neighborhood,
-            venue_type: venue.venue_type,
+            venue_type: venue.place_type, // bridge: place_type → venue_type
             image_url: venue.image_url,
             short_description: venue.short_description,
             vibes: venue.vibes,

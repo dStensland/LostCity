@@ -101,7 +101,7 @@ type SpotRow = {
   neighborhood: string | null;
   lat: number | null;
   lng: number | null;
-  venue_type: string | null;
+  place_type: string | null;
   venue_types: string[] | null;
   description: string | null;
   short_description: string | null;
@@ -136,7 +136,7 @@ type LiveEventRow = {
     city: string | null;
     lat: number | null;
     lng: number | null;
-    venue_type: string | null;
+    place_type: string | null;
   } | null;
 };
 
@@ -305,7 +305,7 @@ export async function GET(request: NextRequest) {
       if (categoryFilter && categoryFilter.spotTypes.length > 0) {
         const validTypes = categoryFilter.spotTypes.filter(t => t in VENUE_TYPES_MAP);
         if (validTypes.length > 0) {
-          const typeFilters = validTypes.map((t) => `venue_type.eq.${t}`).join(",");
+          const typeFilters = validTypes.map((t) => `place_type.eq.${t}`).join(",");
           spotsCountQuery = spotsCountQuery.or(typeFilters);
         }
       } else {
@@ -314,7 +314,7 @@ export async function GET(request: NextRequest) {
         );
         const validPlaceTypes = placeTypes.filter(t => t in VENUE_TYPES_MAP);
         if (validPlaceTypes.length > 0) {
-          const typeFilters = validPlaceTypes.map((t) => `venue_type.eq.${t}`).join(",");
+          const typeFilters = validPlaceTypes.map((t) => `place_type.eq.${t}`).join(",");
           spotsCountQuery = spotsCountQuery.or(typeFilters);
         }
       }
@@ -333,7 +333,7 @@ export async function GET(request: NextRequest) {
       if (spotsCountResult.data) {
         const spotsData = spotsCountResult.data as Array<{
           id: number; lat: number | null; lng: number | null;
-          hours: HoursData | null; venue_type: string | null; city: string | null;
+          hours: HoursData | null; place_type: string | null; city: string | null;
         }>;
         for (const spot of spotsData) {
           if (!isVenueCityInScope(spot.city, portalCity, { allowMissingCity: true })) continue;
@@ -371,7 +371,7 @@ export async function GET(request: NextRequest) {
         neighborhood,
         lat,
         lng,
-        venue_type,
+        place_type,
         venue_types,
         description,
         short_description,
@@ -402,7 +402,7 @@ export async function GET(request: NextRequest) {
       // Validate each type against known venue types before building filter
       const validTypes = categoryFilter.spotTypes.filter(t => t in VENUE_TYPES_MAP);
       if (validTypes.length > 0) {
-        const typeFilters = validTypes.map((t) => `venue_type.eq.${t}`).join(",");
+        const typeFilters = validTypes.map((t) => `place_type.eq.${t}`).join(",");
         spotsQuery = spotsQuery.or(typeFilters);
       }
     } else {
@@ -413,7 +413,7 @@ export async function GET(request: NextRequest) {
       // Validate types before building filter
       const validPlaceTypes = placeTypes.filter(t => t in VENUE_TYPES_MAP);
       if (validPlaceTypes.length > 0) {
-        const typeFilters = validPlaceTypes.map((t) => `venue_type.eq.${t}`).join(",");
+        const typeFilters = validPlaceTypes.map((t) => `place_type.eq.${t}`).join(",");
         spotsQuery = spotsQuery.or(typeFilters);
       }
     }
@@ -447,7 +447,7 @@ export async function GET(request: NextRequest) {
         is_free,
         ticket_url,
         is_live,
-        venue:places!events_venue_id_fkey(
+        venue:places!events_place_id_fkey(
           id,
           name,
           slug,
@@ -455,7 +455,7 @@ export async function GET(request: NextRequest) {
           city,
           lat,
           lng,
-          venue_type
+          place_type
         )
       `)
       .eq("is_live", true)
@@ -545,8 +545,8 @@ export async function GET(request: NextRequest) {
       const closingTimeDisplay = closesAt ? formatClosingTime(closesAt) : null;
 
       // Get icon and label for venue type
-      const venueTypeInfo = spot.venue_type
-        ? VENUE_TYPES_MAP[spot.venue_type as VenueType]
+      const venueTypeInfo = spot.place_type
+        ? VENUE_TYPES_MAP[spot.place_type as VenueType]
         : null;
 
       processedSpots.push({
@@ -561,7 +561,7 @@ export async function GET(request: NextRequest) {
           neighborhood: spot.neighborhood,
           lat: spot.lat,
           lng: spot.lng,
-          venue_type: spot.venue_type,
+          venue_type: spot.place_type,
           venue_types: spot.venue_types,
           icon: venueTypeInfo?.icon || "📍",
           label: venueTypeInfo?.label || "Spot",
@@ -633,7 +633,7 @@ export async function GET(request: NextRequest) {
       .filter((item): item is AroundMeItem & { type: "spot" } => item.type === "spot")
       .map((item) => item.id);
     if (returnedSpotIds.length > 0) {
-      type TagRow = { venue_id: number; tag_id: string; tag_label: string; tag_group: string; score: number };
+      type TagRow = { place_id: number; tag_id: string; tag_label: string; tag_group: string; score: number };
       const { data: tagData } = await supabase
         .from("place_tag_summary")
         .select("place_id, tag_id, tag_label, tag_group, score")
@@ -643,7 +643,7 @@ export async function GET(request: NextRequest) {
 
       const tagsByVenue = new Map<number, VenueTagData[]>();
       for (const tag of (tagData || []) as TagRow[]) {
-        const existing = tagsByVenue.get(tag.venue_id) || [];
+        const existing = tagsByVenue.get(tag.place_id) || [];
         if (existing.length < 3) {
           existing.push({
             tag_id: tag.tag_id,
@@ -651,7 +651,7 @@ export async function GET(request: NextRequest) {
             tag_group: tag.tag_group,
             score: tag.score,
           });
-          tagsByVenue.set(tag.venue_id, existing);
+          tagsByVenue.set(tag.place_id, existing);
         }
       }
 

@@ -556,7 +556,7 @@ export async function fetchNewFromSpots(
     .select(EVENT_SELECT)
     .gte("start_date", ctx.today)
     .lte("start_date", ctx.twoWeeksAhead)
-    .in("venue_id", followedPlaceIds.slice(0, 50))
+    .in("place_id", followedPlaceIds.slice(0, 50))
     .is("canonical_event_id", null)
     .or("is_class.eq.false,is_class.is.null")
     .or("is_sensitive.eq.false,is_sensitive.is.null")

@@ -58,7 +58,7 @@ const VENUE_SELECT = `
   id, name, slug, address, neighborhood, city, place_type,
   venue_types, lat, lng, image_url, short_description,
   vibes, genres, price_level, hours_display,
-  hours, featured, active,
+  hours, featured, is_active,
   location_designator
 `;
 

@@ -126,7 +126,7 @@ export async function getYonderDestinationNodePayload(
       "id, slug, name, place_type, city, neighborhood, image_url, hero_image_url, short_description",
     )
     .in("slug", slugs)
-    .eq("active", true);
+    .eq("is_active", true);
 
   const rows = (venueRows ?? []) as Array<{
     id: number;

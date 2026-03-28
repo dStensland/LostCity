@@ -43,7 +43,7 @@ type SavedVenue = {
     name: string;
     slug: string;
     neighborhood: string | null;
-    venue_type: string | null;
+    place_type: string | null;
     vibes: string[] | null;
     image_url: string | null;
     short_description: string | null;
@@ -95,7 +95,7 @@ export default function DogSavedView({ portalSlug }: { portalSlug: string }) {
               event:events!inner (
                 id, title, start_date, start_time, is_all_day, is_free,
                 category, image_url, tags,
-                venue:venues (id, name, neighborhood, slug)
+                venue:places (id, name, neighborhood, slug)
               )
             `)
             .eq("user_id", user.id)
@@ -111,8 +111,8 @@ export default function DogSavedView({ portalSlug }: { portalSlug: string }) {
             .from("saved_items")
             .select(`
               id, created_at,
-              venue:venues!inner (
-                id, name, slug, neighborhood, venue_type, vibes,
+              venue:places!inner (
+                id, name, slug, neighborhood, place_type, vibes,
                 image_url, short_description
               )
             `)
@@ -416,15 +416,15 @@ function SavedVenueRow({
   onUnsave: () => void;
 }) {
   const contentType = classifyDogContentType(
-    venue.venue_type,
+    venue.place_type,
     venue.vibes,
     null,
     false
   );
   const accentColor = DOG_CONTENT_COLORS[contentType];
 
-  const typeLabel = venue.venue_type
-    ? venue.venue_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+  const typeLabel = venue.place_type
+    ? venue.place_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
     : "Spot";
 
   return (

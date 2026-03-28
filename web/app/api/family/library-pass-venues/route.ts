@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       id: number;
       name: string;
       slug: string | null;
-      venue_type: string | null;
+      place_type: string | null;
       neighborhood: string | null;
       image_url: string | null;
       short_description: string | null;

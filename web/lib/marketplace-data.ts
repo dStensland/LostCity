@@ -87,7 +87,7 @@ type RawVenueRow = {
   id: number;
   name: string;
   slug: string;
-  venue_type: string | null;
+  place_type: string | null;
   spot_type: string | null;
   description: string | null;
   image_url: string | null;
@@ -125,7 +125,7 @@ export async function getPCMEvents(limit = 30): Promise<PCMEvent[]> {
     .select(`
       id, title, start_date, start_time, end_time,
       image_url, category, description, tags,
-      venue:places!events_venue_id_fkey(name, slug)
+      venue:places!events_place_id_fkey(name, slug)
     `)
     .in("place_id", venueIds)
     .gte("start_date", today)
@@ -167,7 +167,7 @@ export async function getPCMTenants(): Promise<PCMTenant[]> {
     id: row.id,
     name: row.name,
     slug: row.slug,
-    venue_type: row.venue_type,
+    venue_type: row.place_type, // bridge: place_type → venue_type
     spot_type: row.spot_type,
     description: row.description,
     image_url: row.image_url,
@@ -222,7 +222,7 @@ export async function getNeighborhoodEvents(limit = 20): Promise<NeighborhoodEve
     .select(`
       id, title, start_date, start_time,
       image_url, category, tags,
-      venue:places!events_venue_id_fkey(name, slug)
+      venue:places!events_place_id_fkey(name, slug)
     `)
     .in("place_id", neighborhoodVenueIds)
     .gte("start_date", today)
@@ -270,7 +270,7 @@ export async function getNeighborhoodVenues(limit = 12): Promise<NeighborhoodVen
     id: row.id,
     name: row.name,
     slug: row.slug,
-    venue_type: row.venue_type,
+    venue_type: row.place_type, // bridge: place_type → venue_type
     image_url: row.image_url,
     neighborhood: row.neighborhood,
     vibes: row.vibes || [],

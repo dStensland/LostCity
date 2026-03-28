@@ -32,7 +32,7 @@ type FollowingEvent = {
   source_url: string | null;
   source_id: number | null;
   tags: string[] | null;
-  venue_id: number | null;
+  place_id: number | null;
   organization_id: string | null;
   venue: {
     id: number;
@@ -112,9 +112,9 @@ export async function GET(request: Request) {
         source_url,
         source_id,
         tags,
-        venue_id,
+        place_id,
         organization_id,
-        venue:venues!left(
+        venue:places!left(
           id,
           name,
           slug,
@@ -145,9 +145,9 @@ export async function GET(request: Request) {
 
     // Filter by followed venues OR followed organizations
     if (venueIds.length > 0 && organizationIds.length > 0) {
-      query = query.or(`venue_id.in.(${venueIds.join(",")}),organization_id.in.(${organizationIds.join(",")})`);
+      query = query.or(`place_id.in.(${venueIds.join(",")}),organization_id.in.(${organizationIds.join(",")})`);
     } else if (venueIds.length > 0) {
-      query = query.in("venue_id", venueIds);
+      query = query.in("place_id", venueIds);
     } else if (organizationIds.length > 0) {
       query = query.in("organization_id", organizationIds);
     }
@@ -175,7 +175,7 @@ export async function GET(request: Request) {
           organization_id: event.organization_id,
           category: event.category,
           tags: event.tags || [],
-          venue_id: event.venue_id,
+          place_id: event.place_id,
           venue: event.venue ? { id: event.venue.id } : null,
         })),
         {
@@ -192,7 +192,7 @@ export async function GET(request: Request) {
       const reasons = [];
 
       // Check if venue is followed
-      if (event.venue_id && venueIds.includes(event.venue_id)) {
+      if (event.place_id && venueIds.includes(event.place_id)) {
         const venue = event.venue as { name: string } | null;
         reasons.push({
           type: "followed_venue",

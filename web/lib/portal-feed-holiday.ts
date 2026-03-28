@@ -61,7 +61,7 @@ type HolidayEvent = {
     name: string;
     neighborhood: string | null;
     slug: string | null;
-    venue_type: string | null;
+    place_type: string | null;
     location_designator:
       | "standard"
       | "private_after_signup"

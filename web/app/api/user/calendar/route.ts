@@ -144,7 +144,7 @@ export async function GET(request: Request) {
           description,
           ticket_url,
           source_url,
-          venue:venues!left(
+          venue:places!left(
             id,
             name,
             slug,

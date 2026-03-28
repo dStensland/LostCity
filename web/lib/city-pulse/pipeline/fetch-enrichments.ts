@@ -87,8 +87,8 @@ export async function fetchPhaseAEnrichments(
         let q = supabase
           .from("places")
           .select(VENUE_SELECT)
-          .eq("active", true)
-          .or(`venue_type.in.(${typesList}),vibes.ov.{${vibesList}}`);
+          .eq("is_active", true)
+          .or(`place_type.in.(${typesList}),vibes.ov.{${vibesList}}`);
         if (ctx.geoCenter) {
           const radiusKm = ctx.portalFilters.geo_radius_km ?? 25;
           const degOffset = radiusKm / 111;

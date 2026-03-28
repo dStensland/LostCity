@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (venueId !== null) {
-      query = query.eq("venue_id", venueId);
+      query = query.eq("place_id", venueId);
     }
 
     if (qFilter && isValidString(qFilter, 1, 200)) {

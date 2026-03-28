@@ -298,7 +298,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       id, name, slug, address, neighborhood, place_type,
       lat, lng, image_url, short_description, vibes, hours, city
     `)
-    .neq("active", false)
+    .neq("is_active", false)
     .not("lat", "is", null)
     .not("lng", "is", null)
     .gte("lat", anchorLat - latDelta)
@@ -323,7 +323,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     slug: string;
     address: string | null;
     neighborhood: string | null;
-    venue_type: string | null;
+    place_type: string | null;
     lat: number;
     lng: number;
     image_url: string | null;
@@ -338,7 +338,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   // IDs for event-hosting venues (broader than suggestion types)
   const eventVenueIds = allVenues
-    .filter((v) => EVENT_VENUE_TYPES.has(v.venue_type ?? ""))
+    .filter((v) => EVENT_VENUE_TYPES.has(v.place_type ?? ""))
     .map((v) => v.id);
 
   // -----------------------------------------------------------------------
@@ -347,7 +347,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   const anchorDayOfWeek = new Date(`${anchorDate}T12:00:00Z`).getUTCDay();
   const suggestionVenueIds = allVenues
-    .filter((v) => VENUE_SUGGESTION_TYPES.has(v.venue_type ?? ""))
+    .filter((v) => VENUE_SUGGESTION_TYPES.has(v.place_type ?? ""))
     .map((v) => v.id);
 
   // Determine if after-slot window crosses midnight (need next-day events)
@@ -458,7 +458,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
     for (const venue of allVenues) {
       // Only allow venue-suggestion types
-      if (!VENUE_SUGGESTION_TYPES.has(venue.venue_type ?? "")) continue;
+      if (!VENUE_SUGGESTION_TYPES.has(venue.place_type ?? "")) continue;
 
       if (venue.lat == null || venue.lng == null) continue;
 
@@ -470,7 +470,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       if (distKm > radiusKm) continue;
 
       const walkMin = getWalkingMinutes(distKm);
-      const category = categorizeVenue(venue.venue_type);
+      const category = categorizeVenue(venue.place_type);
 
       if (categoryFilter && !categoryFilter.has(category)) continue;
 
@@ -491,7 +491,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           slug: venue.slug,
           lat: venue.lat,
           lng: venue.lng,
-          venue_type: venue.venue_type,
+          venue_type: venue.place_type,
         },
         suggested_time: "",
         distance_km: Math.round(distKm * 100) / 100,
@@ -570,7 +570,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           slug: venue.slug,
           lat: venue.lat,
           lng: venue.lng,
-          venue_type: venue.venue_type,
+          venue_type: venue.place_type,
         },
         suggested_time: formatTimeDisplay(event.start_time),
         distance_km: Math.round(distKm * 100) / 100,

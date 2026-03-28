@@ -287,7 +287,7 @@ type DbEvent = {
     name: string;
     neighborhood: string | null;
     slug: string | null;
-    venue_type: string | null;
+    place_type: string | null;
     city: string | null;
   } | null;
 };
@@ -297,7 +297,7 @@ type DbVenue = {
   name: string;
   slug: string;
   neighborhood: string | null;
-  venue_type: string | null;
+  place_type: string | null;
   lat: number | null;
   lng: number | null;
   city: string | null;
@@ -781,7 +781,7 @@ async function fetchDestinationsDirect(
   const { data: venuesRaw } = await supabase
     .from("places")
     .select("id, name, slug, neighborhood, place_type, lat, lng, city, image_url, short_description")
-    .neq("active", false)
+    .neq("is_active", false)
     .not("lat", "is", null)
     .not("lng", "is", null)
     .gte("lat", centerLat - latDelta)
@@ -805,7 +805,7 @@ async function fetchDestinationsDirect(
   const excludedVenueTypes = new Set(['nonprofit', 'food_bank', 'charity', 'church', 'school', 'government', 'hospital', 'office']);
   const filteredVenues = venuesInRadius.filter((v) =>
     !propertyVenueSlugs.has(v.slug) &&
-    (!v.venue_type || !excludedVenueTypes.has(v.venue_type))
+    (!v.place_type || !excludedVenueTypes.has(v.place_type))
   );
 
   if (filteredVenues.length === 0) {
@@ -931,7 +931,7 @@ async function fetchDestinationsDirect(
           slug: venue.slug,
           name: venue.name,
           neighborhood: venue.neighborhood,
-          venue_type: venue.venue_type,
+          venue_type: venue.place_type, // bridge: place_type → venue_type
           image_url: venue.image_url,
           short_description: venue.short_description,
         },

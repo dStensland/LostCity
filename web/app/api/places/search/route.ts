@@ -293,7 +293,7 @@ export async function GET(request: NextRequest) {
       neighborhood,
       city,
       state,
-      venue_type,
+      place_type,
       aliases,
       lat,
       lng,
@@ -330,7 +330,7 @@ export async function GET(request: NextRequest) {
     neighborhood: string | null;
     city: string | null;
     state: string | null;
-    venue_type: string | null;
+    place_type: string | null;
     aliases: string[] | null;
     lat: number | null;
     lng: number | null;
@@ -359,7 +359,7 @@ export async function GET(request: NextRequest) {
     neighborhood: venue.neighborhood,
     city: venue.city,
     state: venue.state,
-    venue_type: venue.venue_type,
+    venue_type: venue.place_type, // bridge: place_type → venue_type
     lat: venue.lat,
     lng: venue.lng,
     image_url: venue.image_url,

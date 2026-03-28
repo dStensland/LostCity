@@ -547,7 +547,7 @@ async function applySearchFilters(
       conditions.push(`id.in.(${[...allMatchingIds].join(",")})`);
     }
     if (searchVenueIds.length > 0) {
-      conditions.push(`venue_id.in.(${searchVenueIds.join(",")})`);
+      conditions.push(`place_id.in.(${searchVenueIds.join(",")})`);
     }
 
     if (conditions.length > 0) {
@@ -567,7 +567,7 @@ async function applySearchFilters(
     }
 
     if (moodVenueIds.length > 0) {
-      conditions.push(`venue_id.in.(${moodVenueIds.join(",")})`);
+      conditions.push(`place_id.in.(${moodVenueIds.join(",")})`);
     }
 
     if (conditions.length > 0) {
@@ -604,7 +604,7 @@ async function applySearchFilters(
   // Apply vibes filter (venue attribute) - uses pre-fetched IDs
   if (filters.vibes && filters.vibes.length > 0) {
     if (vibesVenueIds.length > 0) {
-      query = query.in("venue_id", vibesVenueIds);
+      query = query.in("place_id", vibesVenueIds);
     } else {
       return { query, shouldReturnEmpty: true };
     }
@@ -613,7 +613,7 @@ async function applySearchFilters(
   // Apply neighborhoods filter - uses pre-fetched IDs
   if (filters.neighborhoods && filters.neighborhoods.length > 0) {
     if (neighborhoodVenueIds.length > 0) {
-      query = query.in("venue_id", neighborhoodVenueIds);
+      query = query.in("place_id", neighborhoodVenueIds);
     } else {
       return { query, shouldReturnEmpty: true };
     }
@@ -621,7 +621,7 @@ async function applySearchFilters(
 
   // Apply city filter - uses pre-fetched IDs
   if (filters.city && cityVenueIds.length > 0) {
-    query = query.in("venue_id", cityVenueIds);
+    query = query.in("place_id", cityVenueIds);
   }
 
   // Apply price filters
@@ -654,7 +654,7 @@ async function applySearchFilters(
 
   // Apply venue filter
   if (filters.venue_id) {
-    query = query.eq("venue_id", filters.venue_id);
+    query = query.eq("place_id", filters.venue_id);
   }
 
   // Exclude classes (events marked as classes)
@@ -667,7 +667,7 @@ async function applySearchFilters(
 
   // Apply multiple venues filter (portal filter)
   if (filters.venue_ids && filters.venue_ids.length > 0) {
-    query = query.in("venue_id", filters.venue_ids);
+    query = query.in("place_id", filters.venue_ids);
   }
 
   // Apply exclude categories filter (portal filter)
@@ -718,7 +718,7 @@ async function applySearchFilters(
     } else {
       const venueIds = (nearbyVenues as { id: number }[] | null)?.map((v) => v.id) || [];
       if (venueIds.length > 0) {
-        query = query.in("venue_id", venueIds);
+        query = query.in("place_id", venueIds);
       } else {
         return { query, shouldReturnEmpty: true };
       }
@@ -731,7 +731,7 @@ async function applySearchFilters(
   // when passed to .in("venue_id", [...]). We still exclude venue-less events since
   // they can't be plotted on a map.
   if (filters.geo_bounds) {
-    query = query.not("venue_id", "is", null);
+    query = query.not("place_id", "is", null);
   }
 
   // Apply importance tier filter (planning horizon)
@@ -1092,14 +1092,14 @@ export async function getEventsForMap(
       is_live,
       series_id,
       series:series_id(series_type, festival:festivals(id)),
-      venue:venues!inner(id, name, slug, address, neighborhood, city, state, lat, lng, venue_type)
+      venue:places!inner(id, name, slug, address, neighborhood, city, state, lat, lng, place_type)
     `
     )
     .or(`start_date.gte.${today},end_date.gte.${today}`)
     // Hide TBA events (no start_time, not all-day)
     .or("start_time.not.is.null,is_all_day.eq.true")
-    .not("venues.lat", "is", null)
-    .not("venues.lng", "is", null)
+    .not("places.lat", "is", null)
+    .not("places.lng", "is", null)
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
   query = applyFederatedPortalScopeToQuery(query, {

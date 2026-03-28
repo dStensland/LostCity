@@ -219,7 +219,7 @@ export async function GET(request: NextRequest) {
       slug: string;
       address: string | null;
       neighborhood: string | null;
-      venue_type: string | null;
+      place_type: string | null;
       location_designator: "standard" | "private_after_signup" | "virtual" | "recovery_meeting" | null;
       city: string;
       image_url: string | null;
@@ -234,7 +234,7 @@ export async function GET(request: NextRequest) {
     };
 
     type EventRow = {
-      venue_id: number;
+      place_id: number;
     };
 
     type SpotRow = {
@@ -270,7 +270,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from("places")
       .select("id, name, slug, address, neighborhood, place_type, location_designator, city, image_url, lat, lng, price_level, hours, hours_display, vibes, short_description, genres")
-      .neq("active", false); // Exclude deactivated venues
+      .neq("is_active", false); // Exclude deactivated venues
 
     // Venues table has no portal_id column, so we scope by city.
     if (portalCityFilter.length > 0) {
@@ -423,7 +423,7 @@ export async function GET(request: NextRequest) {
           let neighborhoodsQuery = supabase
             .from("places")
             .select("neighborhood")
-            .neq("active", false);
+            .neq("is_active", false);
           if (portalCityFilter.length > 0) {
             neighborhoodsQuery = neighborhoodsQuery.in(
               "city",
@@ -470,10 +470,10 @@ export async function GET(request: NextRequest) {
       const buildEventCountsQuery = (venueIds: number[]) => {
         let scopedQuery = portalClient
           .from("events")
-          .select("venue_id")
+          .select("place_id")
           .gte("start_date", today)
           .lte("start_date", eventsWindowEnd)
-          .not("venue_id", "is", null)
+          .not("place_id", "is", null)
           .in("place_id", venueIds);
 
         scopedQuery = applyPortalScopeToQuery(scopedQuery, {
@@ -510,8 +510,8 @@ export async function GET(request: NextRequest) {
 
       if (events) {
         for (const event of events as EventRow[]) {
-          const count = eventCounts.get(event.venue_id) || 0;
-          eventCounts.set(event.venue_id, count + 1);
+          const count = eventCounts.get(event.place_id) || 0;
+          eventCounts.set(event.place_id, count + 1);
         }
       }
 
@@ -552,7 +552,7 @@ export async function GET(request: NextRequest) {
         name: venue.name,
         slug: venue.slug,
         neighborhood: venue.neighborhood,
-        venue_type: venue.venue_type,
+        venue_type: venue.place_type,
         location_designator: venue.location_designator || "standard",
         image_url: venue.image_url,
         event_count: eventCounts.get(venue.id) || 0,
@@ -666,12 +666,12 @@ export async function GET(request: NextRequest) {
       );
 
       if (eventDetails) {
-        type EventDetail = { venue_id: number; id: number; title: string; start_date: string; start_time: string | null };
+        type EventDetail = { place_id: number; id: number; title: string; start_date: string; start_time: string | null };
         const eventsPerVenue = new Map<number, EventDetail[]>();
         for (const row of eventDetails as EventDetail[]) {
-          const existing = eventsPerVenue.get(row.venue_id);
+          const existing = eventsPerVenue.get(row.place_id);
           if (!existing) {
-            eventsPerVenue.set(row.venue_id, [row]);
+            eventsPerVenue.set(row.place_id, [row]);
           } else if (existing.length < 2) {
             existing.push(row);
           }

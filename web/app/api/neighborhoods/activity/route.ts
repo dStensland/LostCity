@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
 
     const { data: eventRows, error: eventError } = await serviceClient
       .from("events")
-      .select("category_id, venue:venues!events_venue_id_fkey(neighborhood)")
+      .select("category_id, venue:places!events_place_id_fkey(neighborhood)")
       .eq("is_active", true)
       .is("canonical_event_id", null)
       .gte("start_date", todayStr)

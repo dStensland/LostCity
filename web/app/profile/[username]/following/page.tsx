@@ -59,7 +59,7 @@ export default async function FollowingPage({ params }: Props) {
   const { data: venueFollowsData } = await supabase
     .from("follows")
     .select(`
-      venue:venues!follows_followed_venue_id_fkey(
+      venue:places!follows_followed_venue_id_fkey(
         id, name, slug, neighborhood
       )
     `)

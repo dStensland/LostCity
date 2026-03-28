@@ -152,7 +152,7 @@ type SpecialRow = {
     name: string;
     slug: string;
     neighborhood: string | null;
-    venue_type: string | null;
+    place_type: string | null;
     image_url: string | null;
     lat: number | null;
     lng: number | null;
@@ -396,7 +396,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       name: string;
       slug: string;
       neighborhood: string | null;
-      venue_type: string | null;
+      place_type: string | null;
       lat: number | null;
       lng: number | null;
       city: string | null;

@@ -72,7 +72,7 @@ type NearbyDestination = VenueDiningProfile & {
   id: number;
   name: string;
   slug: string;
-  venue_type: string | null;
+  place_type: string | null;
   neighborhood: string | null;
   lat: number | null;
   lng: number | null;
@@ -298,7 +298,7 @@ async function fetchNearbyDestinations(
         }
 
         // Determine category
-        const venueType = s.venue_type || "";
+        const venueType = s.place_type || "";
         let category: string | null = null;
 
         for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
@@ -315,7 +315,7 @@ async function fetchNearbyDestinations(
                   eventStartTime: eventData.start_time,
                   travelToVenueMinutes: estimateTravelToVenueMinutes(distance),
                   profile: {
-                    venue_type: s.venue_type,
+                    venue_type: s.place_type,
                     service_style: s.service_style,
                     meal_duration_min_minutes: s.meal_duration_min_minutes,
                     meal_duration_max_minutes: s.meal_duration_max_minutes,
@@ -403,7 +403,7 @@ async function fetchNearbyDestinations(
         }
 
         // Determine category
-        const venueType = s.venue_type || "";
+        const venueType = s.place_type || "";
         let category: string | null = null;
 
         for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
@@ -420,7 +420,7 @@ async function fetchNearbyDestinations(
                   eventStartTime: eventData.start_time,
                   travelToVenueMinutes: estimateTravelToVenueMinutes(distance),
                   profile: {
-                    venue_type: s.venue_type,
+                    venue_type: s.place_type,
                     service_style: s.service_style,
                     meal_duration_min_minutes: s.meal_duration_min_minutes,
                     meal_duration_max_minutes: s.meal_duration_max_minutes,

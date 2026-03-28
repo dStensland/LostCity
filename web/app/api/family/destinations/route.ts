@@ -92,12 +92,12 @@ export async function GET(request: NextRequest) {
     // Pass 1: get venue IDs that have a family_friendly occasion
     const { data: occasionRows } = await supabase
       .from("place_occasions")
-      .select("venue_id")
+      .select("place_id")
       .eq("occasion", "family_friendly")
       .gte("confidence", 0.5);
 
     const familyOccasionIds = new Set(
-      (occasionRows ?? []).map((r: { venue_id: number }) => r.venue_id)
+      (occasionRows ?? []).map((r: { place_id: number }) => r.place_id)
     );
 
     // Pass 2: query venues — match either occasion (family_friendly) or family venue_type.
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
 
     // Build the query: venue_type IN (family types) OR id IN (occasion-matched ids)
     // PostgREST OR syntax: "condition1,condition2"
-    let orFilter = `venue_type.in.(${familyTypeList.join(",")})`;
+    let orFilter = `place_type.in.(${familyTypeList.join(",")})`;
     if (occasionIdList.length > 0) {
       orFilter += `,id.in.(${occasionIdList.slice(0, 200).join(",")})`;
     }
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
         neighborhood,
         image_url,
         hero_image_url,
-        venue_type,
+        place_type,
         indoor_outdoor,
         short_description,
         library_pass
@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
       neighborhood: string | null;
       image_url: string | null;
       hero_image_url: string | null;
-      venue_type: string | null;
+      place_type: string | null;
       indoor_outdoor: string | null;
       short_description: string | null;
       library_pass: { eligible?: boolean; card_type?: string; notes?: string } | null;
@@ -176,7 +176,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     const familyVenues = venueRows.filter(
-      (v) => !v.venue_type || !EXCLUDED_VENUE_TYPES.has(v.venue_type)
+      (v) => !v.place_type || !EXCLUDED_VENUE_TYPES.has(v.place_type)
     );
 
     // Apply environment filter
@@ -186,9 +186,9 @@ export async function GET(request: NextRequest) {
         if (v.indoor_outdoor === "indoor") return true;
         if (v.indoor_outdoor === "both") return true;
         // Fall back to venue_type classification
-        if (!v.indoor_outdoor && v.venue_type) {
-          if (INDOOR_TYPES.has(v.venue_type)) return true;
-          if (BOTH_TYPES.has(v.venue_type)) return true;
+        if (!v.indoor_outdoor && v.place_type) {
+          if (INDOOR_TYPES.has(v.place_type)) return true;
+          if (BOTH_TYPES.has(v.place_type)) return true;
         }
         return false;
       });
@@ -196,9 +196,9 @@ export async function GET(request: NextRequest) {
       environmentFiltered = familyVenues.filter((v) => {
         if (v.indoor_outdoor === "outdoor") return true;
         if (v.indoor_outdoor === "both") return true;
-        if (!v.indoor_outdoor && v.venue_type) {
-          if (OUTDOOR_TYPES.has(v.venue_type)) return true;
-          if (BOTH_TYPES.has(v.venue_type)) return true;
+        if (!v.indoor_outdoor && v.place_type) {
+          if (OUTDOOR_TYPES.has(v.place_type)) return true;
+          if (BOTH_TYPES.has(v.place_type)) return true;
         }
         return false;
       });
@@ -285,7 +285,7 @@ export async function GET(request: NextRequest) {
       address: v.address,
       neighborhood: v.neighborhood,
       image_url: v.hero_image_url ?? v.image_url,
-      venue_type: v.venue_type,
+      venue_type: v.place_type, // bridge: place_type → venue_type for API consumers
       indoor_outdoor: v.indoor_outdoor,
       description: v.short_description,
       editorial_mention_count: editorialCountMap.get(v.id) ?? 0,

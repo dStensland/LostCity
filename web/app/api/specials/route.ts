@@ -49,7 +49,7 @@ type VenueRow = {
   slug: string;
   address: string | null;
   neighborhood: string | null;
-  venue_type: string | null;
+  place_type: string | null;
   lat: number | null;
   lng: number | null;
   image_url: string | null;
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
         const { data: venues, error: venuesError } = await supabase
           .from("places")
           .select("id, name, slug, address, neighborhood, place_type, lat, lng, image_url, short_description")
-          .neq("active", false)
+          .neq("is_active", false)
           .not("lat", "is", null)
           .not("lng", "is", null)
           .gte("lat", lat - latDelta)
@@ -263,7 +263,7 @@ export async function GET(request: NextRequest) {
           slug: venue.slug,
           address: venue.address,
           neighborhood: venue.neighborhood,
-          venue_type: venue.venue_type,
+          venue_type: venue.place_type, // bridge: place_type → venue_type
           image_url: venue.image_url,
         },
         distance_km: Math.round(venue.distance_km * 100) / 100,

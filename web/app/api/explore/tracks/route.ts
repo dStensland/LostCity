@@ -39,14 +39,14 @@ type TrackVenueRow = {
     short_description: string | null;
     image_url: string | null;
     hero_image_url: string | null;
-    venue_type: string | null;
+    place_type: string | null;
     data_quality: number | null;
   } | null;
 };
 
 type EventRow = {
   id: number;
-  venue_id: number;
+  place_id: number;
   title: string;
   start_date: string;
   start_time: string | null;
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
           .from("explore_track_venues")
           .select(`
             id, editorial_blurb, is_featured, upvote_count,
-            venues (id, name, slug, neighborhood, short_description, image_url, hero_image_url, venue_type, data_quality)
+            venues:places (id, name, slug, neighborhood, short_description, image_url, hero_image_url, place_type, data_quality)
           `)
           .eq("track_id", track.id)
           .eq("status", "approved")
@@ -153,8 +153,8 @@ export async function GET(request: NextRequest) {
     if (allVenueIds.size > 0) {
       let eventsQuery = supabase
         .from("events")
-        .select("id, venue_id, title, start_date, start_time, is_free, price_min")
-        .in("venue_id", Array.from(allVenueIds))
+        .select("id, place_id, title, start_date, start_time, is_free, price_min")
+        .in("place_id", Array.from(allVenueIds))
         .gte("start_date", today)
         .lte("start_date", weekendEnd) // Only need through weekend for pills
         .is("canonical_event_id", null)
@@ -170,9 +170,9 @@ export async function GET(request: NextRequest) {
       const events = rawEvents as unknown as EventRow[] | null;
       if (events) {
         for (const e of events) {
-          const list = eventsByVenue.get(e.venue_id) ?? [];
+          const list = eventsByVenue.get(e.place_id) ?? [];
           list.push(e);
-          eventsByVenue.set(e.venue_id, list);
+          eventsByVenue.set(e.place_id, list);
         }
       }
     }
@@ -182,8 +182,8 @@ export async function GET(request: NextRequest) {
     if (allVenueIds.size > 0) {
       let countsQuery = supabase
         .from("events")
-        .select("venue_id")
-        .in("venue_id", Array.from(allVenueIds))
+        .select("place_id")
+        .in("place_id", Array.from(allVenueIds))
         .gte("start_date", today)
         .is("canonical_event_id", null)
         .is("portal_id", null)
@@ -192,10 +192,10 @@ export async function GET(request: NextRequest) {
       countsQuery = applyFeedGate(countsQuery);
       const { data: rawCounts } = await countsQuery;
 
-      const countEvents = rawCounts as unknown as { venue_id: number }[] | null;
+      const countEvents = rawCounts as unknown as { place_id: number }[] | null;
       if (countEvents) {
         for (const e of countEvents) {
-          eventCountsByVenue.set(e.venue_id, (eventCountsByVenue.get(e.venue_id) ?? 0) + 1);
+          eventCountsByVenue.set(e.place_id, (eventCountsByVenue.get(e.place_id) ?? 0) + 1);
         }
       }
     }
@@ -236,7 +236,7 @@ export async function GET(request: NextRequest) {
               title: ev.title,
               date: ev.start_date,
               time: ev.start_time,
-              venue_name: trackVenueNameMap.get(ev.venue_id) ?? "",
+              venue_name: trackVenueNameMap.get(ev.place_id) ?? "",
               is_free: ev.is_free ?? false,
             };
           }

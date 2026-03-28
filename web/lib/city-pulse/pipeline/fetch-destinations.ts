@@ -38,21 +38,19 @@ export interface DestinationItem {
   editorial_quote: { snippet: string; source: string } | null;
 }
 
-/** Local shape for a row fetched from the venues table.
- *  DB column names (venue_type) are preserved since the table hasn't been
- *  renamed yet. Will become place_type after Deploy 10. */
+/** Local shape for a row fetched from the places table (Deploy 10: venue_* renamed). */
 type PlaceRow = {
   id: number;
   name: string;
   slug: string | null;
   neighborhood: string | null;
-  venue_type: string | null; // DB column — becomes place_type after Deploy 10
+  place_type: string | null;
   image_url: string | null;
   hours: HoursData | null;
 };
 
 type MentionRow = {
-  venue_id: number;
+  place_id: number;
   source_key: string;
   snippet: string;
 };
@@ -172,15 +170,15 @@ export async function fetchDestinations(
       .select("place_id, occasion, confidence")
       .in("occasion", occasions)
       .gte("confidence", 0.5) as unknown as {
-        data: { venue_id: number; occasion: string; confidence: number }[] | null;
+        data: { place_id: number; occasion: string; confidence: number }[] | null;
       };
 
     if (occasionRows && occasionRows.length > 0) {
       // Sort by confidence desc, deduplicate by venue keeping best occasion
       const sorted = [...occasionRows].sort((a, b) => b.confidence - a.confidence);
       for (const row of sorted) {
-        if (!occasionByVenue.has(row.venue_id)) {
-          occasionByVenue.set(row.venue_id, row.occasion);
+        if (!occasionByVenue.has(row.place_id)) {
+          occasionByVenue.set(row.place_id, row.occasion);
         }
       }
       venueIds = [...occasionByVenue.keys()];
@@ -197,7 +195,7 @@ export async function fetchDestinations(
         .from("places")
         .select("id, name, slug, neighborhood, place_type, image_url, hours")
         .in("id", venueIds)
-        .eq("active", true)
+        .eq("is_active", true)
         .eq("city", "Atlanta") as unknown as Promise<{ data: PlaceRow[] | null }>,
       supabase
         .from("editorial_mentions")
@@ -209,8 +207,8 @@ export async function fetchDestinations(
 
     if (mentionResult.data) {
       for (const row of mentionResult.data) {
-        if (!mentionByVenue.has(row.venue_id) && row.snippet && isQualitySnippet(row.snippet)) {
-          mentionByVenue.set(row.venue_id, { snippet: row.snippet, source_key: row.source_key });
+        if (!mentionByVenue.has(row.place_id) && row.snippet && isQualitySnippet(row.snippet)) {
+          mentionByVenue.set(row.place_id, { snippet: row.snippet, source_key: row.source_key });
         }
       }
     }
@@ -226,7 +224,7 @@ export async function fetchDestinations(
         name: place.name,
         slug: place.slug,
         neighborhood: place.neighborhood,
-        venue_type: place.venue_type,
+        venue_type: place.place_type,
         image_url: place.image_url,
       },
       occasion,
@@ -280,7 +278,7 @@ export async function fetchDestinations(
     if (fallbackMentions && fallbackMentions.length > 0) {
       const fallbackPlaceIds = [...new Set(
         fallbackMentions
-          .map((r) => r.venue_id)
+          .map((r) => r.place_id)
           .filter((id) => !existingIds.has(id))
       )].slice(0, needed);
 
@@ -291,7 +289,7 @@ export async function fetchDestinations(
             .from("places")
             .select("id, name, slug, neighborhood, place_type, image_url, hours")
             .in("id", fallbackPlaceIds)
-            .eq("active", true)
+            .eq("is_active", true)
             .eq("city", "Atlanta") as unknown as Promise<{ data: PlaceRow[] | null }>,
         ]);
 
@@ -299,8 +297,8 @@ export async function fetchDestinations(
           // Build mention map for fallback places (quality-filtered)
           const fallbackMentionMap = new Map<number, { snippet: string; source_key: string }>();
           for (const row of fallbackMentions) {
-            if (!fallbackMentionMap.has(row.venue_id) && row.snippet && isQualitySnippet(row.snippet)) {
-              fallbackMentionMap.set(row.venue_id, { snippet: row.snippet, source_key: row.source_key });
+            if (!fallbackMentionMap.has(row.place_id) && row.snippet && isQualitySnippet(row.snippet)) {
+              fallbackMentionMap.set(row.place_id, { snippet: row.snippet, source_key: row.source_key });
             }
           }
 
@@ -312,7 +310,7 @@ export async function fetchDestinations(
                 name: place.name,
                 slug: place.slug,
                 neighborhood: place.neighborhood,
-                venue_type: place.venue_type,
+                venue_type: place.place_type,
                 image_url: place.image_url,
               },
               occasion: "date_night",

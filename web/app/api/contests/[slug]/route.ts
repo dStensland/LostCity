@@ -34,7 +34,7 @@ type VenueRow = {
   neighborhood: string | null;
   image_url: string | null;
   hero_image_url: string | null;
-  venue_type: string | null;
+  place_type: string | null;
 };
 
 type VoteRow = { venue_id: number };
@@ -272,7 +272,7 @@ export const GET = withOptionalAuth(async (request: NextRequest, { user, supabas
         slug: venue.slug,
         neighborhood: venue.neighborhood,
         imageUrl: venue.hero_image_url ?? venue.image_url,
-        venueType: venue.venue_type,
+        venueType: venue.place_type,
         rank: index + 1,
         voteCount: entry.voteCount,
         caseCount: entry.caseCount,

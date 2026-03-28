@@ -259,7 +259,7 @@ async function fetchPersistedSnapshot(
       .from("places")
       .select("id")
       .eq("slug", destinationSlug)
-      .eq("active", true)
+      .eq("is_active", true)
       .limit(1)
       .maybeSingle();
 

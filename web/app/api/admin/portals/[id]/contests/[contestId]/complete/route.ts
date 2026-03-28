@@ -34,7 +34,7 @@ type VenueRow = {
   neighborhood: string | null;
   image_url: string | null;
   hero_image_url: string | null;
-  venue_type: string | null;
+  place_type: string | null;
 };
 
 type VoteCountRow = { venue_id: number; vote_count: number };
@@ -328,7 +328,7 @@ export async function POST(request: NextRequest, { params }: Props) {
       slug: venue.slug,
       neighborhood: venue.neighborhood,
       imageUrl: venue.hero_image_url ?? venue.image_url,
-      venueType: venue.venue_type,
+      venueType: venue.place_type,
       voteCount: entry.voteCount,
       caseCount: entry.caseCount,
       totalScore: Math.round(entry.totalScore * 10) / 10,

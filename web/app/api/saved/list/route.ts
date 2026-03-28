@@ -45,13 +45,13 @@ export const GET = withOptionalAuth(async (request, { user, serviceClient }) => 
             image_url,
             genres
           ),
-          venue:venues!events_venue_id_fkey(
+          venue:places!events_place_id_fkey(
             name,
             slug,
             neighborhood
           )
         ),
-        venue:venues!saved_items_venue_id_fkey(
+        venue:places!saved_items_venue_id_fkey(
           id,
           name,
           slug,

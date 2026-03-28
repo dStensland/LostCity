@@ -99,7 +99,7 @@ export default function DashboardPlanning() {
             price_max,
             category,
             image_url,
-            venue:venues (
+            venue:places (
               id,
               name,
               neighborhood
@@ -127,7 +127,7 @@ export default function DashboardPlanning() {
             price_max,
             category,
             image_url,
-            venue:venues (
+            venue:places (
               id,
               name,
               neighborhood
@@ -162,7 +162,7 @@ export default function DashboardPlanning() {
             price_max,
             category,
             image_url,
-            venue:venues (
+            venue:places (
               id,
               name,
               neighborhood
