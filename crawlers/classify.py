@@ -31,6 +31,7 @@ from typing import Optional
 
 from genre_normalize import GENRES_BY_CATEGORY
 from llm_client import generate_text
+from sources._sports_bar_common import detect_sports_watch_party
 
 logger = logging.getLogger(__name__)
 
@@ -444,6 +445,22 @@ def classify_rules(
         result.category = "music"
         result.genres = ["dj"]
         result.confidence = 0.7
+
+    # ------------------------------------------------------------------
+    # Step 2b: Sports watch party at sports bar
+    # When venue is sports_bar AND title/description signals a watch party
+    # with a known sport keyword, override to sports category.
+    # This runs AFTER the dance-party check but BEFORE general venue hints
+    # so the specific detection wins over the generic sports_bar → film fallback.
+    # ------------------------------------------------------------------
+    if venue_type == "sports_bar":
+        watch_party_result = detect_sports_watch_party(title, description)
+        if watch_party_result is not None:
+            _wp_category, _wp_genre, _wp_tags = watch_party_result
+            result.category = _wp_category  # "sports"
+            result.genres = [_wp_genre]  # ["watch_party"]
+            result.confidence = 0.88
+            result.source = "rules"
 
     # ------------------------------------------------------------------
     # Step 3: Venue type hints (only when title matching produced nothing)

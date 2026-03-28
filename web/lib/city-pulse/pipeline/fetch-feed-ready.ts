@@ -63,6 +63,9 @@ type FeedReadyRow = {
   series_name: string | null;
   series_type: string | null;
   series_slug: string | null;
+  cost_tier: string | null;
+  duration: string | null;
+  significance: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -130,6 +133,10 @@ function reshapeWithExtras(row: FeedReadyRow): FeedEventData {
   }
   // Attach source_id at the event level (used by applySourceDiversity)
   (base as Record<string, unknown>).source_id = row.source_id;
+  // Attach taxonomy v2 derived attributes
+  (base as Record<string, unknown>).cost_tier = row.cost_tier;
+  (base as Record<string, unknown>).duration = row.duration;
+  (base as Record<string, unknown>).significance = row.significance;
   return base;
 }
 

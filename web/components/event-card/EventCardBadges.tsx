@@ -4,6 +4,8 @@ interface EventCardBadgesProps {
   isLive: boolean;
   hasFestivalId: boolean;
   isTentpole: boolean;
+  /** Cost tier from taxonomy v2 — renders $ / $$ / $$$ badge (not "free", which is already in metadata) */
+  costTier?: string | null;
   /** "mobile" = smaller dot/text sizes; "desktop" = slightly larger */
   size?: "mobile" | "desktop";
 }
@@ -12,6 +14,7 @@ export function EventCardBadges({
   isLive,
   hasFestivalId,
   isTentpole,
+  costTier,
   size = "desktop",
 }: EventCardBadgesProps) {
   const dotSize = size === "mobile" ? "h-1.5 w-1.5" : "h-2 w-2";
@@ -72,6 +75,15 @@ export function EventCardBadges({
           </svg>
           <span className="font-mono text-2xs font-medium text-[var(--gold)] uppercase tracking-wide">
             Big Stuff
+          </span>
+        </span>
+      )}
+      {costTier && costTier !== "free" && (
+        <span
+          className={`${shrinkClass} inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[var(--gold)]/10 border-[var(--gold)]/25`}
+        >
+          <span className="font-mono text-2xs font-medium text-[var(--gold)] uppercase tracking-wide">
+            {costTier}
           </span>
         </span>
       )}

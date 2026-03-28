@@ -118,6 +118,13 @@ export type FeedEventData = {
   importance?: "flagship" | "major" | "standard" | null;
   ticket_url?: string | null;
   source_url?: string | null;
+  // Taxonomy v2 derived attributes
+  cost_tier?: string | null;
+  duration?: string | null;
+  booking_required?: boolean | null;
+  indoor_outdoor?: string | null;
+  significance?: string | null;
+  significance_signals?: string[] | null;
   series_id?: string | null;
   series?: {
     id: string;
@@ -494,6 +501,7 @@ function EventCard({
                     isLive={isLive}
                     hasFestivalId={Boolean(event.festival_id)}
                     isTentpole={Boolean(event.is_tentpole)}
+                    costTier={event.cost_tier}
                     size="mobile"
                   />
                 </div>
@@ -521,6 +529,7 @@ function EventCard({
                   isLive={isLive}
                   hasFestivalId={Boolean(event.festival_id)}
                   isTentpole={Boolean(event.is_tentpole)}
+                  costTier={event.cost_tier}
                   size="desktop"
                 />
               </div>
@@ -539,6 +548,8 @@ function EventCard({
                 contextType={contextType}
                 portalSlug={portalSlug}
                 hasFriendsGoing={friendsGoing.length > 0}
+                duration={event.duration}
+                bookingRequired={event.booking_required}
               />
 
               {/* Editorial press quote — shown when venue/event has been covered */}

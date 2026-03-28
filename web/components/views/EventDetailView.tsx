@@ -104,6 +104,13 @@ type EventData = {
   reentry_policy?: string | null;
   set_times_mentioned?: boolean | null;
   is_live?: boolean;
+  // Taxonomy v2 derived attributes
+  cost_tier?: string | null;
+  duration?: string | null;
+  booking_required?: boolean | null;
+  indoor_outdoor?: string | null;
+  significance?: string | null;
+  significance_signals?: string[] | null;
   venue: {
     id: number;
     name: string;
@@ -393,6 +400,15 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
   );
   const hasLineup = displayParticipants.length > 0;
 
+  // Taxonomy v2 duration labels
+  const DETAIL_DURATION_LABELS: Record<string, string> = {
+    "short": "~1 hour",
+    "medium": "2-3 hours",
+    "half-day": "Half day",
+    "full-day": "Full day",
+    "multi-day": "Multiple days",
+  };
+
   // Price + date/time for sidebar
   const { text: priceText, isFree } = formatPriceDetailed(event);
   const dateObj = parseISO(event.start_date);
@@ -499,6 +515,32 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
             </>
           )}
         </p>
+
+        {/* Taxonomy v2 derived attributes */}
+        {(event.cost_tier || event.duration || event.indoor_outdoor || event.booking_required) && (
+          <div className="flex items-center gap-1.5 flex-wrap mt-1">
+            {event.cost_tier && event.cost_tier !== "free" && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-2xs font-medium text-[var(--gold)] bg-[var(--gold)]/10 border border-[var(--gold)]/25 uppercase tracking-wide">
+                {event.cost_tier}
+              </span>
+            )}
+            {event.duration && DETAIL_DURATION_LABELS[event.duration] && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-2xs text-[var(--muted)] bg-[var(--twilight)]/40">
+                {DETAIL_DURATION_LABELS[event.duration]}
+              </span>
+            )}
+            {event.indoor_outdoor && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-2xs text-[var(--muted)] bg-[var(--twilight)]/40 capitalize">
+                {event.indoor_outdoor === "both" ? "Indoor & Outdoor" : event.indoor_outdoor}
+              </span>
+            )}
+            {event.booking_required && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-2xs text-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 border border-[var(--neon-cyan)]/20">
+                Book ahead
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Divider */}

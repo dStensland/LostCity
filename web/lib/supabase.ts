@@ -97,6 +97,14 @@ export type Event = {
   instructor?: string | null;
   capacity?: number | null;
   updated_at?: string | null;
+  // Taxonomy v2 derived attributes
+  cost_tier?: string | null;
+  duration?: string | null;
+  booking_required?: boolean | null;
+  indoor_outdoor?: string | null;
+  significance?: string | null;
+  significance_signals?: string[] | null;
+  audience_tags?: string[] | null;
 };
 
 export type Venue = {

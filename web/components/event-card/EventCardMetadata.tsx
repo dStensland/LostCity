@@ -1,6 +1,14 @@
 "use client";
 
 import Dot from "@/components/ui/Dot";
+
+const DURATION_LABELS: Record<string, string> = {
+  "short": "~1hr",
+  "medium": "2-3hrs",
+  "half-day": "Half Day",
+  "full-day": "Full Day",
+  "multi-day": "Multi-Day",
+};
 import SeriesBadge from "@/components/SeriesBadge";
 import ReasonBadge, {
   getTopReasons,
@@ -40,6 +48,8 @@ interface EventCardMetadataProps {
   portalSlug?: string;
   /** When true, reason badges are suppressed (friends going takes precedence) */
   hasFriendsGoing: boolean;
+  duration?: string | null;
+  bookingRequired?: boolean | null;
 }
 
 export function EventCardMetadata({
@@ -55,6 +65,8 @@ export function EventCardMetadata({
   contextType,
   portalSlug,
   hasFriendsGoing,
+  duration,
+  bookingRequired,
 }: EventCardMetadataProps) {
   return (
     <>
@@ -155,6 +167,24 @@ export function EventCardMetadata({
             <Dot />
             <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-2xs text-[var(--muted)] bg-[var(--twilight)]/40 capitalize">
               {skillLevel}
+            </span>
+          </span>
+        )}
+        {/* Duration — desktop only */}
+        {duration && DURATION_LABELS[duration] && (
+          <span className="hidden sm:contents">
+            <Dot />
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-2xs text-[var(--muted)] bg-[var(--twilight)]/40">
+              {DURATION_LABELS[duration]}
+            </span>
+          </span>
+        )}
+        {/* Booking required — desktop only */}
+        {bookingRequired && (
+          <span className="hidden sm:contents">
+            <Dot />
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-2xs text-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 border border-[var(--neon-cyan)]/20">
+              Book ahead
             </span>
           </span>
         )}

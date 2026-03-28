@@ -43,6 +43,9 @@ export interface ScorableEvent {
   is_free: boolean;
   is_tentpole?: boolean | null;
   featured_blurb?: string | null;
+  // Taxonomy v2 significance
+  significance?: string | null;
+  significance_signals?: string[] | null;
   price_min: number | null;
   image_url: string | null;
   source_id?: number | null;
@@ -262,6 +265,36 @@ export function scoreEvent(
   if (event.is_tentpole) {
     score += 40;
     reasons.push({ type: "trending", label: "Major event" });
+  }
+
+  // Significance level (+15 to +30)
+  if (event.significance === "high") {
+    score += 30;
+    // Only add reason if is_tentpole didn't already add "Major event"
+    if (!event.is_tentpole) {
+      reasons.push({ type: "trending", label: "High-profile event" });
+    }
+  } else if (event.significance === "medium") {
+    score += 15;
+  }
+
+  // Significance signal bonuses (+5 each, capped at 20)
+  const SIGNAL_SCORES: Record<string, number> = {
+    "touring": 5,
+    "large_venue": 5,
+    "festival": 5,
+    "limited_run": 5,
+    "opening": 5,
+    "championship": 5,
+    "high_price": 3,
+    // "known_name" intentionally omitted — lowest-confidence signal per spec
+  };
+  if (event.significance_signals && event.significance_signals.length > 0) {
+    const signalBonus = event.significance_signals.reduce(
+      (sum, signal) => sum + (SIGNAL_SCORES[signal] ?? 0),
+      0,
+    );
+    score += Math.min(20, signalBonus);
   }
 
   // Featured editorial blurb (+15)

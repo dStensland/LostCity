@@ -59,6 +59,8 @@ SPORTS_GENRES = {
     "boxing", "wrestling", "kickboxing", "motorsports", "nascar",
     "monster-truck", "dirt-track", "track", "gymnastics", "figure-skating",
     "poker", "volleyball",
+    # Watch-party / viewing events
+    "watch_party",
 }
 
 RECREATION_GENRES = {

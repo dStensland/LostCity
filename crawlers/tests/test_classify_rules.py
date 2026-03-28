@@ -261,3 +261,30 @@ def test_unknown_title_no_category():
     result = classify_rules(title="Zorp XQ7 Gathering")
     assert result.category is None
     assert result.confidence == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Sports watch party detection
+# ---------------------------------------------------------------------------
+
+def test_sports_watch_party_at_sports_bar():
+    """Super Bowl watch party at sports bar → sports/watch_party."""
+    result = classify_rules(
+        title="Super Bowl Watch Party",
+        description="Come watch the big game!",
+        venue_type="sports_bar",
+    )
+    assert result.category == "sports"
+    assert "watch_party" in result.genres
+    assert result.confidence >= 0.85
+
+
+def test_sports_bar_no_sport_keyword_stays_film():
+    """Sports bar with 'viewing party' but no sport keyword → no sports override."""
+    result = classify_rules(
+        title="Movie Viewing Party",
+        description="Watch a film together.",
+        venue_type="sports_bar",
+    )
+    # Should NOT be classified as sports — no sport keyword
+    assert result.category != "sports"
