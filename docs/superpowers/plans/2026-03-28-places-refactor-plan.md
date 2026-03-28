@@ -4,7 +4,7 @@
 
 **Goal:** Rename venues → places across the entire platform (database, API, types, components, crawlers) with zero downtime via phased migration.
 
-**Architecture:** `ALTER TABLE venues RENAME TO places` + backward-compatible views → incremental code migration per module → drop views. Two extension tables (`place_profile`, `place_vertical_details`) replace the kitchen-sink columns. PostGIS added for spatial queries. `place_candidates` staging table for dedup improvement.
+**Architecture:** Code migration first, table rename last. The DB table stays as `venues` throughout the code migration. The application layer (types, components, API routes) progressively adopts "places" terminology. Extension tables (`place_profile`, `place_vertical_details`) are additive. PostGIS added. The final table rename is a mechanical find-replace once all code semantically uses "places."
 
 **Tech Stack:** PostgreSQL 15 (Supabase), PostGIS, Next.js 16, TypeScript, Python crawlers
 
@@ -12,21 +12,11 @@
 
 ---
 
-## Critical Warnings
+## Critical Design Decision: Why Code First, Rename Last
 
-These were discovered during architecture review and MUST be followed:
+PostgREST (used by Supabase) resolves FK joins via `pg_constraint` on real tables. Views do NOT have FK constraints. If we rename `venues` → `places` and create a `venues` view, all 30+ files using `venue:venues(id, name, ...)` join syntax break because PostgREST cannot resolve FKs through views.
 
-1. **Migrations 1c + 1d must be ONE SQL file.** Supabase runs each migration independently — no transaction boundary between files. If `events.venue_id` is renamed to `place_id` in one file and `refresh_feed_events_ready` is updated in the next, there's a window where the feed refresh fails.
-
-2. **`feed_events_ready` output column names stay as `venue_*` initially.** The refresh function reads from `places` / `e.place_id` internally, but still outputs `venue_id`, `venue_name`, etc. This decouples the database-internal change from the API surface. Column renames happen in Deploy 8 after all TypeScript consumers are migrated.
-
-3. **The `venues` view must alias renamed columns.** `CREATE VIEW venues AS SELECT *, place_type AS venue_type FROM places` — NOT `SELECT *`. Without the alias, any code doing `.eq("venue_type", ...)` against the view fails silently.
-
-4. **Deploy crawler changes on a Monday morning** after a full weekend crawl completes. Verify all cron crawls succeed over 24h before proceeding.
-
-5. **CRITICAL: PostgREST FK joins through views.** 30+ files use `venue:venues(id, name, ...)` Supabase join syntax on the `events` table. After Deploy 1, the FK becomes `events.place_id -> places.id` and `venues` is a view, not the FK target. PostgREST resolves joins via FK metadata — it may NOT follow views. **Before Deploy 1, validate locally** that `supabase.from("events").select("*, venue:venues(id, name)")` works against the view. If it does NOT work, all join-based queries must be updated in Deploy 1 (moving them to Tasks 4-7 is not safe). Fallback: update joins to `place:places(id, name)` in the same deploy, or use explicit FK hints `venue:venues!place_id(...)`.
-
-6. **Writable views needed for `venue_occasions` and `venue_specials` too.** Crawlers INSERT into these tables. The backward-compatible views MUST have INSTEAD OF INSERT/UPDATE/DELETE triggers, not just the main `venues` view. Without triggers, crawler writes to these views fail silently on Deploy 1.
+**Solution:** Keep `venues` as the real table throughout the code migration. The application layer says "Place" everywhere (types, components, routes), but Supabase query strings internally reference `venues` until the final rename. The last deploy is a mechanical string replacement: `.from("venues")` → `.from("places")`, `venue:venues(...)` → `place:places(...)`.
 
 ---
 
@@ -34,694 +24,500 @@ These were discovered during architecture review and MUST be followed:
 
 | Deploy | Name | Scope | Risk | Parallel? |
 |--------|------|-------|------|-----------|
-| 1 | Schema PR1 | Migrations 1a + 1b + 1c/1d-combined | CRITICAL | No |
-| 2 | Schema PR2 | Migrations 1e + 1f (extension tables + data backfill) | LOW | No |
-| 3 | Types Foundation | `Place` types, regenerate database types | LOW | No |
-| 4 | Search Migration | Search modules + search API routes | MED | Yes (with 5, 6) |
-| 5 | Component Renames | All 27 Venue*.tsx → Place*.tsx files | MED | Yes (with 4, 6) |
-| 6 | Destinations Migration | Destinations + yonder + forth modules | MED | Yes (with 4, 5) |
-| 7 | Feed Pipeline | City-pulse, portal-feed-loader, feed sections | HIGH | No |
-| 8 | Feed Column Rename | Rename feed_events_ready venue_* → place_* | MED | No |
-| 9 | API Route Migration | All /api/venues/* → /api/places/*, 308 redirects | MED | No |
-| 10 | Crawler Abstraction | Core crawler DB modules + pipeline | HIGH | No |
-| 11 | Crawler Bulk Rename | 1,052 source files mechanical rename | HIGH | No |
-| 12 | Cleanup | Drop views, drop legacy tables, remove aliases | LOW | No |
+| 1 | Schema: Additive | PostGIS + extension tables + candidates + RLS | LOW | No |
+| 2 | Types Foundation | `Place` types wrapping venue DB response | LOW | No |
+| 3 | Component Renames | All 27 Venue*.tsx → Place*.tsx | MED | Yes (with 4, 5) |
+| 4 | Search + Lib Migration | Search/spot/tag/feature lib files | MED | Yes (with 3, 5) |
+| 5 | Destinations + Explore | Destination/yonder/explore modules | MED | Yes (with 3, 4) |
+| 6 | API Routes | /api/venues/* → /api/places/* | MED | No |
+| 7 | Feed Pipeline | CityPulse, portal-feed-loader, sections | HIGH | No |
+| 8 | Crawler Abstraction | Core DB modules + pipeline | HIGH | No |
+| 9 | Crawler Bulk Rename | 1,052 source files | HIGH | No |
+| 10 | **Final Table Rename** | `ALTER TABLE venues RENAME TO places` + all query string updates | CRITICAL | No |
+| 11 | Cleanup | Drop deprecated columns, old routes, aliases | LOW | No |
 
 ---
 
-## Task 1: Schema PR1 — Core Table Rename + Views
+## Task 1: Schema — Additive Changes (No Rename)
 
-**Goal:** Rename `venues` → `places` in the database with full backward compatibility. Zero application code changes.
+**Goal:** Add PostGIS, create extension tables, create candidates table, add RLS. The `venues` table stays as `venues`. Everything is additive — zero breaking changes.
 
 **Files:**
-- Create: `supabase/migrations/YYYYMMDD_places_rename_1a_google.sql`
-- Create: `supabase/migrations/YYYYMMDD_places_rename_1b_core.sql`
-- Create: `supabase/migrations/YYYYMMDD_places_rename_1cd_fks_and_feed.sql`
+- Create: `supabase/migrations/YYYYMMDD_places_postgis.sql`
+- Create: `supabase/migrations/YYYYMMDD_places_extension_tables.sql`
+- Create: `supabase/migrations/YYYYMMDD_places_data_backfill.sql`
 
-### Sub-task 1a: Rename Google `places` table to clear the name
+### Migration 1a: PostGIS + coordinate validation + RLS
 
-- [ ] **Step 1: Write migration 1a**
-
-```sql
--- Migration: places_rename_1a_google
--- Purpose: Clear the `places` name for the unified table
-
--- Rename the Google Places table
-ALTER TABLE IF EXISTS places RENAME TO google_places_legacy;
-
--- Update dependent objects
-ALTER TABLE IF EXISTS place_user_signals RENAME TO google_place_user_signals;
-
--- Drop materialized view (will be recreated against unified places table)
-DROP MATERIALIZED VIEW IF EXISTS hospital_nearby_places;
-
--- Rename the get_nearby_places function to avoid collision
-ALTER FUNCTION IF EXISTS get_nearby_places(FLOAT, FLOAT, INT, TEXT) RENAME TO get_nearby_google_places_legacy;
-```
-
-- [ ] **Step 2: Test locally with `supabase db reset`**
-
-Run: `cd /Users/coach/Projects/LostCity && supabase db reset`
-Expected: Migration applies cleanly, no errors.
-
-- [ ] **Step 3: Verify backward compatibility**
-
-Run: `supabase db test` or connect to local DB and verify:
-```sql
-SELECT count(*) FROM google_places_legacy;  -- should return data
-SELECT count(*) FROM google_place_user_signals;  -- should return data
-```
-
-### Sub-task 1b: Rename `venues` → `places` + backward-compatible view
-
-- [ ] **Step 4: Write migration 1b**
+- [ ] **Step 1: Write migration**
 
 ```sql
--- Migration: places_rename_1b_core
--- Purpose: Rename venues -> places, add PostGIS, create backward-compatible view
+-- Add PostGIS generated column to venues
+ALTER TABLE venues ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE venues ADD COLUMN IF NOT EXISTS google_place_id TEXT;
 
--- 1. Rename core table
-ALTER TABLE venues RENAME TO places;
-
--- 2. Rename key columns
-ALTER TABLE places RENAME COLUMN venue_type TO place_type;
-
--- 3. Convert indoor_outdoor from ENUM to TEXT
-ALTER TABLE places ALTER COLUMN indoor_outdoor TYPE TEXT USING indoor_outdoor::TEXT;
-DROP TYPE IF EXISTS venue_environment;
-ALTER TABLE places ADD CONSTRAINT chk_indoor_outdoor
-  CHECK (indoor_outdoor IS NULL OR indoor_outdoor IN ('indoor', 'outdoor', 'both'));
-
--- 4. Backfill NULL place_type
-UPDATE places SET place_type = 'other' WHERE place_type IS NULL;
-
--- 5. Add new columns
-ALTER TABLE places ADD COLUMN IF NOT EXISTS phone TEXT;
-ALTER TABLE places ADD COLUMN IF NOT EXISTS google_place_id TEXT;
-
--- 6. Add PostGIS generated column
-ALTER TABLE places ADD COLUMN IF NOT EXISTS location GEOGRAPHY(POINT, 4326)
+ALTER TABLE venues ADD COLUMN IF NOT EXISTS location GEOGRAPHY(POINT, 4326)
   GENERATED ALWAYS AS (
     ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
   ) STORED;
 
--- 7. Coordinate validation
-ALTER TABLE places ADD CONSTRAINT valid_coordinates CHECK (
+-- Coordinate validation
+ALTER TABLE venues ADD CONSTRAINT valid_coordinates CHECK (
   (lat IS NULL AND lng IS NULL) OR
   (lat BETWEEN -90 AND 90 AND lng BETWEEN -180 AND 180)
 );
 
--- 8. Spatial index (partial)
-CREATE INDEX IF NOT EXISTS idx_places_location ON places USING GIST (location)
+-- Spatial index (partial — skip NULLs)
+CREATE INDEX IF NOT EXISTS idx_venues_location ON venues USING GIST (location)
   WHERE location IS NOT NULL;
 
--- 9. Backward-compatible view with column aliases
--- CRITICAL: Must alias renamed columns so existing code still works
-CREATE VIEW venues AS
-SELECT *,
-  place_type AS venue_type  -- alias for code that references venue_type
-FROM places;
-
--- 10. INSTEAD OF triggers for writable view
-CREATE OR REPLACE FUNCTION venues_view_insert() RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO places (
-    id, slug, name, aliases, address, neighborhood, city, state, zip,
-    lat, lng, place_type, indoor_outdoor, location_designator,
-    website, image_url, active, created_at, updated_at
-  ) VALUES (
-    NEW.id, NEW.slug, NEW.name, NEW.aliases, NEW.address, NEW.neighborhood,
-    NEW.city, NEW.state, NEW.zip, NEW.lat, NEW.lng,
-    COALESCE(NEW.place_type, NEW.venue_type),  -- accept either column name
-    NEW.indoor_outdoor, NEW.location_designator, NEW.website,
-    NEW.image_url, NEW.active, COALESCE(NEW.created_at, NOW()),
-    COALESCE(NEW.updated_at, NOW())
-  );
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION venues_view_update() RETURNS TRIGGER AS $$
-BEGIN
-  UPDATE places SET
-    name = NEW.name, slug = NEW.slug, aliases = NEW.aliases,
-    address = NEW.address, neighborhood = NEW.neighborhood,
-    city = NEW.city, state = NEW.state, zip = NEW.zip,
-    lat = NEW.lat, lng = NEW.lng,
-    place_type = COALESCE(NEW.place_type, NEW.venue_type),
-    indoor_outdoor = NEW.indoor_outdoor, website = NEW.website,
-    image_url = NEW.image_url, active = NEW.active,
-    updated_at = COALESCE(NEW.updated_at, NOW())
-  WHERE id = OLD.id;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION venues_view_delete() RETURNS TRIGGER AS $$
-BEGIN
-  DELETE FROM places WHERE id = OLD.id;
-  RETURN OLD;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER venues_insert INSTEAD OF INSERT ON venues
-  FOR EACH ROW EXECUTE FUNCTION venues_view_insert();
-CREATE TRIGGER venues_update INSTEAD OF UPDATE ON venues
-  FOR EACH ROW EXECUTE FUNCTION venues_view_update();
-CREATE TRIGGER venues_delete INSTEAD OF DELETE ON venues
-  FOR EACH ROW EXECUTE FUNCTION venues_view_delete();
-
--- 11. Enable RLS
-ALTER TABLE places ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "places_read" ON places FOR SELECT USING (true);
-CREATE POLICY "places_write" ON places FOR ALL
+-- Enable RLS on venues (currently has none)
+ALTER TABLE venues ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "venues_read" ON venues FOR SELECT USING (true);
+CREATE POLICY "venues_write" ON venues FOR ALL
   USING (auth.role() = 'service_role')
   WITH CHECK (auth.role() = 'service_role');
 ```
 
-- [ ] **Step 5: Test migration locally**
+- [ ] **Step 2: Test locally** — `supabase db reset` (or verify against staging)
+- [ ] **Step 3: Verify** — `SELECT location FROM venues WHERE lat IS NOT NULL LIMIT 5;` returns geography data
 
-Run: `supabase db reset`
-Expected: Clean apply. Then verify:
+### Migration 1b: Extension tables
+
+- [ ] **Step 4: Write `place_profile` table**
+
 ```sql
--- Both should work
-SELECT id, name, place_type FROM places LIMIT 5;
-SELECT id, name, venue_type FROM venues LIMIT 5;
--- Writes through view should work
-UPDATE venues SET name = name WHERE id = 1;
+CREATE TABLE place_profile (
+  place_id                  INTEGER PRIMARY KEY REFERENCES venues(id) ON DELETE CASCADE,
+  description               TEXT,
+  short_description         TEXT,
+  hero_image_url            TEXT,
+  gallery_urls              TEXT[],
+  featured                  BOOLEAN DEFAULT false,
+  explore_category          TEXT,
+  explore_blurb             TEXT,
+  parking_type              TEXT CHECK (parking_type IN (
+                              'free_lot', 'paid_lot', 'street', 'garage', 'none')),
+  parking                   TEXT,
+  transit_accessible        BOOLEAN,
+  transit_notes             TEXT,
+  capacity                  INTEGER,
+  planning_notes            TEXT,
+  planning_last_verified_at TIMESTAMPTZ,
+  wheelchair_accessible     BOOLEAN,
+  family_suitability        TEXT CHECK (family_suitability IN ('yes', 'no', 'caution')),
+  age_min                   INTEGER,
+  age_max                   INTEGER,
+  sensory_notes             TEXT,
+  accessibility_notes       TEXT,
+  library_pass              JSONB,
+  last_verified_at          TIMESTAMPTZ,
+  updated_at                TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE place_profile ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "profile_read" ON place_profile FOR SELECT USING (true);
+CREATE POLICY "profile_write" ON place_profile FOR ALL
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
 ```
 
-### Sub-task 1c/1d: FK renames + feed function update (SINGLE FILE)
-
-- [ ] **Step 6: Write combined migration 1c/1d**
-
-This is the critical migration. All FK renames + feed function update in ONE file.
+- [ ] **Step 5: Write `place_vertical_details` table**
 
 ```sql
--- Migration: places_rename_1cd_fks_and_feed
--- CRITICAL: This must be a single file. See plan warnings.
+CREATE TABLE place_vertical_details (
+  place_id    INTEGER PRIMARY KEY REFERENCES venues(id) ON DELETE CASCADE,
+  dining      JSONB,
+  outdoor     JSONB,
+  civic       JSONB,
+  google      JSONB,
+  updated_at  TIMESTAMPTZ DEFAULT now()
+);
 
--- === 1c: Rename related tables + FK columns ===
+CREATE INDEX idx_place_vertical_dining ON place_vertical_details
+  USING GIN (dining) WHERE dining IS NOT NULL;
+CREATE INDEX idx_place_vertical_outdoor ON place_vertical_details
+  USING GIN (outdoor) WHERE outdoor IS NOT NULL;
 
--- Related tables with backward-compatible views
-ALTER TABLE venue_destination_details RENAME TO place_outdoor_details_legacy;
-CREATE VIEW venue_destination_details AS SELECT * FROM place_outdoor_details_legacy;
+ALTER TABLE place_vertical_details ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "vertical_read" ON place_vertical_details FOR SELECT USING (true);
+CREATE POLICY "vertical_write" ON place_vertical_details FOR ALL
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
+```
 
-ALTER TABLE venue_occasions RENAME TO place_occasions;
-ALTER TABLE place_occasions RENAME COLUMN venue_id TO place_id;
--- Writable backward-compatible view (crawlers INSERT into this)
-CREATE VIEW venue_occasions AS SELECT place_id AS venue_id, * FROM place_occasions;
-CREATE OR REPLACE FUNCTION venue_occasions_view_insert() RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO place_occasions (place_id, occasion, confidence, source, created_at)
-  VALUES (COALESCE(NEW.place_id, NEW.venue_id), NEW.occasion, NEW.confidence, NEW.source, COALESCE(NEW.created_at, NOW()));
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-CREATE TRIGGER venue_occasions_insert INSTEAD OF INSERT ON venue_occasions
-  FOR EACH ROW EXECUTE FUNCTION venue_occasions_view_insert();
-CREATE OR REPLACE FUNCTION venue_occasions_view_delete() RETURNS TRIGGER AS $$
-BEGIN
-  DELETE FROM place_occasions WHERE id = OLD.id;
-  RETURN OLD;
-END;
-$$ LANGUAGE plpgsql;
-CREATE TRIGGER venue_occasions_delete INSTEAD OF DELETE ON venue_occasions
-  FOR EACH ROW EXECUTE FUNCTION venue_occasions_view_delete();
+- [ ] **Step 6: Write `place_candidates` table**
 
-ALTER TABLE venue_specials RENAME TO place_specials;
-ALTER TABLE place_specials RENAME COLUMN venue_id TO place_id;
--- Writable backward-compatible view (crawlers INSERT into this)
-CREATE VIEW venue_specials AS SELECT place_id AS venue_id, * FROM place_specials;
-CREATE OR REPLACE FUNCTION venue_specials_view_insert() RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO place_specials (place_id, title, type, description, days_of_week, time_start, time_end, start_date, end_date, image_url, price_note, confidence, source_url, is_active, created_at, updated_at)
-  VALUES (COALESCE(NEW.place_id, NEW.venue_id), NEW.title, NEW.type, NEW.description, NEW.days_of_week, NEW.time_start, NEW.time_end, NEW.start_date, NEW.end_date, NEW.image_url, NEW.price_note, NEW.confidence, NEW.source_url, COALESCE(NEW.is_active, true), COALESCE(NEW.created_at, NOW()), COALESCE(NEW.updated_at, NOW()));
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-CREATE TRIGGER venue_specials_insert INSTEAD OF INSERT ON venue_specials
-  FOR EACH ROW EXECUTE FUNCTION venue_specials_view_insert();
-
--- Core FK renames
-ALTER TABLE events RENAME COLUMN venue_id TO place_id;
-ALTER TABLE editorial_mentions RENAME COLUMN venue_id TO place_id;
-ALTER TABLE programs RENAME COLUMN venue_id TO place_id;
-ALTER TABLE exhibitions RENAME COLUMN venue_id TO place_id;
-ALTER TABLE open_calls RENAME COLUMN venue_id TO place_id;
-ALTER TABLE places RENAME COLUMN parent_venue_id TO parent_place_id;
-
--- Venue management tables
-ALTER TABLE venue_claims RENAME TO place_claims;
-ALTER TABLE place_claims RENAME COLUMN venue_id TO place_id;
-ALTER TABLE venue_inventory_snapshots RENAME TO place_inventory_snapshots;
-ALTER TABLE place_inventory_snapshots RENAME COLUMN venue_id TO place_id;
-
--- Tags
-ALTER TABLE venue_tags RENAME TO place_tags;
-ALTER TABLE place_tags RENAME COLUMN venue_id TO place_id;
-ALTER TABLE venue_tag_summary RENAME TO place_tag_summary;
-ALTER TABLE place_tag_summary RENAME COLUMN venue_id TO place_id;
-
--- Features / highlights
-ALTER TABLE venue_features RENAME COLUMN venue_id TO place_id;
-ALTER TABLE venue_highlights RENAME COLUMN venue_id TO place_id;
-
--- Walkable neighbors
-ALTER TABLE walkable_neighbors RENAME COLUMN venue_id TO place_id;
-ALTER TABLE walkable_neighbors RENAME COLUMN neighbor_id TO neighbor_place_id;
-
--- === 1d: Update feed_events_ready refresh function ===
--- IMPORTANT: Still outputs venue_* column names for backward compat.
--- The function READS from `places` and `e.place_id` internally,
--- but the OUTPUT columns stay as venue_id, venue_name, etc.
-
-CREATE OR REPLACE FUNCTION refresh_feed_events_ready()
-RETURNS void AS $$
-BEGIN
-  -- Truncate and repopulate
-  TRUNCATE feed_events_ready;
-
-  INSERT INTO feed_events_ready (
-    event_id, portal_id, title, start_date, start_time, end_date, end_time,
-    is_all_day, is_free, price_min, price_max, category, genres,
-    image_url, featured_blurb, tags, festival_id, is_tentpole, is_featured,
-    series_id, is_recurring, source_id, organization_id, importance, data_quality,
-    venue_id, venue_name, venue_slug, venue_neighborhood, venue_city,
-    venue_type, venue_image_url, venue_active,
-    series_name, series_type, series_slug, refreshed_at
+```sql
+CREATE TABLE place_candidates (
+  id                      SERIAL PRIMARY KEY,
+  raw_name                TEXT NOT NULL,
+  raw_address             TEXT,
+  lat                     DECIMAL(10, 8),
+  lng                     DECIMAL(11, 8),
+  source_id               INTEGER REFERENCES sources(id),
+  discovered_by_portal_id INTEGER REFERENCES portals(id),
+  matched_venue_id        INTEGER REFERENCES venues(id),
+  match_confidence        DECIMAL(3, 2),
+  match_method            TEXT,
+  status                  TEXT NOT NULL DEFAULT 'pending'
+                          CHECK (status IN ('pending', 'confirmed', 'rejected', 'merged')),
+  promoted_to_venue_id    INTEGER REFERENCES venues(id),
+  reviewed_by             UUID REFERENCES auth.users(id),
+  reviewed_at             TIMESTAMPTZ,
+  raw_data                JSONB,
+  created_at              TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT valid_candidate_coordinates CHECK (
+    (lat IS NULL AND lng IS NULL) OR
+    (lat BETWEEN -90 AND 90 AND lng BETWEEN -180 AND 180)
   )
-  SELECT
-    e.id, psa.portal_id, e.title, e.start_date, e.start_time, e.end_date, e.end_time,
-    e.is_all_day, e.is_free, e.price_min, e.price_max, e.category, e.genres,
-    e.image_url, e.featured_blurb, e.tags, e.festival_id, e.is_tentpole, e.is_featured,
-    e.series_id, (e.series_id IS NOT NULL), e.source_id, e.organization_id,
-    e.importance, e.data_quality,
-    -- Read from places table + place_id, but OUTPUT as venue_* column names
-    e.place_id,           -- maps to venue_id output column
-    p.name,               -- maps to venue_name
-    p.slug,               -- maps to venue_slug
-    p.neighborhood,       -- maps to venue_neighborhood
-    p.city,               -- maps to venue_city
-    p.place_type,         -- maps to venue_type
-    p.image_url,          -- maps to venue_image_url
-    p.active,             -- maps to venue_active
-    s.name, s.type, s.slug, NOW()
-  FROM events e
-  JOIN portal_source_access psa ON psa.source_id = e.source_id
-  LEFT JOIN places p ON p.id = e.place_id
-  LEFT JOIN event_series s ON s.id = e.series_id
-  WHERE e.start_date >= CURRENT_DATE - interval '1 day'
-    AND e.canonical_event_id IS NULL
-    AND (p.active IS NULL OR p.active = true);
+);
 
-  -- ... (rest of the function body — update all venue references to places)
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+CREATE INDEX idx_place_candidates_status ON place_candidates (status) WHERE status = 'pending';
+CREATE INDEX idx_place_candidates_source ON place_candidates (source_id);
 
--- Update search RPC
-CREATE OR REPLACE FUNCTION search_places_ranked(
-    p_query TEXT,
-    p_city TEXT DEFAULT NULL,  -- optional during migration, required in Phase 4
-    p_limit INTEGER DEFAULT 10,
-    p_offset INTEGER DEFAULT 0,
-    p_neighborhoods TEXT[] DEFAULT NULL,
-    p_spot_types TEXT[] DEFAULT NULL,
-    p_vibes TEXT[] DEFAULT NULL
-)
-RETURNS TABLE(
-    id INTEGER, name TEXT, slug TEXT, address TEXT, neighborhood TEXT,
-    spot_type TEXT, spot_types TEXT[], vibes TEXT[], description TEXT,
-    short_description TEXT, lat DECIMAL, lng DECIMAL, image_url TEXT,
-    website TEXT, ts_rank REAL, similarity_score REAL, combined_score REAL,
-    featured BOOLEAN, explore_featured BOOLEAN, data_quality INTEGER,
-    is_event_venue BOOLEAN
-) AS $$
-BEGIN
-  -- Same body as search_venues_ranked but queries `places` table
-  -- and uses `place_type` column instead of `venue_type`
-  -- Full implementation needed at migration time
-  RETURN;
-END;
-$$ LANGUAGE plpgsql;
-
--- Keep old function as wrapper
-CREATE OR REPLACE FUNCTION search_venues_ranked(
-    p_query TEXT, p_limit INTEGER DEFAULT 10, p_offset INTEGER DEFAULT 0,
-    p_neighborhoods TEXT[] DEFAULT NULL, p_spot_types TEXT[] DEFAULT NULL,
-    p_vibes TEXT[] DEFAULT NULL, p_city TEXT DEFAULT NULL
-)
-RETURNS TABLE(
-    id INTEGER, name TEXT, slug TEXT, address TEXT, neighborhood TEXT,
-    spot_type TEXT, spot_types TEXT[], vibes TEXT[], description TEXT,
-    short_description TEXT, lat DECIMAL, lng DECIMAL, image_url TEXT,
-    website TEXT, ts_rank REAL, similarity_score REAL, combined_score REAL,
-    featured BOOLEAN, explore_featured BOOLEAN, data_quality INTEGER,
-    is_event_venue BOOLEAN
-) AS $$
-BEGIN
-  RETURN QUERY SELECT * FROM search_places_ranked(
-    p_query, p_city, p_limit, p_offset, p_neighborhoods, p_spot_types, p_vibes
-  );
-END;
-$$ LANGUAGE plpgsql;
+ALTER TABLE place_candidates ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "candidates_read" ON place_candidates FOR SELECT
+  USING (auth.role() = 'service_role' OR EXISTS (
+    SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true
+  ));
+CREATE POLICY "candidates_write" ON place_candidates FOR ALL
+  USING (auth.role() = 'service_role' OR EXISTS (
+    SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true
+  ))
+  WITH CHECK (auth.role() = 'service_role' OR EXISTS (
+    SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true
+  ));
 ```
 
-- [ ] **Step 7: Test migration locally**
-
-Run: `supabase db reset`
-Expected: All migrations apply. Verify:
-```sql
--- Events should have place_id
-SELECT place_id FROM events LIMIT 1;
--- Feed refresh should work
-SELECT refresh_feed_events_ready();
--- Feed should have data
-SELECT venue_id, venue_name FROM feed_events_ready LIMIT 5;
--- Search should work through both functions
-SELECT * FROM search_venues_ranked('high museum', 5);
-SELECT * FROM search_places_ranked('high museum', 'Atlanta', 5);
-```
-
-- [ ] **Step 8: Run full test suite**
-
-Run: `cd /Users/coach/Projects/LostCity/web && npx vitest run`
-Expected: All tests pass (backward-compatible views mean zero code breakage).
-
-Run: `cd /Users/coach/Projects/LostCity/crawlers && python -m pytest`
-Expected: All tests pass.
-
-- [ ] **Step 9: Commit Schema PR1**
-
-```bash
-git add supabase/migrations/YYYYMMDD_places_rename_*.sql
-git commit -m "feat(schema): rename venues → places with backward-compatible views
-
-- Rename Google places → google_places_legacy (clear name)
-- ALTER TABLE venues RENAME TO places
-- Add PostGIS geography column (generated from lat/lng)
-- Writable venues view with INSTEAD OF triggers
-- Rename all FK columns (events.place_id, etc.)
-- Update refresh_feed_events_ready to read from places
-- Add search_places_ranked RPC (search_venues_ranked kept as wrapper)
-- Enable RLS on places table"
-```
-
-- [ ] **Step 10: CRITICAL — Validate PostgREST FK joins through views**
-
-Before deploying, test locally that Supabase PostgREST resolves FK joins through the `venues` view:
-
-```bash
-# Start local Supabase
-supabase start
-
-# Test join syntax against the view
-curl 'http://localhost:54321/rest/v1/events?select=id,title,venue:venues(id,name)&limit=1' \
-  -H "apikey: $SUPABASE_ANON_KEY"
-```
-
-**If this returns an error** ("could not find a relationship between 'events' and 'venues'"):
-- The backward-compatible view approach is NOT sufficient for FK joins
-- STOP deployment — all join-based queries (~30 files) must be updated to `place:places(id,name)` before Deploy 1
-- This converts Deploy 1 from "zero code changes" to "schema + code migration" and increases risk significantly
-- Consult with team before proceeding
-
-**If this returns valid data**, the join resolves through the view and Deploy 1 is safe.
-
-Also test crawler write-through-view:
-```bash
-# Test write to venues view
-curl -X POST 'http://localhost:54321/rest/v1/venues' \
-  -H "apikey: $SUPABASE_SERVICE_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Test Place","slug":"test-place-validation","city":"Atlanta","state":"GA"}'
-
-# Test write to venue_occasions view
-curl -X POST 'http://localhost:54321/rest/v1/venue_occasions' \
-  -H "apikey: $SUPABASE_SERVICE_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"venue_id":1,"occasion":"date_night","confidence":1.0,"source":"manual"}'
-
-# Cleanup test data
-curl -X DELETE 'http://localhost:54321/rest/v1/venues?slug=eq.test-place-validation' \
-  -H "apikey: $SUPABASE_SERVICE_KEY"
-```
-
-- [ ] **Step 11: Deploy and verify for 24h**
-
-Deploy to Supabase. Monitor:
-- Feed loads correctly on all portals
-- Search works
-- Crawlers complete without errors
-- No 500 errors in Vercel logs
-- PostgREST joins resolve correctly (check event detail pages)
-
-**DO NOT proceed to Task 2 until Task 1 has been stable in production for 24 hours.**
-
-### Rollback Strategy for Task 1
-
-If issues are found after deploy:
+- [ ] **Step 7: Write `merge_places` function**
 
 ```sql
--- Revert: Full rollback migration (keep ready but only run if needed)
--- 1. Drop views and triggers
-DROP VIEW IF EXISTS venues CASCADE;
-DROP VIEW IF EXISTS venue_occasions CASCADE;
-DROP VIEW IF EXISTS venue_specials CASCADE;
-DROP VIEW IF EXISTS venue_destination_details CASCADE;
-
--- 2. Reverse FK column renames
-ALTER TABLE events RENAME COLUMN place_id TO venue_id;
-ALTER TABLE editorial_mentions RENAME COLUMN place_id TO venue_id;
-ALTER TABLE programs RENAME COLUMN place_id TO venue_id;
-ALTER TABLE exhibitions RENAME COLUMN place_id TO venue_id;
-ALTER TABLE open_calls RENAME COLUMN place_id TO venue_id;
--- (repeat for all renamed columns)
-
--- 3. Reverse table renames
-ALTER TABLE place_occasions RENAME TO venue_occasions;
-ALTER TABLE place_specials RENAME TO venue_specials;
-ALTER TABLE places RENAME TO venues;
-ALTER TABLE google_places_legacy RENAME TO places;
-
--- 4. Restore original column names
-ALTER TABLE venues RENAME COLUMN place_type TO venue_type;
--- ... etc
-
--- 5. Restore feed function to original version
--- (restore from git history)
-```
-
-For code deploys (Tasks 3-9): `git revert <commit>` is sufficient — backward-compatible views mean old code works.
-For crawler deploys (Tasks 10-11): `git revert` + verify cron crawls resume successfully.
-
----
-
-## Task 2: Schema PR2 — Extension Tables + Data Migration
-
-**Goal:** Create `place_profile`, `place_vertical_details`, `place_candidates` tables and backfill data.
-
-**Files:**
-- Create: `supabase/migrations/YYYYMMDD_places_extension_tables.sql`
-- Create: `supabase/migrations/YYYYMMDD_places_data_backfill.sql`
-
-- [ ] **Step 1: Write extension tables migration**
-
-Create `place_profile`, `place_vertical_details`, `place_candidates` as specified in the design spec (Section "Extension Table: `place_profile`" and "Extension Table: `place_vertical_details`" and "New Table: `place_candidates`").
-
-Include RLS policies for all three tables.
-
-- [ ] **Step 2: Write data backfill migration**
-
-Backfill `place_vertical_details.outdoor` from `place_outdoor_details_legacy` (formerly `venue_destination_details`).
-Backfill `place_vertical_details.dining` from dining columns on `places` base table.
-Backfill `place_profile` from profile-level columns (description, hero_image_url, featured, planning_notes, etc.).
-
-- [ ] **Step 3: Write `merge_places` function**
-
-```sql
--- As specified in design spec — re-parents all FKs and soft-deletes duplicate
-CREATE OR REPLACE FUNCTION merge_places(p_keep_id INTEGER, p_remove_id INTEGER)
+CREATE OR REPLACE FUNCTION merge_venues(p_keep_id INTEGER, p_remove_id INTEGER)
 RETURNS VOID AS $$
 BEGIN
-  UPDATE events SET place_id = p_keep_id WHERE place_id = p_remove_id;
-  UPDATE place_occasions SET place_id = p_keep_id WHERE place_id = p_remove_id
-    ON CONFLICT (place_id, occasion) DO NOTHING;
-  UPDATE place_specials SET place_id = p_keep_id WHERE place_id = p_remove_id;
-  UPDATE editorial_mentions SET place_id = p_keep_id WHERE place_id = p_remove_id
-    ON CONFLICT (article_url, place_id) DO NOTHING;
-  UPDATE programs SET place_id = p_keep_id WHERE place_id = p_remove_id;
-  UPDATE exhibitions SET place_id = p_keep_id WHERE place_id = p_remove_id;
-  UPDATE open_calls SET place_id = p_keep_id WHERE place_id = p_remove_id;
-  UPDATE walkable_neighbors SET place_id = p_keep_id WHERE place_id = p_remove_id;
-  UPDATE walkable_neighbors SET neighbor_place_id = p_keep_id WHERE neighbor_place_id = p_remove_id;
+  UPDATE events SET venue_id = p_keep_id WHERE venue_id = p_remove_id;
+  UPDATE venue_occasions SET venue_id = p_keep_id WHERE venue_id = p_remove_id
+    ON CONFLICT (venue_id, occasion) DO NOTHING;
+  UPDATE venue_specials SET venue_id = p_keep_id WHERE venue_id = p_remove_id;
+  UPDATE editorial_mentions SET venue_id = p_keep_id WHERE venue_id = p_remove_id
+    ON CONFLICT (article_url, venue_id) DO NOTHING;
+  UPDATE programs SET venue_id = p_keep_id WHERE venue_id = p_remove_id;
+  UPDATE exhibitions SET venue_id = p_keep_id WHERE venue_id = p_remove_id;
+  UPDATE open_calls SET venue_id = p_keep_id WHERE venue_id = p_remove_id;
+  UPDATE walkable_neighbors SET venue_id = p_keep_id WHERE venue_id = p_remove_id;
+  UPDATE walkable_neighbors SET neighbor_id = p_keep_id WHERE neighbor_id = p_remove_id;
   -- Merge aliases
-  UPDATE places SET aliases = (
+  UPDATE venues SET aliases = (
     SELECT array_agg(DISTINCT a) FROM (
-      SELECT unnest(aliases) AS a FROM places WHERE id IN (p_keep_id, p_remove_id)
+      SELECT unnest(aliases) AS a FROM venues WHERE id IN (p_keep_id, p_remove_id)
     ) sub
   ) WHERE id = p_keep_id;
   -- Soft-delete duplicate
-  UPDATE places SET active = false WHERE id = p_remove_id;
+  UPDATE venues SET active = false WHERE id = p_remove_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
-- [ ] **Step 4: Update `search_vector` tsvector trigger**
+Note: Named `merge_venues` while table is still `venues`. Renamed to `merge_places` in Deploy 10.
 
-The trigger/function that maintains `search_vector` must reference `places` instead of `venues`.
+### Migration 1c: Data backfill
 
-- [ ] **Step 5: Create `get_nearby_places` function against unified table**
+- [ ] **Step 8: Backfill extension tables from existing venue columns**
 
-Replace the legacy Google-only function with one that queries the unified `places` table with the PostGIS `location` column. Include mandatory radius cap (50km) and city filtering.
+```sql
+-- Backfill place_vertical_details.outdoor from venue_destination_details
+INSERT INTO place_vertical_details (place_id, outdoor, updated_at)
+SELECT venue_id, jsonb_build_object(
+  'destination_type', destination_type,
+  'commitment_tier', commitment_tier,
+  'primary_activity', primary_activity,
+  'drive_time_minutes', drive_time_minutes,
+  'difficulty_level', difficulty_level,
+  'trail_length_miles', trail_length_miles,
+  'elevation_gain_ft', elevation_gain_ft,
+  'surface_type', surface_type,
+  'best_seasons', best_seasons,
+  'weather_fit_tags', weather_fit_tags,
+  'practical_notes', practical_notes,
+  'conditions_notes', conditions_notes,
+  'best_time_of_day', best_time_of_day,
+  'dog_friendly', dog_friendly,
+  'reservation_required', reservation_required,
+  'permit_required', permit_required,
+  'fee_note', fee_note,
+  'seasonal_hazards', seasonal_hazards
+), updated_at
+FROM venue_destination_details;
 
-- [ ] **Step 6: Recreate `hospital_nearby_places` materialized view**
+-- Backfill place_vertical_details.dining from venues base table
+INSERT INTO place_vertical_details (place_id, dining)
+SELECT id, jsonb_build_object(
+  'menu_url', menu_url,
+  'reservation_url', reservation_url,
+  'service_style', service_style,
+  'meal_duration_min_minutes', meal_duration_min_minutes,
+  'meal_duration_max_minutes', meal_duration_max_minutes,
+  'walk_in_wait_minutes', walk_in_wait_minutes,
+  'payment_buffer_minutes', payment_buffer_minutes,
+  'accepts_reservations', accepts_reservations,
+  'reservation_recommended', reservation_recommended
+)
+FROM venues
+WHERE menu_url IS NOT NULL OR service_style IS NOT NULL
+  OR accepts_reservations IS NOT NULL
+ON CONFLICT (place_id) DO UPDATE SET
+  dining = EXCLUDED.dining;
 
-Against the unified `places` table instead of `google_places_legacy`.
+-- Backfill place_profile
+INSERT INTO place_profile (
+  place_id, description, short_description, hero_image_url, featured,
+  explore_category, explore_blurb, planning_notes, planning_last_verified_at,
+  library_pass, last_verified_at
+)
+SELECT
+  id, description, short_description, hero_image_url, featured,
+  explore_category, explore_blurb, planning_notes, planning_last_verified_at,
+  library_pass, last_verified_at
+FROM venues
+WHERE description IS NOT NULL OR hero_image_url IS NOT NULL
+  OR featured = true OR planning_notes IS NOT NULL
+  OR explore_category IS NOT NULL OR library_pass IS NOT NULL;
+```
 
-- [ ] **Step 7: Test locally**
+- [ ] **Step 9: Run full test suite**
 
-Run: `supabase db reset`
-Verify: Extension tables populated, data matches source, `merge_places` works, search_vector triggers fire.
+```bash
+cd /Users/coach/Projects/LostCity/web && npx vitest run
+cd /Users/coach/Projects/LostCity/crawlers && python -m pytest
+```
 
-- [ ] **Step 8: Commit and deploy**
+Expected: All pass. These migrations are purely additive.
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add supabase/migrations/YYYYMMDD_places_*.sql
+git commit -m "feat(schema): add PostGIS, extension tables, place_candidates for places refactor
+
+Additive-only changes — no renames, no breaking changes.
+- PostGIS geography column on venues (generated from lat/lng)
+- place_profile table (1:1 enrichment)
+- place_vertical_details table (JSONB per vertical)
+- place_candidates staging table for dedup
+- merge_venues function
+- RLS on venues table
+- Coordinate validation constraint"
+```
+
+### Rollback for Task 1
+
+All additive — rollback is simply:
+```sql
+DROP TABLE IF EXISTS place_candidates CASCADE;
+DROP TABLE IF EXISTS place_vertical_details CASCADE;
+DROP TABLE IF EXISTS place_profile CASCADE;
+DROP FUNCTION IF EXISTS merge_venues(INTEGER, INTEGER);
+ALTER TABLE venues DROP COLUMN IF EXISTS location;
+ALTER TABLE venues DROP COLUMN IF EXISTS phone;
+ALTER TABLE venues DROP COLUMN IF EXISTS google_place_id;
+ALTER TABLE venues DROP CONSTRAINT IF EXISTS valid_coordinates;
+```
 
 ---
 
-## Task 3: Types Foundation
+## Task 2: Types Foundation
 
-**Goal:** Create TypeScript `Place` types that all subsequent code migration depends on.
+**Goal:** Create `Place` TypeScript types that all subsequent code depends on. Types use "Place" naming but map to the `venues` table response.
 
 **Files:**
 - Create: `web/lib/types/places.ts`
-- Modify: `web/lib/types.ts` (add re-export)
-- Run: `supabase gen types typescript` to regenerate database types
+- Modify: `web/lib/types.ts` — add re-exports + backward-compatible aliases
 
-- [ ] **Step 1: Regenerate database types**
+- [ ] **Step 1: Create `web/lib/types/places.ts`**
 
-Run: `cd /Users/coach/Projects/LostCity && supabase gen types typescript --local > web/lib/supabase/database.types.ts`
+Write the full type file as specified in the design spec TypeScript Types section. Types say `Place`, `PlaceCard`, `PlaceProfile`, etc. but the field names match the DB columns (`venue_type` until the final rename, then `place_type`).
 
-This will produce types with `places` instead of `venues`, `place_id` instead of `venue_id`, etc.
+Note: During the migration period, the DB still returns `venue_type`, `venue_id`, etc. The types should handle this with a mapping:
 
-- [ ] **Step 2: Create `web/lib/types/places.ts`**
-
-Write the full `Place`, `PlaceCard`, `PlaceProfile`, `PlaceDiningDetails`, `PlaceOutdoorDetails`, `PlaceDetail` interfaces as specified in the design spec TypeScript Types section.
-
-- [ ] **Step 3: Add backward-compatible type aliases**
-
-In `web/lib/types.ts`, add:
 ```typescript
-// Backward compatibility — remove in Phase 4
+/** Base place — maps to `venues` table (renamed to `places` in final deploy) */
+export interface Place {
+  id: number;
+  slug: string;
+  name: string;
+  aliases: string[] | null;
+  address: string | null;
+  neighborhood: string | null;
+  city: string;
+  state: string;
+  zip: string | null;
+  lat: number | null;
+  lng: number | null;
+  place_type: string;           // mapped from venue_type in queries
+  indoor_outdoor: 'indoor' | 'outdoor' | 'both' | null;
+  location_designator: string;
+  website: string | null;
+  phone: string | null;
+  image_url: string | null;
+  hours: Record<string, unknown> | null;
+  owner_portal_id: number | null;
+  google_place_id: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Minimal card type */
+export type PlaceCard = Pick<Place,
+  'id' | 'slug' | 'name' | 'neighborhood' | 'place_type' |
+  'image_url' | 'hours' | 'lat' | 'lng'
+>;
+
+// ... PlaceProfile, PlaceDiningDetails, PlaceOutdoorDetails, PlaceDetail
+// (as defined in design spec)
+```
+
+- [ ] **Step 2: Add mapping utility**
+
+```typescript
+// web/lib/utils/place-mapping.ts
+
+/** Maps a venue DB row to Place type during migration period */
+export function mapVenueToPlace(row: any): Place {
+  return {
+    ...row,
+    place_type: row.venue_type ?? row.place_type,
+    is_active: row.active ?? row.is_active ?? true,
+  };
+}
+
+/** Maps a venue DB row to PlaceCard */
+export function mapVenueToPlaceCard(row: any): PlaceCard {
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    neighborhood: row.neighborhood,
+    place_type: row.venue_type ?? row.place_type,
+    image_url: row.image_url,
+    hours: row.hours,
+    lat: row.lat,
+    lng: row.lng,
+  };
+}
+```
+
+- [ ] **Step 3: Add backward-compatible aliases in `web/lib/types.ts`**
+
+```typescript
+export type { Place, PlaceCard, PlaceProfile } from './types/places';
+// Backward compat — remove in final cleanup
 export type Venue = Place;
 export type VenueCard = PlaceCard;
 ```
 
 - [ ] **Step 4: Build check**
 
-Run: `cd /Users/coach/Projects/LostCity/web && npx tsc --noEmit`
-Expected: PASS. The type aliases mean no existing code breaks.
+```bash
+cd /Users/coach/Projects/LostCity/web && npx tsc --noEmit
+```
 
 - [ ] **Step 5: Commit**
 
 ---
 
-## Tasks 4-6: Parallel Code Migration (can be done by separate agents)
+## Tasks 3-5: Parallel Code Migration
 
-### Task 4: Search Migration
+These three can be done by separate agents simultaneously since they touch different files.
 
-**Goal:** Migrate search modules to use `places` table and `Place` types.
+### Task 3: Component Renames
+
+**Goal:** Rename all Venue*.tsx files to Place*.tsx and update all imports.
+
+**Files to rename:** All 27+ components with "Venue" in filename (see full list in spec).
+
+**Pattern per component:**
+- [ ] `git mv VenueCard.tsx PlaceCard.tsx`
+- [ ] Rename component function/export inside file
+- [ ] Rename props interface (`VenueCardProps` → `PlaceCardProps`)
+- [ ] Update all imports across the codebase
+- [ ] `npx tsc --noEmit` after each batch
+- [ ] Commit after each logical group (leaf components, then widely-imported, then complex)
+
+**Order:** Leaf → widely imported → complex (see spec for grouping).
+
+**Important:** Internal Supabase queries in these components still reference `venues` table. Only the component names, prop types, and file names change.
+
+### Task 4: Search + Lib File Migration
+
+**Goal:** Rename venue-named lib files and update types/exports to use Place naming.
+
+**Files to rename:**
+- `web/lib/venue-tags.ts` → `web/lib/place-tags.ts`
+- `web/lib/venue-tags-config.ts` → `web/lib/place-tags-config.ts`
+- `web/lib/venue-features.ts` → `web/lib/place-features.ts`
+- `web/lib/venue-features.test.ts` → `web/lib/place-features.test.ts`
+- `web/lib/venue-highlights.ts` → `web/lib/place-highlights.ts`
+- `web/lib/venue-auto-approve.ts` → `web/lib/place-auto-approve.ts`
+- `web/lib/hooks/useVenueDiscovery.ts` → `web/lib/hooks/usePlaceDiscovery.ts`
+- `web/lib/types/venue-destinations.ts` → `web/lib/types/place-destinations.ts`
+
+**Files to modify (types/exports only, NOT Supabase queries):**
+- `web/lib/search.ts` — export types as Place*
+- `web/lib/unified-search.ts` — export types as Place*
+- `web/lib/search-ranking.ts` — update type names
+- `web/lib/search-preview.ts` — update type names
+- `web/lib/spots.ts` — update type names
+- `web/lib/spot-detail.ts` — update type names
+
+**Important:** Supabase query strings (`.from("venues")`, `venue:venues(...)`) do NOT change yet. Only TypeScript type names, function names, and file names change.
+
+### Task 5: Destinations + Explore Migration
+
+**Goal:** Update destination/explore modules to use Place types.
 
 **Files:**
-- Modify: `web/lib/search.ts` — update `.from("venues")` → `.from("places")`, `venue_id` → `place_id`
-- Modify: `web/lib/unified-search.ts` — update `search_venues_ranked` → `search_places_ranked`
-- Modify: `web/lib/search-ranking.ts` — update venue references
-- Modify: `web/lib/search-suggestions.ts` — update venue references
-- Modify: `web/lib/search-preview.ts` — update `.from("venues")`
-- Modify: `web/lib/instant-search-service.ts` — update venue result types
-- Modify: `web/lib/search-suggestion-results.ts` — update venue types
-- Modify: `web/lib/spots.ts` — update `.from("venues")` → `.from("places")`
-- Modify: `web/lib/spot-detail.ts` — update venue queries
-- Rename: `web/lib/venue-tags.ts` → `web/lib/place-tags.ts`
-- Rename: `web/lib/venue-tags-config.ts` → `web/lib/place-tags-config.ts`
-- Rename: `web/lib/venue-features.ts` → `web/lib/place-features.ts`
-- Rename: `web/lib/venue-features.test.ts` → `web/lib/place-features.test.ts`
-- Rename: `web/lib/venue-highlights.ts` → `web/lib/place-highlights.ts`
-- Rename: `web/lib/venue-auto-approve.ts` → `web/lib/place-auto-approve.ts`
-- Rename: `web/lib/hooks/useVenueDiscovery.ts` → `web/lib/hooks/usePlaceDiscovery.ts`
-- Rename: `web/lib/types/venue-destinations.ts` → `web/lib/types/place-destinations.ts`
-- Move: `web/app/api/venues/search/route.ts` → `web/app/api/places/search/route.ts`
-- Create: `web/app/api/venues/search/route.ts` (308 redirect to /api/places/search)
+- Modify: `web/lib/city-pulse/pipeline/fetch-destinations.ts` — types only
+- Modify: `web/lib/forth-data.ts` — types only
+- Modify: `web/lib/yonder-destination-nodes.ts` — types only
+- Modify: `web/lib/yonder-provider-inventory.ts` — types only
+- Modify: `web/lib/explore-tracks.ts` — types only
 
-**Pattern for each file:**
-- [ ] Read the file
-- [ ] Replace `.from("venues")` → `.from("places")`
-- [ ] Replace `venue_id` → `place_id` in select strings and filter params
-- [ ] Replace `venue_type` → `place_type` in select strings
-- [ ] Replace `VenueX` types → `PlaceX` types in imports
-- [ ] Update function names (e.g., `searchVenues` → `searchPlaces`)
-- [ ] Run `npx tsc --noEmit` after each file
-- [ ] Run `npx vitest run` after each file
-- [ ] Commit after each logical group
+**Same pattern:** Type names change, Supabase query strings stay as `venues`.
 
-**Mandatory city filtering:** While migrating `/api/places/search`, add the required `city` parameter. Derive it from portal context server-side when not provided by client.
+---
 
-### Task 5: Component Renames
+## Task 6: API Route Migration
 
-**Goal:** Rename all 27 Venue*.tsx files to Place*.tsx and update all imports.
+**Goal:** Move all /api/venues/* routes to /api/places/*. Create 308 redirects at old paths.
 
-**Files:** See the complete component rename table in the design spec.
+**Files:**
+- Move: `web/app/api/venues/search/` → `web/app/api/places/search/`
+- Move: `web/app/api/venues/[id]/events/` → `web/app/api/places/[id]/events/`
+- Move: `web/app/api/venues/[id]/tags/` → `web/app/api/places/[id]/tags/`
+- Move: `web/app/api/venues/by-slug/[slug]/edit/` → `web/app/api/places/by-slug/[slug]/edit/`
+- Move: `web/app/api/venues/by-slug/[slug]/submit-event/` → `web/app/api/places/by-slug/[slug]/submit-event/`
+- Move: `web/app/api/venues/claim/` → `web/app/api/places/claim/`
+- Create: 308 redirect stubs at all old paths
 
-**Pattern for each component:**
-- [ ] Rename file (e.g., `VenueCard.tsx` → `PlaceCard.tsx`)
-- [ ] Update component name inside the file
-- [ ] Update all props interfaces (`VenueCardProps` → `PlaceCardProps`)
-- [ ] Update all imports of this component across the codebase
+**Important:** Internal Supabase queries still say `.from("venues")`. Only the route paths change. Add mandatory `city` parameter to search endpoint while moving it.
 
-Use `git mv` for renames to preserve history.
-
-**Order:** Start with leaf components (no internal venue-component imports), then work up:
-1. `VenueTagBadges`, `VenueVibes`, `VenueIcon` (leaf)
-2. `VenueTagList`, `VenueShowtimes`, `VenueEventsByDay` (leaf)
-3. `VenueCard`, `VenueAutocomplete` (widely imported)
-4. `VenueDetailView`, `VenueFilterBar`, `VenueListView` (complex, many imports)
-5. `SubmitVenueModal`, `QuickAddVenue` (forms)
-6. Portal-specific: `VenueDetailModal`, `HotelVenueCard`
-
-After each rename batch:
-- [ ] Run `npx tsc --noEmit`
-- [ ] Run `npx vitest run`
+Per route:
+- [ ] Move route file to new path
+- [ ] Update response type names to Place*
+- [ ] Create 308 redirect at old path
+- [ ] Update client-side fetch URLs across components
+- [ ] `npx tsc --noEmit`
 - [ ] Commit
-
-### Task 6: Destinations Migration
-
-**Goal:** Migrate destination/explore modules to use `places` and new extension tables.
-
-**Files:**
-- Modify: `web/lib/city-pulse/pipeline/fetch-destinations.ts` — `venue_occasions` → `place_occasions`, `venue_id` → `place_id`
-- Modify: `web/lib/forth-data.ts` — venue references
-- Modify: `web/lib/yonder-destination-nodes.ts` — venue references
-- Modify: `web/lib/yonder-provider-inventory.ts` — venue references
-- Modify: `web/lib/types/venue-destinations.ts` → rename to `place-destinations.ts`
-- Modify: `web/app/api/portals/[slug]/destinations/route.ts`
-- Modify: `web/app/api/portals/[slug]/yonder/destinations/route.ts`
-
-Same pattern as Task 4: read, replace, type-check, test, commit.
 
 ---
 
 ## Task 7: Feed Pipeline Migration
 
-**Goal:** Migrate the CityPulse feed pipeline to use `place_id` and `Place` types.
+**Goal:** Update CityPulse feed pipeline to use Place types.
 
-**Depends on:** Tasks 3-6 complete.
-
-**Files:**
-- Modify: `web/lib/city-pulse/pipeline/fetch-feed-ready.ts` — `FeedReadyRow` type still uses `venue_*` column names (the DB columns haven't been renamed yet). Update TypeScript types to add `place_*` aliases while keeping `venue_*` for now.
-- Modify: `web/lib/city-pulse/pipeline/fetch-events.ts` — venue references
-- Modify: `web/lib/portal-feed-loader.ts` — 10+ venue_id references, venue_ids filter
-- Modify: All section builders in `web/lib/city-pulse/sections/` that reference venue columns
-
-**Files (complete list — grep for `venue` in `web/lib/city-pulse/`):**
+**Files (complete list — grep for venue type references in `web/lib/city-pulse/`):**
 - Modify: `web/lib/city-pulse/pipeline/fetch-feed-ready.ts`
 - Modify: `web/lib/city-pulse/pipeline/fetch-events.ts`
 - Modify: `web/lib/city-pulse/pipeline/fetch-counts.ts`
@@ -730,109 +526,26 @@ Same pattern as Task 4: read, replace, type-check, test, commit.
 - Modify: `web/lib/city-pulse/dashboard-cards.ts`
 - Modify: `web/lib/city-pulse/quick-links.ts`
 - Modify: `web/lib/city-pulse/curated-sections.ts`
-- Modify: `web/lib/city-pulse/weather-mapping.ts`
 - Modify: `web/lib/city-pulse/specials.ts`
-- Modify: `web/lib/portal-feed-loader.ts` — 10+ venue_id references
-- Modify: All section builders in `web/lib/city-pulse/sections/` that reference venue columns
+- Modify: `web/lib/portal-feed-loader.ts`
 
-**Critical:** The `feed_events_ready` DB columns are still `venue_*` at this point. The TypeScript code must read `venue_*` columns from the DB but expose them as `place_*` in the type system. Use a mapping layer:
+**Pattern:** `FeedReadyRow` type maps `venue_*` DB columns to `place_*` TypeScript fields using the mapping utility from Task 2. Supabase query strings stay as `venue_*`.
 
 ```typescript
 // In fetch-feed-ready.ts
-type FeedReadyRow = {
-  // DB still says venue_*, we alias to place_*
-  place_id: number;       // reads from venue_id column
-  place_name: string;     // reads from venue_name column
-  // ... etc
-};
-
-function mapFeedRow(row: any): FeedReadyRow {
-  return {
-    ...row,
-    place_id: row.venue_id,
-    place_name: row.venue_name,
-    // ... etc
-  };
-}
+// DB returns venue_id, venue_name, etc. — we map to Place naming
+const row = mapFeedRowToPlace(rawRow);
+// row.place_id, row.place_name, etc.
 ```
 
-- [ ] Migrate each file
-- [ ] Run `npx tsc --noEmit` after each
-- [ ] Run full test suite
+- [ ] Migrate each file (types only, not query strings)
+- [ ] `npx tsc --noEmit` after each
+- [ ] `npx vitest run`
 - [ ] Commit
 
 ---
 
-## Task 8: Feed Column Rename
-
-**Goal:** Now that all TypeScript consumers use `place_*`, rename the `feed_events_ready` output columns.
-
-**Depends on:** Task 7 complete and deployed.
-
-**Files:**
-- Create: `supabase/migrations/YYYYMMDD_feed_events_ready_place_columns.sql`
-- Modify: `web/lib/city-pulse/pipeline/fetch-feed-ready.ts` — remove the mapping layer, read `place_*` directly
-
-- [ ] **Step 1: Write migration**
-
-```sql
-ALTER TABLE feed_events_ready RENAME COLUMN venue_id TO place_id;
-ALTER TABLE feed_events_ready RENAME COLUMN venue_name TO place_name;
-ALTER TABLE feed_events_ready RENAME COLUMN venue_slug TO place_slug;
-ALTER TABLE feed_events_ready RENAME COLUMN venue_neighborhood TO place_neighborhood;
-ALTER TABLE feed_events_ready RENAME COLUMN venue_city TO place_city;
-ALTER TABLE feed_events_ready RENAME COLUMN venue_type TO place_type;
-ALTER TABLE feed_events_ready RENAME COLUMN venue_image_url TO place_image_url;
-ALTER TABLE feed_events_ready RENAME COLUMN venue_active TO place_active;
-
--- Update refresh function to output place_* column names
-CREATE OR REPLACE FUNCTION refresh_feed_events_ready() ...
-  -- Same as Task 1 version but now outputs place_id, place_name, etc.
-```
-
-- [ ] **Step 2: Update TypeScript to remove mapping layer**
-
-Remove the `mapFeedRow` adapter from Task 7. Read `place_*` columns directly.
-
-- [ ] **Step 3: Deploy migration + code change together**
-
-This is an atomic pair: the migration and the TypeScript update must deploy together.
-
-- [ ] **Step 4: Verify feed loads on all portals**
-
----
-
-## Task 9: API Route Migration
-
-**Goal:** Move all venue API routes to /api/places/*, create 308 redirects.
-
-**Files:**
-- Move: `web/app/api/venues/*` → `web/app/api/places/*` (directory rename)
-- Move: `web/app/api/spots/*` → integrate into `web/app/api/places/*`
-- Create: Redirect stubs at old paths
-
-For each route:
-- [ ] Move the route file to new path
-- [ ] Update internal queries (`.from("venues")` → `.from("places")`)
-- [ ] Update response types
-- [ ] Create 308 redirect at old path:
-
-```typescript
-// web/app/api/venues/search/route.ts (redirect stub)
-import { NextResponse } from 'next/server';
-export async function GET(request: Request) {
-  const url = new URL(request.url);
-  url.pathname = url.pathname.replace('/api/venues/', '/api/places/');
-  return NextResponse.redirect(url, 308);
-}
-```
-
-- [ ] Run full test suite
-- [ ] Commit
-
----
-
-## Task 10: Crawler Abstraction Layer
+## Task 8: Crawler Abstraction Layer
 
 **Goal:** Rename core crawler DB modules. Keep backward-compatible aliases.
 
@@ -842,143 +555,202 @@ export async function GET(request: Request) {
 - Rename: `crawlers/db/venue_occasions.py` → `crawlers/db/place_occasions.py`
 - Rename: `crawlers/db/venue_specials.py` → `crawlers/db/place_specials.py`
 - Rename: `crawlers/db/destination_details.py` → `crawlers/db/place_vertical.py`
-- Modify: `crawlers/db/__init__.py` — update imports, add backward-compatible aliases
+- Rename: `crawlers/venue_enrich.py` → `crawlers/place_enrich.py`
+- Rename: `crawlers/scrape_venue_specials.py` → `crawlers/scrape_place_specials.py`
+- Rename: `crawlers/scrape_venue_hours.py` → `crawlers/scrape_place_hours.py`
+- Modify: `crawlers/db/__init__.py` — update imports, add backward compat aliases
 - Modify: `crawlers/db/events.py` — update imports
 - Modify: `crawlers/pipeline_main.py` — update imports
 
-**Critical:** In `crawlers/db/__init__.py`, re-export old names as aliases:
+**Important:** SQL queries inside these files still reference `venues` table. Only Python module names, function names, and variable names change.
+
+In `crawlers/db/__init__.py`:
 ```python
 from .places import get_or_create_place
-# Backward compat — remove in Phase 4
-get_or_create_venue = get_or_create_place
+get_or_create_venue = get_or_create_place  # backward compat
 ```
 
-In `crawlers/db/places.py`, update `get_or_create_place()` to:
-- Query `.from("places")` instead of `.from("venues")`
-- Accept both `venue_id` and `place_id` in event data dicts
-- Write to `place_id` column on events
-
 - [ ] Rename files with `git mv`
-- [ ] Update imports in `__init__.py`, `events.py`, `pipeline_main.py`
-- [ ] Run: `cd /Users/coach/Projects/LostCity/crawlers && python -m pytest`
-- [ ] Deploy on a Monday morning
-- [ ] Monitor 24h of cron crawls
+- [ ] Update internal imports
+- [ ] Run: `python -m pytest`
+- [ ] **Deploy on Monday morning, monitor 24h of cron crawls**
 - [ ] Commit
 
 ---
 
-## Task 11: Crawler Source Bulk Rename
+## Task 9: Crawler Source Bulk Rename
 
-**Goal:** Mechanically rename venue references in 1,052 source crawler files.
+**Goal:** Mechanical rename of function calls in 1,052 source files.
 
-**Depends on:** Task 10 stable in production for 24h.
+**Depends on:** Task 8 stable in production for 24h.
 
-This is a mechanical find-and-replace across all source files:
-- `"venue_id"` → `"place_id"` in event dictionaries
-- `"venue_name_hint"` → `"place_name_hint"`
+Replacements:
 - `get_or_create_venue` → `get_or_create_place`
-- `VENUE_DATA` → `PLACE_DATA` (in constant names)
+- `VENUE_DATA` → `PLACE_DATA`
+- `venue_data` → `place_data`
 
-- [ ] **Step 1: Write a migration script**
+**Note:** `"venue_id"` and `"venue_name_hint"` in event dicts do NOT change yet — these are DB column names and the table is still `venues`.
 
-```python
-# scripts/rename_venue_to_place_in_crawlers.py
-import os, re
-
-SOURCE_DIR = "crawlers/sources"
-REPLACEMENTS = [
-    (r'"venue_id"', '"place_id"'),
-    (r'"venue_name_hint"', '"place_name_hint"'),
-    (r'get_or_create_venue', 'get_or_create_place'),
-    (r'VENUE_DATA', 'PLACE_DATA'),
-    (r'venue_data', 'place_data'),
-]
-# ... apply to all .py files in SOURCE_DIR
-```
-
-- [ ] **Step 2: Run script, review diff**
-- [ ] **Step 3: Run full crawler test suite**
-- [ ] **Step 4: Deploy on Monday, monitor 24h**
-- [ ] **Step 5: Commit**
+- [ ] Write migration script
+- [ ] Run, review diff
+- [ ] Run: `python -m pytest`
+- [ ] Deploy on Monday, monitor 24h
+- [ ] Commit
 
 ---
 
-## Task 12: Cleanup (Phase 4)
+## Task 10: Final Table Rename (CRITICAL)
 
-**Goal:** Remove all backward-compatibility layers.
+**Goal:** Rename the actual database table `venues` → `places` and update ALL query strings.
 
-**Depends on:** All previous tasks complete and stable.
+**Preconditions:** All code semantically uses "Place" naming. Only Supabase query strings still say `venues`.
 
-- [ ] **Step 1: Drop backward-compatible views**
+**This is the only dangerous deploy.** It must be atomic: schema migration + code changes deploy together.
 
-```sql
-DROP VIEW IF EXISTS venues CASCADE;
-DROP VIEW IF EXISTS venue_occasions CASCADE;
-DROP VIEW IF EXISTS venue_specials CASCADE;
-DROP VIEW IF EXISTS venue_destination_details CASCADE;
-
--- Drop trigger functions
-DROP FUNCTION IF EXISTS venues_view_insert();
-DROP FUNCTION IF EXISTS venues_view_update();
-DROP FUNCTION IF EXISTS venues_view_delete();
-
--- Drop old search wrapper
-DROP FUNCTION IF EXISTS search_venues_ranked();
-```
-
-- [ ] **Step 2: Drop legacy tables**
+### Migration: The Rename
 
 ```sql
-DROP TABLE IF EXISTS place_outdoor_details_legacy;
-DROP TABLE IF EXISTS google_places_legacy CASCADE;
-DROP TABLE IF EXISTS google_place_user_signals;
-```
+-- 1. Rename Google places table to clear the name
+ALTER TABLE IF EXISTS places RENAME TO google_places_legacy;
+ALTER TABLE IF EXISTS place_user_signals RENAME TO google_place_user_signals;
+DROP MATERIALIZED VIEW IF EXISTS hospital_nearby_places;
 
-- [ ] **Step 3: Remove TypeScript aliases**
+-- 2. Rename venues → places
+ALTER TABLE venues RENAME TO places;
 
-Remove `Venue = Place` aliases from `web/lib/types.ts`.
-
-- [ ] **Step 4: Remove crawler aliases**
-
-Remove `get_or_create_venue = get_or_create_place` from `crawlers/db/__init__.py`.
-
-- [ ] **Step 5: Remove API redirect stubs**
-
-Delete all 308 redirect routes at `/api/venues/*` and `/api/spots/*`.
-
-- [ ] **Step 6: Drop deprecated columns from places table**
-
-```sql
--- Columns that were moved to extension tables and are no longer read
-ALTER TABLE places DROP COLUMN IF EXISTS menu_url;
-ALTER TABLE places DROP COLUMN IF EXISTS reservation_url;
-ALTER TABLE places DROP COLUMN IF EXISTS service_style;
-ALTER TABLE places DROP COLUMN IF EXISTS meal_duration_min_minutes;
-ALTER TABLE places DROP COLUMN IF EXISTS meal_duration_max_minutes;
--- ... etc (full list from spec column disposition table)
-```
-
-- [ ] **Step 7: Add NOT NULL constraint on place_type**
-
-```sql
-ALTER TABLE places ALTER COLUMN place_type SET NOT NULL;
-```
-
-- [ ] **Step 8: Rename `active` → `is_active`**
-
-Only now, after all consumers are migrated:
-```sql
+-- 3. Rename columns
+ALTER TABLE places RENAME COLUMN venue_type TO place_type;
 ALTER TABLE places RENAME COLUMN active TO is_active;
--- Update all RPC functions that reference `active`
+
+-- 4. Convert indoor_outdoor ENUM to TEXT
+ALTER TABLE places ALTER COLUMN indoor_outdoor TYPE TEXT USING indoor_outdoor::TEXT;
+DROP TYPE IF EXISTS venue_environment;
+ALTER TABLE places ADD CONSTRAINT chk_indoor_outdoor
+  CHECK (indoor_outdoor IS NULL OR indoor_outdoor IN ('indoor', 'outdoor', 'both'));
+
+-- 5. Rename FK columns on dependent tables
+ALTER TABLE events RENAME COLUMN venue_id TO place_id;
+ALTER TABLE editorial_mentions RENAME COLUMN venue_id TO place_id;
+ALTER TABLE programs RENAME COLUMN venue_id TO place_id;
+ALTER TABLE exhibitions RENAME COLUMN venue_id TO place_id;
+ALTER TABLE open_calls RENAME COLUMN venue_id TO place_id;
+ALTER TABLE places RENAME COLUMN parent_venue_id TO parent_place_id;
+
+-- 6. Rename related tables
+ALTER TABLE venue_occasions RENAME TO place_occasions;
+ALTER TABLE place_occasions RENAME COLUMN venue_id TO place_id;
+ALTER TABLE venue_specials RENAME TO place_specials;
+ALTER TABLE place_specials RENAME COLUMN venue_id TO place_id;
+ALTER TABLE venue_claims RENAME TO place_claims;
+ALTER TABLE place_claims RENAME COLUMN venue_id TO place_id;
+ALTER TABLE venue_tags RENAME TO place_tags;
+ALTER TABLE place_tags RENAME COLUMN venue_id TO place_id;
+ALTER TABLE venue_tag_summary RENAME TO place_tag_summary;
+ALTER TABLE place_tag_summary RENAME COLUMN venue_id TO place_id;
+ALTER TABLE venue_inventory_snapshots RENAME TO place_inventory_snapshots;
+ALTER TABLE place_inventory_snapshots RENAME COLUMN venue_id TO place_id;
+ALTER TABLE venue_features RENAME COLUMN venue_id TO place_id;
+ALTER TABLE venue_highlights RENAME COLUMN venue_id TO place_id;
+ALTER TABLE walkable_neighbors RENAME COLUMN venue_id TO place_id;
+ALTER TABLE walkable_neighbors RENAME COLUMN neighbor_id TO neighbor_place_id;
+
+-- 7. Update place_candidates FKs (reference venues → places)
+ALTER TABLE place_candidates RENAME COLUMN matched_venue_id TO matched_place_id;
+ALTER TABLE place_candidates RENAME COLUMN promoted_to_venue_id TO promoted_to_place_id;
+
+-- 8. Rename merge function
+DROP FUNCTION IF EXISTS merge_venues(INTEGER, INTEGER);
+-- Recreate as merge_places (same body but references places table)
+
+-- 9. Update feed_events_ready columns
+ALTER TABLE feed_events_ready RENAME COLUMN venue_id TO place_id;
+ALTER TABLE feed_events_ready RENAME COLUMN venue_name TO place_name;
+ALTER TABLE feed_events_ready RENAME COLUMN venue_slug TO place_slug;
+ALTER TABLE feed_events_ready RENAME COLUMN venue_neighborhood TO place_neighborhood;
+ALTER TABLE feed_events_ready RENAME COLUMN venue_city TO place_city;
+ALTER TABLE feed_events_ready RENAME COLUMN venue_type TO place_type;
+ALTER TABLE feed_events_ready RENAME COLUMN venue_image_url TO place_image_url;
+ALTER TABLE feed_events_ready RENAME COLUMN venue_active TO place_active;
+
+-- 10. Update refresh_feed_events_ready function to use new names
+-- 11. Update search_venues_ranked → search_places_ranked
+-- 12. Update search_vector trigger to reference places
+-- 13. Recreate hospital_nearby_places materialized view against places
+-- 14. Update RLS policy names
 ```
 
-- [ ] **Step 9: Final build + test verification**
+### Code: Mechanical string replacement
 
-Run: `npx tsc --noEmit && npx vitest run`
-Run: `python -m pytest`
-Expected: All pass with zero `venue` references remaining.
+This is the bulk of the work — every Supabase query string across the codebase.
 
-- [ ] **Step 10: Commit and celebrate**
+**TypeScript (web/):**
+- `.from("venues")` → `.from("places")` (~42 files)
+- `venue:venues(` → `place:places(` (~30 files)
+- `venue_id` in select strings → `place_id`
+- `venue_type` in select strings → `place_type`
+- `venue_name` in select strings → `place_name`
+- `venue_slug` in select strings → `place_slug`
+- `venue_neighborhood` → `place_neighborhood`
+- `venue_city` → `place_city`
+- `venue_image_url` → `place_image_url`
+- `venue_active` → `place_active` / `is_active`
+
+**Python (crawlers/):**
+- `.table("venues")` → `.table("places")`
+- `"venue_id"` in dicts → `"place_id"`
+- `"venue_name_hint"` → `"place_name_hint"`
+
+**Feed pipeline:**
+- Remove the mapping utility from Task 2 (no longer needed)
+- Read `place_*` columns directly
+
+- [ ] Write migration
+- [ ] Run mechanical find-replace across web/ and crawlers/
+- [ ] `npx tsc --noEmit`
+- [ ] `npx vitest run`
+- [ ] `python -m pytest`
+- [ ] **Deploy migration + code together (atomic pair)**
+- [ ] Monitor all portals, feeds, search, crawlers for 24h
+- [ ] Commit
+
+### Rollback for Task 10
+
+```sql
+-- Reverse everything (keep ready, only run if needed)
+ALTER TABLE places RENAME TO venues;
+ALTER TABLE venues RENAME COLUMN place_type TO venue_type;
+ALTER TABLE venues RENAME COLUMN is_active TO active;
+ALTER TABLE events RENAME COLUMN place_id TO venue_id;
+-- ... (reverse all renames)
+ALTER TABLE google_places_legacy RENAME TO places;
+```
+Code rollback: `git revert <commit>`
+
+---
+
+## Task 11: Cleanup
+
+**Goal:** Remove deprecated columns, old routes, legacy tables, backward-compat aliases.
+
+- [ ] Drop deprecated columns from `places` table (dining columns moved to vertical_details)
+- [ ] Remove 308 redirect stubs at `/api/venues/*`
+- [ ] Remove `Venue = Place` type aliases
+- [ ] Remove `get_or_create_venue = get_or_create_place` Python alias
+- [ ] Remove mapping utility (`place-mapping.ts`)
+- [ ] Drop `google_places_legacy` table
+- [ ] Drop `venue_destination_details` table (data in `place_vertical_details.outdoor`)
+- [ ] Add NOT NULL constraint on `place_type`
+- [ ] Final grep verification: zero `venue` references remaining
+
+```bash
+# Verification
+grep -r "venue_id" web/lib/ --include="*.ts" | grep -v node_modules | grep -v ".d.ts"
+grep -r '\.from.*venues' web/ --include="*.ts"
+grep -r "VenueCard\|VenueDetail" web/components/ --include="*.tsx"
+grep -r "venue_id" crawlers/ --include="*.py" | grep -v __pycache__
+```
+
+Expected: Zero matches.
 
 ---
 
@@ -993,9 +765,4 @@ npx vitest run
 
 # All crawler tests pass
 cd ../crawlers && python -m pytest
-
-# No venue references remaining (run after Phase 4)
-grep -r "venue_id" web/lib/ --include="*.ts" | grep -v node_modules | grep -v ".d.ts"
-grep -r "from.*venues" web/app/api/ --include="*.ts"
-grep -r "VenueCard\|VenueDetail\|VenueAutocomplete" web/components/ --include="*.tsx"
 ```
