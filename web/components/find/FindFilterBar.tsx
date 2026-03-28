@@ -56,20 +56,20 @@ const MOBILE_CATEGORIES = [
   { value: "music",       label: "Music" },
   { value: "food_drink",  label: "Food & Drink" },
   { value: "comedy",      label: "Comedy" },
-  { value: "nightlife",   label: "Nightlife" },
+  { value: "games",       label: "Games" },
   { value: "art",         label: "Art" },
   { value: "sports",      label: "Sports" },
-  { value: "recreation",  label: "Recreation" },
-  { value: "exercise",    label: "Exercise" },
-  { value: "family",      label: "Family" },
+  { value: "fitness",     label: "Fitness" },
+  { value: "dance",       label: "Dance" },
+  { value: "workshops",   label: "Workshops" },
 ] as const;
 
 // Civic portals show only relevant categories on mobile
 const CIVIC_MOBILE_CATEGORIES = [
-  { value: "government",  label: "Government" },
-  { value: "community",   label: "Community" },
+  { value: "civic",       label: "Civic" },
   { value: "volunteer",   label: "Volunteer" },
-  { value: "family",      label: "Family" },
+  { value: "education",   label: "Education" },
+  { value: "support",     label: "Support" },
 ] as const;
 
 // Resolves the CSS variable for a category's accent color.

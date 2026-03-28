@@ -91,13 +91,19 @@ export default function SmartEmptyState({ filters, portalSlug, totalEventsCount 
         // Suggest similar categories
         if (filters.categories?.length === 1) {
           const categoryMap: Record<string, string[]> = {
-            music: ["nightlife", "comedy"],
-            nightlife: ["music", "food_drink"],
-            comedy: ["music", "nightlife"],
+            music: ["comedy", "dance"],
+            comedy: ["music", "theater"],
             theater: ["film", "art"],
             film: ["theater", "art"],
             art: ["film", "theater"],
-            food_drink: ["nightlife", "community"],
+            food_drink: ["music", "games"],
+            games: ["music", "comedy"],
+            dance: ["music", "fitness"],
+            fitness: ["dance", "outdoors"],
+            workshops: ["art", "education"],
+            education: ["workshops", "words"],
+            outdoors: ["fitness", "sports"],
+            words: ["art", "education"],
           };
 
           const similar = categoryMap[filters.categories[0]]?.slice(0, 2);
@@ -136,11 +142,11 @@ export default function SmartEmptyState({ filters, portalSlug, totalEventsCount 
       headline: "No shows matching these filters",
       subline: "Try a different date or neighborhood — Atlanta always has a stage lit somewhere",
     },
-    nightlife: {
-      color: "var(--cat-nightlife, #818CF8)",
-      icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />,
-      headline: "Nothing going on tonight with these filters",
-      subline: "Broaden your search — the city doesn't sleep, but your filters might be too narrow",
+    games: {
+      color: "var(--cat-games, #4ADE80)",
+      icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
+      headline: "No game nights with these filters",
+      subline: "Try a different date — trivia, bingo, and board game nights happen all week",
     },
     comedy: {
       color: "var(--cat-comedy, #FBBF24)",
@@ -166,11 +172,11 @@ export default function SmartEmptyState({ filters, portalSlug, totalEventsCount 
       headline: "No games or sports events found",
       subline: "Try expanding your date range or check back closer to game day",
     },
-    community: {
-      color: "var(--cat-community, #A78BFA)",
+    civic: {
+      color: "var(--cat-civic, #60A5FA)",
       icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />,
-      headline: "No community events match",
-      subline: "Widen your filters to discover meetups, markets, and gatherings nearby",
+      headline: "No civic events match",
+      subline: "Widen your filters to discover meetings, organizing, and public events nearby",
     },
     theater: {
       color: "var(--cat-theater, #FB7185)",
