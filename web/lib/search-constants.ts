@@ -23,6 +23,11 @@ export const PRICE_FILTERS = [
 ] as const;
 
 export const TAG_GROUPS = {
+  Audience: [
+    { value: "audience:general",  label: "All Ages" },
+    { value: "audience:family",   label: "Family Friendly" },
+    { value: "audience:21plus",   label: "21+ Only" },
+  ],
   Vibe: [
     { value: "date-night", label: "Date Night" },
     { value: "chill", label: "Chill" },
@@ -87,6 +92,7 @@ export const TAG_GROUPS = {
 } as const;
 
 export const ALL_TAGS = [
+  ...TAG_GROUPS.Audience,
   ...TAG_GROUPS.Vibe,
   ...TAG_GROUPS.Access,
   ...TAG_GROUPS.Type,

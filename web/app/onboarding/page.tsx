@@ -7,12 +7,20 @@ import {
   Palette,
   SmileyWink,
   ForkKnife,
-  Martini,
   Tree,
   Trophy,
-  UsersThree,
-  Baby,
   BookOpen,
+  FilmSlate,
+  MaskHappy,
+  GameController,
+  Wrench,
+  GraduationCap,
+  Barbell,
+  Buildings,
+  Heart,
+  HandHeart,
+  Megaphone,
+  PersonArmsSpread,
 } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth-context";
@@ -25,16 +33,24 @@ type Category = {
 };
 
 const CATEGORIES: Category[] = [
-  { id: "music", label: "Music", Icon: MusicNote, color: "#FF6B7A" },
-  { id: "art", label: "Art", Icon: Palette, color: "#A78BFA" },
-  { id: "comedy", label: "Comedy", Icon: SmileyWink, color: "#FFD93D" },
-  { id: "food_drink", label: "Food & Drink", Icon: ForkKnife, color: "#FF6B7A" },
-  { id: "nightlife", label: "Nightlife", Icon: Martini, color: "#E855A0" },
-  { id: "outdoors", label: "Outdoors", Icon: Tree, color: "#00D9A0" },
-  { id: "sports", label: "Sports", Icon: Trophy, color: "#FFD93D" },
-  { id: "community", label: "Community", Icon: UsersThree, color: "#00D4E8" },
-  { id: "family", label: "Family", Icon: Baby, color: "#5E7A5E" },
-  { id: "learning", label: "Learning", Icon: BookOpen, color: "#A78BFA" },
+  { id: "music",       label: "Music",         Icon: MusicNote,        color: "#FF6B7A" },
+  { id: "art",         label: "Art",           Icon: Palette,          color: "#A78BFA" },
+  { id: "comedy",      label: "Comedy",        Icon: SmileyWink,       color: "#FFD93D" },
+  { id: "theater",     label: "Theater",       Icon: MaskHappy,        color: "#E879F9" },
+  { id: "film",        label: "Film",          Icon: FilmSlate,        color: "#60A5FA" },
+  { id: "food_drink",  label: "Food & Drink",  Icon: ForkKnife,        color: "#FF6B7A" },
+  { id: "outdoors",    label: "Outdoors",      Icon: Tree,             color: "#00D9A0" },
+  { id: "sports",      label: "Sports",        Icon: Trophy,           color: "#FFD93D" },
+  { id: "fitness",     label: "Fitness",       Icon: Barbell,          color: "#00D9A0" },
+  { id: "dance",       label: "Dance",         Icon: PersonArmsSpread, color: "#E879F9" },
+  { id: "games",       label: "Games",         Icon: GameController,   color: "#4ADE80" },
+  { id: "workshops",   label: "Workshops",     Icon: Wrench,           color: "#FBBF24" },
+  { id: "education",   label: "Education",     Icon: GraduationCap,    color: "#60A5FA" },
+  { id: "words",       label: "Words",         Icon: BookOpen,         color: "#A78BFA" },
+  { id: "conventions", label: "Conventions",   Icon: Buildings,        color: "#38BDF8" },
+  { id: "volunteer",   label: "Volunteer",     Icon: HandHeart,        color: "#00D9A0" },
+  { id: "civic",       label: "Civic",         Icon: Megaphone,        color: "#6EE7B7" },
+  { id: "support",     label: "Support",       Icon: Heart,            color: "#F9A8D4" },
 ];
 
 function OnboardingContent() {

@@ -29,10 +29,17 @@ const CATEGORIES = [
   "theater",
   "film",
   "food_drink",
-  "community",
-  "exercise",
-  "family",
-  "learning",
+  "sports",
+  "dance",
+  "games",
+  "workshops",
+  "education",
+  "words",
+  "fitness",
+  "outdoors",
+  "conventions",
+  "civic",
+  "volunteer",
 ];
 
 export default function SubmitOrgPage() {

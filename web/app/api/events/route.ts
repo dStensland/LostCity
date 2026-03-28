@@ -83,10 +83,24 @@ export async function GET(request: Request) {
     const timeAfterRaw = searchParams.get("time_after");
     const timeAfter = timeAfterRaw && /^\d{2}:\d{2}$/.test(timeAfterRaw) ? timeAfterRaw : undefined;
 
+    // Parse tags — strip audience:* prefixed values and route them to the
+    // audience filter (which maps to audience_tags on events), not the tags filter.
+    const rawTags = searchParams.get("tags")?.split(",").filter(Boolean) || [];
+    const audienceTags = rawTags.filter((t) => t.startsWith("audience:"));
+    const plainTags = rawTags.filter((t) => !t.startsWith("audience:"));
+    // Use explicit audience param if provided, otherwise derive from tag prefixes
+    const audienceParam = searchParams.get("audience") ||
+      (audienceTags.includes("audience:family") ? "family" :
+       audienceTags.includes("audience:21plus") ? "21plus" : undefined);
+    const audience = audienceParam === "family" ? "family" :
+      audienceParam === "21plus" ? "21plus" :
+      audienceParam === "general" ? "general" : undefined;
+
     const filters: SearchFilters = {
       search: searchParams.get("search") || undefined,
       categories: searchParams.get("categories")?.split(",").filter(Boolean) || undefined,
-      tags: searchParams.get("tags")?.split(",").filter(Boolean) || undefined,
+      tags: plainTags.length > 0 ? plainTags : undefined,
+      audience,
       genres: genres.length > 0 ? genres : undefined,
       vibes: searchParams.get("vibes")?.split(",").filter(Boolean) || undefined,
       neighborhoods: searchParams.get("neighborhoods")?.split(",").filter(Boolean) || undefined,
