@@ -233,15 +233,15 @@ export async function fetchPhaseBEnrichments(
   portalClient: SupabaseClient,
   ctx: PipelineContext,
   allEventIds: number[],
-  allVenueIds: number[],
+  allPlaceIds: number[],
   userSignals: UserSignals | null,
 ): Promise<PhaseBEnrichments> {
-  const editorialPromise: Promise<EditorialMention[]> = allVenueIds.length > 0
+  const editorialPromise: Promise<EditorialMention[]> = allPlaceIds.length > 0
     ? Promise.resolve(
         supabase
           .from("editorial_mentions")
           .select("venue_id, source_key, snippet, article_url, guide_name")
-          .in("venue_id", allVenueIds),
+          .in("venue_id", allPlaceIds),
       ).then(({ data }) => (data ?? []) as unknown as EditorialMention[])
     : Promise.resolve([]);
 
@@ -275,13 +275,14 @@ export async function fetchPhaseBEnrichments(
     return !LOW_QUALITY_SNIPPET_PATTERNS.some((p) => p.test(snippet));
   }
 
-  // Build venue_id → EditorialMention[] lookup map
+  // Build place_id → EditorialMention[] lookup map
+  // (DB column is still venue_id until Deploy 10)
   const editorialMap: Record<number, EditorialMention[]> = {};
   for (const row of editorialRows as Array<EditorialMention & { venue_id: number }>) {
     if (!row.snippet || !isQualitySnippet(row.snippet)) continue;
-    const venueId = row.venue_id;
-    if (!editorialMap[venueId]) editorialMap[venueId] = [];
-    editorialMap[venueId].push({
+    const placeId = row.venue_id;
+    if (!editorialMap[placeId]) editorialMap[placeId] = [];
+    editorialMap[placeId].push({
       source_key: row.source_key,
       snippet: row.snippet,
       article_url: row.article_url,

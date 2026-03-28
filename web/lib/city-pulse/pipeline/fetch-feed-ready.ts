@@ -21,6 +21,11 @@ import { dedupeEventsById, filterOutInactiveVenueEvents } from "@/lib/event-feed
 // Flat row type from feed_events_ready
 // ---------------------------------------------------------------------------
 
+/** Row from feed_events_ready.
+ *
+ *  DB column names still use venue_* naming for place fields.
+ *  These will be renamed to place_* in the final table rename (Deploy 10).
+ */
 type FeedReadyRow = {
   event_id: number;
   portal_id: string;
@@ -52,14 +57,17 @@ type FeedReadyRow = {
   early_bird_deadline: string | null;
   sellout_risk: string | null;
   attendee_count: number | null;
-  venue_id: number | null;
-  venue_name: string | null;
-  venue_slug: string | null;
-  venue_neighborhood: string | null;
-  venue_city: string | null;
-  venue_type: string | null;
-  venue_image_url: string | null;
-  venue_active: boolean | null;
+
+  // Place fields (DB column names are still venue_* until final table rename)
+  venue_id: number | null;      // → place_id after Deploy 10
+  venue_name: string | null;    // → place_name after Deploy 10
+  venue_slug: string | null;    // → place_slug after Deploy 10
+  venue_neighborhood: string | null; // → place_neighborhood after Deploy 10
+  venue_city: string | null;    // → place_city after Deploy 10
+  venue_type: string | null;    // → place_type after Deploy 10
+  venue_image_url: string | null; // → place_image_url after Deploy 10
+  venue_active: boolean | null; // → place_active after Deploy 10
+
   series_name: string | null;
   series_type: string | null;
   series_slug: string | null;

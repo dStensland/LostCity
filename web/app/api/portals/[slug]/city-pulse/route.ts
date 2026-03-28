@@ -343,7 +343,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Stage 4B: social proof + friends + new-from-spots + editorial — depends on event IDs + userSignals
   const allEvents = [...pools.todayEvents, ...pools.trendingEvents];
   const allEventIds = Array.from(new Set(allEvents.map((e) => e.id)));
-  const allVenueIds = Array.from(
+  const allPlaceIds = Array.from(
     new Set(allEvents.map((e) => e.venue?.id).filter((id): id is number => id != null)),
   );
 
@@ -352,7 +352,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     portalClient,
     ctx,
     allEventIds,
-    allVenueIds,
+    allPlaceIds,
     phaseA.userSignals,
   );
 

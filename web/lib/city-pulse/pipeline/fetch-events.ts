@@ -540,22 +540,23 @@ export async function fetchTabEventPool(
 // ---------------------------------------------------------------------------
 
 /**
- * Fetch events from venues the user follows.
- * Fires after userSignals are available — pass followedVenueIds directly.
+ * Fetch events from places the user follows.
+ * Fires after userSignals are available — pass followedPlaceIds directly.
+ * (Parameter was previously named followedVenueIds — DB column is still venue_id.)
  */
 export async function fetchNewFromSpots(
   portalClient: SupabaseClient,
   ctx: PipelineContext,
-  followedVenueIds: number[],
+  followedPlaceIds: number[],
 ): Promise<FeedEventData[]> {
-  if (!ctx.userId || followedVenueIds.length === 0) return [];
+  if (!ctx.userId || followedPlaceIds.length === 0) return [];
 
   const { data: followedEvents } = await portalClient
     .from("events")
     .select(EVENT_SELECT)
     .gte("start_date", ctx.today)
     .lte("start_date", ctx.twoWeeksAhead)
-    .in("venue_id", followedVenueIds.slice(0, 50))
+    .in("venue_id", followedPlaceIds.slice(0, 50))
     .is("canonical_event_id", null)
     .or("is_class.eq.false,is_class.is.null")
     .or("is_sensitive.eq.false,is_sensitive.is.null")

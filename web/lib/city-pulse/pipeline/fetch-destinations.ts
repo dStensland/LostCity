@@ -38,12 +38,15 @@ export interface DestinationItem {
   editorial_quote: { snippet: string; source: string } | null;
 }
 
-type VenueRow = {
+/** Local shape for a row fetched from the venues table.
+ *  DB column names (venue_type) are preserved since the table hasn't been
+ *  renamed yet. Will become place_type after Deploy 10. */
+type PlaceRow = {
   id: number;
   name: string;
   slug: string | null;
   neighborhood: string | null;
-  venue_type: string | null;
+  venue_type: string | null; // DB column — becomes place_type after Deploy 10
   image_url: string | null;
   hours: HoursData | null;
 };
@@ -185,7 +188,7 @@ export async function fetchDestinations(
   }
 
   // Steps 2 & 3 (parallel): venue details + editorial mentions
-  let venues: VenueRow[] = [];
+  let venues: PlaceRow[] = [];
   const mentionByVenue = new Map<number, { snippet: string; source_key: string }>();
 
   if (venueIds.length > 0) {
@@ -195,7 +198,7 @@ export async function fetchDestinations(
         .select("id, name, slug, neighborhood, venue_type, image_url, hours")
         .in("id", venueIds)
         .eq("active", true)
-        .eq("city", "Atlanta") as unknown as Promise<{ data: VenueRow[] | null }>,
+        .eq("city", "Atlanta") as unknown as Promise<{ data: PlaceRow[] | null }>,
       supabase
         .from("editorial_mentions")
         .select("venue_id, source_key, snippet")
@@ -214,17 +217,17 @@ export async function fetchDestinations(
   }
 
   // Step 4: merge, filter open-now, sort, limit
-  let destinations: DestinationItem[] = venues.map((venue) => {
-    const occasion = occasionByVenue.get(venue.id) ?? occasions[0] ?? "date_night";
-    const mention = mentionByVenue.get(venue.id) ?? null;
+  let destinations: DestinationItem[] = venues.map((place) => {
+    const occasion = occasionByVenue.get(place.id) ?? occasions[0] ?? "date_night";
+    const mention = mentionByVenue.get(place.id) ?? null;
     return {
       venue: {
-        id: venue.id,
-        name: venue.name,
-        slug: venue.slug,
-        neighborhood: venue.neighborhood,
-        venue_type: venue.venue_type,
-        image_url: venue.image_url,
+        id: place.id,
+        name: place.name,
+        slug: place.slug,
+        neighborhood: place.neighborhood,
+        venue_type: place.venue_type,
+        image_url: place.image_url,
       },
       occasion,
       contextual_label: getContextualLabel(occasion),
@@ -234,11 +237,11 @@ export async function fetchDestinations(
     };
   });
 
-  // Filter open now when hours data is available; keep venues with no hours data
+  // Filter open now when hours data is available; keep places with no hours data
   destinations = destinations.filter((d) => {
-    const venueRow = venues.find((v) => v.id === d.venue.id);
-    if (!venueRow?.hours) return true;
-    const { isOpen } = isOpenAt(venueRow.hours, now);
+    const placeRow = venues.find((v) => v.id === d.venue.id);
+    if (!placeRow?.hours) return true;
+    const { isOpen } = isOpenAt(placeRow.hours, now);
     return isOpen;
   });
 
@@ -275,25 +278,25 @@ export async function fetchDestinations(
       };
 
     if (fallbackMentions && fallbackMentions.length > 0) {
-      const fallbackVenueIds = [...new Set(
+      const fallbackPlaceIds = [...new Set(
         fallbackMentions
           .map((r) => r.venue_id)
           .filter((id) => !existingIds.has(id))
       )].slice(0, needed);
 
-      if (fallbackVenueIds.length > 0) {
-        // Fallback steps: venue details + mention map in parallel
-        const [fallbackVenueResult] = await Promise.all([
+      if (fallbackPlaceIds.length > 0) {
+        // Fallback steps: place details + mention map in parallel
+        const [fallbackPlaceResult] = await Promise.all([
           supabase
             .from("venues")
             .select("id, name, slug, neighborhood, venue_type, image_url, hours")
-            .in("id", fallbackVenueIds)
+            .in("id", fallbackPlaceIds)
             .eq("active", true)
-            .eq("city", "Atlanta") as unknown as Promise<{ data: VenueRow[] | null }>,
+            .eq("city", "Atlanta") as unknown as Promise<{ data: PlaceRow[] | null }>,
         ]);
 
-        if (fallbackVenueResult.data) {
-          // Build mention map for fallback venues (quality-filtered)
+        if (fallbackPlaceResult.data) {
+          // Build mention map for fallback places (quality-filtered)
           const fallbackMentionMap = new Map<number, { snippet: string; source_key: string }>();
           for (const row of fallbackMentions) {
             if (!fallbackMentionMap.has(row.venue_id) && row.snippet && isQualitySnippet(row.snippet)) {
@@ -301,16 +304,16 @@ export async function fetchDestinations(
             }
           }
 
-          for (const venue of fallbackVenueResult.data) {
-            const mention = fallbackMentionMap.get(venue.id);
+          for (const place of fallbackPlaceResult.data) {
+            const mention = fallbackMentionMap.get(place.id);
             destinations.push({
               venue: {
-                id: venue.id,
-                name: venue.name,
-                slug: venue.slug,
-                neighborhood: venue.neighborhood,
-                venue_type: venue.venue_type,
-                image_url: venue.image_url,
+                id: place.id,
+                name: place.name,
+                slug: place.slug,
+                neighborhood: place.neighborhood,
+                venue_type: place.venue_type,
+                image_url: place.image_url,
               },
               occasion: "date_night",
               contextual_label: "WORTH CHECKING OUT",
