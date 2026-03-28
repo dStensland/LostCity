@@ -2,9 +2,9 @@
 
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
-import VenueDetailView, {
+import PlaceDetailView, {
   type SpotApiResponse,
-} from "@/components/views/VenueDetailView";
+} from "@/components/views/PlaceDetailView";
 
 interface PlaceDetailWrapperProps {
   slug: string;
@@ -27,7 +27,7 @@ export default function PlaceDetailWrapper({
   }, [router, portalSlug]);
 
   return (
-    <VenueDetailView
+    <PlaceDetailView
       slug={slug}
       portalSlug={portalSlug}
       onClose={handleClose}

@@ -30,7 +30,7 @@ type SearchResult =
 
 type AddedItem = { name: string; slug?: string; pending?: boolean };
 
-interface QuickAddVenueProps {
+interface QuickAddPlaceProps {
   /** Element to anchor the popover to. Renders a button if not provided. */
   trigger?: React.ReactNode;
   /** Called when a venue is added (either existing or newly submitted) */
@@ -41,7 +41,7 @@ interface QuickAddVenueProps {
   size?: "sm" | "md";
 }
 
-export default function QuickAddVenue({ trigger, onAdd, onRemove, size = "sm" }: QuickAddVenueProps) {
+export default function QuickAddPlace({ trigger, onAdd, onRemove, size = "sm" }: QuickAddPlaceProps) {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");

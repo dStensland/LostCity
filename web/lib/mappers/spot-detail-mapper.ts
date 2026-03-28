@@ -1,5 +1,5 @@
 import type { SpotDetailPayload } from "@/lib/spot-detail";
-import type { SpotApiResponse } from "@/components/views/VenueDetailView";
+import type { SpotApiResponse } from "@/components/views/PlaceDetailView";
 
 /**
  * Maps server-side SpotDetailPayload to the client view's SpotApiResponse.

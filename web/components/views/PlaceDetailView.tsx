@@ -214,7 +214,7 @@ export type SpotApiResponse = {
   walkableNeighbors: WalkableNeighbor[];
 };
 
-interface VenueDetailViewProps {
+interface PlaceDetailViewProps {
   slug: string;
   portalSlug: string;
   onClose: () => void;
@@ -263,7 +263,7 @@ function CollapsibleVenueTags({ venueId }: { venueId: number }) {
   );
 }
 
-export default function VenueDetailView({ slug, portalSlug, onClose, initialData }: VenueDetailViewProps) {
+export default function PlaceDetailView({ slug, portalSlug, onClose, initialData }: PlaceDetailViewProps) {
   const { portal } = usePortal();
   const { toEvent: handleEventClick, toSpot: handleSpotClick } = useDetailNavigation(portalSlug);
 

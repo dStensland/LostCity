@@ -3,7 +3,7 @@
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import EventDetailView from "./EventDetailView";
-import VenueDetailView from "./VenueDetailView";
+import PlaceDetailView from "./PlaceDetailView";
 import SeriesDetailView from "./SeriesDetailView";
 import OrgDetailView from "./OrgDetailView";
 import FestivalDetailView from "./FestivalDetailView";
@@ -117,7 +117,7 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
   } else if (spotSlug) {
     detailView = (
       <AnimatedDetailWrapper key={`spot-${spotSlug}`} onNavigateClose={navigateClose}>
-        <VenueDetailView
+        <PlaceDetailView
           slug={spotSlug}
           portalSlug={portalSlug}
           onClose={handleClose}

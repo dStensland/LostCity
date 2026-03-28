@@ -24,7 +24,7 @@ const VENUE_TYPES = [
 
 type ModalState = "form" | "success";
 
-interface SubmitVenueModalProps {
+interface SubmitPlaceModalProps {
   isOpen: boolean;
   onClose: () => void;
   portalSlug?: string;
@@ -35,7 +35,7 @@ interface SuccessData {
   slug: string;
 }
 
-export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlanta" }: SubmitVenueModalProps) {
+export default function SubmitPlaceModal({ isOpen, onClose, portalSlug = "atlanta" }: SubmitPlaceModalProps) {
   const router = useRouter();
   const { user } = useAuth();
   const modalRef = useRef<HTMLDivElement>(null);

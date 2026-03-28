@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import SubmitVenueModal from "@/components/SubmitVenueModal";
+import SubmitPlaceModal from "@/components/SubmitPlaceModal";
 import { useAuth } from "@/lib/auth-context";
 
 interface AddNewChooserProps {
@@ -162,7 +162,7 @@ export default function AddNewChooser({ portalSlug }: AddNewChooserProps) {
       </div>
 
       {/* Modals */}
-      <SubmitVenueModal
+      <SubmitPlaceModal
         isOpen={isVenueModalOpen}
         onClose={closeModal}
         portalSlug={portalSlug}
