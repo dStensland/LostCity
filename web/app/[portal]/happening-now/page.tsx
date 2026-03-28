@@ -18,7 +18,7 @@ const CLIENT_CATEGORY_FILTERS: Record<string, { spotTypes: string[]; eventCatego
   drinks: { spotTypes: ["bar", "brewery", "cocktail_bar", "rooftop"], eventCategories: ["Food & Drink"] },
   music: { spotTypes: ["music_venue", "amphitheater"], eventCategories: ["Music"] },
   arts: { spotTypes: ["gallery", "museum", "theater", "arts_center"], eventCategories: ["Art", "Theater", "Film"] },
-  fun: { spotTypes: ["recreation", "arcade", "karaoke", "eatertainment", "attraction"], eventCategories: ["Comedy", "Sports", "Family"] },
+  fun: { spotTypes: ["entertainment", "arcade", "karaoke", "eatertainment", "attraction"], eventCategories: ["Comedy", "Sports", "Games"] },
 };
 
 function filterItemsByCategory(items: AroundMeItem[], category: FilterCategory): AroundMeItem[] {

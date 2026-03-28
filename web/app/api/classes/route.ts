@@ -30,7 +30,7 @@ const VALID_CLASS_CATEGORIES = [
   "cooking",
   "pottery",
   "dance",
-  "exercise",
+  "fitness",
   "woodworking",
   "floral",
   "photography",

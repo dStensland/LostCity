@@ -10,7 +10,7 @@ import {
   getGenreDisplayLabel,
 } from "@/lib/preferences";
 
-const DEFAULT_CATEGORIES = ["music", "food_drink", "nightlife", "comedy", "art"];
+const DEFAULT_CATEGORIES = ["music", "food_drink", "games", "comedy", "art"];
 const MAX_GENRES_PER_CATEGORY = 8;
 
 interface GenreOption {
