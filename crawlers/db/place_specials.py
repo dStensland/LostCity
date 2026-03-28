@@ -18,8 +18,8 @@ from db.client import (
 
 logger = logging.getLogger(__name__)
 
-_VENUE_SPECIAL_COLUMNS = {
-    "venue_id",
+_PLACE_SPECIAL_COLUMNS = {
+    "place_id",
     "title",
     "type",
     "description",
@@ -78,7 +78,7 @@ def _update_special_record(client, special_id: int, row: dict):
 def upsert_place_special(venue_id: int, special_data: dict) -> Optional[int]:
     """Insert or update a place special matched by venue/title/type/source/date."""
     if not venue_id:
-        logger.warning("upsert_place_special: missing venue_id")
+        logger.warning("upsert_place_special: missing place_id")
         return None
 
     title = special_data.get("title")
@@ -91,7 +91,7 @@ def upsert_place_special(venue_id: int, special_data: dict) -> Optional[int]:
         **{
             key: value
             for key, value in special_data.items()
-            if key in _VENUE_SPECIAL_COLUMNS and key != "venue_id"
+            if key in _PLACE_SPECIAL_COLUMNS and key != "place_id"
         },
     }
     row["title"] = title.strip()
@@ -101,7 +101,7 @@ def upsert_place_special(venue_id: int, special_data: dict) -> Optional[int]:
         row["is_active"] = True
 
     if not writes_enabled():
-        _log_write_skip(f"upsert venue_specials venue_id={venue_id} title={row['title']}")
+        _log_write_skip(f"upsert place_specials place_id={venue_id} title={row['title']}")
         return venue_id
 
     client = get_client()

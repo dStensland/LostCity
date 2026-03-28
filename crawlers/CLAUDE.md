@@ -100,7 +100,7 @@ python3 main.py --allow-production-writes
 
 ## Key Database Operations (db.py)
 
-- `get_or_create_venue(venue_data)` — Finds by slug or name, creates if missing. Returns venue ID.
+- `get_or_create_place(venue_data)` — Finds by slug or name, creates if missing. Returns place ID.
 - `insert_event(event_data, series_hint=None)` — Inserts event with auto-tagging, poster fetching, genre inference. Pass `series_hint` dict to link into a series (see Series Grouping section).
 - `find_event_by_hash(content_hash)` — Dedup check before inserting.
 - `generate_content_hash(title, venue_name, date)` — From dedupe.py, creates MD5 hash.
@@ -141,7 +141,7 @@ record_store, studio, fitness_center, community_center, college, university
 
 Every crawler and import should produce data that meets our health targets. See `CRAWLER_STRATEGY.md` for full criteria. Run `python3 data_health.py` to check current scores.
 
-### Minimum Venue Data (when creating via `get_or_create_venue`)
+### Minimum Venue Data (when creating via `get_or_create_place`)
 
 | Field | Required? | Notes |
 |-------|-----------|-------|
@@ -162,7 +162,7 @@ Every crawler and import should produce data that meets our health targets. See 
 | title | Yes | Validated by `validate_event_title()` |
 | start_date | Yes | YYYY-MM-DD format |
 | source_url | Yes | Link to original source |
-| venue_id | Yes | From `get_or_create_venue()` |
+| place_id | Yes | From `get_or_create_place()` |
 | category | Yes | From valid category list |
 | start_time | Strongly preferred | Never infer is_all_day from missing time |
 | description | Preferred | From source page or LLM extraction |

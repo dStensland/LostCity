@@ -20,7 +20,7 @@ from db.client import (
 logger = logging.getLogger(__name__)
 
 _DESTINATION_DETAILS_COLUMNS = {
-    "venue_id",
+    "place_id",
     "destination_type",
     "commitment_tier",
     "primary_activity",
@@ -62,7 +62,7 @@ def upsert_place_vertical_details(venue_id: int, details: dict) -> Optional[int]
         return None
 
     if not venue_id:
-        logger.warning("upsert_place_vertical_details: missing venue_id")
+        logger.warning("upsert_place_vertical_details: missing place_id")
         return None
 
     row = {
@@ -70,12 +70,12 @@ def upsert_place_vertical_details(venue_id: int, details: dict) -> Optional[int]
         **{
             key: value
             for key, value in details.items()
-            if key in _DESTINATION_DETAILS_COLUMNS and key != "venue_id"
+            if key in _DESTINATION_DETAILS_COLUMNS and key != "place_id"
         },
     }
 
     if not writes_enabled():
-        _log_write_skip(f"upsert venue_destination_details venue_id={venue_id}")
+        _log_write_skip(f"upsert venue_destination_details place_id={venue_id}")
         return venue_id
 
     try:

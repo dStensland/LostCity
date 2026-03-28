@@ -19,8 +19,8 @@ from db.client import (
 
 logger = logging.getLogger(__name__)
 
-_VENUE_OCCASION_COLUMNS = {
-    "venue_id",
+_PLACE_OCCASION_COLUMNS = {
+    "place_id",
     "occasion",
     "confidence",
     "source",
@@ -52,7 +52,7 @@ def _update_occasion_record(client, occasion_id: int, updates: dict):
 def upsert_place_occasion(venue_id: int, occasion_data: dict) -> Optional[int]:
     """Insert or update a place occasion while respecting authoritative rows."""
     if not venue_id:
-        logger.warning("upsert_place_occasion: missing venue_id")
+        logger.warning("upsert_place_occasion: missing place_id")
         return None
 
     occasion = occasion_data.get("occasion")
@@ -65,7 +65,7 @@ def upsert_place_occasion(venue_id: int, occasion_data: dict) -> Optional[int]:
         **{
             key: value
             for key, value in occasion_data.items()
-            if key in _VENUE_OCCASION_COLUMNS and key != "venue_id"
+            if key in _PLACE_OCCASION_COLUMNS and key != "place_id"
         },
     }
     row["occasion"] = occasion.strip()
@@ -74,7 +74,7 @@ def upsert_place_occasion(venue_id: int, occasion_data: dict) -> Optional[int]:
 
     if not writes_enabled():
         _log_write_skip(
-            f"upsert venue_occasions venue_id={venue_id} occasion={row['occasion']}"
+            f"upsert place_occasions place_id={venue_id} occasion={row['occasion']}"
         )
         return venue_id
 
