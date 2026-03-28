@@ -701,7 +701,7 @@ function MobileFilterStrip({
         )}
       </div>
 
-      <VenueFilterSheet
+      <PlaceFilterSheet
         isOpen={sheetOpen}
         onClose={() => setSheetOpen(false)}
         filters={filters}
