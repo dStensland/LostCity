@@ -106,7 +106,26 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return errorApiResponse("Failed to fetch preferences", 500);
   }
 
-  return successResponse({ preferences: prefs || null });
+  // Map legacy interest values to v2 taxonomy before returning
+  const LEGACY_INTEREST_MAP: Record<string, string> = {
+    nightlife: "music",
+    wellness: "fitness",
+    family: "workshops",
+    exercise: "fitness",
+    recreation: "fitness",
+    community: "civic",
+    learning: "education",
+  };
+
+  const prefsData = prefs as { interests?: string[] } | null;
+  if (prefsData && Array.isArray(prefsData.interests)) {
+    const migratedInterests = prefsData.interests.map(
+      (i: string) => LEGACY_INTEREST_MAP[i] || i
+    );
+    return successResponse({ preferences: { ...prefsData, interests: migratedInterests } });
+  }
+
+  return successResponse({ preferences: prefsData || null });
 }
 
 // POST /api/portals/[slug]/preferences — upsert preferences

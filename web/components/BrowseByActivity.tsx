@@ -33,35 +33,35 @@ function parseSubcategory(key: string): { parent: string; label: string } | null
     cinema: "film", screening: "film", "special-screening": "film",
     // Theater
     play: "theater", ballet: "theater", broadway: "theater", performance: "theater",
-    // Nightlife
-    club: "nightlife", karaoke: "nightlife", drag: "nightlife",
+    // Games / nightlife subcategories
+    club: "games", karaoke: "games", drag: "music",
     // Sports
     baseball: "sports", softball: "sports", mens_basketball: "sports",
     womens_basketball: "sports", cycling: "sports", running: "sports",
-    // Community
-    volunteer: "community", lgbtq: "community", activism: "community", social: "community",
+    // Civic
+    volunteer: "civic", lgbtq: "civic", activism: "civic", social: "civic",
     // Food & Drink
     dining: "food_drink", farmers_market: "food_drink",
     // Words
     literary: "words", book_club: "words", storytime: "words", podcast: "words",
     // Art
     gallery: "art", museum: "art", exhibition: "art",
-    // Learning
-    education: "learning", campus: "learning", workshop: "learning",
-    // Family
-    kids: "family", maternity: "family",
-    // Wellness
-    spiritual: "wellness", nutrition: "wellness", health: "wellness",
+    // Education (was learning)
+    education: "education", campus: "education", workshop: "workshops",
+    // Workshops
+    kids: "workshops", maternity: "workshops",
+    // Fitness (was wellness/exercise)
+    spiritual: "fitness", nutrition: "fitness", health: "fitness",
     // Outdoors
     adventure: "outdoors", sightseeing: "outdoors", outdoor: "outdoors",
     // Gaming
     gaming: "gaming",
-    // Exercise
-    fitness: "exercise", dance: "exercise",
+    // Fitness
+    fitness: "fitness", dance: "dance",
     // Other/special
     special_event: "other", convention: "other", festival: "other", reception: "other",
-    experimental: "other", safety: "other", "support-group": "community",
-    "health-screening": "wellness",
+    experimental: "other", safety: "other", "support-group": "civic",
+    "health-screening": "fitness",
   };
 
   const parent = parentMappings[key];
@@ -109,7 +109,7 @@ interface BrowseByActivityProps {
 }
 
 // Primary 6 categories (always visible)
-const PRIMARY_CATEGORIES = ["music", "comedy", "nightlife", "art", "food_drink", "community"];
+const PRIMARY_CATEGORIES = ["music", "comedy", "games", "art", "food_drink", "civic"];
 
 // Build full activity config from CATEGORIES
 function buildActivityConfig(): Array<{

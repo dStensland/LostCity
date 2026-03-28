@@ -169,7 +169,7 @@ export function resolveCuratedSections(
         ]);
         const entertainmentCategories = new Set(["music", "comedy", "dance"]);
         filtered = filtered.filter((e) => {
-          if (e.category === "nightlife") return true;
+          if (e.category === "games" || e.category === "dance") return true;
           const vType = (e as unknown as Record<string, unknown>).venue &&
             typeof (e as unknown as Record<string, unknown>).venue === "object"
             ? ((e as unknown as Record<string, unknown>).venue as Record<string, unknown>)?.venue_type as string | undefined

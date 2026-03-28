@@ -38,7 +38,7 @@ export const DEFAULT_INTEREST_IDS = [
   "comedy",
   "art",
   "food_drink",
-  "nightlife",
+  "games",
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -130,12 +130,12 @@ export const INTEREST_CHIPS: InterestChip[] = [
     match: catMatch("food_drink"),
   },
   {
-    id: "nightlife",
-    label: "Going Out",
-    iconName: "MoonStars",
+    id: "games",
+    label: "Games & Trivia",
+    iconName: "GameController",
     color: "#E879F9",
     type: "category",
-    match: catMatch("nightlife"),
+    match: catMatch("games"),
   },
   // --- Available via "+" picker ---
   {
@@ -155,20 +155,20 @@ export const INTEREST_CHIPS: InterestChip[] = [
     match: (item) => catMatch("sports")(item) || spectatorSportsMatch(item),
   },
   {
-    id: "recreation",
-    label: "Rec Sports",
+    id: "fitness",
+    label: "Fitness & Rec",
     iconName: "PersonSimpleRun",
     color: "#86EFAC",
     type: "category",
-    match: (item) => catMatch("recreation")(item) || recreationSignalMatch(item),
+    match: (item) => catMatch("fitness")(item) || recreationSignalMatch(item),
   },
   {
-    id: "family",
-    label: "Family",
-    iconName: "UsersFour",
+    id: "workshops",
+    label: "Workshops",
+    iconName: "Toolbox",
     color: "#A78BFA",
     type: "category",
-    match: catMatch("family"),
+    match: catMatch("workshops"),
   },
   {
     id: "theater",
@@ -179,12 +179,12 @@ export const INTEREST_CHIPS: InterestChip[] = [
     match: catMatch("theater"),
   },
   {
-    id: "exercise",
-    label: "Exercise",
-    iconName: "Barbell",
+    id: "civic",
+    label: "Civic",
+    iconName: "Bank",
     color: "#5EEAD4",
     type: "category",
-    match: (item) => catMatch("exercise")(item) || catMatch("fitness")(item),
+    match: catMatch("civic"),
   },
   // --- Special chips ---
   {
@@ -202,28 +202,12 @@ export const INTEREST_CHIPS: InterestChip[] = [
   },
   // --- Extended ---
   {
-    id: "community",
-    label: "Community",
-    iconName: "UsersThree",
-    color: "#6EE7B7",
-    type: "category",
-    match: catMatch("community"),
-  },
-  {
-    id: "learning",
-    label: "Learning",
+    id: "education",
+    label: "Education",
     iconName: "GraduationCap",
     color: "#A8E6CF",
     type: "category",
-    match: catMatch("learning"),
-  },
-  {
-    id: "wellness",
-    label: "Wellness",
-    iconName: "Leaf",
-    color: "#99F6E4",
-    type: "category",
-    match: catMatch("wellness"),
+    match: catMatch("education"),
   },
   {
     id: "dance",
@@ -368,7 +352,7 @@ const CHIP_COUNT_KEYS: Record<string, string[]> = {
   dj_electronic: ["genre:dj", "genre:electronic", "genre:edm", "tag:dj", "tag:electronic", "tag:edm"],
   food_specials: ["genre:happy-hour", "genre:food-specials", "genre:specials", "genre:oysters", "genre:taco-tuesday", "genre:wings", "genre:drink-specials", "tag:happy-hour", "tag:food-specials", "tag:specials", "tag:oysters", "tag:taco-tuesday", "tag:wings", "tag:drink-specials"],
   sports: SPECTATOR_SPORTS_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),
-  recreation: RECREATION_SIGNAL_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),
+  fitness: RECREATION_SIGNAL_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),
 
   dance: DANCE_SIGNAL_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),
   markets: MARKET_SIGNAL_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),

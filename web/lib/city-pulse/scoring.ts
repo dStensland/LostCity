@@ -97,11 +97,11 @@ export function contextBoost(event: ScorableEvent, context: FeedContext | null):
     const themeCategories: Record<string, string[]> = {
       taco_tuesday: ["food_drink", "food"],
       wine_wednesday: ["food_drink", "food"],
-      thirsty_thursday: ["nightlife", "food_drink"],
-      friday_night: ["nightlife", "music", "comedy"],
-      saturday_night: ["nightlife", "music", "comedy"],
+      thirsty_thursday: ["games", "food_drink"],
+      friday_night: ["music", "comedy", "games", "dance"],
+      saturday_night: ["music", "comedy", "games", "dance"],
       brunch_weekend: ["food_drink", "food"],
-      sunday_funday: ["food_drink", "nightlife", "community"],
+      sunday_funday: ["food_drink", "games", "civic"],
     };
     const relevant = themeCategories[context.day_theme];
     if (relevant?.includes(event.category)) {

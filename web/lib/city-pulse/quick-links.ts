@@ -73,7 +73,7 @@ const LINKS = {
   morningClasses: (p: string): QuickLink => ({
     label: "Classes",
     icon: "Barbell",
-    href: buildHref(p, { categories: "exercise", date: "today" }),
+    href: buildHref(p, { categories: "fitness", date: "today" }),
     accent_color: "var(--neon-cyan)",
   }),
   farmersMarkets: (p: string): QuickLink => ({
@@ -109,7 +109,7 @@ const LINKS = {
   tonightEvents: (p: string): QuickLink => ({
     label: "Tonight",
     icon: "MoonStars",
-    href: buildHref(p, { categories: "music,nightlife,comedy", date: "today" }),
+    href: buildHref(p, { categories: "music,comedy,games,dance", date: "today" }),
     accent_color: "var(--neon-magenta)",
   }),
   liveMusic: (p: string): QuickLink => ({
@@ -125,9 +125,9 @@ const LINKS = {
     accent_color: "var(--gold)",
   }),
   nightlife: (p: string): QuickLink => ({
-    label: "Nightlife",
+    label: "Going Out",
     icon: "Champagne",
-    href: buildHref(p, { categories: "nightlife", date: "today" }),
+    href: buildHref(p, { categories: "games,dance", date: "today" }),
     accent_color: "var(--neon-magenta)",
   }),
   lateNightEats: (p: string): QuickLink => ({
@@ -175,7 +175,7 @@ const LINKS = {
   family: (p: string): QuickLink => ({
     label: "Family",
     icon: "UsersThree",
-    href: buildHref(p, { categories: "family", date: "today" }),
+    href: buildHref(p, { audience: "family", date: "today" }),
     accent_color: "var(--neon-green)",
   }),
   arts: (p: string): QuickLink => ({
@@ -259,7 +259,7 @@ const LINKS = {
   danceFitness: (p: string): QuickLink => ({
     label: "Dance & Fitness",
     icon: "Barbell",
-    href: buildHref(p, { categories: "exercise,dance", date: "today" }),
+    href: buildHref(p, { categories: "fitness,dance", date: "today" }),
     accent_color: "var(--neon-cyan)",
   }),
 } satisfies Record<string, LinkFactory>;
@@ -375,13 +375,13 @@ export function getCivicQuickLinks(portalSlug: string): QuickLink[] {
     {
       label: "Volunteer Today",
       icon: "HandHeart",
-      href: buildHref(portalSlug, { categories: "community", date: "today" }),
+      href: buildHref(portalSlug, { categories: "civic", date: "today" }),
       accent_color: "var(--neon-green)",
     },
     {
       label: "City Meetings",
       icon: "Bank",
-      href: buildHref(portalSlug, { categories: "government", date: "this_week" }),
+      href: buildHref(portalSlug, { categories: "civic", date: "this_week" }),
       accent_color: "var(--gold)",
     },
     {
@@ -393,7 +393,7 @@ export function getCivicQuickLinks(portalSlug: string): QuickLink[] {
     {
       label: "Groups",
       icon: "UsersThree",
-      href: buildHref(portalSlug, { categories: "community", type: "events" }),
+      href: buildHref(portalSlug, { categories: "civic", type: "events" }),
       accent_color: "var(--coral)",
     },
     {

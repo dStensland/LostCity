@@ -478,8 +478,8 @@ function calculateQualityScore(
     score -= 5;
   }
 
-  // Boost community events that feel special/unique (not boring admin stuff)
-  if (cat === "community" || cat === "learning" || cat === "food_drink") {
+  // Boost civic/education events that feel special/unique (not boring admin stuff)
+  if (cat === "civic" || cat === "education" || cat === "food_drink") {
     const specialTags = ["date-night", "holiday", "21+", "late-night", "outdoor", "festival"];
     const specialTagCount = specialTags.filter(t => tags.includes(t)).length;
     score += specialTagCount * 3;
@@ -779,7 +779,9 @@ export async function GET(request: NextRequest) {
         .lte("start_date", endDate)
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
-        .or("is_sensitive.eq.false,is_sensitive.is.null");
+        .or("is_sensitive.eq.false,is_sensitive.is.null")
+        .neq("category_id", "support")
+        .neq("category_id", "support_group");
 
       scoped = applyFeedGate(scoped);
 

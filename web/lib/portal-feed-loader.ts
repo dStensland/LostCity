@@ -1091,7 +1091,8 @@ export async function loadPortalFeed(
           .is("canonical_event_id", null)
           .or("is_class.eq.false,is_class.is.null")
           .or("is_sensitive.eq.false,is_sensitive.is.null")
-          .eq("category_id", "nightlife");
+          .in("category_id", ["games", "dance"])
+          .gte("start_time", "17:00:00");
         nightlifeCoreQuery = applyFeedGate(nightlifeCoreQuery);
         nightlifeCoreQuery = applyPortalEventScope(nightlifeCoreQuery);
 

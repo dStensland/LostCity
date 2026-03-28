@@ -67,10 +67,10 @@ const CARDS = {
   }),
   nightlife: (slug: string): CardTemplate => ({
     id: "nightlife",
-    label: "Nightlife",
+    label: "Going Out",
     value: "Trending",
     icon: "Martini",
-    href: `/${slug}?view=happening&categories=nightlife&date=today`,
+    href: `/${slug}?view=happening&categories=games%2Cdance&date=today`,
     accent: "var(--neon-magenta)",
   }),
   late_night: (slug: string): CardTemplate => ({
