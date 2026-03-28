@@ -21,7 +21,7 @@ def main():
     all_events = []
     offset = 0
     while True:
-        batch = supabase.table("events").select("id, title, venue_id, start_date, created_at, category_id").range(offset, offset + 999).execute()
+        batch = supabase.table("events").select("id, title, place_id, start_date, created_at, category_id").range(offset, offset + 999).execute()
         if not batch.data:
             break
         all_events.extend(batch.data)
@@ -40,7 +40,7 @@ def main():
 
     groups = defaultdict(list)
     for e in all_events:
-        key = (e["title"], e["venue_id"], e["start_date"])
+        key = (e["title"], e["place_id"], e["start_date"])
         groups[key].append(e)
 
     duplicate_groups = {k: v for k, v in groups.items() if len(v) > 1}
@@ -81,7 +81,7 @@ def main():
     all_events = []
     offset = 0
     while True:
-        batch = supabase.table("events").select("id, title, venue_id, start_date, created_at, category_id").range(offset, offset + 999).execute()
+        batch = supabase.table("events").select("id, title, place_id, start_date, created_at, category_id").range(offset, offset + 999).execute()
         if not batch.data:
             break
         all_events.extend(batch.data)
@@ -132,7 +132,7 @@ def main():
     all_events = []
     offset = 0
     while True:
-        batch = supabase.table("events").select("id, title, venue_id, start_date, created_at, category_id").range(offset, offset + 999).execute()
+        batch = supabase.table("events").select("id, title, place_id, start_date, created_at, category_id").range(offset, offset + 999).execute()
         if not batch.data:
             break
         all_events.extend(batch.data)
@@ -170,7 +170,7 @@ def main():
     all_events = []
     offset = 0
     while True:
-        batch = supabase.table("events").select("id, title, venue_id, start_date, created_at, category_id").range(offset, offset + 999).execute()
+        batch = supabase.table("events").select("id, title, place_id, start_date, created_at, category_id").range(offset, offset + 999).execute()
         if not batch.data:
             break
         all_events.extend(batch.data)

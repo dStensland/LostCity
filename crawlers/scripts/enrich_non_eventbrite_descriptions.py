@@ -1498,7 +1498,7 @@ def fetch_candidate_events(
             client.table("events")
             .select(
                 "id,title,description,source_url,start_date,start_time,end_time,"
-                "raw_text,source_id,is_free,venue_id,price_min,price_max,tags,ticket_url,"
+                "raw_text,source_id,is_free,place_id,price_min,price_max,tags,ticket_url,"
                 "festival_id"
             )
             .gte("start_date", start_date)
@@ -1599,9 +1599,9 @@ def main() -> int:
     )
     venue_ids = sorted(
         {
-            int(row["venue_id"])
+            int(row["place_id"])
             for row in candidates
-            if row.get("venue_id") is not None
+            if row.get("place_id") is not None
         }
     )
     venue_map = fetch_venue_map(client, venue_ids)
@@ -1620,7 +1620,7 @@ def main() -> int:
             skipped += 1
             continue
         current_desc = clean_text(event.get("description"))
-        venue = venue_map.get(int(event["venue_id"])) if event.get("venue_id") is not None else None
+        venue = venue_map.get(int(event["place_id"])) if event.get("place_id") is not None else None
 
         if len(current_desc) >= args.min_length:
             skipped += 1

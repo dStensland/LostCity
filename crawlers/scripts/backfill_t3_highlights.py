@@ -69,8 +69,8 @@ def main():
     existing = set()
     for offset in range(0, len(t3_ids), 500):
         batch = t3_ids[offset:offset + 500]
-        r = client.table("venue_highlights").select("venue_id").in_("venue_id", batch).execute()
-        existing.update(row["venue_id"] for row in (r.data or []))
+        r = client.table("venue_highlights").select("place_id").in_("place_id", batch).execute()
+        existing.update(row["place_id"] for row in (r.data or []))
 
     missing = [v for v in all_t3 if v["id"] not in existing]
     print(f"Already have highlights: {len(existing)}")

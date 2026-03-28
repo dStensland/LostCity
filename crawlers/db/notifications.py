@@ -144,11 +144,11 @@ def compute_event_update(
     ) != existing.get("end_time"):
         update_data["end_time"] = incoming_with_signals.get("end_time")
 
-    if incoming_with_signals.get("venue_id") and incoming_with_signals.get(
-        "venue_id"
-    ) != existing.get("venue_id"):
+    _new_place_id = incoming_with_signals.get("place_id") or incoming_with_signals.get("venue_id")
+    _existing_place_id = existing.get("place_id") or existing.get("venue_id")
+    if _new_place_id and _new_place_id != _existing_place_id:
         changes.append("venue updated")
-        update_data["venue_id"] = incoming_with_signals.get("venue_id")
+        update_data["place_id"] = _new_place_id
 
     incoming_title = incoming_with_signals.get("title")
     if incoming_title and incoming_title != existing.get("title"):

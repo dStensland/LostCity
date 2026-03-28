@@ -29,7 +29,7 @@ def main():
     all_events = []
     offset = 0
     while True:
-        batch = supabase.table("events").select("id, title, venue_id, start_date, created_at").range(offset, offset + 999).execute()
+        batch = supabase.table("events").select("id, title, place_id, start_date, created_at").range(offset, offset + 999).execute()
         if not batch.data:
             break
         all_events.extend(batch.data)
@@ -40,7 +40,7 @@ def main():
     # Find duplicates
     groups = defaultdict(list)
     for e in all_events:
-        key = (e["title"], e["venue_id"], e["start_date"])
+        key = (e["title"], e["place_id"], e["start_date"])
         groups[key].append(e)
 
     duplicate_groups = {k: v for k, v in groups.items() if len(v) > 1}
@@ -97,13 +97,13 @@ def main():
     # ANALYSIS: NULL VENUE_ID EVENTS
     # ============================================================================
     print("\n" + "=" * 80)
-    print("ANALYSIS: NULL VENUE_ID EVENTS")
+    print("ANALYSIS: NULL PLACE_ID EVENTS")
     print("=" * 80, flush=True)
 
     try:
-        result = supabase.table("events").select("id, title, start_date, category_id, source_url").is_("venue_id", None).execute()
+        result = supabase.table("events").select("id, title, start_date, category_id, source_url").is_("place_id", None).execute()
         null_venue = result.data
-        print(f"\nFound {len(null_venue)} events with NULL venue_id", flush=True)
+        print(f"\nFound {len(null_venue)} events with NULL place_id", flush=True)
 
         # Analyze patterns
         from collections import Counter

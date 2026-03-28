@@ -401,7 +401,7 @@ def find_cross_source_duplicates(
     while True:
         result = (
             client.table("events")
-            .select("id, title, start_date, start_time, venue_id, source_id, canonical_event_id")
+            .select("id, title, start_date, start_time, place_id, source_id, canonical_event_id")
             .gte("start_date", today)
             .lte("start_date", future)
             .eq("is_active", True)
@@ -423,36 +423,36 @@ def find_cross_source_duplicates(
         return []
 
     # ── Step 3 & 4: for each aggregator event, find venue-direct matches ──────
-    # Collect all unique (venue_id, start_date) pairs to batch-fetch candidates.
+    # Collect all unique (place_id, start_date) pairs to batch-fetch candidates.
     date_venue_keys: set[tuple[int, str]] = {
-        (e["venue_id"], e["start_date"])
+        (e["place_id"], e["start_date"])
         for e in agg_events
-        if e.get("venue_id") and e.get("start_date")
+        if e.get("place_id") and e.get("start_date")
     }
 
-    # Batch fetch venue-direct events for each (date, venue_id) combination.
+    # Batch fetch venue-direct events for each (date, place_id) combination.
     # Group by date to reduce query count.
     date_to_venue_ids: dict[str, set[int]] = {}
     for venue_id, start_date in date_venue_keys:
         date_to_venue_ids.setdefault(start_date, set()).add(venue_id)
 
-    # venue_direct_map: (venue_id, start_date) -> list of non-aggregator events
+    # venue_direct_map: (place_id, start_date) -> list of non-aggregator events
     venue_direct_map: dict[tuple[int, str], list[dict]] = {}
 
     for start_date, venue_ids in date_to_venue_ids.items():
         venue_id_list = list(venue_ids)
         result = (
             client.table("events")
-            .select("id, title, start_date, start_time, venue_id, source_id, canonical_event_id")
+            .select("id, title, start_date, start_time, place_id, source_id, canonical_event_id")
             .eq("start_date", start_date)
             .eq("is_active", True)
             .is_("canonical_event_id", "null")
-            .in_("venue_id", venue_id_list)
+            .in_("place_id", venue_id_list)
             .not_.in_("source_id", agg_source_ids)
             .execute()
         )
         for row in (result.data or []):
-            key = (row["venue_id"], row["start_date"])
+            key = (row["place_id"], row["start_date"])
             venue_direct_map.setdefault(key, []).append(row)
 
     # ── Step 5: fuzzy title matching ──────────────────────────────────────────
@@ -463,7 +463,7 @@ def find_cross_source_duplicates(
     seen_dupe_ids: set[int] = set()  # guard against double-reporting
 
     for agg_event in agg_events:
-        venue_id = agg_event.get("venue_id")
+        venue_id = agg_event.get("place_id")
         start_date = agg_event.get("start_date")
         agg_id = agg_event["id"]
         agg_title = agg_event.get("title") or ""

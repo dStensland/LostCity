@@ -87,7 +87,7 @@ def main():
                 "start_date", today
             ).lte("start_date", thirty_days).is_(
                 "canonical_event_id", "null"
-            ).in_("venue_id", chain_venue_ids).execute()
+            ).in_("place_id", chain_venue_ids).execute()
             
             chain_event_count = result.count
             print(f"   Events at chain venues: {chain_event_count:,}")

@@ -78,7 +78,7 @@ def fetch_future_events(client, source_id: int, today_iso: str) -> list[dict[str
             client.table("events")
             .select(
                 "source_id,start_date,end_date,age_min,age_max,price_min,price_max,is_free,"
-                "ticket_url,venue_id,tags,is_active"
+                "ticket_url,place_id,tags,is_active"
             )
             .eq("source_id", source_id)
             .eq("is_active", True)
@@ -97,7 +97,7 @@ def fetch_future_events(client, source_id: int, today_iso: str) -> list[dict[str
 
 def score_source(source_row: dict[str, Any], event_rows: list[dict[str, Any]]) -> SourceSweep:
     future_rows = len(event_rows)
-    venue_ids = {row.get("venue_id") for row in event_rows if row.get("venue_id") is not None}
+    venue_ids = {row.get("place_id") for row in event_rows if row.get("place_id") is not None}
     age_rows = [
         row for row in event_rows if row.get("age_min") is not None or row.get("age_max") is not None
     ]

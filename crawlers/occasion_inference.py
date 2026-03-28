@@ -536,12 +536,12 @@ def load_existing_occasions(venue_ids: list[int]) -> dict[tuple[int, str], dict]
         batch = venue_ids[i : i + batch_size]
         result = (
             client.table("place_occasions")
-            .select("id, venue_id, occasion, confidence, source")
-            .in_("venue_id", batch)
+            .select("id, place_id, occasion, confidence, source")
+            .in_("place_id", batch)
             .execute()
         )
         for row in result.data or []:
-            key = (row["venue_id"], row["occasion"])
+            key = (row["place_id"], row["occasion"])
             existing[key] = row
 
     return existing
@@ -573,8 +573,8 @@ def upsert_occasions(
     if not writes_enabled():
         for o in occasions:
             logger.info(
-                "DRY RUN: venue_id=%s → %s (%.2f)",
-                o["venue_id"],
+                "DRY RUN: place_id=%s → %s (%.2f)",
+                o["place_id"],
                 o["occasion"],
                 o["confidence"],
             )
@@ -583,7 +583,7 @@ def upsert_occasions(
     client = get_client()
 
     for o in occasions:
-        key = (o["venue_id"], o["occasion"])
+        key = (o["place_id"], o["occasion"])
         row = existing.get(key)
 
         if row is None:
@@ -592,16 +592,16 @@ def upsert_occasions(
                 client.table("place_occasions").insert(o).execute()
                 created += 1
                 logger.debug(
-                    "INSERT venue_id=%s %s (%.2f)",
-                    o["venue_id"],
+                    "INSERT place_id=%s %s (%.2f)",
+                    o["place_id"],
                     o["occasion"],
                     o["confidence"],
                 )
             except Exception as exc:
                 logger.warning(
-                    "Failed to insert occasion %s for venue_id=%s: %s",
+                    "Failed to insert occasion %s for place_id=%s: %s",
                     o["occasion"],
-                    o["venue_id"],
+                    o["place_id"],
                     exc,
                 )
             continue
@@ -609,8 +609,8 @@ def upsert_occasions(
         # Row exists — check source protection
         if row["source"] in ("manual", "editorial"):
             logger.debug(
-                "Skipping venue_id=%s %s — protected source '%s'",
-                o["venue_id"],
+                "Skipping place_id=%s %s — protected source '%s'",
+                o["place_id"],
                 o["occasion"],
                 row["source"],
             )
@@ -628,17 +628,17 @@ def upsert_occasions(
             ).execute()
             updated += 1
             logger.debug(
-                "UPDATE venue_id=%s %s %.2f → %.2f",
-                o["venue_id"],
+                "UPDATE place_id=%s %s %.2f → %.2f",
+                o["place_id"],
                 o["occasion"],
                 existing_conf,
                 new_conf,
             )
         except Exception as exc:
             logger.warning(
-                "Failed to update occasion %s for venue_id=%s: %s",
+                "Failed to update occasion %s for place_id=%s: %s",
                 o["occasion"],
-                o["venue_id"],
+                o["place_id"],
                 exc,
             )
 
@@ -657,9 +657,9 @@ def delete_stale_occasions(
 
     Returns the number of rows deleted.
     """
-    # Build a set of (venue_id, occasion) keys that the current run produced.
+    # Build a set of (place_id, occasion) keys that the current run produced.
     current_keys: set[tuple[int, str]] = {
-        (o["venue_id"], o["occasion"]) for o in inferred_occasions
+        (o["place_id"], o["occasion"]) for o in inferred_occasions
     }
 
     # Collect existing inferred rows that are no longer in the current set.
@@ -673,8 +673,8 @@ def delete_stale_occasions(
         if key not in current_keys:
             stale_ids.append(row["id"])
             logger.debug(
-                "STALE: venue_id=%s %s (row id=%s) — no longer inferred",
-                row["venue_id"],
+                "STALE: place_id=%s %s (row id=%s) — no longer inferred",
+                row["place_id"],
                 row["occasion"],
                 row["id"],
             )

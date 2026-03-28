@@ -65,7 +65,7 @@ def find_open_call_by_hash(content_hash: str) -> Optional[dict]:
 # ---------------------------------------------------------------------------
 
 _OPEN_CALL_COLUMNS = {
-    "slug", "organization_id", "venue_id", "source_id", "portal_id", "title",
+    "slug", "organization_id", "place_id", "source_id", "portal_id", "title",
     "description", "deadline", "application_url", "fee", "eligibility",
     "medium_requirements", "call_type", "status", "source_url", "tags",
     "metadata", "confidence_tier", "is_active",
@@ -116,6 +116,12 @@ def insert_open_call(call_data: dict) -> Optional[str]:
     metadata = call_data.get("metadata") or {}
     metadata["content_hash"] = content_hash
     call_data["metadata"] = metadata
+
+    # Normalize venue_id → place_id (Deploy 10: open_calls.venue_id renamed)
+    if "venue_id" in call_data and "place_id" not in call_data:
+        call_data["place_id"] = call_data.pop("venue_id")
+    elif "venue_id" in call_data:
+        call_data.pop("venue_id")
 
     # Filter to only valid columns
     filtered = {k: v for k, v in call_data.items() if k in _OPEN_CALL_COLUMNS}

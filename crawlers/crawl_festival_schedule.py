@@ -2091,12 +2091,13 @@ def insert_sessions(
 
             smart_update_existing_event(existing, incoming_update)
 
-            if session.venue_name and existing.get("venue_id") != venue_id:
+            _existing_place_id = existing.get("place_id") or existing.get("venue_id")
+            if session.venue_name and _existing_place_id != venue_id:
                 update_event(existing["id"], {"place_id": venue_id})
                 logger.info(
                     "Updated venue for existing session: %s (%s -> %s)",
                     session.title,
-                    existing.get("venue_id"),
+                    _existing_place_id,
                     venue_id,
                 )
 

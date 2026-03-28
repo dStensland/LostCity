@@ -158,12 +158,12 @@ def main():
 
     # Step 5: Recategorize 'other' using venue type
     print("\n=== Step 5: Recategorize 'other' via venue type ===")
-    r = client.table("events").select("id,title,description,venue_id").gte("start_date", "2026-02-09").eq("category_id", "other").execute()
+    r = client.table("events").select("id,title,description,place_id").gte("start_date", "2026-02-09").eq("category_id", "other").execute()
     other_events = r.data
     print(f"  Total 'other' events: {len(other_events)}")
 
     # Get venue types
-    venue_ids = list(set(e["venue_id"] for e in other_events if e.get("venue_id")))
+    venue_ids = list(set(e["place_id"] for e in other_events if e.get("place_id")))
     venue_types = {}
     for i in range(0, len(venue_ids), 50):
         batch = venue_ids[i:i+50]
@@ -174,7 +174,7 @@ def main():
     by_new_cat = {}
     still_other = []
     for e in other_events:
-        vt = venue_types.get(e.get("venue_id"))
+        vt = venue_types.get(e.get("place_id"))
         new_cat = VENUE_TYPE_TO_CATEGORY.get(vt)
         if not new_cat:
             # Try title + description inference

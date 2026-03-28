@@ -157,7 +157,7 @@ def _fetch_events_for_sources(source_ids: list[int], start: str, end: str) -> li
         chunk = (
             client.table("events")
             .select(
-                "id,source_id,venue_id,title,category_id,start_date,"
+                "id,source_id,place_id,title,category_id,start_date,"
                 "image_url,ticket_url,source_url,is_free"
             )
             .in_("source_id", batch)
@@ -239,7 +239,7 @@ def main() -> int:
             if row.get("event_id"):
                 event_ids_with_artists.add(int(row["event_id"]))
 
-    venue_ids = sorted({int(e["venue_id"]) for e in events if e.get("venue_id")})
+    venue_ids = sorted({int(e["place_id"]) for e in events if e.get("place_id")})
     venue_image_by_id: dict[int, str] = {}
     for idx in range(0, len(venue_ids), 150):
         batch = venue_ids[idx : idx + 150]
@@ -285,7 +285,7 @@ def main() -> int:
             continue
 
         failed_goals = failed_by_slug.get(slug, set())
-        venue_id = int(event["venue_id"]) if event.get("venue_id") else None
+        venue_id = int(event["place_id"]) if event.get("place_id") else None
         category = str(event.get("category_id") or event.get("category") or "").strip().lower()
         source_url = str(event.get("source_url") or "").strip()
         is_free = event.get("is_free")

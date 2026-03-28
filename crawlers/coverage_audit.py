@@ -166,7 +166,7 @@ def query_4_neighborhood_coverage(events, venues_map):
     no_venue_count = 0
 
     for e in events:
-        vid = e.get("venue_id")
+        vid = e.get("place_id")
         if not vid:
             no_venue_count += 1
             continue
@@ -322,7 +322,7 @@ def query_7_venue_types(events, venues_map):
     no_type_count = 0
 
     for e in events:
-        vid = e.get("venue_id")
+        vid = e.get("place_id")
         venue = venues_map.get(vid) if vid else None
         if not venue:
             continue
@@ -423,7 +423,7 @@ def main():
 
     client = get_client()
 
-    EVENTS_COLS = "id,title,start_date,start_time,category_id,genres,tags,source_id,venue_id,is_recurring,series_id"
+    EVENTS_COLS = "id,title,start_date,start_time,category_id,genres,tags,source_id,place_id,is_recurring,series_id"
 
     # ---- Fetch recurring events (series_id IS NOT NULL, next 7 days) ----
     print("  Fetching recurring events (series_id IS NOT NULL)...")
@@ -461,7 +461,7 @@ def main():
     print(f"  -> {len(all_recurring)} unique recurring events (union)")
 
     # ---- Fetch venue data ----
-    venue_ids = {e.get("venue_id") for e in all_recurring if e.get("venue_id")}
+    venue_ids = {e.get("place_id") for e in all_recurring if e.get("place_id")}
     print(f"\n  Fetching venue data for {len(venue_ids)} unique venues...")
     venues_map = {}
     venue_id_list = sorted(venue_ids)
@@ -509,7 +509,7 @@ def main():
     # Neighborhoods with < 5 events
     hood_counts = Counter()
     for e in recurring_events:
-        vid = e.get("venue_id")
+        vid = e.get("place_id")
         venue = venues_map.get(vid) if vid else None
         if venue:
             hood = venue.get("neighborhood") or "Unknown"

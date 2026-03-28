@@ -347,7 +347,7 @@ def main() -> None:
     # -----------------------------------------------------------------------
     query = (
         sb.table("events")
-        .select("id, title, description, category_id, venue_id, start_date")
+        .select("id, title, description, category_id, place_id, start_date")
         .is_("age_min", "null")
         .is_("age_max", "null")
         .eq("is_active", True)
@@ -369,7 +369,7 @@ def main() -> None:
     # -----------------------------------------------------------------------
     # Bulk-load venue types for all referenced venue IDs
     # -----------------------------------------------------------------------
-    venue_ids = list({e["venue_id"] for e in events if e.get("venue_id")})
+    venue_ids = list({e["place_id"] for e in events if e.get("venue_id")})
     venue_type_map: dict[int, str] = {}
 
     if venue_ids:
@@ -400,7 +400,7 @@ def main() -> None:
     for event in events:
         title = event.get("title") or ""
         description = event.get("description") or ""
-        venue_type = venue_type_map.get(event.get("venue_id") or 0)
+        venue_type = venue_type_map.get(event.get("place_id") or 0)
         category = event.get("category_id") or ""
 
         # Check adult signals first

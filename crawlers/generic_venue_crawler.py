@@ -137,8 +137,8 @@ def get_venues_with_websites(
     if missing_events and venues:
         # Filter to venues with no events
         venue_ids_list = [v["id"] for v in venues]
-        events_result = client.table("events").select("venue_id").in_("venue_id", venue_ids_list).execute()
-        venues_with_events = set(e["venue_id"] for e in (events_result.data or []))
+        events_result = client.table("events").select("place_id").in_("place_id", venue_ids_list).execute()
+        venues_with_events = set(e["place_id"] for e in (events_result.data or []))
         venues = [v for v in venues if v["id"] not in venues_with_events]
 
     return venues
@@ -158,8 +158,8 @@ def get_venues_missing_events(client: Client, limit: int = 100) -> list[dict]:
 
     # Get venue IDs that have events
     venue_ids = [v["id"] for v in venues]
-    events_result = client.table("events").select("venue_id").in_("venue_id", venue_ids).execute()
-    venues_with_events = set(e["venue_id"] for e in (events_result.data or []))
+    events_result = client.table("events").select("place_id").in_("place_id", venue_ids).execute()
+    venues_with_events = set(e["place_id"] for e in (events_result.data or []))
 
     # Return venues without events
     missing = [v for v in venues if v["id"] not in venues_with_events]

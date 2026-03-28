@@ -2321,9 +2321,9 @@ def find_events_by_date_and_venue_family(date: str, venue_id: int) -> list[dict]
 
     result = (
         client.table("events")
-        .select("*, venue:venues(name)")
+        .select("*, venue:places(name)")
         .eq("start_date", date)
-        .in_("venue_id", sibling_ids)
+        .in_("place_id", sibling_ids)
         .execute()
     )
 

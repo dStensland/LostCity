@@ -52,7 +52,7 @@ _DESTINATION_DETAILS_COLUMNS = {
 def _upsert_destination_details_record(client, row: dict):
     return client.table("venue_destination_details").upsert(
         row,
-        on_conflict="venue_id",
+        on_conflict="place_id",
     ).execute()
 
 

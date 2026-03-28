@@ -141,7 +141,7 @@ def fetch_events(
     cursor = _load_resume_cursor(checkpoint_file, resume_after_id)
     while True:
         query = client.table("events").select(
-            "id,source_id,venue_id,title,start_date,start_time,description,image_url,ticket_url,created_at,canonical_event_id"
+            "id,source_id,place_id,title,start_date,start_time,description,image_url,ticket_url,created_at,canonical_event_id"
         )
         if start_date:
             query = query.gte("start_date", start_date)
@@ -204,10 +204,10 @@ def main() -> None:
 
     groups: dict[tuple, list[dict]] = defaultdict(list)
     for row in events:
-        if not row.get("source_id") or not row.get("venue_id") or not row.get("title"):
+        if not row.get("source_id") or not row.get("place_id") or not row.get("title"):
             continue
         key = (
-            row.get("venue_id"),
+            row.get("place_id"),
             row.get("start_date"),
             normalize_start_time(row.get("start_time")),
             normalize_title(row.get("title")),

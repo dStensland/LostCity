@@ -212,7 +212,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
     try:
         get_client().table("venue_features").update({"is_active": False}).eq(
-            "venue_id", venue_id
+            "place_id", venue_id
         ).eq("slug", "fountain-rings-and-open-lawn").execute()
     except Exception as exc:
         logger.warning(

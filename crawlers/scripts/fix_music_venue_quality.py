@@ -341,10 +341,10 @@ def run_music_venue_quality_fix(
     events_result = (
         client.table("events")
         .select(
-            "id,venue_id,title,start_date,start_time,description,category_id,"
+            "id,place_id,title,start_date,start_time,description,category_id,"
             "source_url,ticket_url,image_url,extraction_version,canonical_event_id"
         )
-        .in_("venue_id", venue_ids)
+        .in_("place_id", venue_ids)
         .gte("start_date", from_date)
         .order("start_date")
         .order("start_time")
@@ -386,7 +386,7 @@ def run_music_venue_quality_fix(
     by_slot: dict[tuple[int, str, str], list[dict[str, Any]]] = defaultdict(list)
     for event in events:
         slot_key = (
-            event["venue_id"],
+            event["place_id"],
             event["start_date"],
             str(event.get("start_time") or "00:00:00"),
         )
@@ -429,7 +429,7 @@ def run_music_venue_quality_fix(
         winner = scored[0][3]
         winner_id = winner["id"]
         slot_key = (
-            winner["venue_id"],
+            winner["place_id"],
             winner["start_date"],
             str(winner.get("start_time") or "00:00:00"),
         )
@@ -492,7 +492,7 @@ def run_music_venue_quality_fix(
     # Backfill missing lineups + repair garbage descriptions on canonical rows
     for event in events:
         slot_key = (
-            event["venue_id"],
+            event["place_id"],
             event["start_date"],
             str(event.get("start_time") or "00:00:00"),
         )
@@ -500,7 +500,7 @@ def run_music_venue_quality_fix(
         if canonical_id != event["id"]:
             continue
 
-        venue_name = venue_map[event["venue_id"]]["name"]
+        venue_name = venue_map[event["place_id"]]["name"]
         current_artists = artists_by_event.get(event["id"], [])
         if not current_artists:
             parsed = parse_lineup_from_title(event.get("title"))

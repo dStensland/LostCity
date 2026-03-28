@@ -42,7 +42,7 @@ def _select_existing_special(client, row: dict):
     query = (
         client.table("place_specials")
         .select("id")
-        .eq("place_id", row["venue_id"])
+        .eq("place_id", row["place_id"])
         .eq("title", row["title"])
         .eq("type", row["type"])
     )

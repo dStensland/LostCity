@@ -117,8 +117,8 @@ def analyze_coverage() -> None:
     future_events = paged_select(
         client,
         "events",
-        "id,source_id,venue_id,category_id,content_kind,start_date,"
-        "venues(city,neighborhood,active)",
+        "id,source_id,place_id,category_id,content_kind,start_date,"
+        "places(city,neighborhood,is_active)",
         query_builder=lambda q: q.eq("is_active", True).gte("start_date", today),
         order_column="start_date",
     )
@@ -144,8 +144,8 @@ def analyze_coverage() -> None:
     )
     active_specials = paged_select(
         client,
-        "venue_specials",
-        "id,venue_id,venues(city,active)",
+        "place_specials",
+        "id,place_id,places(city,is_active)",
         query_builder=lambda q: q.eq("is_active", True),
     )
 
@@ -166,14 +166,14 @@ def analyze_coverage() -> None:
                 city_exhibit_counts[city] += 1
             else:
                 city_event_counts[city] += 1
-            if event.get("venue_id"):
-                city_venue_counts[city].add(event["venue_id"])
+            if event.get("place_id"):
+                city_venue_counts[city].add(event["place_id"])
         if city == "Atlanta" and venue.get("neighborhood"):
             atlanta_neighborhood_counts[venue["neighborhood"]] += 1
         if event.get("source_id"):
             future_source_counts[event["source_id"]] += 1
-        if event.get("venue_id"):
-            future_active_venue_ids.add(event["venue_id"])
+        if event.get("place_id"):
+            future_active_venue_ids.add(event["place_id"])
 
     recent_source_counts = defaultdict(int)
     for event in recent_events:
@@ -319,11 +319,11 @@ def analyze_coverage() -> None:
     atlanta_venues = [venue for venue in active_venues if venue.get("city") == "Atlanta"]
     atlanta_active_venue_ids = {venue["id"] for venue in atlanta_venues}
     atlanta_special_venue_ids = {
-        special["venue_id"]
+        special["place_id"]
         for special in active_specials
-        if (special.get("venues") or {}).get("city") == "Atlanta"
-        and (special.get("venues") or {}).get("is_active") is not False
-        and special.get("venue_id") is not None
+        if (special.get("places") or {}).get("city") == "Atlanta"
+        and (special.get("places") or {}).get("is_active") is not False
+        and special.get("place_id") is not None
     }
 
     def _filled(field: str) -> int:

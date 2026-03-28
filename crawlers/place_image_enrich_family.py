@@ -278,15 +278,15 @@ def get_family_portal_venue_ids(client) -> list[int]:
         try:
             events_resp = (
                 client.table("events")
-                .select("venue_id")
+                .select("place_id")
                 .in_("source_id", batch)
                 .eq("is_active", True)
                 .limit(5000)  # cap per batch; sources are single-venue mostly
                 .execute()
             )
             for e in events_resp.data or []:
-                if e.get("venue_id"):
-                    venue_ids.add(e["venue_id"])
+                if e.get("place_id"):
+                    venue_ids.add(e["place_id"])
         except Exception as exc:
             logger.warning("  Batch %d–%d failed: %s — skipping", i, i + batch_size, exc)
 

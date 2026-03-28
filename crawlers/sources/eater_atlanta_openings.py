@@ -516,8 +516,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             if existing:
                 direct_updates: dict[str, object] = {}
-                if existing.get("venue_id") != venue_id:
-                    direct_updates["venue_id"] = venue_id
+                if existing.get("place_id") != venue_id:
+                    direct_updates["place_id"] = venue_id
                 if existing.get("content_hash") != content_hash:
                     direct_updates["content_hash"] = content_hash
                 if direct_updates:

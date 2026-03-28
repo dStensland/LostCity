@@ -86,7 +86,7 @@ def build_audit() -> dict:
     features = (
         client.table("venue_features")
         .select("place_id,slug,title,feature_type,description,price_note,url,sort_order,is_active")
-        .in_("venue_id", list(by_id.keys()))
+        .in_("place_id", list(by_id.keys()))
         .eq("is_active", True)
         .execute()
         .data

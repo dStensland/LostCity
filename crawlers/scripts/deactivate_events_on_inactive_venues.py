@@ -69,8 +69,8 @@ def _load_candidate_events(
     for bucket in _chunked(venue_ids):
         query = (
             client.table("events")
-            .select("id,title,venue_id,start_date,end_date,canonical_event_id")
-            .in_("venue_id", bucket)
+            .select("id,title,place_id,start_date,end_date,canonical_event_id")
+            .in_("place_id", bucket)
         )
         if active_column:
             query = query.eq(active_column, True)
@@ -129,7 +129,7 @@ def main() -> None:
         e for e in candidates if e.get("canonical_event_id") in (None, 0, "0")
     ]
 
-    by_venue = Counter(int(e["venue_id"]) for e in candidates if e.get("venue_id"))
+    by_venue = Counter(int(e["place_id"]) for e in candidates if e.get("place_id"))
     mode = "APPLY" if args.apply else "DRY-RUN"
     print(
         f"[{mode}] events_active_column={active_column or 'none'} "

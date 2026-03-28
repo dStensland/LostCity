@@ -32,10 +32,10 @@ _EDITORIAL_MENTION_COLUMNS = {
 
 @retry_on_network_error(max_retries=4, base_delay=0.5)
 def _upsert_editorial_mention_record(client, row: dict):
-    if row.get("venue_id") is not None:
+    if row.get("place_id") is not None:
         return client.table("editorial_mentions").upsert(
             row,
-            on_conflict="article_url,venue_id",
+            on_conflict="article_url,place_id",
         ).execute()
 
     return client.table("editorial_mentions").upsert(

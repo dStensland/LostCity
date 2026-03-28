@@ -160,14 +160,14 @@ def fetch_editorial_snippets(client, venue_ids: list[int]) -> dict[int, str]:
         batch = venue_ids[offset:offset + 500]
         r = (client.table("editorial_mentions")
              .select("place_id,snippet,source_key,mention_type,article_title")
-             .in_("venue_id", batch)
+             .in_("place_id", batch)
              .eq("is_active", True)
              .not_.is_("snippet", "null")
              .in_("mention_type", ["review", "feature"])
              .order("published_at", desc=True)
              .execute())
         for row in (r.data or []):
-            vid = row["venue_id"]
+            vid = row["place_id"]
             snippet = (row.get("snippet") or "").strip()
             if len(snippet) < 30:
                 continue

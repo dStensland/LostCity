@@ -176,16 +176,16 @@ def run_diagnostics():
             
             events = (
                 client.table("events")
-                .select("venue_id")
+                .select("place_id")
                 .eq("portal_id", atlanta_id)
                 .gte("start_date", today)
                 .lte("start_date", in_30_days)
                 .execute()
             ).data or []
-            
+
             venue_counts = {}
             for event in events:
-                venue_id = event.get("venue_id")
+                venue_id = event.get("place_id")
                 venue_counts[venue_id] = venue_counts.get(venue_id, 0) + 1
             
             # Get venue names for top venues

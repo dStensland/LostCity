@@ -65,23 +65,23 @@ def main():
     print("2. VENUE_ID ANALYSIS (next 30 days, unique events)")
     print("=" * 80)
     
-    result = client.table("events").select("id,venue_id", count="exact").is_(
+    result = client.table("events").select("id,place_id", count="exact").is_(
         "canonical_event_id", "null"
-    ).is_("venue_id", "null").gte(
+    ).is_("place_id", "null").gte(
         "start_date", today
     ).lte("start_date", thirty_days).execute()
-    
+
     null_venue_count = result.count
-    print(f"Events with NULL venue_id: {null_venue_count:,}")
-    
+    print(f"Events with NULL place_id: {null_venue_count:,}")
+
     result = client.table("events").select("id", count="exact").is_(
         "canonical_event_id", "null"
-    ).not_.is_("venue_id", "null").gte(
+    ).not_.is_("place_id", "null").gte(
         "start_date", today
     ).lte("start_date", thirty_days).execute()
     
     has_venue_count = result.count
-    print(f"Events with venue_id set: {has_venue_count:,}")
+    print(f"Events with place_id set: {has_venue_count:,}")
     
     print()
     

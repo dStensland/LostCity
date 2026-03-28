@@ -301,7 +301,7 @@ def _maybe_patch_existing_venue(client, venue: dict, park: dict) -> dict:
 def _venue_has_destination_details(client, venue_id: int) -> bool:
     result = (
         client.table("venue_destination_details")
-        .select("venue_id")
+        .select("place_id")
         .eq("place_id", venue_id)
         .limit(1)
         .execute()

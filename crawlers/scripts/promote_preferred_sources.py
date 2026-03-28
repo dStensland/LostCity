@@ -49,7 +49,7 @@ def fetch_events(start_date: str) -> list[dict]:
         batch = (
             client.table("events")
             .select(
-                "id,source_id,portal_id,is_sensitive,venue_id,title,start_date,start_time,"
+                "id,source_id,portal_id,is_sensitive,place_id,title,start_date,start_time,"
                 "description,image_url,ticket_url,created_at,canonical_event_id"
             )
             .gte("start_date", start_date)
@@ -101,10 +101,10 @@ def main() -> None:
 
     grouped: dict[tuple, list[dict]] = defaultdict(list)
     for row in events:
-        if not row.get("venue_id") or not row.get("title") or not row.get("start_date"):
+        if not row.get("place_id") or not row.get("title") or not row.get("start_date"):
             continue
         key = (
-            row.get("venue_id"),
+            row.get("place_id"),
             row.get("start_date"),
             row.get("start_time"),
             normalize_title(row.get("title")),

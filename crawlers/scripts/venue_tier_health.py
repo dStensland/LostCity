@@ -246,21 +246,21 @@ def fetch_enrichment_counts(client, venue_ids: list[int]) -> dict[int, dict]:
 
     for offset in range(0, len(venue_ids), 500):
         batch = venue_ids[offset:offset + 500]
-        r = client.table("venue_destination_details").select("venue_id").in_("venue_id", batch).execute()
+        r = client.table("venue_destination_details").select("place_id").in_("place_id", batch).execute()
         for row in (r.data or []):
-            enrichment[row["venue_id"]]["has_destination_details"] = True
+            enrichment[row["place_id"]]["has_destination_details"] = True
 
     for table, key in [
         ("venue_features", "feature_count"),
-        ("venue_specials", "special_count"),
+        ("place_specials", "special_count"),
         ("editorial_mentions", "editorial_count"),
-        ("venue_occasions", "occasion_count"),
+        ("place_occasions", "occasion_count"),
         ("venue_highlights", "highlight_count"),
     ]:
         for offset in range(0, len(venue_ids), 500):
             batch = venue_ids[offset:offset + 500]
-            r = client.table(table).select("venue_id").in_("venue_id", batch).execute()
-            counts: Counter = Counter(row["venue_id"] for row in (r.data or []))
+            r = client.table(table).select("place_id").in_("place_id", batch).execute()
+            counts: Counter = Counter(row["place_id"] for row in (r.data or []))
             for vid, count in counts.items():
                 enrichment[vid][key] = count
 

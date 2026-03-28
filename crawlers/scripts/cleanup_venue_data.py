@@ -152,8 +152,8 @@ def get_venue_event_counts(client) -> dict:
     while True:
         result = (
             client.table("events")
-            .select("venue_id", count="exact")
-            .not_.is_("venue_id", "null")
+            .select("place_id", count="exact")
+            .not_.is_("place_id", "null")
             .range(offset, offset + page_size - 1)
             .execute()
         )
@@ -161,7 +161,7 @@ def get_venue_event_counts(client) -> dict:
         if not rows:
             break
         for row in rows:
-            vid = row.get("venue_id")
+            vid = row.get("place_id")
             if vid:
                 counts[vid] = counts.get(vid, 0) + 1
         if len(rows) < page_size:

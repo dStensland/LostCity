@@ -165,7 +165,7 @@ def _fetch_source_events(
     Returns list of event dicts with id, title, venue_id, start_date,
     start_time, canonical_event_id.
     """
-    fields = "id,title,venue_id,start_date,start_time,canonical_event_id"
+    fields = "id,title,place_id,start_date,start_time,canonical_event_id"
     rows: list[dict] = []
     offset = 0
 
@@ -258,7 +258,7 @@ def run_arse_pass(
     by_venue: dict[int, list[str]] = defaultdict(list)
 
     for ev in arse_events:
-        venue_id = ev.get("venue_id")
+        venue_id = ev.get("place_id")
         start_date = ev.get("start_date")
         title = ev.get("title", "")
         ev_id = ev["id"]
@@ -348,7 +348,7 @@ def run_tm_pass(
     by_venue: dict[int, list[str]] = defaultdict(list)
 
     for ev in tm_events:
-        venue_id = ev.get("venue_id")
+        venue_id = ev.get("place_id")
         start_date = ev.get("start_date")
         title = ev.get("title", "")
         ev_id = ev["id"]

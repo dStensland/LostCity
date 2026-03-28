@@ -44,7 +44,7 @@ def backfill_tags(dry_run: bool = False, batch_size: int = 100) -> dict:
 
             try:
                 # Get venue vibes (with caching)
-                venue_id = event.get("venue_id")
+                venue_id = event.get("place_id") or event.get("venue_id")
                 venue_vibes = []
 
                 if venue_id:

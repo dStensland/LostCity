@@ -215,8 +215,8 @@ def deactivate_closed_venue_events(client, dry_run=False) -> int:
 
     events_result = (
         client.table("events")
-        .select("id, title, venue_id")
-        .in_("venue_id", closed_venue_ids)
+        .select("id, title, place_id")
+        .in_("place_id", closed_venue_ids)
         .gte("start_date", date.today().isoformat())
         .eq("is_active", True)
         .execute()
@@ -240,7 +240,7 @@ def deactivate_closed_venue_events(client, dry_run=False) -> int:
 def alert_missing_venue_ids(client) -> list:
     """Find events missing venue_id, grouped by source."""
     rows = _fetch_all_pages(client, "events", "id, title, source_id", [
-        ("is_", ("venue_id", "null")),
+        ("is_", ("place_id", "null")),
         ("gte", ("start_date", date.today().isoformat())),
         ("eq", ("is_active", True)),
     ])

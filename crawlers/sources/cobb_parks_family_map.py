@@ -114,7 +114,7 @@ def _parse_park_page(page_html: str, page_url: str) -> dict:
 def _venue_has_destination_details(client, venue_id: int) -> bool:
     result = (
         client.table("venue_destination_details")
-        .select("venue_id")
+        .select("place_id")
         .eq("place_id", venue_id)
         .limit(1)
         .execute()

@@ -673,7 +673,7 @@ def _extract_duplicate_clusters(
 def duplicate_group_key(row: dict[str, Any]) -> tuple[Any, ...]:
     title = normalize_text(row.get("title") or "")
     start_date = str(row.get("start_date") or "")
-    venue_id = int(row.get("venue_id") or 0)
+    venue_id = int(row.get("place_id") or 0)
     category = normalize_text(row.get("category_id") or row.get("category") or "")
     if category in TIME_SENSITIVE_DUPLICATE_CATEGORIES:
         start_time = str(row.get("start_time") or "").strip() or "__none__"
@@ -775,7 +775,7 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
 
     # Duplicate integrity (all future vs visible future).
     duplicate_fields = (
-        "id,title,start_date,venue_id,source_id,portal_id,canonical_event_id,start_time,is_all_day,genres,description"
+        "id,title,start_date,place_id,source_id,portal_id,canonical_event_id,start_time,is_all_day,genres,description"
     )
     if events_has_category_id:
         duplicate_fields += ",category_id"
@@ -792,7 +792,7 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
         duplicate_rows_all = [
             row
             for row in duplicate_rows_all
-            if int(row.get("venue_id") or 0) in scoped_venue_ids
+            if int(row.get("place_id") or 0) in scoped_venue_ids
         ]
     if portal_scope_active:
         duplicate_rows_all = [row for row in duplicate_rows_all if row_in_portal_scope(row)]
@@ -823,9 +823,9 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
         if row.get("source_id") is not None
     }
     venue_ids_for_duplicates = {
-        int(row.get("venue_id") or 0)
+        int(row.get("place_id") or 0)
         for row in duplicate_rows_all
-        if row.get("venue_id") is not None
+        if row.get("place_id") is not None
     }
     source_name_map_full = fetch_id_name_map(
         client,
@@ -1087,15 +1087,15 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
     # Specials.
     active_special_rows = paged_select(
         client,
-        "venue_specials",
-        "id,type,venue_id",
+        "place_specials",
+        "id,type,place_id",
         query_builder=lambda q: q.eq("is_active", True),
     )
     if city_scope_active:
         active_special_rows = [
             row
             for row in active_special_rows
-            if int(row.get("venue_id") or 0) in scoped_venue_ids
+            if int(row.get("place_id") or 0) in scoped_venue_ids
         ]
     special_type_counts = Counter((row.get("type") or "unknown") for row in active_special_rows)
 
@@ -1109,7 +1109,7 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
     if city_scope_active:
         walkable_neighbors_rows = count_rows_for_venue_ids(client, "walkable_neighbors", scoped_venue_ids)
     else:
-        walkable_neighbors_rows = count_exact(client, "walkable_neighbors", select_field="venue_id")
+        walkable_neighbors_rows = count_exact(client, "walkable_neighbors", select_field="place_id")
     walkability_score_column_present = has_column(client, "venues", "walkability_score")
 
     # Enrichment fill rates (venue-level).
@@ -1173,7 +1173,7 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
 
     specials_by_neighborhood: Counter[str] = Counter()
     for row in active_special_rows:
-        vid = row.get("venue_id")
+        vid = row.get("place_id")
         if vid is None:
             continue
         neighborhood = neighborhood_by_venue_id.get(int(vid), "Unknown")
@@ -1253,12 +1253,12 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
     future_visible_events_on_registry_closed_venues = sum(
         1
         for row in duplicate_rows_visible
-        if int(row.get("venue_id") or 0) in closed_venue_id_set
+        if int(row.get("place_id") or 0) in closed_venue_id_set
     )
 
     inactive_venue_ids = {int(row["id"]) for row in venue_rows if row.get("is_active") is False and row.get("id") is not None}
     future_visible_events_on_inactive_venues = sum(
-        1 for row in duplicate_rows_visible if int(row.get("venue_id") or 0) in inactive_venue_ids
+        1 for row in duplicate_rows_visible if int(row.get("place_id") or 0) in inactive_venue_ids
     )
 
     # Indie theater showtime coverage.

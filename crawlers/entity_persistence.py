@@ -195,7 +195,7 @@ def persist_typed_entity_envelope(
         open_call_record = dict(open_call)
         venue_id = _resolve_venue_id(open_call_record, venue_ids_by_slug)
         if venue_id:
-            open_call_record["venue_id"] = venue_id
+            open_call_record["place_id"] = venue_id
         persisted = insert_open_call(open_call_record)
         if persisted:
             result.bump_persisted("open_calls")

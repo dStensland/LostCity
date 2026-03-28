@@ -775,9 +775,9 @@ def fetch_t2_venues_missing_details(client, *, venue_type=None):
     has_details = set()
     for off in range(0, len(venue_ids), 500):
         batch = venue_ids[off:off + 500]
-        r = client.table("venue_destination_details").select("venue_id").in_("venue_id", batch).execute()
+        r = client.table("venue_destination_details").select("place_id").in_("place_id", batch).execute()
         for row in (r.data or []):
-            has_details.add(row["venue_id"])
+            has_details.add(row["place_id"])
 
     return [v for v in all_venues if v["id"] not in has_details]
 

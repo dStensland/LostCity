@@ -520,7 +520,7 @@ def _resolve_venue_id(client, entry: dict) -> int:
 def _venue_has_destination_details(client, venue_id: int) -> bool:
     result = (
         client.table("venue_destination_details")
-        .select("venue_id")
+        .select("place_id")
         .eq("place_id", venue_id)
         .limit(1)
         .execute()

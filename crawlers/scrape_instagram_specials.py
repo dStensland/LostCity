@@ -507,7 +507,7 @@ def upsert_specials(
     if not dry_run:
         # Delete existing Instagram-sourced specials for this venue (idempotent re-runs)
         client.table("place_specials").delete().eq(
-            "venue_id", venue_id
+            "place_id", venue_id
         ).like("source_url", "%instagram.com%").execute()
 
     count = 0
@@ -670,12 +670,12 @@ def get_venues_with_instagram(
         venue_ids_with_specials = set()
         specials_result = (
             client.table("place_specials")
-            .select("venue_id")
+            .select("place_id")
             .eq("is_active", True)
             .execute()
         )
         for row in specials_result.data or []:
-            venue_ids_with_specials.add(row["venue_id"])
+            venue_ids_with_specials.add(row["place_id"])
 
         venues = [v for v in venues if v["id"] not in venue_ids_with_specials]
 

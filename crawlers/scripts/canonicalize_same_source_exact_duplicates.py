@@ -63,7 +63,7 @@ def fetch_future_visible_rows(start_date: str) -> list[dict[str, Any]]:
         batch = (
             client.table("events")
             .select(
-                "id,source_id,venue_id,title,start_date,start_time,"
+                "id,source_id,place_id,title,start_date,start_time,"
                 "description,image_url,ticket_url,created_at,canonical_event_id"
             )
             .gte("start_date", start_date)
@@ -106,7 +106,7 @@ def main() -> None:
     grouped: dict[tuple[int, int, str, str, str], list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         source_id = int(row.get("source_id") or 0)
-        venue_id = int(row.get("venue_id") or 0)
+        venue_id = int(row.get("place_id") or 0)
         if source_id <= 0:
             continue
         key = (

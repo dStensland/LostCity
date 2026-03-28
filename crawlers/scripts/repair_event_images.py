@@ -98,7 +98,7 @@ def fetch_all_events(from_date: Optional[str]) -> list[dict]:
     while True:
         query = (
             client.table("events")
-            .select("id,title,start_date,venue_id,image_url,source_url")
+            .select("id,title,start_date,place_id,image_url,source_url")
             .order("id")
             .range(offset, offset + page_size - 1)
         )
@@ -281,7 +281,7 @@ def main() -> int:
         print("No events found in selected scope.")
         return 0
 
-    venue_ids = {int(e["venue_id"]) for e in events if e.get("venue_id")}
+    venue_ids = {int(e["venue_id"]) for e in events if e.get("place_id")}
     venue_images = fetch_venue_images(venue_ids)
 
     # Build URL pools that need reachability checks.
@@ -293,7 +293,7 @@ def main() -> int:
         if current and not is_bad_image_pattern(current):
             current_urls.add(current)
 
-        venue_id = event.get("venue_id")
+        venue_id = event.get("place_id")
         if venue_id:
             venue_img = venue_images.get(int(venue_id))
             if venue_img and not is_bad_image_pattern(venue_img):
@@ -340,7 +340,7 @@ def main() -> int:
         replacement: Optional[str] = None
 
         # Venue fallback first.
-        venue_id = event.get("venue_id")
+        venue_id = event.get("place_id")
         if venue_id:
             venue_img = venue_images.get(int(venue_id))
             if venue_img and not is_bad_image_pattern(venue_img) and venue_status.get(venue_img, False):

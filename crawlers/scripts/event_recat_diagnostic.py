@@ -52,10 +52,10 @@ def run_diagnostic():
     for cat in CHECK_CATEGORIES:
         events = (
             client.table("events")
-            .select("id, title, venue_id, category_id, start_date")
+            .select("id, title, place_id, category_id, start_date")
             .eq("category_id", cat)
             .eq("is_active", True)
-            .in_("venue_id", venue_ids)
+            .in_("place_id", venue_ids)
             .limit(500)
             .execute()
         )
@@ -67,7 +67,7 @@ def run_diagnostic():
                     {
                         "id": ev["id"],
                         "title": title,
-                        "venue": venue_names.get(ev["venue_id"], "unknown"),
+                        "venue": venue_names.get(ev["place_id"], "unknown"),
                         "current_category": cat,
                         "suggested": "art",
                         "start_date": ev.get("start_date"),

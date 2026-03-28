@@ -354,7 +354,7 @@ def sweep_null_source_short_descriptions(
             client.table("events")
             .select(
                 "id,title,description,start_date,start_time,end_time,source_url,ticket_url,"
-                "is_free,price_min,price_max,venue_id"
+                "is_free,price_min,price_max,place_id"
             )
             .gte("start_date", start_date)
             .is_("canonical_event_id", "null")
@@ -391,9 +391,9 @@ def sweep_null_source_short_descriptions(
 
     venue_ids = sorted(
         {
-            int(row["venue_id"])
+            int(row["place_id"])
             for row in candidates
-            if row.get("venue_id") is not None
+            if row.get("place_id") is not None
         }
     )
     venue_map: dict[int, dict] = {}
@@ -419,7 +419,7 @@ def sweep_null_source_short_descriptions(
     for event in candidates:
         event_id = int(event["id"])
         current = clean_text(event.get("description"))
-        venue = venue_map.get(int(event["venue_id"])) if event.get("venue_id") is not None else None
+        venue = venue_map.get(int(event["place_id"])) if event.get("place_id") is not None else None
         enriched = build_null_source_description(event, venue)
         if not enriched or enriched == current:
             continue

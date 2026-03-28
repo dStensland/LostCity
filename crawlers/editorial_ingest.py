@@ -1137,7 +1137,7 @@ def ingest_source(
                 try:
                     get_client().table("editorial_mentions").delete().eq(
                         "article_url", url
-                    ).is_("venue_id", "null").execute()
+                    ).is_("place_id", "null").execute()
                 except Exception:
                     pass  # Best effort — may not exist
 
@@ -1183,7 +1183,7 @@ def _build_mention_payload(
         "is_active": True,
     }
     if venue_id is not None:
-        payload["venue_id"] = venue_id
+        payload["place_id"] = venue_id
     if guide_name is not None:
         payload["guide_name"] = guide_name
     if published_at is not None:

@@ -223,7 +223,7 @@ def main() -> None:
     future_rows = paged_select(
         client,
         "events",
-        "id,venue_id,source_id,start_date,canonical_event_id",
+        "id,place_id,source_id,start_date,canonical_event_id",
         query_builder=lambda q: q.gte("start_date", args.start_date).is_(
             "canonical_event_id", "null"
         ),
@@ -231,7 +231,7 @@ def main() -> None:
     events_by_venue: dict[int, int] = defaultdict(int)
     source_rows_by_venue: dict[int, Counter[int]] = defaultdict(Counter)
     for row in future_rows:
-        venue_id = int(row.get("venue_id") or 0)
+        venue_id = int(row.get("place_id") or 0)
         if venue_id not in scoped_venue_ids:
             continue
         events_by_venue[venue_id] += 1

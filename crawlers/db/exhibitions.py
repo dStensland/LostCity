@@ -56,7 +56,7 @@ def find_exhibition_by_hash(content_hash: str) -> Optional[dict]:
     client = get_client()
     result = (
         client.table("exhibitions")
-        .select("id, title, venue_id, opening_date, updated_at")
+        .select("id, title, place_id, opening_date, updated_at")
         .eq("metadata->>content_hash", content_hash)
         .limit(1)
         .execute()
@@ -76,7 +76,7 @@ def find_exhibition_by_title_venue(title: str, venue_id: int) -> Optional[dict]:
     client = get_client()
     result = (
         client.table("exhibitions")
-        .select("id, title, venue_id, opening_date, updated_at")
+        .select("id, title, place_id, opening_date, updated_at")
         .eq("place_id", venue_id)
         .ilike("title", normalized)
         .limit(1)
@@ -92,7 +92,7 @@ def find_exhibition_by_title_venue(title: str, venue_id: int) -> Optional[dict]:
 # ---------------------------------------------------------------------------
 
 _EXHIBITION_COLUMNS = {
-    "slug", "venue_id", "source_id", "portal_id", "title", "description",
+    "slug", "place_id", "source_id", "portal_id", "title", "description",
     "image_url", "opening_date", "closing_date", "medium", "exhibition_type",
     "admission_type", "admission_url", "source_url", "tags", "is_active",
     "metadata",
@@ -120,9 +120,15 @@ def insert_exhibition(exhibition_data: dict, artists: Optional[list] = None) -> 
         logger.debug("Skipping exhibition with junk title: %r", title)
         return None
 
-    venue_id = exhibition_data.get("venue_id")
+    # Normalize venue_id → place_id (Deploy 10: exhibitions.venue_id renamed)
+    if "venue_id" in exhibition_data and "place_id" not in exhibition_data:
+        exhibition_data["place_id"] = exhibition_data.pop("venue_id")
+    elif "venue_id" in exhibition_data:
+        exhibition_data.pop("venue_id")
+
+    venue_id = exhibition_data.get("place_id")
     if not venue_id:
-        logger.warning("Skipping exhibition %r — no venue_id", title)
+        logger.warning("Skipping exhibition %r — no place_id", title)
         return None
 
     # Generate content hash for dedup

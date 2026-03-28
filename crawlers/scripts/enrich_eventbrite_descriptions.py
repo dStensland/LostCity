@@ -190,7 +190,7 @@ def main() -> int:
 
     query = (
         client.table("events")
-        .select("id,title,description,source_url,start_date,start_time,source_id,is_free,venue_id")
+        .select("id,title,description,source_url,start_date,start_time,source_id,is_free,place_id")
         .in_("source_id", source_ids)
         .gte("start_date", args.start_date)
         .is_("canonical_event_id", "null")
@@ -204,7 +204,7 @@ def main() -> int:
         .data
         or []
     )
-    venue_ids = sorted({int(row["venue_id"]) for row in candidates if row.get("venue_id") is not None})
+    venue_ids = sorted({int(row["place_id"]) for row in candidates if row.get("place_id") is not None})
     venue_map = fetch_venue_map(client, venue_ids)
 
     scanned = 0
@@ -218,7 +218,7 @@ def main() -> int:
         title = str(event.get("title") or "").strip()
         source_url = str(event.get("source_url") or "").strip()
         current_desc = (event.get("description") or "").strip()
-        venue = venue_map.get(int(event["venue_id"])) if event.get("venue_id") is not None else None
+        venue = venue_map.get(int(event["place_id"])) if event.get("place_id") is not None else None
 
         if not source_url:
             skipped += 1

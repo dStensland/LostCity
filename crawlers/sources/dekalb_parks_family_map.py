@@ -277,7 +277,7 @@ def _fetch_existing_venue(client, entry: dict) -> Optional[dict]:
 def _venue_has_destination_details(client, venue_id: int) -> bool:
     result = (
         client.table("venue_destination_details")
-        .select("venue_id")
+        .select("place_id")
         .eq("place_id", venue_id)
         .limit(1)
         .execute()
