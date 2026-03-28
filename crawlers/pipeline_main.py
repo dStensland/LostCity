@@ -81,7 +81,7 @@ def _get_or_create_default_venue(profile) -> int | None:
     from db import get_venue_by_id
     venue = get_venue_by_id(venue_id)
     if venue:
-        _VENUE_TYPE_CACHE[venue_id] = venue.get("venue_type")
+        _VENUE_TYPE_CACHE[venue_id] = venue.get("place_type")
 
     return venue_id
 

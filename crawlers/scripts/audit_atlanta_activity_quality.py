@@ -77,7 +77,7 @@ def build_audit() -> dict:
     target_slugs = _target_slugs()
     venues = (
         client.table("places")
-        .select("id,slug,name,city,website,venue_type")
+        .select("id,slug,name,city,website,place_type")
         .in_("slug", target_slugs)
         .execute()
         .data
@@ -102,13 +102,13 @@ def build_audit() -> dict:
             issues.append("missing_website")
         elif website.startswith("http://"):
             issues.append("http_url")
-        if venue.get("venue_type") in {"arena", "event_space"}:
+        if venue.get("place_type") in {"arena", "event_space"}:
             issues.append(f"weak_type={venue['venue_type']}")
         if issues:
             weak_rows.append(
                 {
                     "slug": venue["slug"],
-                    "place_type": venue.get("venue_type"),
+                    "place_type": venue.get("place_type"),
                     "city": venue.get("city"),
                     "website": website,
                     "issues": issues,
@@ -133,9 +133,9 @@ def build_audit() -> dict:
     for brand, slugs in BRAND_GROUPS.items():
         rows = (
             client.table("places")
-            .select("slug,name,city,venue_type,website,active")
+            .select("slug,name,city,place_type,website,active")
             .in_("slug", slugs)
-            .eq("active", True)
+            .eq("is_active", True)
             .order("slug")
             .execute()
             .data
@@ -193,7 +193,7 @@ def render_markdown(audit: dict) -> str:
             lines.append(f"- `{brand}`")
             for row in rows:
                 lines.append(
-                    f"  - `{row['slug']}` | city=`{row.get('city')}` | type=`{row.get('venue_type')}` | website=`{row.get('website')}`"
+                    f"  - `{row['slug']}` | city=`{row.get('city')}` | type=`{row.get('place_type')}` | website=`{row.get('website')}`"
                 )
     else:
         lines.append("- none")

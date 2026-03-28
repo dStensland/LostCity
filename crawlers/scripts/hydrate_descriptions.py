@@ -204,8 +204,8 @@ def fetch_venues_needing_descriptions(client, *, venue_type=None, limit=0):
     offset = 0
     while True:
         q = (client.table("places")
-             .select("id,name,venue_type,city,lat,lng,description")
-             .eq("active", True)
+             .select("id,name,place_type,city,lat,lng,description")
+             .eq("is_active", True)
              .order("id")
              .range(offset, offset + 999))
         if venue_type:
@@ -214,7 +214,7 @@ def fetch_venues_needing_descriptions(client, *, venue_type=None, limit=0):
         if not r.data:
             break
         for v in r.data:
-            if v.get("venue_type") not in target_types:
+            if v.get("place_type") not in target_types:
                 continue
             if _is_template_description(v.get("description")):
                 all_venues.append(v)

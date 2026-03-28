@@ -33,8 +33,8 @@ def fetch_all_venues(client) -> list[dict]:
     while True:
         r = (
             client.table("places")
-            .select("id, name, slug, venue_type, neighborhood, city, verified_at, created_at, active")
-            .eq("active", True)
+            .select("id, name, slug, place_type, neighborhood, city, verified_at, created_at, active")
+            .eq("is_active", True)
             .order("id")
             .range(offset, offset + 999)
             .execute()
@@ -94,7 +94,7 @@ def main():
     # Breakdown by venue_type
     type_counts: dict[str, int] = {}
     for v in never_verified:
-        vtype = v.get("venue_type") or "unknown"
+        vtype = v.get("place_type") or "unknown"
         type_counts[vtype] = type_counts.get(vtype, 0) + 1
 
     if type_counts:

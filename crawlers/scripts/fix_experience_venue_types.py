@@ -45,7 +45,7 @@ def main():
     supabase = get_client()
 
     ids = [r[0] for r in FIXES]
-    result = supabase.table("places").select("id, name, venue_type, active").in_("id", ids).execute()
+    result = supabase.table("places").select("id, name, place_type, active").in_("id", ids).execute()
     current = {row["id"]: row for row in result.data}
 
     print("=" * 70)

@@ -67,7 +67,7 @@ def triage_venues(limit: int = None, include_all: bool = False) -> list[VenueTri
     client = get_client()
 
     # Query venues
-    query = client.table("places").select("*").eq("active", True).order("name")
+    query = client.table("places").select("*").eq("is_active", True).order("name")
 
     if not include_all:
         # Focus on incomplete venues
@@ -98,7 +98,7 @@ def analyze_venue(client, venue: dict) -> Optional[VenueTriage]:
     name = venue.get("name", "")
     slug = venue.get("slug", "")
     neighborhood = venue.get("neighborhood")
-    venue_type = venue.get("venue_type")
+    venue_type = venue.get("place_type")
     venue_types = venue.get("venue_types") or []
     vibes = venue.get("vibes") or []
     lat = venue.get("lat")

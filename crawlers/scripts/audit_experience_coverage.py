@@ -171,7 +171,7 @@ def main():
     # Fetch all active venues
     result = client.table("places").select(
         "id, name, venue_type, city, neighborhood, active"
-    ).eq("active", True).execute()
+    ).eq("is_active", True).execute()
     all_venues = result.data or []
 
     total_missing = 0

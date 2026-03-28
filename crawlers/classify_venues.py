@@ -133,7 +133,7 @@ def should_deactivate(venue: dict) -> Optional[str]:
 
     # Pure address names with no other data
     address_pattern = re.compile(r'^\d+\s+[\w\s]+(?:St|Ave|Rd|Blvd|Dr|Ln|Way|Pkwy|Hwy|Circle|Ct|Pl|Cir|Pike)\b', re.IGNORECASE)
-    if address_pattern.match(name) and not venue.get("website") and not venue.get("venue_type"):
+    if address_pattern.match(name) and not venue.get("website") and not venue.get("place_type"):
         return f"address-only name, no website/type: {name}"
 
     return None
@@ -200,7 +200,7 @@ def classify_with_llm(venues: list[dict]) -> dict[int, str]:
             parts.append(f"Web:{v['website'][:60]}")
         if v.get('address'):
             parts.append(f"Addr:{v['address'][:60]}")
-        if v.get('venue_type'):
+        if v.get('place_type'):
             parts.append(f"CurrentType:{v['venue_type']}")
         lines.append(" | ".join(parts))
 
@@ -237,7 +237,7 @@ def run_cleanup(dry_run: bool = False, use_llm: bool = True):
     # Get ALL active venues
     result = client.table("places").select(
         "id,name,slug,venue_type,website,address,city,state,neighborhood"
-    ).eq("active", True).order("name").execute()
+    ).eq("is_active", True).order("name").execute()
     venues = result.data or []
 
     stats = {
@@ -259,7 +259,7 @@ def run_cleanup(dry_run: bool = False, use_llm: bool = True):
         if reason:
             print(f"  DEACTIVATE [{v['id']}] {v['name'][:50]} — {reason}")
             if not dry_run:
-                client.table("places").update({"active": False}).eq("id", v["id"]).execute()
+                client.table("places").update({"is_active": False}).eq("id", v["id"]).execute()
             stats["deactivated"] += 1
 
     print(f"\n  Total deactivated: {stats['deactivated']}")
@@ -270,7 +270,7 @@ def run_cleanup(dry_run: bool = False, use_llm: bool = True):
     print("=" * 60)
 
     for v in venues:
-        if v.get("venue_type") in ORG_TYPES:
+        if v.get("place_type") in ORG_TYPES:
             print(f"  RECLASSIFY [{v['id']}] {v['name'][:50]} — {v['venue_type']} → organization")
             if not dry_run:
                 client.table("places").update({"place_type": "organization"}).eq("id", v["id"]).execute()
@@ -289,7 +289,7 @@ def run_cleanup(dry_run: bool = False, use_llm: bool = True):
         # Skip already-handled venues
         if should_deactivate(v):
             continue
-        if v.get("venue_type") and v["venue_type"] not in ("venue", ""):
+        if v.get("place_type") and v["venue_type"] not in ("venue", ""):
             continue
 
         # Try rules
@@ -327,7 +327,7 @@ def run_cleanup(dry_run: bool = False, use_llm: bool = True):
                         if new_type == "deactivate":
                             print(f"    DEACTIVATE [{vid}] {v['name'][:50]}")
                             if not dry_run:
-                                client.table("places").update({"active": False}).eq("id", vid).execute()
+                                client.table("places").update({"is_active": False}).eq("id", vid).execute()
                             stats["llm_deactivated"] += 1
                         else:
                             print(f"    CLASSIFY [{vid}] {v['name'][:50]} → {new_type}")

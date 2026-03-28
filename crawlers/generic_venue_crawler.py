@@ -117,7 +117,7 @@ def get_venues_with_websites(
 
     query = client.table("places").select(
         "id, name, slug, website, venue_type, address, neighborhood, city, state, zip, vibes"
-    ).eq("active", True).not_.is_("website", "null")
+    ).eq("is_active", True).not_.is_("website", "null")
 
     if venue_ids:
         query = query.in_("id", venue_ids)
@@ -150,7 +150,7 @@ def get_venues_missing_events(client: Client, limit: int = 100) -> list[dict]:
     # Get all event venues with websites
     venues_result = client.table("places").select(
         "id, name, slug, website, venue_type, address, neighborhood, city, state, zip, vibes"
-    ).eq("active", True).eq("is_event_venue", True).not_.is_("website", "null").execute()
+    ).eq("is_active", True).eq("is_event_venue", True).not_.is_("website", "null").execute()
 
     venues = venues_result.data or []
     if not venues:

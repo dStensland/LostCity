@@ -83,7 +83,7 @@ def pct(numerator: int, denominator: int) -> float:
 
 
 def normalized_venue_type(venue: dict[str, Any]) -> str:
-    return str(venue.get("venue_type") or "").strip().lower()
+    return str(venue.get("place_type") or "").strip().lower()
 
 
 def has_usable_hours(value: Any) -> bool:
@@ -140,7 +140,7 @@ def analyze_coverage() -> None:
         "venues",
         "id,name,slug,city,neighborhood,venue_type,active,website,image_url,hours,lat,lng,"
         "location_designator,planning_notes,short_description,parking_note,transit_note",
-        query_builder=lambda q: q.eq("active", True),
+        query_builder=lambda q: q.eq("is_active", True),
     )
     active_specials = paged_select(
         client,
@@ -322,7 +322,7 @@ def analyze_coverage() -> None:
         special["venue_id"]
         for special in active_specials
         if (special.get("venues") or {}).get("city") == "Atlanta"
-        and (special.get("venues") or {}).get("active") is not False
+        and (special.get("venues") or {}).get("is_active") is not False
         and special.get("venue_id") is not None
     }
 

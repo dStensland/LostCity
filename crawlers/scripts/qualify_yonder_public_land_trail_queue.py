@@ -146,7 +146,7 @@ def main() -> int:
         if not batch:
             break
         venue_rows.extend(
-            row for row in batch if row.get("active", True) is not False and row.get("state") == "GA"
+            row for row in batch if row.get("is_active", True) is not False and row.get("state") == "GA"
         )
         if len(batch) < 1000:
             break

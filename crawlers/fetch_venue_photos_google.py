@@ -119,8 +119,8 @@ def fetch_venue_photos(
     # Build query
     query = (
         client.table("places")
-        .select("id,name,slug,address,city,state,website,image_url,venue_type")
-        .eq("active", True)
+        .select("id,name,slug,address,city,state,website,image_url,place_type")
+        .eq("is_active", True)
         .is_("image_url", "null")
     )
 

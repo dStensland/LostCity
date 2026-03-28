@@ -193,7 +193,7 @@ def get_venues_needing_hydration(
 
     query = client.table("places").select(
         "id, name, slug, address, city, state, lat, lng, venue_type, hours, image_url, foursquare_id, website"
-    ).eq("active", True).eq("city", "Atlanta")
+    ).eq("is_active", True).eq("city", "Atlanta")
 
     if venue_type:
         query = query.eq("place_type", venue_type)
@@ -283,7 +283,7 @@ def hydrate_venue(venue: dict, dry_run: bool = False) -> bool:
     name = venue["name"]
     lat = venue.get("lat") or ATLANTA_LAT
     lng = venue.get("lng") or ATLANTA_LNG
-    venue_type = venue.get("venue_type")
+    venue_type = venue.get("place_type")
 
     # Search Foursquare
     category = CATEGORY_MAP.get(venue_type)

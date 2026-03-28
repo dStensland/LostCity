@@ -83,7 +83,7 @@ def apply_metadata_fixes(apply: bool = False) -> int:
     for slug, patch in VENUE_METADATA_FIXES.items():
         venue_res = (
             client.table("places")
-            .select("id,slug,name,venue_type,website")
+            .select("id,slug,name,place_type,website")
             .eq("slug", slug)
             .limit(1)
             .execute()

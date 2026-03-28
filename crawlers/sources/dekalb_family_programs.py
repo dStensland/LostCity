@@ -67,7 +67,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
     if not slug or slug == GENERIC_VENUE["slug"]:
         return None
 
-    venue_type = str(place_data.get("place_type") or place_data.get("venue_type") or "").strip().lower()
+    venue_type = str(place_data.get("place_type") or place_data.get("place_type") or "").strip().lower()
     envelope = TypedEntityEnvelope()
 
     if venue_type in {"recreation", "community_center"}:

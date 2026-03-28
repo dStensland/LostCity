@@ -255,7 +255,7 @@ def _build_destination_envelope(venue_id: int, venue_dict: dict) -> TypedEntityE
             "metadata": {
                 "source_type": "family_destination_enrichment",
                 "source_slug": "trees-atlanta",
-                "place_type": venue_dict.get("venue_type"),
+                "place_type": venue_dict.get("place_type"),
                 "city": str(venue_dict.get("city") or "Atlanta").lower(),
                 "neighborhood": neighborhood.lower() if neighborhood else None,
             },

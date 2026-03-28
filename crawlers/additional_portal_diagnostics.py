@@ -194,7 +194,7 @@ def run_diagnostics():
             if venue_ids:
                 venues_data = (
                     client.table("places")
-                    .select("id, name, neighborhood, venue_type")
+                    .select("id, name, neighborhood, place_type")
                     .in_("id", venue_ids)
                     .execute()
                 ).data or []

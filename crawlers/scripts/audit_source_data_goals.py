@@ -189,7 +189,7 @@ def main() -> None:
 
     venue_rows = (
         client.table("places")
-        .select("id,slug,name,venue_type,spot_type")
+        .select("id,slug,name,place_type,spot_type")
         .execute()
         .data
         or []
@@ -284,7 +284,7 @@ def main() -> None:
         goals, mode = resolve_source_data_goals(
             source_slug=source_slug,
             source_name=source_name,
-            venue_type=venue.get("venue_type"),
+            venue_type=venue.get("place_type"),
             spot_type=venue.get("spot_type"),
         )
         if mode == "profile":

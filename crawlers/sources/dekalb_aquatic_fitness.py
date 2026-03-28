@@ -109,7 +109,7 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
             "source_url": ACTIVITY_SEARCH_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "place_type": place_data.get("place_type") or place_data.get("venue_type"),
+                "place_type": place_data.get("place_type") or place_data.get("place_type"),
                 "county": "dekalb",
             },
         },

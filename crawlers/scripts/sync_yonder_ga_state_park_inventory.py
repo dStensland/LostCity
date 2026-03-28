@@ -62,7 +62,7 @@ def load_venue_map(client, slugs: list[str]) -> dict[str, int]:
         client.table("places")
         .select("id,slug")
         .in_("slug", slugs)
-        .eq("active", True)
+        .eq("is_active", True)
         .execute()
     )
     return {row["slug"]: row["id"] for row in (result.data or [])}

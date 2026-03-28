@@ -209,7 +209,7 @@ def validate_place_minimum_fields(venue_data: dict) -> tuple[bool, list[str]]:
     # Strongly preferred fields
     if not venue_data.get("lat") or not venue_data.get("lng"):
         warnings.append("missing coordinates (lat/lng)")
-    if not venue_data.get("venue_type"):
+    if not venue_data.get("place_type"):
         warnings.append("missing venue_type")
     if not venue_data.get("address"):
         warnings.append("missing address")

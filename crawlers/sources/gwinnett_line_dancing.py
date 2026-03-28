@@ -138,7 +138,7 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
             "source_url": CATALOG_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "place_type": place_data.get("place_type") or place_data.get("venue_type"),
+                "place_type": place_data.get("place_type") or place_data.get("place_type"),
                 "county": "gwinnett",
             },
         },

@@ -97,12 +97,12 @@ def main():
             if not dry_run:
                 # Don't delete, just set to inactive — they may have events pointing to them
                 ids = [v["id"] for v in r.data]
-                client.table("places").update({"active": False, "place_type": "venue"}).in_("id", ids).execute()
+                client.table("places").update({"is_active": False, "place_type": "venue"}).in_("id", ids).execute()
                 print(f"    -> Deactivated and set type to 'venue'")
             total_deleted += r.count
 
     # Step 3: Check remaining null types
-    r = client.table("places").select("id", count="exact").is_("venue_type", "null").execute()
+    r = client.table("places").select("id", count="exact").is_("place_type", "null").execute()
     print(f"\n=== Remaining null venue_type: {r.count} ===")
 
     print(f"\nTotal: {total_updated} remapped, {total_deleted} deactivated")

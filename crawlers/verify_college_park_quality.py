@@ -77,7 +77,7 @@ def check_venue_completeness(venues: List[Dict]) -> Dict:
         if not venue.get('neighborhood'):
             stats['missing_fields']['neighborhood'] += 1
         
-        if not venue.get('venue_type'):
+        if not venue.get('place_type'):
             stats['missing_fields']['venue_type'] += 1
     
     return stats
@@ -148,7 +148,7 @@ def main():
     logger.info("-" * 70)
     type_counts = {}
     for venue in all_venues:
-        vtype = venue.get('venue_type') or 'unknown'
+        vtype = venue.get('place_type') or 'unknown'
         type_counts[vtype] = type_counts.get(vtype, 0) + 1
     
     for vtype, count in sorted(type_counts.items(), key=lambda x: x[1], reverse=True):

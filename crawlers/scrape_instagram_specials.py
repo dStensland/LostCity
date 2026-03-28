@@ -652,8 +652,8 @@ def get_venues_with_instagram(
 
     query = (
         client.table("places")
-        .select("id, name, slug, instagram, venue_type, website")
-        .neq("active", False)
+        .select("id, name, slug, instagram, place_type, website")
+        .neq("is_active", False)
         .not_.is_("instagram", "null")
     )
 

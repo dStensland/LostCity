@@ -47,10 +47,10 @@ def fetch_destination_venues(client) -> list[dict]:
     for vtype in DESTINATION_TYPES:
         batch = (
             client.table("places")
-            .select("id,name,slug,description,neighborhood,website,image_url,lat,lng,venue_type")
+            .select("id,name,slug,description,neighborhood,website,image_url,lat,lng,place_type")
             .eq("place_type", vtype)
             .eq("state", "GA")
-            .eq("active", True)
+            .eq("is_active", True)
             .limit(1000)
             .execute()
         )
@@ -156,7 +156,7 @@ def backfill_web_metadata(client, venues: list[dict], *, dry_run: bool, limit: i
         and not any(x in (v.get("website") or "") for x in ["facebook.com", "instagram.com"])
     ]
     # Sort: high-value types first
-    candidates.sort(key=lambda v: (0 if v.get("venue_type") in HIGH_VALUE_TYPES else 1, v.get("name", "")))
+    candidates.sort(key=lambda v: (0 if v.get("place_type") in HIGH_VALUE_TYPES else 1, v.get("name", "")))
     if limit:
         candidates = candidates[:limit]
     stats["candidates"] = len(candidates)

@@ -320,7 +320,7 @@ def run_audit():
     
     missing_coords = [v for v in all_venues if not v.get('lat') or not v.get('lng')]
     missing_city = [v for v in all_venues if not v.get('city')]
-    missing_type = [v for v in all_venues if not v.get('venue_type')]
+    missing_type = [v for v in all_venues if not v.get('place_type')]
     
     findings['missing_venue_data'] = {
         'missing_coords': len(missing_coords),

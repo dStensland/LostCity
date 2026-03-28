@@ -59,7 +59,7 @@ def main():
     # Get all active T3 venues
     all_t3 = []
     for vt in T3_TYPES:
-        r = client.table("places").select("id,name,venue_type").eq("active", True).eq("place_type", vt).execute()
+        r = client.table("places").select("id,name,place_type").eq("is_active", True).eq("place_type", vt).execute()
         all_t3.extend(r.data or [])
 
     t3_ids = [v["id"] for v in all_t3]

@@ -48,7 +48,7 @@ def fetch_all_venues(client, *, active_only: bool = True) -> list[dict]:
             "id, name, slug, city, state, lat, lng, neighborhood, active, address"
         ).order("id")
         if active_only:
-            query = query.eq("active", True)
+            query = query.eq("is_active", True)
         r = query.range(offset, offset + 999).execute()
         if not r.data:
             break
@@ -79,7 +79,7 @@ def step1_address_as_name(client, venues: list[dict], *, write: bool = False) ->
         deactivated = 0
         for v, reason in flagged:
             try:
-                client.table("places").update({"active": False}).eq("id", v["id"]).execute()
+                client.table("places").update({"is_active": False}).eq("id", v["id"]).execute()
                 deactivated += 1
             except Exception as e:
                 logger.error(f"Failed to deactivate venue {v['id']}: {e}")
@@ -121,7 +121,7 @@ def step2_out_of_state(client, venues: list[dict], *, write: bool = False) -> in
         deactivated = 0
         for v, reason in flagged:
             try:
-                client.table("places").update({"active": False}).eq("id", v["id"]).execute()
+                client.table("places").update({"is_active": False}).eq("id", v["id"]).execute()
                 deactivated += 1
             except Exception as e:
                 logger.error(f"Failed to deactivate venue {v['id']}: {e}")

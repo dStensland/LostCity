@@ -326,7 +326,7 @@ def query_7_venue_types(events, venues_map):
         venue = venues_map.get(vid) if vid else None
         if not venue:
             continue
-        vtype = venue.get("venue_type") or "unknown"
+        vtype = venue.get("place_type") or "unknown"
         if vtype == "unknown":
             no_type_count += 1
         vtype_counts[vtype] += 1

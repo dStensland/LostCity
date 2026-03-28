@@ -132,7 +132,7 @@ def classify_event_for_backfill(
         )
 
     place_data = event.get("venues") or {}
-    venue_type = place_data.get("venue_type") if isinstance(place_data, dict) else None
+    venue_type = place_data.get("place_type") if isinstance(place_data, dict) else None
     title = event.get("title") or ""
     description = event.get("description") or ""
 

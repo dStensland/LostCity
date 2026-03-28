@@ -244,7 +244,7 @@ def get_venues_needing_hours(
 
     query = client.table("places").select(
         "id, name, slug, address, city, lat, lng, hours, venue_type, hours_source, hours_updated_at"
-    ).eq("active", True).not_.is_("lat", "null").not_.is_("lng", "null")
+    ).eq("is_active", True).not_.is_("lat", "null").not_.is_("lng", "null")
 
     if city:
         query = query.eq("city", city)
@@ -351,7 +351,7 @@ def hydrate_venue_hours(venue: dict, dry_run: bool = False) -> dict:
 
     # Normalize/validate through shared pipeline
     hours_json, hours_display = prepare_hours_update(
-        raw_hours, source="google", venue_type=venue.get("venue_type"),
+        raw_hours, source="google", venue_type=venue.get("place_type"),
     )
     if not hours_json:
         result["status"] = "no_hours"

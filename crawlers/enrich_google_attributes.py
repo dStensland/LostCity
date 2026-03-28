@@ -377,7 +377,7 @@ def get_venues(
     query = (
         client.table("places")
         .select("id, name, slug, city, lat, lng, vibes, cuisine, hours, hours_display, menu_url, reservation_url, price_level, phone, last_verified_at")
-        .eq("active", True)
+        .eq("is_active", True)
         .not_.is_("lat", "null")
         .not_.is_("lng", "null")
     )

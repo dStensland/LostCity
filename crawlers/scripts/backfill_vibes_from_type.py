@@ -94,7 +94,7 @@ def fetch_venues_without_vibes(client, *, venue_type=None):
     all_venues = []
     offset = 0
     while True:
-        q = client.table("places").select("id,name,venue_type,vibes").eq("active", True)
+        q = client.table("places").select("id,name,place_type,vibes").eq("is_active", True)
         if venue_type:
             q = q.eq("place_type", venue_type)
         q = q.order("id").range(offset, offset + 999)

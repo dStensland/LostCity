@@ -42,7 +42,7 @@ def main():
     
     # Query events with venue information
     result = client.table("events") \
-        .select("*, venue:venues(name, neighborhood, venue_type, address, city)") \
+        .select("*, venue:venues(name, neighborhood, place_type, address, city)") \
         .gte("start_date", start_date) \
         .lte("start_date", end_date) \
         .order("start_date") \

@@ -289,9 +289,9 @@ class VenueCache:
         client = get_client()
         result = (
             client.table("places")
-            .select("id, name, aliases, venue_type")
+            .select("id, name, aliases, place_type")
             .eq("city", "Atlanta")
-            .eq("active", True)
+            .eq("is_active", True)
             .execute()
         )
         rows = result.data or []
@@ -300,7 +300,7 @@ class VenueCache:
             vid = row["id"]
             name = row["name"] or ""
             aliases = row.get("aliases") or []
-            venue_type = row.get("venue_type") or ""
+            venue_type = row.get("place_type") or ""
 
             if len(name) < _MIN_NAME_CHARS:
                 continue

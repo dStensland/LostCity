@@ -201,7 +201,7 @@ def main() -> None:
         client,
         "venues",
         "id,slug,name,city,description,active",
-        query_builder=lambda q: q.eq("active", False),
+        query_builder=lambda q: q.eq("is_active", False),
     )
     inactive_venues = [
         row
@@ -340,7 +340,7 @@ def main() -> None:
 
     updated = 0
     for candidate in candidates:
-        client.table("places").update({"active": True}).eq("id", candidate.venue_id).execute()
+        client.table("places").update({"is_active": True}).eq("id", candidate.venue_id).execute()
         updated += 1
 
     print(

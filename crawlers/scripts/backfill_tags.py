@@ -52,7 +52,7 @@ def backfill_tags(dry_run: bool = False, batch_size: int = 100) -> dict:
                         venue = get_venue_by_id(venue_id)
                         venue_cache[venue_id] = {
                             "vibes": venue.get("vibes", []) if venue else [],
-                            "place_type": venue.get("venue_type") if venue else None,
+                            "place_type": venue.get("place_type") if venue else None,
                         }
                     venue_vibes = venue_cache[venue_id]["vibes"]
                     venue_type = venue_cache[venue_id]["venue_type"]

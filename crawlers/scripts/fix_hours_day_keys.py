@@ -40,7 +40,7 @@ def fix_day_keys(dry_run: bool = False):
     # Fetch all venues that have hours
     result = client.table("places").select(
         "id, name, hours, hours_source, last_verified_at"
-    ).eq("active", True).not_.is_("hours", "null").execute()
+    ).eq("is_active", True).not_.is_("hours", "null").execute()
 
     venues = result.data or []
     logger.info(f"Found {len(venues)} venues with hours data")

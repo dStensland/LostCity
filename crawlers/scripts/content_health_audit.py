@@ -311,7 +311,7 @@ def summarize_crawl_freshness(
 
 
 def normalized_venue_type(row: dict[str, Any]) -> str:
-    return str(row.get("venue_type") or "").strip().lower()
+    return str(row.get("place_type") or "").strip().lower()
 
 
 def has_usable_hours(value: Any) -> bool:
@@ -1141,7 +1141,7 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
         1 for row in venue_rows if isinstance(row.get("vibes"), list) and "historic" in row.get("vibes", [])
     )
     venues_with_museum_or_historic_type = sum(
-        1 for row in venue_rows if (row.get("venue_type") or "") in HISTORIC_TYPES
+        1 for row in venue_rows if (row.get("place_type") or "") in HISTORIC_TYPES
     )
     venues_with_historyish_description = sum(
         1
@@ -1157,7 +1157,7 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
         if int(row.get("walkable_neighbor_count") or 0) > 0:
             walkability_by_neighborhood[neighborhood] += 1
         is_historic = (
-            ((row.get("venue_type") or "") in HISTORIC_TYPES)
+            ((row.get("place_type") or "") in HISTORIC_TYPES)
             or (isinstance(row.get("vibes"), list) and "historic" in (row.get("vibes") or []))
             or any(keyword in (row.get("description") or "").lower() for keyword in HISTORY_KEYWORDS)
         )
@@ -1256,7 +1256,7 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
         if int(row.get("venue_id") or 0) in closed_venue_id_set
     )
 
-    inactive_venue_ids = {int(row["id"]) for row in venue_rows if row.get("active") is False and row.get("id") is not None}
+    inactive_venue_ids = {int(row["id"]) for row in venue_rows if row.get("is_active") is False and row.get("id") is not None}
     future_visible_events_on_inactive_venues = sum(
         1 for row in duplicate_rows_visible if int(row.get("venue_id") or 0) in inactive_venue_ids
     )

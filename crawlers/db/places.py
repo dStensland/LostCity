@@ -234,7 +234,7 @@ def infer_location_designator(venue_data: dict) -> str:
     """Infer location designator for venue-level rendering/quality logic."""
     slug = (venue_data.get("slug") or "").strip().lower()
     name = _normalize_venue_name(venue_data.get("name"))
-    venue_type = (venue_data.get("place_type") or venue_data.get("venue_type") or "").strip().lower()
+    venue_type = (venue_data.get("place_type") or venue_data.get("place_type") or "").strip().lower()
 
     if (
         venue_type == "virtual"
@@ -341,11 +341,29 @@ def _fetch_venue_description(url: str) -> Optional[str]:
 
 
 def _sanitize_venue_payload(venue_data: dict) -> dict:
-    """Strip event-only fields before any venues table insert."""
+    """Strip event-only fields before any venues table insert.
+
+    Also normalizes legacy column names:
+      - "venue_type" → "place_type"  (Deploy-10 rename)
+      - "active"     → "is_active"   (Deploy-10 rename)
+    so that existing VENUE_DATA dicts continue to work without changes.
+    """
     if not venue_data:
         return {}
 
     sanitized = dict(venue_data)
+
+    # Normalize legacy Deploy-10 column renames
+    if "venue_type" in sanitized and "place_type" not in sanitized:
+        sanitized["place_type"] = sanitized.pop("venue_type")
+    elif "venue_type" in sanitized:
+        sanitized.pop("venue_type")  # place_type already present; discard duplicate
+
+    if "active" in sanitized and "is_active" not in sanitized:
+        sanitized["is_active"] = sanitized.pop("active")
+    elif "active" in sanitized:
+        sanitized.pop("active")  # is_active already present; discard duplicate
+
     stripped = sorted(key for key in _EVENT_ONLY_VENUE_FIELDS if key in sanitized)
     for key in stripped:
         sanitized.pop(key, None)

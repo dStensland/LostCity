@@ -211,7 +211,7 @@ def analyze_gaps() -> None:
         if event.get("source_id"):
             future_items_by_source[event["source_id"]] += 1
         venue = event.get("venues") or {}
-        if venue.get("active") is False:
+        if venue.get("is_active") is False:
             continue
         city = venue.get("city")
         if city:

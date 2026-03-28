@@ -68,7 +68,7 @@ def load_venue_id(client) -> int | None:
         client.table("places")
         .select("id")
         .eq("slug", VENUE_SLUG)
-        .eq("active", True)
+        .eq("is_active", True)
         .limit(1)
         .maybe_single()
         .execute()

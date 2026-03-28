@@ -38,7 +38,7 @@ def run_diagnostic():
 
     venues = (
         client.table("places")
-        .select("id, name, venue_type")
+        .select("id, name, place_type")
         .in_("place_type", list(ARTS_VENUE_TYPES))
         .execute()
     )

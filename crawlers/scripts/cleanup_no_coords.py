@@ -80,8 +80,8 @@ def fetch_no_coord_venues(client) -> list[dict]:
     while True:
         result = (
             client.table("places")
-            .select("id,name,slug,address,city,state,venue_type,neighborhood,lat,lng,website")
-            .eq("active", True)
+            .select("id,name,slug,address,city,state,place_type,neighborhood,lat,lng,website")
+            .eq("is_active", True)
             .is_("lat", "null")
             .order("id")
             .range(offset, offset + 999)
@@ -147,7 +147,7 @@ def phase1_deactivate_junk(client, venues: list[dict], event_counts: dict,
     for v in venues:
         vid = v["id"]
         name = v.get("name", "")
-        vtype = v.get("venue_type")
+        vtype = v.get("place_type")
         n_events = event_counts.get(vid, 0)
 
         # Check explicit junk patterns (deactivate even with events)
@@ -171,7 +171,7 @@ def phase1_deactivate_junk(client, venues: list[dict], event_counts: dict,
         })
 
         if not dry_run:
-            client.table("places").update({"active": False}).eq("id", vid).execute()
+            client.table("places").update({"is_active": False}).eq("id", vid).execute()
 
         stats["deactivated"] += 1
 
@@ -266,7 +266,7 @@ def phase3_assign_neighborhoods(client, dry_run: bool = False) -> dict:
         result = (
             client.table("places")
             .select("id,name,lat,lng")
-            .eq("active", True)
+            .eq("is_active", True)
             .not_.is_("lat", "null")
             .is_("neighborhood", "null")
             .order("id")
@@ -319,7 +319,7 @@ def phase4_report(client) -> None:
     with_address = 0
     without_address = 0
     for v in remaining:
-        vtype = v.get("venue_type") or "(null)"
+        vtype = v.get("place_type") or "(null)"
         by_type[vtype] = by_type.get(vtype, 0) + 1
         if v.get("address"):
             with_address += 1
@@ -342,7 +342,7 @@ def phase4_report(client) -> None:
         result = (
             client.table("places")
             .select("id", count="exact")
-            .eq("active", True)
+            .eq("is_active", True)
             .not_.is_("lat", "null")
             .is_("neighborhood", "null")
             .range(offset, offset + 999)

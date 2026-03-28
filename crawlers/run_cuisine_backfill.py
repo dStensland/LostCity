@@ -27,7 +27,7 @@ def main():
     result = (
         client.table("places")
         .select("id")
-        .eq("active", True)
+        .eq("is_active", True)
         .is_("cuisine", "null")
         .not_.is_("website", "null")
         .in_("place_type", FOOD_TYPES)

@@ -56,9 +56,9 @@ def main():
     # Find active venues with qualifying types that aren't flagged
     query = (
         client.table("places")
-        .select("id, name, venue_type, city, neighborhood, is_experience, typical_duration_minutes")
+        .select("id, name, place_type, city, neighborhood, is_experience, typical_duration_minutes")
         .in_("place_type", EXPERIENCE_VENUE_TYPES)
-        .neq("active", False)
+        .neq("is_active", False)
     )
     if args.city:
         query = query.eq("city", args.city)

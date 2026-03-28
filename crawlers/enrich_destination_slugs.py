@@ -869,7 +869,7 @@ def _maybe_planning_enrich(venue: Dict[str, Any]) -> Dict[str, Any]:
 
     combined_text = " ".join(combined_text_parts)
     planning_note = _extract_planning_note_from_text(combined_text)
-    planning_note = _compose_hospitality_planning_note(planning_note, venue.get("place_type") or venue.get("venue_type"))
+    planning_note = _compose_hospitality_planning_note(planning_note, venue.get("place_type") or venue.get("place_type"))
     phone = _select_first_party_phone(
         website,
         page_texts,
@@ -881,7 +881,7 @@ def _maybe_planning_enrich(venue: Dict[str, Any]) -> Dict[str, Any]:
     if (
         not planning_note
         and fetched_any_page
-        and venue.get("place_type") or venue.get("venue_type") in HOSPITALITY_VENUE_TYPES
+        and venue.get("place_type") or venue.get("place_type") in HOSPITALITY_VENUE_TYPES
         and venue.get("planning_notes")
     ):
         updates: Dict[str, Any] = {
@@ -926,7 +926,7 @@ def _maybe_website_hours_enrich(venue: Dict[str, Any]) -> Dict[str, Any]:
         hours, hours_display = prepare_hours_update(
             raw_hours,
             source="website",
-            venue_type=venue.get("place_type") or venue.get("venue_type"),
+            venue_type=venue.get("place_type") or venue.get("place_type"),
         )
         if not hours:
             continue
@@ -985,7 +985,7 @@ def _maybe_foursquare_enrich(venue: Dict[str, Any]) -> Dict[str, Any]:
         query=query_name,
         lat=float(lat),
         lng=float(lng),
-        categories=CATEGORY_MAP.get(venue.get("place_type") or venue.get("venue_type")),
+        categories=CATEGORY_MAP.get(venue.get("place_type") or venue.get("place_type")),
     )
     if not search_result:
         return {}

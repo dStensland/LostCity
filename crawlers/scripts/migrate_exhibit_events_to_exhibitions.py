@@ -87,7 +87,7 @@ def classify_exhibit(event: dict) -> str:
     """
     title = (event.get("title") or "").strip()
     title_lower = title.lower()
-    venue_type = (event.get("venue_type") or "").strip().lower()
+    venue_type = (event.get("place_type") or "").strip().lower()
     source_slug = (event.get("source_slug") or "").strip().lower()
     start_date = event.get("start_date")
 

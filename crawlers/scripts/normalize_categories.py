@@ -167,9 +167,9 @@ def main():
     venue_types = {}
     for i in range(0, len(venue_ids), 50):
         batch = venue_ids[i:i+50]
-        vr = client.table("places").select("id,venue_type").in_("id", batch).execute()
+        vr = client.table("places").select("id,place_type").in_("id", batch).execute()
         for v in vr.data:
-            venue_types[v["id"]] = v.get("venue_type")
+            venue_types[v["id"]] = v.get("place_type")
 
     by_new_cat = {}
     still_other = []

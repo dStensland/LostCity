@@ -53,7 +53,7 @@ def migrate(apply: bool = False) -> None:
         # Look up venue
         venue_res = (
             client.table("places")
-            .select("id, name, venue_type")
+            .select("id, name, place_type")
             .eq("slug", venue_slug)
             .limit(1)
             .execute()

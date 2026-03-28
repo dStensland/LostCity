@@ -22,7 +22,7 @@ def main():
     while True:
         r = (client.table('places')
              .select('id,name,lat,lng,city')
-             .eq('active', True)
+             .eq('is_active', True)
              .not_.is_('lat', 'null')
              .is_('neighborhood', 'null')
              .order('id')

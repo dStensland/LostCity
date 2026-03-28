@@ -135,8 +135,8 @@ def scrape_descriptions(
     # Fetch all with websites, filter client-side to catch both null and empty string
     query = (
         client.table("places")
-        .select("id,name,slug,website,venue_type,description")
-        .eq("active", True)
+        .select("id,name,slug,website,place_type,description")
+        .eq("is_active", True)
         .not_.is_("website", "null")
     )
 

@@ -228,7 +228,7 @@ def main():
     # Fetch venues with images for recommendations
     venue_result = (
         sb.table("places")
-        .select("id, name, venue_type, neighborhood")
+        .select("id, name, place_type, neighborhood")
         .not_.is_("image_url", "null")
         .not_.is_("neighborhood", "null")
         .limit(500)

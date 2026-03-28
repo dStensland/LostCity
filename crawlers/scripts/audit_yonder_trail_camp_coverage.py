@@ -63,7 +63,7 @@ def fmt_examples(rows: list[dict[str, Any]], limit: int = 12) -> list[str]:
     lines: list[str] = []
     for row in rows[:limit]:
         lines.append(
-            f"- {row.get('name')} [{row.get('venue_type') or 'null'}] "
+            f"- {row.get('name')} [{row.get('place_type') or 'null'}] "
             f"({row.get('city') or 'Unknown city'})"
         )
     return lines
@@ -79,7 +79,7 @@ def main() -> int:
             "venues",
             "id,name,slug,venue_type,city,state,description,active",
         )
-        if row.get("active", True) is not False and row.get("state") == "GA"
+        if row.get("is_active", True) is not False and row.get("state") == "GA"
     ]
 
     snapshots = fetch_rows(
@@ -91,31 +91,31 @@ def main() -> int:
         row["venue_id"] for row in snapshots if row.get("venue_id") is not None
     }
 
-    trail_typed = [row for row in venues if row.get("venue_type") == "trail"]
-    park_typed = [row for row in venues if row.get("venue_type") == "park"]
-    campground_typed = [row for row in venues if row.get("venue_type") == "campground"]
+    trail_typed = [row for row in venues if row.get("place_type") == "trail"]
+    park_typed = [row for row in venues if row.get("place_type") == "park"]
+    campground_typed = [row for row in venues if row.get("place_type") == "campground"]
 
     trail_like = [row for row in venues if TRAIL_NAME_RE.search(row.get("name") or "")]
     trail_like_mismatch = [
-        row for row in trail_like if row.get("venue_type") not in {"trail", "park"}
+        row for row in trail_like if row.get("place_type") not in {"trail", "park"}
     ]
 
     camp_like = [row for row in venues if CAMP_NAME_RE.search(row.get("name") or "")]
     camp_like_mismatch = [
         row
         for row in camp_like
-        if row.get("venue_type") not in {"campground", "park", "trail"}
+        if row.get("place_type") not in {"campground", "park", "trail"}
     ]
 
     state_park_parents = [
         row
         for row in venues
-        if STATE_PARK_RE.search(row.get("name") or "") and row.get("venue_type") == "park"
+        if STATE_PARK_RE.search(row.get("name") or "") and row.get("place_type") == "park"
     ]
     state_park_campgrounds = [
         row
         for row in venues
-        if STATE_PARK_RE.search(row.get("name") or "") and row.get("venue_type") == "campground"
+        if STATE_PARK_RE.search(row.get("name") or "") and row.get("place_type") == "campground"
     ]
     state_parks_with_inventory = [
         row for row in state_park_parents if row.get("id") in venue_ids_with_inventory

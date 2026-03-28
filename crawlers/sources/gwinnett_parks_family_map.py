@@ -247,7 +247,7 @@ def _fetch_existing_venue(client, park: dict) -> Optional[dict]:
         value = park[field]
         result = (
             client.table("places")
-            .select("id,name,slug,address,city,venue_type,spot_type")
+            .select("id,name,slug,address,city,place_type,spot_type")
             .eq(field, value)
             .limit(1)
             .execute()
@@ -264,7 +264,7 @@ def _fetch_existing_venue(client, park: dict) -> Optional[dict]:
     if park.get("address"):
         result = (
             client.table("places")
-            .select("id,name,slug,address,city,venue_type,spot_type")
+            .select("id,name,slug,address,city,place_type,spot_type")
             .eq("address", park["address"])
             .limit(5)
             .execute()
@@ -275,7 +275,7 @@ def _fetch_existing_venue(client, park: dict) -> Optional[dict]:
 
     result = (
         client.table("places")
-        .select("id,name,slug,address,city,venue_type,spot_type")
+        .select("id,name,slug,address,city,place_type,spot_type")
         .eq("name", park["name"])
         .limit(5)
         .execute()
@@ -345,7 +345,7 @@ def _build_venue_record(park: dict) -> dict:
         "address": park["address"],
         "city": park["city"],
         "state": park["state"],
-        "place_type": park.get("place_type") or park.get("venue_type"),
+        "place_type": park.get("place_type") or park.get("place_type"),
         "spot_type": park["spot_type"],
         "website": park["url"],
         "description": park["summary"],

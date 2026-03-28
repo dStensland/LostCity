@@ -35,7 +35,7 @@ def run_discovery():
         if vid not in venue_mentions:
             venue_mentions[vid] = {
                 "name": venue["name"],
-                "place_type": venue.get("venue_type"),
+                "place_type": venue.get("place_type"),
                 "website": venue.get("website"),
                 "mention_count": 0,
             }

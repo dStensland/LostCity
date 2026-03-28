@@ -55,7 +55,7 @@ def analyze_top_venues():
     
     # Get events with venue info
     result = supabase.table("events")\
-        .select("place_id, venues(name, website, venue_type)")\
+        .select("place_id, venues(name, website, place_type)")\
         .eq("source_id", 1)\
         .gte("created_at", TODAY)\
         .execute()
@@ -76,7 +76,7 @@ def analyze_top_venues():
     for venue_id, data in sorted_venues:
         venue = data["venue"]
         has_website = "Yes" if venue.get("website") else "No"
-        venue_type = venue.get("venue_type") or "unknown"
+        venue_type = venue.get("place_type") or "unknown"
         print(f"{venue['name'][:48]:50s} {data['count']:8d} {has_website:>10s} {venue_type:>20s}")
     
     return sorted_venues
@@ -111,7 +111,7 @@ def analyze_new_venues():
     print("="*80)
     
     result = supabase.table("places")\
-        .select("name, address, city, venue_type, website")\
+        .select("name, address, city, place_type, website")\
         .gte("created_at", TODAY)\
         .execute()
     
@@ -121,7 +121,7 @@ def analyze_new_venues():
     for venue in result.data[:50]:  # Show first 50
         has_website = "Yes" if venue.get("website") else "No"
         city = venue.get("city") or "Unknown"
-        venue_type = venue.get("venue_type") or "unknown"
+        venue_type = venue.get("place_type") or "unknown"
         print(f"{venue['name'][:48]:50s} {city[:13]:15s} {venue_type:20s} {has_website:>10s}")
 
 def analyze_venues_with_websites():
@@ -132,7 +132,7 @@ def analyze_venues_with_websites():
     
     # Get distinct venues from Eventbrite events that have websites
     result = supabase.table("events")\
-        .select("place_id, venues(name, website, venue_type)")\
+        .select("place_id, venues(name, website, place_type)")\
         .eq("source_id", 1)\
         .execute()
     
@@ -158,7 +158,7 @@ def analyze_venues_with_websites():
     print(f"\n{'Venue Name':50s} {'Events':>8s} {'Type':20s} {'Website':50s}")
     print("-" * 130)
     for venue_id, venue, count in sorted_venues[:50]:  # Top 50
-        venue_type = venue.get("venue_type") or "unknown"
+        venue_type = venue.get("place_type") or "unknown"
         website = venue.get("website", "")[:48]
         print(f"{venue['name'][:48]:50s} {count:8d} {venue_type:20s} {website:50s}")
     
@@ -172,7 +172,7 @@ def analyze_repeat_organizers():
     
     # Get all Eventbrite events
     result = supabase.table("events")\
-        .select("place_id, venues(name, website, venue_type)")\
+        .select("place_id, venues(name, website, place_type)")\
         .eq("source_id", 1)\
         .execute()
     
@@ -193,7 +193,7 @@ def analyze_repeat_organizers():
     for venue_id, data in prolific[:50]:  # Top 50
         venue = data["venue"]
         has_website = "Yes" if venue.get("website") else "No"
-        venue_type = venue.get("venue_type") or "unknown"
+        venue_type = venue.get("place_type") or "unknown"
         print(f"{venue['name'][:48]:50s} {data['count']:8d} {has_website:>10s} {venue_type:>20s}")
     
     return prolific
@@ -244,7 +244,7 @@ def main():
             "venue": venue["name"],
             "website": venue.get("website"),
             "events": count,
-            "type": venue.get("venue_type"),
+            "type": venue.get("place_type"),
             "has_crawler": has_crawler,
             "priority": "HIGH" if count >= 10 and not has_crawler else "MEDIUM" if count >= 5 else "LOW"
         })

@@ -129,7 +129,7 @@ def get_venues_needing_hours(
 
     query = client.table("places").select(
         "id, name, slug, city, foursquare_id, hours, venue_type, hours_source, hours_updated_at"
-    ).eq("active", True)
+    ).eq("is_active", True)
 
     # Must have foursquare_id
     query = query.not_.is_("foursquare_id", "null")
@@ -234,7 +234,7 @@ def main():
         if raw_hours:
             # Normalize/validate through shared pipeline
             hours, display = prepare_hours_update(
-                raw_hours, source="foursquare", venue_type=venue.get("venue_type"),
+                raw_hours, source="foursquare", venue_type=venue.get("place_type"),
             )
             if not hours:
                 logger.info(f"  NO HOURS: {name} (validation failed)")

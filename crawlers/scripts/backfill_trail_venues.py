@@ -131,8 +131,8 @@ def main() -> None:
     # We pull name, slug, venue_type, city, neighborhood so we can report clearly.
     result = (
         client.table("places")
-        .select("id, name, slug, venue_type, city, neighborhood, address")
-        .neq("active", False)
+        .select("id, name, slug, place_type, city, neighborhood, address")
+        .neq("is_active", False)
         .eq("city", args.city)
         .execute()
     )
@@ -151,7 +151,7 @@ def main() -> None:
         if not is_trail_candidate(v):
             continue
 
-        current_type = v.get("venue_type")
+        current_type = v.get("place_type")
 
         if current_type == "trail":
             already_trail.append(v)
@@ -183,14 +183,14 @@ def main() -> None:
         print(f"\n  Candidates (will be updated to venue_type='trail'):")
         for v in sorted(candidates, key=lambda x: x["name"]):
             hood = v.get("neighborhood") or ""
-            current = v.get("venue_type") or "NULL"
+            current = v.get("place_type") or "NULL"
             print(f"    [{v['id']:>5}] {v['name']:<45} current={current:<20} {hood}")
 
     if skipped_type:
         print(f"\n  Skipped (keyword match but type not reclassifiable):")
         for v in sorted(skipped_type, key=lambda x: x["name"]):
             hood = v.get("neighborhood") or ""
-            current = v.get("venue_type") or "NULL"
+            current = v.get("place_type") or "NULL"
             print(f"    [{v['id']:>5}] {v['name']:<45} type={current:<20} {hood}")
 
     # --- Apply ---

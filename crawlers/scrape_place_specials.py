@@ -2351,7 +2351,7 @@ def upsert_results(
         current_source = venue.get("hours_source")
         if should_update_hours(current_source, hours_source):
             hours_json, hours_display = prepare_hours_update(
-                data["hours"], source=hours_source, venue_type=venue.get("venue_type"),
+                data["hours"], source=hours_source, venue_type=venue.get("place_type") or venue.get("place_type"),
             )
             if hours_json:
                 updates["hours"] = hours_json
@@ -2526,13 +2526,13 @@ def get_venues(
 
     query = (
         client.table("places")
-        .select("id, name, slug, website, venue_type, description, short_description, "
+        .select("id, name, slug, website, place_type, description, short_description, "
                "image_url, lat, lng, hours, menu_url, reservation_url, instagram, "
                "facebook_url, phone, price_level, vibes, cuisine, service_style, "
                "genres, accepts_reservations, is_event_venue, is_chain, "
                "dietary_options, parking, menu_highlights, payment_notes, "
                "last_verified_at, hours_source")
-        .neq("active", False)
+        .neq("is_active", False)
         .not_.is_("website", "null")
     )
 

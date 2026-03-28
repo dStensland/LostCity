@@ -68,7 +68,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": f"{BASE_URL}/visit/",
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "place_type": BELTLINE_HQ.get("venue_type"),
+                "place_type": BELTLINE_HQ.get("place_type"),
                 "city": "atlanta",
             },
         },

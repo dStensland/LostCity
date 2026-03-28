@@ -109,7 +109,7 @@ def fetch_venue_rows() -> list[dict]:
     while True:
         batch = (
             client.table("places")
-            .select("name,slug,state,active,venue_type")
+            .select("name,slug,state,active,place_type")
             .order("id")
             .range(offset, offset + 999)
             .execute()
@@ -119,7 +119,7 @@ def fetch_venue_rows() -> list[dict]:
         if not batch:
             break
         rows.extend(
-            row for row in batch if row.get("active", True) is not False and row.get("state") == "GA"
+            row for row in batch if row.get("is_active", True) is not False and row.get("state") == "GA"
         )
         if len(batch) < 1000:
             break

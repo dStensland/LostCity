@@ -186,7 +186,7 @@ def get_venues_to_validate(
 
     query = client.table("places").select(
         "id, name, slug, address, city, lat, lng, website, foursquare_id, venue_type"
-    ).eq("active", True).eq("city", "Atlanta")
+    ).eq("is_active", True).eq("city", "Atlanta")
 
     if without_website:
         query = query.is_("website", "null")

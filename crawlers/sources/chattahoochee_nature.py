@@ -153,7 +153,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": _BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "place_type": _VENUE_DATA.get("venue_type"),
+                "place_type": _VENUE_DATA.get("place_type"),
                 "city": "roswell",
             },
         },

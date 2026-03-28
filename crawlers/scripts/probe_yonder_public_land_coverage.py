@@ -303,7 +303,7 @@ def main() -> int:
             "venues",
             "id,name,slug,venue_type,state,active",
         )
-        if row.get("active", True) is not False and row.get("state") == "GA"
+        if row.get("is_active", True) is not False and row.get("state") == "GA"
     ]
 
     candidates: list[Candidate] = []

@@ -310,7 +310,7 @@ def fetch_target_venues(
     """Query Supabase venues for bars/restaurants/etc. in Atlanta with a website."""
     query = (
         client_sb.table("places")
-        .select("id, name, slug, website, venue_type, city, state")
+        .select("id, name, slug, website, place_type, city, state")
         .eq("city", "Atlanta")
         .eq("state", "GA")
         .not_.is_("website", "null")

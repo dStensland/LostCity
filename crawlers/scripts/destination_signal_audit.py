@@ -232,7 +232,7 @@ def build_goal_accountability(
         goals, goal_mode = resolve_source_data_goals(
             str(source.get("slug") or ""),
             source_name=str(source.get("name") or ""),
-            venue_type=str(venue.get("venue_type") or ""),
+            venue_type=str(venue.get("place_type") or ""),
         )
         scoped_goals = [goal for goal in goals if goal in ACCOUNTABILITY_GOALS]
         if not scoped_goals:
@@ -266,7 +266,7 @@ def build_goal_accountability(
                     goal=goal,
                     goal_mode=goal_mode,
                     venue=str(venue.get("name") or ""),
-                    venue_type=str(venue.get("venue_type") or ""),
+                    venue_type=str(venue.get("place_type") or ""),
                     city=str(venue.get("city") or ""),
                     state=str(venue.get("state") or ""),
                     future_events=future_events,
@@ -332,7 +332,7 @@ def find_opportunities(
         rows.append(
             OpportunityRow(
                 venue=str(venue.get("name") or ""),
-                venue_type=str(venue.get("venue_type") or ""),
+                venue_type=str(venue.get("place_type") or ""),
                 city=str(venue.get("city") or ""),
                 source=source_by_venue.get(venue_id, ""),
                 future_events=int(future_events_by_venue[venue_id]),
@@ -431,7 +431,7 @@ def main() -> None:
         client,
         "venues",
         "id,name,slug,city,state,venue_type,hours,description,image_url,planning_notes,parking_note,transit_note,active",
-        query_builder=lambda q: q.eq("active", True),
+        query_builder=lambda q: q.eq("is_active", True),
     )
     sources = paged_select(
         client,
@@ -533,10 +533,10 @@ def main() -> None:
         future_exhibits_by_venue=future_exhibits_by_venue,
     )
 
-    nightlife_venues = [venue for venue in scoped_venues if str(venue.get("venue_type") or "") in NIGHTLIFE_TYPES]
-    exhibit_venues = [venue for venue in scoped_venues if str(venue.get("venue_type") or "") in EXHIBIT_TYPES]
-    event_led_venues = [venue for venue in scoped_venues if str(venue.get("venue_type") or "") in EVENT_LED_TYPES]
-    fixed_hours_venues = [venue for venue in scoped_venues if str(venue.get("venue_type") or "") in FIXED_HOURS_TYPES]
+    nightlife_venues = [venue for venue in scoped_venues if str(venue.get("place_type") or "") in NIGHTLIFE_TYPES]
+    exhibit_venues = [venue for venue in scoped_venues if str(venue.get("place_type") or "") in EXHIBIT_TYPES]
+    event_led_venues = [venue for venue in scoped_venues if str(venue.get("place_type") or "") in EVENT_LED_TYPES]
+    fixed_hours_venues = [venue for venue in scoped_venues if str(venue.get("place_type") or "") in FIXED_HOURS_TYPES]
 
     payload = {
         "generated_at": date.today().isoformat(),

@@ -305,7 +305,7 @@ def get_venues_needing_images(venue_ids: list[int], limit: int) -> list[dict]:
             .in_("id", batch)
             .is_("image_url", "null")
             .not_.is_("website", "null")
-            .eq("active", True)
+            .eq("is_active", True)
             .execute()
         )
         results.extend(resp.data or [])

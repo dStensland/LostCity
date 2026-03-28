@@ -101,7 +101,7 @@ def cleanup_duplicates(apply: bool = False) -> None:
             )
 
         if apply:
-            client.table("places").update({"active": False}).eq("id", duplicate["id"]).execute()
+            client.table("places").update({"is_active": False}).eq("id", duplicate["id"]).execute()
         logger.info("  %s duplicate venue row", "deactivated" if apply else "would deactivate")
 
 

@@ -80,7 +80,7 @@ def _fetch_active_venues(city: str | None) -> list[dict[str, Any]]:
     client = get_client()
     query = client.table("places").select(
         "id,name,slug,address,city,state,website,image_url,hero_image_url,active"
-    ).eq("active", True)
+    ).eq("is_active", True)
     if city:
         query = query.eq("city", city)
     rows = query.execute().data or []

@@ -70,7 +70,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": ACTIVITIES_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "place_type": PLACE_DATA.get("venue_type"),
+                "place_type": PLACE_DATA.get("place_type"),
                 "city": "chamblee",
             },
         },

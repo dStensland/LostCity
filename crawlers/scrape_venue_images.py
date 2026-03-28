@@ -249,7 +249,7 @@ def get_venues_needing_images(
 
     query = client.table("places").select(
         "id, name, slug, website, image_url, venue_type"
-    ).eq("active", True)
+    ).eq("is_active", True)
 
     # Must have website
     query = query.not_.is_("website", "null")

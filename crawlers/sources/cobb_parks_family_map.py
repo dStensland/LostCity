@@ -170,7 +170,7 @@ def _build_venue_record(park: dict) -> dict:
 def _fetch_existing_venue(client, park: dict) -> Optional[dict]:
     result = (
         client.table("places")
-        .select("id,name,slug,address,city,state,zip,venue_type,spot_type")
+        .select("id,name,slug,address,city,state,zip,place_type,spot_type")
         .eq("slug", park["slug"])
         .limit(1)
         .execute()
@@ -187,7 +187,7 @@ def _fetch_existing_venue(client, park: dict) -> Optional[dict]:
     if park.get("address"):
         result = (
             client.table("places")
-            .select("id,name,slug,address,city,state,zip,venue_type,spot_type")
+            .select("id,name,slug,address,city,state,zip,place_type,spot_type")
             .eq("address", park["address"])
             .limit(5)
             .execute()
@@ -198,7 +198,7 @@ def _fetch_existing_venue(client, park: dict) -> Optional[dict]:
 
     result = (
         client.table("places")
-        .select("id,name,slug,address,city,state,zip,venue_type,spot_type")
+        .select("id,name,slug,address,city,state,zip,place_type,spot_type")
         .eq("name", park["name"])
         .limit(5)
         .execute()

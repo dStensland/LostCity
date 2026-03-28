@@ -48,7 +48,7 @@ def _resolve_events_active_column(client) -> str | None:
 
 
 def _load_inactive_venues(client, *, registry_only: bool) -> list[dict[str, Any]]:
-    query = client.table("places").select("id,name,slug,active").eq("active", False)
+    query = client.table("places").select("id,name,slug,active").eq("is_active", False)
     if registry_only and CLOSED_VENUE_SLUGS:
         query = query.in_("slug", sorted(CLOSED_VENUE_SLUGS))
     return query.limit(12000).execute().data or []

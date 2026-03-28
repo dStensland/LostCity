@@ -94,12 +94,12 @@ def fetch_venue_presence() -> tuple[set[str], set[str]]:
     slugs = {
         row.get("slug")
         for row in rows
-        if row.get("active", True) is not False and row.get("state") == "GA" and row.get("slug")
+        if row.get("is_active", True) is not False and row.get("state") == "GA" and row.get("slug")
     }
     names = {
         (row.get("name") or "").strip().lower()
         for row in rows
-        if row.get("active", True) is not False and row.get("state") == "GA" and row.get("name")
+        if row.get("is_active", True) is not False and row.get("state") == "GA" and row.get("name")
     }
     return slugs, names
 
@@ -218,7 +218,7 @@ def main() -> int:
         if not batch:
             break
         venue_rows.extend(
-            row for row in batch if row.get("active", True) is not False and row.get("state") == "GA"
+            row for row in batch if row.get("is_active", True) is not False and row.get("state") == "GA"
         )
         if len(batch) < 1000:
             break

@@ -125,9 +125,9 @@ def actual_tier(venue: dict, enrichment: dict) -> int:
         return -1
     if not venue.get("city") or not venue.get("state"):
         return -1
-    if not venue.get("venue_type"):
+    if not venue.get("place_type"):
         return -1
-    if venue.get("active") is not True:
+    if venue.get("is_active") is not True:
         return -1
 
     # Tier 1 checks
@@ -216,7 +216,7 @@ def fetch_venues(client, *, city: Optional[str] = None, venue_type: Optional[str
     all_venues = []
     offset = 0
     while True:
-        q = client.table("places").select(fields).eq("active", True)
+        q = client.table("places").select(fields).eq("is_active", True)
         if city:
             q = q.eq("city", city)
         if venue_type:
@@ -287,7 +287,7 @@ def print_field_gaps(venues: list[dict], enrichment: dict):
     print(f"{'─' * 70}")
 
     # T1 gaps (all venues with target >= 1)
-    t1_venues = [v for v in venues if target_tier_for(v.get("venue_type")) >= 1]
+    t1_venues = [v for v in venues if target_tier_for(v.get("place_type")) >= 1]
     if t1_venues:
         no_desc = sum(1 for v in t1_venues if not _is_real_description(v.get("description")))
         no_hood = sum(1 for v in t1_venues if not v.get("neighborhood"))
@@ -311,7 +311,7 @@ def print_field_gaps(venues: list[dict], enrichment: dict):
             print(f"    Missing {field:<20} {count:>5} ({pct:.0f}%){marker}")
 
     # T2 gaps (all venues with target >= 2)
-    t2_venues = [v for v in venues if target_tier_for(v.get("venue_type")) >= 2]
+    t2_venues = [v for v in venues if target_tier_for(v.get("place_type")) >= 2]
     if t2_venues:
         total = len(t2_venues)
         no_dest = sum(1 for v in t2_venues if not enrichment.get(v["id"], {}).get("has_destination_details"))
@@ -338,7 +338,7 @@ def print_field_gaps(venues: list[dict], enrichment: dict):
         print(f"    {C.D}T1 prerequisite fail    {t1_prereq_fail:>5} ({pct:.0f}%){C.END}")
 
     # T3 premium signal gaps (all venues with target >= 3)
-    t3_venues = [v for v in venues if target_tier_for(v.get("venue_type")) >= 3]
+    t3_venues = [v for v in venues if target_tier_for(v.get("place_type")) >= 3]
     if t3_venues:
         total = len(t3_venues)
         no_specials = sum(1 for v in t3_venues if enrichment.get(v["id"], {}).get("special_count", 0) < 1)
@@ -433,7 +433,7 @@ def print_report(venues: list[dict], enrichment: dict, *, show_gaps: bool = Fals
 
         # Field gaps in JSON
         for tier_level, tier_key in [(1, "t1"), (2, "t2"), (3, "t3")]:
-            tier_venues = [v for v in venues if target_tier_for(v.get("venue_type")) >= tier_level]
+            tier_venues = [v for v in venues if target_tier_for(v.get("place_type")) >= tier_level]
             if not tier_venues:
                 continue
             tier_total = len(tier_venues)

@@ -109,8 +109,8 @@ def main():
     print("Querying venues...")
     result = (
         client.table("places")
-        .select("id,name,slug,address,city,state,venue_type")
-        .eq("active", True)
+        .select("id,name,slug,address,city,state,place_type")
+        .eq("is_active", True)
         .is_("image_url", "null")
         .in_("place_type", EXPERIENCE_VENUE_TYPES)
         .order("name")

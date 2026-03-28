@@ -178,8 +178,8 @@ def run_deactivate(dry_run: bool = False):
     print("Loading active venues...")
     result = (
         client.table("places")
-        .select("id,name,slug,venue_type,website,city,state,address")
-        .eq("active", True)
+        .select("id,name,slug,place_type,website,city,state,address")
+        .eq("is_active", True)
         .order("name")
         .execute()
     )
@@ -244,7 +244,7 @@ def run_deactivate(dry_run: bool = False):
     deactivated = 0
     for v, reason in to_deactivate:
         try:
-            client.table("places").update({"active": False}).eq("id", v["id"]).execute()
+            client.table("places").update({"is_active": False}).eq("id", v["id"]).execute()
             deactivated += 1
         except Exception as e:
             print(f"  ERROR deactivating [{v['id']}] {v['name']}: {e}")
@@ -274,10 +274,10 @@ def run_merge_dupes(dry_run: bool = False):
     print("Loading active venues...")
     result = (
         client.table("places")
-        .select("id,name,slug,venue_type,website,city,state,address,neighborhood,"
+        .select("id,name,slug,place_type,website,city,state,address,neighborhood,"
                 "instagram,phone,description,image_url,lat,lng,hours,menu_url,"
                 "reservation_url,vibes,created_at")
-        .eq("active", True)
+        .eq("is_active", True)
         .order("name")
         .execute()
     )
@@ -347,7 +347,7 @@ def run_merge_dupes(dry_run: bool = False):
                     continue
 
             try:
-                client.table("places").update({"active": False}).eq("id", d["id"]).execute()
+                client.table("places").update({"is_active": False}).eq("id", d["id"]).execute()
                 merged += 1
             except Exception as e:
                 print(f"      ERROR deactivating [{d['id']}]: {e}")

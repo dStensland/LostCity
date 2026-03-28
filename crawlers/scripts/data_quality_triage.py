@@ -317,7 +317,7 @@ def analyze_venue_completeness(client):
             issues["missing_neighborhood"] += 1
         if not venue.get("website"):
             issues["missing_website"] += 1
-        if not venue.get("venue_type"):
+        if not venue.get("place_type"):
             issues["missing_type"] += 1
         if not venue.get("image_url"):
             issues["missing_image"] += 1

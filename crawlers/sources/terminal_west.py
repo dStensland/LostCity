@@ -530,7 +530,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             detail_fetch_limit = 40
 
             for payload_event in payload_events:
-                if payload_event.get("active") is False:
+                if payload_event.get("is_active") is False:
                     continue
 
                 event_id = _clean_text(payload_event.get("eventId"))

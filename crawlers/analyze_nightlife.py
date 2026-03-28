@@ -55,7 +55,7 @@ def analyze_nightlife():
     ]
     
     # Get venue IDs with nightlife types
-    venues_result = client.table("places").select("id,name,venue_type").in_(
+    venues_result = client.table("places").select("id,name,place_type").in_(
         "venue_type", nightlife_venue_types
     ).execute()
     
@@ -82,7 +82,7 @@ def analyze_nightlife():
     print("3. VENUE TYPE ANALYSIS")
     print("-" * 80)
     
-    venue_type_counts = Counter(v.get("venue_type") for v in venues_result.data)
+    venue_type_counts = Counter(v.get("place_type") for v in venues_result.data)
     print("Nightlife venue type counts:")
     for vtype, count in sorted(venue_type_counts.items(), key=lambda x: -x[1]):
         print(f"  {vtype}: {count}")

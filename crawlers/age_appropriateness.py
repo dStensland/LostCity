@@ -379,12 +379,12 @@ def main() -> None:
             chunk = venue_ids[i : i + CHUNK]
             vresp = (
                 sb.table("places")
-                .select("id, venue_type")
+                .select("id, place_type")
                 .in_("id", chunk)
                 .execute()
             )
             for row in (vresp.data or []):
-                if row.get("venue_type"):
+                if row.get("place_type"):
                     venue_type_map[row["id"]] = row["venue_type"]
         print(f"Loaded venue_type for {len(venue_type_map)} of {len(venue_ids)} venues")
     print()

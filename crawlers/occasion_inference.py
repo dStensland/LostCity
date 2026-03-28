@@ -316,7 +316,7 @@ def infer_occasions(venue: dict, min_confidence: float = 0.5) -> list[dict]:
     """
     venue_id = venue["id"]
     vibes = _normalize_vibes(venue)
-    venue_type = (venue.get("venue_type") or "").lower().strip()
+    venue_type = (venue.get("place_type") or "").lower().strip()
     price_level = venue.get("price_level")
     service_style = (venue.get("service_style") or "").lower().strip()
     reservation_recommended = bool(venue.get("reservation_recommended"))
@@ -502,7 +502,7 @@ def load_venues(venue_id: Optional[int] = None) -> list[dict]:
                 "id, name, slug, venue_type, vibes, price_level, hours, "
                 "service_style, reservation_recommended, beltline_adjacent, lat, lng"
             )
-            .eq("active", True)
+            .eq("is_active", True)
             .order("id")
             .range(offset, offset + 999)
         )

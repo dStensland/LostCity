@@ -137,9 +137,9 @@ def run_cleanup(dry_run: bool = True):
             stats["duplicates_deleted"] = len(dupes_to_delete)
 
     # 5. Fix Cook's Warehouse venue_type
-    cooks = client.table("places").select("id, name, venue_type").ilike("name", "%cook%warehouse%").execute()
+    cooks = client.table("places").select("id, name, place_type").ilike("name", "%cook%warehouse%").execute()
     for v in cooks.data:
-        if v.get("venue_type") == "studio":
+        if v.get("place_type") == "studio":
             logger.info("VENUE FIX: %r venue_type studio → event_space (id=%s)", v["name"], v["id"])
             stats["venue_fixes"] += 1
             if not dry_run:

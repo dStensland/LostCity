@@ -75,8 +75,8 @@ def main() -> None:
 
         venue: dict[str, Any] = venues[0]
         venue_updates = {}
-        if venue.get("active") is not False:
-            venue_updates["active"] = False
+        if venue.get("is_active") is not False:
+            venue_updates["is_active"] = False
         new_desc = _append_note(venue.get("description"))
         if new_desc != (venue.get("description") or "").strip():
             venue_updates["description"] = new_desc

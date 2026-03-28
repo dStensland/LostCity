@@ -140,7 +140,7 @@ def run_audit(limit: int) -> dict[str, Any]:
                 }
             )
             continue
-        if venue.get("active") is not False:
+        if venue.get("is_active") is not False:
             registry_drift.append(
                 {
                     "slug": entry.slug,
@@ -161,7 +161,7 @@ def run_audit(limit: int) -> dict[str, Any]:
 
     candidates: list[Candidate] = []
     for venue in venues:
-        if venue.get("active") is not True:
+        if venue.get("is_active") is not True:
             continue
         slug = venue.get("slug") or ""
         if slug in CLOSED_VENUE_SLUGS:
@@ -175,7 +175,7 @@ def run_audit(limit: int) -> dict[str, Any]:
                 id=venue.get("id"),
                 slug=slug,
                 name=venue.get("name") or "",
-                active=venue.get("active"),
+                active=venue.get("is_active"),
                 signal=signal,
                 snippet=_clean_snippet(desc),
             )
@@ -191,7 +191,7 @@ def run_audit(limit: int) -> dict[str, Any]:
         venue = venues_by_slug.get(source.get("slug") or "")
         if not venue:
             continue
-        if venue.get("active") is False:
+        if venue.get("is_active") is False:
             active_source_for_inactive_venue.append(
                 {
                     "source_slug": source.get("slug"),
@@ -204,7 +204,7 @@ def run_audit(limit: int) -> dict[str, Any]:
 
     best_of_counts = _safe_best_of_counts(
         client,
-        [v.get("id") for v in venues if v.get("active") is False and v.get("id")],
+        [v.get("id") for v in venues if v.get("is_active") is False and v.get("id")],
     )
 
     return {

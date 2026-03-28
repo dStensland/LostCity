@@ -228,8 +228,8 @@ def backfill_venues(
     # Get venues without genres
     result = (
         client.table("places")
-        .select("id,name,venue_type,genres")
-        .eq("active", True)
+        .select("id,name,place_type,genres")
+        .eq("is_active", True)
         .is_("genres", "null")
         .order("id")
         .limit(limit)

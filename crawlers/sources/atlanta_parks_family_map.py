@@ -268,7 +268,7 @@ def _build_venue_record(entry: dict) -> dict:
 def _fetch_existing_venue(client, entry: dict) -> Optional[dict]:
     slug_result = (
         client.table("places")
-        .select("id,name,slug,address,city,state,zip,lat,lng,neighborhood,venue_type,spot_type")
+        .select("id,name,slug,address,city,state,zip,lat,lng,neighborhood,place_type,spot_type")
         .eq("slug", entry["slug"])
         .limit(1)
         .execute()
@@ -278,7 +278,7 @@ def _fetch_existing_venue(client, entry: dict) -> Optional[dict]:
 
     name_result = (
         client.table("places")
-        .select("id,name,slug,address,city,state,zip,lat,lng,neighborhood,venue_type,spot_type")
+        .select("id,name,slug,address,city,state,zip,lat,lng,neighborhood,place_type,spot_type")
         .eq("name", entry["name"])
         .limit(1)
         .execute()

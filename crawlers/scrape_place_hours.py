@@ -453,7 +453,7 @@ def get_venues_needing_hours(
 
     query = client.table("places").select(
         "id, name, slug, website, hours, venue_type, hours_source, hours_updated_at"
-    ).eq("active", True)
+    ).eq("is_active", True)
 
     # Must have website
     query = query.not_.is_("website", "null")
@@ -550,7 +550,7 @@ def main():
 
         if raw_hours:
             hours, hours_display = prepare_hours_update(
-                raw_hours, source="website", venue_type=venue.get("venue_type"),
+                raw_hours, source="website", venue_type=venue.get("place_type"),
             )
         else:
             hours = None

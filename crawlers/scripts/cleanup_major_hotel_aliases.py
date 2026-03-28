@@ -114,7 +114,7 @@ def _append_aliases(client: Any, keeper: Dict[str, Any], aliases: List[str], dry
 def _deactivate_alias(client: Any, alias_id: int, dry_run: bool) -> None:
     if dry_run:
         return
-    client.table("places").update({"active": False}).eq("id", alias_id).execute()
+    client.table("places").update({"is_active": False}).eq("id", alias_id).execute()
 
 
 def run(apply_changes: bool) -> None:
@@ -191,10 +191,10 @@ def run(apply_changes: bool) -> None:
                 events_moved,
                 sources_moved,
                 specials_moved,
-                alias.get("active"),
+                alias.get("is_active"),
             )
 
-            if alias.get("active"):
+            if alias.get("is_active"):
                 _deactivate_alias(client, alias["id"], dry_run)
                 totals["aliases_deactivated"] += 1
 

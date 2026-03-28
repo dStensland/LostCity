@@ -753,15 +753,15 @@ def fetch_t2_venues_missing_details(client, *, venue_type=None):
     offset = 0
     while True:
         q = (client.table("places")
-             .select("id,name,slug,venue_type,vibes")
-             .eq("active", True)
+             .select("id,name,slug,place_type,vibes")
+             .eq("is_active", True)
              .order("id")
              .range(offset, offset + 999))
         r = q.execute()
         if not r.data:
             break
         for v in r.data:
-            if v.get("venue_type") in target_types:
+            if v.get("place_type") in target_types:
                 all_venues.append(v)
         if len(r.data) < 1000:
             break

@@ -205,7 +205,7 @@ def classify_with_llm(venues: list[dict]) -> dict[int, dict]:
         parts = [f"ID:{v['id']} Name:{v['name']}"]
         if v.get("website"):
             parts.append(f"Web:{v['website'][:60]}")
-        if v.get("venue_type"):
+        if v.get("place_type"):
             parts.append(f"Type:{v['venue_type']}")
         if v.get("price_level"):
             parts.append(f"Price:{v['price_level']}")
@@ -262,8 +262,8 @@ def run_classification(
     # Fetch active food/drink venues missing cuisine
     query = (
         client.table("places")
-        .select("id, name, slug, venue_type, website, price_level, service_style")
-        .eq("active", True)
+        .select("id, name, slug, place_type, website, price_level, service_style")
+        .eq("is_active", True)
         .is_("cuisine", "null")
     )
 

@@ -220,7 +220,7 @@ def audit_city_pulse_feed(client, portal_id: int, today: str, verbose: bool) -> 
     stale = sum(1 for e in week_events if e.get("start_date", "") < today)
     # Only count inactive venues on feed-ready events (matches what users see)
     inactive_venues = sum(1 for e in week_events
-                         if (e.get("venue") or {}).get("active") is False
+                         if (e.get("venue") or {}).get("is_active") is False
                          and e.get("is_feed_ready") is not False)
 
     # Estimate section fill: today, tonight (7pm+), weekend, this week
@@ -280,7 +280,7 @@ def audit_city_pulse_feed(client, portal_id: int, today: str, verbose: bool) -> 
 
     details = []
     if verbose and inactive_venues > 0:
-        bad = [e for e in week_events if (e.get("venue") or {}).get("active") is False]
+        bad = [e for e in week_events if (e.get("venue") or {}).get("is_active") is False]
         details = [{"id": e["id"], "title": e.get("title"), "venue": (e.get("venue") or {}).get("name")}
                    for e in bad[:10]]
 
@@ -616,7 +616,7 @@ def audit_venue_destinations(client, verbose: bool) -> dict:
         client, "venues",
         "id, name, slug, city, active, image_url, description, neighborhood, "
         "hours, venue_type, lat, lng",
-        query_builder=lambda q: q.eq("active", True),
+        query_builder=lambda q: q.eq("is_active", True),
     )
     venues = [v for v in venues if is_atlanta_city(v.get("city"))]
 
@@ -629,11 +629,11 @@ def audit_venue_destinations(client, verbose: bool) -> dict:
                   if not v.get("description") or len(v.get("description", "")) < 20)
     no_hood = sum(1 for v in venues if not v.get("neighborhood"))
     no_hours = sum(1 for v in venues if not v.get("hours"))
-    no_type = sum(1 for v in venues if not v.get("venue_type"))
+    no_type = sum(1 for v in venues if not v.get("place_type"))
     no_geo = sum(1 for v in venues if not v.get("lat") or not v.get("lng"))
 
     # Type distribution
-    type_dist = Counter(v.get("venue_type") or "null" for v in venues)
+    type_dist = Counter(v.get("place_type") or "null" for v in venues)
 
     details = []
     if verbose:
@@ -673,7 +673,7 @@ def audit_search_leakage(client, verbose: bool) -> dict:
     # Raw DB count of Nashville venues (informational, not user-visible)
     nashville_venues_in_db = count_exact(
         client, "venues",
-        query_builder=lambda q: q.eq("active", True).eq("city", "Nashville"),
+        query_builder=lambda q: q.eq("is_active", True).eq("city", "Nashville"),
     )
 
     # Events with null portal_id (potential leakage)

@@ -128,7 +128,7 @@ def parse_acuity_scheduling_page(page, venue_id: int, source_id: int) -> list[di
                 price = cls.get('price', '')
                 duration = cls.get('duration', 0)
                 class_size = cls.get('classSize', 0)
-                is_active = cls.get('active', False)
+                is_active = cls.get('is_active', False)
 
                 if not is_active:
                     continue

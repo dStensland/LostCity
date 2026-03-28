@@ -252,7 +252,7 @@ def _fetch_existing_venue(client, entry: dict) -> Optional[dict]:
     for field, value in candidates:
         result = (
             client.table("places")
-            .select("id,name,slug,address,city,state,zip,venue_type,spot_type")
+            .select("id,name,slug,address,city,state,zip,place_type,spot_type")
             .eq(field, value)
             .limit(1)
             .execute()
@@ -263,7 +263,7 @@ def _fetch_existing_venue(client, entry: dict) -> Optional[dict]:
     if entry.get("address"):
         result = (
             client.table("places")
-            .select("id,name,slug,address,city,state,zip,venue_type,spot_type")
+            .select("id,name,slug,address,city,state,zip,place_type,spot_type")
             .eq("address", entry["address"])
             .limit(5)
             .execute()

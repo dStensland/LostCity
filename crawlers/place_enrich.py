@@ -430,7 +430,7 @@ Website Content:
             data["genres"] = None
 
         # Validate venue_type
-        if data.get("venue_type") and data["venue_type"] not in VALID_VENUE_TYPES:
+        if data.get("place_type") and data["venue_type"] not in VALID_VENUE_TYPES:
             logger.warning(f"Invalid venue_type '{data['venue_type']}' - ignoring")
             data["venue_type"] = None
 
@@ -623,7 +623,7 @@ def enrich_incomplete_venues(limit: int = 50, dry_run: bool = False) -> dict:
     client = get_client()
 
     # Find incomplete venues (missing neighborhood, type, or coordinates)
-    result = client.table("places").select("*").eq("active", True).or_(
+    result = client.table("places").select("*").eq("is_active", True).or_(
         "neighborhood.is.null,venue_type.is.null,lat.is.null"
     ).order("name").limit(limit).execute()
 
@@ -643,7 +643,7 @@ def enrich_incomplete_venues(limit: int = 50, dry_run: bool = False) -> dict:
         print(f"\n[{i}/{len(venues)}] {venue['name']}")
 
         # Skip if already has coordinates and neighborhood
-        if venue.get("lat") and venue.get("lng") and venue.get("neighborhood") and venue.get("venue_type"):
+        if venue.get("lat") and venue.get("lng") and venue.get("neighborhood") and venue.get("place_type"):
             print("  Skipping: already complete")
             stats["skipped"] += 1
             continue
@@ -653,9 +653,9 @@ def enrich_incomplete_venues(limit: int = 50, dry_run: bool = False) -> dict:
             if result:
                 stats["enriched"] += 1
                 if dry_run:
-                    print(f"  [DRY RUN] Would update with: neighborhood={result.get('neighborhood')}, type={result.get('venue_type')}")
+                    print(f"  [DRY RUN] Would update with: neighborhood={result.get('neighborhood')}, type={result.get('place_type')}")
                 else:
-                    print(f"  Updated: neighborhood={result.get('neighborhood')}, type={result.get('venue_type')}")
+                    print(f"  Updated: neighborhood={result.get('neighborhood')}, type={result.get('place_type')}")
             else:
                 stats["failed"] += 1
         except Exception as e:
@@ -676,8 +676,8 @@ def enrich_hours_only(limit: int = 50, venue_type: Optional[str] = None, dry_run
     client = get_client()
 
     query = (client.table("places")
-             .select("id, name, slug, address, city, state, lat, lng, hours, phone, venue_type")
-             .eq("active", True)
+             .select("id, name, slug, address, city, state, lat, lng, hours, phone, place_type")
+             .eq("is_active", True)
              .is_("hours", "null")
              .not_.is_("name", "null"))
 
@@ -749,7 +749,7 @@ def enrich_address_venues(limit: int = 50, dry_run: bool = False) -> dict:
     client = get_client()
 
     # Get all incomplete venues
-    result = client.table("places").select("*").eq("active", True).or_(
+    result = client.table("places").select("*").eq("is_active", True).or_(
         "neighborhood.is.null,venue_type.is.null"
     ).order("name").execute()
 
@@ -836,7 +836,7 @@ def enrich_websites_only(limit: int = 50, dry_run: bool = False) -> dict:
     # Find venues with websites that need enrichment
     # Query: active=true, website IS NOT NULL, (vibes IS NULL OR venue_type IS NULL OR price_level IS NULL)
     # Note: is_event_venue check is done in Python to handle case where column doesn't exist yet
-    result = client.table("places").select("*").eq("active", True).not_.is_("website", "null").or_(
+    result = client.table("places").select("*").eq("is_active", True).not_.is_("website", "null").or_(
         "vibes.is.null,venue_type.is.null,price_level.is.null"
     ).order("name").limit(limit).execute()
 
@@ -863,7 +863,7 @@ def enrich_websites_only(limit: int = 50, dry_run: bool = False) -> dict:
             continue
 
         # Skip if already has all the main data (is_event_venue may not exist yet)
-        if (venue.get("vibes") and venue.get("venue_type") and venue.get("price_level")):
+        if (venue.get("vibes") and venue.get("place_type") and venue.get("price_level")):
             # Check is_event_venue only if column exists
             if "is_event_venue" in venue and venue.get("is_event_venue") is not None:
                 print("  Skipping: already complete")
@@ -910,8 +910,8 @@ def enrich_websites_only(limit: int = 50, dry_run: bool = False) -> dict:
                     print(f"  Genres: {combined_genres}")
 
             # venue_type: use new if missing
-            new_venue_type = extracted.get("venue_type")
-            if new_venue_type and not venue.get("venue_type"):
+            new_venue_type = extracted.get("place_type")
+            if new_venue_type and not venue.get("place_type"):
                 updates["venue_type"] = new_venue_type
                 print(f"  Spot type: {new_venue_type}")
 

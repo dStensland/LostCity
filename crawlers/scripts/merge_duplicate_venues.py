@@ -365,7 +365,7 @@ def _deactivate_venue(client: Any, venue_id: int, dry_run: bool) -> None:
     if dry_run:
         logger.info("    [dry-run] would set active=false on venue %d", venue_id)
         return
-    client.table("places").update({"active": False}).eq("id", venue_id).execute()
+    client.table("places").update({"is_active": False}).eq("id", venue_id).execute()
 
 
 def _probe_tables(client: Any) -> Dict[str, bool]:
@@ -440,13 +440,13 @@ def run(apply_changes: bool) -> None:
             "  Kill: '%s' (slug=%s, active=%s)",
             killer.get("name"),
             killer.get("slug"),
-            killer.get("active"),
+            killer.get("is_active"),
         )
         logger.info(
             "  Keep: '%s' (slug=%s, active=%s)",
             keeper.get("name"),
             keeper.get("slug"),
-            keeper.get("active"),
+            keeper.get("is_active"),
         )
 
         # Repoint every available FK table.
@@ -463,7 +463,7 @@ def run(apply_changes: bool) -> None:
         _append_alias_slug(client, keeper, killer.get("slug"), dry_run)
 
         # Deactivate the killer venue.
-        if killer.get("active") is not False:
+        if killer.get("is_active") is not False:
             _deactivate_venue(client, kill_id, dry_run)
             venues_deactivated += 1
         else:

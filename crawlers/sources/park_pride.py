@@ -176,7 +176,7 @@ def build_venue_from_api(place_data: dict) -> Optional[dict]:
 
 
 def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityEnvelope | None:
-    venue_type = str(place_data.get("place_type") or place_data.get("venue_type") or "").strip().lower()
+    venue_type = str(place_data.get("place_type") or place_data.get("place_type") or "").strip().lower()
     if venue_type != "park":
         return None
 
