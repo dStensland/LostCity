@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env")
 sys.path.insert(0, str(ROOT))
 
-from db import get_client, get_or_create_venue, get_venue_by_slug
+from db import get_client, get_or_create_place, get_venue_by_slug
 
 FOREST_PARENT_SLUG = "chattahoochee-oconee-national-forest"
 GA_STATE_PARK_RESERVATIONS = "https://gastateparks.reserveamerica.com/"
@@ -204,7 +204,7 @@ def upsert_seeds(seeds: list[dict], *, apply: bool, refresh_existing: bool) -> t
         if not existing:
             created_id = None
             if apply:
-                created_id = get_or_create_venue(payload)
+                created_id = get_or_create_place(payload)
                 # Park/campground child rows can legitimately share coordinates
                 # with their parent anchor, which the generic deduper sometimes
                 # collapses. If the intended slug still does not exist, insert

@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timedelta
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_existing_event_for_insert,
     smart_update_existing_event,
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.wylieandrum.com"
 WEEKS_AHEAD = 6
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Wylie & Rum",
     "slug": "wylie-and-rum",
     "address": "45 Moreland Ave SE",
@@ -73,7 +73,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     logger.info(f"Wylie & Rum venue record ensured (ID: {venue_id})")
 
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -97,7 +97,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             events_found += 1
 
             content_hash = generate_content_hash(
-                template["title"], VENUE_DATA["name"], start_date
+                template["title"], PLACE_DATA["name"], start_date
             )
 
             event_record = {

@@ -18,7 +18,7 @@ import requests
 from utils import slugify
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -358,7 +358,7 @@ def _build_structured_description(
     category: str,
     genre: Optional[str],
     attractions: list[str],
-    venue_data: Optional[dict],
+    place_data: Optional[dict],
     start_date: str,
     start_time: Optional[str],
     price_min: Optional[float],
@@ -379,10 +379,10 @@ def _build_structured_description(
     if attractions:
         parts.append(f"Lineup includes {', '.join(attractions[:3])}.")
 
-    if venue_data:
-        venue_name = _clean_text(venue_data.get("name"))
-        venue_city = _clean_text(venue_data.get("city")) or ""
-        venue_state = _clean_text(venue_data.get("state")) or "GA"
+    if place_data:
+        venue_name = _clean_text(place_data.get("name"))
+        venue_city = _clean_text(place_data.get("city")) or ""
+        venue_state = _clean_text(place_data.get("state")) or "GA"
         if venue_name:
             parts.append(f"Location: {venue_name}, {venue_city}, {venue_state}.")
 
@@ -484,14 +484,14 @@ def parse_event(event_data: dict) -> Optional[dict]:
 
         # Venue
         venues = event_data.get("_embedded", {}).get("venues", [])
-        venue_data = None
+        place_data = None
         if venues:
             v = venues[0]
             address = v.get("address", {})
             city = v.get("city", {})
             state = v.get("state", {})
 
-            venue_data = {
+            place_data = {
                 "name": _normalize_venue_name(v.get("name", "")),
                 "slug": slugify(_normalize_venue_name(v.get("name", ""))),
                 "address": address.get("line1"),
@@ -661,7 +661,7 @@ def parse_event(event_data: dict) -> Optional[dict]:
             "price_note": price_note,
             "ticket_status": ticket_status,
             "is_free": is_free,
-            "venue": venue_data,
+            "venue": place_data,
             "ticketmaster_id": event_data.get("id"),
             "_parsed_artists": parsed_artists,
             "on_sale_date": on_sale_date,
@@ -736,7 +736,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 venue_info = parsed.get("venue")
                 if venue_info and venue_info.get("name"):
                     try:
-                        venue_id = get_or_create_venue(venue_info)
+                        venue_id = get_or_create_place(venue_info)
                     except Exception as e:
                         logger.warning(
                             f"Failed to create venue {venue_info['name']}: {e}"

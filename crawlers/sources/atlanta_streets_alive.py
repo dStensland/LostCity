@@ -13,14 +13,14 @@ from datetime import date, datetime
 
 from playwright.sync_api import sync_playwright
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
+from db import find_event_by_hash, get_or_create_place, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.atlantastreetsalive.org"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Streets Alive Route",
     "slug": "atlanta-streets-alive-route",
     "address": "Atlanta Open Streets Corridors",
@@ -130,7 +130,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     today = datetime.now().date()
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     page_text = ""
     selected_url = BASE_URL
@@ -170,7 +170,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     for event_date in schedule_dates:
         title = "Atlanta Streets Alive"
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], event_date.isoformat())
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], event_date.isoformat())
 
         event_record = {
             "source_id": source_id,

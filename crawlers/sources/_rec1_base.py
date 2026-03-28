@@ -33,7 +33,7 @@ import requests
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     insert_program,
     infer_program_type,
@@ -1226,7 +1226,7 @@ def _resolve_venue(
     if matched_venue is None:
         matched_venue = tenant.default_venue
 
-    venue_data = {
+    place_data = {
         "name": matched_venue.name,
         "slug": matched_venue.slug,
         "address": matched_venue.address,
@@ -1240,7 +1240,7 @@ def _resolve_venue(
         "spot_type": matched_venue.venue_type,
     }
 
-    vid = get_or_create_venue(venue_data)
+    vid = get_or_create_place(place_data)
     if tenant.venue_enrichment_builder:
         try:
             envelope = tenant.venue_enrichment_builder(matched_venue, vid)
@@ -1308,7 +1308,7 @@ def crawl_tenant(source: dict, tenant: TenantConfig) -> tuple[int, int, int]:
     venue_id_cache: dict[str, int] = {}
 
     # Pre-create the default venue
-    default_vid = get_or_create_venue(
+    default_vid = get_or_create_place(
         {
             "name": tenant.default_venue.name,
             "slug": tenant.default_venue.slug,

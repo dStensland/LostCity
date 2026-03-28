@@ -39,7 +39,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -276,7 +276,7 @@ async def crawl_location(
     events_new = 0
     events_updated = 0
 
-    venue_data = {
+    place_data = {
         **VENUE_DATA_TEMPLATE,
         "name": location["name"],
         "slug": location["slug"],
@@ -290,7 +290,7 @@ async def crawl_location(
         "website": location["website"],
     }
 
-    venue_id = get_or_create_venue(venue_data)
+    venue_id = get_or_create_place(place_data)
 
     cal_id = location.get("google_calendar_id")
 

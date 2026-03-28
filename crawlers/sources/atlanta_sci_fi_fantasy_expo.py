@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -34,7 +34,7 @@ SOURCE_URL = "https://atlantascifiexpo.com/"
 SCHEDULE_URL = "https://atlantascifiexpo.com/schedule/"
 USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Northlake Mall",
     "slug": "northlake-mall",
     "address": "4800 Briarcliff Road Northeast",
@@ -179,8 +179,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             logger.info("Removed %s stale Atlanta Sci-Fi & Fantasy Expo events after refresh", stale_removed)
         logger.info("Atlanta Sci-Fi & Fantasy Expo crawl complete: no current cycle published (%s)", exc)
         return 0, 0, 0
-    venue_id = get_or_create_venue(VENUE_DATA)
-    content_hash = generate_content_hash(event["title"], VENUE_DATA["name"], event["start_date"])
+    venue_id = get_or_create_place(PLACE_DATA)
+    content_hash = generate_content_hash(event["title"], PLACE_DATA["name"], event["start_date"])
     current_hashes.add(content_hash)
     events_found = 1
 

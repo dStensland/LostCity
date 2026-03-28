@@ -14,7 +14,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.lecolonial.com"
 EVENTS_URL = f"{BASE_URL}/atlanta/happenings"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Le Colonial Atlanta",
     "slug": "le-colonial-atlanta",
     "address": "3060 Peachtree Rd NW",
@@ -119,7 +119,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Le Colonial uses <section class="text-block"> for each event
         event_sections = soup.find_all("section", class_="text-block")
@@ -174,7 +174,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_found += 1
 
                 # Generate content hash
-                content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
                 # Check if event exists
 

@@ -14,7 +14,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.piedmontluminaria.org"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Piedmont Luminaria Event",
     "slug": "piedmont-luminaria",
     "address": "1968 Peachtree Road NW",
@@ -97,8 +97,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page_title = page.title()
 
             # Get venue from page if specified
-            venue_id = get_or_create_venue(VENUE_DATA)
-            venue_name = VENUE_DATA["name"]
+            venue_id = get_or_create_place(PLACE_DATA)
+            venue_name = PLACE_DATA["name"]
 
             # Look for location info
             location_match = re.search(r"(held at|location[:\s]+|venue[:\s]+)([^\.]+)", body_text, re.IGNORECASE)
@@ -106,12 +106,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 location_text = location_match.group(2).strip()
                 if location_text and len(location_text) < 100:
                     # Update venue with actual location
-                    venue_data = {
-                        **VENUE_DATA,
-                        "name": location_text if "piedmont" not in location_text.lower() else VENUE_DATA["name"],
+                    place_data = {
+                        **PLACE_DATA,
+                        "name": location_text if "piedmont" not in location_text.lower() else PLACE_DATA["name"],
                     }
-                    venue_id = get_or_create_venue(venue_data)
-                    venue_name = venue_data["name"]
+                    venue_id = get_or_create_place(place_data)
+                    venue_name = place_data["name"]
 
             # Extract event information
             lines = [line.strip() for line in body_text.split("\n") if line.strip()]

@@ -34,7 +34,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup, Tag
 
-from db import get_or_create_venue
+from db import get_or_create_place
 from entity_lanes import TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 from exhibition_utils import build_exhibition_record
@@ -54,7 +54,7 @@ HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Emory Visual Arts Gallery",
     "slug": "emory-visual-arts-gallery",
     "address": "700 Peavine Creek Dr",
@@ -381,7 +381,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     envelope = TypedEntityEnvelope()
     session = requests.Session()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     logger.info("Emory Visual Arts Gallery: fetching %s", BASE_URL)
     html = _fetch(BASE_URL, session)
@@ -416,7 +416,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             source_id=source_id,
             opening_date=parsed["opening_date"],
             closing_date=parsed["closing_date"],
-            venue_name=VENUE_DATA["name"],
+            venue_name=PLACE_DATA["name"],
             description=parsed["description"],
             image_url=parsed["image_url"],
             source_url=parsed["source_url"],

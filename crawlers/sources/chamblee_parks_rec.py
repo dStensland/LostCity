@@ -11,7 +11,7 @@ coverage focused on camps, youth athletics, and kid/family enrichment programs.
 
 from __future__ import annotations
 
-from db import get_or_create_venue
+from db import get_or_create_place
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 from sources._myrec_base import crawl_myrec, is_family_relevant_session
@@ -19,7 +19,7 @@ from sources._myrec_base import crawl_myrec, is_family_relevant_session
 BASE_URL = "https://chambleega.myrec.com"
 ACTIVITIES_URL = f"{BASE_URL}/info/activities/default.aspx?type=activities"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Chamblee Parks and Recreation",
     "slug": "chamblee-parks-recreation",
     "address": "3518 Broad Street",
@@ -70,7 +70,7 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
             "source_url": ACTIVITIES_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": VENUE_DATA.get("venue_type"),
+                "venue_type": PLACE_DATA.get("venue_type"),
                 "city": "chamblee",
             },
         },
@@ -126,12 +126,12 @@ def _include_session(
 MYREC_CONFIG = {
     "base_url": BASE_URL,
     "activities_url": ACTIVITIES_URL,
-    "venue": VENUE_DATA,
+    "venue": PLACE_DATA,
     "include_session": _include_session,
 }
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
     return crawl_myrec(source, MYREC_CONFIG)

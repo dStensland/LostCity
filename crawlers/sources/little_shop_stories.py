@@ -24,7 +24,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -58,7 +58,7 @@ _PAGE_DELAY = 0.8
 # Venue data
 # ---------------------------------------------------------------------------
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Little Shop of Stories",
     "slug": "little-shop-of-stories",
     "address": "133 E Court Square",
@@ -559,7 +559,7 @@ def _parse_event_card(
     hash_key = start_date_str
     if start_time_str:
         hash_key = f"{start_date_str}|{start_time_str}"
-    content_hash = generate_content_hash(title, VENUE_DATA["name"], hash_key)
+    content_hash = generate_content_hash(title, PLACE_DATA["name"], hash_key)
 
     record: dict = {
         "source_id": source_id,
@@ -659,7 +659,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # Ensure venue exists
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
     except Exception as exc:
         logger.error("[little-shop-stories] Failed to get/create venue: %s", exc)
         return 0, 0, 0

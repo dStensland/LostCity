@@ -22,7 +22,7 @@ from typing import Any, Optional
 import requests
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -35,7 +35,7 @@ BASE_URL = "https://creaturecomfortsbeer.com"
 EVENTS_API_URL = f"{BASE_URL}/wp-json/tribe/events/v1/events"
 PER_PAGE = 50
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Creature Comforts Brewing — Atlanta",
     "slug": "creature-comforts-atl",
     "address": "1271 Center St NW",
@@ -153,7 +153,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         today = datetime.now().strftime("%Y-%m-%d")
 
         page = 1
@@ -251,7 +251,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
                     content_hash = generate_content_hash(
-                        title, VENUE_DATA["name"], start_date
+                        title, PLACE_DATA["name"], start_date
                     )
 
                     event_record = {

@@ -34,7 +34,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -283,7 +283,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             # Create venue for drive location
                             venue_type = infer_venue_type(sponsor_name)
 
-                            venue_data = {
+                            place_data = {
                                 "name": sponsor_name,
                                 "slug": re.sub(r'[^a-z0-9]+', '-', sponsor_name.lower()).strip('-'),
                                 "address": street,
@@ -297,7 +297,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "lng": None,
                             }
 
-                            venue_id = get_or_create_venue(venue_data)
+                            venue_id = get_or_create_place(place_data)
 
                             # Create event title
                             title = f"American Red Cross Blood Drive"

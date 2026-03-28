@@ -67,7 +67,7 @@ def test_crawl_writes_exhibitions_only(monkeypatch):
 
     monkeypatch.setattr(crawler, "_today", lambda: date(2026, 3, 17))
     monkeypatch.setattr(crawler, "_fetch_soup", lambda _url: soup)
-    monkeypatch.setattr(crawler, "get_or_create_venue", lambda _venue: 77)
+    monkeypatch.setattr(crawler, "get_or_create_place", lambda _venue: 77)
     monkeypatch.setattr(
         crawler,
         "insert_exhibition",

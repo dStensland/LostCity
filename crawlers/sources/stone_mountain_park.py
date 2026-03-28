@@ -52,7 +52,7 @@ from bs4 import BeautifulSoup
 from db import (
     get_client,
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -74,7 +74,7 @@ EVENTS_LISTING_URL = f"{BASE_URL}/activities/events/"
 ATTRACTIONS_URL = f"{BASE_URL}/activities/attractions/"
 
 # ── Venue record ──────────────────────────────────────────────────────────────
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Stone Mountain Park",
     "slug": "stone-mountain-park",
     "address": "1000 Robert E. Lee Blvd",
@@ -846,7 +846,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     )
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         persist_typed_entity_envelope(_build_destination_envelope(venue_id))
     except Exception as e:
         logger.error(f"Stone Mountain Park: could not get/create venue: {e}")

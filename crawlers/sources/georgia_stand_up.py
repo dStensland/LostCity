@@ -22,7 +22,7 @@ from playwright.sync_api import sync_playwright
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -35,7 +35,7 @@ BASE_URL = "https://www.georgiastandup.org"
 EVENTS_URL = f"{BASE_URL}/event-list"
 VOLUNTEER_URL = f"{BASE_URL}/volunteer"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia STAND-UP",
     "slug": "georgia-stand-up",
     "address": "Atlanta, GA",
@@ -190,7 +190,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     current_hashes: set[str] = set()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -233,7 +233,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         except ValueError:
             continue
 
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
         current_hashes.add(content_hash)
         events_found += 1
 

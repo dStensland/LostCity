@@ -16,7 +16,7 @@ from date_utils import MAX_FUTURE_DAYS_DEFAULT
 from db import (
     find_existing_event_for_insert,
     get_client,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
     writes_enabled,
@@ -447,8 +447,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             soup = BeautifulSoup(response.text, "html.parser")
 
             # Get venue for this sport
-            venue_data = VENUES.get(sport_name, VENUES["default"])
-            venue_id = get_or_create_venue(venue_data)
+            place_data = VENUES.get(sport_name, VENUES["default"])
+            venue_id = get_or_create_place(place_data)
 
             # Parse games from the page
             games = parse_schedule_page(soup, sport_name)
@@ -473,7 +473,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # Generate hash
                 content_hash = generate_content_hash(
-                    title, venue_data["name"], start_date
+                    title, place_data["name"], start_date
                 )
 
 

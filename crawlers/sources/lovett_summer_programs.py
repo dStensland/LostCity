@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup, Tag
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -44,7 +44,7 @@ REQUEST_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "The Lovett School",
     "slug": "the-lovett-school",
     "address": "4075 Paces Ferry Rd NW",
@@ -340,7 +340,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
         "is_recurring": False,
         "recurrence_rule": None,
         "content_hash": generate_content_hash(
-            f"{title} [{row['hash_key']}]", VENUE_DATA["name"], row["start_date"]
+            f"{title} [{row['hash_key']}]", PLACE_DATA["name"], row["start_date"]
         ),
         "age_min": row["age_min"],
         "age_max": row["age_max"],
@@ -362,7 +362,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         return 0, 0, 0
 
     today = date.today().strftime("%Y-%m-%d")
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     for row in rows:
         if row["end_date"] < today:

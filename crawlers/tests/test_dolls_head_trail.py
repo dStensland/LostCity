@@ -4,7 +4,7 @@ from sources.dolls_head_trail import _build_destination_envelope
 def test_build_destination_envelope_projects_destination_details_and_feature() -> None:
     envelope = _build_destination_envelope(
         venue_id=31,
-        venue_data={
+        place_data={
             "vibes": ["quirky", "folk-art", "outdoor"],
         },
     )

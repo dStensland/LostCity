@@ -26,7 +26,7 @@ except ImportError:
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -161,7 +161,7 @@ def get_next_weekday(weekday_name: str) -> datetime:
     return today + timedelta(days=days_ahead)
 
 
-def crawl_pdf_schedule(pdf_url: str, venue_data: dict, source_id: int, portal_id: Optional[str]) -> tuple[int, int, int]:
+def crawl_pdf_schedule(pdf_url: str, place_data: dict, source_id: int, portal_id: Optional[str]) -> tuple[int, int, int]:
     """Crawl a PDF schedule and extract class events."""
     events_found = 0
     events_new = 0
@@ -176,7 +176,7 @@ def crawl_pdf_schedule(pdf_url: str, venue_data: dict, source_id: int, portal_id
         response = requests.get(pdf_url, timeout=30)
         response.raise_for_status()
 
-        venue_id = get_or_create_venue(venue_data)
+        venue_id = get_or_create_place(place_data)
 
         with pdfplumber.open(BytesIO(response.content)) as pdf:
             for page in pdf.pages:
@@ -236,14 +236,14 @@ def crawl_pdf_schedule(pdf_url: str, venue_data: dict, source_id: int, portal_id
                             events_found += 1
 
                             content_hash = generate_content_hash(
-                                class_name, venue_data["name"], start_date
+                                class_name, place_data["name"], start_date
                             )
 
 
                             cat_info = get_class_category(class_name)
-                            base_tags = ["piedmont", "fitness", "class", venue_data.get("neighborhood", "").lower()]
+                            base_tags = ["piedmont", "fitness", "class", place_data.get("neighborhood", "").lower()]
 
-                            description = f"Group fitness class at {venue_data['name']}. Drop-in welcome for members."
+                            description = f"Group fitness class at {place_data['name']}. Drop-in welcome for members."
 
                             # Build series_hint
                             series_hint = {
@@ -272,8 +272,8 @@ def crawl_pdf_schedule(pdf_url: str, venue_data: dict, source_id: int, portal_id
                                 "price_max": None,
                                 "price_note": "Included with membership",
                                 "is_free": False,
-                                "source_url": venue_data["website"],
-                                "ticket_url": venue_data["website"],
+                                "source_url": place_data["website"],
+                                "ticket_url": place_data["website"],
                                 "image_url": None,
                                 "raw_text": cell_text,
                                 "extraction_confidence": 0.75,
@@ -301,7 +301,7 @@ def crawl_pdf_schedule(pdf_url: str, venue_data: dict, source_id: int, portal_id
     return events_found, events_new, events_updated
 
 
-def crawl_fayetteville_calendar(venue_data: dict, source_id: int, portal_id: Optional[str]) -> tuple[int, int, int]:
+def crawl_fayetteville_calendar(place_data: dict, source_id: int, portal_id: Optional[str]) -> tuple[int, int, int]:
     """Crawl the Fayetteville wellness center dynamic calendar."""
     events_found = 0
     events_new = 0
@@ -316,8 +316,8 @@ def crawl_fayetteville_calendar(venue_data: dict, source_id: int, portal_id: Opt
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(venue_data)
-            calendar_url = venue_data.get("calendar_url", venue_data["website"])
+            venue_id = get_or_create_place(place_data)
+            calendar_url = place_data.get("calendar_url", place_data["website"])
 
             logger.info(f"Fetching Fayetteville calendar: {calendar_url}")
             page.goto(calendar_url, wait_until="domcontentloaded", timeout=90000)
@@ -437,7 +437,7 @@ def crawl_fayetteville_calendar(venue_data: dict, source_id: int, portal_id: Opt
                         start_date = current_date.strftime("%Y-%m-%d")
 
                         content_hash = generate_content_hash(
-                            class_name, venue_data["name"], f"{start_date} {start_time}"
+                            class_name, place_data["name"], f"{start_date} {start_time}"
                         )
 
                         existing = find_event_by_hash(content_hash)
@@ -490,7 +490,7 @@ def crawl_fayetteville_calendar(venue_data: dict, source_id: int, portal_id: Opt
                             "price_note": "Included with membership",
                             "is_free": False,
                             "source_url": calendar_url,
-                            "ticket_url": venue_data["website"],
+                            "ticket_url": place_data["website"],
                             "image_url": image_url,
                             "raw_text": f"{class_name} - {start_date} {start_time}",
                             "extraction_confidence": 0.85,

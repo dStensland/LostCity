@@ -24,7 +24,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -48,7 +48,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     venue_features=True,
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Marcus Jewish Community Center of Atlanta",
     "slug": "mjcca",
     "address": "5342 Tilly Mill Road",
@@ -490,7 +490,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching MJCCA calendar: {CALENDAR_URL}")

@@ -16,7 +16,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_client, get_or_create_venue
+from db import get_client, get_or_create_place
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 HOMEPAGE = "https://topgolf.com/us/atlanta/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Topgolf Atlanta Midtown",
     "slug": "topgolf-atlanta-midtown",
     "address": "1600 Ellsworth Industrial Blvd NW",
@@ -223,7 +223,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     the venue and refresh image/description from the live homepage on
     each run.
     """
-    venue_data = dict(VENUE_DATA)
+    place_data = dict(PLACE_DATA)
 
     # Fetch og: metadata from the live homepage to keep the record fresh.
     try:
@@ -235,21 +235,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
         resp.raise_for_status()
         og_image, og_desc = _extract_og_meta(resp.text)
         if og_image:
-            venue_data["image_url"] = og_image
+            place_data["image_url"] = og_image
         if og_desc:
-            venue_data["description"] = og_desc
+            place_data["description"] = og_desc
     except Exception as exc:
         logger.warning("Topgolf Atlanta Midtown: og: enrichment failed: %s", exc)
 
-    venue_id = get_or_create_venue(venue_data)
+    venue_id = get_or_create_place(place_data)
     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     # Push the freshest image/description back onto the existing venue row.
     update: dict = {}
-    if venue_data.get("image_url"):
-        update["image_url"] = venue_data["image_url"]
-    if venue_data.get("description"):
-        update["description"] = venue_data["description"]
+    if place_data.get("image_url"):
+        update["image_url"] = place_data["image_url"]
+    if place_data.get("description"):
+        update["description"] = place_data["description"]
     if update:
         try:
             get_client().table("venues").update(update).eq("id", venue_id).execute()

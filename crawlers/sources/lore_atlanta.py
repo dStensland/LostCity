@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://loreatl.com"
 EVENTS_URL = BASE_URL
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Lore Atlanta",
     "slug": "lore-atlanta",
     "address": "466 Edgewood Ave SE",
@@ -112,7 +112,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Lore Atlanta: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

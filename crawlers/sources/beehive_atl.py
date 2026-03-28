@@ -13,7 +13,7 @@ from typing import Optional
 
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ CALENDAR_PARAMS = {
     "calendar": "beecreativeclasses1@gmail.com",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "The Beehive ATL",
     "slug": "beehive-atl",
     "address": "1250 Caroline Street, C120",
@@ -106,7 +106,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Calculate date range: today to 120 days from now
         now = datetime.now()

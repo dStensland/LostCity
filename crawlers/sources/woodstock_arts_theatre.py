@@ -16,7 +16,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://woodstockarts.org"
 THEATRE_EVENTS_URL = f"{BASE_URL}/events/category/theatre/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Woodstock Arts Theatre",
     "slug": "woodstock-arts-theatre",
     "address": "8534 Main St",
@@ -231,7 +231,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             # Step 1: Load the theatre category page to discover show URLs
             logger.info(f"Fetching Woodstock Arts Theatre events: {THEATRE_EVENTS_URL}")

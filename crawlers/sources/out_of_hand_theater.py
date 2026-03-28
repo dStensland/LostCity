@@ -24,7 +24,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ PERFORMANCES_URL = f"{BASE_URL}/prisontownperformances"
 SHOW_INFO_URL = f"{BASE_URL}/shows-in-homes-2026"
 
 # Out of Hand HQ — serves as fallback venue; individual shows are in homes/community spaces
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Out of Hand Theater",
     "slug": "out-of-hand-theater",
     "address": "135 Auburn Ave",
@@ -140,7 +140,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Out of Hand Theater performances: {PERFORMANCES_URL}")
             page.goto(PERFORMANCES_URL, wait_until="domcontentloaded", timeout=30000)

@@ -2,7 +2,7 @@
 """
 crawl_lint.py — Static analysis linter for LostCity crawler source files.
 
-Checks VENUE_DATA completeness and enrichment presence without importing
+Checks PLACE_DATA completeness and enrichment presence without importing
 any crawler module. Uses ast.parse() so it runs in any environment.
 
 Usage:
@@ -84,7 +84,7 @@ def _extract_dict_keys(node: ast.Dict) -> set[str]:
     count them as "present" for required-field purposes because we can't know
     their runtime value.
 
-    In practice almost every VENUE_DATA key is a string literal, so this edge
+    In practice almost every PLACE_DATA key is a string literal, so this edge
     case is rare.
     """
     keys: set[str] = set()
@@ -99,13 +99,13 @@ def _extract_dict_keys(node: ast.Dict) -> set[str]:
 
 
 def _find_venue_data_assignments(tree: ast.Module) -> list[ast.Dict]:
-    """Return all ast.Dict nodes assigned to a name matching VENUE_DATA."""
+    """Return all ast.Dict nodes assigned to a name matching PLACE_DATA."""
     dicts: list[ast.Dict] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Assign):
             continue
         for target in node.targets:
-            if isinstance(target, ast.Name) and target.id == "VENUE_DATA":
+            if isinstance(target, ast.Name) and target.id == "PLACE_DATA":
                 if isinstance(node.value, ast.Dict):
                     dicts.append(node.value)
                 # If the value is something else (e.g. a function call or
@@ -123,7 +123,7 @@ def _has_build_destination_envelope(tree: ast.Module) -> bool:
 
 
 def _venue_data_has_destination_details(dicts: list[ast.Dict]) -> bool:
-    """Return True if any VENUE_DATA dict has a '_destination_details' key."""
+    """Return True if any PLACE_DATA dict has a '_destination_details' key."""
     for d in dicts:
         if "_destination_details" in _extract_dict_keys(d):
             return True
@@ -152,19 +152,19 @@ def lint_file(path: Path) -> FileResult:
 
     venue_dicts = _find_venue_data_assignments(tree)
 
-    # Skip aggregator crawlers that have no VENUE_DATA at all
+    # Skip aggregator crawlers that have no PLACE_DATA at all
     if not venue_dicts:
         return FileResult(
             path=path,
             messages=[],
             skipped=True,
-            skip_reason="no VENUE_DATA (aggregator or base crawler)",
+            skip_reason="no PLACE_DATA (aggregator or base crawler)",
         )
 
     messages: list[LintMessage] = []
 
-    # Collect all keys present across *all* VENUE_DATA assignments in the file.
-    # Some crawlers define multiple VENUE_DATA blocks (multi-venue files) — we
+    # Collect all keys present across *all* PLACE_DATA assignments in the file.
+    # Some crawlers define multiple PLACE_DATA blocks (multi-venue files) — we
     # report per-block so the author knows which blocks are incomplete.
     if len(venue_dicts) == 1:
         _check_single_block(venue_dicts[0], messages, label=None)
@@ -173,7 +173,7 @@ def lint_file(path: Path) -> FileResult:
             _check_single_block(d, messages, label=f"block {idx + 1}")
 
     # Enrichment check: _build_destination_envelope function OR
-    # _destination_details key in any VENUE_DATA dict
+    # _destination_details key in any PLACE_DATA dict
     has_enrichment = _has_build_destination_envelope(
         tree
     ) or _venue_data_has_destination_details(venue_dicts)
@@ -192,9 +192,9 @@ def lint_file(path: Path) -> FileResult:
 def _check_single_block(
     d: ast.Dict, messages: list[LintMessage], label: str | None
 ) -> None:
-    """Append lint messages for one VENUE_DATA dict node."""
+    """Append lint messages for one PLACE_DATA dict node."""
     present = _extract_dict_keys(d)
-    prefix = f"VENUE_DATA {label} " if label else "VENUE_DATA "
+    prefix = f"PLACE_DATA {label} " if label else "PLACE_DATA "
 
     missing_required = [f for f in REQUIRED_FIELDS if f not in present]
     if missing_required:

@@ -12,7 +12,7 @@ from datetime import date, datetime
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -77,8 +77,8 @@ def parse_session(session: dict, today: date) -> dict | None:
 
     features = {feature.get("name"): feature.get("value") for feature in session.get("features") or []}
     location = (features.get("location") or "").strip().lower()
-    venue_data = VENUE_DATA_BY_LOCATION.get(location)
-    if not venue_data:
+    place_data = VENUE_DATA_BY_LOCATION.get(location)
+    if not place_data:
         return None
 
     start_date, _end_date = _parse_date_range(features.get("dates") or "", today)
@@ -91,18 +91,18 @@ def parse_session(session: dict, today: date) -> dict | None:
 
     price = session.get("price")
     price_value = float(price) if price is not None else None
-    title = f"Family Sensory Swim at {venue_data['name']}"
+    title = f"Family Sensory Swim at {place_data['name']}"
 
     return {
         "title": title,
         "description": (
-            f"Family sensory swim session at {venue_data['name']} through Gwinnett County Parks & Recreation. "
+            f"Family sensory swim session at {place_data['name']} through Gwinnett County Parks & Recreation. "
             "Public low-stimulation pool time for all ages; reserve through the official county catalog."
         ),
         "start_date": start_date.strftime("%Y-%m-%d"),
         "start_time": start_time,
         "end_time": end_time,
-        "venue_data": venue_data,
+        "venue_data": place_data,
         "price_min": price_value,
         "price_max": price_value,
         "price_note": (
@@ -112,7 +112,7 @@ def parse_session(session: dict, today: date) -> dict | None:
         ),
         "ticket_url": CATALOG_URL,
         "source_url": CATALOG_URL,
-        "raw_text": f"{TARGET_SESSION} | {features.get('dates','')} | {features.get('times','')} | {venue_data['name']}",
+        "raw_text": f"{TARGET_SESSION} | {features.get('dates','')} | {features.get('times','')} | {place_data['name']}",
     }
 
 
@@ -154,7 +154,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         if not parsed:
             continue
 
-        venue_id = get_or_create_venue(parsed["venue_data"])
+        venue_id = get_or_create_place(parsed["venue_data"])
         events_found += 1
 
         content_hash = generate_content_hash(

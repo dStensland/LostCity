@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 from db import (
     find_event_by_hash,
     get_client,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
     update_event,
@@ -429,7 +429,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    aggregate_venue_id = get_or_create_venue(AGGREGATE_VENUE_DATA)
+    aggregate_venue_id = get_or_create_place(AGGREGATE_VENUE_DATA)
     venue_id_cache: dict[str, int] = {AGGREGATE_VENUE_DATA["slug"]: aggregate_venue_id}
     feed = feedparser.parse(OPENINGS_FEED_URL)
 
@@ -460,17 +460,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if not image_url:
                 image_url = article_meta.image_url
 
-            venue_data, is_specific_venue = build_venue_data(
+            place_data, is_specific_venue = build_venue_data(
                 title=title,
                 description=description,
                 article_url=article_url,
                 article_meta=article_meta,
             )
-            venue_slug = venue_data["slug"]
+            venue_slug = place_data["slug"]
             if venue_slug in venue_id_cache:
                 venue_id = venue_id_cache[venue_slug]
             else:
-                venue_id = get_or_create_venue(venue_data)
+                venue_id = get_or_create_place(place_data)
                 venue_id_cache[venue_slug] = venue_id
 
             events_found += 1

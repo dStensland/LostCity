@@ -18,13 +18,13 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_client, get_or_create_venue
+from db import get_client, get_or_create_place
 
 logger = logging.getLogger(__name__)
 
 HOMEPAGE = "https://atlantamovietours.com/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Movie Tours",
     "slug": "atlanta-movie-tours",
     "address": "327 Nelson St SW Suite C",
@@ -88,7 +88,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     booked directly. The crawler upserts the venue and refreshes
     image/description from the live homepage on each run.
     """
-    venue_data = dict(VENUE_DATA)
+    place_data = dict(PLACE_DATA)
 
     try:
         resp = requests.get(
@@ -99,19 +99,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
         resp.raise_for_status()
         og_image, og_desc = _extract_og_meta(resp.text)
         if og_image:
-            venue_data["image_url"] = og_image
+            place_data["image_url"] = og_image
         if og_desc:
-            venue_data["description"] = og_desc
+            place_data["description"] = og_desc
     except Exception as exc:
         logger.warning("Atlanta Movie Tours: og: enrichment failed: %s", exc)
 
-    venue_id = get_or_create_venue(venue_data)
+    venue_id = get_or_create_place(place_data)
 
     update: dict = {}
-    if venue_data.get("image_url"):
-        update["image_url"] = venue_data["image_url"]
-    if venue_data.get("description"):
-        update["description"] = venue_data["description"]
+    if place_data.get("image_url"):
+        update["image_url"] = place_data["image_url"]
+    if place_data.get("description"):
+        update["description"] = place_data["description"]
     if update:
         try:
             get_client().table("venues").update(update).eq("id", venue_id).execute()

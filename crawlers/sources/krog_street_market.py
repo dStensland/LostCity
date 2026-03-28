@@ -22,7 +22,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     find_existing_event_for_insert,
@@ -40,7 +40,7 @@ EVENTS_URL = f"{BASE_URL}/events"
 WEEKS_AHEAD = 6
 
 # -- Primary venue (default for unmapped events) --
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Krog Street Market",
     "slug": "krog-street-market",
     "address": "99 Krog St NE",
@@ -100,7 +100,7 @@ SUB_VENUE_MAP = [
 
 WEEKLY_SCHEDULE = [
     {
-        "venue_data": VENUE_DATA,
+        "venue_data": PLACE_DATA,
         "day": 1,  # Tuesday
         "title": "Tuesday Night Trivia at Krog Street Market",
         "description": (
@@ -200,10 +200,10 @@ def _get_next_weekday(start_date: datetime, weekday: int) -> datetime:
 def _resolve_venue(title: str, full_text: str) -> dict:
     """Route event to the correct sub-venue based on location keywords."""
     search_text = (title + " " + full_text).lower()
-    for keyword, venue_data in SUB_VENUE_MAP:
+    for keyword, place_data in SUB_VENUE_MAP:
         if keyword in search_text:
-            return venue_data
-    return VENUE_DATA
+            return place_data
+    return PLACE_DATA
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -299,10 +299,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # Ensure all sub-venue records exist
     venue_ids: dict[str, int] = {}
-    for vdata in [VENUE_DATA, BREWDOG_VENUE_DATA, GUAC_Y_MARGYS_VENUE_DATA]:
-        venue_ids[vdata["slug"]] = get_or_create_venue(vdata)
+    for vdata in [PLACE_DATA, BREWDOG_VENUE_DATA, GUAC_Y_MARGYS_VENUE_DATA]:
+        venue_ids[vdata["slug"]] = get_or_create_place(vdata)
 
-    persist_typed_entity_envelope(_build_destination_envelope(venue_ids[VENUE_DATA["slug"]]))
+    persist_typed_entity_envelope(_build_destination_envelope(venue_ids[PLACE_DATA["slug"]]))
 
     try:
         with sync_playwright() as p:
@@ -482,8 +482,8 @@ def _generate_recurring_events(
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
     for template in WEEKLY_SCHEDULE:
-        venue_data = template["venue_data"]
-        venue_id = venue_ids[venue_data["slug"]]
+        place_data = template["venue_data"]
+        venue_id = venue_ids[place_data["slug"]]
         next_date = _get_next_weekday(today, template["day"])
         day_code = DAY_CODES[template["day"]]
         day_name = DAY_NAMES[template["day"]]
@@ -502,7 +502,7 @@ def _generate_recurring_events(
             events_found += 1
 
             content_hash = generate_content_hash(
-                template["title"], venue_data["name"], start_date
+                template["title"], place_data["name"], start_date
             )
 
             event_record = {

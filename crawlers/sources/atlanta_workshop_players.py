@@ -32,7 +32,7 @@ from playwright.sync_api import sync_playwright
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -45,7 +45,7 @@ CAMP_URL = f"{BASE_URL}/camp"
 SHOWS_URL = f"{BASE_URL}/shows"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Workshop Players",
     "slug": "atlanta-workshop-players",
     "address": "1580 Holcomb Bridge Rd Suite 13",
@@ -671,7 +671,7 @@ def _upsert_event(
     tags.extend(extra_tags)
     tags = list(dict.fromkeys(tags))  # dedupe, preserve order
 
-    content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+    content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
     event_record: dict[str, Any] = {
         "source_id": source_id,
@@ -733,7 +733,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     logger.info("AWP: venue record ensured (ID: %s)", venue_id)
 
     # ── 1. Summer camp sessions ────────────────────────────────────────────

@@ -12,7 +12,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://experienceavalon.com"
 EVENTS_URL = f"{BASE_URL}/events/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Avalon",
     "slug": "avalon-alpharetta",
     "address": "2200 Avalon Blvd",
@@ -134,7 +134,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     }
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         logger.info(f"Fetching Avalon events from {EVENTS_URL}")
 

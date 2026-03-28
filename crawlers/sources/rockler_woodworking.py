@@ -14,7 +14,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.rockler.com"
 EVENTS_URL = "https://www.eventbrite.com/cc/sandy-springs-ga-2306939"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Rockler Woodworking - Sandy Springs",
     "slug": "rockler-woodworking",
     "address": "6690 Roswell Road Suite 450",
@@ -79,7 +79,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Rockler Woodworking classes: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
@@ -206,7 +206,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         # Parse price
                         price_min, is_free = parse_price(price_text) if price_text else (None, False)
 
-                        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
 
                         # Get specific event URL
@@ -220,7 +220,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "source_id": source_id,
                             "venue_id": venue_id,
                             "title": title,
-                            "description": f"Woodworking class at {VENUE_DATA['name']}",
+                            "description": f"Woodworking class at {PLACE_DATA['name']}",
                             "start_date": start_date,
                             "start_time": start_time,
                             "end_date": None,
@@ -297,7 +297,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             end_date, end_time = parse_eventbrite_datetime(int(end_timestamp))
 
                         # Extract description
-                        description = event.get("description") or event.get("summary") or f"Woodworking class at {VENUE_DATA['name']}"
+                        description = event.get("description") or event.get("summary") or f"Woodworking class at {PLACE_DATA['name']}"
 
                         # Extract image
                         image_url = None
@@ -319,7 +319,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         events_found += 1
 
-                        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
                         existing = find_event_by_hash(content_hash)
                         if existing:

@@ -26,7 +26,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.relapsetheatre.com"
 EVENTS_URL = "https://therelapsetheater-com.seatengine.com/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Relapse Theatre",
     "slug": "relapse-theatre",
     "address": "380 14th St NW",
@@ -289,7 +289,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     current_hashes: set[str] = set()
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         logger.info(f"Fetching Relapse Theatre events: {EVENTS_URL}")
         try:

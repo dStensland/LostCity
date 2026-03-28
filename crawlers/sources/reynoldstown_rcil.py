@@ -14,7 +14,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.reynoldstown.net"
 
 # Default venue for neighborhood-wide events
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Reynoldstown",
     "slug": "reynoldstown-neighborhood",
     "address": "952 Wylie St SE",
@@ -158,7 +158,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     # Always create the Wheelbarrow Festival
     new, updated = create_wheelbarrow_festival(source_id, venue_id, datetime.now().year)

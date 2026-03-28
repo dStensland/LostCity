@@ -18,7 +18,7 @@ import requests
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -41,7 +41,7 @@ SPORTAPI_URL = "https://sportapi.atlutd.com/api/matches/bySportecIds/"
 DEFAULT_TICKETS_URL = "https://www.atlutd.com/tickets"
 ATLANTA_TZ = ZoneInfo("America/New_York")
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Mercedes-Benz Stadium",
     "slug": "mercedes-benz-stadium",
     "address": "1 AMB Dr NW, Atlanta, GA 30313, USA",
@@ -143,7 +143,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     current_hashes: set[str] = set()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     matches = upcoming_home_matches(fetch_match_details(fetch_schedule_match_ids()))
 
     for match in matches:
@@ -154,7 +154,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         start_time = kickoff_local.strftime("%H:%M")
         source_url = build_match_page_url(match)
         ticket_url = match.get("firstPartyTickets", {}).get("url") or DEFAULT_TICKETS_URL
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
         current_hashes.add(content_hash)
         events_found += 1

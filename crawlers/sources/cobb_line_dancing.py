@@ -13,7 +13,7 @@ from datetime import date, datetime, timedelta
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -54,7 +54,7 @@ DAY_INDEX = {
     "tuesday": 1,
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "South Cobb Recreation Center",
     "slug": "south-cobb-recreation-center",
     "address": "620 Lions Club Dr",
@@ -155,9 +155,9 @@ def parse_session(session: dict, today: date) -> dict | None:
 
     price = session.get("price")
     price_value = float(price) if price is not None else None
-    title = f"{title_core} at {VENUE_DATA['name']}"
+    title = f"{title_core} at {PLACE_DATA['name']}"
     description = (
-        f"Public line dancing class at {VENUE_DATA['name']} through Cobb County Parks. "
+        f"Public line dancing class at {PLACE_DATA['name']} through Cobb County Parks. "
         "Reserve through the official county catalog for current availability."
     )
 
@@ -181,7 +181,7 @@ def parse_session(session: dict, today: date) -> dict | None:
         "source_url": CATALOG_URL,
         "raw_text": (
             f"{title_core} | {features.get('days', '')} | {features.get('dates', '')} | "
-            f"{features.get('times', '')} | {VENUE_DATA['name']}"
+            f"{features.get('times', '')} | {PLACE_DATA['name']}"
         ),
     }
 
@@ -220,7 +220,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         str(target_group.get("id")),
         target_group.get("type", ""),
     )
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     for session in sessions:
         parsed = parse_session(session, today)
@@ -232,7 +232,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             start_date = event_date.strftime("%Y-%m-%d")
             content_hash = generate_content_hash(
                 parsed["title"],
-                VENUE_DATA["name"],
+                PLACE_DATA["name"],
                 start_date,
             )
             current_hashes.add(content_hash)

@@ -17,7 +17,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import slugify
 
@@ -45,7 +45,7 @@ def crawl_ryman_auditorium(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     # Venue data - store once in venues table
-    VENUE_DATA = {
+    PLACE_DATA = {
         "name": "Ryman Auditorium",
         "slug": "ryman-auditorium",
         "address": "116 5th Ave N",
@@ -60,7 +60,7 @@ def crawl_ryman_auditorium(source: dict) -> tuple[int, int, int]:
         "vibes": ["historic", "legendary", "acoustic", "iconic", "mother-church"]
     }
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     # Fetch events page
     url = "https://www.ryman.com/events"
@@ -183,7 +183,7 @@ def create_honky_tonk_continuous_events(source: dict) -> tuple[int, int, int]:
 
     # Create venue and recurring event for each
     for honky_tonk in HONKY_TONKS:
-        venue_data = {
+        place_data = {
             "name": honky_tonk["name"],
             "slug": honky_tonk["slug"],
             "address": honky_tonk["address"],
@@ -195,7 +195,7 @@ def create_honky_tonk_continuous_events(source: dict) -> tuple[int, int, int]:
             "vibes": ["honky-tonk", "country", "live-music", "no-cover", "walk-ins"]
         }
 
-        venue_id = get_or_create_venue(venue_data)
+        venue_id = get_or_create_place(place_data)
 
         # Generate next 30 days of events
         from datetime import timedelta
@@ -233,7 +233,7 @@ def create_honky_tonk_continuous_events(source: dict) -> tuple[int, int, int]:
                 "price_max": None,
                 "price_note": "No cover charge",
                 "is_free": True,
-                "source_url": venue_data["website"],
+                "source_url": place_data["website"],
                 "ticket_url": None,
                 "image_url": None,
                 "raw_text": honky_tonk["description"],
@@ -297,14 +297,14 @@ def crawl_nashville_scene_events(source: dict) -> tuple[int, int, int]:
             category = map_category(category_tag)
 
             # Get or create venue (may be new)
-            venue_data = {
+            place_data = {
                 "name": venue_name,
                 "slug": slugify(venue_name),
                 "city": "Nashville",
                 "state": "TN",
                 "venue_type": "venue",  # Generic for now
             }
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
 
             # Generate content hash
             content_hash = generate_content_hash(title, venue_name, start_date)
@@ -375,7 +375,7 @@ def crawl_bluebird_cafe(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    VENUE_DATA = {
+    PLACE_DATA = {
         "name": "Bluebird Cafe",
         "slug": "bluebird-cafe",
         "address": "4104 Hillsboro Pike",
@@ -388,7 +388,7 @@ def crawl_bluebird_cafe(source: dict) -> tuple[int, int, int]:
         "vibes": ["songwriter", "acoustic", "intimate", "legendary", "reservations"]
     }
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     # Bluebird typically posts monthly schedules
     url = "https://www.bluebirdcafe.com/calendar"
@@ -497,14 +497,14 @@ def crawl_cma_fest(source: dict) -> tuple[int, int, int]:
             time_str = performance.find("time")["datetime"]
 
             # Create venue if needed (stages within festival)
-            venue_data = {
+            place_data = {
                 "name": venue_name,
                 "slug": slugify(venue_name),
                 "city": "Nashville",
                 "state": "TN",
                 "venue_type": "festival_stage",
             }
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
 
             start_date = datetime.fromisoformat(time_str).strftime("%Y-%m-%d")
             start_time = datetime.fromisoformat(time_str).strftime("%H:%M")

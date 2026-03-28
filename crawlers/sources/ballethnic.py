@@ -27,7 +27,7 @@ from typing import Optional
 
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ RECURRING_SERIES_TITLES = {
 }
 
 # Home venue — the company's East Point studio
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Ballethnic Dance Studio",
     "slug": "ballethnic-dance-studio",
     "address": "2587 Ballethnic Way",
@@ -121,7 +121,7 @@ def _parse_price(cost_str: str) -> tuple[Optional[float], Optional[float], Optio
 
 
 def _build_venue_data_from_api(api_venue: dict) -> dict:
-    """Convert a TEC API venue object into our VENUE_DATA dict format."""
+    """Convert a TEC API venue object into our PLACE_DATA dict format."""
     name = api_venue.get("venue", "")
     address = api_venue.get("address", "")
     city = api_venue.get("city", "")
@@ -217,7 +217,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     )
 
     # Create or update home venue record
-    home_venue_id = get_or_create_venue(VENUE_DATA)
+    home_venue_id = get_or_create_place(PLACE_DATA)
 
     # Fetch all upcoming events, paginating if needed
     all_api_events: list[dict] = []
@@ -289,8 +289,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 venue_id = home_venue_id
                 venue_name = "Ballethnic Dance Studio"
             else:
-                venue_data = _build_venue_data_from_api(api_venue)
-                venue_id = get_or_create_venue(venue_data)
+                place_data = _build_venue_data_from_api(api_venue)
+                venue_id = get_or_create_place(place_data)
         else:
             venue_id = home_venue_id
             venue_name = "Ballethnic Dance Studio"

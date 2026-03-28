@@ -21,7 +21,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
+from db import find_event_by_hash, get_or_create_place, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -444,10 +444,10 @@ def build_parent_event(
 ) -> dict:
     start_date, _ = parse_iso_datetime(series.get("startDate"))
     end_date, _ = parse_iso_datetime(series.get("endDate"))
-    venue_data = build_venue_data("404 Day Weekend")
-    venue_id = get_or_create_venue(venue_data)
+    place_data = build_venue_data("404 Day Weekend")
+    venue_id = get_or_create_place(place_data)
     title = normalize_title(series.get("name") or f"404 Day Weekend {year}")
-    content_hash = generate_content_hash(title, venue_data["name"], start_date or f"{year}-04-01")
+    content_hash = generate_content_hash(title, place_data["name"], start_date or f"{year}-04-01")
 
     return {
         "source_id": source_id,
@@ -490,8 +490,8 @@ def build_child_event(
     parade_event: Optional[dict],
 ) -> dict:
     category, subcategory, tags = determine_category(title)
-    venue_data = build_venue_data(card.get("location_name") or title)
-    venue_id = get_or_create_venue(venue_data)
+    place_data = build_venue_data(card.get("location_name") or title)
+    venue_id = get_or_create_place(place_data)
 
     source_url = collection_event.get("url") or (detail_event or {}).get("url") or EVENTS_URL
     if "parade" in title.lower():
@@ -545,7 +545,7 @@ def build_child_event(
 
     content_hash = generate_content_hash(
         title,
-        venue_data["name"],
+        place_data["name"],
         f"{start_date}|{start_time or 'all-day'}",
     )
 
@@ -669,8 +669,8 @@ def _build_piedmont_park_child(source_id: int, card: dict, jsonld: Optional[dict
     if len(description) > 600:
         description = description[:597] + "..."
 
-    venue_data = build_venue_data("Piedmont Park")
-    venue_id = get_or_create_venue(venue_data)
+    place_data = build_venue_data("Piedmont Park")
+    venue_id = get_or_create_place(place_data)
     content_hash = generate_content_hash("404 Day 2026", "Piedmont Park", start_date)
 
     return {
@@ -713,8 +713,8 @@ def _build_stankonia_child(source_id: int, card: dict) -> dict:
         description = description[:597] + "..."
 
     title = "404 Day: Old Atlanta vs. New Atlanta"
-    venue_data = build_venue_data("Stankonia Studios")
-    venue_id = get_or_create_venue(venue_data)
+    place_data = build_venue_data("Stankonia Studios")
+    venue_id = get_or_create_place(place_data)
     content_hash = generate_content_hash(title, "Stankonia Studios", start_date)
 
     return {

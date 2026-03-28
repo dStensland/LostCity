@@ -76,10 +76,10 @@ def audit_venue_coverage():
         if not venue_id:
             continue
 
-        venue_data = event.get("venues")
-        if venue_data:
-            venue_stats[venue_id]["name"] = venue_data.get("name", "Unknown")
-            venue_stats[venue_id]["has_image"] = bool(venue_data.get("image_url"))
+        place_data = event.get("venues")
+        if place_data:
+            venue_stats[venue_id]["name"] = place_data.get("name", "Unknown")
+            venue_stats[venue_id]["has_image"] = bool(place_data.get("image_url"))
 
         venue_stats[venue_id]["count"] += 1
 

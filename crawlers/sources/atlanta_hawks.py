@@ -16,7 +16,7 @@ import requests
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -33,7 +33,7 @@ TICKETS_URL = "https://www.nba.com/hawks/tickets/games"
 TEAM_ABBREV = "ATL"
 ATLANTA_TZ = ZoneInfo("America/New_York")
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "State Farm Arena",
     "slug": "state-farm-arena",
     "address": "1 State Farm Dr",
@@ -119,7 +119,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     current_hashes: set[str] = set()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     games = upcoming_home_games(fetch_schedule_games())
 
     for game in games:
@@ -128,7 +128,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         start_date = local_dt.strftime("%Y-%m-%d")
         start_time = local_dt.strftime("%H:%M")
         source_url = build_game_page_url(game)
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
         current_hashes.add(content_hash)
         events_found += 1

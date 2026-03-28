@@ -12,7 +12,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -186,7 +186,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Create/get venue
                     if venue_name:
-                        venue_data = {
+                        place_data = {
                             "name": venue_name,
                             "slug": re.sub(
                                 r"[^a-z0-9]+", "-", venue_name.lower()
@@ -196,14 +196,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "spot_type": "club",
                         }
                     else:
-                        venue_data = {
+                        place_data = {
                             "name": "Atlanta",
                             "slug": "atlanta-tbd",
                             "city": "Atlanta",
                             "state": "GA",
                         }
 
-                    venue_id = get_or_create_venue(venue_data)
+                    venue_id = get_or_create_place(place_data)
                     events_found += 1
 
                     content_hash = generate_content_hash(

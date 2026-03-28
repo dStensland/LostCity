@@ -20,7 +20,7 @@ from datetime import datetime
 from typing import Optional
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -37,7 +37,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 BASE_URL = "https://thebreman.org"
 API_URL = f"{BASE_URL}/wp-json/wp/v2/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "The Breman Museum",
     "slug": "breman-museum",
     "address": "1440 Spring St NW",
@@ -234,7 +234,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Fetch og:image from homepage to enrich venue record
-        venue_data = dict(VENUE_DATA)
+        place_data = dict(PLACE_DATA)
         try:
             headers = {
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
@@ -244,12 +244,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 home_soup = BeautifulSoup(home_resp.text, "html.parser")
                 og_image = home_soup.find("meta", attrs={"property": "og:image"})
                 if og_image and og_image.get("content"):
-                    venue_data["image_url"] = og_image["content"]
+                    place_data["image_url"] = og_image["content"]
                     logger.debug("Fetched og:image for Breman Museum")
         except Exception as _e:
             logger.debug(f"Could not fetch og:image for Breman Museum: {_e}")
 
-        venue_id = get_or_create_venue(venue_data)
+        venue_id = get_or_create_place(place_data)
 
         # Fetch events from API (get up to 100 events)
         params = {"per_page": 100, "status": "publish"}
@@ -369,7 +369,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         source_id=source_id,
                         opening_date=details["date"],
                         closing_date=event_record.get("end_date"),
-                        venue_name=VENUE_DATA["name"],
+                        venue_name=PLACE_DATA["name"],
                         description=description,
                         image_url=image_url,
                         source_url=event_url,

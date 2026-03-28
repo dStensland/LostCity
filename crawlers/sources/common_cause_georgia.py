@@ -25,7 +25,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.commoncause.org"
 EVENTS_URL = f"{BASE_URL}/georgia/events/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Common Cause Georgia",
     "slug": "common-cause-georgia",
     "address": "Atlanta, GA",
@@ -226,7 +226,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     list_html = _fetch(EVENTS_URL)
     if not list_html:
@@ -261,7 +261,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         content_hash = generate_content_hash(
             parsed["title"],
-            VENUE_DATA["name"],
+            PLACE_DATA["name"],
             parsed["start_date"],
         )
 

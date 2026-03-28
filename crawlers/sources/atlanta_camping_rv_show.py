@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -30,7 +30,7 @@ SOURCE_URL = "https://atlantarvshow.com/our-show/"
 TICKETS_URL = "https://atlantarvshow.com/tickets-soon/"
 USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Exposition Center South",
     "slug": "atlanta-exposition-center-south",
     "address": "3850 Jonesboro Rd",
@@ -137,14 +137,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     page_text = BeautifulSoup(response.text, "html.parser").get_text(" ", strip=True)
     show = parse_show_details(page_text)
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     description = (
         "Atlanta Camping & RV Show is a large indoor consumer show for RVs, camping gear, "
         "outdoor travel planning, dealers, and recreation exhibitors at Atlanta Exposition Center South."
     )
 
     for session in show["sessions"]:
-        content_hash = generate_content_hash(session["title"], VENUE_DATA["name"], session["start_date"])
+        content_hash = generate_content_hash(session["title"], PLACE_DATA["name"], session["start_date"])
         current_hashes.add(content_hash)
         events_found += 1
 

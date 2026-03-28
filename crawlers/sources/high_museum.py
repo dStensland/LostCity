@@ -17,7 +17,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -40,7 +40,7 @@ BASE_URL = "https://high.org"
 EVENTS_URL = f"{BASE_URL}/events/"
 EXHIBITIONS_URL = f"{BASE_URL}/exhibitions/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "High Museum of Art",
     "slug": "high-museum",
     "address": "1280 Peachtree St NE",
@@ -543,7 +543,7 @@ def _scrape_page_events(
                     source_id=source_id,
                     opening_date=current_date,
                     closing_date=event_record.get("end_date"),
-                    venue_name=VENUE_DATA["name"],
+                    venue_name=PLACE_DATA["name"],
                     description=description,
                     image_url=image_map.get(title),
                     source_url=event_record.get("source_url"),
@@ -691,7 +691,7 @@ def _crawl_exhibitions(
                 source_id=source_id,
                 opening_date=start_date or exhibit_start,
                 closing_date=end_date,
-                venue_name=VENUE_DATA["name"],
+                venue_name=PLACE_DATA["name"],
                 description=description,
                 image_url=exhibit_image_map.get(title),
                 source_url=event_url,
@@ -742,15 +742,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "|| document.querySelector('meta[name=\"description\"]'); return m ? m.content : null; }"
                 )
                 if og_image:
-                    VENUE_DATA["image_url"] = og_image
+                    PLACE_DATA["image_url"] = og_image
                     logger.debug("High Museum: og:image = %s", og_image)
                 if og_desc:
-                    VENUE_DATA["description"] = og_desc
+                    PLACE_DATA["description"] = og_desc
                     logger.debug("High Museum: og:description captured")
             except Exception as _meta_exc:
                 logger.debug("High Museum: could not extract og meta from homepage: %s", _meta_exc)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             # ----------------------------------------------------------------

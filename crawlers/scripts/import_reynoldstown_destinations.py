@@ -8,7 +8,7 @@ import argparse
 import sys
 sys.path.insert(0, '.')
 
-from db import get_or_create_venue
+from db import get_or_create_place
 from destination_import_flow import add_enrichment_args, run_post_import_enrichment
 
 REYNOLDSTOWN_DESTINATIONS = [
@@ -179,7 +179,7 @@ def main():
 
     for dest in REYNOLDSTOWN_DESTINATIONS:
         try:
-            venue_id = get_or_create_venue(dest)
+            venue_id = get_or_create_place(dest)
             print(f"  ✓ {dest['name']} (ID: {venue_id})")
         except Exception as e:
             print(f"  ✗ {dest['name']}: {e}")

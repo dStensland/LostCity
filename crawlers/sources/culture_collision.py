@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -30,7 +30,7 @@ SOURCE_URL = "https://www.culturecollisiontradeshow.com/"
 TICKETS_URL = "https://www.eventbrite.com/e/culture-collision-trade-show-5-sports-cards-sneakers-3-v-3-game-more-tickets-828783382407?aff=ebdssbdestsearch"
 USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia International Convention Center",
     "slug": "georgia-international-convention-center",
     "address": "2000 Convention Center Concourse",
@@ -149,14 +149,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
     response.raise_for_status()
 
     sessions = parse_homepage(response.text)
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     description = (
         "Culture Collision is a destination collectibles convention centered on sports cards, "
         "TCG, sneakers, merch, and pop-culture fandom at GICC in College Park."
     )
 
     for session in sessions:
-        content_hash = generate_content_hash(session["title"], VENUE_DATA["name"], session["start_date"])
+        content_hash = generate_content_hash(session["title"], PLACE_DATA["name"], session["start_date"])
         current_hashes.add(content_hash)
         events_found += 1
 

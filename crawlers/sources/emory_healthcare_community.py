@@ -78,7 +78,7 @@ from datetime import datetime
 from typing import Optional
 from playwright.sync_api import sync_playwright, Response
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -211,9 +211,9 @@ def map_venue_name_to_venue_data(venue_name: str, lat: Optional[float] = None, l
     venue_lower = venue_name.lower()
 
     # Try exact matching first
-    for key, venue_data in EMORY_VENUES.items():
+    for key, place_data in EMORY_VENUES.items():
         if key in venue_lower:
-            result = venue_data.copy()
+            result = place_data.copy()
             # Override with API coordinates if available
             if lat and lng:
                 result["lat"] = lat
@@ -504,8 +504,8 @@ def crawl_group(page, group_key: str, group_name: str, source_id: int) -> tuple[
             lat = venue_geocode.get("latitude") if venue_geocode else None
             lng = venue_geocode.get("longitude") if venue_geocode else None
 
-            venue_data = map_venue_name_to_venue_data(venue_name, lat, lng)
-            venue_id = get_or_create_venue(venue_data)
+            place_data = map_venue_name_to_venue_data(venue_name, lat, lng)
+            venue_id = get_or_create_place(place_data)
 
             # Category mapping
             blackthorn_category = event_data.get("category", "")
@@ -548,7 +548,7 @@ def crawl_group(page, group_key: str, group_name: str, source_id: int) -> tuple[
 
             # Check for duplicates
             events_found += 1
-            content_hash = generate_content_hash(title, venue_data["name"], start_date)
+            content_hash = generate_content_hash(title, place_data["name"], start_date)
 
 
             # Check for recurring event linkage
@@ -591,7 +591,7 @@ def crawl_group(page, group_key: str, group_name: str, source_id: int) -> tuple[
             try:
                 insert_event(event_record)
                 events_new += 1
-                logger.info(f"Added [{group_name}]: {title} on {start_date} at {venue_data['name']}")
+                logger.info(f"Added [{group_name}]: {title} on {start_date} at {place_data['name']}")
             except Exception as e:
                 logger.error(f"Failed to insert event {title}: {e}")
 

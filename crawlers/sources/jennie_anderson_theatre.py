@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 LOCATION_URL = "https://www.cobbcounty.gov/jennie-t-anderson-theatre"
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"}
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Jennie T. Anderson Theatre",
     "slug": "jennie-anderson-theatre",
     "address": "548 S Marietta Pkwy SE",
@@ -126,7 +126,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     today = datetime.now().date()
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         logger.info("Fetching Jennie T. Anderson Theatre: %s", LOCATION_URL)
         resp = requests.get(LOCATION_URL, timeout=30, headers=REQUEST_HEADERS)

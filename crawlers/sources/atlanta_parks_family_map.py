@@ -25,7 +25,7 @@ from typing import Optional
 
 import requests
 
-from db import get_client, get_or_create_venue
+from db import get_client, get_or_create_place
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 from utils import slugify
@@ -514,7 +514,7 @@ def _resolve_venue_id(client, entry: dict) -> int:
             geometry = _lookup_place_geometry(entry["name"])
             if geometry:
                 venue_record.update({k: v for k, v in geometry.items() if v})
-    return get_or_create_venue(venue_record)
+    return get_or_create_place(venue_record)
 
 
 def _venue_has_destination_details(client, venue_id: int) -> bool:

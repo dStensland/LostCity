@@ -17,7 +17,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_existing_event_for_insert, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_existing_event_for_insert, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ TICKET_URL = "https://www.eventbrite.com/o/tongue-amp-groove-4990866211"
 IMG_BASE = "https://www.tandgonline.com/assets/images/"
 WEEKS_AHEAD = 8
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Tongue & Groove",
     "slug": "tongue-and-groove",
     "address": "565 Main St NE",
@@ -234,7 +234,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     logger.info(f"Tongue & Groove venue record ensured (ID: {venue_id})")
 
     schedule = _fetch_schedule()
@@ -260,7 +260,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             start_date = event_date.strftime("%Y-%m-%d")
             events_found += 1
 
-            content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
             event_record = {
                 "source_id": source_id,

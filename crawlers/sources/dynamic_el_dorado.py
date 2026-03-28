@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 import requests
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 API_URL = "https://crowdwork.com/api/v2/dynamiceldorado/shows"
 BASE_URL = "https://dynamiceldorado.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Dynamic El Dorado",
     "slug": "dynamic-el-dorado",
     "address": "684 John Wesley Dobbs Ave NE",
@@ -160,7 +160,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     current_hashes: set[str] = set()
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         logger.info(f"Fetching Dynamic El Dorado shows: {API_URL}")
         resp = requests.get(

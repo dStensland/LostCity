@@ -70,7 +70,7 @@ def _parse_date_range(text: str) -> tuple[str | None, str | None]:
 
 
 class _Crawler(GenericExhibitionCrawler):
-    VENUE_DATA = {
+    PLACE_DATA = {
         "name": "Besharat Contemporary",
         "slug": "besharat-contemporary",
         "address": "163 Peters St SW",

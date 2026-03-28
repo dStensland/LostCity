@@ -32,7 +32,7 @@ load_dotenv(env_path)
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from db import get_client, get_source_by_slug, get_or_create_venue
+from db import get_client, get_source_by_slug, get_or_create_place
 from utils import setup_logging, slugify
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -121,7 +121,7 @@ def _ensure_venue(festival: dict, source: dict) -> Optional[int]:
         return result.data[0]["id"]
 
     # Create a minimal venue from festival data
-    venue_data = {
+    place_data = {
         "name": location or festival["name"],
         "slug": slugify(location or festival["name"]),
         "city": "Atlanta",
@@ -130,7 +130,7 @@ def _ensure_venue(festival: dict, source: dict) -> Optional[int]:
         "website": festival.get("website"),
     }
     try:
-        return get_or_create_venue(venue_data)
+        return get_or_create_place(place_data)
     except Exception as e:
         logger.warning(f"  Failed to create venue: {e}")
         return None

@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     infer_program_type,
     infer_season,
@@ -333,7 +333,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             location_label: str = item.get("location", {}).get("label") or ""
             venue_key = location_label.lower().strip()
             if venue_key not in venue_cache:
-                venue_cache[venue_key] = get_or_create_venue(_resolve_venue_data(location_label))
+                venue_cache[venue_key] = get_or_create_place(_resolve_venue_data(location_label))
             venue_id = venue_cache[venue_key]
 
             price_min, price_max, is_free = _extract_prices(desc_html)

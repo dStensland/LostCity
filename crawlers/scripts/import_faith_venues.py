@@ -11,7 +11,7 @@ Usage:
 """
 
 import logging
-from db import get_or_create_venue, get_venue_by_slug
+from db import get_or_create_place, get_venue_by_slug
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -108,9 +108,9 @@ def main():
     existing = 0
     errors = 0
 
-    for venue_data in FAITH_VENUES:
-        venue_name = venue_data["name"]
-        venue_slug = venue_data["slug"]
+    for place_data in FAITH_VENUES:
+        venue_name = place_data["name"]
+        venue_slug = place_data["slug"]
 
         try:
             # Check if venue already exists
@@ -121,7 +121,7 @@ def main():
                 existing += 1
             else:
                 # Create new venue
-                venue_id = get_or_create_venue(venue_data)
+                venue_id = get_or_create_place(place_data)
                 logger.info(f"  + Created {venue_name} (ID: {venue_id})")
                 created += 1
 

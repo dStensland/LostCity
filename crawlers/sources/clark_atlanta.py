@@ -15,7 +15,7 @@ from typing import Any, Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -218,8 +218,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
     }
 
-    venue_data = VENUES["default"]
-    venue_id = get_or_create_venue(venue_data)
+    place_data = VENUES["default"]
+    venue_id = get_or_create_place(place_data)
 
     try:
         calendar_events = _fetch_calendar_events(headers, date.today())
@@ -256,7 +256,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             content_hash = generate_content_hash(
                 title,
-                venue_data["name"],
+                place_data["name"],
                 f"{start_date}|{start_time or ''}|{source_url}",
             )
 

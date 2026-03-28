@@ -28,7 +28,7 @@ from typing import Optional
 
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://events.nghs.com"
 API_URL = f"{BASE_URL}/api/2/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Northeast Georgia Medical Center",
     "slug": "northeast-georgia-medical-center",
     "address": "743 Spring St NE",
@@ -154,7 +154,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Create venue record
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         headers = {
             "User-Agent": "LostCity/1.0 (https://lostcity.ai; events@lostcity.ai)"
@@ -209,7 +209,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Check for duplicates
             content_hash = generate_content_hash(
-                title, VENUE_DATA["name"], start_date
+                title, PLACE_DATA["name"], start_date
             )
 
             existing = find_event_by_hash(content_hash)

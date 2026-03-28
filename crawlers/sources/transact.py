@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -170,7 +170,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     html = _fetch_html(SOURCE_URL)
     event = parse_homepage(html)
-    venue_id = get_or_create_venue(event["venue"])
+    venue_id = get_or_create_place(event["venue"])
 
     for session in event["sessions"]:
         content_hash = generate_content_hash(session["title"], event["venue"]["name"], session["start_date"])

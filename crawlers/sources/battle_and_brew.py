@@ -13,7 +13,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, find_existing_event_for_insert
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, find_existing_event_for_insert
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.battleandbrew.com"
 EVENTS_URL = f"{BASE_URL}/upcoming-events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Battle & Brew",
     "slug": "battle-and-brew",
     "address": "5920 Roswell Rd",
@@ -107,7 +107,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
             events_found += 1
 
             content_hash = generate_content_hash(
-                template["title"], VENUE_DATA["name"], start_date
+                template["title"], PLACE_DATA["name"], start_date
             )
 
             is_free = template.get("is_free", False) or "free" in template["tags"]
@@ -131,7 +131,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
                 "source_url": BASE_URL,
                 "ticket_url": None,
                 "image_url": None,
-                "raw_text": f"{template['title']} at {VENUE_DATA['name']} - {start_date}",
+                "raw_text": f"{template['title']} at {PLACE_DATA['name']} - {start_date}",
                 "extraction_confidence": 0.90,
                 "is_recurring": True,
                 "recurrence_rule": f"FREQ=WEEKLY;BYDAY={day_code}",
@@ -245,7 +245,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Battle & Brew: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -25,7 +25,7 @@ BASE_URL = "https://www.cairgeorgia.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
 # CAIR Georgia venue
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "CAIR Georgia",
     "slug": "cair-georgia",
     "address": "6225 Highway 85",
@@ -178,7 +178,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Get venue ID
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching CAIR Georgia events: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
@@ -286,7 +286,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             is_free = is_free_event(title, description, price_text)
 
                             content_hash = generate_content_hash(
-                                title, VENUE_DATA["name"], start_date
+                                title, PLACE_DATA["name"], start_date
                             )
 
 

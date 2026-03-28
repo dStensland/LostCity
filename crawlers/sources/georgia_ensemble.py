@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -25,7 +25,7 @@ BASE_URL = "https://get.org"
 SEASON_URL = f"{BASE_URL}/25-26-season/"
 
 # Current venue (as of 2024-2025 season)
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia Ensemble Theatre @ Act3 Playhouse",
     "slug": "georgia-ensemble-theatre",
     "address": "5975 Roswell Rd",
@@ -198,7 +198,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Georgia Ensemble Theatre: {SEASON_URL}")
             page.goto(SEASON_URL, wait_until="domcontentloaded", timeout=30000)

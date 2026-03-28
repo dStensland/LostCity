@@ -33,7 +33,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, find_existing_event_for_insert, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, find_existing_event_for_insert, smart_update_existing_event
 from dedupe import generate_content_hash
 from source_destination_sync import refresh_venue_specials_from_website
 from utils import enrich_event_record
@@ -52,7 +52,7 @@ HEADERS = {
     )
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Star Community Bar",
     "slug": "star-community-bar",
     "address": "437 Moreland Ave NE",
@@ -254,7 +254,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     logger.info(f"Star Community Bar venue record ensured (ID: {venue_id})")
     refresh_venue_specials_from_website(venue_id)
 
@@ -353,7 +353,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             category, subcategory, genres, tags = _classify_event(title)
 
             # --- Content hash ---
-            content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
             event_record = {
                 "source_id": source_id,
@@ -426,7 +426,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             events_found += 1
 
             content_hash = generate_content_hash(
-                template["title"], VENUE_DATA["name"], start_date
+                template["title"], PLACE_DATA["name"], start_date
             )
 
             event_record = {

@@ -13,7 +13,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.ridgeviewsmyrna.com"
 SOURCE_URL = f"{BASE_URL}/resources/support-groups/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Ridgeview Institute",
     "slug": "ridgeview-institute",
     "address": "3995 South Cobb Dr SE",
@@ -225,7 +225,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Create/fetch venue
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Generate events for each meeting in schedule
         for meeting in SCHEDULE:

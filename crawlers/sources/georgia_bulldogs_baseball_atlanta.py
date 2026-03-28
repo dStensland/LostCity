@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 from db import (
     find_existing_event_for_insert,
     get_client,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -166,7 +166,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     response.raise_for_status()
     soup = BeautifulSoup(response.text, "html.parser")
 
-    venue_id = get_or_create_venue(TRUIST_PARK)
+    venue_id = get_or_create_place(TRUIST_PARK)
 
     for game in parse_schedule_cards(soup):
         events_found += 1

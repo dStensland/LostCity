@@ -18,7 +18,7 @@ from playwright.sync_api import sync_playwright
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -270,8 +270,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 card_text = clean_text(card.inner_text())
-                venue_data = get_venue_for_event(title, card_text)
-                if should_skip_dedicated_event(title, venue_data["slug"]):
+                place_data = get_venue_for_event(title, card_text)
+                if should_skip_dedicated_event(title, place_data["slug"]):
                     continue
 
                 source_url = CALENDAR_URL
@@ -289,8 +289,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         image_url = src if src.startswith("http") else f"{BASE_URL}{src}"
 
                 category = determine_category(title, card_text)
-                venue_id = get_or_create_venue(venue_data)
-                content_hash = generate_content_hash(title, venue_data["name"], start_date)
+                venue_id = get_or_create_place(place_data)
+                content_hash = generate_content_hash(title, place_data["name"], start_date)
                 current_hashes.add(content_hash)
                 events_found += 1
 
@@ -298,7 +298,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title,
-                    "description": build_description(title, venue_data, start_date, end_date, None),
+                    "description": build_description(title, place_data, start_date, end_date, None),
                     "start_date": start_date,
                     "start_time": None,
                     "end_date": end_date,

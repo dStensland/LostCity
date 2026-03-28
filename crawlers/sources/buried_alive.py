@@ -12,7 +12,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://buriedalivefilmfest.com"
 EVENTS_URL = BASE_URL
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Buried Alive Film Festival",
     "slug": "buried-alive-film-fest",
     "address": "349 Decatur St SE",  # Various venues
@@ -78,7 +78,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Extract event links for specific URLs
             event_links = extract_event_links(page, BASE_URL)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             body_text = page.inner_text("body")
 

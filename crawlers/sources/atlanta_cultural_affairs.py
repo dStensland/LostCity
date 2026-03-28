@@ -9,7 +9,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ def generate_annual_events(source_id: int, year: int) -> list[dict]:
 
     # Atlanta Jazz Festival - Memorial Day Weekend at Piedmont Park
     sat_date, sun_date = get_atlanta_jazz_festival_dates(year)
-    piedmont_venue_id = get_or_create_venue(VENUES["piedmont_park"])
+    piedmont_venue_id = get_or_create_place(VENUES["piedmont_park"])
 
     # Only generate if event is in the future
     today = datetime.now().date()

@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -160,7 +160,7 @@ def parse_api_event(event: dict) -> Optional[dict]:
     )
 
     description_text = _text_from_html(event.get("description") or "")
-    venue_data = build_venue_data(event.get("venue"))
+    place_data = build_venue_data(event.get("venue"))
     category_slugs = [
         category.get("slug")
         for category in (event.get("categories") or [])
@@ -175,7 +175,7 @@ def parse_api_event(event: dict) -> Optional[dict]:
         "start_date": start_dt.strftime("%Y-%m-%d"),
         "start_time": start_dt.strftime("%H:%M"),
         "end_time": end_dt.strftime("%H:%M") if end_dt else None,
-        "venue_data": venue_data,
+        "venue_data": place_data,
         "category": category,
         "subcategory": subcategory,
         "tags": tags,
@@ -240,7 +240,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         if not parsed:
             continue
 
-        venue_id = get_or_create_venue(parsed["venue_data"])
+        venue_id = get_or_create_place(parsed["venue_data"])
         events_found += 1
 
         content_hash = generate_content_hash(

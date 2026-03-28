@@ -19,7 +19,7 @@ from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ OPEN_TABLE_URL = f"{BASE_URL}/products/knit-togethers"
 
 MAX_EVENTS = 30
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "The Craftivist",
     "slug": "the-craftivist",
     "address": "743 Edgewood Ave NE",
@@ -115,7 +115,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             # --- Scrape classes collection ---
             logger.info(f"Fetching The Craftivist classes: {CLASSES_URL}")
@@ -190,7 +190,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date or "")
+                    content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date or "")
 
                     existing = find_event_by_hash(content_hash)
 
@@ -249,7 +249,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.wait_for_timeout(2000)
 
                 title = "Open Table at The Craftivist"
-                content_hash = generate_content_hash(title, VENUE_DATA["name"], "recurring")
+                content_hash = generate_content_hash(title, PLACE_DATA["name"], "recurring")
 
                 existing = find_event_by_hash(content_hash)
 

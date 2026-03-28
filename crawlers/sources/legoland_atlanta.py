@@ -44,7 +44,7 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
+from db import find_event_by_hash, get_or_create_place, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -63,7 +63,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     venue_features=True,
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "LEGO Discovery Center Atlanta",
     "slug": "lego-discovery-center-atlanta",
     "address": "3500 Peachtree Rd NE Suite G-1",
@@ -459,7 +459,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info("Fetching LEGO Discovery Center Atlanta events: %s", EVENTS_URL)
@@ -540,7 +540,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 tags = _infer_tags(title, description)
 
                 content_hash = generate_content_hash(
-                    title, VENUE_DATA["name"], start_date
+                    title, PLACE_DATA["name"], start_date
                 )
 
                 is_html_fallback = ld.get("_source") == "html_fallback"

@@ -30,7 +30,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_exhibition
+from db import get_or_create_place, insert_exhibition
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ USER_AGENT = (
 )
 REQUEST_TIMEOUT = 20
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Whitespace Gallery",
     "slug": "whitespace-gallery",
     "address": "814 Edgewood Ave NE",
@@ -226,7 +226,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     found = new = updated = 0
 
     # Always ensure venue record exists
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     session = _session()
 
@@ -269,7 +269,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             "title": title,
             "venue_id": venue_id,
             "source_id": source_id,
-            "_venue_name": VENUE_DATA["name"],
+            "_venue_name": PLACE_DATA["name"],
             "opening_date": exh.get("opening_date"),
             "closing_date": exh.get("closing_date"),
             "description": None,

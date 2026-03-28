@@ -13,7 +13,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import enrich_event_record
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.hotelclermont.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Hotel Clermont",
     "slug": "hotel-clermont",
     "address": "789 Ponce De Leon Ave NE",
@@ -125,7 +125,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1500)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             # Squarespace events calendar uses eapp-events-calendar components
             event_items = page.query_selector_all("[class*='eapp-events-calendar-grid-item']")
@@ -225,7 +225,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                    content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
                     # Determine category from title
                     title_lower = title.lower()

@@ -32,7 +32,7 @@ from bs4 import BeautifulSoup
 from date_utils import parse_human_date
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -51,7 +51,7 @@ _HEADERS = {
     "Accept-Language": "en-US,en;q=0.5",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "LifeLine Animal Project",
     "slug": "lifeline-animal-project",
     "address": "3180 Presidential Dr",
@@ -312,7 +312,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     today = datetime.now().date()
 
     for page_config in KNOWN_EVENT_PAGES:
@@ -345,7 +345,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         image_url = _extract_image(soup)
         description = _extract_description(soup, title)
 
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
         event_record = {
             "source_id": source_id,

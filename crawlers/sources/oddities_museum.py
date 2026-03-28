@@ -14,7 +14,7 @@ from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -146,7 +146,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.wait_for_timeout(1000)
 
             # Get or create venue
-            venue_id = get_or_create_venue(ODDITIES_MUSEUM_VENUE)
+            venue_id = get_or_create_place(ODDITIES_MUSEUM_VENUE)
 
             # Find event articles - Squarespace uses article elements for events
             event_articles = page.query_selector_all('article:has(a[href*="/calendar-of-events/"])')

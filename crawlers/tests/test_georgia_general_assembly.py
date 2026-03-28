@@ -136,7 +136,7 @@ def test_crawl_updates_existing_events_with_shared_db_contract(monkeypatch) -> N
     monkeypatch.setattr(source_module.requests, "Session", lambda: DummySession())
     monkeypatch.setattr(source_module, "_fetch_meetings", lambda session, now: [{"ignored": True}])
     monkeypatch.setattr(source_module, "_extract_meeting_events", lambda raw_payload, today=None: payload)
-    monkeypatch.setattr(source_module, "get_or_create_venue", lambda venue: 99)
+    monkeypatch.setattr(source_module, "get_or_create_place", lambda venue: 99)
     monkeypatch.setattr(source_module, "find_event_by_hash", lambda content_hash: existing)
     monkeypatch.setattr(source_module, "insert_event", lambda event_record: calls.append(("insert", event_record)))
     monkeypatch.setattr(

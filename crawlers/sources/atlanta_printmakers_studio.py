@@ -19,7 +19,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_exhibition,
 )
 
@@ -32,7 +32,7 @@ USER_AGENT = (
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Printmakers Studio",
     "slug": "atlanta-printmakers-studio",
     "address": "748 Virginia Ave",
@@ -313,7 +313,7 @@ def _sync_exhibition_record(
         "title": candidate.title,
         "venue_id": venue_id,
         "source_id": source_id,
-        "_venue_name": VENUE_DATA["name"],
+        "_venue_name": PLACE_DATA["name"],
         "opening_date": candidate.opening_date,
         "closing_date": candidate.closing_date,
         "description": candidate.description,
@@ -341,7 +341,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     today = _today()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     soup = _fetch_soup(EXHIBITIONS_URL)
     candidates = _extract_candidates(soup, today=today)
 

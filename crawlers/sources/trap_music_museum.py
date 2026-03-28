@@ -16,14 +16,14 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, get_client, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, get_client, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://trapmusicmuseum.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Trap Music Museum",
     "slug": "trap-music-museum",
     "address": "630 Travis St NW",
@@ -155,7 +155,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     }
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Check main page for featured events
         logger.info(f"Fetching Trap Music Museum: {BASE_URL}")

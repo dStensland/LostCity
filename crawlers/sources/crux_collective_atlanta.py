@@ -25,7 +25,7 @@ from zoneinfo import ZoneInfo
 import requests
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -149,11 +149,11 @@ def _parse_show_dates(show: dict) -> list[tuple[str, str]]:
 def _get_or_create_show_venue(venue_str: str) -> int:
     """
     Parse a venue string like "Windmill Arts Center, 2823 Church St, East Point, GA 30344"
-    and return its venue_id via get_or_create_venue.
+    and return its venue_id via get_or_create_place.
     Falls back to the org record if parsing fails.
     """
     if not venue_str or not venue_str.strip():
-        return get_or_create_venue(ORG_DATA)
+        return get_or_create_place(ORG_DATA)
 
     m = _VENUE_ADDR_RE.match(venue_str.strip())
     if m:
@@ -166,7 +166,7 @@ def _get_or_create_show_venue(venue_str: str) -> int:
         # Generate a slug from venue name
         slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
 
-        venue_data = {
+        place_data = {
             "name": name,
             "slug": slug,
             "address": address,
@@ -182,12 +182,12 @@ def _get_or_create_show_venue(venue_str: str) -> int:
             "vibes": ["artsy", "live-music", "lively"],
         }
         try:
-            return get_or_create_venue(venue_data)
+            return get_or_create_place(place_data)
         except Exception as exc:
             logger.warning(f"Failed to create venue for '{venue_str}': {exc}")
 
     # Fallback: use org record
-    return get_or_create_venue(ORG_DATA)
+    return get_or_create_place(ORG_DATA)
 
 
 def _extract_production_title(show_name: str) -> str:

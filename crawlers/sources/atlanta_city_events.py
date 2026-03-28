@@ -23,7 +23,7 @@ from urllib.parse import urljoin, urlparse
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -522,7 +522,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             elif not part.upper() in ["GA", "GEORGIA"] and len(part) > 2:
                                 city = part
 
-                    venue_data = {
+                    place_data = {
                         "name": venue_name,
                         "slug": re.sub(r"[^a-z0-9]+", "-", venue_name.lower()).strip("-"),
                         "address": street_address,
@@ -533,7 +533,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "website": BASE_URL,
                     }
 
-                    venue_id = get_or_create_venue(venue_data)
+                    venue_id = get_or_create_place(place_data)
 
                     # Infer category
                     category = infer_category(event_data["title"], event_data["description"] or "")

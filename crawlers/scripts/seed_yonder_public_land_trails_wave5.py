@@ -24,7 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from db import get_client, get_or_create_venue, get_venue_by_slug
+from db import get_client, get_or_create_place, get_venue_by_slug
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -187,7 +187,7 @@ def main() -> None:
         if not existing:
             created_id = None
             if args.apply:
-                created_id = get_or_create_venue(payload)
+                created_id = get_or_create_place(payload)
             logger.info("%s venue: %s", "CREATE" if args.apply else "WOULD CREATE", seed["slug"])
             if not args.apply or created_id:
                 created += 1

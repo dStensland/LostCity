@@ -12,7 +12,7 @@ from datetime import date, datetime, timedelta
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -45,7 +45,7 @@ DAY_INDEX = {
     "tuesday": 1,
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Rhodes Jordan Park Community Recreation Center",
     "slug": "rhodes-jordan-park-crc",
     "address": "100 E Crogan St",
@@ -144,9 +144,9 @@ def parse_session(session: dict, today: date) -> dict | None:
 
     price = session.get("price")
     price_value = float(price) if price is not None else None
-    title = f"{normalized_title} at {VENUE_DATA['name']}"
+    title = f"{normalized_title} at {PLACE_DATA['name']}"
     description = (
-        f"Public Latin dance class at {VENUE_DATA['name']} through Gwinnett County Parks & Recreation. "
+        f"Public Latin dance class at {PLACE_DATA['name']} through Gwinnett County Parks & Recreation. "
         "Reserve through the official county catalog for current availability."
     )
 
@@ -170,7 +170,7 @@ def parse_session(session: dict, today: date) -> dict | None:
         "source_url": CATALOG_URL,
         "raw_text": (
             f"{normalized_title} | {features.get('ageGender','')} | {features.get('days','')} | "
-            f"{features.get('dates','')} | {features.get('times','')} | {VENUE_DATA['name']}"
+            f"{features.get('dates','')} | {features.get('times','')} | {PLACE_DATA['name']}"
         ),
     }
 
@@ -182,7 +182,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     current_hashes: set[str] = set()
     seen_session_ids: set[int] = set()
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     today = datetime.now().date()
 
     checkout_key = _get_checkout_key(TENANT_SLUG)
@@ -224,7 +224,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         for event_date, weekday in parsed["occurrences"]:
             events_found += 1
             start_date = event_date.strftime("%Y-%m-%d")
-            content_hash = generate_content_hash(parsed["title"], VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(parsed["title"], PLACE_DATA["name"], start_date)
             current_hashes.add(content_hash)
 
             event_record = {

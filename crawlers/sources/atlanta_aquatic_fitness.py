@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -174,7 +174,7 @@ def _normalize_title(raw_title: str, venue_name: str) -> str:
     return f"{title} at {venue_name}"
 
 
-def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityEnvelope:
+def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
 
     envelope.add(
@@ -195,7 +195,7 @@ def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityE
             "source_url": SOURCE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": venue_data.get("venue_type"),
+                "venue_type": place_data.get("venue_type"),
                 "city": "atlanta",
             },
         },
@@ -207,7 +207,7 @@ def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityE
             "slug": "public-pool-and-aquatics-programs",
             "title": "Public pool and aquatics programs",
             "feature_type": "amenity",
-            "description": f"{venue_data['name']} is one of Atlanta DPR's aquatic facilities with public swim and family aquatics programming.",
+            "description": f"{place_data['name']} is one of Atlanta DPR's aquatic facilities with public swim and family aquatics programming.",
             "url": SOURCE_URL,
             "price_note": "Public access and registration vary by program and season.",
             "is_free": False,
@@ -240,8 +240,8 @@ def parse_item(item: dict, today: date) -> Optional[dict]:
 
     location_label = ((item.get("location") or {}).get("label") or "").strip()
     override_label = VENUE_OVERRIDES.get(location_label.lower(), location_label)
-    venue_data = _resolve_venue_data(override_label)
-    if venue_data.get("city") != "Atlanta":
+    place_data = _resolve_venue_data(override_label)
+    if place_data.get("city") != "Atlanta":
         return None
 
     weekdays, start_time, end_time = schedule
@@ -250,9 +250,9 @@ def parse_item(item: dict, today: date) -> Optional[dict]:
         return None
 
     price_min, price_max, is_free = _extract_prices(description_html)
-    normalized_title = _normalize_title(raw_title, venue_data["name"])
+    normalized_title = _normalize_title(raw_title, place_data["name"])
     description = (
-        f"Public aquatic fitness class at {venue_data['name']} through Atlanta DPR. "
+        f"Public aquatic fitness class at {place_data['name']} through Atlanta DPR. "
         "Reserve through the official city registration catalog for current availability."
     )
 
@@ -266,7 +266,7 @@ def parse_item(item: dict, today: date) -> Optional[dict]:
     return {
         "title": normalized_title,
         "description": description,
-        "venue_data": venue_data,
+        "venue_data": place_data,
         "start_date": start_date,
         "end_date": end_date,
         "weekdays": weekdays,
@@ -326,7 +326,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if not parsed:
                 continue
 
-            venue_id = get_or_create_venue(parsed["venue_data"])
+            venue_id = get_or_create_place(parsed["venue_data"])
             if venue_id not in enriched_venue_ids:
                 persist_typed_entity_envelope(
                     _build_destination_envelope(parsed["venue_data"], venue_id)

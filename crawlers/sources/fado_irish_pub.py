@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 import requests
 
 from sources._sports_bar_common import detect_sports_watch_party
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://fadoirishpub.com/atlanta"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Fado Irish Pub",
     "slug": "fado-irish-pub",
     "address": "273 Buckhead Avenue NE",
@@ -63,7 +63,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     }
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Try to fetch events page
         try:
@@ -84,7 +84,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if not start_date:
                         continue
 
-                    content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                    content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
                     # Determine category based on title
                     title_lower = title.lower()

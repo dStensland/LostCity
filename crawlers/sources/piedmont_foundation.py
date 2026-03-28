@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -172,14 +172,14 @@ def find_venue_for_event(title: str, location_text: str) -> dict:
     search_text = f"{title} {location_text}".lower()
 
     # Check external venues first
-    for key, venue_data in EXTERNAL_VENUES.items():
+    for key, place_data in EXTERNAL_VENUES.items():
         if key in search_text:
-            return {**venue_data, "venue_type": "event_venue", "website": None}
+            return {**place_data, "venue_type": "event_venue", "website": None}
 
     # Check hospital names
-    for key, venue_data in VENUE_MAP.items():
+    for key, place_data in VENUE_MAP.items():
         if key in search_text:
-            return {**venue_data, "venue_type": "hospital", "website": BASE_URL}
+            return {**place_data, "venue_type": "hospital", "website": BASE_URL}
 
     # Default to Piedmont Atlanta
     return {**VENUE_MAP["piedmont atlanta"], "venue_type": "hospital", "website": BASE_URL}
@@ -351,11 +351,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     events_found += 1
 
                     # Find venue
-                    venue_data = find_venue_for_event(title, location or "")
-                    venue_id = get_or_create_venue(venue_data)
+                    place_data = find_venue_for_event(title, location or "")
+                    venue_id = get_or_create_place(place_data)
 
                     content_hash = generate_content_hash(
-                        title, venue_data["name"], start_date
+                        title, place_data["name"], start_date
                     )
 
 
@@ -393,7 +393,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_url": event_url,
                         "ticket_url": event_url,
                         "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date} at {venue_data['name']}",
+                        "raw_text": f"{title} - {start_date} at {place_data['name']}",
                         "extraction_confidence": 0.85,
                         "is_recurring": False,
                         "recurrence_rule": None,

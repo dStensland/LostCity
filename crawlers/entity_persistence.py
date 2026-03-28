@@ -10,17 +10,17 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     insert_exhibition,
     insert_open_call,
     insert_program,
     upsert_editorial_mention,
     upsert_volunteer_opportunity,
-    upsert_venue_destination_details,
+    upsert_place_vertical_details,
     upsert_venue_feature,
-    upsert_venue_occasion,
-    upsert_venue_special,
+    upsert_place_occasion,
+    upsert_place_special,
 )
 from entity_lanes import TypedEntityEnvelope
 
@@ -63,7 +63,7 @@ def persist_typed_entity_envelope(
 
     for destination in envelope.destinations:
         destination_record = dict(destination)
-        venue_id = get_or_create_venue(destination_record)
+        venue_id = get_or_create_place(destination_record)
         if isinstance(venue_id, int) and venue_id > 0:
             slug = destination_record.get("slug")
             if isinstance(slug, str) and slug:
@@ -81,7 +81,7 @@ def persist_typed_entity_envelope(
             result.bump_skipped("destination_details")
             result.unresolved.append("destination_details")
             continue
-        persisted = upsert_venue_destination_details(venue_id, details_record)
+        persisted = upsert_place_vertical_details(venue_id, details_record)
         if persisted:
             result.bump_persisted("destination_details")
         else:
@@ -107,7 +107,7 @@ def persist_typed_entity_envelope(
             result.bump_skipped("venue_specials")
             result.unresolved.append("venue_specials")
             continue
-        persisted = upsert_venue_special(venue_id, special_record)
+        persisted = upsert_place_special(venue_id, special_record)
         if persisted:
             result.bump_persisted("venue_specials")
         else:
@@ -133,7 +133,7 @@ def persist_typed_entity_envelope(
             result.bump_skipped("venue_occasions")
             result.unresolved.append("venue_occasions")
             continue
-        persisted = upsert_venue_occasion(venue_id, occasion_record)
+        persisted = upsert_place_occasion(venue_id, occasion_record)
         if persisted:
             result.bump_persisted("venue_occasions")
         else:

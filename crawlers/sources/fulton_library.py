@@ -15,7 +15,7 @@ from typing import Optional
 from bs4 import BeautifulSoup
 
 from utils import slugify
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -246,10 +246,10 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 )
 
 
-def _build_branch_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
+def _build_branch_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityEnvelope:
     """Project a Fulton library branch into shared Family-friendly destination details."""
     envelope = TypedEntityEnvelope()
-    branch_name = str(venue_data.get("name") or "Fulton County library branch").strip()
+    branch_name = str(place_data.get("name") or "Fulton County library branch").strip()
 
     envelope.add(
         "destination_details",
@@ -479,15 +479,15 @@ def build_library_description(
     start_date: Optional[str],
     start_time: Optional[str],
     end_time: Optional[str],
-    venue_data: dict,
+    place_data: dict,
     category: str,
     is_registration_required: bool,
     event_url: str,
 ) -> str:
     description = (base_description or "").strip()
-    venue_name = str(venue_data.get("name") or "Fulton County Library System").strip()
-    city = str(venue_data.get("city") or "Atlanta").strip()
-    state = str(venue_data.get("state") or "GA").strip()
+    venue_name = str(place_data.get("name") or "Fulton County Library System").strip()
+    city = str(place_data.get("city") or "Atlanta").strip()
+    state = str(place_data.get("state") or "GA").strip()
     time_label = format_time_label(start_time)
     end_label = format_time_label(end_time)
 
@@ -638,7 +638,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         venue_name = branch["name"]
                         address = branch.get("address", {})
 
-                        venue_data = {
+                        place_data = {
                             "name": venue_name,
                             "slug": slugify(venue_name),
                             "address": address.get("street"),
@@ -649,7 +649,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         }
                     else:
                         # Fallback to generic library venue
-                        venue_data = {
+                        place_data = {
                             "name": "Fulton County Library System",
                             "slug": "fulton-county-library-system",
                             "city": "Atlanta",
@@ -657,14 +657,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "venue_type": "library",
                         }
 
-                    venue_id = get_or_create_venue(venue_data)
+                    venue_id = get_or_create_place(place_data)
                     persist_result = persist_typed_entity_envelope(
-                        _build_branch_destination_envelope(venue_id, venue_data)
+                        _build_branch_destination_envelope(venue_id, place_data)
                     )
                     if persist_result.skipped:
                         logger.warning(
                             "Fulton Library: skipped typed destination writes for %s: %s",
-                            venue_data["name"],
+                            place_data["name"],
                             persist_result.skipped,
                         )
 
@@ -700,7 +700,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     is_registration_required = bool(reg_info.get("enabledMethods"))
 
                     # Generate content hash
-                    content_hash = generate_content_hash(title, venue_data["name"], start_date)
+                    content_hash = generate_content_hash(title, place_data["name"], start_date)
 
                     # Check if event already exists
 
@@ -716,7 +716,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             start_date=start_date,
                             start_time=start_time,
                             end_time=end_time,
-                            venue_data=venue_data,
+                            place_data=place_data,
                             category=category,
                             is_registration_required=is_registration_required,
                             event_url=event_url,
@@ -752,7 +752,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Insert event
                     insert_event(event_record)
                     events_new += 1
-                    logger.info(f"Added: {title} on {start_date} at {venue_data['name']}")
+                    logger.info(f"Added: {title} on {start_date} at {place_data['name']}")
 
                 except Exception as e:
                     logger.error(f"Failed to process event {event_id}: {e}")

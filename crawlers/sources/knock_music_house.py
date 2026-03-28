@@ -10,7 +10,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_event_links, find_event_url
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.knockmusichouse.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Knock Music House",
     "slug": "knock-music-house",
     "address": "1789 Cheshire Bridge Road NE",
@@ -69,7 +69,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Try JSON-LD first
         json_events = parse_jsonld_events(soup)
@@ -84,7 +84,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if not start_date:
                 continue
 
-            content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
             # Parse time if available
             start_time = None

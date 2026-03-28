@@ -10,13 +10,13 @@ from __future__ import annotations
 
 import logging
 
-from db import get_or_create_venue
+from db import get_or_create_place
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.thegatemuseum.org"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Millennium Gate",
     "slug": "millennium-gate",
     "address": "395 Central Ave NE",
@@ -42,7 +42,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     This crawler ensures the venue is represented as an important cultural destination.
     """
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         logger.info(f"Millennium Gate Museum venue verified (ID: {venue_id})")
 
         # Return (0, 0, 0) - no events crawled, but venue exists

@@ -28,7 +28,7 @@ import requests
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from date_utils import parse_human_date
 
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://dol.georgia.gov"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia Department of Labor",
     "slug": "georgia-department-of-labor",
     "address": "148 Andrew Young International Blvd NE",
@@ -168,7 +168,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Create venue record
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Try multiple URL patterns
         urls_to_try = [

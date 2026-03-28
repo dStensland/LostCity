@@ -16,7 +16,7 @@ from urllib.request import Request, urlopen
 
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -235,8 +235,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.error("Cannot crawl parade source without home page content")
         return events_found, events_new, events_updated
 
-    parade_venue_id = get_or_create_venue(PARADE_VENUE)
-    race_venue_id = get_or_create_venue(RACE_VENUE)
+    parade_venue_id = get_or_create_place(PARADE_VENUE)
+    race_venue_id = get_or_create_place(RACE_VENUE)
 
     home_text = clean_html(home_html)
     race_text = clean_html(race_html or "")

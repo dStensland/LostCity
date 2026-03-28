@@ -5,7 +5,7 @@ Import major Atlanta hotels as destination venues.
 Follows the standard curated destination flow:
 - define a destination list in-code
 - skip existing slugs
-- create missing venues via get_or_create_venue()
+- create missing venues via get_or_create_place()
 
 Usage:
     cd /Users/coach/Projects/LostCity/crawlers
@@ -15,7 +15,7 @@ Usage:
 import logging
 import argparse
 
-from db import get_client, get_or_create_venue, get_venue_by_slug
+from db import get_client, get_or_create_place, get_venue_by_slug
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -315,7 +315,7 @@ def import_hotels() -> None:
             continue
 
         try:
-            venue_id = get_or_create_venue(hotel)
+            venue_id = get_or_create_place(hotel)
             logger.info(f"  ADD:  {hotel['name']} -> ID {venue_id}")
             added += 1
         except Exception as exc:

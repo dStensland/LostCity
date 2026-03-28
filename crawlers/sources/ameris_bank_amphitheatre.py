@@ -16,7 +16,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.encoreparkamphitheatre.com"
 EVENTS_URL = "https://www.encoreparkamphitheatre.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Ameris Bank Amphitheatre",
     "slug": "ameris-bank-amphitheatre",
     "address": "2200 Encore Pkwy",
@@ -104,7 +104,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         logger.info(f"Fetching Ameris Bank Amphitheatre: {EVENTS_URL}")
         response = requests.get(EVENTS_URL, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
         response.raise_for_status()

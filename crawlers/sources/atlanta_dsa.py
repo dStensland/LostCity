@@ -27,7 +27,7 @@ from icalendar import Calendar
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -40,7 +40,7 @@ BASE_URL = "https://atldsa.org"
 EVENTS_URL = f"{BASE_URL}/events/"
 JOIN_URL = f"{BASE_URL}/join"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Democratic Socialists of America",
     "slug": "atlanta-dsa",
     "address": "Atlanta, GA",
@@ -154,7 +154,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     page_html = _fetch(EVENTS_URL)
     if not page_html:
         return 0, 0, 0
@@ -238,7 +238,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     )
                 )
 
-                content_hash = generate_content_hash(summary, VENUE_DATA["name"], start_date)
+                content_hash = generate_content_hash(summary, PLACE_DATA["name"], start_date)
                 current_hashes.add(content_hash)
                 events_found += 1
 

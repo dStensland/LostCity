@@ -31,7 +31,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -415,7 +415,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Ensure HQ venue exists (used as fallback)
-        hq_venue_id = get_or_create_venue(TREES_ATLANTA_HQ)
+        hq_venue_id = get_or_create_place(TREES_ATLANTA_HQ)
         venue_cache["trees-atlanta"] = hq_venue_id
 
         logger.info(f"Fetching Trees Atlanta events: {EVENTS_URL}")
@@ -566,7 +566,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     venue_dict = build_location_venue(location_str)
                     slug = venue_dict["slug"]
                     if slug not in venue_cache:
-                        venue_id = get_or_create_venue(venue_dict)
+                        venue_id = get_or_create_place(venue_dict)
                         persist_typed_entity_envelope(_build_destination_envelope(venue_id, venue_dict))
                         venue_cache[slug] = venue_id
                     venue_id = venue_cache[slug]

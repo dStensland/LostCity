@@ -14,7 +14,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -272,7 +272,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Get venue ID
-            venue_id = get_or_create_venue(BELTLINE_HQ)
+            venue_id = get_or_create_place(BELTLINE_HQ)
             persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Atlanta BeltLine events: {EVENTS_URL}")

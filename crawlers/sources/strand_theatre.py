@@ -11,14 +11,14 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://earlsmithstrand.org"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Earl Smith Strand Theatre",
     "slug": "strand-theatre-marietta",
     "address": "117 N Park Square NE",
@@ -274,7 +274,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     now = datetime.now()
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     for event in KNOWN_EVENTS_2026:
         start_date = event["start_date"]

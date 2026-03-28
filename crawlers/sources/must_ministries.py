@@ -25,7 +25,7 @@ from bs4 import BeautifulSoup
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ BASE_URL = "https://mustministries.org"
 VOLUNTEERHUB_URL = "https://mustministries.volunteerhub.com/vv2/"
 
 # Main Marietta location
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "MUST Ministries",
     "slug": "must-ministries",
     "address": "1110 Powder Springs St",
@@ -132,21 +132,21 @@ def determine_venue(location: str, event_name: str) -> tuple[int, str]:
 
     # Check for Cherokee
     if "cherokee" in location_lower or "cherokee" in name_lower or "due west" in location_lower:
-        venue_id = get_or_create_venue(CHEROKEE_VENUE)
+        venue_id = get_or_create_place(CHEROKEE_VENUE)
         return venue_id, "MUST Ministries Cherokee"
 
     # Check for Smyrna
     if "smyrna" in location_lower or "smyrna" in name_lower or "concord" in location_lower:
-        venue_id = get_or_create_venue(SMYRNA_VENUE)
+        venue_id = get_or_create_place(SMYRNA_VENUE)
         return venue_id, "MUST Ministries Smyrna"
 
     # Check for Hope House
     if "hope house" in location_lower or "hope house" in name_lower:
-        venue_id = get_or_create_venue(HOPE_HOUSE_VENUE)
+        venue_id = get_or_create_place(HOPE_HOUSE_VENUE)
         return venue_id, "MUST Ministries Hope House"
 
     # Default to main Marietta location
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     return venue_id, "MUST Ministries"
 
 

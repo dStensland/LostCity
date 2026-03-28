@@ -43,7 +43,7 @@ import requests
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -71,7 +71,7 @@ _HEADERS = {
 
 _REQUEST_TIMEOUT = 20
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Brave + Kind Bookshop",
     "slug": "brave-and-kind-books",
     "address": "308 W Ponce De Leon Ave",
@@ -411,7 +411,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # Ensure venue exists
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
     except Exception as exc:
         logger.error("[brave-kind] Failed to get/create venue: %s", exc)
         return 0, 0, 0

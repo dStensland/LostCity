@@ -234,7 +234,7 @@ class TestResolveSessionVenue:
         def fail_get_or_create(_venue_data):
             raise AssertionError("should not create a placeholder venue")
 
-        monkeypatch.setattr(festival_crawler, "get_or_create_venue", fail_get_or_create)
+        monkeypatch.setattr(festival_crawler, "get_or_create_place", fail_get_or_create)
 
         venue_id = resolve_session_venue(session, "monsterama-con")
         assert venue_id is None
@@ -247,7 +247,7 @@ class TestResolveSessionVenue:
         )
 
         monkeypatch.setattr(festival_crawler, "get_venue_by_slug", lambda _slug: None)
-        monkeypatch.setattr(festival_crawler, "get_or_create_venue", lambda _venue: -1)
+        monkeypatch.setattr(festival_crawler, "get_or_create_place", lambda _venue: -1)
 
         venue_id = resolve_session_venue(session, "atlanta-toy-model-train-show")
         assert venue_id is None
@@ -267,11 +267,11 @@ class TestResolveSessionVenue:
 
         monkeypatch.setattr(festival_crawler, "get_venue_by_slug", lambda _slug: None)
 
-        def fake_get_or_create(venue_data):
-            captured.update(venue_data)
+        def fake_get_or_create(place_data):
+            captured.update(place_data)
             return 2206
 
-        monkeypatch.setattr(festival_crawler, "get_or_create_venue", fake_get_or_create)
+        monkeypatch.setattr(festival_crawler, "get_or_create_place", fake_get_or_create)
 
         venue_id = resolve_session_venue(session, "atlanta-toy-model-train-show")
 

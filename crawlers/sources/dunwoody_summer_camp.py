@@ -22,7 +22,7 @@ import requests
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -45,7 +45,7 @@ REQUEST_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Dunwoody Nature Center",
     "slug": "dunwoody-nature-center",
     "address": "5343 Roberts Dr",
@@ -238,7 +238,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
         "extraction_confidence": 0.82,
         "is_recurring": False,
         "recurrence_rule": None,
-        "content_hash": generate_content_hash(row["title"], VENUE_DATA["name"], row["start_date"]),
+        "content_hash": generate_content_hash(row["title"], PLACE_DATA["name"], row["start_date"]),
         "age_min": row["age_min"],
         "age_max": row["age_max"],
     }
@@ -258,7 +258,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.error("Dunwoody Summer Camp fetch failed: %s", exc)
         return 0, 0, 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     today = date.today().strftime("%Y-%m-%d")
 
     for row in rows:

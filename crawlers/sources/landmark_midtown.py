@@ -12,7 +12,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, Page
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -24,7 +24,7 @@ SHOWTIMES_URL = f"{BASE_URL}/showtimes/"
 # Venue-specific page (redirects to /our-locations/...)
 VENUE_PAGE_URL = f"{BASE_URL}/our-locations/x00qm-landmark-midtown-art-cinema-atlanta/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Landmark Midtown Art Cinema",
     "slug": "landmark-midtown-art-cinema",
     "address": "931 Monroe Drive NE",
@@ -432,7 +432,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             today = datetime.now().date()
 
             # Shared set tracks every (title, date, time) processed this run so that

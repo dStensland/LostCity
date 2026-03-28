@@ -13,7 +13,7 @@ from datetime import datetime
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -26,7 +26,7 @@ SOURCE_URL = "https://cpskyhawks.gleague.nba.com/news/college-park-skyhawks-anno
 PRINTABLE_SCHEDULE_URL = "https://cdn-gleague.nba.com/sites/1612709929/2025/09/2526_CPS_Schedule_Calendar_v4.pdf"
 TICKETS_URL = "https://www.ticketmaster.com/college-park-skyhawks-tickets/artist/2669508"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Gateway Center Arena",
     "slug": "gateway-center-arena",
     "address": "2330 Convention Center Concourse",
@@ -115,7 +115,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     current_hashes: set[str] = set()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     for game in upcoming_home_games():
         opponent_label = game["opponent_label"]
@@ -123,7 +123,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         start_time = game["time"]
         title = build_event_title(opponent_label)
         description = build_description(opponent_label, start_date, start_time)
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
         current_hashes.add(content_hash)
         events_found += 1

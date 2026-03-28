@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -33,7 +33,7 @@ VENUE_URL = "http://www.events.crugroup.com/smusteelsummit/venue"
 USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia International Convention Center",
     "slug": "georgia-international-convention-center",
     "address": "2000 Convention Center Concourse",
@@ -116,8 +116,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
     venue_response.raise_for_status()
 
     event = parse_pages(home_response.text, venue_response.text)
-    venue_id = get_or_create_venue(VENUE_DATA)
-    content_hash = generate_content_hash(event["title"], VENUE_DATA["name"], event["start_date"])
+    venue_id = get_or_create_place(PLACE_DATA)
+    content_hash = generate_content_hash(event["title"], PLACE_DATA["name"], event["start_date"])
     current_hashes.add(content_hash)
     events_found = 1
 

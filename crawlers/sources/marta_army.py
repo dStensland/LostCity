@@ -34,7 +34,7 @@ from icalendar import Calendar
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -50,7 +50,7 @@ ICAL_URL = (
 EVENTS_PAGE = "https://www.martaarmy.org/transit-events"
 
 # Fallback venue — events happen at various locations, but we need a default
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "MARTA Army",
     "slug": "marta-army",
     "address": "Atlanta, GA",
@@ -136,7 +136,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",

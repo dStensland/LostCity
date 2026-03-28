@@ -21,7 +21,7 @@ from playwright.sync_api import sync_playwright
 
 from db import (
     get_client,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -79,7 +79,7 @@ CATALOG_EXHIBITION_CANDIDATES = [
     "Robert Wun: Between Reality and Fantasy",
 ]
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "SCAD FASH Museum of Fashion + Film",
     "slug": "scad-fash",
     "address": "1600 Peachtree St NW",
@@ -454,17 +454,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "|| document.querySelector('meta[name=\"description\"]'); return m ? m.content : null; }"
                     )
                     if og_image:
-                        VENUE_DATA["image_url"] = og_image
+                        PLACE_DATA["image_url"] = og_image
                         logger.debug("SCAD FASH: og:image = %s", og_image)
                     if og_desc:
-                        VENUE_DATA["description"] = og_desc
+                        PLACE_DATA["description"] = og_desc
                         logger.debug("SCAD FASH: og:description captured")
                 else:
                     logger.debug("SCAD FASH: homepage is Cloudflare-blocked; using catalog description")
             except Exception as _meta_exc:
                 logger.debug("SCAD FASH: could not extract og meta from homepage: %s", _meta_exc)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             blocked_urls: list[str] = []
 
             # Try both events and exhibitions pages
@@ -657,7 +657,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 source_id=source_id,
                                 opening_date=start_date,
                                 closing_date=event_record.get("end_date"),
-                                venue_name=VENUE_DATA["name"],
+                                venue_name=PLACE_DATA["name"],
                                 description=event_record.get("description"),
                                 image_url=image_map.get(title),
                                 source_url=url,

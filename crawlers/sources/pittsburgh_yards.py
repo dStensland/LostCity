@@ -13,7 +13,7 @@ from sources._tribe_events_base import TribeConfig, crawl_tribe
 
 _CONFIG = TribeConfig(
     base_url="https://www.pittsburghyards.com",
-    venue_data={
+    place_data={
         "name": "Pittsburgh Yards",
         "slug": "pittsburgh-yards",
         "address": "352 University Ave SW",

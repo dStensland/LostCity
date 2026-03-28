@@ -14,7 +14,7 @@ from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_or_create_virtual_venue
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, get_or_create_virtual_venue
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -118,7 +118,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Get or create the SFQP venue
-            venue_id = get_or_create_venue(SFQP_VENUE)
+            venue_id = get_or_create_place(SFQP_VENUE)
 
             logger.info(f"Fetching Southern Fried Queer Pride: {source_url}")
             page.goto(source_url, wait_until="domcontentloaded", timeout=30000)

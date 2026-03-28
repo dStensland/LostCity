@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -32,7 +32,7 @@ BASE_URL = "https://cobbgalleria.com"
 EVENTS_URL = f"{BASE_URL}/events"
 USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Cobb Convention Center-Atlanta",
     "slug": "cobb-convention-center",
     "address": "2 Galleria Pkwy SE",
@@ -257,11 +257,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
     if not events:
         raise ValueError("Cobb Galleria public events page did not yield any future non-dedicated events")
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     for event in events:
         title = event["title"]
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], event["start_date"])
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], event["start_date"])
         current_hashes.add(content_hash)
         events_found += 1
 

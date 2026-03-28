@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db import (  # noqa: E402
     configure_write_mode,
     get_client,
-    get_or_create_venue,
+    get_or_create_place,
     upsert_venue_feature,
     venues_support_features_table,
 )
@@ -169,7 +169,7 @@ def _get_or_create_target_venue(venue_slug: str, apply: bool) -> dict[str, Any] 
         logger.warning("Venue slug '%s' not found and no ensure payload exists; skipping", venue_slug)
         return None
 
-    temp_or_real_id = get_or_create_venue(payload)
+    temp_or_real_id = get_or_create_place(payload)
     if apply:
         venue_res = (
             client.table("venues").select("id,name,slug").eq("slug", venue_slug).limit(1).execute()

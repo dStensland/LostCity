@@ -21,7 +21,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 from db import (
     find_event_by_hash,
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -37,7 +37,7 @@ WEEKS_AHEAD = 6
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
 DAY_NAMES = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Track Club",
     "slug": "atlanta-track-club",
     "address": "201 Armour Dr NE",
@@ -87,7 +87,7 @@ RECURRING_PROGRAMS = [
         "day": 3,  # Thursday
         "title": "Atlanta Track Club BeltLine Run Club",
         "source_url": f"{BASE_URL}/monthly-group-run-schedule",
-        "venue_data": VENUE_DATA,
+        "venue_data": PLACE_DATA,
         "start_time": "18:15",
         "description": (
             "Atlanta Track Club BeltLine Run Club. Free weekly run/walk that rotates between "
@@ -463,7 +463,7 @@ def seed_recurring_programs(source_id: int) -> tuple[int, int, int]:
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
     for program in RECURRING_PROGRAMS:
-        venue_id = get_or_create_venue(program["venue_data"])
+        venue_id = get_or_create_place(program["venue_data"])
         next_date = get_next_weekday(today, program["day"])
         day_code = DAY_CODES[program["day"]]
 
@@ -549,7 +549,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.wait_for_timeout(1500)
 
             # Get venue ID
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             recurring_found, recurring_new, recurring_updated = seed_recurring_programs(source_id)
             events_found += recurring_found

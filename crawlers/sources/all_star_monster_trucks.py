@@ -14,7 +14,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ BASE_URL = "https://www.allstarmonster.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
 # Jim R. Miller Park - where they perform in the Atlanta area
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Jim R. Miller Park",
     "slug": "jim-r-miller-park",
     "address": "2245 Callaway Rd SW",
@@ -142,7 +142,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # We'll create venue records dynamically per event
-            # Keep VENUE_DATA as default for Jim R. Miller Park
+            # Keep PLACE_DATA as default for Jim R. Miller Park
 
             logger.info(f"Fetching All Star Monster Truck Tour: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
@@ -210,7 +210,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     state = "GA"
 
                 # Create venue data dynamically
-                venue_data = {
+                place_data = {
                     "name": venue_line,
                     "slug": re.sub(r'[^\w\s-]', '', venue_line.lower()).replace(' ', '-').strip('-'),
                     "city": city,
@@ -219,7 +219,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 }
 
                 # Get or create venue
-                current_venue_id = get_or_create_venue(venue_data)
+                current_venue_id = get_or_create_place(place_data)
 
                 # Generate content hash
                 content_hash = generate_content_hash(

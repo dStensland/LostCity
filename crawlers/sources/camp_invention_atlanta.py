@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -254,7 +254,7 @@ def _parse_detail_page(detail_html: str, detail_url: str) -> Optional[dict]:
     description = _clean_text(" ".join(part for part in description_parts if part))[:1000]
     tags = list(dict.fromkeys(BASE_TAGS + _age_band_tags(age_min, age_max) + ["science"]))
 
-    venue_data = {
+    place_data = {
         "name": venue_name,
         "slug": _slugify(venue_name),
         "address": _clean_text(address.get("streetAddress")),
@@ -284,7 +284,7 @@ def _parse_detail_page(detail_html: str, detail_url: str) -> Optional[dict]:
         "price_note": price_note,
         "description": description,
         "tags": tags,
-        "venue_data": venue_data,
+        "venue_data": place_data,
     }
 
 
@@ -356,7 +356,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             continue
 
         try:
-            venue_id = get_or_create_venue(row["venue_data"])
+            venue_id = get_or_create_place(row["venue_data"])
             record = _build_event_record(source_id, venue_id, row)
             events_found += 1
 

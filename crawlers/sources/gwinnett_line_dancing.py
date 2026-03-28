@@ -13,7 +13,7 @@ from datetime import date, datetime, timedelta
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -112,7 +112,7 @@ VENUE_DATA_BY_LOCATION = {
 }
 
 
-def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
+def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
     envelope.add(
         "destination_details",
@@ -126,7 +126,7 @@ def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityE
             "parking_type": "free_lot",
             "best_time_of_day": "afternoon",
             "practical_notes": (
-                f"{venue_data['name']} works best for families as a planned activity-building or community-center stop tied to a class, rec program, or other scheduled visit rather than as a roamable attraction."
+                f"{place_data['name']} works best for families as a planned activity-building or community-center stop tied to a class, rec program, or other scheduled visit rather than as a roamable attraction."
             ),
             "accessibility_notes": (
                 "Indoor community-center circulation makes these Gwinnett rec venues lower-friction options for weather-flex family plans, especially when paired with a registered activity."
@@ -138,7 +138,7 @@ def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityE
             "source_url": CATALOG_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": venue_data["venue_type"],
+                "venue_type": place_data["venue_type"],
                 "county": "gwinnett",
             },
         },
@@ -150,7 +150,7 @@ def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityE
             "slug": "indoor-family-recreation-space",
             "title": "Indoor family recreation space",
             "feature_type": "amenity",
-            "description": f"{venue_data['name']} gives families a weather-flex indoor recreation option inside Gwinnett's public rec system.",
+            "description": f"{place_data['name']} gives families a weather-flex indoor recreation option inside Gwinnett's public rec system.",
             "url": CATALOG_URL,
             "price_note": "Drop-in access and specific amenities vary by center.",
             "is_free": False,
@@ -164,7 +164,7 @@ def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityE
             "slug": "planned-class-and-activity-building",
             "title": "Planned class and activity building",
             "feature_type": "experience",
-            "description": f"{venue_data['name']} is strongest as a planned rec-building stop for classes, community programs, and other scheduled county activities.",
+            "description": f"{place_data['name']} is strongest as a planned rec-building stop for classes, community programs, and other scheduled county activities.",
             "url": CATALOG_URL,
             "price_note": "Program pricing varies by activity.",
             "is_free": False,
@@ -235,8 +235,8 @@ def parse_session(session: dict, today: date) -> dict | None:
     if not _is_adult_age_value(age_value):
         return None
 
-    venue_data = VENUE_DATA_BY_LOCATION.get((features.get("location") or "").strip().lower())
-    if not venue_data:
+    place_data = VENUE_DATA_BY_LOCATION.get((features.get("location") or "").strip().lower())
+    if not place_data:
         return None
 
     start_date, end_date = _parse_date_range(features.get("dates") or "", today)
@@ -257,9 +257,9 @@ def parse_session(session: dict, today: date) -> dict | None:
 
     price = session.get("price")
     price_value = float(price) if price is not None else None
-    title = f"{raw_title} at {venue_data['name']}"
+    title = f"{raw_title} at {place_data['name']}"
     description = (
-        f"Public adult line dancing class at {venue_data['name']} through Gwinnett County Parks & Recreation. "
+        f"Public adult line dancing class at {place_data['name']} through Gwinnett County Parks & Recreation. "
         "Reserve through the official county catalog for current availability."
     )
 
@@ -268,7 +268,7 @@ def parse_session(session: dict, today: date) -> dict | None:
         "description": description,
         "start_time": start_time,
         "end_time": end_time,
-        "venue_data": venue_data,
+        "venue_data": place_data,
         "occurrences": occurrences,
         "price_min": price_value,
         "price_max": price_value,
@@ -284,7 +284,7 @@ def parse_session(session: dict, today: date) -> dict | None:
         "source_url": CATALOG_URL,
         "raw_text": (
             f"{raw_title} | {age_value} | {features.get('days','')} | "
-            f"{features.get('dates','')} | {features.get('times','')} | {venue_data['name']}"
+            f"{features.get('dates','')} | {features.get('times','')} | {place_data['name']}"
         ),
     }
 
@@ -298,7 +298,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     seen_session_ids: set[int] = set()
     venue_ids = {}
     for data in VENUE_DATA_BY_LOCATION.values():
-        venue_id = get_or_create_venue(data)
+        venue_id = get_or_create_place(data)
         persist_typed_entity_envelope(_build_destination_envelope(venue_id, data))
         venue_ids[data["slug"]] = venue_id
     today = datetime.now().date()

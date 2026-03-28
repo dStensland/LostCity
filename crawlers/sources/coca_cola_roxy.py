@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from description_fetcher import fetch_detail_html_playwright
 from pipeline.detail_enrich import enrich_from_detail
@@ -31,7 +31,7 @@ PLANNING_NOTE = (
     "Battery traffic can materially change arrival time on Braves and major-event nights."
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Coca-Cola Roxy",
     "slug": "coca-cola-roxy",
     "address": "800 Battery Ave SE",
@@ -81,7 +81,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             ensure_venue_destination_fields(venue_id, planning_notes=PLANNING_NOTE)
 
             logger.info(f"Fetching Coca-Cola Roxy: {EVENTS_URL}")

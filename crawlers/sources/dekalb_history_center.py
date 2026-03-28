@@ -29,7 +29,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -53,7 +53,7 @@ _HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "DeKalb History Center",
     "slug": "dekalb-history-center",
     "address": "101 E Court Square",
@@ -349,7 +349,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     today = date.today()
 
     session = requests.Session()
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     # ------------------------------------------------------------------ #
     # EVENTS — programs CPT via WP REST API                                #
@@ -415,7 +415,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         price_note = detail["price_note"]
         category, subcategory, tags = _category_for_program(title, prog_cat_slugs)
 
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
         event_record: dict = {
             "source_id": source_id,
@@ -505,7 +505,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             source_id=source_id,
             opening_date=opening_date,
             closing_date=None,
-            venue_name=VENUE_DATA["name"],
+            venue_name=PLACE_DATA["name"],
             description=description,
             image_url=image_url,
             source_url=ex_url,

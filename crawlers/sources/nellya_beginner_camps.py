@@ -19,7 +19,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
+from db import find_event_by_hash, get_or_create_place, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ REQUEST_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Nellya Fencers Club",
     "slug": "nellya-fencers-club",
     "address": "1530 Carroll Drive NW #104",
@@ -188,7 +188,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
         "extraction_confidence": 0.88,
         "is_recurring": False,
         "recurrence_rule": None,
-        "content_hash": generate_content_hash(title, VENUE_DATA["name"], row["start_date"]),
+        "content_hash": generate_content_hash(title, PLACE_DATA["name"], row["start_date"]),
         "age_min": row["age_min"],
         "age_max": row["age_max"],
     }
@@ -211,7 +211,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.error("Nellya Beginner Camps: failed to fetch page: %s", exc)
         return 0, 0, 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     today = date.today().strftime("%Y-%m-%d")
 
     for row in _parse_rows(BeautifulSoup(response.text, "html.parser")):

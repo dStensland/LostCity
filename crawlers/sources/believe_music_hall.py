@@ -13,7 +13,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
@@ -23,7 +23,7 @@ BASE_URL = "https://www.believemusichall.com"
 # Main page has events; /events returns 404
 EVENTS_URL = BASE_URL
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Believe Music Hall",
     "slug": "believe-music-hall",
     "address": "181 Ralph David Abernathy Blvd",
@@ -89,7 +89,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             all_lines = []
 
             # Crawl multiple pages (site has pagination 1, 2, 3, 4)

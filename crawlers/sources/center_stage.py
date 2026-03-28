@@ -16,7 +16,7 @@ from typing import Optional
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
@@ -26,7 +26,7 @@ BASE_URL = "https://www.centerstage-atlanta.com"
 EVENTS_URL = BASE_URL
 
 # Venue configurations for the Center Stage complex
-VENUE_DATA = {
+PLACE_DATA = {
     "CENTER STAGE": {
         "name": "Center Stage",
         "slug": "center-stage-atlanta",
@@ -193,8 +193,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Cache venue IDs
             venue_ids = {}
-            for venue_key, venue_data in VENUE_DATA.items():
-                venue_ids[venue_key] = get_or_create_venue(venue_data)
+            for venue_key, place_data in PLACE_DATA.items():
+                venue_ids[venue_key] = get_or_create_place(place_data)
 
             logger.info(f"Fetching Center Stage: {BASE_URL}")
             page.goto(BASE_URL, wait_until="domcontentloaded", timeout=60000)
@@ -215,7 +215,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             body_text = page.inner_text("body")
             lines = [l.strip() for l in body_text.split("\n") if l.strip()]
             # Valid venue names to look for
-            venue_names = set(VENUE_DATA.keys())
+            venue_names = set(PLACE_DATA.keys())
             venue_names.add("ATLANTA SYMPHONY HALL")
 
             current_year = datetime.now().year
@@ -289,7 +289,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         seen_events.add(event_key)
 
                         events_found += 1
-                        venue_name = VENUE_DATA.get(venue_key, VENUE_DATA["CENTER STAGE"])["name"]
+                        venue_name = PLACE_DATA.get(venue_key, PLACE_DATA["CENTER STAGE"])["name"]
                         content_hash = generate_content_hash(title, venue_name, start_date)
 
                         category = "music"

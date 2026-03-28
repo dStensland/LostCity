@@ -29,7 +29,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ PUBLIC_SUBHOSTS = [
 # Months ahead to scan (VolunteerHub rarely schedules more than 2-3 months out)
 MONTHS_TO_SCAN = 6
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Habitat for Humanity Atlanta",
     "slug": "habitat-for-humanity-atlanta",
     "address": "824 Memorial Dr SE",
@@ -210,7 +210,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     # Collect all raw events across subhosts and months
     raw_events: list[dict] = []

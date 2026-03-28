@@ -29,7 +29,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -253,12 +253,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Ensure organization venue exists
-        org_venue_id = get_or_create_venue(CFM_ORG)
+        org_venue_id = get_or_create_place(CFM_ORG)
         logger.info(f"CFM organization venue ID: {org_venue_id}")
 
         # Ensure all market location venues exist
         for market in MARKET_LOCATIONS:
-            market_venue_id = get_or_create_venue(market)
+            market_venue_id = get_or_create_place(market)
             logger.info(f"Market location '{market['name']}' venue ID: {market_venue_id}")
 
         # Fetch events page

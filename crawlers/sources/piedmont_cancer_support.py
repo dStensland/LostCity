@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -205,13 +205,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Get or create venue
             if group["venue_key"]:
-                venue_data = VENUES[group["venue_key"]]
-                venue_id = get_or_create_venue(venue_data)
-                venue_name = venue_data["name"]
+                place_data = VENUES[group["venue_key"]]
+                venue_id = get_or_create_place(place_data)
+                venue_name = place_data["name"]
             else:
                 # Virtual event - use main PCI location for reference
-                venue_data = VENUES["howell_mill"]
-                venue_id = get_or_create_venue(venue_data)
+                place_data = VENUES["howell_mill"]
+                venue_id = get_or_create_place(place_data)
                 venue_name = "Virtual (Zoom)"
 
             for start_date in dates:

@@ -300,7 +300,7 @@ def test_crawl_inserts_main_and_stankonia_events():
 
     with (
         patch("sources.four04_day._fetch_html", side_effect=lambda url: HOMEPAGE_HTML if url == "https://404day.com" else EVENTS_HTML),
-        patch("sources.four04_day.get_or_create_venue", side_effect=[100, 200]),
+        patch("sources.four04_day.get_or_create_place", side_effect=[100, 200]),
         patch("sources.four04_day.find_event_by_hash", return_value=None),
         patch("sources.four04_day.insert_event", side_effect=mock_insert_event),
     ):
@@ -323,7 +323,7 @@ def test_crawl_main_event_uses_piedmont_park_venue():
 
     with (
         patch("sources.four04_day._fetch_html", side_effect=lambda url: HOMEPAGE_HTML if url == "https://404day.com" else EVENTS_HTML),
-        patch("sources.four04_day.get_or_create_venue", side_effect=[100, 200]),
+        patch("sources.four04_day.get_or_create_place", side_effect=[100, 200]),
         patch("sources.four04_day.find_event_by_hash", return_value=None),
         patch("sources.four04_day.insert_event", side_effect=mock_insert_event),
     ):
@@ -341,7 +341,7 @@ def test_crawl_groups_both_events_under_same_series():
 
     with (
         patch("sources.four04_day._fetch_html", side_effect=lambda url: HOMEPAGE_HTML if url == "https://404day.com" else EVENTS_HTML),
-        patch("sources.four04_day.get_or_create_venue", side_effect=[100, 200]),
+        patch("sources.four04_day.get_or_create_place", side_effect=[100, 200]),
         patch("sources.four04_day.find_event_by_hash", return_value=None),
         patch("sources.four04_day.insert_event", side_effect=mock_insert_event),
     ):
@@ -357,7 +357,7 @@ def test_crawl_returns_updated_count_when_events_exist():
 
     with (
         patch("sources.four04_day._fetch_html", side_effect=lambda url: HOMEPAGE_HTML if url == "https://404day.com" else EVENTS_HTML),
-        patch("sources.four04_day.get_or_create_venue", side_effect=[100, 200]),
+        patch("sources.four04_day.get_or_create_place", side_effect=[100, 200]),
         patch("sources.four04_day.find_event_by_hash", return_value=fake_existing),
         patch("sources.four04_day.smart_update_existing_event"),
     ):
@@ -389,7 +389,7 @@ def test_crawl_skips_stankonia_when_card_not_found():
 
     with (
         patch("sources.four04_day._fetch_html", side_effect=lambda url: HOMEPAGE_HTML if url == "https://404day.com" else single_card_html),
-        patch("sources.four04_day.get_or_create_venue", side_effect=[100]),
+        patch("sources.four04_day.get_or_create_place", side_effect=[100]),
         patch("sources.four04_day.find_event_by_hash", return_value=None),
         patch("sources.four04_day.insert_event", side_effect=lambda r, series_hint=None: inserted.append(r["title"])),
     ):

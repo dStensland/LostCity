@@ -19,7 +19,7 @@ version uses the Tribe Events Calendar REST API — no browser needed.
 
 from __future__ import annotations
 
-from db import get_or_create_venue
+from db import get_or_create_place
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 from sources._tribe_events_base import TribeConfig, crawl_tribe
@@ -51,7 +51,7 @@ _VENUE_DATA = {
 
 _CONFIG = TribeConfig(
     base_url=_BASE_URL,
-    venue_data=_VENUE_DATA,
+    place_data=_VENUE_DATA,
     default_category="art",
     default_tags=["arts-center"],
     future_only=True,
@@ -137,6 +137,6 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
 
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Callanwolde Fine Arts Center events via the Tribe Events Calendar API."""
-    venue_id = get_or_create_venue(_VENUE_DATA)
+    venue_id = get_or_create_place(_VENUE_DATA)
     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
     return crawl_tribe(source, _CONFIG)

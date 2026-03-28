@@ -28,7 +28,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -317,7 +317,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Ensure venue exists
-            venue_id = get_or_create_venue(JTA_VENUE_DATA)
+            venue_id = get_or_create_place(JTA_VENUE_DATA)
 
             performances = _scrape_ludus_page(page)
             browser.close()

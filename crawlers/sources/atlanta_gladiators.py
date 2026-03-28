@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -35,7 +35,7 @@ DEFAULT_TICKETS_URL = "https://www.ticketmaster.com/atlanta-gladiators-tickets/a
 TEAM_NAME = "Atlanta Gladiators"
 GAME_LINK_RE = re.compile(r"^/games/\d{4}/\d{2}/\d{2}/[^/?#]+/?$")
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Gas South Arena",
     "slug": "gas-south-arena",
     "address": "6400 Sugarloaf Pkwy",
@@ -170,7 +170,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     current_hashes: set[str] = set()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     homepage_response = requests.get(SCHEDULE_URL, headers=HEADERS, timeout=30)
     homepage_response.raise_for_status()
     game_links = extract_game_links(homepage_response.text)
@@ -184,7 +184,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         title = parsed["title"]
         start_date = parsed["start_date"]
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
         current_hashes.add(content_hash)
         events_found += 1
 

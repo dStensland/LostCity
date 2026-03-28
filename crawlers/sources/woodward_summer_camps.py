@@ -24,7 +24,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -295,8 +295,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
         return 0, 0, 0
 
     today = date.today().strftime("%Y-%m-%d")
-    main_venue_id = get_or_create_venue(VENUE_MAIN)
-    north_venue_id = get_or_create_venue(VENUE_NORTH)
+    main_venue_id = get_or_create_place(VENUE_MAIN)
+    north_venue_id = get_or_create_place(VENUE_NORTH)
 
     for row in rows:
         if row["end_date"] < today:

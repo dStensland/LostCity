@@ -43,7 +43,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, infer_program_type, infer_season
+from db import find_event_by_hash, get_or_create_place, insert_event, infer_program_type, infer_season
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -250,7 +250,7 @@ def _get_start_time(program: dict) -> Optional[str]:
 
 
 def _build_venue_data(program: dict) -> dict:
-    """Build venue_data dict from program location fields."""
+    """Build place_data dict from program location fields."""
     field_name = (program.get("fieldName") or "").strip()
     city = (program.get("city") or "").strip()
     zip_code = (program.get("zipCode") or "").strip()
@@ -401,10 +401,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
             continue
 
         # Build venue
-        venue_data = _build_venue_data(program)
-        venue_slug = venue_data["slug"]
+        place_data = _build_venue_data(program)
+        venue_slug = place_data["slug"]
         if venue_slug not in venue_cache:
-            venue_cache[venue_slug] = get_or_create_venue(venue_data)
+            venue_cache[venue_slug] = get_or_create_place(place_data)
         venue_id = venue_cache[venue_slug]
 
         # Extract fields
@@ -463,7 +463,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         program_id = program.get("id") or _extract_program_id_from_url(url)
         content_hash = generate_content_hash(
             title,
-            venue_data["name"],
+            place_data["name"],
             start_dt.strftime("%Y-%m-%d"),
         )
 
@@ -489,7 +489,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             "image_url": program.get("largeTopImage") or None,
             "raw_text": (
                 f"{title} | {sport_name} | {program_type} | "
-                f"{venue_data.get('city', '')} | Ages {age_min}-{age_max} | "
+                f"{place_data.get('city', '')} | Ages {age_min}-{age_max} | "
                 f"{days_of_week}"
             ),
             "extraction_confidence": 0.95,
@@ -550,7 +550,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "genders": program.get("gendersPlaying"),
                     "area_play_name": program.get("areaPlayName"),
                 },
-                "_venue_name": venue_data["name"],
+                "_venue_name": place_data["name"],
             }
             program_envelope.add("programs", program_data)
 

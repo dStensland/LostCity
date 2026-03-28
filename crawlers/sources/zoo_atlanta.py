@@ -16,7 +16,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, get_client, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, get_client, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -34,7 +34,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     venue_features=True,
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Zoo Atlanta",
     "slug": "zoo-atlanta",
     "address": "800 Cherokee Ave SE",
@@ -306,24 +306,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "|| document.querySelector('meta[name=\"description\"]'); return m ? m.content : null; }"
                 )
                 if og_image:
-                    VENUE_DATA["image_url"] = og_image
+                    PLACE_DATA["image_url"] = og_image
                     logger.debug("Zoo Atlanta: og:image = %s", og_image)
                 if og_desc:
-                    VENUE_DATA["description"] = og_desc
+                    PLACE_DATA["description"] = og_desc
                     logger.debug("Zoo Atlanta: og:description captured")
             except Exception as _meta_exc:
                 logger.debug("Zoo Atlanta: could not extract og meta from homepage: %s", _meta_exc)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             # Persist any og: enrichment to the venue record
             try:
                 venue_update: dict = {}
-                if VENUE_DATA.get("image_url"):
-                    venue_update["image_url"] = VENUE_DATA["image_url"]
-                if VENUE_DATA.get("description"):
-                    venue_update["description"] = VENUE_DATA["description"]
+                if PLACE_DATA.get("image_url"):
+                    venue_update["image_url"] = PLACE_DATA["image_url"]
+                if PLACE_DATA.get("description"):
+                    venue_update["description"] = PLACE_DATA["description"]
                 if venue_update:
                     get_client().table("venues").update(venue_update).eq("id", venue_id).execute()
                     logger.info("Zoo Atlanta: enriched venue record from homepage og: metadata")

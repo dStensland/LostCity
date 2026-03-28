@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env")
 sys.path.insert(0, str(ROOT))
 
-from db import get_client, get_or_create_venue, get_venue_by_slug
+from db import get_client, get_or_create_place, get_venue_by_slug
 
 
 CAMPGROUND_TARGETS = [
@@ -152,7 +152,7 @@ def main() -> None:
         if not existing:
             created_id = None
             if args.apply:
-                created_id = get_or_create_venue(payload)
+                created_id = get_or_create_place(payload)
                 if created_id and not get_venue_by_slug(seed["slug"]):
                     created_id = insert_venue_direct(payload)
             print(f"{'CREATE' if args.apply else 'WOULD CREATE'} venue: {seed['slug']}")

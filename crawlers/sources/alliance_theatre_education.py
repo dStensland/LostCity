@@ -42,7 +42,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ ALLIANCE_VENUE_DATA = {
     ),
 }
 
-# Satellite camp locations: (venue_name_fragment, venue_data)
+# Satellite camp locations: (venue_name_fragment, place_data)
 # These are partner schools/venues where Alliance runs camps.
 # We map recognized location names to venue records.
 SATELLITE_VENUES: dict[str, dict] = {
@@ -244,9 +244,9 @@ def _get_venue_for_location(location_text: str) -> dict:
     Match a location name to a known satellite venue dict, or return
     the default Alliance Theatre venue data.
     """
-    for key, venue_data in SATELLITE_VENUES.items():
+    for key, place_data in SATELLITE_VENUES.items():
         if key.lower() in location_text.lower():
-            return venue_data
+            return place_data
     return ALLIANCE_VENUE_DATA
 
 
@@ -387,13 +387,13 @@ def _crawl_drama_camps(source_id: int, alliance_venue_id: int) -> tuple[int, int
             continue
 
         # Resolve venue
-        venue_data = _get_venue_for_location(venue_line)
+        place_data = _get_venue_for_location(venue_line)
         try:
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
         except Exception as exc:
             logger.warning(
                 "[alliance-theatre-education] Failed to get/create venue '%s': %s",
-                venue_data["name"], exc
+                place_data["name"], exc
             )
             i = j
             continue
@@ -438,11 +438,11 @@ def _crawl_drama_camps(source_id: int, alliance_venue_id: int) -> tuple[int, int
             )
             season = "Spring Break" if is_spring else ("Summer" if is_summer else "Drama")
 
-            venue_short = venue_data["name"].replace("The ", "").replace(" School", "").strip()
+            venue_short = place_data["name"].replace("The ", "").replace(" School", "").strip()
             title = f"Alliance Theatre {season} Drama Camp at {venue_short}"
 
             description = (
-                f"Alliance Theatre offers {season.lower()} drama camp at {venue_data['name']} "
+                f"Alliance Theatre offers {season.lower()} drama camp at {place_data['name']} "
                 f"for students {grade_text.replace('Rising Grades', 'rising grades')}. "
                 f"Campers build character, grow confidence, and develop their creative voice "
                 f"through acting, storytelling, and performance — culminating in a short "
@@ -462,7 +462,7 @@ def _crawl_drama_camps(source_id: int, alliance_venue_id: int) -> tuple[int, int
             if is_summer:
                 tags.append("summer")
 
-            content_hash = generate_content_hash(title, venue_data["name"], start_date)
+            content_hash = generate_content_hash(title, place_data["name"], start_date)
             events_found += 1
 
             event_record = {
@@ -642,7 +642,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # Ensure the Alliance Theatre venue exists (used as fallback and for teen programs)
     try:
-        alliance_venue_id = get_or_create_venue(ALLIANCE_VENUE_DATA)
+        alliance_venue_id = get_or_create_place(ALLIANCE_VENUE_DATA)
     except Exception as exc:
         logger.error("[alliance-theatre-education] Failed to get/create Alliance Theatre venue: %s", exc)
         return 0, 0, 0

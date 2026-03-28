@@ -16,7 +16,7 @@ import logging
 from datetime import datetime, timedelta
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_existing_event_for_insert,
     smart_update_existing_event,
@@ -278,15 +278,15 @@ def _build_description(
     base_template: str,
     *,
     venue_name: str,
-    venue_data: dict,
+    place_data: dict,
     day_name: str,
     start_time: str,
     source_url: str,
 ) -> str:
     base = base_template.format(venue=venue_name).strip()
-    neighborhood = str(venue_data.get("neighborhood") or "").strip()
-    city = str(venue_data.get("city") or "Atlanta").strip()
-    state = str(venue_data.get("state") or "GA").strip()
+    neighborhood = str(place_data.get("neighborhood") or "").strip()
+    city = str(place_data.get("city") or "Atlanta").strip()
+    state = str(place_data.get("state") or "GA").strip()
     start_label = _format_time_label(start_time)
 
     where = venue_name
@@ -325,16 +325,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     for slot in WEEKLY_SCHEDULE:
         venue_key = slot["venue_key"]
-        venue_data = VENUES.get(venue_key)
-        if not venue_data:
+        place_data = VENUES.get(venue_key)
+        if not place_data:
             logger.warning(f"Unknown venue key: {venue_key}")
             continue
 
         if venue_key not in venue_ids:
-            venue_ids[venue_key] = get_or_create_venue(venue_data)
+            venue_ids[venue_key] = get_or_create_place(place_data)
 
         venue_id = venue_ids[venue_key]
-        venue_name = venue_data["name"]
+        venue_name = place_data["name"]
         day_int = slot["day"]
         start_time = slot["start_time"]
         day_code = DAY_CODES[day_int]
@@ -343,11 +343,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         config = EVENT_TYPE_CONFIG.get(event_type, EVENT_TYPE_CONFIG["trivia"])
         title = config["title"]
-        source_url = venue_data.get("website", "https://outspokenentertainment.com")
+        source_url = place_data.get("website", "https://outspokenentertainment.com")
         description = _build_description(
             config["description_tpl"],
             venue_name=venue_name,
-            venue_data=venue_data,
+            place_data=place_data,
             day_name=day_name,
             start_time=start_time,
             source_url=source_url,

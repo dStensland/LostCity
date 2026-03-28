@@ -22,7 +22,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db.client import get_client
-from db.place_validation import validate_venue_name
+from db.place_validation import validate_place_name
 from neighborhood_lookup import haversine
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ def step1_address_as_name(client, venues: list[dict], *, write: bool = False) ->
     flagged = []
 
     for v in venues:
-        name_ok, reason = validate_venue_name(v.get("name"))
+        name_ok, reason = validate_place_name(v.get("name"))
         if not name_ok:
             flagged.append((v, reason))
 

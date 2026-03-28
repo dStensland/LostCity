@@ -2,13 +2,13 @@ from sources.ymca_atlanta import _build_destination_envelope
 
 
 def test_build_destination_envelope_for_ymca_branch() -> None:
-    venue_data = {
+    place_data = {
         "name": "Andrew and Walter Young Family YMCA",
         "slug": "ymca-andrew-young-atlanta",
         "city": "Atlanta",
     }
 
-    envelope = _build_destination_envelope(2602, venue_data)
+    envelope = _build_destination_envelope(2602, place_data)
 
     assert envelope.destination_details[0]["venue_id"] == 2602
     assert envelope.destination_details[0]["destination_type"] == "community_center"

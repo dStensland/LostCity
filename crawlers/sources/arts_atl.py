@@ -10,7 +10,7 @@ import re
 from bs4 import BeautifulSoup
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_image_url
 
@@ -154,7 +154,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Get or create venue
             venue_info = event_data.get("location", {})
             if isinstance(venue_info, dict) and venue_info.get("name"):
-                venue_data = {
+                place_data = {
                     "name": venue_info.get("name"),
                     "slug": re.sub(r'[^a-z0-9]+', '-', venue_info.get("name", "").lower()).strip('-'),
                     "address": venue_info.get("address", {}).get("streetAddress", ""),
@@ -165,9 +165,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "venue_type": "various",
                     "website": venue_info.get("url", ""),
                 }
-                venue_id = get_or_create_venue(venue_data)
+                venue_id = get_or_create_place(place_data)
             else:
-                venue_id = get_or_create_venue(DEFAULT_VENUE)
+                venue_id = get_or_create_place(DEFAULT_VENUE)
 
             content_hash = generate_content_hash(title, "ArtsATL", start_date)
 
@@ -224,7 +224,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if not title or not start_date:
                     continue
 
-                venue_id = get_or_create_venue(DEFAULT_VENUE)
+                venue_id = get_or_create_place(DEFAULT_VENUE)
                 content_hash = generate_content_hash(title, "ArtsATL", start_date)
                 existing = find_event_by_hash(content_hash)
                 if existing:

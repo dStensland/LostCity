@@ -16,7 +16,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.collegeparkmainstreet.com"
 EVENTBRITE_ORG_URL = "https://www.eventbrite.com/o/college-park-main-street-association-78944267493"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "College Park Main Street",
     "slug": "college-park-main-street",
     "address": "Main Street",
@@ -179,7 +179,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching College Park Main Street events: {EVENTBRITE_ORG_URL}")
             page.goto(EVENTBRITE_ORG_URL, wait_until="domcontentloaded", timeout=30000)

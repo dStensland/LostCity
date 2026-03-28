@@ -36,16 +36,16 @@ def test_build_venue_data_uses_restaurant_venue_when_identified():
         lead_text="Ikara will replace Allora in the Twelve Midtown building.",
         emphasized_terms=[],
     )
-    venue_data, is_specific = build_venue_data(
+    place_data, is_specific = build_venue_data(
         title="A Gorgeous Indian Fine Dining Restaurant Is Taking Over Allora at Atlantic Station",
         description="Ikara will replace Italian restaurant Allora.",
         article_url="https://atlanta.eater.com/openings/86701/new-indian-fine-dining-restaurant-ikara-atlantic-station-atlanta",
         article_meta=article_meta,
     )
     assert is_specific is True
-    assert venue_data["name"] == "Ikara"
-    assert venue_data["venue_type"] == "restaurant"
-    assert venue_data["neighborhood"] == "Atlantic Station"
+    assert place_data["name"] == "Ikara"
+    assert place_data["venue_type"] == "restaurant"
+    assert place_data["neighborhood"] == "Atlantic Station"
 
 
 def test_build_venue_data_falls_back_for_roundup():
@@ -55,14 +55,14 @@ def test_build_venue_data_falls_back_for_roundup():
         lead_text="Many different restaurant projects are coming soon.",
         emphasized_terms=[],
     )
-    venue_data, is_specific = build_venue_data(
+    place_data, is_specific = build_venue_data(
         title="Highly Anticipated Restaurant Openings in Atlanta, 2026",
         description="A broad look at upcoming restaurant openings.",
         article_url="https://atlanta.eater.com/openings/86653/highly-anticipated-restaurant-openings-atlanta-2026",
         article_meta=article_meta,
     )
     assert is_specific is False
-    assert venue_data["slug"] == "atlanta-restaurant-scene"
+    assert place_data["slug"] == "atlanta-restaurant-scene"
 
 
 def test_select_restaurant_name_from_first_look_title():

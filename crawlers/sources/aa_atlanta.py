@@ -17,7 +17,7 @@ import requests
 from datetime import datetime, timedelta
 from typing import Optional
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -224,7 +224,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     addr_parts = parse_address(formatted_address)
 
                     # Create venue
-                    venue_data = {
+                    place_data = {
                         "name": location_name,
                         "slug": f"aa-{meeting.get('slug', '').split('-')[0]}-{location_id}",
                         "address": addr_parts["address"],
@@ -239,7 +239,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "website": meeting.get("location_url"),
                     }
 
-                    venue_id = get_or_create_venue(venue_data)
+                    venue_id = get_or_create_place(place_data)
                     venue_cache[venue_key] = (venue_id, location_name)
                 else:
                     venue_id, location_name = venue_cache[venue_key]

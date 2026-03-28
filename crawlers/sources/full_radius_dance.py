@@ -29,7 +29,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -311,8 +311,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Create venue records
-            seven_stages_venue_id = get_or_create_venue(SEVEN_STAGES_VENUE_DATA)
-            frd_venue_id = get_or_create_venue(FRD_ORG_VENUE_DATA)
+            seven_stages_venue_id = get_or_create_place(SEVEN_STAGES_VENUE_DATA)
+            frd_venue_id = get_or_create_place(FRD_ORG_VENUE_DATA)
 
             # Try the performances page first
             logger.info(f"Full Radius Dance: fetching {PERFORMANCES_URL}")

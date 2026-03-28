@@ -16,7 +16,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.wholeworldtheatre.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Whole World Improv Theatre",
     "slug": "whole-world-improv",
     "address": "1216 Spring St NW",
@@ -87,7 +87,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Whole World Improv: {BASE_URL}")
             goto_with_retry(page, BASE_URL, attempts=3, timeout_ms=45000)

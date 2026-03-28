@@ -9,12 +9,12 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Vine City",
     "slug": "vine-city-neighborhood",
     "address": "Vine City",
@@ -128,7 +128,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     # NPU meetings
     meeting_new, meeting_updated = create_monthly_meetings(source_id, venue_id)

@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.piedmont.org"
 ATHENS_CHAPEL_URL = f"{BASE_URL}/locations/piedmont-athens/piedmont-athens-chapel-and-healing-places"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Piedmont Athens Regional Medical Center",
     "slug": "piedmont-athens-regional",
     "address": "1199 Prince Avenue",
@@ -224,11 +224,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                                     if title:
                                         events_found += 1
-                                        venue_id = get_or_create_venue(VENUE_DATA)
+                                        venue_id = get_or_create_place(PLACE_DATA)
                                         start_date = dt.strftime("%Y-%m-%d")
 
                                         content_hash = generate_content_hash(
-                                            title, VENUE_DATA["name"], start_date
+                                            title, PLACE_DATA["name"], start_date
                                         )
 
                                         existing = find_event_by_hash(content_hash)
@@ -279,7 +279,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             browser.close()
 
         # Generate events from known recurring schedules
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         for event_template in RECURRING_EVENTS:
             dates = generate_upcoming_dates(event_template["schedule"], months_ahead=3)
@@ -290,7 +290,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 title = event_template["title"]
 
                 content_hash = generate_content_hash(
-                    title, VENUE_DATA["name"], start_date
+                    title, PLACE_DATA["name"], start_date
                 )
 
                 description = event_template["description"]

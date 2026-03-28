@@ -28,7 +28,7 @@ from zoneinfo import ZoneInfo
 import requests
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -48,7 +48,7 @@ EVENTS_API_URL = (
 )
 BOX_OFFICE_URL = "https://limelight.tix.page"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Limelight Theater",
     "slug": "limelight-theater",
     "address": "349 Decatur St SE",
@@ -186,7 +186,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     current_hashes: set[str] = set()
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         logger.info(f"Fetching Limelight Theater shows: {EVENTS_API_URL}")
         resp = requests.get(

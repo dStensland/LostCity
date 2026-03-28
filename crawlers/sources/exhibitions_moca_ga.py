@@ -88,7 +88,7 @@ def _parse_date_range(text: str) -> tuple[str | None, str | None]:
 
 
 class _Crawler(GenericExhibitionCrawler):
-    VENUE_DATA = {
+    PLACE_DATA = {
         "name": "MOCA GA",
         "slug": "moca-ga",
         "address": "75 Bennett St NW",

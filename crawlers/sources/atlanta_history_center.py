@@ -24,7 +24,7 @@ from bs4 import BeautifulSoup
 from db import (
     find_event_by_hash,
     get_client,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -56,7 +56,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     venue_features=True,
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta History Center",
     "slug": "atlanta-history-center",
     "address": "130 W Paces Ferry Rd NW",
@@ -267,7 +267,7 @@ def _transform_tribe_record(_raw_event: dict, record: dict) -> dict:
 
 _CONFIG = TribeConfig(
     base_url=BASE_URL,
-    venue_data=VENUE_DATA,
+    place_data=PLACE_DATA,
     default_category="community",
     default_tags=["history", "history-museum", "educational", "family-friendly"],
     future_only=True,
@@ -413,7 +413,7 @@ def _parse_exhibition_record(url: str, soup: BeautifulSoup, source_id: int, venu
         "raw_text": f"{title} | exhibition",
         "extraction_confidence": 0.88,
         "content_kind": "exhibit",
-        "content_hash": generate_content_hash(title, VENUE_DATA["name"], url),
+        "content_hash": generate_content_hash(title, PLACE_DATA["name"], url),
     }
 
 
@@ -516,7 +516,7 @@ def _parse_summer_camp_records(url: str, soup: BeautifulSoup, source_id: int, ve
                     "content_kind": "event",
                     "age_min": age_min,
                     "age_max": age_max,
-                    "content_hash": generate_content_hash(full_title, VENUE_DATA["name"], start_date),
+                    "content_hash": generate_content_hash(full_title, PLACE_DATA["name"], start_date),
                 }
             )
 
@@ -553,7 +553,7 @@ def _crawl_exhibitions(source_id: int, venue_id: int, portal_id: Optional[str] =
             source_id=source_id,
             opening_date=record["start_date"],
             closing_date=record.get("end_date"),
-            venue_name=VENUE_DATA["name"],
+            venue_name=PLACE_DATA["name"],
             description=record.get("description"),
             image_url=record.get("image_url"),
             source_url=record.get("source_url"),
@@ -714,7 +714,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     """
     events_found, events_new, events_updated = crawl_tribe(source, _CONFIG)
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     exhibit_found, exhibit_new, exhibit_updated = _crawl_exhibitions(source["id"], venue_id, source.get("portal_id"))

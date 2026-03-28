@@ -9,12 +9,12 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Blake's on the Park",
     "slug": "blakes-on-park",
     "address": "227 10th St NE",
@@ -88,7 +88,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
     logger.info(f"Generating Blake's weekly events for next {WEEKS_AHEAD} weeks")
@@ -126,7 +126,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "price_max": None,
                 "price_note": None,
                 "is_free": False,
-                "source_url": VENUE_DATA["website"],
+                "source_url": PLACE_DATA["website"],
                 "ticket_url": None,
                 "image_url": None,
                 "raw_text": f"{event_template['title']} - {start_date}",

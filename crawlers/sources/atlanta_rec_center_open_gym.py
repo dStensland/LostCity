@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -249,7 +249,7 @@ def parse_open_gym_item(item: dict, today: date) -> Optional[dict]:
     weekdays, start_time, end_time = schedule
     location_label = ((item.get("location") or {}).get("label") or "").strip()
     location_lower = location_label.lower()
-    venue_data = next(
+    place_data = next(
         (venue for key, venue in OPEN_GYM_VENUE_OVERRIDES.items() if key in location_lower),
         _resolve_venue_data(location_label),
     )
@@ -284,7 +284,7 @@ def parse_open_gym_item(item: dict, today: date) -> Optional[dict]:
         "weekdays": weekdays,
         "start_time": start_time,
         "end_time": end_time,
-        "venue_data": venue_data,
+        "venue_data": place_data,
         "source_url": item.get("detail_url") or SOURCE_URL,
         "ticket_url": (
             (item.get("enroll_now") or {}).get("href")
@@ -330,7 +330,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if not template:
                 continue
 
-            venue_id = get_or_create_venue(template["venue_data"])
+            venue_id = get_or_create_place(template["venue_data"])
             series_description = template["description"]
 
             for event_date, weekday in iter_occurrence_dates(

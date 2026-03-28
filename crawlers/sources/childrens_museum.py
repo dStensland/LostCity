@@ -22,7 +22,7 @@ from typing import Optional
 
 import requests
 
-from db import get_client, get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_client, get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -41,7 +41,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     venue_specials=True,
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Children's Museum of Atlanta",
     "slug": "childrens-museum-atlanta",
     "address": "275 Centennial Olympic Park Dr NW",
@@ -528,7 +528,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     special_programs = calendar_data.get("preload", {}).get("special_programs", [])
     logger.info("Found %d special programs in CMA calendar", len(special_programs))
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     # Enrich venue with og:image and og:description extracted from the homepage we already fetched

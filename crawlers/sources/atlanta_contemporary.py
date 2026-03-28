@@ -20,7 +20,7 @@ from bs4 import BeautifulSoup
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -31,7 +31,7 @@ BASE_URL = "https://atlantacontemporary.org"
 EVENTS_URL = f"{BASE_URL}/programs/schedule"
 EXHIBITIONS_URL = f"{BASE_URL}/exhibitions"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Contemporary",
     "slug": "atlanta-contemporary",
     "address": "535 Means St NW",
@@ -331,7 +331,7 @@ def build_exhibition_lane_record(
         "title": exhibition["title"],
         "venue_id": venue_id,
         "source_id": source_id,
-        "_venue_name": VENUE_DATA["name"],
+        "_venue_name": PLACE_DATA["name"],
         "opening_date": exhibition["canonical_start_date"],
         "closing_date": exhibition["end_date"],
         "description": exhibition["description"],
@@ -483,16 +483,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "|| document.querySelector('meta[name=\"description\"]'); return m ? m.content : null; }"
                 )
                 if og_image:
-                    VENUE_DATA["image_url"] = og_image
+                    PLACE_DATA["image_url"] = og_image
                     logger.debug("Atlanta Contemporary: og:image = %s", og_image)
                 if og_desc:
-                    VENUE_DATA["description"] = og_desc
+                    PLACE_DATA["description"] = og_desc
                     logger.debug("Atlanta Contemporary: og:description captured")
             except Exception as _meta_exc:
                 logger.debug("Atlanta Contemporary: could not extract og meta from homepage: %s", _meta_exc)
 
             # Get venue ID
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Atlanta Contemporary events: {EVENTS_URL}")

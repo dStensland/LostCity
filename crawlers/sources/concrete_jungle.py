@@ -25,7 +25,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -39,7 +39,7 @@ BASE_URL = "https://www.concrete-jungle.org"
 VOLUNTEER_URL = f"{BASE_URL}/volunteer/atlanta"
 AIRTABLE_EMBED_URL = "https://airtable.com/embed/shrLr48ircCprxRSF"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Concrete Jungle",
     "slug": "concrete-jungle",
     "address": "1080 Euclid Ave NE",
@@ -204,7 +204,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         today = date.today()
         current_hashes: set[str] = set()
 

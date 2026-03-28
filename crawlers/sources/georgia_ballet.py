@@ -26,7 +26,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -392,8 +392,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Create venue records
-            jta_venue_id = get_or_create_venue(JTA_VENUE_DATA)
-            studio_venue_id = get_or_create_venue(STUDIO_VENUE_DATA)
+            jta_venue_id = get_or_create_place(JTA_VENUE_DATA)
+            studio_venue_id = get_or_create_place(STUDIO_VENUE_DATA)
 
             logger.info(f"Georgia Ballet: fetching events page {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="networkidle", timeout=30000)

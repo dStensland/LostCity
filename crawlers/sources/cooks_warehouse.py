@@ -14,7 +14,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, parse_price, extract_event_links, find_event_url
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://cookswarehouse.com"
 EVENTS_URL = f"{BASE_URL}/all-classes/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Cook's Warehouse",
     "slug": "cooks-warehouse",
     "address": "1544 Piedmont Ave NE Suite 403-R",
@@ -156,7 +156,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             # Loop through 3 pages of classes
             for page_num in range(1, 4):

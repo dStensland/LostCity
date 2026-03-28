@@ -15,7 +15,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_event_links, find_event_url, enrich_event_record
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://aisle5atl.com"
 EVENTS_URL = "https://aisle5atl.com/calendar/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Aisle 5",
     "slug": "aisle-5",
     "address": "1123 Euclid Ave NE",
@@ -148,7 +148,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Aisle 5: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

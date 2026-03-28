@@ -29,7 +29,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -1063,7 +1063,7 @@ def _ensure_venues() -> dict[str, int]:
     venue_ids: dict[str, int] = {}
 
     for loc in LOCATION_PAGES:
-        venue_data = {
+        place_data = {
             "name": loc["venue_name"],
             "slug": loc["venue_slug"],
             "address": loc["address"],
@@ -1078,7 +1078,7 @@ def _ensure_venues() -> dict[str, int]:
             "vibes": ["family-friendly", "all-ages"],
         }
         try:
-            vid = get_or_create_venue(venue_data)
+            vid = get_or_create_place(place_data)
             venue_ids[loc["venue_slug"]] = vid
         except Exception as exc:
             logger.error(
@@ -1086,7 +1086,7 @@ def _ensure_venues() -> dict[str, int]:
             )
 
     for extra in EXTRA_VENUES:
-        venue_data = {
+        place_data = {
             "name": extra["venue_name"],
             "slug": extra["venue_slug"],
             "address": extra["address"],
@@ -1100,7 +1100,7 @@ def _ensure_venues() -> dict[str, int]:
             "website": BASE_URL,
         }
         try:
-            vid = get_or_create_venue(venue_data)
+            vid = get_or_create_place(place_data)
             venue_ids[extra["venue_slug"]] = vid
         except Exception as exc:
             logger.error(

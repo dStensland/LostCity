@@ -36,7 +36,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_exhibition
+from db import get_or_create_place, insert_exhibition
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ USER_AGENT = (
 )
 REQUEST_TIMEOUT = 20
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "MOCA GA",
     "slug": "moca-ga",
     "address": "75 Bennett St NW",
@@ -363,7 +363,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     today = date.today()
     found = new = updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     session = _session()
 
     # Check current year and previous year archives (exhibitions that opened last year
@@ -414,7 +414,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             "title": title,
             "venue_id": venue_id,
             "source_id": source_id,
-            "_venue_name": VENUE_DATA["name"],
+            "_venue_name": PLACE_DATA["name"],
             "opening_date": opening_str,
             "closing_date": closing_str,
             "description": detail.get("description"),

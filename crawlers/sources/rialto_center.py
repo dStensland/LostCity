@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -33,7 +33,7 @@ BASE_URL = "https://rialto.gsu.edu"
 EVENTS_URL = "https://calendar.gsu.edu/rialto"
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"}
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Rialto Center for the Arts",
     "slug": "rialto-center",
     "address": "80 Forsyth St NW",
@@ -195,7 +195,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     seen_hashes: set[str] = set()
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         logger.info("Fetching Rialto Center for the Arts: %s", EVENTS_URL)
         response = requests.get(EVENTS_URL, timeout=30, headers=REQUEST_HEADERS)
         response.raise_for_status()

@@ -6,7 +6,7 @@ Thursday open mic nights and Saturday live bands in Midtown.
 import logging
 from datetime import datetime, timedelta
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.katscafe.com"
 EVENTS_URL = BASE_URL
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Kat's Cafe",
     "slug": "kats-cafe",
     "address": "970 Piedmont Avenue NE",
@@ -69,7 +69,7 @@ def generate_recurring_events(source_id: int, venue_id: int, weeks_ahead: int = 
                 continue
 
             start_date = event_date.strftime("%Y-%m-%d")
-            content_hash = generate_content_hash(recurring["title"], VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(recurring["title"], PLACE_DATA["name"], start_date)
             day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
             events.append({
@@ -117,7 +117,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Generate recurring events
         recurring_events = generate_recurring_events(source_id, venue_id)

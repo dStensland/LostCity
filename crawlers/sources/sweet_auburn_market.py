@@ -13,7 +13,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 from entity_lanes import TypedEntityEnvelope, SourceEntityCapabilities
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.sweetauburncurbmarket.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Sweet Auburn Curb Market",
     "slug": "sweet-auburn-curb-market",
     "address": "209 Edgewood Ave SE",
@@ -129,7 +129,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Sweet Auburn Curb Market: {EVENTS_URL}")

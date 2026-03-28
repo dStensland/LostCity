@@ -16,7 +16,7 @@ from datetime import date, datetime
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.grantparkporchfest.com"
 SCHEDULE_URL = f"{BASE_URL}/schedule"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Grant Park Neighborhood",
     "slug": "grant-park-neighborhood",
     "address": "Grant St & Cherokee Pl SE",
@@ -156,7 +156,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             year = next_year
             event_date = next_date
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     events_found = 1
 
     title = f"Grant Park Porchfest {year}"

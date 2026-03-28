@@ -9,14 +9,14 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://chompandstomp.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Cabbagetown Park",
     "slug": "cabbagetown-park",
     "address": "177 Carroll St SE",
@@ -58,7 +58,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         year += 1
         event_date = get_first_saturday_november(year)
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     events_found = 1
 
     title = f"Chomp & Stomp Chili Cookoff & Bluegrass Festival {year}"

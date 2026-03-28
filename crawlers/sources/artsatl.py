@@ -16,7 +16,7 @@ from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -95,7 +95,7 @@ def get_venue_from_json_ld(location_data: dict) -> Optional[dict]:
     # Clean HTML entities from venue name
     venue_name = html.unescape(venue_name)
 
-    venue_data = {
+    place_data = {
         'name': venue_name,
         'address': address.get('streetAddress'),
         'city': address.get('addressLocality', 'Atlanta'),
@@ -107,9 +107,9 @@ def get_venue_from_json_ld(location_data: dict) -> Optional[dict]:
 
     # Generate slug from name
     slug = re.sub(r'[^a-z0-9]+', '-', venue_name.lower()).strip('-')
-    venue_data['slug'] = slug[:100]  # Limit slug length
+    place_data['slug'] = slug[:100]  # Limit slug length
 
-    return venue_data
+    return place_data
 
 
 def categorize_event(event_data: dict) -> tuple[str, str]:
@@ -209,10 +209,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         venue_name = 'ArtsATL'
 
                         if location_data:
-                            venue_data = get_venue_from_json_ld(location_data)
-                            if venue_data:
-                                venue_name = venue_data['name']
-                                venue_id = get_or_create_venue(venue_data)
+                            place_data = get_venue_from_json_ld(location_data)
+                            if place_data:
+                                venue_name = place_data['name']
+                                venue_id = get_or_create_place(place_data)
 
                         # Get image
                         image_url = event_data.get('image')

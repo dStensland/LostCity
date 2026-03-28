@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -45,7 +45,7 @@ SCHEDULE_RE = re.compile(
     re.IGNORECASE,
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "east central dekalb cmty & senior ctr": {
         "name": "East Central DeKalb Community & Senior Center",
         "slug": "east-central-dekalb-community-senior-center",
@@ -116,8 +116,8 @@ def parse_item(item: dict, today: date) -> dict | None:
         return None
 
     location_label = ((item.get("location") or {}).get("label") or "").strip().lower()
-    venue_data = VENUE_DATA.get(location_label)
-    if not venue_data:
+    place_data = PLACE_DATA.get(location_label)
+    if not place_data:
         return None
 
     start_raw = item.get("date_range_start")
@@ -146,16 +146,16 @@ def parse_item(item: dict, today: date) -> dict | None:
         price_max = 0.0
         is_free = True
 
-    title = f"Line Dance 101 at {venue_data['name']}"
+    title = f"Line Dance 101 at {place_data['name']}"
     description = (
-        f"Public line dance class at {venue_data['name']} through DeKalb County Recreation. "
+        f"Public line dance class at {place_data['name']} through DeKalb County Recreation. "
         "Reserve through the official county catalog for current availability."
     )
 
     return {
         "title": title,
         "description": description,
-        "venue_data": venue_data,
+        "venue_data": place_data,
         "start_time": start_time,
         "end_time": end_time,
         "occurrences": occurrences,
@@ -175,7 +175,7 @@ def parse_item(item: dict, today: date) -> dict | None:
         or item.get("detail_url")
         or ACTIVITY_SEARCH_URL,
         "source_url": item.get("detail_url") or ACTIVITY_SEARCH_URL,
-        "raw_text": f"{item.get('name','')} | {item.get('date_range','')} | {venue_data['name']}",
+        "raw_text": f"{item.get('name','')} | {item.get('date_range','')} | {place_data['name']}",
     }
 
 
@@ -213,7 +213,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if not parsed:
                 continue
 
-            venue_id = get_or_create_venue(parsed["venue_data"])
+            venue_id = get_or_create_place(parsed["venue_data"])
             for event_date, weekday in parsed["occurrences"]:
                 events_found += 1
                 start_date = event_date.strftime("%Y-%m-%d")

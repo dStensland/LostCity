@@ -23,7 +23,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug, remove_stale_source_events
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug, remove_stale_source_events
 from dedupe import generate_content_hash
 from utils import enrich_event_record
 
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.brooklynbowl.com"
 CALENDAR_URL = f"{BASE_URL}/nashville/shows/all"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Brooklyn Bowl Nashville",
     "slug": "brooklyn-bowl-nashville",
     "address": "925 3rd Ave N",
@@ -85,7 +85,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Brooklyn Bowl Nashville: {CALENDAR_URL}")
             page.goto(CALENDAR_URL, wait_until="domcontentloaded", timeout=30000)

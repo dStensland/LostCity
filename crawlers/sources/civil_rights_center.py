@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup, Tag
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -44,7 +44,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     venue_features=True,
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "National Center for Civil and Human Rights",
     "slug": "civil-human-rights-center",
     "address": "100 Ivan Allen Jr Blvd NW",
@@ -376,7 +376,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     with requests.Session() as session:

@@ -13,7 +13,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.liberationatl.org"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Liberation Center",
     "slug": "atlanta-liberation-center",
     "address": "344 Candler Park Dr NE",
@@ -128,7 +128,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Atlanta Liberation Center events: {EVENTS_URL}")
 
@@ -232,7 +232,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             description = f"{title_text} at Atlanta Liberation Center"
 
                         # Generate content hash
-                        content_hash = generate_content_hash(title_text, VENUE_DATA["name"], start_date)
+                        content_hash = generate_content_hash(title_text, PLACE_DATA["name"], start_date)
 
                         # Check if exists
 
@@ -342,7 +342,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             description = f"{title} at Atlanta Liberation Center"
 
                         # Generate content hash
-                        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
                         # Check if exists
                         existing = find_event_by_hash(content_hash)

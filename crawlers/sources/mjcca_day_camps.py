@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup, Tag
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -456,7 +456,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         try:
             venue_slug = row["venue"]["slug"]
             if venue_slug not in venue_cache:
-                venue_cache[venue_slug] = get_or_create_venue(row["venue"])
+                venue_cache[venue_slug] = get_or_create_place(row["venue"])
             record = _build_event_record(source_id, venue_cache[venue_slug], row)
             events_found += 1
             existing = find_event_by_hash(record["content_hash"])

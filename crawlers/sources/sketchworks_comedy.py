@@ -23,7 +23,7 @@ from zoneinfo import ZoneInfo
 import requests
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -43,7 +43,7 @@ EVENTS_API_URL = (
 BOX_OFFICE_URL = "https://sketchworkscomedy.tix.page"
 BASE_URL = "https://sketchworkscomedy.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Sketchworks Comedy",
     "slug": "sketchworks-comedy",
     # Sketchworks is a troupe, not a fixed venue — they perform at rented spaces.
@@ -172,7 +172,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     current_hashes: set[str] = set()
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         logger.info(f"Fetching Sketchworks Comedy shows: {EVENTS_API_URL}")
         resp = requests.get(

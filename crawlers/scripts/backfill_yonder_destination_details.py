@@ -26,7 +26,7 @@ from config import set_database_target  # noqa: E402
 from db import (  # noqa: E402
     configure_write_mode,
     get_venue_by_slug,
-    upsert_venue_destination_details,
+    upsert_place_vertical_details,
 )
 from scripts.seed_yonder_federal_backbone_wave2 import RIDB_TARGETS  # noqa: E402
 from scripts.seed_yonder_public_land_campgrounds_wave1 import WAVE_1_CAMPGROUNDS  # noqa: E402
@@ -137,7 +137,7 @@ def backfill_destination_details(apply: bool) -> BackfillStats:
             continue
 
         record = _build_detail_record(kind, seed)
-        persisted = upsert_venue_destination_details(venue["id"], record)
+        persisted = upsert_place_vertical_details(venue["id"], record)
         if persisted:
             stats.persisted += 1
             logger.info(

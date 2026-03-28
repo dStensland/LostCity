@@ -17,7 +17,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
+from db import find_event_by_hash, get_or_create_place, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Underground Atlanta",
     "slug": "underground-atlanta",
     "address": "50 Upper Alabama St",
@@ -112,7 +112,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     listing = requests.get(EVENTS_URL, headers=HEADERS, timeout=30)
     listing.raise_for_status()
@@ -140,7 +140,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         image_url = image.get("url") if isinstance(image, dict) else image
 
         events_found += 1
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
         event_record = {
             "source_id": source_id,

@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_existing_event_for_insert,
     smart_update_existing_event,
@@ -706,7 +706,7 @@ def get_next_weekday(start_date: datetime, weekday: int) -> datetime:
 
 
 def venue_dict_to_db(v: dict) -> dict:
-    """Convert a scraped venue dict to a db.get_or_create_venue-compatible dict."""
+    """Convert a scraped venue dict to a db.get_or_create_place-compatible dict."""
     venue_type = infer_venue_type(v.get("name", ""))
     slug = v.get("slug") or slugify(v["name"])
     return {
@@ -724,7 +724,7 @@ def venue_dict_to_db(v: dict) -> dict:
 
 
 def generate_events_for_venue(
-    venue_data: dict,
+    place_data: dict,
     source_id: int,
     today: datetime,
 ) -> tuple[int, int, int]:
@@ -732,20 +732,20 @@ def generate_events_for_venue(
     Generate up to WEEKS_AHEAD events for a single venue/day combo.
     Returns (found, new, updated).
     """
-    day_int = venue_data.get("day")
+    day_int = place_data.get("day")
     if day_int is None:
-        logger.debug(f"No day-of-week for venue {venue_data['name']}, skipping")
+        logger.debug(f"No day-of-week for venue {place_data['name']}, skipping")
         return 0, 0, 0
 
-    start_time = venue_data.get("start_time") or "20:00"
-    gwd_url = venue_data.get("gwd_url") or GWD_VENUES_URL
+    start_time = place_data.get("start_time") or "20:00"
+    gwd_url = place_data.get("gwd_url") or GWD_VENUES_URL
 
-    venue_name = venue_data["name"]
+    venue_name = place_data["name"]
     day_name = DAY_NAMES[day_int]
     day_code = DAY_CODES[day_int]
 
-    venue_db = venue_dict_to_db(venue_data)
-    venue_id = get_or_create_venue(venue_db)
+    venue_db = venue_dict_to_db(place_data)
+    venue_id = get_or_create_place(venue_db)
 
     next_date = get_next_weekday(today, day_int)
 
@@ -903,15 +903,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
     # ------------------------------------------------------------------
     # Step 3: Generate events
     # ------------------------------------------------------------------
-    for venue_data in venues_to_process:
+    for place_data in venues_to_process:
         try:
-            f, n, u = generate_events_for_venue(venue_data, source_id, today)
+            f, n, u = generate_events_for_venue(place_data, source_id, today)
             events_found += f
             events_new += n
             events_updated += u
         except Exception as exc:
             logger.error(
-                f"Unhandled error generating events for {venue_data.get('name', '?')}: {exc}"
+                f"Unhandled error generating events for {place_data.get('name', '?')}: {exc}"
             )
 
     logger.info(

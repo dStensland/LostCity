@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -264,7 +264,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
     for template in templates:
-        venue_id = get_or_create_venue(template["venue_data"])
+        venue_id = get_or_create_place(template["venue_data"])
         next_date = get_next_weekday(today, template["weekday"])
         day_code = DAY_CODES[template["weekday"]]
         day_name = DAY_NAMES[template["weekday"]]

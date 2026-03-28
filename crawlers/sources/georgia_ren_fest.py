@@ -39,7 +39,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -52,7 +52,7 @@ THEMED_WEEKENDS_URL = f"{BASE_URL}/themed-weekends"
 TICKETS_URL = "https://tickets.garenfest.com/renfest"
 
 # ── Venue record ──────────────────────────────────────────────────────────────
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia Renaissance Festival",
     "slug": "georgia-renaissance-festival",
     "address": "6905 Virlyn B Smith Rd",
@@ -556,7 +556,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     )
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # 1. Per-themed-weekend events
         try:

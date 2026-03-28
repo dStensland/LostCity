@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup, Tag
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -29,7 +29,7 @@ BASE_URL = "https://www.georgiaswarm.com"
 SCHEDULE_URL = f"{BASE_URL}/schedule/"
 TICKETS_URL = "https://www.ticketmaster.com/georgia-swarm-tickets/artist/2162829?home_away=home"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Gas South Arena",
     "slug": "gas-south-arena",
     "address": "6400 Sugarloaf Pkwy",
@@ -152,12 +152,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
     )
     response.raise_for_status()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     games = parse_schedule_html(response.text)
 
     for game in games:
         events_found += 1
-        content_hash = generate_content_hash(game["title"], VENUE_DATA["name"], game["start_date"])
+        content_hash = generate_content_hash(game["title"], PLACE_DATA["name"], game["start_date"])
         current_hashes.add(content_hash)
 
         event_record = {

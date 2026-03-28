@@ -16,7 +16,7 @@ from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -31,7 +31,7 @@ BASE_URL = "https://www.cathedralatl.org"
 EVENTS_URL = f"{BASE_URL}/events/"
 CONCERTS_URL = f"{BASE_URL}/worship/music/concerts/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "The Cathedral of St. Philip",
     "slug": "cathedral-of-st-philip",
     "address": "2744 Peachtree Rd NW",
@@ -163,7 +163,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             # Crawl both the general events page and concerts page
             urls_to_crawl = [EVENTS_URL, CONCERTS_URL]

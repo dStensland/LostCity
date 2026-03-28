@@ -20,7 +20,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -38,7 +38,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     venue_specials=True,
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Fernbank Science Center",
     "slug": "fernbank-science-center",
     "address": "156 Heaton Park Dr NE",
@@ -274,7 +274,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
         })
 
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
         logger.info(f"Fetching Fernbank Science Center: {EVENTS_URL}")

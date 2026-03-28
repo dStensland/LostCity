@@ -31,7 +31,7 @@ REUSE PATTERN:
 
   _CONFIG = JackRabbitConfig(
       org_id="509235",
-      venue_data={...},
+      place_data={...},
       default_category="fitness",
       default_tags=["gymnastics", "kids", "class"],
       enrollment_url="https://app.jackrabbitclass.com/regv2.asp?id=509235",
@@ -55,7 +55,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -352,8 +352,8 @@ class JackRabbitConfig:
     # JackRabbit organization ID (numeric string)
     org_id: str
 
-    # Venue data passed to get_or_create_venue()
-    venue_data: dict
+    # Venue data passed to get_or_create_place()
+    place_data: dict
 
     # Default LostCity category for all classes
     default_category: str = "fitness"
@@ -538,7 +538,7 @@ def crawl_jackrabbit(source: dict, config: JackRabbitConfig) -> tuple[int, int, 
 
     # Ensure venue exists
     try:
-        venue_id = get_or_create_venue(config.venue_data)
+        venue_id = get_or_create_place(config.place_data)
     except Exception as exc:
         logger.error(
             "[jackrabbit/%s] Failed to create/find venue: %s",
@@ -547,7 +547,7 @@ def crawl_jackrabbit(source: dict, config: JackRabbitConfig) -> tuple[int, int, 
         )
         return 0, 0, 0
 
-    venue_name = config.venue_data["name"]
+    venue_name = config.place_data["name"]
     logger.info("[jackrabbit/%s] Starting crawl", config.org_id)
 
     # Fetch and parse the OpeningsJS endpoint

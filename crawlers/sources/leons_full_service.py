@@ -6,13 +6,13 @@ Decatur gastropub with oysters and craft cocktails.
 from __future__ import annotations
 
 import logging
-from db import get_or_create_venue
+from db import get_or_create_place
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.leonsfullservice.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Leon's Full Service",
     "slug": "leons-full-service",
     "address": "131 E Ponce de Leon Ave",
@@ -32,7 +32,7 @@ VENUE_DATA = {
 def crawl(source: dict) -> tuple[int, int, int]:
     """Ensure Leon's Full Service exists as a venue."""
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         logger.info(f"Leon's Full Service venue record ensured (ID: {venue_id})")
         return 0, 0, 0
     except Exception as e:

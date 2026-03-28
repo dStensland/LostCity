@@ -35,7 +35,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ BASE_URL = "https://www.flyonawall.buzz"
 EVENTS_LISTING_URL = f"{BASE_URL}/whats-next"
 
 # Fly on a Wall's home venue
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Fly on a Wall",
     "slug": "fly-on-a-wall",
     "address": "2450 Piedmont Rd NE, Suite 200",
@@ -490,11 +490,11 @@ def _get_or_create_event_venue(event_data: dict, home_venue_id: int) -> tuple[in
     # Check if this is the home venue
     home_indicators = {"fly on a wall", "flyonawall", "2450 piedmont"}
     if any(ind in location_name.lower() or ind in location_address.lower() for ind in home_indicators):
-        return home_venue_id, VENUE_DATA["name"]
+        return home_venue_id, PLACE_DATA["name"]
 
     # External venue — try to create from address data
     if not location_name or not location_address:
-        return home_venue_id, VENUE_DATA["name"]
+        return home_venue_id, PLACE_DATA["name"]
 
     # Parse city/state/zip from address string like
     # "2450 Piedmont Rd NE, Atlanta, GA 30324, USA"
@@ -515,7 +515,7 @@ def _get_or_create_event_venue(event_data: dict, home_venue_id: int) -> tuple[in
 
     slug = re.sub(r"[^a-z0-9]+", "-", location_name.lower()).strip("-")
 
-    venue_data = {
+    place_data = {
         "name": location_name,
         "slug": slug,
         "address": address_line,
@@ -528,11 +528,11 @@ def _get_or_create_event_venue(event_data: dict, home_venue_id: int) -> tuple[in
     }
 
     try:
-        venue_id = get_or_create_venue(venue_data)
+        venue_id = get_or_create_place(place_data)
         return venue_id, location_name
     except Exception as e:
         logger.warning(f"Fly on a Wall: could not create venue '{location_name}': {e}")
-        return home_venue_id, VENUE_DATA["name"]
+        return home_venue_id, PLACE_DATA["name"]
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -555,7 +555,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Ensure home venue exists
-            home_venue_id = get_or_create_venue(VENUE_DATA)
+            home_venue_id = get_or_create_place(PLACE_DATA)
 
             # Step 1: Collect all event-detail URLs from the listing page
             event_urls = _get_event_urls_from_listing(page)

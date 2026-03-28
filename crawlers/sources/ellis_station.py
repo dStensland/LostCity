@@ -14,7 +14,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://ellisstation.com"
 CLASS_URL = f"{BASE_URL}/products/candle-making-class"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Ellis Station Candle Co",
     "slug": "ellis-station-candle-co",
     "address": "250 Peters St SW",  # Located in the Castleberry Hill area
@@ -107,7 +107,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Ellis Station Candle Co: {CLASS_URL}")
 

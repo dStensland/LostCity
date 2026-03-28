@@ -14,7 +14,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ BASE_URL = "https://cabbagetown.com"
 CALENDAR_URL = f"{BASE_URL}/calendar"
 
 # Default venue for neighborhood-wide events
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Cabbagetown",
     "slug": "cabbagetown-neighborhood",
     "address": "177 Carroll St SE",
@@ -114,7 +114,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Look for event containers - common patterns
         event_elements = soup.select(".event, .calendar-event, [class*='event-item'], article")

@@ -13,14 +13,14 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://lindberghcitycenter.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Lindbergh City Center",
     "slug": "lindbergh-city-center",
     "address": "2300 Main St NE",
@@ -138,7 +138,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Create known seasonal events
         seasonal_new, seasonal_updated = create_seasonal_events(source_id, venue_id)

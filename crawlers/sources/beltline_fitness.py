@@ -19,7 +19,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -288,7 +288,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.wait_for_timeout(1000)
 
             # Get venue ID
-            venue_id = get_or_create_venue(BELTLINE_VENUE)
+            venue_id = get_or_create_place(BELTLINE_VENUE)
 
             # Extract page text
             body_text = page.inner_text("body")

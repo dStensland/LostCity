@@ -26,7 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from db import get_client, get_or_create_venue, get_venue_by_slug
+from db import get_client, get_or_create_place, get_venue_by_slug
 from utils import slugify
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -254,7 +254,7 @@ def main() -> None:
 
         if not existing:
             if args.apply:
-                get_or_create_venue(payload)
+                get_or_create_place(payload)
             logger.info("%s venue: %s", "CREATE" if args.apply else "WOULD CREATE", seed["slug"])
             created += 1
             continue

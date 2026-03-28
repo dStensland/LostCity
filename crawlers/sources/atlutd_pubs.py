@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -279,7 +279,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    get_or_create_venue(NETWORK_VENUE_DATA)
+    get_or_create_place(NETWORK_VENUE_DATA)
 
     response = requests.get(
         EVENTS_URL,
@@ -296,7 +296,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         if event_date < today:
             continue
 
-        venue_id = get_or_create_venue(item["venue_data"])
+        venue_id = get_or_create_place(item["venue_data"])
         events_found += 1
 
         description = (

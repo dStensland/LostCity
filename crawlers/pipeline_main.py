@@ -17,7 +17,7 @@ from urllib.parse import urljoin
 
 from db import (
     get_source_by_slug,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     update_event,
@@ -67,12 +67,12 @@ def _get_or_create_default_venue(profile) -> int | None:
     if venue_slug in _VENUE_CACHE:
         return _VENUE_CACHE[venue_slug]
 
-    venue_data = {
+    place_data = {
         "name": profile.defaults.venue_name,
         "slug": venue_slug,
         "website": None,
     }
-    venue_id = get_or_create_venue(venue_data)
+    venue_id = get_or_create_place(place_data)
     if venue_id is None:
         logger.warning("Default venue rejected by validation for '%s'", profile.defaults.venue_name)
         return None
@@ -96,7 +96,7 @@ def _get_or_create_event_venue(event: dict) -> int | None:
     if slug in _VENUE_CACHE:
         return _VENUE_CACHE[slug]
 
-    venue_data = {
+    place_data = {
         "name": name,
         "slug": slug,
         "address": venue.get("address"),
@@ -106,7 +106,7 @@ def _get_or_create_event_venue(event: dict) -> int | None:
         "zip": venue.get("zip"),
         "website": venue.get("website"),
     }
-    venue_id = get_or_create_venue(venue_data)
+    venue_id = get_or_create_place(place_data)
     if venue_id is None:
         return None
     _VENUE_CACHE[slug] = venue_id

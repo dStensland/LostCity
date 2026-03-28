@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -317,7 +317,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     soup = BeautifulSoup(response.text, "html.parser")
     venue = _extract_venue_data(soup)
-    venue_id = get_or_create_venue(venue)
+    venue_id = get_or_create_place(venue)
     rows = _extract_lesson_rows(soup)
 
     logger.info(

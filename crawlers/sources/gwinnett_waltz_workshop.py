@@ -12,7 +12,7 @@ from datetime import date, datetime
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -34,7 +34,7 @@ CATALOG_URL = f"https://secure.rec1.com/GA/{TENANT_SLUG}/catalog"
 TARGET_TAB = "Classes & Activities"
 TARGET_GROUP = "Ballroom/Waltz"
 TARGET_TITLE = "Waltz Workshop"
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Gwinnett Historic Courthouse",
     "slug": "gwinnett-historic-courthouse",
     "address": "185 W Crogan St",
@@ -78,9 +78,9 @@ def parse_session(session: dict, today: date) -> dict | None:
 
     price = session.get("price")
     price_value = float(price) if price is not None else None
-    title = f"Waltz Workshop at {VENUE_DATA['name']}"
+    title = f"Waltz Workshop at {PLACE_DATA['name']}"
     description = (
-        f"Public ballroom workshop at {VENUE_DATA['name']} through Gwinnett County Parks & Recreation. "
+        f"Public ballroom workshop at {PLACE_DATA['name']} through Gwinnett County Parks & Recreation. "
         "Reserve through the official county catalog for current availability."
     )
 
@@ -104,7 +104,7 @@ def parse_session(session: dict, today: date) -> dict | None:
         "source_url": CATALOG_URL,
         "raw_text": (
             f"{raw_title} | {features.get('ageGender','')} | {features.get('dates','')} | "
-            f"{features.get('times','')} | {VENUE_DATA['name']}"
+            f"{features.get('times','')} | {PLACE_DATA['name']}"
         ),
     }
 
@@ -116,7 +116,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     current_hashes: set[str] = set()
     seen_session_ids: set[int] = set()
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     today = datetime.now().date()
 
     checkout_key = _get_checkout_key(TENANT_SLUG)
@@ -158,7 +158,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         events_found += 1
         content_hash = generate_content_hash(
             parsed["title"],
-            VENUE_DATA["name"],
+            PLACE_DATA["name"],
             parsed["start_date"],
         )
         current_hashes.add(content_hash)

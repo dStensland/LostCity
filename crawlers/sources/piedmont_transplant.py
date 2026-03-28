@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.piedmont.org"
 SUPPORT_GROUP_URL = f"{BASE_URL}/transplant/services-treatments/support-group"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Piedmont Transplant Institute",
     "slug": "piedmont-transplant-institute",
     "address": "1968 Peachtree Road NW",
@@ -195,7 +195,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             browser.close()
 
         # Generate events from known recurring schedules
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         for group in SUPPORT_GROUPS:
             dates = generate_upcoming_dates(group["schedule"], months_ahead=3)
@@ -204,7 +204,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_found += 1
 
                 title = group["title"]
-                venue_name = "Virtual (Zoom)" if group["is_virtual"] else VENUE_DATA["name"]
+                venue_name = "Virtual (Zoom)" if group["is_virtual"] else PLACE_DATA["name"]
 
                 content_hash = generate_content_hash(
                     title, venue_name, start_date

@@ -16,7 +16,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://centralrockgym.com"
 LOCATION_URL = f"{BASE_URL}/kennesaw/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Central Rock Gym Atlanta",
     "slug": "stone-summit",
     "address": "3701 Presidential Pkwy",
@@ -169,7 +169,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             # Try each URL until we find class information
             body_text = ""
@@ -278,7 +278,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         events_found += 1
 
                         # Generate content hash for deduplication
-                        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
 
                         # Get category info

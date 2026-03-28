@@ -8,7 +8,7 @@ import logging
 from bs4 import BeautifulSoup
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -79,8 +79,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")
-        venue_data = VENUES["default"]
-        venue_id = get_or_create_venue(venue_data)
+        place_data = VENUES["default"]
+        venue_id = get_or_create_place(place_data)
 
         # Try JSON-LD first
         json_events = parse_jsonld_events(soup)
@@ -98,8 +98,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Determine venue based on event type
             title_lower = title.lower()
             if "museum" in title_lower or "exhibition" in title_lower or "art" in title_lower:
-                venue_data = VENUES["museum"]
-                venue_id = get_or_create_venue(venue_data)
+                place_data = VENUES["museum"]
+                venue_id = get_or_create_place(place_data)
                 category, subcategory = "museums", "exhibition"
             elif any(w in title_lower for w in ["athletics", "game", "petrels"]):
                 category, subcategory = "sports", "college"
@@ -108,7 +108,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             else:
                 category, subcategory = "community", "campus"
 
-            content_hash = generate_content_hash(title, venue_data["name"], start_date)
+            content_hash = generate_content_hash(title, place_data["name"], start_date)
 
             event_record = {
                 "source_id": source_id,

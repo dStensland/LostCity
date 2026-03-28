@@ -13,7 +13,7 @@ from typing import Optional, Tuple
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.jimmycarterlibrary.gov"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Jimmy Carter Presidential Library and Museum",
     "slug": "jimmy-carter-library",
     "address": "441 John Lewis Freedom Pkwy NE",
@@ -245,7 +245,7 @@ def crawl(source: dict) -> Tuple[int, int, int]:
         }
 
         # Fetch og:image from homepage to enrich venue record
-        venue_data = dict(VENUE_DATA)
+        place_data = dict(PLACE_DATA)
         try:
             _home_resp = requests.get(BASE_URL, headers=headers, timeout=15)
             if _home_resp.status_code == 200:
@@ -255,13 +255,13 @@ def crawl(source: dict) -> Tuple[int, int, int]:
                     img_src = _og_image["content"]
                     if img_src and not img_src.startswith("http"):
                         img_src = BASE_URL + "/" + img_src.lstrip("/")
-                    venue_data["image_url"] = img_src
+                    place_data["image_url"] = img_src
                     logger.debug("Fetched og:image for Jimmy Carter Library")
         except Exception as _e:
             logger.debug(f"Could not fetch og:image for Jimmy Carter Library: {_e}")
 
         # Get or create venue
-        venue_id = get_or_create_venue(venue_data)
+        venue_id = get_or_create_place(place_data)
         persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
         # Fetch events page
@@ -399,7 +399,7 @@ def crawl(source: dict) -> Tuple[int, int, int]:
                     price_note = "Free admission"
 
                 # Generate content hash
-                content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
                 # Create event record
                 event_record = {

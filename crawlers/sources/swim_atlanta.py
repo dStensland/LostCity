@@ -52,7 +52,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     find_existing_event_for_insert,
@@ -567,9 +567,9 @@ def _crawl_meets(source_id: int) -> tuple[int, int, int]:
             loc_idx = 1  # Georgia Tech
 
         loc = LOCATIONS[loc_idx]
-        venue_data = _build_venue_data(loc)
+        place_data = _build_venue_data(loc)
         try:
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
         except Exception as exc:
             logger.error(
                 f"[swim-atlanta] Failed to get/create venue for {loc['name']}: {exc}"
@@ -831,9 +831,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # 2. Recurring swim lessons program events per location
     for loc in LOCATIONS:
-        venue_data = _build_venue_data(loc)
+        place_data = _build_venue_data(loc)
         try:
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
         except Exception as exc:
             logger.error(
                 f"[swim-atlanta] Failed to get/create venue for {loc['name']}: {exc}"

@@ -14,14 +14,14 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://piedmontheights.org"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Piedmont Heights",
     "slug": "piedmont-heights",
     "address": "Piedmont Heights",
@@ -317,7 +317,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     # Create recurring monthly board meetings
     meeting_new, meeting_updated = create_monthly_meetings(source_id, venue_id)

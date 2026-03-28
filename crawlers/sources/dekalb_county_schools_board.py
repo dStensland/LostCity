@@ -34,7 +34,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -57,7 +57,7 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "DCSD Administrative & Instructional Complex",
     "slug": "dcsd-administrative-center",
     "address": "1701 Mountain Industrial Blvd",
@@ -299,7 +299,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     # Ensure venue exists
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     # Fetch the meeting calendar page
     logger.info(f"DeKalb County Schools Board: fetching {MEETING_CALENDAR_URL}")
@@ -363,7 +363,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             events_found += 1
 
             # Content hash for DB-level dedup
-            content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
             # Series grouping
             series_hint = determine_series_hint(raw_title)

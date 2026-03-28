@@ -18,7 +18,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, parse_price
 
@@ -76,9 +76,9 @@ def parse_location(title: str, description: str) -> Optional[dict]:
     """
     # Check title for known venues
     title_lower = title.lower()
-    for venue_key, venue_data in KNOWN_VENUES.items():
+    for venue_key, place_data in KNOWN_VENUES.items():
         if venue_key in title_lower:
-            return venue_data
+            return place_data
 
     # Check description for location details
     desc_lower = description.lower()
@@ -90,9 +90,9 @@ def parse_location(title: str, description: str) -> Optional[dict]:
             return None
 
     # Check description for known venues
-    for venue_key, venue_data in KNOWN_VENUES.items():
+    for venue_key, place_data in KNOWN_VENUES.items():
         if venue_key in desc_lower:
-            return venue_data
+            return place_data
 
     # Default to SNDBATH organization venue
     return SNDBATH_VENUE
@@ -224,12 +224,12 @@ def parse_event(article, source_id: int, image_map: dict) -> Optional[dict]:
                 source_url = href
 
         # Determine venue
-        venue_data = parse_location(title, description)
-        if venue_data is None:
+        place_data = parse_location(title, description)
+        if place_data is None:
             # Event is outside metro Atlanta
             return None
 
-        venue_id = get_or_create_venue(venue_data)
+        venue_id = get_or_create_place(place_data)
 
         # Parse price
         price_min, price_max, price_note, is_free = parse_price_from_description(description)
@@ -274,7 +274,7 @@ def parse_event(article, source_id: int, image_map: dict) -> Optional[dict]:
             "image_url": image_url,
             "raw_text": f"{title} - {description[:500]}" if description else title,
             "extraction_confidence": 0.95,
-            "content_hash": generate_content_hash(title, venue_data["name"], start_date),
+            "content_hash": generate_content_hash(title, place_data["name"], start_date),
             "_genres": genres,  # Store genres to pass to insert_event
         }
 

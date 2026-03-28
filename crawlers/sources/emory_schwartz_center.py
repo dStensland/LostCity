@@ -12,7 +12,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from source_destination_sync import ensure_venue_destination_fields
 from utils import enrich_event_record
@@ -28,7 +28,7 @@ PLANNING_NOTE = (
     "than standard standalone-theater assumptions."
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Schwartz Center for Performing Arts",
     "slug": "schwartz-center",
     "address": "1700 North Decatur Road NE",
@@ -153,7 +153,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             html = page.content()
             soup = BeautifulSoup(html, "html.parser")
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             ensure_venue_destination_fields(venue_id, planning_notes=PLANNING_NOTE)
 
             # Sequential parsing - track current event as we find links
@@ -243,7 +243,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     events_found += 1
 
                     # Check for duplicates
-                    content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                    content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
                     # Categorize
                     category, subcategory = categorize_event(title, "")

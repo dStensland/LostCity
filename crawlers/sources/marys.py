@@ -11,12 +11,12 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Mary's",
     "slug": "marys",
     "address": "1267 Glenwood Ave SE",
@@ -89,7 +89,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
     logger.info(f"Generating Mary's weekly events for next {WEEKS_AHEAD} weeks")

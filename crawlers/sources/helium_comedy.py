@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
 from dedupe import generate_content_hash
 from source_destination_sync import ensure_venue_destination_fields
 from utils import extract_event_links, find_event_url, enrich_event_record
@@ -29,7 +29,7 @@ PLANNING_NOTE = (
     "than a casual drop-in bar set."
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Helium Comedy Club Atlanta",
     "slug": "helium-comedy-club-atlanta",
     "address": "539 Peachtree St NE",
@@ -95,7 +95,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             ensure_venue_destination_fields(venue_id, planning_notes=PLANNING_NOTE)
 
             logger.info(f"Fetching Helium Comedy Club Atlanta: {EVENTS_URL}")

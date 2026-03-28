@@ -17,7 +17,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://atlantalegalaid.org"
 VOLUNTEER_URL = f"{BASE_URL}/volunteer/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Legal Aid Society",
     "slug": "atlanta-legal-aid",
     "address": "54 Ellis St NE",
@@ -228,7 +228,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         logger.info("Fetching Atlanta Legal Aid volunteer page: %s", VOLUNTEER_URL)
         response = requests.get(
             VOLUNTEER_URL,
@@ -271,7 +271,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         tags = list(dict.fromkeys(tags + ["volunteer", "training", "advocacy"]))
 
         content_hash = generate_content_hash(
-            training["title"], VENUE_DATA["name"], training["start_date"]
+            training["title"], PLACE_DATA["name"], training["start_date"]
         )
         event_record = {
             "source_id": source_id,

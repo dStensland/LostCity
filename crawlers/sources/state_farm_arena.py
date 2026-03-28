@@ -16,7 +16,7 @@ from playwright.sync_api import sync_playwright
 
 from db import (
     get_client,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     parse_lineup_from_title,
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.statefarmarena.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "State Farm Arena",
     "slug": "state-farm-arena",
     "address": "1 State Farm Drive",
@@ -279,7 +279,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching State Farm Arena: {EVENTS_URL}")

@@ -22,7 +22,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright, Page
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 # ─── Venue ────────────────────────────────────────────────────────────────────
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "MudFire Clayworks & Gallery",
     "slug": "mudfire-clayworks-gallery",
     "address": "175 Laredo Dr",
@@ -864,7 +864,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Ensure venue record exists
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             logger.info(f"MudFire venue ID: {venue_id}")
 
             # 1. One-time pottery classes via Acuity Scheduling

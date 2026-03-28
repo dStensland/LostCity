@@ -16,7 +16,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -233,8 +233,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
     try:
         # Create/fetch all venues
         venue_ids = {}
-        for location_key, venue_data in VENUES.items():
-            venue_ids[location_key] = get_or_create_venue(venue_data)
+        for location_key, place_data in VENUES.items():
+            venue_ids[location_key] = get_or_create_place(place_data)
 
         # Generate events for each schedule item
         for schedule_item in SCHEDULE:

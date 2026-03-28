@@ -8,14 +8,14 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.summershadefestival.org"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Grant Park",
     "slug": "grant-park",
     "address": "625 Park Ave SE",
@@ -59,7 +59,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         start_date = fourth_sat
         end_date = fourth_sat + __import__("datetime").timedelta(days=1)
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     events_found = 1
 
     title = f"Grant Park Summer Shade Festival {year}"

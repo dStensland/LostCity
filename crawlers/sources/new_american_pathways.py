@@ -26,7 +26,7 @@ from sources._tribe_events_base import TribeConfig, crawl_tribe
 
 _CONFIG = TribeConfig(
     base_url="https://newamericanpathways.org",
-    venue_data={
+    place_data={
         "name": "New American Pathways",
         "slug": "new-american-pathways",
         "address": "2300 Lake Park Dr SE Suite 200",

@@ -18,14 +18,14 @@ from datetime import datetime, timedelta, timezone
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.springscinema.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "The Springs Cinema & Taphouse",
     "slug": "springs-cinema",
     "address": "5920 Roswell Rd NE Suite A-103",
@@ -97,7 +97,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             today = datetime.now().date()
 
             # Capture the auth headers from the page's own GraphQL requests

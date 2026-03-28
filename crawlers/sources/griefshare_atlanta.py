@@ -19,7 +19,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -376,7 +376,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 # Create venue record
-                venue_data = {
+                place_data = {
                     "name": church_name,
                     "slug": re.sub(r"[^a-z0-9]+", "-", church_name.lower()).strip("-"),
                     "address": street if street else None,
@@ -387,7 +387,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "vibes": ["faith-christian"],  # Using valid vibe from tags.py
                 }
 
-                venue_id = get_or_create_venue(venue_data)
+                venue_id = get_or_create_place(place_data)
 
                 # Extract day of week for recurrence
                 day_match = re.search(

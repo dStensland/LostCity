@@ -50,7 +50,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -723,7 +723,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
          Returns all event CPT records with embedded featured images.
       2. For each record, GET the detail page and parse schema.org Event + time widget.
       3. Skip past events and administrative notices (sold-out, cancelled, closed).
-      4. Persist via get_or_create_venue / find_event_by_hash / insert_event.
+      4. Persist via get_or_create_place / find_event_by_hash / insert_event.
 
     Returns (events_found, events_new, events_updated).
     """
@@ -735,7 +735,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # Ensure venue record exists
     try:
-        venue_id = get_or_create_venue(_VENUE_DATA)
+        venue_id = get_or_create_place(_VENUE_DATA)
     except Exception as exc:
         logger.error("[dnc] Failed to create/find venue: %s", exc)
         return 0, 0, 0

@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup, Tag
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -41,7 +41,7 @@ REQUEST_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Vinings School of Art",
     "slug": "vinings-school-of-art",
     "address": "1675 Cumberland Pkwy SE #102",
@@ -314,7 +314,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
         "extraction_confidence": 0.89,
         "is_recurring": False,
         "recurrence_rule": None,
-        "content_hash": generate_content_hash(title, VENUE_DATA["name"], row["start_date"]),
+        "content_hash": generate_content_hash(title, PLACE_DATA["name"], row["start_date"]),
         "age_min": row["age_min"],
         "age_max": row["age_max"],
     }
@@ -337,7 +337,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.error("Vinings School of Art Summer Camps: failed to fetch page: %s", exc)
         return 0, 0, 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     today = date.today().strftime("%Y-%m-%d")
     soup = BeautifulSoup(response.content.decode("utf-8", "replace"), "html.parser")
 

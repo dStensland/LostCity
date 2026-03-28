@@ -16,7 +16,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://elevateatlart.com"
 
 # Generic organization venue for events without specific locations
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Elevate ATL Art",
     "slug": "elevate-atl-art",
     "address": "Various Locations",
@@ -265,7 +265,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Get default venue ID
-            default_venue_id = get_or_create_venue(VENUE_DATA)
+            default_venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Elevate ATL Art homepage: {BASE_URL}")
 

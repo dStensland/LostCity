@@ -18,7 +18,7 @@ import requests
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     get_portal_id_by_slug,
     insert_event,
     smart_update_existing_event,
@@ -188,7 +188,7 @@ def _get_or_create_class_venue(occurrence: dict) -> Optional[int]:
     ]
     address = ", ".join(part.strip() for part in address_parts if part and str(part).strip())
 
-    venue_data = {
+    place_data = {
         "name": business_name.strip(),
         "slug": _slugify(str(business_name)),
         "address": address or None,
@@ -198,7 +198,7 @@ def _get_or_create_class_venue(occurrence: dict) -> Optional[int]:
         "venue_type": "hospital",
         "website": "https://www.piedmont.org",
     }
-    return get_or_create_venue(venue_data)
+    return get_or_create_place(place_data)
 
 
 def crawl_category(

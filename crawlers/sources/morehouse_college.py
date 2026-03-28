@@ -11,7 +11,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -164,15 +164,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Determine venue
             if "stadium" in location_name.lower() or "athletics" in title.lower():
-                venue_data = VENUES["athletics"]
+                place_data = VENUES["athletics"]
             else:
-                venue_data = VENUES["default"]
+                place_data = VENUES["default"]
 
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
 
             # Generate hash
             content_hash = generate_content_hash(
-                title, venue_data["name"], start_date
+                title, place_data["name"], start_date
             )
 
 

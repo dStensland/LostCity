@@ -13,7 +13,7 @@ from datetime import date, datetime, timedelta
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -180,8 +180,8 @@ def parse_session(session: dict, today: date) -> dict | None:
         for feature in session.get("features") or []
     }
     location = (features.get("location") or "").strip().lower()
-    venue_data = VENUE_DATA_BY_LOCATION.get(location)
-    if not venue_data:
+    place_data = VENUE_DATA_BY_LOCATION.get(location)
+    if not place_data:
         return None
 
     start_date, end_date = _parse_date_range(features.get("dates") or "", today)
@@ -206,9 +206,9 @@ def parse_session(session: dict, today: date) -> dict | None:
 
     price = session.get("price")
     price_value = float(price) if price is not None else None
-    title = f"{title_core} at {venue_data['name']}"
+    title = f"{title_core} at {place_data['name']}"
     description = (
-        f"Public adult tennis class at {venue_data['name']} through Cobb County Parks. "
+        f"Public adult tennis class at {place_data['name']} through Cobb County Parks. "
         "Reserve through the official county catalog for current availability."
     )
 
@@ -217,7 +217,7 @@ def parse_session(session: dict, today: date) -> dict | None:
         "description": description,
         "start_time": start_time,
         "end_time": end_time,
-        "venue_data": venue_data,
+        "venue_data": place_data,
         "occurrences": occurrences,
         "price_min": price_value,
         "price_max": price_value,
@@ -234,7 +234,7 @@ def parse_session(session: dict, today: date) -> dict | None:
         "raw_text": (
             f"{title_core} | {features.get('days', '')} | "
             f"{features.get('dates', '')} | {features.get('times', '')} | "
-            f"{venue_data['name']}"
+            f"{place_data['name']}"
         ),
     }
 
@@ -247,7 +247,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     current_hashes: set[str] = set()
     seen_session_ids: set[int] = set()
     venue_ids = {
-        data["slug"]: get_or_create_venue(data)
+        data["slug"]: get_or_create_place(data)
         for data in VENUE_DATA_BY_LOCATION.values()
     }
     today = datetime.now().date()

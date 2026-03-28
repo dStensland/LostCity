@@ -13,7 +13,7 @@ import httpx
 from datetime import datetime, timedelta
 from typing import Optional
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 WEBSITE_URL = "https://craftedcreationsnorthatlanta.com"
 CLASSES_URL = f"{WEBSITE_URL}/collections/byob-candle-making-classes"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Crafted Creations Candle Studio",
     "slug": "crafted-creations-candle-studio",
     "address": "6035 Peachtree Rd, STE C-212",
@@ -51,7 +51,7 @@ async def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         logger.info(f"Using venue ID: {venue_id}")
     except Exception as e:
         logger.error(f"Failed to create venue: {e}")
@@ -129,7 +129,7 @@ async def crawl(source: dict) -> tuple[int, int, int]:
                     # Generate content hash
                     content_hash = generate_content_hash(
                         class_info["title"],
-                        VENUE_DATA["name"],
+                        PLACE_DATA["name"],
                         start_date_str
                     )
 

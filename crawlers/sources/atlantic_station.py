@@ -20,7 +20,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://atlanticstation.com"
 EVENTS_URL = f"{BASE_URL}/events-list/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlantic Station",
     "slug": "atlantic-station",
     "address": "1380 Atlantic Dr NW",
@@ -341,7 +341,7 @@ def build_event_record(
     start_time, end_time, is_all_day = parse_time_range(detail.get("time_label") or "")
     category, subcategory, tags = determine_category(detail["title"], detail.get("description") or "")
     start_date = start_dt.strftime("%Y-%m-%d")
-    content_hash = generate_content_hash(detail["title"], VENUE_DATA["name"], start_date)
+    content_hash = generate_content_hash(detail["title"], PLACE_DATA["name"], start_date)
 
     raw_parts = [part for part in [detail.get("date_label"), detail.get("repeat_type"), detail.get("time_label"), detail.get("location")] if part]
     return {
@@ -381,7 +381,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     current_hashes: set[str] = set()
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         response = requests.get(EVENTS_URL, headers=HEADERS, timeout=30)
         response.raise_for_status()
 

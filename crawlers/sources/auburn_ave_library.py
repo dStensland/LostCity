@@ -19,7 +19,7 @@ from html import unescape
 import re
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ BASE_URL = "https://fulcolibrary.bibliocommons.com"
 RSS_FEED_URL = "https://gateway.bibliocommons.com/v2/libraries/fulcolibrary/rss/events?types=5faac707c118654500b6f842"
 EVENTS_PAGE_URL = f"{BASE_URL}/v2/events?types=5faac707c118654500b6f842"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Auburn Avenue Research Library",
     "slug": "auburn-ave-library",
     "address": "101 Auburn Ave NE",
@@ -221,7 +221,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         # Parse XML
         root = ET.fromstring(response.content)
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # BiblioCommons RSS uses standard RSS 2.0 format with bc: namespace
         items = root.findall('.//item')
@@ -300,7 +300,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_found += 1
 
                 # Check for duplicates
-                content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
                 # Determine category
                 category, subcategory, tags = determine_category(title, description)

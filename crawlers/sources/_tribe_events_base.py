@@ -14,7 +14,7 @@ config wrapper:
   4. Map Tribe categories to our taxonomy (category + tags).
   5. Infer age ranges from title / description text.
   6. Group repeated events with series_hint where appropriate.
-  7. Persist via get_or_create_venue / find_event_by_hash / insert_event.
+  7. Persist via get_or_create_place / find_event_by_hash / insert_event.
 
 Design notes:
   - Uses requests (no Playwright) — this is a REST API, not a rendered page.
@@ -30,7 +30,7 @@ Reuse pattern — each source file does:
 
     _CONFIG = TribeConfig(
         base_url="https://example.org",
-        venue_data={...},
+        place_data={...},
         default_category="art",
         default_tags=["arts-center"],
     )
@@ -53,7 +53,7 @@ import requests
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -734,8 +734,8 @@ class TribeConfig:
     # Base URL of the WordPress site (e.g. "https://callanwolde.org")
     base_url: str
 
-    # Venue data passed to get_or_create_venue()
-    venue_data: dict
+    # Venue data passed to get_or_create_place()
+    place_data: dict
 
     # Default LostCity category when Tribe categories don't map
     default_category: str = "community"
@@ -931,7 +931,7 @@ def _build_event_record(
         except Exception as exc:
             logger.warning(
                 "[tribe/%s] record_transform failed for %r: %s",
-                config.venue_data.get("slug") or config.base_url,
+                config.place_data.get("slug") or config.base_url,
                 title,
                 exc,
             )
@@ -959,19 +959,19 @@ def crawl_tribe(source: dict, config: TribeConfig) -> tuple[int, int, int]:
 
     # Ensure venue exists
     try:
-        venue_id = get_or_create_venue(config.venue_data)
+        venue_id = get_or_create_place(config.place_data)
     except Exception as exc:
         logger.error(
             "[tribe/%s] Failed to create/find venue: %s",
-            config.venue_data.get("slug", "?"),
+            config.place_data.get("slug", "?"),
             exc,
         )
         return 0, 0, 0
 
-    venue_name = config.venue_data["name"]
+    venue_name = config.place_data["name"]
     logger.info(
         "[tribe/%s] Starting crawl — API: %s",
-        config.venue_data.get("slug", "?"),
+        config.place_data.get("slug", "?"),
         api_url,
     )
 
@@ -994,7 +994,7 @@ def crawl_tribe(source: dict, config: TribeConfig) -> tuple[int, int, int]:
         if data is None:
             logger.warning(
                 "[tribe/%s] API returned None on page %d — stopping",
-                config.venue_data.get("slug", "?"),
+                config.place_data.get("slug", "?"),
                 page,
             )
             break
@@ -1004,7 +1004,7 @@ def crawl_tribe(source: dict, config: TribeConfig) -> tuple[int, int, int]:
             total_events = int(data.get("total", 0))
             logger.info(
                 "[tribe/%s] %d total events across %d pages",
-                config.venue_data.get("slug", "?"),
+                config.place_data.get("slug", "?"),
                 total_events,
                 total_pages,
             )
@@ -1036,14 +1036,14 @@ def crawl_tribe(source: dict, config: TribeConfig) -> tuple[int, int, int]:
                     events_new += 1
                     logger.debug(
                         "[tribe/%s] Added: %s on %s",
-                        config.venue_data.get("slug", "?"),
+                        config.place_data.get("slug", "?"),
                         record["title"],
                         record["start_date"],
                     )
                 except Exception as exc:
                     logger.error(
                         "[tribe/%s] Failed to insert %r: %s",
-                        config.venue_data.get("slug", "?"),
+                        config.place_data.get("slug", "?"),
                         record["title"],
                         exc,
                     )
@@ -1061,7 +1061,7 @@ def crawl_tribe(source: dict, config: TribeConfig) -> tuple[int, int, int]:
 
     logger.info(
         "[tribe/%s] Crawl complete: %d found, %d new, %d updated",
-        config.venue_data.get("slug", "?"),
+        config.place_data.get("slug", "?"),
         events_found,
         events_new,
         events_updated,

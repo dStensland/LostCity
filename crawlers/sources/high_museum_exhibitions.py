@@ -26,7 +26,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_exhibition
+from db import get_or_create_place, insert_exhibition
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ USER_AGENT = (
 )
 REQUEST_TIMEOUT = 20
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "High Museum of Art",
     "slug": "high-museum",
     "address": "1280 Peachtree St NE",
@@ -277,7 +277,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     today = date.today()
     found = new = updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     session = _session()
 
     raw_exhibitions = _fetch_wp_exhibitions(session)
@@ -330,7 +330,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             "title": title,
             "venue_id": venue_id,
             "source_id": source_id,
-            "_venue_name": VENUE_DATA["name"],
+            "_venue_name": PLACE_DATA["name"],
             "opening_date": opening_str,
             "closing_date": closing_str,
             "description": description,

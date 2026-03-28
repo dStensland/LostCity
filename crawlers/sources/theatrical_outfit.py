@@ -12,7 +12,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ BASE_URL = "https://www.theatricaloutfit.org"
 CALENDAR_URL = f"{BASE_URL}/events-calendar/"
 MONTHS_AHEAD = 4
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Theatrical Outfit",
     "slug": "theatrical-outfit",
     "address": "84 Luckie St NW",
@@ -87,7 +87,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             today = datetime.now().date()
             max_date = today + timedelta(days=180)
 
@@ -142,7 +142,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         content_hash = generate_content_hash(
                             title,
-                            VENUE_DATA["name"],
+                            PLACE_DATA["name"],
                             f"{date_text}|{start_time or ''}|{source_url}",
                         )
 

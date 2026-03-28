@@ -17,7 +17,7 @@ import requests
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -235,23 +235,23 @@ def crawl(source: dict) -> tuple[int, int, int]:
     response.raise_for_status()
 
     venue_ids = {
-        official_slug: get_or_create_venue(venue_data)
-        for official_slug, venue_data in VENUE_DATA_BY_OFFICIAL_SLUG.items()
+        official_slug: get_or_create_place(place_data)
+        for official_slug, place_data in VENUE_DATA_BY_OFFICIAL_SLUG.items()
     }
 
     for match in parse_schedule_payload(response.text):
-        venue_data = VENUE_DATA_BY_OFFICIAL_SLUG[match["venue_slug"]]
+        place_data = VENUE_DATA_BY_OFFICIAL_SLUG[match["venue_slug"]]
         venue_id = venue_ids[match["venue_slug"]]
 
         events_found += 1
-        content_hash = generate_content_hash(match["title"], venue_data["name"], match["start_date"])
+        content_hash = generate_content_hash(match["title"], place_data["name"], match["start_date"])
         current_hashes.add(content_hash)
 
-        description = f"{match['title']} at {venue_data['name']}. Official LOVB Atlanta home match."
+        description = f"{match['title']} at {place_data['name']}. Official LOVB Atlanta home match."
         if match["special_event_description"]:
             description += f" {match['special_event_description']}."
 
-        tags = ["sports", "volleyball", "lovb", "lovb-atlanta", venue_data["slug"], "home-game"]
+        tags = ["sports", "volleyball", "lovb", "lovb-atlanta", place_data["slug"], "home-game"]
         if match["tag"]:
             tags.append(match["tag"].lower().replace(" ", "-"))
 

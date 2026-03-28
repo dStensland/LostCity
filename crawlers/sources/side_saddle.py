@@ -7,7 +7,7 @@ Generates recurring jazz night events.
 import logging
 from datetime import datetime, timedelta
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.sidesaddleatl.com"
 EVENTS_URL = BASE_URL
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Side Saddle",
     "slug": "side-saddle",
     "address": "1080 Memorial Drive SE",
@@ -53,7 +53,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     today = datetime.now().date()
 
     # Generate recurring events for the next 8 weeks
@@ -73,7 +73,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             events_found += 1
 
             content_hash = generate_content_hash(
-                recurring["title"], VENUE_DATA["name"], date_str
+                recurring["title"], PLACE_DATA["name"], date_str
             )
 
 

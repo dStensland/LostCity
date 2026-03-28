@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -179,7 +179,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     current_hashes: set[str] = set()
 
     for template in SCHEDULES:
-        venue_id = get_or_create_venue(template["venue_data"])
+        venue_id = get_or_create_place(template["venue_data"])
         series_hint = {
             "series_type": "recurring_show",
             "series_title": template["title"],

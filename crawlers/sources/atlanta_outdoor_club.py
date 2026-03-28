@@ -16,7 +16,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -182,7 +182,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     session = requests.Session()
-    fallback_venue_id = get_or_create_venue(ORG_VENUE)
+    fallback_venue_id = get_or_create_place(ORG_VENUE)
 
     try:
         logger.info("Fetching Atlanta Outdoor Club listing: %s", EVENTS_URL)
@@ -234,7 +234,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if in_metro:
                     venue_record["city"] = "Atlanta"
                 try:
-                    venue_id = get_or_create_venue(venue_record)
+                    venue_id = get_or_create_place(venue_record)
                 except Exception as exc:
                     logger.debug("Falling back to org venue for %s: %s", title, exc)
 

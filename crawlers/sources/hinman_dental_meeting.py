@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 SOURCE_URL = "https://www.hinman.org/"
 USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia World Congress Center",
     "slug": "georgia-world-congress-center",
     "address": "285 Andrew Young International Blvd NW",
@@ -148,8 +148,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             logger.info("Removed %s stale Hinman events after refresh", stale_removed)
         logger.info("Hinman crawl complete: no current cycle published (%s)", exc)
         return 0, 0, 0
-    venue_id = get_or_create_venue(VENUE_DATA)
-    content_hash = generate_content_hash(event["title"], VENUE_DATA["name"], event["start_date"])
+    venue_id = get_or_create_place(PLACE_DATA)
+    content_hash = generate_content_hash(event["title"], PLACE_DATA["name"], event["start_date"])
     current_hashes.add(content_hash)
     events_found = 1
 
@@ -175,7 +175,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         "image_url": event["image_url"],
         "raw_text": (
             f"{event['title']} | {event['start_date']} to {event['end_date']} | "
-            f"{VENUE_DATA['name']}"
+            f"{PLACE_DATA['name']}"
         ),
         "extraction_confidence": 0.92,
         "content_hash": content_hash,

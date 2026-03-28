@@ -38,7 +38,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -58,7 +58,7 @@ REQUEST_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Springmont School",
     "slug": "springmont-school-atlanta",
     "address": "5750 Long Island Dr",
@@ -249,7 +249,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
         "recurrence_rule": None,
         "content_hash": generate_content_hash(
             title,
-            VENUE_DATA["name"],
+            PLACE_DATA["name"],
             row["start_date"],
         ),
         "age_min": row["age_min"],
@@ -332,7 +332,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     }
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         record = _build_event_record(source_id, venue_id, row)
 
         existing = find_event_by_hash(record["content_hash"])

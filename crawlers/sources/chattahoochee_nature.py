@@ -58,7 +58,7 @@ from bs4 import BeautifulSoup
 from db import (
     get_client,
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -781,7 +781,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
       1. GET /wp-json/wp/v2/mec-events to list all base event CPT records.
       2. For each record, GET the event detail page and parse schema.org Event.
       3. Skip past events and administrative closure notices.
-      4. Persist via get_or_create_venue / find_event_by_hash / insert_event.
+      4. Persist via get_or_create_place / find_event_by_hash / insert_event.
 
     Returns (events_found, events_new, events_updated).
     """
@@ -793,7 +793,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # Ensure venue record exists
     try:
-        venue_id = get_or_create_venue(_VENUE_DATA)
+        venue_id = get_or_create_place(_VENUE_DATA)
         persist_typed_entity_envelope(_build_destination_envelope(venue_id))
     except Exception as exc:
         logger.error("[cnc] Failed to create/find venue: %s", exc)

@@ -421,7 +421,7 @@ def test_find_existing_event_for_insert_prefers_explicit_content_hash(
 
 
 class TestGetOrCreateVenue:
-    """Tests for get_or_create_venue function."""
+    """Tests for get_or_create_place function."""
 
     @patch("db.places.get_client")
     def test_finds_existing_venue_by_slug(self, mock_get_client, sample_venue_data):
@@ -436,9 +436,9 @@ class TestGetOrCreateVenue:
         table.eq.return_value = table
         table.execute.return_value = MagicMock(data=[{"id": 42}])
 
-        from db import get_or_create_venue
+        from db import get_or_create_place
 
-        venue_id = get_or_create_venue(sample_venue_data)
+        venue_id = get_or_create_place(sample_venue_data)
 
         assert venue_id == 42
         client.table.assert_called_with("venues")
@@ -464,9 +464,9 @@ class TestGetOrCreateVenue:
             MagicMock(data=[{"id": 42}]),  # verified_at touch
         ]
 
-        from db import get_or_create_venue
+        from db import get_or_create_place
 
-        venue_id = get_or_create_venue({**sample_venue_data, "active": True})
+        venue_id = get_or_create_place({**sample_venue_data, "active": True})
 
         assert venue_id == 42
         # First update call is reactivation, second is verified_at touch
@@ -491,9 +491,9 @@ class TestGetOrCreateVenue:
             MagicMock(data=[{"id": 99}]),  # Match by name
         ]
 
-        from db import get_or_create_venue
+        from db import get_or_create_place
 
-        venue_id = get_or_create_venue(sample_venue_data)
+        venue_id = get_or_create_place(sample_venue_data)
 
         assert venue_id == 99
 
@@ -515,9 +515,9 @@ class TestGetOrCreateVenue:
             MagicMock(data=[{"id": 2206}]),  # Alias match by name
         ]
 
-        from db import get_or_create_venue
+        from db import get_or_create_place
 
-        venue_id = get_or_create_venue(
+        venue_id = get_or_create_place(
             {
                 **sample_venue_data,
                 "name": "Gwinnett County Fairground",
@@ -546,9 +546,9 @@ class TestGetOrCreateVenue:
             MagicMock(data=[{"id": 123}]),  # Insert returns new ID
         ]
 
-        from db import get_or_create_venue
+        from db import get_or_create_place
 
-        venue_id = get_or_create_venue(sample_venue_data)
+        venue_id = get_or_create_place(sample_venue_data)
 
         assert venue_id == 123
         table.insert.assert_called_once_with(sample_venue_data)
@@ -572,7 +572,7 @@ class TestGetOrCreateVenue:
             MagicMock(data=[{"id": 123}]),
         ]
 
-        from db import get_or_create_venue
+        from db import get_or_create_place
 
         payload = {
             **sample_venue_data,
@@ -581,7 +581,7 @@ class TestGetOrCreateVenue:
             "start_date": "2026-03-11",
         }
 
-        venue_id = get_or_create_venue(payload)
+        venue_id = get_or_create_place(payload)
 
         assert venue_id == 123
         insert_payload = table.insert.call_args.args[0]
@@ -607,11 +607,11 @@ class TestGetOrCreateVenue:
             MagicMock(data=[]),
         ]
 
-        from db import get_or_create_venue, configure_write_mode
+        from db import get_or_create_place, configure_write_mode
 
         configure_write_mode(False, reason="test dry run")
         try:
-            venue_id = get_or_create_venue(sample_venue_data)
+            venue_id = get_or_create_place(sample_venue_data)
         finally:
             configure_write_mode(True)
 

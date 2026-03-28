@@ -22,7 +22,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -103,9 +103,9 @@ def get_venue_for_event(venue_name: str) -> dict:
     venue_key = venue_name.lower().strip()
 
     # Try exact match first
-    for key, venue_data in VENUE_MAP.items():
+    for key, place_data in VENUE_MAP.items():
         if key in venue_key:
-            return venue_data
+            return place_data
 
     # Try partial matches
     if "bailey" in venue_key or "ksu" in venue_key:
@@ -364,8 +364,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         venue_name = venue_match.group(1).strip()
 
                     # Get or create venue
-                    venue_data = get_venue_for_event(venue_name or "")
-                    venue_id = get_or_create_venue(venue_data)
+                    place_data = get_venue_for_event(venue_name or "")
+                    venue_id = get_or_create_place(place_data)
 
                     # Extract event type/category
                     event_type = ""
@@ -405,7 +405,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     events_found += 1
 
                     # Generate content hash for deduplication
-                    content_hash = generate_content_hash(title, venue_data["name"], start_date)
+                    content_hash = generate_content_hash(title, place_data["name"], start_date)
 
 
                     event_record = {
@@ -444,7 +444,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     try:
                         insert_event(event_record)
                         events_new += 1
-                        logger.info(f"Added: {title} on {start_date} at {venue_data['name']}")
+                        logger.info(f"Added: {title} on {start_date} at {place_data['name']}")
                     except Exception as e:
                         logger.error(f"Failed to insert: {title}: {e}")
 

@@ -14,7 +14,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -26,7 +26,7 @@ BASE_URL = "https://www.piedmont.org"
 CONFERENCES_URL = f"{BASE_URL}/heart/healthcare-professionals/conferences"
 ARRHYTHMIA_URL = f"{BASE_URL}/heart/healthcare-professionals/conferences/arrhythmia-summit"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Piedmont Heart Institute",
     "slug": "piedmont-heart-institute",
     "address": "1968 Peachtree Road NW",
@@ -80,7 +80,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             seen_events = set()
 
             urls_to_crawl = [CONFERENCES_URL, ARRHYTHMIA_URL]
@@ -185,7 +185,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             events_found += 1
 
                             content_hash = generate_content_hash(
-                                title, VENUE_DATA["name"], start_date
+                                title, PLACE_DATA["name"], start_date
                             )
 
 

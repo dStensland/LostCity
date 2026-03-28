@@ -13,7 +13,7 @@ Two-step approach:
    (these almost always have richer info)
 
 Used by:
-- db.py get_or_create_venue() — auto-extract for new venues
+- db.py get_or_create_place() — auto-extract for new venues
 - enrich_parking.py — backfill existing venues
 """
 

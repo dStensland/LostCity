@@ -21,7 +21,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -255,7 +255,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Get venue ID
-            venue_id = get_or_create_venue(MEDSHARE_VENUE)
+            venue_id = get_or_create_place(MEDSHARE_VENUE)
 
             # ===== Crawl special events =====
             logger.info(f"Fetching MedShare special events: {EVENTS_URL}")

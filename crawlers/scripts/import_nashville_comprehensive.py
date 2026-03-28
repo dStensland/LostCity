@@ -1113,34 +1113,34 @@ def import_all_venues():
     logger.info(f"  - Attractions: {len(ATTRACTIONS)}")
     logger.info("")
     
-    for i, venue_data in enumerate(all_venues, 1):
+    for i, place_data in enumerate(all_venues, 1):
         try:
             # Generate slug
-            if 'slug' not in venue_data:
-                venue_data['slug'] = slugify(venue_data['name'])
+            if 'slug' not in place_data:
+                place_data['slug'] = slugify(place_data['name'])
             
             # Add curator vibe tag
-            existing_vibes = venue_data.get('vibes', [])
+            existing_vibes = place_data.get('vibes', [])
             curator_vibes = ['curator-vetted']
-            venue_data['vibes'] = list(set(existing_vibes + curator_vibes))
+            place_data['vibes'] = list(set(existing_vibes + curator_vibes))
             
             # Check if venue exists
-            existing = client.table('venues').select('id, name').eq('slug', venue_data['slug']).execute()
+            existing = client.table('venues').select('id, name').eq('slug', place_data['slug']).execute()
             
             if existing.data:
                 # Update existing venue
                 venue_id = existing.data[0]['id']
-                result = client.table('venues').update(venue_data).eq('id', venue_id).execute()
-                logger.info(f"[{i}/{total}] Updated: {venue_data['name']} ({venue_data['venue_type']})")
+                result = client.table('venues').update(place_data).eq('id', venue_id).execute()
+                logger.info(f"[{i}/{total}] Updated: {place_data['name']} ({place_data['venue_type']})")
                 updated += 1
             else:
                 # Insert new venue
-                result = client.table('venues').insert(venue_data).execute()
-                logger.info(f"[{i}/{total}] Created: {venue_data['name']} ({venue_data['venue_type']})")
+                result = client.table('venues').insert(place_data).execute()
+                logger.info(f"[{i}/{total}] Created: {place_data['name']} ({place_data['venue_type']})")
                 created += 1
         
         except Exception as e:
-            logger.error(f"[{i}/{total}] Error importing {venue_data['name']}: {e}")
+            logger.error(f"[{i}/{total}] Error importing {place_data['name']}: {e}")
             skipped += 1
             continue
     

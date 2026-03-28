@@ -20,7 +20,7 @@ from playwright.sync_api import sync_playwright
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://liveatthebatteryatlanta.com"
 EVENTS_URL = f"{BASE_URL}/events-and-entertainment/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Sports & Social Atlanta",
     "slug": "sports-social-battery",
     "address": "825 Battery Ave SE, Suite 600",
@@ -226,7 +226,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     current_hashes: set[str] = set()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)

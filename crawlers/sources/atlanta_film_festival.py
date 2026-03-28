@@ -30,7 +30,7 @@ from zoneinfo import ZoneInfo
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -72,7 +72,7 @@ FESTIVAL_VENUE_DATA = {
     "website": "https://www.atlantafilmfestival.com",
 }
 
-# Known Eventive venue slugs → VENUE_DATA for get_or_create_venue
+# Known Eventive venue slugs → PLACE_DATA for get_or_create_place
 # Populated on first encounter and cached across the crawl run
 _VENUE_CACHE: dict[str, int] = {}
 
@@ -139,7 +139,7 @@ def _get_or_cache_venue(eventive_venue: dict) -> int:
 
     slug_base = re.sub(r"[^a-z0-9]+", "-", venue_name.lower()).strip("-")
 
-    venue_data = {
+    place_data = {
         "name": venue_name,
         "slug": slug_base,
         "address": address.split(",")[0].strip() if "," in address else address,
@@ -151,7 +151,7 @@ def _get_or_cache_venue(eventive_venue: dict) -> int:
         "website": "https://www.atlantafilmfestival.com",
     }
 
-    venue_id = get_or_create_venue(venue_data)
+    venue_id = get_or_create_place(place_data)
     _VENUE_CACHE[cache_key] = venue_id
     return venue_id
 
@@ -425,7 +425,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     _VENUE_CACHE.clear()
 
     try:
-        festival_venue_id = get_or_create_venue(FESTIVAL_VENUE_DATA)
+        festival_venue_id = get_or_create_place(FESTIVAL_VENUE_DATA)
 
         # Phase 1: All films (151+ titles, available now)
         f, n, u = _crawl_films(source_id, festival_venue_id)

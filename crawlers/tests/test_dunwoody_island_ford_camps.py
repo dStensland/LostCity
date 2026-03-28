@@ -67,7 +67,7 @@ def test_crawl_updates_existing_row_with_existing_record(monkeypatch) -> None:
         lambda *args, **kwargs: SimpleNamespace(status_code=200, raise_for_status=lambda: None),
     )
     monkeypatch.setattr("sources.dunwoody_island_ford_camps._parse_rows_from_pdf", lambda: [row])
-    monkeypatch.setattr("sources.dunwoody_island_ford_camps.get_or_create_venue", lambda venue: 42)
+    monkeypatch.setattr("sources.dunwoody_island_ford_camps.get_or_create_place", lambda venue: 42)
     monkeypatch.setattr(
         "sources.dunwoody_island_ford_camps.persist_typed_entity_envelope", lambda envelope: None
     )

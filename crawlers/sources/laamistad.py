@@ -44,7 +44,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -55,7 +55,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://laamistadinc.org"
 EVENTS_URL = f"{BASE_URL}/events/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "LaAmistad",
     "slug": "laamistad",
     "address": "120 Northwood Dr Suite 140",
@@ -176,7 +176,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
     except Exception as exc:
         logger.error("[laamistad] Failed to create/find venue: %s", exc)
         return 0, 0, 0
@@ -270,7 +270,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         # Content hash
         hash_key = f"{start_date_str}|{start_time_str}" if start_time_str else start_date_str
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], hash_key)
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], hash_key)
 
         events_found += 1
 

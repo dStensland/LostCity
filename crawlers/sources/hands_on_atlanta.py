@@ -34,7 +34,7 @@ from typing import Optional
 import requests
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     prefetch_events_by_source,
@@ -365,7 +365,7 @@ def _build_venue_data(opp: dict) -> dict:
 
     venue_slug = slugify(org_name)
 
-    venue_data: dict = {
+    place_data: dict = {
         "name": venue_name,
         "slug": venue_slug,
         "city": city,
@@ -378,16 +378,16 @@ def _build_venue_data(opp: dict) -> dict:
         full_address = address
         if zip_code:
             full_address = f"{address}, {zip_code}"
-        venue_data["address"] = full_address
+        place_data["address"] = full_address
 
     if zip_code:
-        venue_data["zip"] = zip_code
+        place_data["zip"] = zip_code
 
     if lat and lng:
-        venue_data["lat"] = float(lat)
-        venue_data["lng"] = float(lng)
+        place_data["lat"] = float(lat)
+        place_data["lng"] = float(lng)
 
-    return venue_data
+    return place_data
 
 
 def _infer_series_frequency(times: list[dict]) -> str:
@@ -494,14 +494,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
         )
 
         # Build venue once per opportunity
-        venue_data = _build_venue_data(opp)
+        place_data = _build_venue_data(opp)
         try:
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
         except Exception as e:
             logger.warning("Could not create venue for '%s': %s", opp_name, e)
             continue
 
-        venue_name = venue_data["name"]
+        venue_name = place_data["name"]
         event_title = _build_event_title(opp, fallback_name=opp_name)
 
         # Build tags

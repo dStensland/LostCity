@@ -34,7 +34,7 @@ from bs4 import BeautifulSoup
 
 from config import get_config
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -52,7 +52,7 @@ API_BASE = "https://www.eventbriteapi.com/v3/"
 
 # Primary venue record for The Pigalle as an organization.
 # Individual show venues may differ and are captured per-event from Eventbrite.
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "The Pigalle",
     "slug": "the-pigalle-atlanta",
     "address": "50 Upper Alabama St",
@@ -245,13 +245,13 @@ def process_event(
     event_url = event_data.get("url", "")
 
     # Venue — if event has a specific venue, use it; otherwise fall back to default
-    venue_data = event_data.get("venue") or {}
+    place_data = event_data.get("venue") or {}
     venue_id = default_venue_id
 
-    if venue_data and venue_data.get("name"):
-        venue_name = _normalize_venue_name(venue_data["name"])
+    if place_data and place_data.get("name"):
+        venue_name = _normalize_venue_name(place_data["name"])
         if venue_name:
-            address_data = venue_data.get("address") or {}
+            address_data = place_data.get("address") or {}
             region = address_data.get("region", "")
             if region and region not in ("GA", "Georgia"):
                 logger.debug(f"Skipping non-GA venue: {venue_name} ({region})")
@@ -266,10 +266,10 @@ def process_event(
                 "venue_type": "event_space",
                 "website": None,
             }
-            venue_id = get_or_create_venue(venue_record)
+            venue_id = get_or_create_place(venue_record)
 
     content_hash = generate_content_hash(
-        title, venue_data.get("name") or "The Pigalle", start_date
+        title, place_data.get("name") or "The Pigalle", start_date
     )
 
     tags = ["cabaret", "burlesque", "speakeasy", "underground-atlanta"]
@@ -325,7 +325,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     current_hashes: set[str] = set()
 
     try:
-        default_venue_id = get_or_create_venue(VENUE_DATA)
+        default_venue_id = get_or_create_place(PLACE_DATA)
 
         # Step 1: Discover event IDs from the organizer page
         logger.info("Discovering The Pigalle events from Eventbrite organizer page...")

@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://atlantarollerderby.com"
 SCHEDULE_URL = f"{BASE_URL}/schedule"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Roller Derby",
     "slug": "atlanta-roller-derby",
     "address": "225 E Dougherty St",
@@ -256,7 +256,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Get or create venue
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Atlanta Roller Derby schedule: {SCHEDULE_URL}")
             page.goto(SCHEDULE_URL, wait_until="networkidle", timeout=60000)
@@ -268,7 +268,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         for event in extract_schedule_events(html_content):
             events_found += 1
-            content_hash = generate_content_hash(event["title"], VENUE_DATA["name"], event["start_date"])
+            content_hash = generate_content_hash(event["title"], PLACE_DATA["name"], event["start_date"])
             current_hashes.add(content_hash)
 
             # Create event record

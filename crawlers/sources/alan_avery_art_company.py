@@ -41,7 +41,7 @@ from typing import Optional
 
 import requests
 
-from db import get_or_create_venue
+from db import get_or_create_place
 from entity_lanes import TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 from exhibition_utils import build_exhibition_record
@@ -62,7 +62,7 @@ HEADERS = {
 
 # Address and coordinates confirmed from Wix site's own JSON-LD and geocoding data.
 # The suite number (110) is the gallery within the Miami Circle complex.
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Alan Avery Art Company",
     "slug": "alan-avery-art-company",
     "address": "656 Miami Cir NE",
@@ -219,7 +219,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     envelope = TypedEntityEnvelope()
     session = requests.Session()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     # Step 1: discover event URLs from the sitemap
     logger.info("Alan Avery: fetching event sitemap %s", SITEMAP_URL)
@@ -293,7 +293,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             source_id=source_id,
             opening_date=parsed["opening_date"],
             closing_date=parsed["closing_date"],
-            venue_name=VENUE_DATA["name"],
+            venue_name=PLACE_DATA["name"],
             description=parsed["description"],
             image_url=parsed["image_url"],
             source_url=url,

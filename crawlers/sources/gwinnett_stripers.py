@@ -14,7 +14,7 @@ import httpx
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.milb.com/gwinnett"
 MLB_API_BASE = "https://statsapi.mlb.com/api/v1"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Coolray Field",
     "slug": "coolray-field",
     "address": "2500 Buford Dr",
@@ -83,7 +83,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     try:
         # Find the correct team ID
@@ -146,7 +146,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title = f"Gwinnett Stripers vs {opponent}"
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, VENUE_DATA["name"], game_date)
+                    content_hash = generate_content_hash(title, PLACE_DATA["name"], game_date)
                     current_hashes.add(content_hash)
 
 

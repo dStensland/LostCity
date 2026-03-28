@@ -34,7 +34,7 @@ from config import get_config
 from llm_client import generate_text
 from db import (
     get_client,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_existing_event_for_insert,
     configure_write_mode,

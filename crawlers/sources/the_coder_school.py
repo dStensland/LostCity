@@ -41,7 +41,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -490,9 +490,9 @@ def _crawl_location(loc: dict, source_id: int) -> tuple[int, int, int]:
     found = new = updated = 0
 
     # 1. Ensure venue record exists
-    venue_data = _build_venue_data(loc)
+    place_data = _build_venue_data(loc)
     try:
-        venue_id = get_or_create_venue(venue_data)
+        venue_id = get_or_create_place(place_data)
     except Exception as exc:
         logger.error(
             "[the-coder-school] Failed to get/create venue for %s: %s", loc["name"], exc

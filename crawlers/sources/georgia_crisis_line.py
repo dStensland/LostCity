@@ -26,13 +26,13 @@ from __future__ import annotations
 
 import logging
 
-from db import get_or_create_venue
+from db import get_or_create_place
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.mygcal.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia Crisis & Access Line (GCAL)",
     "slug": "georgia-crisis-access-line",
     "address": "2 Peachtree St NW",
@@ -57,7 +57,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     The venue record makes GCAL discoverable as a mental health resource.
     """
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         logger.info(f"Georgia Crisis & Access Line venue record ensured (ID: {venue_id})")
         logger.info("GCAL is a crisis hotline service with no scheduled events")
 

@@ -6,13 +6,13 @@ Downtown cocktail bar and restaurant.
 from __future__ import annotations
 
 import logging
-from db import get_or_create_venue
+from db import get_or_create_place
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.sidebaratlanta.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Sidebar",
     "slug": "sidebar",
     "address": "79 Poplar St NW",
@@ -32,7 +32,7 @@ VENUE_DATA = {
 def crawl(source: dict) -> tuple[int, int, int]:
     """Ensure Sidebar exists as a venue."""
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         logger.info(f"Sidebar venue record ensured (ID: {venue_id})")
         return 0, 0, 0
     except Exception as e:

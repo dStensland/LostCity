@@ -34,7 +34,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -63,7 +63,7 @@ SEASON_URLS = {
 }
 
 # ── Venue record ─────────────────────────────────────────────────────────────
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Southern Belle Farm",
     "slug": "southern-belle-farm",
     "address": "1658 Turner Church Rd",
@@ -1058,7 +1058,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     )
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
         # 1. Scrape all 4 seasonal landing pages

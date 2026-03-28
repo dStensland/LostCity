@@ -31,7 +31,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ BASE_URL = "https://www.toolbank.org"
 EVENTS_URL = f"{BASE_URL}/events/"
 VOLUNTEER_URL = f"{BASE_URL}/volunteer/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Community ToolBank",
     "slug": "atlanta-toolbank",
     "address": "404 E Lake Ave",
@@ -196,7 +196,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Create venue record
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Try potential events URLs
         potential_urls = [

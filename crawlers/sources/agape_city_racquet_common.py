@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ class AgapeCenterConfig:
     slug: str
     name: str
     events_url: str
-    venue_data: dict
+    place_data: dict
 
 
 AGAPE_CENTER_CONFIGS: dict[str, AgapeCenterConfig] = {
@@ -70,7 +70,7 @@ AGAPE_CENTER_CONFIGS: dict[str, AgapeCenterConfig] = {
         slug="bitsy-grant-tennis-center",
         name="Bitsy Grant Tennis Center",
         events_url="https://bitsygrant.agapetennisacademy.com/events/",
-        venue_data={
+        place_data={
             "name": "Bitsy Grant Tennis Center",
             "slug": "bitsy-grant-tennis-center",
             "address": "2125 Northside Dr. NW",
@@ -91,7 +91,7 @@ AGAPE_CENTER_CONFIGS: dict[str, AgapeCenterConfig] = {
         slug="chastain-park-tennis-center",
         name="Chastain Park Tennis Center",
         events_url="https://chastainpark.agapetennisacademy.com/events/",
-        venue_data={
+        place_data={
             "name": "Chastain Park Tennis Center",
             "slug": "chastain-park-tennis-center",
             "address": "290 Chastain Park Ave",
@@ -112,7 +112,7 @@ AGAPE_CENTER_CONFIGS: dict[str, AgapeCenterConfig] = {
         slug="sharon-lester-tennis-center",
         name="Sharon Lester Tennis Center at Piedmont Park",
         events_url="https://sharonlester.agapetennisacademy.com/events/",
-        venue_data={
+        place_data={
             "name": "Sharon Lester Tennis Center at Piedmont Park",
             "slug": "sharon-lester-tennis-center",
             "address": "400 Park Dr. NE",
@@ -133,7 +133,7 @@ AGAPE_CENTER_CONFIGS: dict[str, AgapeCenterConfig] = {
         slug="washington-park-tennis-center",
         name="Washington Park Tennis Center",
         events_url="https://washingtonpark.agapetennisacademy.com/events/",
-        venue_data={
+        place_data={
             "name": "Washington Park Tennis Center",
             "slug": "washington-park-tennis-center",
             "address": "1125 Lena St. NW",
@@ -154,7 +154,7 @@ AGAPE_CENTER_CONFIGS: dict[str, AgapeCenterConfig] = {
         slug="joseph-mcghee-tennis-center",
         name="Joseph McGhee Tennis Center",
         events_url="https://mcghee.agapetennisacademy.com/events/",
-        venue_data={
+        place_data={
             "name": "Joseph McGhee Tennis Center",
             "slug": "joseph-mcghee-tennis-center",
             "address": "820 Beecher St. SW",
@@ -467,13 +467,13 @@ def crawl_agape_center(source: dict, config: AgapeCenterConfig) -> tuple[int, in
     page_year = extract_table_year(page_text, page_url)
     today = datetime.now().date()
 
-    default_venue_id = get_or_create_venue(config.venue_data)
+    default_venue_id = get_or_create_place(config.place_data)
     table = soup.find("table")
     if not table:
         logger.warning("No events table found for %s", config.slug)
         return events_found, events_new, events_updated
 
-    known_centers = {center.venue_data["name"].lower(): center for center in AGAPE_CENTER_CONFIGS.values()}
+    known_centers = {center.place_data["name"].lower(): center for center in AGAPE_CENTER_CONFIGS.values()}
 
     for row in table.find_all("tr")[1:]:
         cells = row.find_all("td")
@@ -485,7 +485,7 @@ def crawl_agape_center(source: dict, config: AgapeCenterConfig) -> tuple[int, in
         time_label = clean_text(cells[2].get_text(" ", strip=True))
         price_label = clean_text(cells[3].get_text(" ", strip=True))
 
-        if not title or should_skip_event(title, config.venue_data["name"]):
+        if not title or should_skip_event(title, config.place_data["name"]):
             continue
 
         start_date, end_date = parse_date_label(date_label, page_year)
@@ -498,14 +498,14 @@ def crawl_agape_center(source: dict, config: AgapeCenterConfig) -> tuple[int, in
 
         image_url, ticket_url = extract_row_links(row)
 
-        venue_data = config.venue_data
+        place_data = config.place_data
         for known_name, known_center in known_centers.items():
             if known_name in title.lower():
-                venue_data = known_center.venue_data
+                place_data = known_center.place_data
                 break
 
-        venue_id = default_venue_id if venue_data["slug"] == config.venue_data["slug"] else get_or_create_venue(venue_data)
-        venue_name = venue_data["name"]
+        venue_id = default_venue_id if place_data["slug"] == config.place_data["slug"] else get_or_create_place(place_data)
+        venue_name = place_data["name"]
 
         events_found += 1
         inserted, updated = upsert_event(

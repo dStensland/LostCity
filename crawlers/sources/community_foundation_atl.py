@@ -15,7 +15,7 @@ from typing import Optional
 from bs4 import BeautifulSoup
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_image_url
 
@@ -174,9 +174,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Get or create venue
             if event_data.get("venue") == "monday_night_garage":
-                venue_id = get_or_create_venue(MONDAY_NIGHT_GARAGE)
+                venue_id = get_or_create_place(MONDAY_NIGHT_GARAGE)
             else:
-                venue_id = get_or_create_venue(DEFAULT_VENUE)
+                venue_id = get_or_create_place(DEFAULT_VENUE)
 
             content_hash = generate_content_hash(title, "Community Foundation Atlanta", start_date)
 

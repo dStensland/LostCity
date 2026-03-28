@@ -22,7 +22,7 @@ from playwright.sync_api import sync_playwright
 from db import (
     find_event_by_hash,
     get_client,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
     update_event,
@@ -43,7 +43,7 @@ REQUEST_USER_AGENT = (
     "Chrome/122.0.0.0 Safari/537.36"
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Terminal West",
     "slug": "terminal-west",
     "address": "887 W Marietta St NW Suite J",
@@ -522,7 +522,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if not payload_events:
                 raise RuntimeError("Terminal West events feed returned no events")
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             detail_page = context.new_page()
             detail_config = DetailConfig(use_llm=False)
@@ -582,7 +582,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 image_url = _extract_best_image(payload_event)
 
                 hash_key = f"{start_date}|{start_time}" if start_time else start_date
-                content_hash = generate_content_hash(title, VENUE_DATA["name"], hash_key)
+                content_hash = generate_content_hash(title, PLACE_DATA["name"], hash_key)
                 event_record: dict[str, Any] = {
                     "source_id": source_id,
                     "venue_id": venue_id,

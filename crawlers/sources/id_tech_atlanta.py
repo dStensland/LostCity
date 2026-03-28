@@ -38,7 +38,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -354,7 +354,7 @@ def _parse_location_page(
     if end_date < today:
         return None
 
-    venue_data = {
+    place_data = {
         "name": location_cfg["venue_name"],
         "slug": location_cfg["venue_slug"],
         "address": location_cfg["address"],
@@ -394,7 +394,7 @@ def _parse_location_page(
         "is_free": False,
         "image_url": image_url,
         "tags": BASE_TAGS,
-        "venue_data": venue_data,
+        "venue_data": place_data,
     }
 
 
@@ -458,7 +458,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             continue
 
         try:
-            venue_id = get_or_create_venue(row["venue_data"])
+            venue_id = get_or_create_place(row["venue_data"])
             record = _build_event_record(source_id, venue_id, row)
             events_found += 1
 

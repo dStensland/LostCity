@@ -13,7 +13,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, find_existing_event_for_insert, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, find_existing_event_for_insert, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://redlightcafe.com"
 EVENTS_URL = f"{BASE_URL}/calendar"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Red Light Cafe",
     "slug": "red-light-cafe",
     "address": "553 Amsterdam Ave NE",
@@ -90,7 +90,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Red Light Cafe: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
@@ -292,7 +292,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
             events_found += 1
 
             content_hash = generate_content_hash(
-                template["title"], VENUE_DATA["name"], start_date
+                template["title"], PLACE_DATA["name"], start_date
             )
 
             event_record = {

@@ -14,7 +14,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -30,7 +30,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 
 BASE_URL = "https://hammondshousemuseum.org"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Hammonds House Museum",
     "slug": "hammonds-house-museum",
     "address": "503 Peeples St SW",
@@ -238,15 +238,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 og_img = home_soup.find("meta", property="og:image")
                 og_desc = home_soup.find("meta", property="og:description") or home_soup.find("meta", attrs={"name": "description"})
                 if og_img and og_img.get("content"):
-                    VENUE_DATA["image_url"] = og_img["content"]
+                    PLACE_DATA["image_url"] = og_img["content"]
                     logger.debug("Hammonds House: og:image = %s", og_img["content"])
                 if og_desc and og_desc.get("content") and len(og_desc["content"]) > 30:
-                    VENUE_DATA["description"] = og_desc["content"]
+                    PLACE_DATA["description"] = og_desc["content"]
                     logger.debug("Hammonds House: og:description captured")
         except Exception as _meta_exc:
             logger.debug("Hammonds House: could not extract og meta from homepage: %s", _meta_exc)
 
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Try multiple potential event page paths
         for path in ["/events", "/programs", "/calendar", "/whats-on", ""]:
@@ -372,7 +372,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     source_id=source_id,
                                     opening_date=start_date,
                                     closing_date=event_record.get("end_date"),
-                                    venue_name=VENUE_DATA["name"],
+                                    venue_name=PLACE_DATA["name"],
                                     description=description,
                                     image_url=None,
                                     source_url=event_record.get("source_url"),
@@ -520,7 +520,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             source_id=source_id,
                             opening_date=start_date,
                             closing_date=end_date,
-                            venue_name=VENUE_DATA["name"],
+                            venue_name=PLACE_DATA["name"],
                             description=f"Current exhibit at Hammonds House Museum. {on_view_line}",
                             image_url=None,
                             source_url=BASE_URL,

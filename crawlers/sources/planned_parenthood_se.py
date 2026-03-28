@@ -25,7 +25,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ BASE_URL = "https://www.plannedparenthood.org"
 # Correct URL from user instructions
 EVENTS_URL = f"{BASE_URL}/planned-parenthood-southeast/get-involved/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Planned Parenthood Southeast",
     "slug": "planned-parenthood-se",
     "address": "75 Piedmont Ave NE Suite 800",
@@ -206,7 +206,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         logger.info(f"Fetching PPSE events: {EVENTS_URL}")
 
@@ -318,7 +318,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # Generate content hash
                 content_hash = generate_content_hash(
-                    title, VENUE_DATA["name"], start_date
+                    title, PLACE_DATA["name"], start_date
                 )
 
                 # Check for existing

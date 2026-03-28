@@ -9,14 +9,14 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
+from db import find_event_by_hash, get_or_create_place, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://decaturwatchfest26.com/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Decatur Square",
     "slug": "decatur-square",
     "address": "509 N McDonough St",
@@ -56,9 +56,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
     start_date, end_date = _resolve_window(today)
     event_year = start_date.year
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     title = f"Decatur WatchFest {event_year}"
-    content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date.isoformat())
+    content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date.isoformat())
 
     event_record = {
         "source_id": source_id,

@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 SOURCE_URL = "https://gserr.com/shows.htm"
 USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Gas South Convention Center",
     "slug": "gas-south-convention-center",
     "address": "6400 Sugarloaf Pkwy",
@@ -101,7 +101,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     if not shows:
         raise ValueError("GSERR schedule did not yield any future Atlanta model train show rows")
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     description = (
         "Golden Spike Enterprises' Atlanta-area model train show at Gas South Convention Center "
         "featuring model trains and railroad artifacts."
@@ -109,7 +109,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     for show in shows:
         title = "Atlanta Model Train Show"
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], show["date"])
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], show["date"])
         current_hashes.add(content_hash)
         events_found += 1
 

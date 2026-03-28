@@ -2,13 +2,13 @@ from sources.atlanta_dpr import _build_destination_envelope
 
 
 def test_build_destination_envelope_for_aquatic_center() -> None:
-    venue_data = {
+    place_data = {
         "name": "MLK Jr. Recreation & Aquatic Center",
         "slug": "mlk-recreation-center",
         "venue_type": "recreation",
     }
 
-    envelope = _build_destination_envelope(venue_data, 1201)
+    envelope = _build_destination_envelope(place_data, 1201)
 
     assert envelope is not None
     assert envelope.destination_details[0]["venue_id"] == 1201
@@ -20,13 +20,13 @@ def test_build_destination_envelope_for_aquatic_center() -> None:
 
 
 def test_build_destination_envelope_for_park() -> None:
-    venue_data = {
+    place_data = {
         "name": "John A. White Park",
         "slug": "john-a-white-park",
         "venue_type": "park",
     }
 
-    envelope = _build_destination_envelope(venue_data, 1202)
+    envelope = _build_destination_envelope(place_data, 1202)
 
     assert envelope is not None
     assert envelope.destination_details[0]["venue_id"] == 1202
@@ -38,13 +38,13 @@ def test_build_destination_envelope_for_park() -> None:
 
 
 def test_build_destination_envelope_for_rec_center_adds_program_feature() -> None:
-    venue_data = {
+    place_data = {
         "name": "Pittman Park Recreation Center",
         "slug": "pittman-park-recreation-center",
         "venue_type": "recreation",
     }
 
-    envelope = _build_destination_envelope(venue_data, 1204)
+    envelope = _build_destination_envelope(place_data, 1204)
 
     assert envelope is not None
     assert envelope.destination_details[0]["destination_type"] == "community_recreation_center"
@@ -57,10 +57,10 @@ def test_build_destination_envelope_for_rec_center_adds_program_feature() -> Non
 
 
 def test_build_destination_envelope_skips_generic_org() -> None:
-    venue_data = {
+    place_data = {
         "name": "Atlanta Department of Parks & Recreation",
         "slug": "atlanta-dept-parks-recreation",
         "venue_type": "organization",
     }
 
-    assert _build_destination_envelope(venue_data, 1203) is None
+    assert _build_destination_envelope(place_data, 1203) is None

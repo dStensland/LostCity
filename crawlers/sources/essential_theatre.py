@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -38,7 +38,7 @@ TICKET_URL = "https://www.tix.com/ticket-sales/essentialtheatre/709"
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"}
 
 # Essential Theatre performs at 7 Stages — use existing venue record
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "7 Stages",
     "slug": "7-stages",
     "address": "1105 Euclid Ave NE",
@@ -244,7 +244,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     today = datetime.now().date()
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Fetch all plays (they have ~61 total, well under 100 per_page limit)
         logger.info("Fetching Essential Theatre plays: %s", PLAYS_API)

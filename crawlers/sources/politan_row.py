@@ -6,11 +6,11 @@ Upscale food hall in Midtown with 10+ chef-driven concepts.
 from __future__ import annotations
 import logging
 
-from db import get_or_create_venue
+from db import get_or_create_place
 
 logger = logging.getLogger(__name__)
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Politan Row at Colony Square",
     "slug": "politan-row-at-colony-square",
     "address": "1197 Peachtree St NE",
@@ -72,5 +72,5 @@ VENUE_DATA = {
 
 def crawl(source: dict) -> tuple[int, int, int]:
     """Destination-first — register venue with enrichment, no events to crawl."""
-    get_or_create_venue(VENUE_DATA)
+    get_or_create_place(PLACE_DATA)
     return (0, 0, 0)

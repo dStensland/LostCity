@@ -17,7 +17,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_existing_event_for_insert,
     smart_update_existing_event,
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.boggssocial.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Boggs Social & Supply",
     "slug": "boggs-social-supply",
     "address": "1310 White St SW",
@@ -96,7 +96,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         for path in ["/events", "/calendar", ""]:
             try:
@@ -304,7 +304,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
             events_found += 1
 
             content_hash = generate_content_hash(
-                template["title"], VENUE_DATA["name"], start_date
+                template["title"], PLACE_DATA["name"], start_date
             )
 
             event_record = {

@@ -16,7 +16,7 @@ import logging
 import requests
 from typing import Optional
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -176,8 +176,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # Create venue mappings
     venue_ids = {}
-    for key, venue_data in VENUES.items():
-        venue_ids[key] = get_or_create_venue(venue_data)
+    for key, place_data in VENUES.items():
+        venue_ids[key] = get_or_create_place(place_data)
 
     try:
         logger.info(f"Fetching City Springs events from: {JSON_URL}")

@@ -32,7 +32,7 @@ import requests
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from date_utils import parse_human_date
 
@@ -42,7 +42,7 @@ BASE_URL = "https://www.healthwellfoundation.org"
 EVENTS_URL = f"{BASE_URL}/events"
 NEWS_URL = f"{BASE_URL}/news-and-stories"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "HealthWell Foundation",
     "slug": "healthwell-foundation",
     "address": "1080 Peachtree St NE",  # Using Atlanta location (national org)
@@ -167,7 +167,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Create venue record
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Try events page and news page
         for url in [EVENTS_URL, NEWS_URL]:

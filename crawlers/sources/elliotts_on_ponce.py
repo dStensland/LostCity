@@ -10,11 +10,11 @@ Registered as destination-only.
 from __future__ import annotations
 
 import logging
-from db import get_or_create_venue
+from db import get_or_create_place
 
 logger = logging.getLogger(__name__)
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Elliott Street Deli & Pub",
     "slug": "elliotts-on-ponce",
     "address": "51 Elliott St SW",
@@ -34,7 +34,7 @@ VENUE_DATA = {
 def crawl(source: dict) -> tuple[int, int, int]:
     """Ensure Elliott Street Deli & Pub exists as a venue (destination-only)."""
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         logger.info(f"Elliott Street Deli & Pub venue record ensured (ID: {venue_id})")
         return 0, 0, 0
     except Exception as e:

@@ -14,7 +14,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -30,7 +30,7 @@ URLS_TO_CRAWL = [
     f"{BASE_URL}/default.aspx",  # Main CME listing
 ]
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Piedmont Healthcare CME",
     "slug": "piedmont-healthcare-cme",
     "address": "1968 Peachtree Road NW",
@@ -93,7 +93,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             seen_events = set()
 
             for url in URLS_TO_CRAWL:
@@ -188,7 +188,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             events_found += 1
 
                             content_hash = generate_content_hash(
-                                title, VENUE_DATA["name"], start_date
+                                title, PLACE_DATA["name"], start_date
                             )
 
 

@@ -49,7 +49,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -630,13 +630,13 @@ def _resolve_venue_data(location_label: str) -> dict:
     return GENERIC_VENUE
 
 
-def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityEnvelope | None:
+def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityEnvelope | None:
     """Project Atlanta DPR city venues into shared Family destination intelligence."""
-    slug = str(venue_data.get("slug") or "").strip()
+    slug = str(place_data.get("slug") or "").strip()
     if not slug or slug == GENERIC_VENUE["slug"]:
         return None
 
-    venue_name = str(venue_data.get("name") or "Atlanta DPR family venue").strip()
+    venue_name = str(place_data.get("name") or "Atlanta DPR family venue").strip()
     envelope = TypedEntityEnvelope()
 
     if slug in _AQUATIC_CENTER_SLUGS:
@@ -664,7 +664,7 @@ def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityE
                 "source_url": ACTIVITY_SEARCH_URL,
                 "metadata": {
                     "source_type": "family_destination_enrichment",
-                    "venue_type": venue_data.get("venue_type"),
+                    "venue_type": place_data.get("venue_type"),
                     "city": "atlanta",
                 },
             },
@@ -710,7 +710,7 @@ def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityE
                 "source_url": ACTIVITY_SEARCH_URL,
                 "metadata": {
                     "source_type": "family_destination_enrichment",
-                    "venue_type": venue_data.get("venue_type"),
+                    "venue_type": place_data.get("venue_type"),
                     "city": "atlanta",
                 },
             },
@@ -774,7 +774,7 @@ def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityE
                 "source_url": ACTIVITY_SEARCH_URL,
                 "metadata": {
                     "source_type": "family_destination_enrichment",
-                    "venue_type": venue_data.get("venue_type"),
+                    "venue_type": place_data.get("venue_type"),
                     "city": "atlanta",
                 },
             },
@@ -1096,11 +1096,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 location_label: str = item.get("location", {}).get("label") or ""
                 venue_key = location_label.lower().strip()
                 if venue_key not in venue_cache:
-                    venue_data = _resolve_venue_data(location_label)
-                    venue_id = get_or_create_venue(venue_data)
+                    place_data = _resolve_venue_data(location_label)
+                    venue_id = get_or_create_place(place_data)
                     venue_cache[venue_key] = venue_id
                     if venue_id and venue_id not in enriched_venue_ids:
-                        destination_envelope = _build_destination_envelope(venue_data, venue_id)
+                        destination_envelope = _build_destination_envelope(place_data, venue_id)
                         if destination_envelope and destination_envelope.has_records():
                             persist_typed_entity_envelope(destination_envelope)
                             enriched_venue_ids.add(venue_id)

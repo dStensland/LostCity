@@ -36,7 +36,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, Page
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -70,7 +70,7 @@ EFK_VENUE_DATA = {
     ),
 }
 
-# Known host venues: (name_fragment.lower()) → venue_data
+# Known host venues: (name_fragment.lower()) → place_data
 # We match these against the program description to pick the right venue.
 HOST_VENUES: dict[str, dict] = {
     "dinodash": {
@@ -297,9 +297,9 @@ def _extract_price(description: str) -> Optional[float]:
 def _resolve_venue(program_title: str, description: str) -> dict:
     """Resolve host venue from program title or description text."""
     combined = (program_title + " " + description).lower()
-    for key, venue_data in HOST_VENUES.items():
+    for key, place_data in HOST_VENUES.items():
         if key.lower() in combined:
-            return venue_data
+            return place_data
     return EFK_VENUE_DATA
 
 
@@ -342,7 +342,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     total_updated = 0
 
     try:
-        efk_venue_id = get_or_create_venue(EFK_VENUE_DATA)
+        efk_venue_id = get_or_create_place(EFK_VENUE_DATA)
     except Exception as exc:
         logger.error("[efk-atlanta] Failed to get/create EFK venue: %s", exc)
         return 0, 0, 0
@@ -396,14 +396,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 description_text = detail["text"]
-                venue_data = _resolve_venue(program_title, description_text)
+                place_data = _resolve_venue(program_title, description_text)
                 age_min, age_max = _extract_age_range(program_title)
                 price_per_week = _extract_price(description_text)
 
                 try:
-                    venue_id = get_or_create_venue(venue_data)
+                    venue_id = get_or_create_place(place_data)
                 except Exception as exc:
-                    logger.warning("[efk-atlanta] Venue create failed for '%s': %s", venue_data["name"], exc)
+                    logger.warning("[efk-atlanta] Venue create failed for '%s': %s", place_data["name"], exc)
                     venue_id = efk_venue_id
 
                 # ----------------------------------------------------------------
@@ -438,12 +438,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         week_name = session["week_name"]
                         # Clean up venue name for title
-                        venue_short = venue_data["name"].replace("The ", "")
+                        venue_short = place_data["name"].replace("The ", "")
                         title = f"Engineering For Kids: {week_name} Camp at {venue_short}"
 
                         description = (
                             f"Engineering For Kids of North Atlanta is offering a 5-day STEM "
-                            f"summer camp at {venue_data['name']}. "
+                            f"summer camp at {place_data['name']}. "
                             f"Theme: {week_name}. "
                             f"Hands-on engineering projects, Cognia STEM Certified curriculum, "
                             f"designed for ages {age_min}–{age_max}. "
@@ -465,7 +465,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if age_max and age_max >= 11:
                             tags.append("middle-school")
 
-                        content_hash = generate_content_hash(title, venue_data["name"], start_date)
+                        content_hash = generate_content_hash(title, place_data["name"], start_date)
                         total_found += 1
 
                         event_record = {
@@ -559,14 +559,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     except ValueError:
                         pass
 
-                    venue_short = venue_data["name"].replace("The ", "")
+                    venue_short = place_data["name"].replace("The ", "")
                     # Clean up title for display
                     clean_title = re.sub(r"\s*\(.*?\)", "", program_title).strip()
                     title = f"Engineering For Kids: {clean_title}"
 
                     description = (
                         f"Engineering For Kids of North Atlanta is offering an after-school "
-                        f"engineering class at {venue_data['name']} for students in grades "
+                        f"engineering class at {place_data['name']} for students in grades "
                         f"ages {age_min}–{age_max}. "
                         f"Each session features hands-on STEM projects aligned with Georgia "
                         f"academic standards. Cognia STEM Certified and STEM.org Accredited. "
@@ -583,7 +583,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if age_min and age_min <= 10:
                         tags.append("elementary")
 
-                    content_hash = generate_content_hash(title, venue_data["name"], start_date)
+                    content_hash = generate_content_hash(title, place_data["name"], start_date)
                     total_found += 1
 
                     event_record = {

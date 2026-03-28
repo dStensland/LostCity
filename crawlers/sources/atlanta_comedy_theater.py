@@ -18,7 +18,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ BASE_URL = "https://atlcomedytheater.com"
 TICKETS_URL = f"{BASE_URL}/norcross-tickets"
 
 # Page says: 4650 JIMMY CARTER BLVD SUITE 114B NORCROSS, GA. 30093
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Comedy Theater",
     "slug": "atlanta-comedy-theater",
     "address": "4650 Jimmy Carter Blvd Suite 114B",
@@ -196,7 +196,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Atlanta Comedy Theater tickets page: {TICKETS_URL}")
             page.goto(TICKETS_URL, wait_until="domcontentloaded", timeout=30000)

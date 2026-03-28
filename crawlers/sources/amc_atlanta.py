@@ -42,13 +42,13 @@ def _build_showtime_description(
     title: str,
     start_date: str,
     start_time: str | None,
-    venue_data: dict,
+    place_data: dict,
     source_url: str,
 ) -> str:
-    venue_name = str(venue_data.get("name") or "AMC").strip()
-    neighborhood = str(venue_data.get("neighborhood") or "").strip()
-    city = str(venue_data.get("city") or "Atlanta").strip()
-    state = str(venue_data.get("state") or "GA").strip()
+    venue_name = str(place_data.get("name") or "AMC").strip()
+    neighborhood = str(place_data.get("neighborhood") or "").strip()
+    city = str(place_data.get("city") or "Atlanta").strip()
+    state = str(place_data.get("state") or "GA").strip()
     time_label = _format_time_label(start_time)
 
     parts: list[str] = [f"Movie showtime for {title} at {venue_name}."]
@@ -279,7 +279,7 @@ class AMCAtlantaCrawler(ChainCinemaCrawler):
                             title=title,
                             start_date=date_str,
                             start_time=start_time,
-                            venue_data=location["venue_data"],
+                            place_data=location["venue_data"],
                             source_url=url,
                         ),
                         "start_date": date_str,

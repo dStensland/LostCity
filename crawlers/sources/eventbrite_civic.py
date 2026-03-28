@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 
 from config import get_config
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -425,15 +425,15 @@ def _process_event(
         end_date, end_time = _parse_datetime(end_info.get("local"))
 
         # Venue
-        venue_data = event_data.get("venue") or {}
+        place_data = event_data.get("venue") or {}
         venue_id = None
         venue_name = "TBA"
 
-        if venue_data and venue_data.get("name"):
-            venue_name = _normalize_venue_name(venue_data.get("name", ""))
+        if place_data and place_data.get("name"):
+            venue_name = _normalize_venue_name(place_data.get("name", ""))
             if not venue_name:
                 venue_name = "TBA"
-            address = venue_data.get("address", {})
+            address = place_data.get("address", {})
 
             region = address.get("region", "")
             if region and region not in ["GA", "Georgia"]:
@@ -451,7 +451,7 @@ def _process_event(
                 "venue_type": "event_space",
                 "website": None,
             }
-            venue_id = get_or_create_venue(venue_record)
+            venue_id = get_or_create_place(venue_record)
 
         # Category — default to community since this is the civic crawler
         category_data = event_data.get("category") or {}
@@ -493,8 +493,8 @@ def _process_event(
             event_url=event_url,
             venue_name=venue_name,
             venue_city=(
-                (venue_data or {}).get("address", {}).get("city", "Atlanta")
-                if venue_data
+                (place_data or {}).get("address", {}).get("city", "Atlanta")
+                if place_data
                 else "Atlanta"
             ),
             venue_state="GA",

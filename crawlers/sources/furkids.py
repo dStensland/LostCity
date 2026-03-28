@@ -29,7 +29,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -51,7 +51,7 @@ _HEADERS = {
 
 # Primary venue — used as the organizing entity when events are at partner stores.
 # Adoption events at PetSmart/Petco are Furkids-organized even if offsite.
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Furkids Animal Rescue & Shelters",
     "slug": "furkids-animal-rescue",
     "address": "6065 Roswell Rd NE Suite 100",
@@ -309,7 +309,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     today = datetime.now().date()
 
     # Step 1: Get all event IDs from the calendar JS
@@ -381,7 +381,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         if subcategory == "adoption-event" and not is_free:
             is_free = False
 
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
         event_record = {
             "source_id": source_id,

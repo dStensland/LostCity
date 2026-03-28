@@ -27,7 +27,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://lionslighthouse.org"
 EVENTS_URL = "https://lionslighthouse.org/news-events/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia Lions Lighthouse Foundation",
     "slug": "ga-lions-lighthouse",
     "address": "5582 Peachtree Rd",
@@ -195,7 +195,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         logger.info(f"Fetching GA Lions Lighthouse events: {EVENTS_URL}")
 
@@ -287,7 +287,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # Generate content hash
                 content_hash = generate_content_hash(
-                    title, VENUE_DATA["name"], start_date
+                    title, PLACE_DATA["name"], start_date
                 )
 
                 # Check for existing

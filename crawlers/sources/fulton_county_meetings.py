@@ -24,7 +24,7 @@ from typing import Optional
 
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -143,7 +143,7 @@ def _venue_id_for_location(location: str, default_id: int) -> int:
         return default_id
 
     slug = re.sub(r"[^a-z0-9]+", "-", loc[:60].lower()).strip("-")
-    venue_data = {
+    place_data = {
         "name": loc[:100],
         "slug": slug,
         "address": loc,
@@ -154,7 +154,7 @@ def _venue_id_for_location(location: str, default_id: int) -> int:
         "website": "https://www.fultoncountyga.gov",
     }
     try:
-        return get_or_create_venue(venue_data)
+        return get_or_create_place(place_data)
     except Exception as exc:
         logger.warning("Could not create venue for location '%s': %s", loc, exc)
         return default_id
@@ -209,7 +209,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     end_str = end_date.strftime("%Y-%m-%d")
 
     try:
-        default_venue_id = get_or_create_venue(DEFAULT_VENUE_DATA)
+        default_venue_id = get_or_create_place(DEFAULT_VENUE_DATA)
 
         logger.info(
             "Fetching Fulton Legistar events %s to %s", start_str, end_str

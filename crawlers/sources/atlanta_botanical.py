@@ -31,7 +31,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     get_client,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -148,9 +148,9 @@ _VENUE_GAINESVILLE: dict = {
 }
 
 
-def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
-    venue_name = str(venue_data.get("name") or "Atlanta Botanical Garden").strip()
-    city = str(venue_data.get("city") or "").lower()
+def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityEnvelope:
+    venue_name = str(place_data.get("name") or "Atlanta Botanical Garden").strip()
+    city = str(place_data.get("city") or "").lower()
     envelope = TypedEntityEnvelope()
     envelope.add(
         "destination_details",
@@ -176,11 +176,11 @@ def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityE
             "reservation_required": False,
             "permit_required": False,
             "fee_note": "Timed-entry and event pricing vary by season; family programs and children's programming run throughout the year.",
-            "source_url": venue_data.get("website") or BASE_URL,
+            "source_url": place_data.get("website") or BASE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
                 "venue_type": "garden",
-                "city": venue_data.get("city"),
+                "city": place_data.get("city"),
             },
         },
     )
@@ -205,7 +205,7 @@ def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityE
             "title": "Paved garden paths and stroller-friendly circulation",
             "feature_type": "amenity",
             "description": f"{venue_name} supports lower-friction family movement with paved garden circulation, making it easier to handle strollers and slower-paced kid outings.",
-            "url": venue_data.get("website") or BASE_URL,
+            "url": place_data.get("website") or BASE_URL,
             "is_free": False,
             "sort_order": 20,
         },
@@ -218,7 +218,7 @@ def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityE
             "title": "Indoor conservatories and weather-flex space",
             "feature_type": "amenity",
             "description": f"{venue_name} includes indoor conservatory and exhibition-style spaces, which helps families keep a garden visit viable when weather or energy shifts during the day.",
-            "url": venue_data.get("website") or BASE_URL,
+            "url": place_data.get("website") or BASE_URL,
             "is_free": False,
             "sort_order": 30,
         },
@@ -231,7 +231,7 @@ def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityE
             "title": "Shade and conservatory reset flex",
             "feature_type": "amenity",
             "description": "The garden works better than many outdoor family destinations in heat because shaded paths and conservatory spaces give families a built-in reset option.",
-            "url": venue_data.get("website") or BASE_URL,
+            "url": place_data.get("website") or BASE_URL,
             "is_free": False,
             "sort_order": 40,
         },
@@ -516,8 +516,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Pre-create both venues once
-        midtown_venue_id = get_or_create_venue(_VENUE_MIDTOWN)
-        gainesville_venue_id = get_or_create_venue(_VENUE_GAINESVILLE)
+        midtown_venue_id = get_or_create_place(_VENUE_MIDTOWN)
+        gainesville_venue_id = get_or_create_place(_VENUE_GAINESVILLE)
         persist_typed_entity_envelope(_build_destination_envelope(midtown_venue_id, _VENUE_MIDTOWN))
         persist_typed_entity_envelope(_build_destination_envelope(gainesville_venue_id, _VENUE_GAINESVILLE))
 

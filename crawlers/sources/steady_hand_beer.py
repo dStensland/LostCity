@@ -14,7 +14,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -24,7 +24,7 @@ BASE_URL = "https://www.steadyhandbeer.com"
 EVENTS_URL = f"{BASE_URL}/events"
 STALE_EVENT_GRACE_DAYS = 3
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Steady Hand Beer Co",
     "slug": "steady-hand-beer",
     "address": "1611 Ellsworth Industrial Blvd NW",
@@ -137,7 +137,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Steady Hand Beer Co: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

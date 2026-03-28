@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 from playwright.sync_api import sync_playwright, Page
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ BASE_URL = "https://www.taraatlanta.com"
 HOME_URL = f"{BASE_URL}/home"
 COMING_SOON_URL = f"{BASE_URL}/coming-soon"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Tara Theatre",
     "slug": "tara-theatre",
     "address": "2345 Cheshire Bridge Rd NE",
@@ -1008,7 +1008,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             showings_cache: dict[str, list[dict]] = {}
             page.on("response", lambda response: _capture_showings_graphql_response(response, showings_cache))
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             today = datetime.now().date()
 
             # Load the now-showing page

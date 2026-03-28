@@ -43,7 +43,7 @@ _TRIBE_VENUE = {
 
 _TRIBE_CONFIG = TribeConfig(
     base_url="https://callanwolde.org",
-    venue_data=_TRIBE_VENUE,
+    place_data=_TRIBE_VENUE,
     default_category="art",
     default_tags=["arts-center"],
     future_only=False,  # disable future-only so any test date works

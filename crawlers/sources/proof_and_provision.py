@@ -10,13 +10,13 @@ calendar was found. Registered as destination-only.
 from __future__ import annotations
 
 import logging
-from db import get_or_create_venue
+from db import get_or_create_place
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.proofandprovision.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Proof and Provision",
     "slug": "proof-and-provision",
     "address": "3060 Peachtree Rd NW",
@@ -36,7 +36,7 @@ VENUE_DATA = {
 def crawl(source: dict) -> tuple[int, int, int]:
     """Ensure Proof and Provision exists as a venue (destination-only)."""
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         logger.info(f"Proof and Provision venue record ensured (ID: {venue_id})")
         return 0, 0, 0
     except Exception as e:

@@ -23,7 +23,7 @@ import requests
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ EDUCATION_REQUEST_HEADERS = {
     "Accept": "text/html,application/xhtml+xml",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Aurora Theatre",
     "slug": "aurora-theatre",
     "address": "128 E Pike St",
@@ -561,7 +561,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             # Pass 1: Education programs (static HTTP — no Playwright needed)
             logger.info("[aurora-theatre] Crawling education programs at %s", CLASSES_CAMPS_URL)

@@ -20,7 +20,7 @@ _GALLERY_URL = "http://www.poem88.com"
 
 
 class _Crawler(GenericExhibitionCrawler):
-    VENUE_DATA = {
+    PLACE_DATA = {
         "name": "Poem 88",
         "slug": "poem-88",
         "address": "351 Peachtree Hills Ave NE",

@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -31,7 +31,7 @@ SOURCE_URL = "https://atlblackexpo.com/"
 TICKETS_URL = "https://atlblackexpo.com/tickets"
 USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia World Congress Center",
     "slug": "georgia-world-congress-center",
     "address": "285 Andrew Young International Blvd NW",
@@ -183,11 +183,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
     if event_window["end_date"] < datetime.now().date():
         raise ValueError("Atlanta Black Expo homepage only exposes a past-dated event window")
     sessions = parse_session_blocks(page_text, event_window["start_date"])
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     for session in sessions:
         title = session["title"]
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], session["start_date"])
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], session["start_date"])
         current_hashes.add(content_hash)
         events_found += 1
 

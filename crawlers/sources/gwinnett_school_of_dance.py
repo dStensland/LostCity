@@ -30,7 +30,7 @@ from sources._jackrabbit_base import JackRabbitConfig, crawl_jackrabbit
 
 _CONFIG = JackRabbitConfig(
     org_id="517929",
-    venue_data={
+    place_data={
         "name": "Gwinnett School of Dance",
         "slug": "gwinnett-school-of-dance",
         "address": "2057 Grayson Highway",

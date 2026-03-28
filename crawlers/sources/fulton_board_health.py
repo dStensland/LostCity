@@ -17,7 +17,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 import requests
 
-from db import find_event_by_hash, smart_update_existing_event, get_or_create_venue, insert_event
+from db import find_event_by_hash, smart_update_existing_event, get_or_create_place, insert_event
 from dedupe import generate_content_hash
 from utils import slugify
 
@@ -271,7 +271,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             continue
 
         venue_payload = _build_venue(cal["location"])
-        venue_id = get_or_create_venue(venue_payload)
+        venue_id = get_or_create_place(venue_payload)
 
         content_hash = generate_content_hash(title, venue_payload["name"], start_date)
         if content_hash in seen_hashes:

@@ -32,7 +32,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup, Tag
 
-from db import get_or_create_venue
+from db import get_or_create_place
 from entity_lanes import TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 from exhibition_utils import build_exhibition_record
@@ -51,7 +51,7 @@ HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Tew Galleries",
     "slug": "tew-galleries",
     "address": "425 Peachtree Hills Ave NE, Suite 24",
@@ -255,7 +255,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     envelope = TypedEntityEnvelope()
     session = requests.Session()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     logger.info("Tew Galleries: fetching exhibitions page %s", EXHIBITIONS_URL)
     html = _fetch(EXHIBITIONS_URL, session)
@@ -290,7 +290,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             source_id=source_id,
             opening_date=parsed["opening_date"],
             closing_date=parsed["closing_date"],
-            venue_name=VENUE_DATA["name"],
+            venue_name=PLACE_DATA["name"],
             description=None,
             image_url=parsed["image_url"],
             source_url=parsed["source_url"],

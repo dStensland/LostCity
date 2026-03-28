@@ -14,14 +14,14 @@ from typing import Optional
 import httpx
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://hallsatlanta.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Halls Atlanta Floral Design School",
     "slug": "halls-floral",
     "address": "2389 Main St NW",
@@ -178,7 +178,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     )
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Try multiple URL patterns for the schedule page
         urls_to_try = [
@@ -268,7 +268,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         events_found += 1
 
                         content_hash = generate_content_hash(
-                            title, VENUE_DATA["name"], date
+                            title, PLACE_DATA["name"], date
                         )
 
 
@@ -385,7 +385,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             events_found += 1
 
                             content_hash = generate_content_hash(
-                                title, VENUE_DATA["name"], date
+                                title, PLACE_DATA["name"], date
                             )
 
                             existing = find_event_by_hash(content_hash)

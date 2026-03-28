@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://outfronttheatre.com"
 SITEMAP_URL = f"{BASE_URL}/event-sitemap.xml"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Out Front Theatre Company",
     "slug": "out-front-theatre-company",
     "address": "999 Brady Ave NW",
@@ -195,7 +195,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             logger.warning("No event URLs found in sitemap — aborting")
             return 0, 0, 0
 
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         today = datetime.now().date()
 
         with sync_playwright() as p:

@@ -14,7 +14,7 @@ from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -100,7 +100,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate('window.scrollBy(0, 800)')
                 page.wait_for_timeout(1500)
 
-            venue_id = get_or_create_venue(SOUTH_RIVER_VENUE)
+            venue_id = get_or_create_place(SOUTH_RIVER_VENUE)
 
             # Wix events structure
             event_items = page.query_selector_all('[data-testid*="event"], [data-hook*="event"], .event-item, article')

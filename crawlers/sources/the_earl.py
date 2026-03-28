@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timedelta
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_existing_event_for_insert,
     smart_update_existing_event,
@@ -29,7 +29,7 @@ PLANNING_NOTE = (
     "is the easiest way to handle dinner, parking, and a strong spot in the room."
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "The EARL",
     "slug": "the-earl",
     "address": "488 Flat Shoals Ave SE",
@@ -79,7 +79,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     logger.info(f"The EARL venue record ensured (ID: {venue_id})")
     ensure_venue_destination_fields(venue_id, planning_notes=PLANNING_NOTE)
 
@@ -105,7 +105,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             hash_key = f"{start_date}|{template['start_time']}"
             content_hash = generate_content_hash(
-                template["title"], VENUE_DATA["name"], hash_key
+                template["title"], PLACE_DATA["name"], hash_key
             )
 
             event_record = {

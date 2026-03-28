@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env")
 sys.path.insert(0, str(ROOT))
 
-from db import get_client, get_or_create_venue, get_venue_by_slug
+from db import get_client, get_or_create_place, get_venue_by_slug
 
 GA_STATE_PARK_RESERVATIONS = "https://gastateparks.reserveamerica.com/"
 
@@ -152,7 +152,7 @@ def upsert_seeds(seeds: list[dict], *, apply: bool, refresh_existing: bool) -> t
         if not existing:
             created_id = None
             if apply:
-                created_id = get_or_create_venue(payload)
+                created_id = get_or_create_place(payload)
                 if created_id and not get_venue_by_slug(seed["slug"]):
                     created_id = insert_venue_direct(payload)
             print(f"{'CREATE' if apply else 'WOULD CREATE'} venue: {seed['slug']}")

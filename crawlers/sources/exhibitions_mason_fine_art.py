@@ -42,7 +42,7 @@ def _parse_date(date_str: str | None) -> str | None:
 
 
 class _Crawler(GenericExhibitionCrawler):
-    VENUE_DATA = {
+    PLACE_DATA = {
         "name": "Mason Fine Art",
         "slug": "mason-fine-art",
         "address": "761-D Miami Cir NE",

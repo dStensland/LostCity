@@ -138,7 +138,7 @@ def test_parse_eventbrite_collection_reads_embedded_server_data():
 
 def test_build_tentpole_event_record_prefers_official_dates_and_metadata():
     with patch(
-        "sources.african_film_festival_atlanta.get_or_create_venue",
+        "sources.african_film_festival_atlanta.get_or_create_place",
         return_value=901,
     ):
         record = build_tentpole_event_record(
@@ -165,7 +165,7 @@ def test_build_screening_event_record_shapes_session_event():
     screening_event = parse_eventbrite_collection(EVENTBRITE_COLLECTION_HTML)[0]
 
     with patch(
-        "sources.african_film_festival_atlanta.get_or_create_venue",
+        "sources.african_film_festival_atlanta.get_or_create_place",
         return_value=902,
     ):
         record = build_screening_event_record(55, screening_event)
@@ -189,7 +189,7 @@ def test_crawl_inserts_tentpole_and_screenings_and_cleans_up_stale_rows():
         side_effect=[SUBMISSIONS_HTML, ANNOUNCEMENT_HTML, EVENTBRITE_COLLECTION_HTML],
     ):
         with patch(
-            "sources.african_film_festival_atlanta.get_or_create_venue",
+            "sources.african_film_festival_atlanta.get_or_create_place",
             side_effect=[901, 902, 903],
         ):
             with patch(

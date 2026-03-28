@@ -26,7 +26,7 @@ import requests
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -55,7 +55,7 @@ REQUEST_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Trinity School",
     "slug": "trinity-school-atlanta",
     "address": "4301 Northside Pkwy NW",
@@ -460,7 +460,7 @@ def _build_event_record(
     source_id: int, venue_id: int, row: dict, description: str
 ) -> dict:
     content_hash = generate_content_hash(
-        row["title"], VENUE_DATA["name"], row["start_date"]
+        row["title"], PLACE_DATA["name"], row["start_date"]
     )
     record = {
         "source_id": source_id,
@@ -508,7 +508,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     logger.info("Crawling Trinity summer camps (source_id=%s)", source_id)
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         pricing_csv = _fetch_text(PRICING_EXPORT_URL)
         description_text = _fetch_text(DESCRIPTIONS_EXPORT_URL)
     except Exception as exc:

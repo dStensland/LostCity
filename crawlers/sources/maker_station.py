@@ -13,7 +13,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_data = {
+    place_data = {
         "name": VENUE_NAME,
         "slug": "the-maker-station",
         "address": VENUE_ADDRESS,
@@ -59,7 +59,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     }
 
     try:
-        venue_id = get_or_create_venue(venue_data)
+        venue_id = get_or_create_place(place_data)
     except Exception as e:
         logger.error(f"Failed to create venue: {e}")
         venue_id = None

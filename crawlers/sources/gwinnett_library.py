@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from urllib.parse import quote
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -185,10 +185,10 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
 )
 
 
-def _build_branch_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
+def _build_branch_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityEnvelope:
     """Project a Gwinnett library branch into shared Family-friendly destination details."""
     envelope = TypedEntityEnvelope()
-    branch_name = str(venue_data.get("name") or "Gwinnett library branch").strip()
+    branch_name = str(place_data.get("name") or "Gwinnett library branch").strip()
 
     envelope.add(
         "destination_details",
@@ -502,17 +502,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Resolve venue from library/location field
             library_name = ev.get("library") or ev.get("location") or ""
-            venue_data = find_branch_venue(library_name)
-            venue_id = get_or_create_venue(venue_data)
+            place_data = find_branch_venue(library_name)
+            venue_id = get_or_create_place(place_data)
 
             if venue_id and venue_id not in enriched_venue_ids:
                 persist_result = persist_typed_entity_envelope(
-                    _build_branch_destination_envelope(venue_id, venue_data)
+                    _build_branch_destination_envelope(venue_id, place_data)
                 )
                 if persist_result.skipped:
                     logger.warning(
                         "Gwinnett Library: skipped typed destination writes for %s: %s",
-                        venue_data["name"],
+                        place_data["name"],
                         persist_result.skipped,
                     )
                 enriched_venue_ids.add(venue_id)
@@ -546,7 +546,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if ev.get("event_image"):
                 image_url = f"{BASE_URL}/images/events/{ev['event_image']}"
 
-            content_hash = generate_content_hash(title, venue_data["name"], start_date_str)
+            content_hash = generate_content_hash(title, place_data["name"], start_date_str)
 
             event_record = {
                 "source_id": source_id,
@@ -584,7 +584,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             try:
                 insert_event(event_record)
                 events_new += 1
-                logger.debug(f"Added: {title} on {start_date_str} at {venue_data['name']}")
+                logger.debug(f"Added: {title} on {start_date_str} at {place_data['name']}")
             except Exception as e:
                 logger.error(f"Failed to insert '{title}': {e}")
 

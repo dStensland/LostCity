@@ -14,7 +14,7 @@ from datetime import datetime
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -30,7 +30,7 @@ IMAGE_URL = (
     "Home-Schedule-Graphic_1920x1080-1.jpg"
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Gateway Center Arena",
     "slug": "gateway-center-arena",
     "address": "2330 Convention Center Concourse",
@@ -132,14 +132,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     current_hashes: set[str] = set()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     for game in upcoming_home_games():
         opponent_label = game["opponent_label"]
         title = build_event_title(opponent_label)
         start_date = game["date"]
         description = build_description(opponent_label, start_date)
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
         current_hashes.add(content_hash)
         events_found += 1
 

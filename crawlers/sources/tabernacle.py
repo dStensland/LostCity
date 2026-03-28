@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, enrich_event_record, find_event_url
 from description_fetcher import fetch_detail_html_playwright
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.tabernacleatl.com"
 SHOWS_URL = f"{BASE_URL}/shows"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "The Tabernacle",
     "slug": "tabernacle",
     "address": "152 Luckie St NW",
@@ -116,7 +116,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching The Tabernacle: {SHOWS_URL}")
             page.goto(SHOWS_URL, wait_until="domcontentloaded", timeout=30000)

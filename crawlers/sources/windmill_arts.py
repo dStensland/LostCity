@@ -32,7 +32,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup, Tag
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Windmill Arts",
     "slug": "windmill-arts",
     "address": "2840 East Point St",
@@ -213,7 +213,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     today_str = datetime.now().strftime("%Y-%m-%d")
 
     session = requests.Session()
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     logger.info("Windmill Arts: fetching events page %s", EVENTS_URL)
     html = _fetch(EVENTS_URL, session)
@@ -270,7 +270,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "series_title": title,
             }
 
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
         event_record: dict = {
             "source_id": source_id,

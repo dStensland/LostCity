@@ -22,7 +22,7 @@ from bs4 import BeautifulSoup, Tag
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -44,7 +44,7 @@ REQUEST_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Wesleyan School",
     "slug": "wesleyan-school",
     "address": "5405 Spalding Dr",
@@ -424,7 +424,7 @@ def _parse_articles(soup: BeautifulSoup) -> list[dict]:
 
 def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     content_hash = generate_content_hash(
-        row["title"], VENUE_DATA["name"], row["start_date"]
+        row["title"], PLACE_DATA["name"], row["start_date"]
     )
     record = {
         "source_id": source_id,
@@ -479,7 +479,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.error("Wesleyan School: failed to fetch offerings page: %s", exc)
         return 0, 0, 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     today = date.today().strftime("%Y-%m-%d")
 
     for row in _parse_articles(BeautifulSoup(response.text, "html.parser")):

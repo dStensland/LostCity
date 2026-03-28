@@ -19,7 +19,7 @@ from playwright.sync_api import sync_playwright
 from artist_images import fetch_artist_info
 from db import (
     get_client,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.masqueradeatlanta.com"
 EVENTS_URL = f"{BASE_URL}/events/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "The Masquerade",
     "slug": "the-masquerade",
     "address": "50 Lower Alabama St SW #110",
@@ -249,7 +249,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching The Masquerade: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

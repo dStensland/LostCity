@@ -12,7 +12,7 @@ from typing import Optional
 from bs4 import BeautifulSoup
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_image_url
 
@@ -196,9 +196,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             sport_events = parse_jsonld_events(soup)
 
             # Get venue for this sport (maps sport to its home venue)
-            venue_data = VENUES.get(sport_name, VENUES["default"])
-            venue_id = get_or_create_venue(venue_data)
-            logger.debug(f"Sport {sport_name} → venue {venue_data['name']}")
+            place_data = VENUES.get(sport_name, VENUES["default"])
+            venue_id = get_or_create_place(place_data)
+            logger.debug(f"Sport {sport_name} → venue {place_data['name']}")
 
             for event_data in sport_events:
                 events_found += 1
@@ -248,7 +248,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # Generate hash
                 content_hash = generate_content_hash(
-                    title, venue_data["name"], start_date
+                    title, place_data["name"], start_date
                 )
 
 

@@ -31,7 +31,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup, Tag
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 from entity_lanes import TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -51,7 +51,7 @@ HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Echo Contemporary",
     "slug": "echo-contemporary",
     "address": "785 Echo St NW",
@@ -247,7 +247,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     today = date.today()
     session = requests.Session()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     # ------------------------------------------------------------------ #
     # Fetch and parse the /events listing page                             #
@@ -298,7 +298,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 source_id=source_id,
                 opening_date=start_date_str,
                 closing_date=end_date_str,
-                venue_name=VENUE_DATA["name"],
+                venue_name=PLACE_DATA["name"],
                 description=description,
                 image_url=image_url,
                 source_url=event_url,
@@ -322,7 +322,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 continue
 
             content_hash = generate_content_hash(
-                title, VENUE_DATA["name"], start_date_str
+                title, PLACE_DATA["name"], start_date_str
             )
             event_record = {
                 "source_id": source_id,

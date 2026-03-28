@@ -11,14 +11,14 @@ import logging
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue
+from db import get_or_create_place
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://glennhotel.com"
 SKYLOUNGE_URL = f"{BASE_URL}/skylounge"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Skylounge at Glenn Hotel",
     "slug": "skylounge-glenn-hotel",
     "address": "110 Marietta St NW",
@@ -53,7 +53,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Look for any event announcements in the page content
         # This is speculative - they may not have regular events posted

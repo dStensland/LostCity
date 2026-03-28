@@ -30,7 +30,7 @@ from bs4 import BeautifulSoup
 from date_utils import parse_human_date
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -366,8 +366,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     # Pre-create both venues so they exist in the DB regardless of meeting schedule.
-    venue_id_north = get_or_create_venue(VENUE_NORTH)
-    venue_id_south = get_or_create_venue(VENUE_SOUTH)
+    venue_id_north = get_or_create_place(VENUE_NORTH)
+    venue_id_south = get_or_create_place(VENUE_SOUTH)
 
     venue_id_map = {
         "north": venue_id_north,
@@ -412,10 +412,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 continue
 
             # Resolve venue
-            venue_data = resolve_venue(raw_title)
+            place_data = resolve_venue(raw_title)
             venue_id = (
                 venue_id_map["north"]
-                if venue_data is VENUE_NORTH
+                if place_data is VENUE_NORTH
                 else venue_id_map["south"]
             )
 
@@ -444,7 +444,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
 
             # Content hash for DB-level dedup
-            content_hash = generate_content_hash(title, venue_data["name"], start_date)
+            content_hash = generate_content_hash(title, place_data["name"], start_date)
 
             # Series grouping
             series_hint = determine_series_hint(raw_title)

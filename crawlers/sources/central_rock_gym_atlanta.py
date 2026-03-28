@@ -19,7 +19,7 @@ from typing import Optional, List
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import normalize_time_format
 
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://centralrockgym.com"
 EVENTS_URL = f"{BASE_URL}/atlanta/climbing_type/events/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Central Rock Gym Atlanta",
     "slug": "central-rock-gym-atlanta",
     "address": "3701 Presidential Parkway",
@@ -273,7 +273,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.wait_for_timeout(3000)
 
             # Get venue ID
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             # Parse HTML
             html = page.content()
@@ -391,7 +391,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "extraction_confidence": 0.85,
                             "is_recurring": True,
                             "recurrence_rule": None,
-                            "content_hash": generate_content_hash(title, VENUE_DATA["name"], event_date),
+                            "content_hash": generate_content_hash(title, PLACE_DATA["name"], event_date),
                         }
 
                         events_found += 1

@@ -14,7 +14,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 
 from config import get_config
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
 from dedupe import generate_content_hash
 
 PORTAL_SLUG = "nashville"
@@ -206,13 +206,13 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int], 
         end_date, end_time = parse_datetime(end_info.get("local"))
 
         # Get venue info
-        venue_data = event_data.get("venue") or {}
+        place_data = event_data.get("venue") or {}
         venue_id = None
         venue_name = "TBA"
 
-        if venue_data and venue_data.get("name"):
-            venue_name = venue_data.get("name", "").strip()
-            address = venue_data.get("address", {})
+        if place_data and place_data.get("name"):
+            venue_name = place_data.get("name", "").strip()
+            address = place_data.get("address", {})
 
             # Skip if not in Tennessee
             region = address.get("region", "")
@@ -229,7 +229,7 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int], 
                 "venue_type": "event_space",
                 "website": None,
             }
-            venue_id = get_or_create_venue(venue_record)
+            venue_id = get_or_create_place(venue_record)
 
         # Get category
         category_data = event_data.get("category") or {}
@@ -325,15 +325,15 @@ def parse_event_for_pipeline(event_data: dict) -> dict | None:
             description = description[:2000]
 
         # Venue
-        venue_data = event_data.get("venue") or {}
+        place_data = event_data.get("venue") or {}
         venue_dict = None
-        if venue_data and venue_data.get("name"):
-            address = venue_data.get("address", {})
+        if place_data and place_data.get("name"):
+            address = place_data.get("address", {})
             region = address.get("region", "")
             if region and region not in ["TN", "Tennessee"]:
                 return None
             venue_dict = {
-                "name": venue_data["name"].strip(),
+                "name": place_data["name"].strip(),
                 "address": address.get("address_1"),
                 "city": address.get("city", "Nashville"),
                 "state": "TN",

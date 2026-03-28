@@ -16,7 +16,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from db import find_event_by_hash, get_client, get_or_create_venue, insert_event, smart_update_existing_event
+from db import find_event_by_hash, get_client, get_or_create_place, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.deltamuseum.org"
 LIST_URL = f"{BASE_URL}/visit/whats-on/upcoming-events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Delta Flight Museum",
     "slug": "delta-flight-museum",
     "address": "1060 Delta Blvd",
@@ -147,7 +147,7 @@ def _extract_event_record(event_url: str, venue_id: int, source_id: int) -> Opti
             description = description[:stop_idx].strip()
     description = description[:4000]
 
-    content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+    content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
     return {
         "source_id": source_id,
         "venue_id": venue_id,
@@ -182,7 +182,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     logger.info("Fetching Delta Flight Museum listing: %s", LIST_URL)
 
     response = requests.get(LIST_URL, timeout=20, headers={"User-Agent": "Mozilla/5.0"})

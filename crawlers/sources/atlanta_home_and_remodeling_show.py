@@ -22,7 +22,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 CATEGORY_URL = "https://nationwideexpos.com/product-category/east-coast/georgia/atlanta/"
 USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Exposition Center South",
     "slug": "atlanta-exposition-center-south",
     "address": "3850 Jonesboro Rd",
@@ -202,7 +202,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     if not product_urls:
         raise ValueError("Nationwide Expos Atlanta category page did not yield any Atlanta product URLs")
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     description = (
         "Atlanta Home and Remodeling Show brings home-improvement vendors, remodeling specialists, "
         "design inspiration, and consumer shopping to Atlanta Exposition Center South."
@@ -223,7 +223,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     for show in parsed_shows:
         for session in show["sessions"]:
-            content_hash = generate_content_hash(session["title"], VENUE_DATA["name"], session["start_date"])
+            content_hash = generate_content_hash(session["title"], PLACE_DATA["name"], session["start_date"])
             current_hashes.add(content_hash)
             events_found += 1
 

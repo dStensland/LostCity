@@ -30,7 +30,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     get_client,
     insert_event,
     find_event_by_hash,
@@ -488,7 +488,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 logger.debug(f"Midtown Alliance: homepage og: extraction failed: {exc}")
 
             # Ensure org venue exists
-            org_venue_id = get_or_create_venue(ORG_VENUE_DATA)
+            org_venue_id = get_or_create_place(ORG_VENUE_DATA)
 
             # Persist any og: enrichment to the org venue record
             try:
@@ -509,7 +509,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 try:
                     vslug = vdata["slug"]
                     vd = {k: v for k, v in vdata.items() if k != "keywords"}
-                    vid = get_or_create_venue(vd)
+                    vid = get_or_create_place(vd)
                     _known_venue_id_cache[vslug] = vid
                 except Exception as exc:
                     logger.warning(f"Midtown Alliance: could not create venue {vdata['name']}: {exc}")
@@ -593,7 +593,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             venue_id = _known_venue_id_cache[vslug]
                         else:
                             vd = {k: v for k, v in matched_venue.items() if k != "keywords"}
-                            venue_id = get_or_create_venue(vd)
+                            venue_id = get_or_create_place(vd)
                             _known_venue_id_cache[vslug] = venue_id
                         venue_name_for_hash = matched_venue["name"]
                     else:

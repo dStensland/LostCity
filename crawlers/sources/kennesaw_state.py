@@ -15,7 +15,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
+from db import find_event_by_hash, get_or_create_place, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -347,8 +347,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         or "Bailey Performance Center"
                     )
                     venue_key = get_venue_key(venue_text)
-                    venue_data = VENUES[venue_key]
-                    venue_id = get_or_create_venue(venue_data)
+                    place_data = VENUES[venue_key]
+                    venue_id = get_or_create_place(place_data)
                     destination_envelope = _build_destination_envelope(venue_key, venue_id)
                     if destination_envelope:
                         persist_typed_entity_envelope(destination_envelope)
@@ -368,8 +368,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         events_found += 1
 
-                        content_hash = generate_content_hash(title, venue_data["name"], start_date)
-                        category, subcategory = categorize_event(title, venue_data["name"])
+                        content_hash = generate_content_hash(title, place_data["name"], start_date)
+                        category, subcategory = categorize_event(title, place_data["name"])
 
                         event_record = {
                             "source_id": source_id,

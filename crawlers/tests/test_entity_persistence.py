@@ -6,11 +6,11 @@ def test_persist_typed_entity_envelope_resolves_destination_anchors(monkeypatch)
     calls = []
 
     monkeypatch.setattr(
-        "entity_persistence.get_or_create_venue",
+        "entity_persistence.get_or_create_place",
         lambda record: 101,
     )
     monkeypatch.setattr(
-        "entity_persistence.upsert_venue_destination_details",
+        "entity_persistence.upsert_place_vertical_details",
         lambda venue_id, details: calls.append(("details", venue_id, details)) or venue_id,
     )
     monkeypatch.setattr(
@@ -18,7 +18,7 @@ def test_persist_typed_entity_envelope_resolves_destination_anchors(monkeypatch)
         lambda venue_id, details: calls.append(("feature", venue_id, details)) or 55,
     )
     monkeypatch.setattr(
-        "entity_persistence.upsert_venue_special",
+        "entity_persistence.upsert_place_special",
         lambda venue_id, details: calls.append(("special", venue_id, details["title"])) or 77,
     )
     monkeypatch.setattr(
@@ -28,7 +28,7 @@ def test_persist_typed_entity_envelope_resolves_destination_anchors(monkeypatch)
         ) or 88,
     )
     monkeypatch.setattr(
-        "entity_persistence.upsert_venue_occasion",
+        "entity_persistence.upsert_place_occasion",
         lambda venue_id, details: calls.append(
             ("occasion", venue_id, details["occasion"])
         ) or 89,
@@ -173,16 +173,16 @@ def test_persist_typed_entity_envelope_resolves_destination_anchors(monkeypatch)
 
 
 def test_persist_typed_entity_envelope_reports_unsupported_and_unresolved_lanes(monkeypatch):
-    monkeypatch.setattr("entity_persistence.get_or_create_venue", lambda record: 0)
+    monkeypatch.setattr("entity_persistence.get_or_create_place", lambda record: 0)
     monkeypatch.setattr("entity_persistence.insert_event", lambda record: None)
     monkeypatch.setattr("entity_persistence.insert_program", lambda record: None)
     monkeypatch.setattr("entity_persistence.insert_exhibition", lambda record, artists=None: None)
     monkeypatch.setattr("entity_persistence.insert_open_call", lambda record: None)
     monkeypatch.setattr("entity_persistence.upsert_venue_feature", lambda venue_id, details: None)
-    monkeypatch.setattr("entity_persistence.upsert_venue_special", lambda venue_id, details: None)
+    monkeypatch.setattr("entity_persistence.upsert_place_special", lambda venue_id, details: None)
     monkeypatch.setattr("entity_persistence.upsert_editorial_mention", lambda venue_id, details: None)
-    monkeypatch.setattr("entity_persistence.upsert_venue_occasion", lambda venue_id, details: None)
-    monkeypatch.setattr("entity_persistence.upsert_venue_destination_details", lambda venue_id, details: None)
+    monkeypatch.setattr("entity_persistence.upsert_place_occasion", lambda venue_id, details: None)
+    monkeypatch.setattr("entity_persistence.upsert_place_vertical_details", lambda venue_id, details: None)
     monkeypatch.setattr("entity_persistence.upsert_volunteer_opportunity", lambda record: None)
 
     envelope = TypedEntityEnvelope(

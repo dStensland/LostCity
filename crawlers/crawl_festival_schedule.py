@@ -37,7 +37,7 @@ from bs4 import BeautifulSoup, Tag
 from config import get_config
 from db import (
     get_client,
-    get_or_create_venue,
+    get_or_create_place,
     get_source_by_slug,
     get_venue_by_slug,
     insert_event,
@@ -1931,7 +1931,7 @@ def resolve_session_venue(
         return default_venue_id
 
     if session.venue_name and not _is_unknown_venue(session.venue_name):
-        venue_data = {
+        place_data = {
             "name": session.venue_name,
             "slug": slugify(session.venue_name),
             "address": session.venue_address,
@@ -1940,7 +1940,7 @@ def resolve_session_venue(
             "zip": session.venue_postal_code,
             "website": session.venue_website,
         }
-        venue_id = get_or_create_venue(venue_data)
+        venue_id = get_or_create_place(place_data)
         if isinstance(venue_id, int) and venue_id > 0:
             return venue_id
         return None

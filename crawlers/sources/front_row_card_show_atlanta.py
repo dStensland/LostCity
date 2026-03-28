@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -185,7 +185,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         venue = session["venue"]
         venue_slug = venue["slug"]
         if venue_slug not in venue_ids:
-            venue_ids[venue_slug] = get_or_create_venue(venue)
+            venue_ids[venue_slug] = get_or_create_place(venue)
 
         title = session["title"]
         content_hash = generate_content_hash(title, venue["name"], session["start_date"])

@@ -45,7 +45,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -458,11 +458,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Cache venue IDs per store to avoid repeated DB lookups
             venue_ids: dict[int, int] = {}
             for store_id, store in stores_by_id.items():
-                venue_data = _build_venue_data(store)
+                place_data = _build_venue_data(store)
                 try:
-                    vid = get_or_create_venue(venue_data)
+                    vid = get_or_create_place(place_data)
                     venue_ids[store_id] = vid
-                    logger.debug("Venue ready: %s (id=%s)", venue_data["name"], vid)
+                    logger.debug("Venue ready: %s (id=%s)", place_data["name"], vid)
                 except Exception as exc:
                     logger.warning(
                         "Failed to upsert venue for store %s: %s", store_id, exc

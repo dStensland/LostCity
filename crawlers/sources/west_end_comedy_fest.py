@@ -24,7 +24,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -509,8 +509,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     # Ensure venue records exist
-    wild_heaven_venue_id = get_or_create_venue(WILD_HEAVEN_VENUE_DATA)
-    plywood_place_venue_id = get_or_create_venue(PLYWOOD_PLACE_VENUE_DATA)
+    wild_heaven_venue_id = get_or_create_place(WILD_HEAVEN_VENUE_DATA)
+    plywood_place_venue_id = get_or_create_place(PLYWOOD_PLACE_VENUE_DATA)
 
     venue_id_map = {
         "wild_heaven": wild_heaven_venue_id,

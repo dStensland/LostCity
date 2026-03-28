@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -44,7 +44,7 @@ SCHEDULE_RE = re.compile(
     re.IGNORECASE,
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Midway Recreation Center",
     "slug": "midway-recreation-center",
     "address": "3181 Midway Rd",
@@ -142,9 +142,9 @@ def parse_item(item: dict, today: date) -> dict | None:
         price_max = 0.0
         is_free = True
 
-    title = f"Midway Pickleball at {VENUE_DATA['name']}"
+    title = f"Midway Pickleball at {PLACE_DATA['name']}"
     description = (
-        f"Public pickleball open play at {VENUE_DATA['name']} through DeKalb County Recreation. "
+        f"Public pickleball open play at {PLACE_DATA['name']} through DeKalb County Recreation. "
         "All levels are welcome. Reserve through the official county catalog for current availability."
     )
 
@@ -171,7 +171,7 @@ def parse_item(item: dict, today: date) -> dict | None:
         or item.get("detail_url")
         or ACTIVITY_SEARCH_URL,
         "source_url": item.get("detail_url") or ACTIVITY_SEARCH_URL,
-        "raw_text": f"{item.get('name','')} | {item.get('date_range','')} | {VENUE_DATA['name']}",
+        "raw_text": f"{item.get('name','')} | {item.get('date_range','')} | {PLACE_DATA['name']}",
     }
 
 
@@ -195,7 +195,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     _, _, total_pages = first
     total_pages = min(total_pages, MAX_PAGES)
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     for page_num in range(1, total_pages + 1):
         result = first if page_num == 1 else _fetch_page(session, csrf, page_num)
@@ -215,7 +215,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 start_date = event_date.strftime("%Y-%m-%d")
                 content_hash = generate_content_hash(
                     parsed["title"],
-                    VENUE_DATA["name"],
+                    PLACE_DATA["name"],
                     start_date,
                 )
                 current_hashes.add(content_hash)

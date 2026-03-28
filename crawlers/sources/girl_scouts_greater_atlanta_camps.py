@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -254,8 +254,8 @@ def _build_rows(
     age_min, age_max, _ = _age_data_from_title(title)
     rows: list[dict] = []
     for session_row in detail_fields["sessions"]:
-        venue_data = _resolve_venue(item.get("camp-location", []), location_lookup, session_row["duration_text"])
-        tags = _derive_tags(title, category_slug, session_row["duration_text"], venue_data["slug"])
+        place_data = _resolve_venue(item.get("camp-location", []), location_lookup, session_row["duration_text"])
+        tags = _derive_tags(title, category_slug, session_row["duration_text"], place_data["slug"])
         description = detail_fields["description"]
         if session_row["duration_text"]:
             description = _clean_text(f"{description} {session_row['duration_text']}")[:1000]
@@ -287,7 +287,7 @@ def _build_rows(
                 or session_row["price_note"],
                 "tags": tags,
                 "class_category": "mixed" if category_slug != "leadership" else "education",
-                "venue_data": venue_data,
+                "venue_data": place_data,
             }
         )
     return rows
@@ -362,7 +362,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             try:
                 if row["end_date"] < today:
                     continue
-                venue_id = get_or_create_venue(row["venue_data"])
+                venue_id = get_or_create_place(row["venue_data"])
                 record = _build_event_record(source_id, venue_id, row)
                 events_found += 1
                 existing = find_event_by_hash(record["content_hash"])

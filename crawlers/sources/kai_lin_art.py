@@ -14,7 +14,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue
+from db import get_or_create_place
 from entity_lanes import TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 from exhibition_utils import build_exhibition_record
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.kailinart.com"
 EVENTS_URL = f"{BASE_URL}/exhibitions"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Kai Lin Art",
     "slug": "kai-lin-art",
     "address": "404 Bishop St NW",
@@ -70,7 +70,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Kai Lin Art: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
@@ -164,7 +164,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         source_id=source_id,
                         opening_date=start_date,
                         closing_date=closing_date,
-                        venue_name=VENUE_DATA["name"],
+                        venue_name=PLACE_DATA["name"],
                         description="Exhibition at Kai Lin Art",
                         image_url=image_map.get(title),
                         source_url=event_url,

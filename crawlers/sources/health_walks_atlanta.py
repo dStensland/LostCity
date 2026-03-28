@@ -16,7 +16,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from date_utils import parse_human_date
 
@@ -73,7 +73,7 @@ SOURCES = {
 }
 
 # Known venue locations
-VENUE_DATA = {
+PLACE_DATA = {
     "battery_atlanta": {
         "name": "The Battery Atlanta",
         "slug": "battery-atlanta",
@@ -253,27 +253,27 @@ def determine_venue(location_hint: Optional[str] = None) -> tuple[int, str]:
     """
     if not location_hint:
         # Default to Piedmont Park (common walk location)
-        venue_data = VENUE_DATA["piedmont_park"]
-        venue_id = get_or_create_venue(venue_data)
-        return venue_id, venue_data["name"]
+        place_data = PLACE_DATA["piedmont_park"]
+        venue_id = get_or_create_place(place_data)
+        return venue_id, place_data["name"]
 
     location_lower = location_hint.lower()
 
     # Check for known venues
     if "battery" in location_lower:
-        venue_data = VENUE_DATA["battery_atlanta"]
+        place_data = PLACE_DATA["battery_atlanta"]
     elif "piedmont" in location_lower:
-        venue_data = VENUE_DATA["piedmont_park"]
+        place_data = PLACE_DATA["piedmont_park"]
     elif "centennial" in location_lower or "olympic" in location_lower:
-        venue_data = VENUE_DATA["centennial_olympic_park"]
+        place_data = PLACE_DATA["centennial_olympic_park"]
     elif "grant" in location_lower:
-        venue_data = VENUE_DATA["grant_park"]
+        place_data = PLACE_DATA["grant_park"]
     else:
         # Default fallback
-        venue_data = VENUE_DATA["piedmont_park"]
+        place_data = PLACE_DATA["piedmont_park"]
 
-    venue_id = get_or_create_venue(venue_data)
-    return venue_id, venue_data["name"]
+    venue_id = get_or_create_place(place_data)
+    return venue_id, place_data["name"]
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -315,10 +315,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Determine venue - use known venue hint if provided
             known_venue_key = event_info.get("known_venue")
-            if known_venue_key and known_venue_key in VENUE_DATA:
-                venue_data = VENUE_DATA[known_venue_key]
-                venue_id = get_or_create_venue(venue_data)
-                venue_name = venue_data["name"]
+            if known_venue_key and known_venue_key in PLACE_DATA:
+                place_data = PLACE_DATA[known_venue_key]
+                venue_id = get_or_create_place(place_data)
+                venue_name = place_data["name"]
             else:
                 # Try to determine from scraped data
                 location_hint = scraped_data.get("location") if scraped_data else None

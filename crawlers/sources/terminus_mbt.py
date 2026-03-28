@@ -19,7 +19,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ BASE_URL = "https://www.terminusmbt.com"
 TICKETS_URL = f"{BASE_URL}/tickets"
 
 # Home base venue
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Tula Arts Center",
     "slug": "tula-arts-center",
     "address": "75 Bennett St NW, Suite A-2",
@@ -201,7 +201,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Create home venue
-            home_venue_id = get_or_create_venue(VENUE_DATA)
+            home_venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Terminus MBT tickets page: {TICKETS_URL}")
             page.goto(TICKETS_URL, wait_until="domcontentloaded", timeout=30000)
@@ -310,7 +310,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Also look for venue information in the body text
                     # It's usually near the performance times
-                    venue_data = parse_venue_from_text(body_text)
+                    place_data = parse_venue_from_text(body_text)
 
                     # If no specific performances found, skip this event
                     if not performance_texts:
@@ -335,9 +335,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         # Determine venue for this performance
                         # If venue data was extracted, use it; otherwise use home venue
-                        if venue_data:
-                            venue_id = get_or_create_venue(venue_data)
-                            venue_name = venue_data["name"]
+                        if place_data:
+                            venue_id = get_or_create_place(place_data)
+                            venue_name = place_data["name"]
                         else:
                             venue_id = home_venue_id
                             venue_name = "Tula Arts Center"

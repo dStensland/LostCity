@@ -17,7 +17,7 @@ from playwright.sync_api import sync_playwright
 from db import (
     find_event_by_hash,
     get_client,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -213,7 +213,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     today = datetime.now().date()
-    venue_id = get_or_create_venue(PIEDMONT_PARK)
+    venue_id = get_or_create_place(PIEDMONT_PARK)
 
     page_text = ""
     selected_url = FESTIVAL_URL

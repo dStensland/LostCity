@@ -8,7 +8,7 @@ generic base for custom galleries.
 
 Usage:
     class MyGallery(WordPressExhibitionCrawler):
-        VENUE_DATA = { ... }
+        PLACE_DATA = { ... }
         WP_EXHIBITION_POST_TYPE = "exhibition"
 
     def crawl(source):
@@ -27,7 +27,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue
+from db import get_or_create_place
 from db.exhibitions import insert_exhibition
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ _DETAIL_DELAY_S = 1.0
 class ExhibitionCrawlerBase(ABC):
     """Abstract base for exhibition crawlers."""
 
-    VENUE_DATA: dict = {}  # Override in subclass
+    PLACE_DATA: dict = {}  # Override in subclass
 
     def _make_session(self) -> requests.Session:
         session = requests.Session()
@@ -56,7 +56,7 @@ class ExhibitionCrawlerBase(ABC):
         return session
 
     def _get_venue_id(self) -> int:
-        return get_or_create_venue(self.VENUE_DATA)
+        return get_or_create_place(self.PLACE_DATA)
 
     @abstractmethod
     def get_exhibitions(self, session: requests.Session, source: dict) -> list[dict]:
@@ -95,7 +95,7 @@ class ExhibitionCrawlerBase(ABC):
                 "source_url": ex.get("source_url"),
                 "exhibition_type": ex.get("exhibition_type", "group"),
                 "is_active": True,
-                "_venue_name": self.VENUE_DATA.get("name", "gallery"),
+                "_venue_name": self.PLACE_DATA.get("name", "gallery"),
             }
 
             result = insert_exhibition(exhibition_data, artists=artists)
@@ -114,7 +114,7 @@ class WordPressExhibitionCrawler(ExhibitionCrawlerBase):
     """Crawl exhibitions from WordPress REST API.
 
     Override these class attributes:
-        VENUE_DATA: dict — full venue data dict
+        PLACE_DATA: dict — full venue data dict
         WP_BASE_URL: str — e.g. "https://gallery.example.com"
         WP_EXHIBITION_POST_TYPE: str — "exhibition" or "exhibitions" (varies by theme)
         WP_PER_PAGE: int — results per page (default 20)
@@ -186,7 +186,7 @@ class SquarespaceExhibitionCrawler(ExhibitionCrawlerBase):
     """Crawl exhibitions from Squarespace ?format=json API.
 
     Override these class attributes:
-        VENUE_DATA: dict — full venue data dict
+        PLACE_DATA: dict — full venue data dict
         SQUARESPACE_URL: str — URL of the exhibitions page (e.g. "https://gallery.com/exhibitions")
     """
 
@@ -246,7 +246,7 @@ class GenericExhibitionCrawler(ExhibitionCrawlerBase):
     """Generic template for galleries with custom HTML structure.
 
     Override these class attributes:
-        VENUE_DATA: dict — full venue data dict
+        PLACE_DATA: dict — full venue data dict
         EXHIBITIONS_URL: str — URL of the exhibitions listing page
 
     Override get_exhibitions() to implement custom HTML parsing.

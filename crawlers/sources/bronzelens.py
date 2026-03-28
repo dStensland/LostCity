@@ -12,7 +12,7 @@ from datetime import datetime
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://bronzelens.com"
 EVENTIVE_URL = "https://bronzelens.eventive.org"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "BronzeLens Film Festival",
     "slug": "bronzelens",
     "address": "Various locations",
@@ -112,7 +112,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 logger.warning(f"No known dates for BronzeLens {year}")
                 return 0, 0, 0
 
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         events_found = 1
 
         title = f"BronzeLens Film Festival {year}"

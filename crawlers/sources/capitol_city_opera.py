@@ -24,7 +24,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -497,10 +497,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Ensure venue records exist
-        petite_violette_id = get_or_create_venue(PETITE_VIOLETTE_VENUE)
-        prumc_id = get_or_create_venue(PRUMC_VENUE)
+        petite_violette_id = get_or_create_place(PETITE_VIOLETTE_VENUE)
+        prumc_id = get_or_create_place(PRUMC_VENUE)
         # Also register CCO as an organization venue
-        get_or_create_venue(CCO_ORG_VENUE)
+        get_or_create_place(CCO_ORG_VENUE)
 
         logger.info("Crawling Capitol City Opera Company")
 

@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import enrich_event_record
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://actors-express.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Actor's Express",
     "slug": "actors-express",
     "address": "887 W Marietta St NW",
@@ -130,7 +130,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Actor's Express: {BASE_URL}")
             page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)

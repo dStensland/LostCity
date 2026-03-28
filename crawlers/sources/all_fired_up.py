@@ -30,7 +30,7 @@ from typing import Optional
 import requests
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -103,9 +103,9 @@ _LOCATION_MAP: list[tuple[str, dict]] = [
 def _infer_venue(title: str) -> dict:
     """Infer venue data from a product title containing a location keyword."""
     title_lower = title.lower()
-    for keyword, venue_data in _LOCATION_MAP:
+    for keyword, place_data in _LOCATION_MAP:
         if keyword in title_lower:
-            return venue_data
+            return place_data
     # Default to Alpharetta when no location keyword is found
     return VENUE_ALPHARETTA
 
@@ -299,13 +299,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # Ensure all 3 venue records exist in the DB before processing events
     venue_ids: dict[str, int] = {}
-    for venue_data in (VENUE_ALPHARETTA, VENUE_EMORY_VILLAGE, VENUE_MARIETTA):
+    for place_data in (VENUE_ALPHARETTA, VENUE_EMORY_VILLAGE, VENUE_MARIETTA):
         try:
-            vid = get_or_create_venue(venue_data)
-            venue_ids[venue_data["slug"]] = vid
+            vid = get_or_create_place(place_data)
+            venue_ids[place_data["slug"]] = vid
         except Exception as exc:
             logger.error(
-                f"All Fired Up Art: failed to create venue '{venue_data['name']}': {exc}"
+                f"All Fired Up Art: failed to create venue '{place_data['name']}': {exc}"
             )
 
     # Fetch BTA scheduled events and Shopify product enrichment
@@ -368,16 +368,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
         duration_minutes = duration_sec // 60
 
         # Infer venue from product title
-        venue_data = _infer_venue(product_title)
-        venue_id = venue_ids.get(venue_data["slug"])
+        place_data = _infer_venue(product_title)
+        venue_id = venue_ids.get(place_data["slug"])
         if not venue_id:
             try:
-                venue_id = get_or_create_venue(venue_data)
-                venue_ids[venue_data["slug"]] = venue_id
+                venue_id = get_or_create_place(place_data)
+                venue_ids[place_data["slug"]] = venue_id
             except Exception as exc:
                 logger.error(
                     f"All Fired Up Art: venue fallback creation failed for "
-                    f"'{venue_data['name']}': {exc}"
+                    f"'{place_data['name']}': {exc}"
                 )
                 continue
 
@@ -418,14 +418,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
             description = _build_description(
                 clean_title=clean_title,
                 raw_description=raw_desc,
-                venue_name=venue_data["name"],
+                venue_name=place_data["name"],
                 price_min=price_min,
                 duration_minutes=duration_minutes,
                 source_url=source_url,
             )
 
             content_hash = generate_content_hash(
-                clean_title, venue_data["name"], start_date
+                clean_title, place_data["name"], start_date
             )
 
             is_free = price_min is not None and price_min == 0
@@ -478,7 +478,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_new += 1
                 logger.info(
                     f"All Fired Up Art: added '{clean_title}' "
-                    f"at {venue_data['name']} on {start_date}"
+                    f"at {place_data['name']} on {start_date}"
                 )
             except Exception as exc:
                 logger.error(

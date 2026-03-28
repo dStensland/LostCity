@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.historickirkwood.org"
 FESTIVAL_URL = f"{BASE_URL}/kirkwoodfling"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Bessie Branham Park",
     "slug": "bessie-branham-park",
     "address": "2051 Delano Dr NE",
@@ -61,7 +61,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         year += 1
         event_date = get_third_saturday_may(year)
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     events_found = 1
 
     title = f"Kirkwood Spring Fling Festival & Tour of Homes {year}"

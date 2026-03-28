@@ -20,7 +20,7 @@ from playwright.sync_api import sync_playwright
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -33,7 +33,7 @@ BASE_URL = "https://dancingdogsyoga.com"
 EVENTS_URL = f"{BASE_URL}/atlanta-yoga-workshops"
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"}
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Dancing Dogs Yoga",
     "slug": "dancing-dogs-yoga",
     "address": "400 Church St",
@@ -157,7 +157,7 @@ def parse_event_detail_html(html: str, event_url: str) -> Optional[dict]:
 
     return {
         "title": title,
-        "description": description or f"Workshop at {VENUE_DATA['name']}",
+        "description": description or f"Workshop at {PLACE_DATA['name']}",
         "start_date": start_dt.strftime("%Y-%m-%d"),
         "start_time": start_dt.strftime("%H:%M"),
         "end_time": end_dt.strftime("%H:%M") if end_dt else None,
@@ -179,7 +179,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     current_hashes: set[str] = set()
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -209,7 +209,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             events_found += 1
             content_hash = generate_content_hash(
-                parsed["title"], VENUE_DATA["name"], parsed["start_date"]
+                parsed["title"], PLACE_DATA["name"], parsed["start_date"]
             )
             current_hashes.add(content_hash)
 

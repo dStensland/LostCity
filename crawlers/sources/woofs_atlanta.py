@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 import requests
 
 from sources._sports_bar_common import detect_sports_watch_party
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://woofsatlanta.com"
 EVENTS_URL = BASE_URL
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Woofs",
     "slug": "woofs-atlanta",
     "address": "494 Plasters Ave NE, Suite 200",
@@ -107,7 +107,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Extract JSON-LD events
         json_events = parse_jsonld_events(soup)
@@ -131,7 +131,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Generate hash
             content_hash = generate_content_hash(
-                title, VENUE_DATA["name"], start_date
+                title, PLACE_DATA["name"], start_date
             )
 
 

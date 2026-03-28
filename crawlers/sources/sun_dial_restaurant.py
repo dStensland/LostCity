@@ -9,7 +9,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ BASE_URL = "https://www.sundialrestaurant.com"
 EVENTS_URL = f"{BASE_URL}/sundialevents"
 CALENDAR_URL = f"{BASE_URL}/calendar"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "The Sun Dial Restaurant",
     "slug": "sun-dial-restaurant",
     "address": "210 Peachtree Street NW",
@@ -63,7 +63,7 @@ def generate_annual_events(source_id: int, venue_id: int) -> list[dict]:
     # Valentine's Day (Feb 14)
     valentines_date = f"{current_year}-02-14"
     if datetime.strptime(valentines_date, "%Y-%m-%d").date() >= today:
-        content_hash = generate_content_hash("Valentine's Day Dinner", VENUE_DATA["name"], valentines_date)
+        content_hash = generate_content_hash("Valentine's Day Dinner", PLACE_DATA["name"], valentines_date)
         description = "Celebrate Valentine's Day 700+ feet above Atlanta with a special prix fixe menu and 360-degree rotating views of the city."
         events.append({
             "source_id": source_id,
@@ -101,7 +101,7 @@ def generate_annual_events(source_id: int, venue_id: int) -> list[dict]:
     # New Year's Eve (Dec 31)
     nye_date = f"{current_year}-12-31"
     if datetime.strptime(nye_date, "%Y-%m-%d").date() >= today:
-        content_hash = generate_content_hash("New Year's Eve Celebration", VENUE_DATA["name"], nye_date)
+        content_hash = generate_content_hash("New Year's Eve Celebration", PLACE_DATA["name"], nye_date)
         description = f"Ring in {current_year + 1} at the top of Atlanta! Watch fireworks and the city lights from 700+ feet above with special dinner and celebration."
         events.append({
             "source_id": source_id,
@@ -151,7 +151,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     }
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Try to fetch events page
         for url in [EVENTS_URL, CALENDAR_URL]:
@@ -173,7 +173,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if not start_date:
                             continue
 
-                        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
                         event_record = {
                             "source_id": source_id,

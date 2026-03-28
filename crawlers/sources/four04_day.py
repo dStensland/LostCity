@@ -30,7 +30,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -49,7 +49,7 @@ USER_AGENT = (
 )
 
 # Piedmont Park — shared venue with the existing piedmont_park crawler;
-# using the same slug so get_or_create_venue returns the existing record.
+# using the same slug so get_or_create_place returns the existing record.
 PIEDMONT_PARK_VENUE = {
     "name": "Piedmont Park",
     "slug": "piedmont-park",
@@ -397,7 +397,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         main_card = cards[0]
 
     # --- Main festival event (Piedmont Park, free) ---
-    piedmont_venue_id = get_or_create_venue(PIEDMONT_PARK_VENUE)
+    piedmont_venue_id = get_or_create_place(PIEDMONT_PARK_VENUE)
     main_event = _build_main_festival_event(source_id, piedmont_venue_id, main_card, main_jsonld)
     events_found += 1
     new_count, updated_count = _upsert_event(main_event, series_hint=SERIES_HINT)
@@ -412,7 +412,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # --- Stankonia concert event (ticketed, separate venue) ---
     if stankonia_card:
-        stankonia_venue_id = get_or_create_venue(STANKONIA_VENUE)
+        stankonia_venue_id = get_or_create_place(STANKONIA_VENUE)
         stankonia_event = _build_stankonia_event(source_id, stankonia_venue_id, stankonia_card)
         events_found += 1
         new_count, updated_count = _upsert_event(stankonia_event, series_hint=SERIES_HINT)

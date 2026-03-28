@@ -16,7 +16,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -26,7 +26,7 @@ BASE_URL = "https://punchline.com"
 SHOWS_URL = f"{BASE_URL}/shows/"
 MAX_PAGES = 5  # 6 shows per page × 5 = 30 shows max
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Punchline Comedy Club",
     "slug": "punchline-comedy-club",
     "address": "3652 Roswell Rd NE",
@@ -231,7 +231,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             all_shows: list[dict] = []
             image_map: dict[str, str] = {}
 

@@ -16,7 +16,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_client, get_or_create_venue
+from db import get_client, get_or_create_place
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 from utils import slugify
@@ -384,7 +384,7 @@ def crawl(config: dict) -> tuple[int, int, int]:
             existing = _maybe_patch_existing_venue(client, existing, park)
             venue_id = existing["id"]
         else:
-            venue_id = get_or_create_venue(_build_venue_record(park))
+            venue_id = get_or_create_place(_build_venue_record(park))
         feature_lines = park["feature_lines"]
         signal_text = _signal_text(park)
 

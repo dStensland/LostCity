@@ -34,7 +34,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 SOURCE_URL = "https://www.cobbcounty.gov/elections/voting/elections-calendar"
 SERIES_TITLE = "2026 Georgia Elections"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Cobb County Elections and Registration",
     "slug": "cobb-county-elections-registration",
     "address": "736 Whitlock Ave NW",
@@ -181,7 +181,7 @@ def _build_election_day_event(
         "Find your polling location at mvp.sos.ga.gov."
     )
 
-    content_hash = generate_content_hash(title, VENUE_DATA["name"], election_date)
+    content_hash = generate_content_hash(title, PLACE_DATA["name"], election_date)
 
     return {
         "source_id": source_id,
@@ -227,7 +227,7 @@ def _build_registration_deadline_event(
         "your county elections office."
     )
 
-    content_hash = generate_content_hash(title, VENUE_DATA["name"], reg_deadline)
+    content_hash = generate_content_hash(title, PLACE_DATA["name"], reg_deadline)
 
     return {
         "source_id": source_id,
@@ -266,7 +266,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     today = date.today()
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
     except Exception as exc:
         logger.error("Failed to get/create venue for Georgia Elections: %s", exc)
         raise

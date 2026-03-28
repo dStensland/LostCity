@@ -53,7 +53,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -363,9 +363,9 @@ def _resolve_venue(location: str) -> dict:
         return dict(_DEFAULT_VENUE)
 
     loc_lower = location.lower()
-    for key, venue_data in _VENUE_REGISTRY.items():
+    for key, place_data in _VENUE_REGISTRY.items():
         if key in loc_lower:
-            return dict(venue_data)
+            return dict(place_data)
 
     return dict(_DEFAULT_VENUE)
 
@@ -478,7 +478,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         else:
             location = ""
 
-        venue_data = _resolve_venue(location)
+        place_data = _resolve_venue(location)
         age_min, age_max = _infer_ages(title, description or "")
         category = _infer_category(title)
 
@@ -497,12 +497,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
         is_all_day = end_date and end_date != start_date
 
         try:
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
         except Exception as exc:
-            logger.error("Georgia 4-H: venue upsert failed for '%s': %s", venue_data.get("name"), exc)
+            logger.error("Georgia 4-H: venue upsert failed for '%s': %s", place_data.get("name"), exc)
             continue
 
-        content_hash = generate_content_hash(title, venue_data["name"], start_date)
+        content_hash = generate_content_hash(title, place_data["name"], start_date)
 
         # Skip duplicates within same run (some events may appear twice in HTML)
         if content_hash in seen_hashes:
@@ -549,7 +549,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "Georgia 4-H: inserted '%s' on %s at %s",
                     title,
                     start_date,
-                    venue_data.get("name"),
+                    place_data.get("name"),
                 )
             except Exception as exc:
                 logger.error("Georgia 4-H: insert failed for '%s': %s", title, exc)

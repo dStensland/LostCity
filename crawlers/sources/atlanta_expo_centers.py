@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -316,12 +316,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
         raise ValueError("Atlanta Expo Centers page did not yield any future non-dedicated events")
 
     for event in events:
-        venue_data = VENUE_DATA_BY_LABEL.get(normalize_label(event["facility"]))
-        if not venue_data:
+        place_data = VENUE_DATA_BY_LABEL.get(normalize_label(event["facility"]))
+        if not place_data:
             continue
-        venue_id = get_or_create_venue(venue_data)
+        venue_id = get_or_create_place(place_data)
 
-        content_hash = generate_content_hash(event["title"], venue_data["name"], event["start_date"])
+        content_hash = generate_content_hash(event["title"], place_data["name"], event["start_date"])
         current_hashes.add(content_hash)
         events_found += 1
 

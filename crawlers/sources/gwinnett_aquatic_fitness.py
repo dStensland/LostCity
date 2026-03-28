@@ -12,7 +12,7 @@ from datetime import date, datetime, timedelta
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -108,7 +108,7 @@ VENUE_DATA_BY_LOCATION = {
 }
 
 
-def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityEnvelope:
+def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityEnvelope:
     envelope = TypedEntityEnvelope()
 
     envelope.add(
@@ -129,7 +129,7 @@ def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityE
             "source_url": CATALOG_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "venue_type": venue_data.get("venue_type"),
+                "venue_type": place_data.get("venue_type"),
                 "county": "gwinnett",
             },
         },
@@ -141,7 +141,7 @@ def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityE
             "slug": "public-pool-and-aquatics-programs",
             "title": "Public pool and aquatics programs",
             "feature_type": "amenity",
-            "description": f"{venue_data['name']} is one of Gwinnett's aquatic facilities with public swim and family aquatics programming.",
+            "description": f"{place_data['name']} is one of Gwinnett's aquatic facilities with public swim and family aquatics programming.",
             "url": CATALOG_URL,
             "price_note": "Public access and registration vary by program and season.",
             "is_free": False,
@@ -197,8 +197,8 @@ def parse_session(session: dict, today: date) -> dict | None:
 
     features = {feature.get("name"): feature.get("value") for feature in session.get("features") or []}
     location = (features.get("location") or "").strip().lower()
-    venue_data = VENUE_DATA_BY_LOCATION.get(location)
-    if not venue_data:
+    place_data = VENUE_DATA_BY_LOCATION.get(location)
+    if not place_data:
         return None
 
     start_date, end_date = _parse_date_range(features.get("dates") or "", today)
@@ -215,7 +215,7 @@ def parse_session(session: dict, today: date) -> dict | None:
 
     price = session.get("price")
     price_value = float(price) if price is not None else None
-    title = f"{(session.get('text') or '').strip()} at {venue_data['name']}"
+    title = f"{(session.get('text') or '').strip()} at {place_data['name']}"
     if not title.strip() or title.startswith(" at "):
         return None
 
@@ -224,7 +224,7 @@ def parse_session(session: dict, today: date) -> dict | None:
         return None
 
     description = (
-        f"Aquatics fitness class at {venue_data['name']} through Gwinnett County Parks & Recreation. "
+        f"Aquatics fitness class at {place_data['name']} through Gwinnett County Parks & Recreation. "
         "Reserve through the official county catalog for current availability."
     )
 
@@ -233,7 +233,7 @@ def parse_session(session: dict, today: date) -> dict | None:
         "description": description,
         "start_time": start_time,
         "end_time": end_time,
-        "venue_data": venue_data,
+        "venue_data": place_data,
         "weekdays": weekdays,
         "occurrences": occurrences,
         "price_min": price_value,
@@ -247,7 +247,7 @@ def parse_session(session: dict, today: date) -> dict | None:
         "source_url": CATALOG_URL,
         "raw_text": (
             f"{session.get('text','')} | {features.get('days','')} | {features.get('dates','')} | "
-            f"{features.get('times','')} | {venue_data['name']}"
+            f"{features.get('times','')} | {place_data['name']}"
         ),
     }
 
@@ -291,7 +291,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         if not parsed:
             continue
 
-        venue_id = get_or_create_venue(parsed["venue_data"])
+        venue_id = get_or_create_place(parsed["venue_data"])
         if venue_id not in enriched_venue_ids:
             persist_typed_entity_envelope(
                 _build_destination_envelope(parsed["venue_data"], venue_id)

@@ -24,7 +24,7 @@ from bs4 import BeautifulSoup, Tag
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -48,7 +48,7 @@ PROGRAM_PAGES = [
     "https://www.theswiftschool.org/programs/summer-programs/swift-skills",
 ]
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Swift School",
     "slug": "swift-school",
     "address": "300 Grimes Bridge Road",
@@ -426,7 +426,7 @@ def _parse_program_page(html: str, source_url: str) -> list[dict]:
 
 def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     content_hash = generate_content_hash(
-        row["title"], VENUE_DATA["name"], row["start_date"]
+        row["title"], PLACE_DATA["name"], row["start_date"]
     )
     record = {
         "source_id": source_id,
@@ -471,7 +471,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     session = requests.Session()
     session.headers.update(REQUEST_HEADERS)
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     today = date.today().strftime("%Y-%m-%d")
 
     for page_url in PROGRAM_PAGES:

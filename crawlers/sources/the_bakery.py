@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import parse_price, extract_images_from_page
 
@@ -26,7 +26,7 @@ EVENTS_URL = "https://www.thebakeryatlanta.com/events"
 # Ticket Tailor public listing
 TT_URL = "https://www.tickettailor.com/events/thebakeryatlanta"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "The Bakery",
     "slug": "the-bakery-atl",
     "address": "638 N Highland Ave NE",
@@ -131,7 +131,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)

@@ -38,7 +38,7 @@ from typing import Optional
 import requests
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     find_existing_event_for_insert,
@@ -487,9 +487,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
     total_updated = 0
 
     for loc in LOCATIONS:
-        venue_data = _build_venue_data(loc)
+        place_data = _build_venue_data(loc)
         try:
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
         except Exception as exc:
             logger.error(
                 f"[goldfish-swim] Failed to get/create venue for {loc['name']}: {exc}"

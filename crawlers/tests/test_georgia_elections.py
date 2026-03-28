@@ -14,7 +14,7 @@ from sources.georgia_elections import (
     _parse_date,
     _parse_table,
     SOURCE_URL,
-    VENUE_DATA,
+    PLACE_DATA,
 )
 
 
@@ -279,7 +279,7 @@ def test_build_registration_deadline_event_content_hash_unique_per_election() ->
 
 
 # ---------------------------------------------------------------------------
-# VENUE_DATA sanity
+# PLACE_DATA sanity
 # ---------------------------------------------------------------------------
 
 
@@ -298,12 +298,12 @@ def test_venue_data_has_required_fields() -> None:
         "website",
     ]
     for field in required:
-        assert field in VENUE_DATA, f"VENUE_DATA missing field: {field}"
+        assert field in PLACE_DATA, f"PLACE_DATA missing field: {field}"
 
 
 def test_venue_data_lat_lng_are_numeric() -> None:
-    assert isinstance(VENUE_DATA["lat"], float)
-    assert isinstance(VENUE_DATA["lng"], float)
+    assert isinstance(PLACE_DATA["lat"], float)
+    assert isinstance(PLACE_DATA["lng"], float)
     # Marietta, GA approximate bounds
-    assert 33.8 < VENUE_DATA["lat"] < 34.1
-    assert -84.7 < VENUE_DATA["lng"] < -84.4
+    assert 33.8 < PLACE_DATA["lat"] < 34.1
+    assert -84.7 < PLACE_DATA["lng"] < -84.4

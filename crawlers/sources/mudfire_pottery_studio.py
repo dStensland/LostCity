@@ -18,7 +18,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, parse_price, normalize_time_format
 
@@ -29,7 +29,7 @@ SCHEDULING_URL = "https://app.squarespacescheduling.com/schedule.php?owner=25826
 DATE_NIGHT_URL = f"{BASE_URL}/date-nights"
 CLASSES_URL = f"{BASE_URL}/classes"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "MudFire Pottery Studio",
     "slug": "mudfire-pottery-studio",
     "address": "175 Laredo Dr",
@@ -170,7 +170,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # Get or create venue
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
     except Exception as e:
         logger.error(f"Failed to create venue: {e}")
         return 0, 0, 0

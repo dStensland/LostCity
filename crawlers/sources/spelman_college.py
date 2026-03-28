@@ -16,7 +16,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -252,7 +252,7 @@ def parse_html_date(date_text: str, current_year: int = 2026) -> tuple[str, str]
 def categorize_event(event_data: dict, title: str) -> tuple[str, str, dict]:
     """
     Categorize event based on filter tags and title.
-    Returns (category, subcategory, venue_data).
+    Returns (category, subcategory, place_data).
     """
     filter_tags = event_data.get("filter1", [])
     title_lower = title.lower()
@@ -534,13 +534,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 # Categorize event and get venue
-                category, subcategory, venue_data = categorize_event(event_data, title)
-                venue_id = get_or_create_venue(venue_data)
-                if venue_data["slug"] == VENUES["museum"]["slug"]:
+                category, subcategory, place_data = categorize_event(event_data, title)
+                venue_id = get_or_create_place(place_data)
+                if place_data["slug"] == VENUES["museum"]["slug"]:
                     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
                 # Check for duplicates
-                content_hash = generate_content_hash(title, venue_data["name"], start_date)
+                content_hash = generate_content_hash(title, place_data["name"], start_date)
 
                 # Extract additional info
                 description = event_data.get("description", "")
@@ -645,9 +645,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 # Categorize event and get venue
-                category, subcategory, venue_data = categorize_event({}, title)
-                venue_id = get_or_create_venue(venue_data)
-                if venue_data["slug"] == VENUES["museum"]["slug"]:
+                category, subcategory, place_data = categorize_event({}, title)
+                venue_id = get_or_create_place(place_data)
+                if place_data["slug"] == VENUES["museum"]["slug"]:
                     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
                 # Build description
@@ -657,7 +657,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 tags = ["college", "hbcu", "spelman", "women", "annual"]
 
                 # Create event record
-                content_hash = generate_content_hash(title, venue_data["name"], start_date)
+                content_hash = generate_content_hash(title, place_data["name"], start_date)
                 event_record = {
                     "source_id": source_id,
                     "venue_id": venue_id,
@@ -699,7 +699,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 logger.error(f"Failed to process static event '{event_data.get('title', 'Unknown')}': {e}", exc_info=True)
                 continue
 
-        museum_venue_id = get_or_create_venue(VENUES["museum"])
+        museum_venue_id = get_or_create_place(VENUES["museum"])
         dest_envelope = _build_destination_envelope(museum_venue_id)
         persist_typed_entity_envelope(dest_envelope)
 

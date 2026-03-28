@@ -128,9 +128,9 @@ def _target_from_source_slug(source_slug: str) -> Optional[Target]:
         return None
 
     module = import_module(module_path)
-    venue_data = getattr(module, "VENUE_DATA", None) or {}
-    venue_slug = venue_data.get("slug") or source_slug
-    venue_name = venue_data.get("name") or source_slug
+    place_data = getattr(module, "PLACE_DATA", None) or {}
+    venue_slug = place_data.get("slug") or source_slug
+    venue_name = place_data.get("name") or source_slug
     venue_rows = _venue_rows_by_slug([venue_slug])
     venue_row = venue_rows.get(venue_slug)
     if not venue_row:

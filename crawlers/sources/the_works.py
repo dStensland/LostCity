@@ -16,7 +16,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -210,9 +210,9 @@ def _classify_event(title: str) -> tuple[str, Optional[str], list[str]]:
 def _resolve_venue(venue_name: str, primary_venue: dict, sub_venues: dict[str, dict]) -> dict:
     """Map TEC venue name to our sub-venue data."""
     venue_lower = venue_name.lower()
-    for keyword, venue_data in sub_venues.items():
+    for keyword, place_data in sub_venues.items():
         if keyword in venue_lower:
-            return venue_data
+            return place_data
     return primary_venue
 
 
@@ -230,7 +230,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     venue_ids: dict[str, int] = {}
     for vdata in [primary_venue] + list(sub_venues.values()):
-        venue_ids[vdata["slug"]] = get_or_create_venue(vdata)
+        venue_ids[vdata["slug"]] = get_or_create_place(vdata)
 
     try:
         with sync_playwright() as p:

@@ -17,7 +17,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from description_fetcher import fetch_description_playwright
 
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://wish.org/georgia"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Make-A-Wish Georgia",
     "slug": "make-a-wish-georgia",
     "address": "1775 The Exchange SE, Suite 200",
@@ -147,7 +147,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Make-A-Wish Georgia events: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

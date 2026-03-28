@@ -6,13 +6,13 @@ Inman Park wine bar with events and tastings.
 from __future__ import annotations
 
 import logging
-from db import get_or_create_venue
+from db import get_or_create_place
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.barcelonawinebar.com/inman-park"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Barcelona Wine Bar",
     "slug": "barcelona-wine-bar",
     "address": "240 North Highland Ave NE",
@@ -32,7 +32,7 @@ VENUE_DATA = {
 def crawl(source: dict) -> tuple[int, int, int]:
     """Ensure Barcelona Wine Bar exists as a venue."""
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         logger.info(f"Barcelona Wine Bar venue record ensured (ID: {venue_id})")
         return 0, 0, 0
     except Exception as e:

@@ -14,7 +14,7 @@ import logging
 from datetime import datetime, timedelta
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_existing_event_for_insert,
     smart_update_existing_event,
@@ -155,16 +155,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     for slot in WEEKLY_SCHEDULE:
         venue_key = slot["venue_key"]
-        venue_data = VENUES.get(venue_key)
-        if not venue_data:
+        place_data = VENUES.get(venue_key)
+        if not place_data:
             logger.warning(f"Unknown venue key: {venue_key}")
             continue
 
         if venue_key not in venue_ids:
-            venue_ids[venue_key] = get_or_create_venue(venue_data)
+            venue_ids[venue_key] = get_or_create_place(place_data)
 
         venue_id = venue_ids[venue_key]
-        venue_name = venue_data["name"]
+        venue_name = place_data["name"]
         day_int = slot["day"]
         start_time = slot["start_time"]
         day_code = DAY_CODES[day_int]
@@ -210,7 +210,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "price_min": None,
                 "price_max": None,
                 "price_note": "Free to play",
-                "source_url": venue_data.get("website", "https://dirtysouthtrivia.com"),
+                "source_url": place_data.get("website", "https://dirtysouthtrivia.com"),
                 "ticket_url": None,
                 "image_url": None,
                 "raw_text": f"Dirty South Trivia at {venue_name} - {start_date}",

@@ -15,7 +15,7 @@ from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_or_create_virtual_venue
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, get_or_create_virtual_venue
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -85,7 +85,7 @@ def get_venue_from_json_ld(location_data: dict) -> dict:
 
     address = location_data.get('address', {})
 
-    venue_data = {
+    place_data = {
         'name': location_data.get('name', 'TBD'),
         'address': address.get('streetAddress'),
         'city': address.get('addressLocality', 'Atlanta'),
@@ -95,11 +95,11 @@ def get_venue_from_json_ld(location_data: dict) -> dict:
     }
 
     # Generate slug from name
-    name = venue_data['name']
+    name = place_data['name']
     slug = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
-    venue_data['slug'] = slug
+    place_data['slug'] = slug
 
-    return venue_data
+    return place_data
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -178,9 +178,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if is_virtual:
                         venue_id = get_or_create_virtual_venue()
                     elif location_data:
-                        venue_data = get_venue_from_json_ld(location_data)
-                        if venue_data:
-                            venue_id = get_or_create_venue(venue_data)
+                        place_data = get_venue_from_json_ld(location_data)
+                        if place_data:
+                            venue_id = get_or_create_place(place_data)
                         else:
                             venue_id = None
                     else:

@@ -14,7 +14,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -24,7 +24,7 @@ BASE_URL = "https://www.mariettaga.gov"
 EVENTS_URL = f"{BASE_URL}/192/Glover-Park-Concert-Series"
 
 # Glover Park venue
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Glover Park",
     "slug": "glover-park-marietta",
     "address": "50 N Park Square",
@@ -178,7 +178,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Get venue ID for Glover Park
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Glover Park Concert Series: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

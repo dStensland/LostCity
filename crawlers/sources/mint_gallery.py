@@ -13,7 +13,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://mintgallery.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Mint Gallery",
     "slug": "mint-gallery",
     "address": "1379 La France St NE",
@@ -74,7 +74,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Mint Gallery: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
@@ -152,7 +152,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                    content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
 
                     # Determine subcategory based on title
@@ -173,7 +173,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": f"Event at {VENUE_DATA['name']}",
+                        "description": f"Event at {PLACE_DATA['name']}",
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,

@@ -10,14 +10,14 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.sisterlouisaschurch.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Sister Louisa's Church of the Living Room & Ping Pong Emporium",
     "slug": "sister-louisas-church",
     "address": "466 Edgewood Ave SE",
@@ -85,7 +85,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Get or create venue
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         for day_of_week, title, time_24h, description, subcategory, genres, tags in WEEKLY_SCHEDULE:
             # Generate events for each week
@@ -100,7 +100,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_found += 1
 
                 content_hash = generate_content_hash(
-                    title, VENUE_DATA["name"], start_date
+                    title, PLACE_DATA["name"], start_date
                 )
 
 

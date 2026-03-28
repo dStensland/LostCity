@@ -13,7 +13,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, find_existing_event_for_insert
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, find_existing_event_for_insert
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.hereticatlanta.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "The Heretic",
     "slug": "the-heretic",
     "address": "2069 Cheshire Bridge Rd NE",
@@ -89,7 +89,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
             events_found += 1
 
             content_hash = generate_content_hash(
-                template["title"], VENUE_DATA["name"], start_date
+                template["title"], PLACE_DATA["name"], start_date
             )
 
             is_free = template.get("is_free", False) or "free" in template["tags"]
@@ -113,7 +113,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
                 "source_url": BASE_URL,
                 "ticket_url": None,
                 "image_url": None,
-                "raw_text": f"{template['title']} at {VENUE_DATA['name']} - {start_date}",
+                "raw_text": f"{template['title']} at {PLACE_DATA['name']} - {start_date}",
                 "extraction_confidence": 0.90,
                 "is_recurring": True,
                 "recurrence_rule": f"FREQ=WEEKLY;BYDAY={day_code}",
@@ -168,7 +168,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching The Heretic: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

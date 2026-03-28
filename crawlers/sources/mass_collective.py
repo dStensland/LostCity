@@ -17,7 +17,7 @@ from datetime import datetime
 from typing import Optional
 
 from config import get_config
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 ORGANIZER_ID = "4567583831"
 API_BASE = "https://www.eventbriteapi.com/v3/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "MASS Collective",
     "slug": "mass-collective",
     "address": "364 Nelson St SW",
@@ -292,7 +292,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Create/get venue
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Fetch all events from API
         logger.info(f"Fetching events for MASS Collective (organizer {ORGANIZER_ID})...")

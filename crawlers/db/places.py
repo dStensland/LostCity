@@ -463,8 +463,8 @@ def _persist_venue_enrichment(
     """
     if details:
         try:
-            from db.place_vertical import upsert_venue_destination_details
-            upsert_venue_destination_details(venue_id, details)
+            from db.place_vertical import upsert_place_vertical_details
+            upsert_place_vertical_details(venue_id, details)
             logger.debug("_persist_venue_enrichment: destination_details for venue_id=%s", venue_id)
         except Exception:
             logger.exception("_persist_venue_enrichment: destination_details failed for venue_id=%s", venue_id)
@@ -483,9 +483,9 @@ def _persist_venue_enrichment(
 
     if specials:
         try:
-            from db.place_specials import upsert_venue_special
+            from db.place_specials import upsert_place_special
             for special in specials:
-                upsert_venue_special(venue_id, special)
+                upsert_place_special(venue_id, special)
             logger.debug(
                 "_persist_venue_enrichment: %d special(s) for venue_id=%s",
                 len(specials),

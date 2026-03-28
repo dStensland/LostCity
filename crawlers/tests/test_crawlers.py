@@ -276,8 +276,8 @@ class TestCrawlerIntegration:
         """Verify venue data has required fields."""
         from sources import the_earl
 
-        assert hasattr(the_earl, "VENUE_DATA")
-        venue = the_earl.VENUE_DATA
+        assert hasattr(the_earl, "PLACE_DATA")
+        venue = the_earl.PLACE_DATA
         required_fields = ["name", "slug", "address", "city", "state"]
         for field in required_fields:
             assert field in venue, f"Missing required field: {field}"

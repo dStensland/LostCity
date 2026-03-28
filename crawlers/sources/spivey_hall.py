@@ -20,7 +20,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -34,7 +34,7 @@ BASE_URL = "https://spiveyhall.org"
 FULLCAL_API = f"{BASE_URL}/wp-admin/admin-ajax.php"
 REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"}
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Spivey Hall",
     "slug": "spivey-hall",
     "address": "2000 Clayton State Blvd",
@@ -154,7 +154,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     today = datetime.now()
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Fetch 6-month window from the FullCalendar API
         start_date = today.strftime("%Y-%m-%d")

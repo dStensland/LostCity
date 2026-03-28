@@ -75,7 +75,7 @@ def test_extract_price_note_parses_admission_and_ride_pricing():
 
 
 def test_build_event_record_shapes_tentpole_fair_event():
-    with patch("sources.atlanta_fair.get_or_create_venue", return_value=515):
+    with patch("sources.atlanta_fair.get_or_create_place", return_value=515):
         record = build_event_record(11, HOMEPAGE_HTML, HOURS_HTML, PRICES_HTML)
 
     assert record["title"] == "Atlanta Fair 2026"
@@ -96,7 +96,7 @@ def test_crawl_inserts_single_tentpole_event():
         "sources.atlanta_fair._fetch_html",
         side_effect=[HOMEPAGE_HTML, HOURS_HTML, PRICES_HTML],
     ):
-        with patch("sources.atlanta_fair.get_or_create_venue", return_value=515):
+        with patch("sources.atlanta_fair.get_or_create_place", return_value=515):
             with patch("sources.atlanta_fair.find_event_by_hash", return_value=None):
                 with patch("sources.atlanta_fair.insert_event") as insert_event:
                     found, new, updated = crawl({"id": 11, "slug": "atlanta-fair"})

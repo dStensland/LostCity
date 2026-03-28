@@ -34,7 +34,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 FEED_URL = "https://atlantacityga.iqm2.com/Services/RSS.aspx?Feed=Calendar"
 BASE_URL = "https://atlantacityga.iqm2.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta City Hall",
     "slug": "atlanta-city-hall",
     "address": "55 Trinity Avenue SW",
@@ -281,7 +281,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         with requests.Session() as session:
             html = _fetch_feed(session)
@@ -352,7 +352,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 description = " ".join(description_parts)
 
                 content_hash = generate_content_hash(
-                    title, VENUE_DATA["name"], start_date
+                    title, PLACE_DATA["name"], start_date
                 )
 
                 event_record = {

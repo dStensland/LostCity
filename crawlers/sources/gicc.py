@@ -24,7 +24,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -39,7 +39,7 @@ USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 MAX_PAGES = 10
 MAX_EVENT_LEAD_DAYS = 270
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia International Convention Center",
     "slug": "georgia-international-convention-center",
     "address": "2000 Convention Center Concourse",
@@ -217,7 +217,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     current_hashes: set[str] = set()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     page_url = EVENTS_URL
     seen_pages: set[str] = set()
     seen_event_keys: set[tuple[str, str]] = set()
@@ -249,7 +249,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     for event in parsed_events:
         title = event["title"]
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], event["start_date"])
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], event["start_date"])
         current_hashes.add(content_hash)
         events_found += 1
 

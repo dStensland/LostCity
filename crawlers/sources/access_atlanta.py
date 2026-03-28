@@ -14,7 +14,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from utils import slugify
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -213,14 +213,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     category = determine_category(f"{title} {venue_name}")
 
                     # Create venue
-                    venue_data = {
+                    place_data = {
                         "name": venue_name,
                         "slug": slugify(venue_name),
                         "city": "Atlanta",
                         "state": "GA",
                         "venue_type": "venue",
                     }
-                    venue_id = get_or_create_venue(venue_data)
+                    venue_id = get_or_create_place(place_data)
 
                     # Content hash
                     content_hash = generate_content_hash(title, venue_name, start_date)

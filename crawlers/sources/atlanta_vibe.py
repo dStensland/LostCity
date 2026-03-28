@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup, Tag
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -198,18 +198,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
     )
     response.raise_for_status()
 
-    gas_south_venue_id = get_or_create_venue(GAS_SOUTH_VENUE_DATA)
-    gsu_venue_id = get_or_create_venue(GSU_CONVOCATION_VENUE_DATA)
+    gas_south_venue_id = get_or_create_place(GAS_SOUTH_VENUE_DATA)
+    gsu_venue_id = get_or_create_place(GSU_CONVOCATION_VENUE_DATA)
 
     venue_matches = [
         (gas_south_venue_id, GAS_SOUTH_VENUE_DATA, parse_schedule_html(response.text)),
         (gsu_venue_id, GSU_CONVOCATION_VENUE_DATA, upcoming_supplemental_matches()),
     ]
 
-    for venue_id, venue_data, matches in venue_matches:
+    for venue_id, place_data, matches in venue_matches:
         for match in matches:
             events_found += 1
-            content_hash = generate_content_hash(match["title"], venue_data["name"], match["start_date"])
+            content_hash = generate_content_hash(match["title"], place_data["name"], match["start_date"])
             current_hashes.add(content_hash)
 
             event_record = {
@@ -217,7 +217,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "venue_id": venue_id,
                 "title": match["title"],
                 "description": (
-                    f"{match['title']} at {venue_data['name']}. "
+                    f"{match['title']} at {place_data['name']}. "
                     "Official Atlanta Vibe Major League Volleyball home match."
                 ),
                 "start_date": match["start_date"],
@@ -227,7 +227,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "is_all_day": False,
                 "category": "sports",
                 "subcategory": "volleyball",
-                "tags": ["sports", "volleyball", "mlv", "atlanta-vibe", venue_data["slug"], "home-game"],
+                "tags": ["sports", "volleyball", "mlv", "atlanta-vibe", place_data["slug"], "home-game"],
                 "price_min": None,
                 "price_max": None,
                 "price_note": "See Atlanta Vibe or Ticketmaster for current pricing",

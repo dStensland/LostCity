@@ -11,7 +11,7 @@ import logging
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue
+from db import get_or_create_place
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 
@@ -27,7 +27,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     venue_specials=True,
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "David J. Sencer CDC Museum",
     "slug": "cdc-museum",
     "address": "1600 Clifton Rd NE",
@@ -124,7 +124,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Ensure venue exists in database
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         persist_typed_entity_envelope(_build_destination_envelope(venue_id))
         logger.info(f"CDC Museum venue created/verified (ID: {venue_id})")
 

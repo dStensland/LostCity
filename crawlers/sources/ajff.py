@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     get_or_create_virtual_venue,
     insert_event,
     remove_stale_source_events,
@@ -465,7 +465,7 @@ def _build_event_record(
         hash_basis = f"{original_start_date or ''}|{end_date or ''}"
         content_hash = generate_content_hash(title, "Online / Virtual Event", hash_basis)
         tags.append("virtual-cinema")
-        venue_data = None
+        place_data = None
         start_time = None
         end_time = None
         is_all_day = True
@@ -475,8 +475,8 @@ def _build_event_record(
         end_time = None
         space = _entity_from_relationship(item, "field_space", included)
         venue = _entity_from_relationship(space, "field_venue", included)
-        venue_data = _build_venue_data(space, venue)
-        venue_name = venue_data["name"]
+        place_data = _build_venue_data(space, venue)
+        venue_name = place_data["name"]
         hash_basis = f"{start_date or ''}|{start_time or ''}"
         content_hash = generate_content_hash(title, venue_name, hash_basis)
         is_all_day = False
@@ -517,7 +517,7 @@ def _build_event_record(
         "recurrence_rule": None,
         "content_hash": content_hash,
         "is_virtual": is_virtual,
-        "venue_data": venue_data,
+        "venue_data": place_data,
     }
 
 
@@ -629,7 +629,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         seen_hashes.add(tentpole_hash)
         events_found += 1
 
-        festival_venue_id = get_or_create_venue(tentpole_record.pop("venue_data"))
+        festival_venue_id = get_or_create_place(tentpole_record.pop("venue_data"))
         tentpole_record["source_id"] = source_id
         tentpole_record["venue_id"] = festival_venue_id
 
@@ -668,11 +668,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
             seen_hashes.add(content_hash)
             events_found += 1
 
-            venue_data = event_record.pop("venue_data")
-            cache_key = venue_data["slug"]
+            place_data = event_record.pop("venue_data")
+            cache_key = place_data["slug"]
             venue_id = venue_cache.get(cache_key)
             if venue_id is None:
-                venue_id = get_or_create_venue(venue_data)
+                venue_id = get_or_create_place(place_data)
                 venue_cache[cache_key] = venue_id
 
             event_record.pop("is_virtual", None)

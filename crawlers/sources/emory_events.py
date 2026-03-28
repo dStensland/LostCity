@@ -11,7 +11,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -232,8 +232,8 @@ def crawl_feed(feed_url: str, source_id: int, is_arts_feed: bool) -> tuple[int, 
             # Venue routing
             location_raw = event.get("location", "")
             location = strip_html(location_raw)
-            venue_data = determine_venue(location)
-            venue_id = get_or_create_venue(venue_data)
+            place_data = determine_venue(location)
+            venue_id = get_or_create_place(place_data)
 
             # Category mapping
             category_calendar = event.get("categoryCalendar", "")
@@ -261,7 +261,7 @@ def crawl_feed(feed_url: str, source_id: int, is_arts_feed: bool) -> tuple[int, 
             is_free = determine_is_free(event)
 
             # Deduplication
-            content_hash = generate_content_hash(title, venue_data["name"], start_date)
+            content_hash = generate_content_hash(title, place_data["name"], start_date)
 
             # Build event record
             event_record = {

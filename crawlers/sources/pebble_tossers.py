@@ -49,7 +49,7 @@ from typing import Optional
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -535,14 +535,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
         image_url: Optional[str] = cover.get("url") if isinstance(cover, dict) else None
 
         # Build/get venue
-        venue_data = _build_venue_data(evt)
+        place_data = _build_venue_data(evt)
         try:
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
         except Exception as exc:
             logger.warning("Could not create venue for '%s': %s", title, exc)
             continue
 
-        venue_name = venue_data["name"]
+        venue_name = place_data["name"]
 
         # Tags
         tags = _infer_tags(title, raw_desc)

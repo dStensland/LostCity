@@ -15,14 +15,14 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.northgeorgiastatefair.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "North Georgia State Fair",
     "slug": "north-georgia-state-fair",
     "address": "2245 Callaway Rd SW",
@@ -108,7 +108,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             # Try BigTickets first for structured event data
             bigtickets_url = "https://www.bigtickets.com/e/northgeorgiastatefair/"

@@ -18,14 +18,14 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_client, get_or_create_venue
+from db import get_client, get_or_create_place
 
 logger = logging.getLogger(__name__)
 
 # Atlanta Trails guide is a stable community resource with good og:image.
 HOMEPAGE = "https://www.atlantatrails.com/atlanta-attractions/krog-street-tunnel/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Krog Street Tunnel",
     "slug": "krog-street-tunnel",
     "address": "Krog St NE",
@@ -92,7 +92,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     with no scheduled calendar. The crawler's sole job is to upsert the
     venue and refresh the image from the Atlanta Trails guide page.
     """
-    venue_data = dict(VENUE_DATA)
+    place_data = dict(PLACE_DATA)
 
     try:
         resp = requests.get(
@@ -103,19 +103,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
         resp.raise_for_status()
         og_image, og_desc = _extract_og_meta(resp.text)
         if og_image:
-            venue_data["image_url"] = og_image
+            place_data["image_url"] = og_image
         # Keep the curated description — community guide descriptions are often
         # more accurate than scraped og:description for landmarks.
     except Exception as exc:
         logger.warning("Krog Street Tunnel: og: enrichment failed: %s", exc)
 
-    venue_id = get_or_create_venue(venue_data)
+    venue_id = get_or_create_place(place_data)
 
     update: dict = {}
-    if venue_data.get("image_url"):
-        update["image_url"] = venue_data["image_url"]
-    if venue_data.get("description"):
-        update["description"] = venue_data["description"]
+    if place_data.get("image_url"):
+        update["image_url"] = place_data["image_url"]
+    if place_data.get("description"):
+        update["description"] = place_data["description"]
     if update:
         try:
             get_client().table("venues").update(update).eq("id", venue_id).execute()

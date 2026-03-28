@@ -35,7 +35,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -55,7 +55,7 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Gwinnett County Public Schools J. Alvin Wilbanks Instructional Support Center",
     "slug": "gwinnett-schools-isc",
     "address": "437 Old Peachtree Rd NW",
@@ -270,7 +270,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     logger.info(f"Gwinnett County Schools Board: fetching {SCHEDULE_URL}")
     html = _fetch_html(SCHEDULE_URL)
@@ -309,7 +309,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             events_found += 1
 
-            content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
             event_record = {
                 "source_id": source_id,

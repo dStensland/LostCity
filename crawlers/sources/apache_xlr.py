@@ -14,7 +14,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.apachexlr.com"
 EVENTS_URL = BASE_URL  # Check if there's a dedicated /events page
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Apache XLR",
     "slug": "apache-xlr",
     "address": "64 Wyman St SE",
@@ -132,7 +132,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             # Get page content
             body_text = page.inner_text("body")

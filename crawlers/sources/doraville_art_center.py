@@ -16,7 +16,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ CLASSES_URL = f"{BASE_URL}/classes"
 
 MAX_EVENTS = 50
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Doraville Art Center",
     "slug": "doraville-art-center",
     "address": "3774 Central Ave",
@@ -66,7 +66,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Doraville Art Center classes: {CLASSES_URL}")
             page.goto(CLASSES_URL, wait_until="domcontentloaded", timeout=30000)
@@ -125,7 +125,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, VENUE_DATA["name"], "")
+                    content_hash = generate_content_hash(title, PLACE_DATA["name"], "")
 
                     existing = find_event_by_hash(content_hash)
 

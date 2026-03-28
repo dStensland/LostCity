@@ -27,7 +27,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -333,7 +333,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    org_venue_id = get_or_create_venue(ACDC_ORG_VENUE_DATA)
+    org_venue_id = get_or_create_place(ACDC_ORG_VENUE_DATA)
 
     try:
         with sync_playwright() as p:
@@ -457,7 +457,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "website": BASE_URL,
                             }
                             try:
-                                venue_id = get_or_create_venue(new_venue_data)
+                                venue_id = get_or_create_place(new_venue_data)
                                 logger.info("ACDC: using venue '%s' for '%s'", vname, title)
                             except Exception as ve:
                                 logger.warning("ACDC: could not create venue '%s': %s", vname, ve)

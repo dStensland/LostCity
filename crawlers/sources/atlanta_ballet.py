@@ -12,7 +12,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://atlantaballet.com"
 PERFORMANCES_URL = f"{BASE_URL}/performances/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Cobb Energy Performing Arts Centre",
     "slug": "cobb-energy-centre",
     "address": "2800 Cobb Galleria Pkwy",
@@ -90,7 +90,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Extract images from page
             image_map = extract_images_from_page(page)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             body_text = page.inner_text("body")
 

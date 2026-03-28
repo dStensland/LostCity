@@ -30,7 +30,7 @@ from bs4 import BeautifulSoup
 from db import (
     get_client,
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -66,7 +66,7 @@ REQUEST_HEADERS = {
 # Polite delay between requests (seconds)
 REQUEST_DELAY = 1.0
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Center for Puppetry Arts",
     "slug": "center-for-puppetry-arts",
     "address": "1404 Spring St NW",
@@ -511,7 +511,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     session = requests.Session()
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         persist_typed_entity_envelope(_build_destination_envelope(venue_id))
         logger.info("Center for Puppetry Arts venue ensured (ID: %s)", venue_id)
 
@@ -667,7 +667,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Build stable content hash including time so each slot is unique
                     hash_key = f"{start_date}|{start_time}" if start_time else start_date
-                    content_hash = generate_content_hash(title, VENUE_DATA["name"], hash_key)
+                    content_hash = generate_content_hash(title, PLACE_DATA["name"], hash_key)
 
                     event_record: dict = {
                         "source_id": source_id,

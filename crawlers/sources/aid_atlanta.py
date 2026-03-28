@@ -22,7 +22,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -32,7 +32,7 @@ BASE_URL = "https://www.aidatlanta.org"
 EVENTS_URL = f"{BASE_URL}/events/"
 
 # Main headquarters venue
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "AID Atlanta",
     "slug": "aid-atlanta",
     "address": "1438 W Peachtree St NW",
@@ -239,7 +239,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching AID Atlanta events: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="networkidle", timeout=30000)
@@ -364,7 +364,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Generate content hash
                     content_hash = generate_content_hash(
-                        title, VENUE_DATA["name"], start_date
+                        title, PLACE_DATA["name"], start_date
                     )
 
                     # Check for existing

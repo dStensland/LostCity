@@ -15,7 +15,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     find_existing_event_for_insert,
@@ -31,7 +31,7 @@ EVENTS_URL = f"{BASE_URL}/events"
 
 WEEKS_AHEAD = 6
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Mary's",
     "slug": "marys-bar",
     "address": "1287 Glenwood Ave SE",
@@ -100,7 +100,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
             events_found += 1
 
             content_hash = generate_content_hash(
-                template["title"], VENUE_DATA["name"], start_date
+                template["title"], PLACE_DATA["name"], start_date
             )
 
             event_record = {
@@ -174,7 +174,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Mary's: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
@@ -326,7 +326,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         raise
 
     # Generate recurring karaoke events
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     r_found, r_new, r_updated = _generate_recurring_events(source_id, venue_id)
     events_found += r_found
     events_new += r_new

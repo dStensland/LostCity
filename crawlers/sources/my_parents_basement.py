@@ -15,7 +15,7 @@ from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ EVENTS_URL = f"{BASE_URL}/events"
 
 MAX_EVENTS = 50
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "My Parents' Basement",
     "slug": "my-parents-basement",
     "address": "22 N Avondale Rd",
@@ -136,7 +136,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate('window.scrollBy(0, 1000)')
                 page.wait_for_timeout(1000)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             # Squarespace events: article elements or event-item divs
             event_items = page.query_selector_all('article, .eventlist-event, [data-item-id]')
@@ -207,7 +207,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     category, subcategory = categorize_event(title, description or '')
 
-                    content_hash = generate_content_hash(title, VENUE_DATA['name'], start_date)
+                    content_hash = generate_content_hash(title, PLACE_DATA['name'], start_date)
 
 
                     # Get image

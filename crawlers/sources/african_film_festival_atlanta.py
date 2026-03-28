@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -311,7 +311,7 @@ def build_tentpole_event_record(
         description_parts.append(f"2026 theme: {theme}.")
     description_parts.append("Screenings take place at venues across Atlanta with tickets and schedule managed through the official AFFATL Eventbrite collection.")
 
-    venue_id = get_or_create_venue(FESTIVAL_VENUE)
+    venue_id = get_or_create_place(FESTIVAL_VENUE)
     content_hash = generate_content_hash(title, FESTIVAL_VENUE["name"], start_date)
 
     return {
@@ -352,8 +352,8 @@ def build_screening_event_record(source_id: int, event: dict) -> Optional[dict]:
     if not title:
         return None
 
-    venue_data = _build_venue_data(event)
-    venue_id = get_or_create_venue(venue_data)
+    place_data = _build_venue_data(event)
+    venue_id = get_or_create_place(place_data)
     start_date, start_time = _parse_eventbrite_datetime(event.get("start"))
     end_date, end_time = _parse_eventbrite_datetime(event.get("end"))
     if not start_date:
@@ -377,7 +377,7 @@ def build_screening_event_record(source_id: int, event: dict) -> Optional[dict]:
     price_note = "Free with RSVP on Eventbrite." if is_free else "Tickets available on Eventbrite."
     content_hash = generate_content_hash(
         title,
-        venue_data["name"],
+        place_data["name"],
         f"{start_date}|{start_time or ''}",
     )
 

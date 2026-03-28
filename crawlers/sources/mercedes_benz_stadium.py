@@ -15,7 +15,7 @@ import requests
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://mercedesbenzstadium.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Mercedes-Benz Stadium",
     "slug": "mercedes-benz-stadium",
     "address": "1 AMB Drive NW",
@@ -189,7 +189,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Fetch og:image from homepage to enrich venue record
-        venue_data = dict(VENUE_DATA)
+        place_data = dict(PLACE_DATA)
         try:
             _headers = {
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
@@ -199,7 +199,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 _home_soup = BeautifulSoup(_home_resp.text, "html.parser")
                 _og_image = _home_soup.find("meta", attrs={"property": "og:image"})
                 if _og_image and _og_image.get("content"):
-                    venue_data["image_url"] = _og_image["content"]
+                    place_data["image_url"] = _og_image["content"]
                     logger.debug("Fetched og:image for Mercedes-Benz Stadium")
         except Exception as _e:
             logger.debug(f"Could not fetch og:image for Mercedes-Benz Stadium: {_e}")
@@ -212,7 +212,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
             persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Mercedes-Benz Stadium: {EVENTS_URL}")

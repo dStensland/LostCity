@@ -12,7 +12,7 @@ Data flow:
   2. Fetch each event detail page concurrently to extract: venue name, street
      address, price, ticket URL, and topic tags.
   3. Per-event venue creation: each event may be at a different venue. We call
-     get_or_create_venue() per unique (venue_name, address) pair.
+     get_or_create_place() per unique (venue_name, address) pair.
 
 Design notes:
   - No Tribe API, no JavaScript rendering — static HTML served by WordPress
@@ -42,7 +42,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -686,7 +686,7 @@ def _get_or_create_event_venue(
     # Determine venue_type from name heuristics
     venue_type = _infer_venue_type(venue_name, is_outdoor)
 
-    venue_data: dict = {
+    place_data: dict = {
         "name": venue_name,
         "slug": slug,
         "address": venue_address or "",
@@ -699,7 +699,7 @@ def _get_or_create_event_venue(
         "vibes": ["educational", "family-friendly"],
     }
 
-    venue_id = get_or_create_venue(venue_data)
+    venue_id = get_or_create_place(place_data)
     _venue_cache[cache_key] = venue_id
     return venue_id
 
@@ -950,7 +950,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # Ensure the fallback org venue exists upfront
     try:
-        fallback_venue_id = get_or_create_venue(_FESTIVAL_ORG_VENUE)
+        fallback_venue_id = get_or_create_place(_FESTIVAL_ORG_VENUE)
     except Exception as exc:
         logger.error("[asf] Could not create fallback venue: %s", exc)
         fallback_venue_id = None

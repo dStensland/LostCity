@@ -26,7 +26,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ BASE_URL = "https://www.katesclub.org"
 EVENTS_URL = f"{BASE_URL}/events"
 CALENDAR_URL = f"{BASE_URL}/calendar"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Kate's Club",
     "slug": "kates-club",
     "address": "660 Peachtree St NE Suite 100",
@@ -199,7 +199,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         urls_to_try = [EVENTS_URL, CALENDAR_URL]
 
@@ -323,7 +323,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         events_found += 1
 
-                        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
 
                         category, subcategory, tags = categorize_event(title, description or "")

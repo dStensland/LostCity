@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
+from db import find_event_by_hash, get_or_create_place, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ EVENTS_URL = "https://www.westsidemotorlounge.com/happenings/"
 CARD_SELECTOR = ".shotgun-event-card"
 ATLANTA_TZ = ZoneInfo("America/New_York")
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Westside Motor Lounge",
     "slug": "westside-motor-lounge",
     "address": "725 Echo St NW",
@@ -125,7 +125,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -178,7 +178,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 image_url = image
 
             events_found += 1
-            content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
             event_record = {
                 "source_id": source_id,

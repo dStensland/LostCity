@@ -28,7 +28,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     get_client,
     insert_event,
     smart_update_existing_event,
@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.lwvaf.org"
 EVENTS_URL = f"{BASE_URL}/calendar"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "League of Women Voters Atlanta-Fulton",
     "slug": "lwv-atlanta-fulton",
     "address": "Atlanta, GA",
@@ -285,7 +285,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     html = _fetch_events_page()
     if not html:

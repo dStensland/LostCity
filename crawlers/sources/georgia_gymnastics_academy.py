@@ -30,7 +30,7 @@ from sources._jackrabbit_base import JackRabbitConfig, crawl_jackrabbit
 
 _CONFIG = JackRabbitConfig(
     org_id="509235",
-    venue_data={
+    place_data={
         "name": "Georgia Gymnastics Academy",
         "slug": "georgia-gymnastics-academy",
         "address": "145 Old Peachtree Road NW",

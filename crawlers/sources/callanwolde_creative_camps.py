@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -42,7 +42,7 @@ REQUEST_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Callanwolde Fine Arts Center",
     "slug": "callanwolde-fine-arts-center",
     "address": "980 Briarcliff Rd NE",
@@ -191,7 +191,7 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
         "recurrence_rule": None,
         "content_hash": generate_content_hash(
             f"{row['title']} {row.get('reg_code') or ''}",
-            VENUE_DATA["name"],
+            PLACE_DATA["name"],
             row["start_date"],
         ),
         "age_min": row["age_min"],
@@ -213,7 +213,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.error("Callanwolde Creative Camps fetch failed: %s", exc)
         return 0, 0, 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     today = date.today().strftime("%Y-%m-%d")
 
     for row in rows:

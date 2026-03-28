@@ -20,7 +20,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, Page
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ class ChainCinemaCrawler:
         CHAIN_NAME: str — display name for the chain (e.g., "AMC Theatres")
         CHAIN_TAG: str — tag slug (e.g., "amc")
         LOCATIONS: list[dict] — list of location dicts, each with:
-            - venue_data: dict — full venue data for get_or_create_venue()
+            - place_data: dict — full venue data for get_or_create_place()
             - url_slug: str — chain-specific slug/ID for URL building
 
     Subclasses must implement:
@@ -89,9 +89,9 @@ class ChainCinemaCrawler:
 
     def get_probe_days_for_location(self, location: dict) -> Optional[int]:
         """Return probe-day override for a location slug, if configured."""
-        venue_data = location.get("venue_data") or {}
+        place_data = location.get("venue_data") or {}
         slug = (
-            venue_data.get("slug")
+            place_data.get("slug")
             or location.get("slug")
             or location.get("url_slug")
         )
@@ -118,9 +118,9 @@ class ChainCinemaCrawler:
                 )
 
                 for location in self.LOCATIONS:
-                    venue_data = location["venue_data"]
-                    venue_id = get_or_create_venue(venue_data)
-                    venue_name = venue_data["name"]
+                    place_data = location["venue_data"]
+                    venue_id = get_or_create_place(place_data)
+                    venue_name = place_data["name"]
 
                     logger.info(f"Crawling {venue_name}...")
 

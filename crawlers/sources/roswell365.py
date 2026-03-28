@@ -22,7 +22,7 @@ from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import enrich_event_record
 
@@ -294,7 +294,7 @@ def scrape_event_page(page, event_url: str) -> Optional[dict]:
         if location_match:
             location_text = location_match.group(1).strip()
 
-        venue_data = parse_venue_from_text(location_text)
+        place_data = parse_venue_from_text(location_text)
 
         # Extract price info
         price_min, price_max, price_note, is_free = extract_price_info(body_text)
@@ -353,7 +353,7 @@ def scrape_event_page(page, event_url: str) -> Optional[dict]:
             "start_date": start_date,
             "start_time": start_time,
             "description": description,
-            "venue_data": venue_data,
+            "venue_data": place_data,
             "price_min": price_min,
             "price_max": price_max,
             "price_note": price_note,
@@ -455,7 +455,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 # Get or create venue
-                venue_id = get_or_create_venue(event_data["venue_data"])
+                venue_id = get_or_create_place(event_data["venue_data"])
 
                 # Check for duplicates
                 content_hash = generate_content_hash(

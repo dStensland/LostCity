@@ -29,7 +29,7 @@ from sources._jackrabbit_base import JackRabbitConfig, crawl_jackrabbit
 
 _CONFIG = JackRabbitConfig(
     org_id="549755",
-    venue_data={
+    place_data={
         "name": "Atlanta School of Gymnastics",
         "slug": "atlanta-school-of-gymnastics",
         "address": "3345 Montreal Station",

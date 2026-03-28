@@ -45,7 +45,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -179,7 +179,7 @@ def _strip_html(raw: str) -> str:
 
 def _resolve_venue(location: str) -> dict:
     """
-    Map the LOCATION field to a venue_data dict.
+    Map the LOCATION field to a place_data dict.
 
     Known venue names → precise coordinates.
     Unknown venues in Atlanta metro → fallback to council HQ.
@@ -362,7 +362,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         # Venue
         location = ev.get("LOCATION", "")
-        venue_data = _resolve_venue(location)
+        place_data = _resolve_venue(location)
 
         # Description
         raw_desc = ev.get("DESCRIPTION", "")
@@ -395,12 +395,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
             tags.append("swimming")
 
         try:
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
         except Exception as exc:
-            logger.error("BSA Atlanta: venue upsert failed for '%s': %s", venue_data.get("name"), exc)
+            logger.error("BSA Atlanta: venue upsert failed for '%s': %s", place_data.get("name"), exc)
             continue
 
-        content_hash = generate_content_hash(name, venue_data["name"], start_date)
+        content_hash = generate_content_hash(name, place_data["name"], start_date)
 
         event_record: dict = {
             "source_id": source_id,
@@ -442,7 +442,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "BSA Atlanta: inserted '%s' on %s at %s",
                     name,
                     start_date,
-                    venue_data.get("name"),
+                    place_data.get("name"),
                 )
             except Exception as exc:
                 logger.error("BSA Atlanta: insert failed for '%s': %s", name, exc)

@@ -10,13 +10,13 @@ from __future__ import annotations
 
 import logging
 
-from db import get_or_create_venue
+from db import get_or_create_place
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://watchmans.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Watchman's",
     "slug": "watchmans",
     "address": "99 Krog St NE",
@@ -36,7 +36,7 @@ VENUE_DATA = {
 def crawl(source: dict) -> tuple[int, int, int]:
     """Ensure Watchman's exists as a venue."""
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         logger.info(f"Watchman's venue record ensured (ID: {venue_id})")
         return 0, 0, 0
     except Exception as e:

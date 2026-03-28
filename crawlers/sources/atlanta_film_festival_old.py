@@ -11,7 +11,7 @@ from datetime import datetime
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.atlantafilmfestival.com"
 
 # Festival uses multiple venues - we'll create a general festival venue
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Film Festival",
     "slug": "atlanta-film-festival",
     "address": "535 Means St NW",  # Festival HQ
@@ -64,7 +64,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
                 page.wait_for_timeout(3000)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             body_text = page.inner_text("body")
             lines = [l.strip() for l in body_text.split("\n") if l.strip()]

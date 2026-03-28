@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ WEEKLY_SCHEDULE = [
 ]
 
 # Venue data for creating venues
-VENUE_DATA = {
+PLACE_DATA = {
     "Urban Pie": {
         "name": "Urban Pie",
         "slug": "urban-pie-kirkwood",
@@ -155,9 +155,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
         for day_of_week, venue_name, time_24h, address, neighborhood in WEEKLY_SCHEDULE:
             # Get or create venue
             if venue_name not in venue_ids:
-                venue_data = VENUE_DATA.get(venue_name)
-                if venue_data:
-                    venue_ids[venue_name] = get_or_create_venue(venue_data)
+                place_data = PLACE_DATA.get(venue_name)
+                if place_data:
+                    venue_ids[venue_name] = get_or_create_place(place_data)
                 else:
                     logger.warning(f"No venue data for {venue_name}")
                     continue

@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.wildasterbooks.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Wild Aster Books",
     "slug": "wild-aster-books",
     "address": "5450 Peachtree Industrial Blvd",
@@ -56,7 +56,7 @@ def generate_storytime_events(source_id: int, venue_id: int, weeks_ahead: int = 
                 continue
 
             start_date = event_date.strftime("%Y-%m-%d")
-            content_hash = generate_content_hash(recurring["title"], VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(recurring["title"], PLACE_DATA["name"], start_date)
             description = "Join MaryJean for interactive children's storytime on our stage. Perfect for little readers and their families!"
             day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
@@ -134,7 +134,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     }
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Try to fetch events page for any additional events
         try:

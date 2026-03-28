@@ -21,7 +21,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -40,7 +40,7 @@ REQUEST_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Lionheart Theatre Company",
     "slug": "lionheart-theatre",
     "address": "10 College St NW",
@@ -291,7 +291,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     seen_hashes: set[str] = set()
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         html = fetch_season_html()
         if not html:

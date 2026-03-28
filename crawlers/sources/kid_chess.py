@@ -24,7 +24,7 @@ from bs4 import BeautifulSoup, Tag
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -404,8 +404,8 @@ def _parse_section(section_title: str, section_node: Tag) -> list[dict]:
         if len(cells) != 6:
             continue
 
-        venue_data = _parse_venue_cell(cells[0])
-        if not venue_data:
+        place_data = _parse_venue_cell(cells[0])
+        if not place_data:
             continue
 
         start_date, end_date = _parse_date_text(
@@ -427,14 +427,14 @@ def _parse_section(section_title: str, section_node: Tag) -> list[dict]:
             {
                 "section_title": _clean_text(section_title),
                 "program_label": program_label,
-                "venue_name": venue_data["name"],
-                "venue_key": venue_data["key"],
-                "venue_url": venue_data.get("website"),
-                "address": venue_data.get("address"),
-                "city": venue_data.get("city"),
-                "state": venue_data.get("state"),
-                "zip": venue_data.get("zip"),
-                "neighborhood": venue_data.get("neighborhood"),
+                "venue_name": place_data["name"],
+                "venue_key": place_data["key"],
+                "venue_url": place_data.get("website"),
+                "address": place_data.get("address"),
+                "city": place_data.get("city"),
+                "state": place_data.get("state"),
+                "zip": place_data.get("zip"),
+                "neighborhood": place_data.get("neighborhood"),
                 "start_date": start_date,
                 "end_date": end_date,
                 "grade_text": grade_text,
@@ -565,7 +565,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_key = row["venue_key"]
             if venue_key not in venue_cache:
-                venue_cache[venue_key] = get_or_create_venue(_build_venue_data(row))
+                venue_cache[venue_key] = get_or_create_place(_build_venue_data(row))
             venue_id = venue_cache[venue_key]
 
             record = _build_event_record(source_id, venue_id, row)

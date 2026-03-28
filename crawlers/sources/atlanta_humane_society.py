@@ -27,7 +27,7 @@ from playwright.sync_api import sync_playwright
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://atlantahumane.org"
 EVENTS_URL = f"{BASE_URL}/events/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Humane Society",
     "slug": "atlanta-humane-society",
     "address": "981 Howell Mill Rd NW",
@@ -238,7 +238,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     current_hashes: set[str] = set()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     try:
         with sync_playwright() as p:
@@ -307,7 +307,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Events at third-party venues (breweries, parks) still attribute
             # to AHS as the organizer — we don't create separate venue records
             # for one-off offsite events.
-            content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
             current_hashes.add(content_hash)
 
             is_free = any(

@@ -283,7 +283,7 @@ def test_crawl_stitches_parent_and_child_events():
 
     with patch("sources.four04_weekend._fetch_html", side_effect=lambda url: html_by_url[url]):
         # 4 weekend venues + 2 from 404day.com (Piedmont Park + Stankonia)
-        with patch("sources.four04_weekend.get_or_create_venue", side_effect=[11, 12, 13, 14, 15, 16]):
+        with patch("sources.four04_weekend.get_or_create_place", side_effect=[11, 12, 13, 14, 15, 16]):
             with patch("sources.four04_weekend.find_event_by_hash", return_value=None):
                 with patch("sources.four04_weekend.insert_event", side_effect=lambda record: inserted_titles.append(record["title"])):
                     found, new, updated = crawl({"id": 99, "slug": "404-weekend"})

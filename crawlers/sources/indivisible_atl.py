@@ -13,7 +13,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ TAG_RULES: list[tuple[str, list[str]]] = [
     (r"\bice\b|immigrant|day laborer|deport", ["immigration", "advocacy"]),
 ]
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Indivisible ATL",
     "slug": "indivisible-atl",
     "address": "PO Box 14492",
@@ -182,7 +182,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Indivisible ATL events: {EVENTS_URL}")
 
@@ -267,7 +267,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             image_url = BASE_URL + image_url
 
                     # Generate content hash
-                    content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                    content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
                     # Check if exists
 

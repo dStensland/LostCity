@@ -16,7 +16,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import find_event_by_hash, smart_update_existing_event, get_or_create_venue, insert_event
+from db import find_event_by_hash, smart_update_existing_event, get_or_create_place, insert_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 TOURS_URL = "https://www.cdc.gov/museum/tours/"
 FRIDAY_TOUR_URL = "https://www.cdc.gov/museum/tours/friday-tour/index.htm"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "David J. Sencer CDC Museum",
     "slug": "cdc-museum-atlanta",
     "address": "1600 Clifton Rd NE",
@@ -113,7 +113,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     friday_soup = BeautifulSoup(friday_html, "html.parser")
     friday_text = friday_soup.get_text(" ", strip=True)
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     description = _build_description(friday_text)
     title = "CDC Museum Friday Tour (1-9 people)"
 
@@ -124,7 +124,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         event_date = first_friday + timedelta(days=7 * week_offset)
         start_date = event_date.strftime("%Y-%m-%d")
 
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
         events_found += 1
 
 

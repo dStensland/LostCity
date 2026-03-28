@@ -22,7 +22,7 @@ import requests
 from datetime import datetime, timedelta
 from typing import Optional
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -288,7 +288,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         lng = None
 
                     # Create venue
-                    venue_data = {
+                    place_data = {
                         "name": location_name,
                         "slug": f"na-{location_city.lower().replace(' ', '-')}-{location_street[:20].lower().replace(' ', '-')}",
                         "address": location_street,
@@ -302,7 +302,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "spot_type": "community_center",
                     }
 
-                    venue_id = get_or_create_venue(venue_data)
+                    venue_id = get_or_create_place(place_data)
                     venue_cache[venue_key] = (venue_id, location_name)
                 else:
                     venue_id, location_name = venue_cache[venue_key]

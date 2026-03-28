@@ -12,7 +12,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, find_existing_event_for_insert, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, find_existing_event_for_insert, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://laughingskulllounge.com"
 EVENTS_URL = BASE_URL
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Laughing Skull Lounge",
     "slug": "laughing-skull-lounge",
     "address": "878 Peachtree St NE",
@@ -172,7 +172,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Extract event links for specific URLs
             event_links = extract_event_links(page, BASE_URL)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             body_text = page.inner_text("body")
 
@@ -334,7 +334,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.error(f"Failed to crawl Laughing Skull website: {e}")
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         f, n, u = _generate_recurring_events(source_id, venue_id)
         events_found += f
         events_new += n
@@ -419,7 +419,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
             events_found += 1
 
             content_hash = generate_content_hash(
-                template["title"], VENUE_DATA["name"], start_date
+                template["title"], PLACE_DATA["name"], start_date
             )
 
             event_record = {

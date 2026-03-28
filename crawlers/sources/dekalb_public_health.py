@@ -16,7 +16,7 @@ from typing import Optional
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-from db import find_event_by_hash, smart_update_existing_event, get_or_create_venue, insert_event
+from db import find_event_by_hash, smart_update_existing_event, get_or_create_place, insert_event
 from dedupe import generate_content_hash
 from utils import slugify
 
@@ -242,7 +242,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Prefer event-specific venue when location metadata exists.
             venue_payload = build_location_venue(location_name, location_address)
-            venue_id = get_or_create_venue(venue_payload)
+            venue_id = get_or_create_place(venue_payload)
 
             venue_name_for_hash = location_name or DEFAULT_VENUE["name"]
             content_hash = generate_content_hash(title, venue_name_for_hash, start_date)

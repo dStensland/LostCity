@@ -2,7 +2,7 @@
 BigTickets.com aggregator crawler for Atlanta metro area events.
 
 Scrapes search results pages to discover events, resolves venues against
-our DB via get_or_create_venue, and enriches existing events with ticket URLs.
+our DB via get_or_create_place, and enriches existing events with ticket URLs.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -346,7 +346,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "venue_type": "event_space",
                     }
                     try:
-                        venue_id = get_or_create_venue(venue_record)
+                        venue_id = get_or_create_place(venue_record)
                     except Exception as e:
                         logger.warning(f"Could not resolve venue '{venue_name}': {e}")
 

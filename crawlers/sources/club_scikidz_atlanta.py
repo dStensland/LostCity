@@ -25,7 +25,7 @@ from bs4 import BeautifulSoup, Tag
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -241,9 +241,9 @@ def _build_venue_data(name: str, raw_address: str, anchor_name: Optional[str]) -
     }
 
 
-def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
-    venue_name = _clean_text(venue_data.get("name"))
-    city = _clean_text(venue_data.get("city") or "Atlanta")
+def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityEnvelope:
+    venue_name = _clean_text(place_data.get("name"))
+    city = _clean_text(place_data.get("city") or "Atlanta")
     envelope = TypedEntityEnvelope()
     envelope.add(
         "destination_details",
@@ -266,7 +266,7 @@ def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityE
                 "These sites are better understood as structured camp-day locations than as general wandering destinations, which means arrival, pickup, and the specific registered program shape matter more than broad on-site exploration."
             ),
             "fee_note": "Camp registration is required; sessions and pricing vary by program and week.",
-            "source_url": venue_data.get("website") or LOCATIONS_URL,
+            "source_url": place_data.get("website") or LOCATIONS_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
                 "venue_type": "community_center",
@@ -283,7 +283,7 @@ def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityE
             "title": "Registered STEM camp site",
             "feature_type": "amenity",
             "description": f"{venue_name} serves as a scheduled Club SciKidz STEM camp location rather than a generic drop-in family destination.",
-            "url": venue_data.get("website") or LOCATIONS_URL,
+            "url": place_data.get("website") or LOCATIONS_URL,
             "is_free": False,
             "sort_order": 10,
         },
@@ -296,7 +296,7 @@ def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityE
             "title": "Planned camp day, not casual stop",
             "feature_type": "amenity",
             "description": "These locations are strongest when the family day is built around a scheduled camp session, with arrival, pickup, and weekly program logistics doing most of the work.",
-            "url": venue_data.get("website") or LOCATIONS_URL,
+            "url": place_data.get("website") or LOCATIONS_URL,
             "is_free": False,
             "sort_order": 20,
         },
@@ -326,12 +326,12 @@ def _parse_locations_page(soup: BeautifulSoup) -> tuple[dict[str, dict], set[str
             continue
 
         venue_name = _clean_text(name_node.get_text(" ", strip=True))
-        venue_data = _build_venue_data(
+        place_data = _build_venue_data(
             venue_name,
             address_node.get_text(" ", strip=True),
             current_anchor,
         )
-        venue_map[_normalize_location_key(venue_name)] = venue_data
+        venue_map[_normalize_location_key(venue_name)] = place_data
 
         for camp_link in location_schedule.select(".age-group a[href]"):
             href = urljoin(BASE_URL, camp_link["href"])
@@ -602,9 +602,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
         return 0, 0, 0
 
     venue_ids: dict[str, int] = {}
-    for key, venue_data in venue_map.items():
-        venue_id = get_or_create_venue(venue_data)
-        persist_typed_entity_envelope(_build_destination_envelope(venue_id, venue_data))
+    for key, place_data in venue_map.items():
+        venue_id = get_or_create_place(place_data)
+        persist_typed_entity_envelope(_build_destination_envelope(venue_id, place_data))
         venue_ids[key] = venue_id
 
     events_found = 0

@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -546,7 +546,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     session = requests.Session()
     session.headers.update({"User-Agent": USER_AGENT})
 
-    venue_id = get_or_create_venue(UNITED_WAY_ATLANTA)
+    venue_id = get_or_create_place(UNITED_WAY_ATLANTA)
     portal_row = get_client().table("portals").select("id").eq("slug", "helpatl").maybe_single().execute().data
     portal_id = portal_row["id"] if portal_row else None
 

@@ -15,7 +15,7 @@ from typing import Iterable, Optional
 import requests
 from bs4 import BeautifulSoup, Tag
 
-from db import get_client, get_or_create_venue
+from db import get_client, get_or_create_place
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 from utils import slugify
@@ -519,7 +519,7 @@ def crawl(config: dict) -> tuple[int, int, int]:
 
         existing = _fetch_existing_venue(client, entry)
         venue_record = _build_venue_record(entry)
-        venue_id = existing["id"] if existing else get_or_create_venue(venue_record)
+        venue_id = existing["id"] if existing else get_or_create_place(venue_record)
 
         combined = f"{entry['name']} {entry.get('amenities_text', '')}".lower()
         add_destination_details = not _venue_has_destination_details(client, venue_id)

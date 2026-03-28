@@ -18,7 +18,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, Page
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -339,14 +339,14 @@ def extract_events_from_page(page: Page, source_id: int, venue_cache: dict, seen
             venue_id = venue_cache[venue_name]
         else:
             venue_slug = re.sub(r"[^a-z0-9]+", "-", venue_name.lower()).strip("-")
-            venue_data = {
+            place_data = {
                 "name": venue_name,
                 "slug": venue_slug[:50],
                 "city": "Atlanta",
                 "state": "GA",
                 "venue_type": "venue",
             }
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
             venue_cache[venue_name] = venue_id
 
         # Generate content hash

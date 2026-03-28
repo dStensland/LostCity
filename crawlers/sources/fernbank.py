@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -36,7 +36,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     venue_specials=True,
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Fernbank Museum of Natural History",
     "slug": "fernbank-museum",
     "address": "767 Clifton Rd NE",
@@ -50,7 +50,7 @@ VENUE_DATA = {
     "spot_type": "museum",
     "website": BASE_URL,
     # description and image_url are extracted dynamically from og: tags on the homepage
-    # at crawl time — see _enrich_venue_data() called before get_or_create_venue().
+    # at crawl time — see _enrich_venue_data() called before get_or_create_place().
     # Hours verified 2026-03-11: Wed-Sun 10am-5pm (closed Mon-Tue)
     "hours": {
         "wednesday": "10:00-17:00",
@@ -154,17 +154,17 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
 def _enrich_venue_data(page) -> None:
     """
     Fetch og:description and og:image from the Fernbank homepage and inject them
-    into VENUE_DATA so get_or_create_venue() stores them on first creation.
+    into PLACE_DATA so get_or_create_place() stores them on first creation.
     Only fills fields that are not already set.
     """
     try:
         page.goto(BASE_URL, wait_until="domcontentloaded", timeout=20000)
         og_desc = page.get_attribute('meta[property="og:description"]', "content")
         og_image = page.get_attribute('meta[property="og:image"]', "content")
-        if og_desc and not VENUE_DATA.get("description"):
-            VENUE_DATA["description"] = re.sub(r"\s+", " ", og_desc).strip()
-        if og_image and not VENUE_DATA.get("image_url"):
-            VENUE_DATA["image_url"] = og_image.strip()
+        if og_desc and not PLACE_DATA.get("description"):
+            PLACE_DATA["description"] = re.sub(r"\s+", " ", og_desc).strip()
+        if og_image and not PLACE_DATA.get("image_url"):
+            PLACE_DATA["image_url"] = og_image.strip()
     except Exception as exc:
         logger.debug("Fernbank homepage og: fetch failed: %s", exc)
 
@@ -226,7 +226,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             _enrich_venue_data(page)
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             logger.info(f"Fetching Fernbank Museum: {EVENTS_URL}")
@@ -405,7 +405,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             source_id=source_id,
                             opening_date=start_date,
                             closing_date=event_record.get("end_date"),
-                            venue_name=VENUE_DATA["name"],
+                            venue_name=PLACE_DATA["name"],
                             description=description,
                             image_url=image_map.get(title),
                             source_url=event_record.get("source_url"),

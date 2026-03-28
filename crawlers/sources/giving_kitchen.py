@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -176,7 +176,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Get venue ID for Giving Kitchen HQ
-            venue_id = get_or_create_venue(GIVING_KITCHEN_HQ)
+            venue_id = get_or_create_place(GIVING_KITCHEN_HQ)
 
             logger.info(f"Fetching Giving Kitchen events: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

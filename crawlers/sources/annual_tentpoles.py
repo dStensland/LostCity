@@ -18,7 +18,7 @@ from playwright.sync_api import sync_playwright
 from db import (
     find_event_by_hash,
     get_client,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -80,7 +80,7 @@ class Config:
     base_title: str
     urls: tuple[str, ...]
     allowed_hosts: tuple[str, ...]
-    venue_data: dict
+    place_data: dict
     description: str
     category: str
     subcategory: Optional[str]
@@ -99,7 +99,7 @@ CONFIGS: dict[str, Config] = {
             "https://www.affps.com/",
         ),
         allowed_hosts=("piedmontparkartsfestival.com", "www.affps.com", "affps.com"),
-        venue_data={
+        place_data={
             "name": "Piedmont Park",
             "slug": "piedmont-park",
             "address": "1320 Monroe Dr NE",
@@ -128,7 +128,7 @@ CONFIGS: dict[str, Config] = {
         base_title="National Black Arts Festival",
         urls=("https://nbaf.org/", "https://nbaf.org/programs-and-events/"),
         allowed_hosts=("nbaf.org", "www.nbaf.org"),
-        venue_data={
+        place_data={
             "name": "National Black Arts Festival",
             "slug": "national-black-arts-festival",
             "address": "80 Joseph E. Lowery Blvd NW",
@@ -154,7 +154,7 @@ CONFIGS: dict[str, Config] = {
         base_title="Native American Festival and Pow-Wow",
         urls=("https://stonemountainpark.com/activity/events/native-american-festival-and-pow-wow/",),
         allowed_hosts=("stonemountainpark.com", "www.stonemountainpark.com"),
-        venue_data={
+        place_data={
             "name": "Stone Mountain Park",
             "slug": "stone-mountain-park",
             "address": "1000 Robert E Lee Blvd",
@@ -185,7 +185,7 @@ CONFIGS: dict[str, Config] = {
             "https://www.atlantagreekpicnic.com/",
         ),
         allowed_hosts=("atlantagreekpicnic.com", "www.atlantagreekpicnic.com"),
-        venue_data={
+        place_data={
             "name": "Atlanta Greek Picnic",
             "slug": "atlanta-greek-picnic",
             "address": "Various Locations",
@@ -209,7 +209,7 @@ CONFIGS: dict[str, Config] = {
         base_title="Taste of Soul Atlanta",
         urls=("https://tasteofsoulatlanta.com/",),
         allowed_hosts=("tasteofsoulatlanta.com", "www.tasteofsoulatlanta.com"),
-        venue_data={
+        place_data={
             "name": "Taste of Soul Atlanta",
             "slug": "taste-of-soul-atlanta",
             "address": "Various Locations",
@@ -233,7 +233,7 @@ CONFIGS: dict[str, Config] = {
         base_title="Georgia Renaissance Festival",
         urls=("https://www.garenfest.com",),
         allowed_hosts=("garenfest.com", "www.garenfest.com"),
-        venue_data={
+        place_data={
             "name": "Georgia Renaissance Festival Grounds",
             "slug": "ga-renaissance-festival-grounds",
             "address": "6905 Virlyn B Smith Rd",
@@ -260,7 +260,7 @@ CONFIGS: dict[str, Config] = {
         base_title="Blue Ridge Trout & Outdoor Adventures Festival",
         urls=("https://blueridgetroutfest.com",),
         allowed_hosts=("blueridgetroutfest.com", "www.blueridgetroutfest.com"),
-        venue_data={
+        place_data={
             "name": "Downtown Blue Ridge",
             "slug": "downtown-blue-ridge",
             "address": "152 Orvin Lance Dr",
@@ -287,7 +287,7 @@ CONFIGS: dict[str, Config] = {
         base_title="Breakaway Music Festival Atlanta",
         urls=("https://www.breakawayfestival.com/festival/atlanta-2026",),
         allowed_hosts=("breakawayfestival.com", "www.breakawayfestival.com"),
-        venue_data={
+        place_data={
             "name": "Breakaway Atlanta",
             "slug": "breakaway-atlanta",
             "address": "Various Locations",
@@ -313,7 +313,7 @@ CONFIGS: dict[str, Config] = {
         base_title="ESFNA Ethiopian Sports & Cultural Festival",
         urls=("https://esfna.org/",),
         allowed_hosts=("esfna.org", "www.esfna.org"),
-        venue_data={
+        place_data={
             "name": "ESFNA Festival",
             "slug": "esfna-festival",
             "address": "Various Locations",
@@ -339,7 +339,7 @@ CONFIGS: dict[str, Config] = {
         base_title="221B Con",
         urls=("https://www.221bcon.com/",),
         allowed_hosts=("221bcon.com", "www.221bcon.com"),
-        venue_data={
+        place_data={
             "name": "221B Con Host Hotel",
             "slug": "221b-con-host-hotel",
             "address": "Various Locations",
@@ -365,7 +365,7 @@ CONFIGS: dict[str, Config] = {
         base_title="FIFA Fan Festival Atlanta",
         urls=("https://www.fifa.com/en/tournaments/mens/worldcup/26",),
         allowed_hosts=("fifa.com", "www.fifa.com"),
-        venue_data={
+        place_data={
             "name": "Centennial Olympic Park",
             "slug": "centennial-olympic-park",
             "address": "265 Park Ave W NW",
@@ -619,7 +619,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(config.venue_data)
+    venue_id = get_or_create_place(config.place_data)
 
     today = date.today()
 
@@ -681,7 +681,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         if config.append_year_to_title
         else config.base_title
     )
-    content_hash = generate_content_hash(title, config.venue_data["name"], start_date.isoformat())
+    content_hash = generate_content_hash(title, config.place_data["name"], start_date.isoformat())
 
     event_record = {
         "source_id": source_id,

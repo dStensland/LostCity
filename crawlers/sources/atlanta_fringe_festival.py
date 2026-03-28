@@ -34,7 +34,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -829,7 +829,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     # -- Ensure primary festival venue exists
-    primary_venue_id = get_or_create_venue(VENUE_DATA_PRIMARY)
+    primary_venue_id = get_or_create_place(VENUE_DATA_PRIMARY)
 
     # -- Build venue slug -> db venue_id cache
     venue_id_cache: dict[str, int] = {}
@@ -839,7 +839,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             return venue_id_cache[slug]
         vdata = _VENUE_SLUG_TO_DATA.get(slug)
         if vdata:
-            vid = get_or_create_venue(vdata)
+            vid = get_or_create_place(vdata)
         else:
             vid = primary_venue_id
         venue_id_cache[slug] = vid

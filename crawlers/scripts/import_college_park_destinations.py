@@ -36,7 +36,7 @@ Usage:
 """
 
 import logging
-from db import get_or_create_venue, get_venue_by_slug
+from db import get_or_create_place, get_venue_by_slug
 import argparse
 from destination_import_flow import add_enrichment_args, run_post_import_enrichment
 
@@ -273,7 +273,7 @@ def main():
 
         # Add venue
         try:
-            venue_id = get_or_create_venue(venue)
+            venue_id = get_or_create_place(venue)
             logger.info(f"  ADD:  {venue['name']} -> ID {venue_id}")
             added += 1
         except Exception as e:

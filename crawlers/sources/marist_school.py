@@ -16,7 +16,7 @@ from sources._myrec_base import crawl_myrec
 BASE_URL = "https://maristschoolga.myrec.com"
 ACTIVITIES_URL = f"{BASE_URL}/info/activities/default.aspx?type=activities"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Marist School",
     "slug": "marist-school",
     "address": "3790 Ashford Dunwoody Rd NE",
@@ -35,9 +35,9 @@ VENUE_DATA = {
 MYREC_CONFIG = {
     "base_url": BASE_URL,
     "activities_url": ACTIVITIES_URL,
-    "venue": VENUE_DATA,
+    "venue": PLACE_DATA,
     "facility_overrides": {
-        "marist school": VENUE_DATA,
+        "marist school": PLACE_DATA,
     },
 }
 

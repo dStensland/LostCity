@@ -37,7 +37,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -71,7 +71,7 @@ _DETAIL_DELAY = 0.6
 # Venue data
 # ---------------------------------------------------------------------------
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Hudgens Center for Art & Learning",
     "slug": "hudgens-center-for-art-learning",
     "address": "6400 Sugarloaf Pkwy Building 300",
@@ -512,12 +512,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # Ensure venue exists in DB
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
     except Exception as exc:
         logger.error("[hudgens] Failed to create/find venue: %s", exc)
         return 0, 0, 0
 
-    venue_name = VENUE_DATA["name"]
+    venue_name = PLACE_DATA["name"]
     today = datetime.now(tz=timezone.utc).date()
     session = requests.Session()
 

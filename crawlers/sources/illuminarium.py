@@ -15,7 +15,7 @@ import requests
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.illuminarium.com"
 ATLANTA_URL = f"{BASE_URL}/atlanta"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Illuminarium Atlanta",
     "slug": "illuminarium-atlanta",
     "address": "550 Somerset Terrace NE",
@@ -195,7 +195,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Fetch og:image from homepage to enrich venue record
-        venue_data = dict(VENUE_DATA)
+        place_data = dict(PLACE_DATA)
         try:
             _headers = {
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
@@ -205,7 +205,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 _home_soup = BeautifulSoup(_home_resp.text, "html.parser")
                 _og_image = _home_soup.find("meta", attrs={"property": "og:image"})
                 if _og_image and _og_image.get("content"):
-                    venue_data["image_url"] = _og_image["content"]
+                    place_data["image_url"] = _og_image["content"]
                     logger.debug("Fetched og:image for Illuminarium Atlanta")
         except Exception as _e:
             logger.debug(f"Could not fetch og:image for Illuminarium Atlanta: {_e}")
@@ -218,7 +218,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
 
             logger.info(f"Fetching Illuminarium Atlanta: {ATLANTA_URL}")
 
@@ -355,7 +355,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         image_url = image_map.get(title_text)
 
                     # Generate content hash
-                    content_hash = generate_content_hash(title_text, VENUE_DATA["name"], start_date)
+                    content_hash = generate_content_hash(title_text, PLACE_DATA["name"], start_date)
 
                     # Check if exists
 
@@ -460,7 +460,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 category, subcategory = determine_category(title_text, description)
 
                                 # Generate content hash
-                                content_hash = generate_content_hash(title_text, VENUE_DATA["name"], start_date)
+                                content_hash = generate_content_hash(title_text, PLACE_DATA["name"], start_date)
 
                                 # Check if exists
                                 existing = find_event_by_hash(content_hash)

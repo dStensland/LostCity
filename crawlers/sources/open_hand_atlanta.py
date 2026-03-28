@@ -21,7 +21,7 @@ import requests
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -100,7 +100,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     current_hashes: set[str] = set()
 
-    venue_id = get_or_create_venue(OPEN_HAND_HQ)
+    venue_id = get_or_create_place(OPEN_HAND_HQ)
 
     today = date.today()
     end_date = today + timedelta(days=45)

@@ -20,7 +20,7 @@ from bs4 import BeautifulSoup, Tag
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -651,7 +651,7 @@ def crawl_myrec(source: dict, config: dict) -> tuple[int, int, int]:
 
     venue_cache: dict[str, int] = {}
     default_venue_data = dict(config["venue"])
-    default_venue_id = get_or_create_venue(default_venue_data)
+    default_venue_id = get_or_create_place(default_venue_data)
     venue_cache[default_venue_data["name"].lower().strip()] = default_venue_id
 
     events_found = 0
@@ -704,12 +704,12 @@ def crawl_myrec(source: dict, config: dict) -> tuple[int, int, int]:
                 continue
 
             facility_name = session_row.get("facility_name")
-            venue_data = _resolve_venue_data(config, facility_name)
-            venue_key = (facility_name or venue_data["name"]).lower().strip()
+            place_data = _resolve_venue_data(config, facility_name)
+            venue_key = (facility_name or place_data["name"]).lower().strip()
             if venue_key not in venue_cache:
-                venue_cache[venue_key] = get_or_create_venue(venue_data)
+                venue_cache[venue_key] = get_or_create_place(place_data)
 
-            venue_name = venue_data["name"]
+            venue_name = place_data["name"]
             event_record = _build_event_record(
                 source_id=source["id"],
                 venue_id=venue_cache[venue_key],

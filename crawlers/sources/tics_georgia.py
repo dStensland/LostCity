@@ -30,7 +30,7 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from date_utils import parse_human_date
 
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = None  # No known website
 CONTACT_EMAIL = "info@ticsofga.org"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Tourette Information Center and Support of Georgia",
     "slug": "tics-georgia",
     "address": "Northwest Atlanta",  # General area, exact location varies
@@ -73,7 +73,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Create venue record
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         logger.info("TICS of Georgia: No public event calendar found")
         logger.info(f"TICS of Georgia venue record ensured (ID: {venue_id})")

@@ -332,11 +332,11 @@ def test_parse_event_uses_detail_enrichment_for_misc_comedy_rows(mock_detail_fet
 @patch("sources.ticketmaster.insert_event")
 @patch("sources.ticketmaster.smart_update_existing_event")
 @patch("sources.ticketmaster.find_existing_event_for_insert")
-@patch("sources.ticketmaster.get_or_create_venue", return_value=126)
+@patch("sources.ticketmaster.get_or_create_place", return_value=126)
 @patch("sources.ticketmaster.fetch_events")
 def test_crawl_uses_natural_key_guard_for_normalized_sports_titles(
     mock_fetch_events,
-    mock_get_or_create_venue,
+    mock_get_or_create_place,
     mock_find_existing,
     mock_smart_update,
     mock_insert_event,
@@ -397,11 +397,11 @@ def test_crawl_uses_natural_key_guard_for_normalized_sports_titles(
 @patch("sources.ticketmaster.insert_event")
 @patch("sources.ticketmaster.smart_update_existing_event")
 @patch("sources.ticketmaster.find_existing_event_for_insert", return_value=None)
-@patch("sources.ticketmaster.get_or_create_venue", return_value=126)
+@patch("sources.ticketmaster.get_or_create_place", return_value=126)
 @patch("sources.ticketmaster.fetch_events")
 def test_crawl_persists_ticketmaster_quality_fields(
     mock_fetch_events,
-    mock_get_or_create_venue,
+    mock_get_or_create_place,
     mock_find_existing,
     mock_smart_update,
     mock_insert_event,

@@ -17,7 +17,7 @@ from datetime import datetime
 from typing import Optional
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
@@ -364,8 +364,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Get or create venues
-        venue_id_sixflags = get_or_create_venue(VENUE_DATA_SIXFLAGS)
-        venue_id_whitewater = get_or_create_venue(VENUE_DATA_WHITEWATER)
+        venue_id_sixflags = get_or_create_place(VENUE_DATA_SIXFLAGS)
+        venue_id_whitewater = get_or_create_place(VENUE_DATA_WHITEWATER)
         persist_typed_entity_envelope(_build_sixflags_destination_envelope(venue_id_sixflags))
         persist_typed_entity_envelope(_build_whitewater_destination_envelope(venue_id_whitewater))
 

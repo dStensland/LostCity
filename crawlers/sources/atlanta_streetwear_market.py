@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -32,7 +32,7 @@ TICKETS_URL = "https://www.eventbrite.com/o/atlanta-streetwear-market-1308433265
 VENUE_PAGE_URL = "https://www.atlantaexpositioncenters.com/events/"
 USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Expo Center North",
     "slug": "atlanta-expo-center-north",
     "address": "3650 Jonesboro Rd SE",
@@ -129,9 +129,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
     venue_response.raise_for_status()
     facility_label = parse_venue_listing(venue_response.text) or "Atlanta Expo Centers - North Facility"
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     title = show["title"]
-    content_hash = generate_content_hash(title, VENUE_DATA["name"], show["start_date"])
+    content_hash = generate_content_hash(title, PLACE_DATA["name"], show["start_date"])
     current_hashes.add(content_hash)
     events_found = 1
 

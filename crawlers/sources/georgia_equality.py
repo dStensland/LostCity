@@ -18,7 +18,7 @@ from typing import Optional
 import requests
 from icalendar import Calendar, Event
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ CALENDAR_URL = f"{BASE_URL}/communitycalendar/"
 # Google Calendar iCal feed
 ICAL_FEED_URL = "https://calendar.google.com/calendar/ical/georgiaequality.org_bpidk7r7g86t7nl9vpncb5h48s%40group.calendar.google.com/public/basic.ics"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia Equality",
     "slug": "georgia-equality",
     "address": "PO Box 2128",
@@ -107,7 +107,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Create default venue
-        default_venue_id = get_or_create_venue(VENUE_DATA)
+        default_venue_id = get_or_create_place(PLACE_DATA)
 
         logger.info(f"Fetching Georgia Equality calendar: {ICAL_FEED_URL}")
 
@@ -176,11 +176,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Check for alternate venue
                 venue_info = extract_location_info(location)
                 if venue_info:
-                    venue_id = get_or_create_venue(venue_info)
+                    venue_id = get_or_create_place(venue_info)
                     venue_name = venue_info["name"]
                 else:
                     venue_id = default_venue_id
-                    venue_name = VENUE_DATA["name"]
+                    venue_name = PLACE_DATA["name"]
 
                 # Clean up description (remove URLs and extra whitespace)
                 if description:

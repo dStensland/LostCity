@@ -14,7 +14,7 @@ from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, insert_exhibition
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, insert_exhibition
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ EVENTS_URL = f"{BASE_URL}/upcoming-events"
 
 MAX_EVENTS = 50
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "404 Found ATL",
     "slug": "404-found-atl",
     "city": "Atlanta",
@@ -125,7 +125,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate('window.scrollBy(0, 1000)')
                 page.wait_for_timeout(1000)
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             # Get the full page text for parsing
             body = page.query_selector('body')
@@ -237,7 +237,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     category, subcategory = categorize_event(title, description or '')
 
-                    content_hash = generate_content_hash(title, VENUE_DATA['name'], start_date)
+                    content_hash = generate_content_hash(title, PLACE_DATA['name'], start_date)
 
                     existing = find_event_by_hash(content_hash)
                     if existing:
@@ -286,7 +286,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "title": title,
                             "venue_id": venue_id,
                             "source_id": source_id,
-                            "_venue_name": VENUE_DATA["name"],
+                            "_venue_name": PLACE_DATA["name"],
                             "opening_date": start_date,
                             "closing_date": end_date,
                             "description": description,
@@ -320,7 +320,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         start_time = parse_time(f"{time_match.group(1)} {time_match.group(2)}")
                         end_time = parse_time(f"{time_match.group(3)} {time_match.group(4)}")
 
-                    content_hash = generate_content_hash(reception_title, VENUE_DATA['name'], reception_date)
+                    content_hash = generate_content_hash(reception_title, PLACE_DATA['name'], reception_date)
 
                     existing = find_event_by_hash(content_hash)
                     if existing:

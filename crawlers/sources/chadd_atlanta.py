@@ -28,7 +28,7 @@ import requests
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from date_utils import parse_human_date
 
@@ -38,7 +38,7 @@ BASE_URL = "https://chadd.org"
 # CHADD may have regional events - check both national and local pages
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "CHADD Atlanta Area Chapter",
     "slug": "chadd-atlanta",
     "address": "Atlanta, GA",
@@ -167,7 +167,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         logger.info(f"Fetching CHADD events: {EVENTS_URL}")
         soup = try_simple_requests(EVENTS_URL)

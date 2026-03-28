@@ -32,7 +32,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -65,7 +65,7 @@ _HEADERS = {
 # Polite delay between event page fetches (seconds)
 _REQUEST_DELAY = 0.6
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Spruill Center for the Arts",
     "slug": "spruill-center-for-the-arts",
     "address": "5339 Chamblee Dunwoody Rd",
@@ -776,7 +776,7 @@ def _crawl_special_events(
                 source_id=source_id,
                 opening_date=start_date,
                 closing_date=effective_end_date,
-                venue_name=VENUE_DATA["name"],
+                venue_name=PLACE_DATA["name"],
                 description=description if description else None,
                 image_url=image_url,
                 source_url=event_url,
@@ -859,7 +859,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     portal_id = source.get("portal_id")
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
     except Exception as exc:
         logger.error("[spruill] Failed to create/find venue: %s", exc)
         return 0, 0, 0

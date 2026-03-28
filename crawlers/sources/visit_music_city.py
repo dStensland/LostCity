@@ -14,7 +14,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from utils import slugify
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -292,14 +292,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if venue_name in venue_cache:
                         venue_id = venue_cache[venue_name]
                     else:
-                        venue_data = {
+                        place_data = {
                             "name": venue_name,
                             "slug": slugify(venue_name),
                             "city": "Nashville",
                             "state": "TN",
                             "venue_type": "venue",
                         }
-                        venue_id = get_or_create_venue(venue_data)
+                        venue_id = get_or_create_place(place_data)
                         venue_cache[venue_name] = venue_id
 
                     # Content hash

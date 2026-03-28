@@ -44,7 +44,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -1086,7 +1086,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # Ensure venue record exists
     try:
-        venue_id = get_or_create_venue(_VENUE_DATA)
+        venue_id = get_or_create_place(_VENUE_DATA)
         persist_result = persist_typed_entity_envelope(
             _build_destination_envelope(venue_id)
         )

@@ -22,7 +22,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -39,7 +39,7 @@ REQUEST_HEADERS = {
 }
 
 # Schwartz Center is the primary performance venue
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Schwartz Center for Performing Arts",
     "slug": "schwartz-center",
     "address": "1700 North Decatur Road NE",
@@ -291,8 +291,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
     seen_hashes: set[str] = set()
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
-        get_or_create_venue(AMC_ORG_VENUE)
+        venue_id = get_or_create_place(PLACE_DATA)
+        get_or_create_place(AMC_ORG_VENUE)
 
         logger.info("Fetching Atlanta Master Chorale concerts: %s", CONCERTS_URL)
         resp = requests.get(CONCERTS_URL, headers=REQUEST_HEADERS, timeout=20)
@@ -336,7 +336,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             })
 
             content_hash = generate_content_hash(
-                title, VENUE_DATA["name"], start_date
+                title, PLACE_DATA["name"], start_date
             )
             seen_hashes.add(content_hash)
             events_found += 1

@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class _Crawler(GenericExhibitionCrawler):
-    VENUE_DATA = {
+    PLACE_DATA = {
         "name": "Atlanta Center for Photography",
         "slug": "atlanta-center-for-photography",
         "address": "1244 Menlo Ave SW",

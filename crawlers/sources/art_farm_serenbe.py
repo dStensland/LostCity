@@ -22,7 +22,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -40,7 +40,7 @@ REQUEST_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Art Farm at Serenbe",
     "slug": "art-farm-serenbe",
     "address": "10950 Hutchesons Ferry Rd",
@@ -435,7 +435,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     seen_hashes: set[str] = set()
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         logger.info("Fetching Art Farm at Serenbe events: %s", EVENTS_URL)
         try:

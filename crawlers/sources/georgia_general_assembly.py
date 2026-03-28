@@ -22,7 +22,7 @@ import requests
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -56,7 +56,7 @@ HEADERS = {
     "Referer": SCHEDULE_URL,
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia General Assembly",
     "slug": "georgia-general-assembly",
     "address": "206 Washington St SW",
@@ -227,7 +227,7 @@ def _extract_meeting_events(payload: list[dict], today: date | None = None) -> l
 
 def crawl(source: dict) -> tuple[int, int, int]:
     source_id = source["id"]
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     today = datetime.now().date()
     events_found = 0
     events_new = 0
@@ -244,7 +244,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     for event in parsed_events:
         content_hash = generate_content_hash(
             event["title"],
-            VENUE_DATA["name"],
+            PLACE_DATA["name"],
             event["start_date"],
         )
         seen_hashes.add(content_hash)

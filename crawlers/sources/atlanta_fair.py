@@ -16,7 +16,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
+from db import find_event_by_hash, get_or_create_place, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ USER_AGENT = (
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Fair",
     "slug": "atlanta-fair",
     "address": "688 Central Ave SW",
@@ -148,10 +148,10 @@ def build_event_record(source_id: int, homepage_html: str, hours_html: str, pric
 
     price_min, price_max, price_note = extract_price_note(prices_text)
     hours_summary = extract_hours_summary(hours_text)
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     year = start_date[:4]
     title = f"Atlanta Fair {year}"
-    content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+    content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
     description = (
         "Seasonal Atlanta Fair featuring carnival rides, midway games, fair food, and family entertainment "

@@ -34,7 +34,7 @@ import fnmatch
 
 from playwright.sync_api import sync_playwright, Page
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
 from dedupe import generate_content_hash
 from sources.plaza_letterboxd import get_letterboxd_movies, enrich_movie_data
 from entity_lanes import TypedEntityEnvelope, SourceEntityCapabilities
@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.plazaatlanta.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Plaza Theatre",
     "slug": "plaza-theatre",
     "address": "1049 Ponce De Leon Ave NE",
@@ -826,7 +826,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             persist_typed_entity_envelope(_build_destination_envelope(venue_id))
             today = datetime.now().date()
 

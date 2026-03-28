@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -33,7 +33,7 @@ SCHEDULE_URL = "https://iwfatlanta.com/about-iwf/show-schedule/"
 REGISTRATION_URL = "https://registration.experientevent.com/ShowIWF261/"
 USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia World Congress Center",
     "slug": "georgia-world-congress-center",
     "address": "285 Andrew Young International Blvd NW",
@@ -208,10 +208,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
         attend_response.text,
         schedule_response.text,
     )
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     for session in event["sessions"]:
-        content_hash = generate_content_hash(session["title"], VENUE_DATA["name"], session["start_date"])
+        content_hash = generate_content_hash(session["title"], PLACE_DATA["name"], session["start_date"])
         current_hashes.add(content_hash)
         events_found += 1
 
@@ -237,7 +237,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             "image_url": event["image_url"],
             "raw_text": (
                 f"{session['title']} | {session['start_date']} | "
-                f"{session['start_time']}-{session['end_time']} | {VENUE_DATA['name']}"
+                f"{session['start_time']}-{session['end_time']} | {PLACE_DATA['name']}"
             ),
             "extraction_confidence": 0.97,
             "content_hash": content_hash,

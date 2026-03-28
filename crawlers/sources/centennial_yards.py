@@ -17,7 +17,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ BASE_URL = "https://centennialyards.com"
 EVENTS_API_URL = f"{BASE_URL}/wp-json/wp/v2/events"
 NEWS_API_URL = f"{BASE_URL}/wp-json/wp/v2/news"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Centennial Yards",
     "slug": "centennial-yards",
     "address": "125 Ted Turner Dr SW",
@@ -203,7 +203,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     session = requests.Session()
     session.headers.update({"User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"})
     today = datetime.now().date()
@@ -274,7 +274,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             description = excerpt_text or content_text[:400] or f"{title} at Centennial Yards"
 
             events_found += 1
-            content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
             record = {
                 "source_id": source_id,
                 "venue_id": venue_id,
@@ -359,7 +359,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 tags.extend(["food", "restaurant-opening"])
 
             events_found += 1
-            content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
             record = {
                 "source_id": source_id,
                 "venue_id": venue_id,

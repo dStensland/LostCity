@@ -20,7 +20,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     find_existing_event_for_insert,
@@ -40,7 +40,7 @@ USER_AGENT = (
     "Chrome/122.0.0.0 Safari/537.36"
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Wild Heaven West End",
     "slug": "wild-heaven-west-end",
     "address": "1010 White St SW",
@@ -254,7 +254,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     logger.info("Wild Heaven West End venue record ensured (ID: %s)", venue_id)
 
     try:
@@ -290,7 +290,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "3 tacos and a beer for $15."
                 )
 
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
         event_record = {
             "source_id": source_id,

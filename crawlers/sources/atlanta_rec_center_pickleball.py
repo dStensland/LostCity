@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -193,7 +193,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
     for template in SCHEDULES:
-        venue_id = get_or_create_venue(template["venue_data"])
+        venue_id = get_or_create_place(template["venue_data"])
         next_date = get_next_weekday(today, template["day"])
         day_code = DAY_CODES[template["day"]]
         day_name = DAY_NAMES[template["day"]].lower()

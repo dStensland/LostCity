@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 import requests
 
 from sources._sports_bar_common import detect_sports_watch_party
-from db import get_or_create_venue, insert_event, find_event_by_hash, find_existing_event_for_insert, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, find_existing_event_for_insert, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.parktavern.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Park Tavern",
     "slug": "park-tavern",
     "address": "500 10th Street NE",
@@ -162,7 +162,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         event_links = parse_event_links_from_html(response.text)
 
@@ -179,7 +179,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             title = parsed["title"]
             start_date = parsed["start_date"]
 
-            content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
             event_record = {
                 "source_id": source_id,
@@ -288,7 +288,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
             events_found += 1
 
             content_hash = generate_content_hash(
-                template["title"], VENUE_DATA["name"], start_date
+                template["title"], PLACE_DATA["name"], start_date
             )
 
             event_record = {

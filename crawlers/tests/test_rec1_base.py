@@ -213,7 +213,7 @@ def test_resolve_venue_persists_enrichment_envelope(monkeypatch) -> None:
     persisted = []
 
     monkeypatch.setattr(
-        "sources._rec1_base.get_or_create_venue",
+        "sources._rec1_base.get_or_create_place",
         lambda _venue_data: 77,
     )
     monkeypatch.setattr(

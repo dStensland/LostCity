@@ -22,7 +22,7 @@ from sources._iclasspro_base import IClassProConfig, crawl_iclasspro
 
 _CONFIG = IClassProConfig(
     org_code="buckheadgymnastics",
-    venue_data={
+    place_data={
         "name": "Buckhead Gymnastics Center",
         "slug": "buckhead-gymnastics-center",
         "address": "2351 Adams Drive",

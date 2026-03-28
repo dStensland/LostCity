@@ -14,7 +14,7 @@ import requests
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -28,7 +28,7 @@ SCHEDULE_URL = "https://www.watchufa.com/hustle/schedule"
 API_URL = f"https://www.backend.ufastats.com/web-v1/games?current&teamID={TEAM_ID}"
 TEAM_BASE_URL = "https://www.watchufa.com/hustle"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Silverbacks Park",
     "slug": "silverbacks-park",
     "address": "3200 Atlanta Silverbacks Way",
@@ -134,12 +134,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
     )
     response.raise_for_status()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     games = parse_games(response.json())
 
     for game in games:
         events_found += 1
-        content_hash = generate_content_hash(game["title"], VENUE_DATA["name"], game["start_date"])
+        content_hash = generate_content_hash(game["title"], PLACE_DATA["name"], game["start_date"])
         current_hashes.add(content_hash)
 
         description = (

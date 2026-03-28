@@ -28,7 +28,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import (
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_event_by_hash,
     smart_update_existing_event,
@@ -537,13 +537,13 @@ def _resolve_venue_data(location_label: str) -> dict:
     return GENERIC_VENUE
 
 
-def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityEnvelope | None:
+def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityEnvelope | None:
     """Project touched DeKalb civic venues into shared destination details."""
-    slug = str(venue_data.get("slug") or "").strip()
+    slug = str(place_data.get("slug") or "").strip()
     if not slug or slug == GENERIC_VENUE["slug"]:
         return None
 
-    venue_type = str(venue_data.get("venue_type") or "").strip().lower()
+    venue_type = str(place_data.get("venue_type") or "").strip().lower()
     envelope = TypedEntityEnvelope()
 
     if venue_type in {"recreation", "community_center"}:
@@ -876,9 +876,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 location_label: str = item.get("location", {}).get("label") or ""
                 venue_key = location_label.lower().strip()
                 if venue_key not in venue_cache:
-                    venue_data = _resolve_venue_data(location_label)
-                    venue_id = get_or_create_venue(venue_data)
-                    destination_envelope = _build_destination_envelope(venue_data, venue_id)
+                    place_data = _resolve_venue_data(location_label)
+                    venue_id = get_or_create_place(place_data)
+                    destination_envelope = _build_destination_envelope(place_data, venue_id)
                     if destination_envelope is not None:
                         persist_typed_entity_envelope(destination_envelope)
                     venue_cache[venue_key] = venue_id

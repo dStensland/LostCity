@@ -17,7 +17,7 @@ from typing import Optional
 import requests
 from icalendar import Calendar
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from description_fetcher import fetch_description_from_url
 from utils import enrich_event_record
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://callanwolde.org"
 ICAL_URL = f"{BASE_URL}/events/?ical=1"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Callanwolde Fine Arts Center",
     "slug": "callanwolde-fine-arts-center",
     "address": "980 Briarcliff Rd NE",
@@ -214,7 +214,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",

@@ -29,7 +29,7 @@ import requests
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from date_utils import parse_human_date
 
@@ -39,7 +39,7 @@ BASE_URL = "https://www.wellstar.org"
 EVENTS_URL = f"{BASE_URL}/event-calendar"
 
 # Main WellStar venue - Kennestone Hospital (flagship)
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "WellStar Health System",
     "slug": "wellstar-health-system",
     "address": "677 Church St NE",
@@ -308,7 +308,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Create venue record
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Try simple requests first
         logger.info(f"Trying simple fetch: {EVENTS_URL}")

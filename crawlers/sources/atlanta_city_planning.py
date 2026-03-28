@@ -35,7 +35,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -47,7 +47,7 @@ BASE_URL = "https://citydesign.atlantaga.gov"
 EVENTS_URL = f"{BASE_URL}/upcoming-events?view=list"
 
 # Default venue for events without a specific location
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Department of City Planning",
     "slug": "atlanta-dept-city-planning",
     "address": "55 Trinity Ave SW",
@@ -289,7 +289,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     html = _fetch_events_page()
     if not html:

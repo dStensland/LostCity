@@ -73,13 +73,13 @@ def test_parse_item_builds_rosel_fann_ms_hayes_title_without_duplication():
 
 
 def test_build_destination_envelope_marks_aquatic_center() -> None:
-    venue_data = {
+    place_data = {
         "name": "CT Martin Recreation & Aquatic Center",
         "slug": "ct-martin-recreation-aquatic-center",
         "venue_type": "recreation",
     }
 
-    envelope = _build_destination_envelope(venue_data, 2201)
+    envelope = _build_destination_envelope(place_data, 2201)
 
     assert envelope.destination_details[0]["destination_type"] == "aquatic_center"
     assert envelope.destination_details[0]["family_suitability"] == "yes"

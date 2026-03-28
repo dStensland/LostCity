@@ -10,7 +10,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue
+from db import get_or_create_place
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.cau.edu"
 CURRENT_EXHIBITIONS_URL = f"{BASE_URL}/about/cultural-contributions/clark-atlanta-university-art-museum/current-exhibitions"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Clark Atlanta University Art Museum",
     "slug": "clark-atlanta-art-museum",
     "address": "223 James P Brawley Dr SW",
@@ -235,7 +235,7 @@ def build_exhibition_lane_record(
         "title": exhibition_data["title"].rstrip(":").strip(),
         "venue_id": venue_id,
         "source_id": source_id,
-        "_venue_name": VENUE_DATA["name"],
+        "_venue_name": PLACE_DATA["name"],
         "opening_date": raw_start,
         "closing_date": raw_end,
         "description": exhibition_data.get("description"),
@@ -275,16 +275,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
         # 0. Homepage — extract og:image / og:description for venue record
         # ----------------------------------------------------------------
         try:
-            home_resp = requests.get(VENUE_DATA["website"], headers=headers, timeout=20)
+            home_resp = requests.get(PLACE_DATA["website"], headers=headers, timeout=20)
             if home_resp.status_code == 200:
                 home_soup = BeautifulSoup(home_resp.text, "html.parser")
                 og_img = home_soup.find("meta", property="og:image")
                 og_desc = home_soup.find("meta", property="og:description") or home_soup.find("meta", attrs={"name": "description"})
                 if og_img and og_img.get("content"):
-                    VENUE_DATA["image_url"] = og_img["content"]
+                    PLACE_DATA["image_url"] = og_img["content"]
                     logger.debug("Clark Atlanta Art Museum: og:image = %s", og_img["content"])
                 if og_desc and og_desc.get("content") and len(og_desc["content"]) > 30:
-                    VENUE_DATA["description"] = og_desc["content"]
+                    PLACE_DATA["description"] = og_desc["content"]
                     logger.debug("Clark Atlanta Art Museum: og:description captured")
         except Exception as _meta_exc:
             logger.debug("Clark Atlanta Art Museum: could not extract og meta from homepage: %s", _meta_exc)
@@ -295,7 +295,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         response.raise_for_status()
 
         # Get or create venue
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Extract exhibitions from HTML
         exhibitions = extract_exhibitions(response.text)

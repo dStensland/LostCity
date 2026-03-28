@@ -18,7 +18,7 @@ import logging
 import os
 from datetime import datetime, timezone, timedelta
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ CSV_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "dice-diversion
 BASE_URL = "https://tabletop.events/conventions/dice-diversions-2026"
 SITE_URL = "https://diceanddiversions.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta Marriott Northwest at Galleria",
     "slug": "atlanta-marriott-northwest-at-galleria",
     "address": "200 Interstate N Pkwy E SE",
@@ -101,7 +101,7 @@ def build_description(row: dict) -> str:
 
 def crawl(source: dict) -> tuple[int, int, int]:
     """Import Dice + Diversions events from CSV export."""
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     source_id = source.get("id")
 
     if not os.path.exists(CSV_PATH):
@@ -157,7 +157,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             more_info = row.get("More Info", "")
 
             # Dedup
-            content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
             event_data = {
                 "title": title,

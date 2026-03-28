@@ -56,7 +56,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -364,10 +364,10 @@ _GENERIC_VENUE: dict = {
 }
 
 
-def _build_destination_envelope(venue_id: int, venue_data: dict) -> TypedEntityEnvelope:
-    venue_name = str(venue_data.get("name") or "YMCA of Metro Atlanta").strip()
-    city = str(venue_data.get("city") or "Atlanta").strip().lower()
-    is_generic = venue_data.get("slug") == _GENERIC_VENUE["slug"]
+def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityEnvelope:
+    venue_name = str(place_data.get("name") or "YMCA of Metro Atlanta").strip()
+    city = str(place_data.get("city") or "Atlanta").strip().lower()
+    is_generic = place_data.get("slug") == _GENERIC_VENUE["slug"]
     envelope = TypedEntityEnvelope()
     envelope.add(
         "destination_details",
@@ -752,7 +752,7 @@ def _build_tags(title: str, description: Optional[str], is_free: bool) -> list[s
 
 def _venue_data_for_branch(branch_slug: str) -> Optional[dict]:
     """
-    Build a venue_data dict for a branch slug, or None if not in registry.
+    Build a place_data dict for a branch slug, or None if not in registry.
     """
     branch = BRANCHES.get(branch_slug)
     if not branch:
@@ -847,23 +847,23 @@ def _process_event_page(
     category = _infer_category(title, description)
     tags = _build_tags(title, description, is_free)
 
-    for venue_data in venues_to_emit:
+    for place_data in venues_to_emit:
         try:
-            venue_id = get_or_create_venue(venue_data)
-            persist_typed_entity_envelope(_build_destination_envelope(venue_id, venue_data))
+            venue_id = get_or_create_place(place_data)
+            persist_typed_entity_envelope(_build_destination_envelope(venue_id, place_data))
         except Exception as exc:
             logger.error(
                 "Failed to get/create venue '%s' for '%s': %s",
-                venue_data.get("name"),
+                place_data.get("name"),
                 title,
                 exc,
             )
             continue
 
         # Include branch slug in hash so multi-branch events produce distinct records
-        branch_discriminant = venue_data.get("slug", "")
+        branch_discriminant = place_data.get("slug", "")
         hash_key = f"{start_date}|{start_time or ''}|{branch_discriminant}"
-        content_hash = generate_content_hash(title, venue_data["name"], hash_key)
+        content_hash = generate_content_hash(title, place_data["name"], hash_key)
 
         event_record: dict = {
             "source_id": source_id,
@@ -887,7 +887,7 @@ def _process_event_page(
             "age_min": None,
             "age_max": None,
             "raw_text": (
-                f"{title} | {start_date} {start_time or ''} | {venue_data['name']}"
+                f"{title} | {start_date} {start_time or ''} | {place_data['name']}"
             ),
             "extraction_confidence": 0.92,
             "is_recurring": False,
@@ -907,13 +907,13 @@ def _process_event_page(
                     "Inserted: '%s' on %s at %s",
                     title,
                     start_date,
-                    venue_data["name"],
+                    place_data["name"],
                 )
             except Exception as exc:
                 logger.error(
                     "Failed to insert '%s' at %s on %s: %s",
                     title,
-                    venue_data["name"],
+                    place_data["name"],
                     start_date,
                     exc,
                 )

@@ -4,7 +4,7 @@ Add ~31 unique Atlanta restaurants from Reddit thread to venues database.
 These are all real, notable Atlanta restaurants that people would want to visit.
 """
 
-from db import get_or_create_venue
+from db import get_or_create_place
 
 RESTAURANTS = [
     {
@@ -479,7 +479,7 @@ def main():
     for restaurant in RESTAURANTS:
         name = restaurant["name"]
         try:
-            venue_id = get_or_create_venue(restaurant)
+            venue_id = get_or_create_place(restaurant)
             if venue_id:
                 print(f"✓ {name} (ID: {venue_id})")
                 added += 1

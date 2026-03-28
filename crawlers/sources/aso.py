@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.aso.org"
 CONCERTS_URL = f"{BASE_URL}/concerts-tickets"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Symphony Hall at Woodruff Arts Center",
     "slug": "symphony-hall-woodruff",
     "address": "1280 Peachtree St NE",
@@ -111,7 +111,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     try:
         with sync_playwright() as p:
@@ -168,7 +168,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Extract venue/location
-                    venue_name = VENUE_DATA["name"]  # Default
+                    venue_name = PLACE_DATA["name"]  # Default
                     location_el = card.query_selector(".location")
                     if location_el:
                         location_text = location_el.inner_text().strip()
@@ -196,7 +196,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
                     seen_titles.add(title_key)
 
-                    content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                    content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
 
                     # Build description

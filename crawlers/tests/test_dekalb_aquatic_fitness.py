@@ -47,13 +47,13 @@ def test_parse_item_builds_occurrences():
 
 
 def test_build_destination_envelope_marks_aquatic_center() -> None:
-    venue_data = {
+    place_data = {
         "name": "East Central DeKalb Community & Senior Center",
         "slug": "east-central-dekalb-community-senior-center",
         "venue_type": "community_center",
     }
 
-    envelope = _build_destination_envelope(venue_data, 2203)
+    envelope = _build_destination_envelope(place_data, 2203)
 
     assert envelope.destination_details[0]["destination_type"] == "aquatic_center"
     assert envelope.venue_features[0]["slug"] == "public-pool-and-aquatics-programs"

@@ -34,7 +34,7 @@ from playwright.sync_api import sync_playwright
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 BOE_URL = "https://www.atlantapublicschools.us/boe"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Alonzo A. Crim Center for Learning and Leadership",
     "slug": "alonzo-a-crim-center",
     "address": "130 Trinity Ave SW",
@@ -435,7 +435,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     # Ensure the venue record exists
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     # Fetch the page
     html = _fetch_boe_page()
@@ -499,7 +499,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             description = _description_for(raw_title)
             series_hint = _series_hint_for(raw_title)
 
-            content_hash = generate_content_hash(title, VENUE_DATA["name"], date_str)
+            content_hash = generate_content_hash(title, PLACE_DATA["name"], date_str)
 
             event_record = {
                 "source_id": source_id,

@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 SOURCE_URL = "https://scrapbookexpo.com/2026-expo-show-list/at-26/"
 USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Gas South Convention Center",
     "slug": "gas-south-convention-center",
     "address": "6400 Sugarloaf Parkway",
@@ -128,14 +128,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
     response.raise_for_status()
 
     sessions = parse_event_page(response.text)
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     description = (
         "Stamp & Scrapbook Expo brings paper crafting, scrapbooking, stamping, workshops, "
         "shopping, and maker culture to the Gas South Convention Center in Duluth."
     )
 
     for session in sessions:
-        content_hash = generate_content_hash(session["title"], VENUE_DATA["name"], session["start_date"])
+        content_hash = generate_content_hash(session["title"], PLACE_DATA["name"], session["start_date"])
         current_hashes.add(content_hash)
         events_found += 1
 

@@ -10,7 +10,7 @@ This crawler is built to the correct SEA LIFE site architecture so that it
 will work as-is if/when a Georgia location opens.  The `LOCATION_SLUG`
 constant is the only value that needs updating.
 
-To activate: update LOCATION_SLUG, EVENTS_PATH, and VENUE_DATA to match the
+To activate: update LOCATION_SLUG, EVENTS_PATH, and PLACE_DATA to match the
 real location once it opens.  Then activate the source record in the DB.
 
 SEA LIFE event site architecture (consistent across US locations):
@@ -36,7 +36,7 @@ from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
+from db import find_event_by_hash, get_or_create_place, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ BASE_URL = "https://www.visitsealife.com"
 EVENTS_PATH = f"/{LOCATION_SLUG}/whats-inside/events/"
 EVENTS_URL = f"{BASE_URL}{EVENTS_PATH}"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "SEA LIFE Georgia Aquarium",
     "slug": "sealife-georgia",
     "address": "3500 Peachtree Rd NE",
@@ -298,7 +298,7 @@ def _parse_events_from_page_text(
                 continue
             seen_keys.add(dedup_key)
 
-            content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
             tags = _infer_tags(title, "")
             events.append({
@@ -359,7 +359,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             working_url = _find_working_events_url(page)
             if not working_url:

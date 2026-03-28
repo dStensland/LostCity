@@ -48,7 +48,7 @@ import requests
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     insert_program,
     infer_program_type,
@@ -295,9 +295,9 @@ def _resolve_venue(location_str: str) -> dict:
     if not location_str:
         return _DEFAULT_VENUE
     loc_lower = location_str.lower().strip()
-    for key, venue_data in _VENUE_MAP.items():
+    for key, place_data in _VENUE_MAP.items():
         if key in loc_lower:
-            return venue_data
+            return place_data
     return _DEFAULT_VENUE
 
 
@@ -457,15 +457,15 @@ def _parse_age_range(
 
 
 def _build_destination_envelope(
-    venue_data: dict, venue_id: int
+    place_data: dict, venue_id: int
 ) -> Optional[TypedEntityEnvelope]:
     """Emit destination_details + venue_features for recreation venues."""
-    venue_type = venue_data.get("venue_type", "")
+    venue_type = place_data.get("venue_type", "")
     if venue_type not in {"recreation", "community_center", "park"}:
         return None
 
     envelope = TypedEntityEnvelope()
-    source_url = venue_data.get("website", _CATALOG_URL)
+    source_url = place_data.get("website", _CATALOG_URL)
 
     if venue_type == "park":
         envelope.add(
@@ -480,7 +480,7 @@ def _build_destination_envelope(
                 "parking_type": "free_lot",
                 "best_time_of_day": "morning",
                 "practical_notes": (
-                    f"{venue_data['name']} is a Cherokee County park suited for "
+                    f"{place_data['name']} is a Cherokee County park suited for "
                     "morning outdoor family time, sports, or seasonal county programming."
                 ),
                 "family_suitability": "yes",
@@ -499,7 +499,7 @@ def _build_destination_envelope(
                 "title": "Free outdoor park access",
                 "feature_type": "amenity",
                 "description": (
-                    f"{venue_data['name']} provides free Cherokee County outdoor space "
+                    f"{place_data['name']} provides free Cherokee County outdoor space "
                     "for family play, sports, and seasonal recreation programs."
                 ),
                 "url": source_url,
@@ -526,7 +526,7 @@ def _build_destination_envelope(
                 "parking_type": "free_lot",
                 "best_time_of_day": "afternoon",
                 "practical_notes": (
-                    f"{venue_data['name']} is a weather-proof Cherokee County family "
+                    f"{place_data['name']} is a weather-proof Cherokee County family "
                     "recreation base for classes, camps, and structured youth programming."
                 ),
                 "family_suitability": "yes",
@@ -545,7 +545,7 @@ def _build_destination_envelope(
                 "title": "Indoor family recreation space",
                 "feature_type": "amenity",
                 "description": (
-                    f"{venue_data['name']} offers indoor Cherokee County recreation space "
+                    f"{place_data['name']} offers indoor Cherokee County recreation space "
                     "with weather-proof youth programming, classes, and camps."
                 ),
                 "url": source_url,
@@ -561,7 +561,7 @@ def _build_destination_envelope(
                 "title": "Family classes and seasonal camps",
                 "feature_type": "experience",
                 "description": (
-                    f"{venue_data['name']} regularly hosts youth classes, family programs, "
+                    f"{place_data['name']} regularly hosts youth classes, family programs, "
                     "and seasonal camps through Cherokee Recreation & Parks."
                 ),
                 "url": source_url,
@@ -671,15 +671,15 @@ def _process_program(
     canonical_start = session_start_date or reg_end_date
 
     location_str = ia.get("catalog_where_label", "")
-    venue_data = _resolve_venue(location_str)
-    venue_cache_key = venue_data["slug"]
+    place_data = _resolve_venue(location_str)
+    venue_cache_key = place_data["slug"]
     if venue_cache_key not in venue_id_cache:
-        venue_id_cache[venue_cache_key] = get_or_create_venue(venue_data)
+        venue_id_cache[venue_cache_key] = get_or_create_place(place_data)
     venue_id = venue_id_cache[venue_cache_key]
 
     # Destination envelope (once per unique venue)
     if f"dest:{venue_cache_key}" not in venue_id_cache:
-        envelope = _build_destination_envelope(venue_data, venue_id)
+        envelope = _build_destination_envelope(place_data, venue_id)
         if envelope:
             persist_typed_entity_envelope(envelope)
         venue_id_cache[f"dest:{venue_cache_key}"] = 1
@@ -793,15 +793,15 @@ def _process_event(
     start_time = _parse_time_from_iso(first_event_str)
 
     location_str = ia.get("catalog_where_label", "")
-    venue_data = _resolve_venue(location_str)
-    venue_cache_key = venue_data["slug"]
+    place_data = _resolve_venue(location_str)
+    venue_cache_key = place_data["slug"]
     if venue_cache_key not in venue_id_cache:
-        venue_id_cache[venue_cache_key] = get_or_create_venue(venue_data)
+        venue_id_cache[venue_cache_key] = get_or_create_place(place_data)
     venue_id = venue_id_cache[venue_cache_key]
 
     # Destination envelope (once per unique venue)
     if f"dest:{venue_cache_key}" not in venue_id_cache:
-        envelope = _build_destination_envelope(venue_data, venue_id)
+        envelope = _build_destination_envelope(place_data, venue_id)
         if envelope:
             persist_typed_entity_envelope(envelope)
         venue_id_cache[f"dest:{venue_cache_key}"] = 1
@@ -825,7 +825,7 @@ def _process_event(
         photo_url = None
 
     content_hash = generate_content_hash(
-        title, venue_data["name"], canonical_date.isoformat()
+        title, place_data["name"], canonical_date.isoformat()
     )
     existing = find_event_by_hash(content_hash)
     if existing:

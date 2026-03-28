@@ -26,7 +26,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://atlantacityga.iqm2.com"
 CALENDAR_URL = f"{BASE_URL}/Citizens/Calendar.aspx"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Atlanta City Hall",
     "slug": "atlanta-city-hall",
     "address": "55 Trinity Avenue",
@@ -145,7 +145,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -277,7 +277,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 series_hint = determine_series_hint(board, meeting_type)
 
                 # Content hash
-                content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
                 event_record = {
                     "source_id": source_id,

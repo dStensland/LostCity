@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 import httpx
 
-from db import get_or_create_venue, get_venue_by_slug, insert_event, find_event_by_hash, smart_update_existing_event, find_existing_event_for_insert
+from db import get_or_create_place, get_venue_by_slug, insert_event, find_event_by_hash, smart_update_existing_event, find_existing_event_for_insert
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -33,7 +33,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     venue_features=True,
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Piedmont Park",
     "slug": "piedmont-park",
     "address": "1320 Monroe Dr NE",
@@ -180,7 +180,7 @@ def _persist_destination_alias_envelopes() -> None:
             _build_destination_envelope(
                 alias_venue["id"],
                 venue_name=alias_venue.get("name") or "Piedmont Park",
-                alias_of=VENUE_DATA["slug"],
+                alias_of=PLACE_DATA["slug"],
             )
         )
 
@@ -294,7 +294,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
             events_found += 1
 
             content_hash = generate_content_hash(
-                template["title"], VENUE_DATA["name"], start_date
+                template["title"], PLACE_DATA["name"], start_date
             )
 
             is_free = template.get("is_free", False) or "free" in template["tags"]
@@ -318,7 +318,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
                 "source_url": BASE_URL,
                 "ticket_url": None,
                 "image_url": None,
-                "raw_text": f"{template['title']} at {VENUE_DATA['name']} - {start_date}",
+                "raw_text": f"{template['title']} at {PLACE_DATA['name']} - {start_date}",
                 "extraction_confidence": 0.90,
                 "is_recurring": True,
                 "recurrence_rule": f"FREQ=WEEKLY;BYDAY={day_code}",
@@ -390,7 +390,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         persist_typed_entity_envelope(_build_destination_envelope(venue_id))
         _persist_destination_alias_envelopes()
 

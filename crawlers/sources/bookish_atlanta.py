@@ -6,14 +6,14 @@ Queer-owned, women-led indie bookshop with book clubs, story times, and events.
 import logging
 from datetime import datetime, timedelta
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.bookishatl.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Bookish Atlanta",
     "slug": "bookish-atlanta",
     "address": "490 Flat Shoals Avenue SE",
@@ -52,7 +52,7 @@ BOOK_CLUB_VENUE_MANUELS = {
     "website": "https://manuelstavern.com",
 }
 
-# Recurring book clubs: (title, weekday_position, weekday, time, venue_data)
+# Recurring book clubs: (title, weekday_position, weekday, time, place_data)
 # weekday: 0=Monday, 1=Tuesday, etc.
 # weekday_position: -1=last, 1=first
 RECURRING_BOOK_CLUBS = [
@@ -91,8 +91,8 @@ def generate_book_club_events(source_id: int, months_ahead: int = 3) -> list[dic
     events = []
     today = datetime.now()
 
-    for title, position, weekday, time, venue_data in RECURRING_BOOK_CLUBS:
-        venue_id = get_or_create_venue(venue_data)
+    for title, position, weekday, time, place_data in RECURRING_BOOK_CLUBS:
+        venue_id = get_or_create_place(place_data)
 
         for month_offset in range(months_ahead):
             year = today.year

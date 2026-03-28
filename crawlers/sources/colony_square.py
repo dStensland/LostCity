@@ -16,7 +16,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
+from db import find_event_by_hash, get_or_create_place, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Colony Square",
     "slug": "colony-square",
     "address": "1197 Peachtree St NE",
@@ -259,7 +259,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     response = requests.get(EVENTS_URL, headers=HEADERS, timeout=30)
     response.raise_for_status()
@@ -286,7 +286,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         for start_date, end_date, start_time, end_time, is_all_day in occurrences:
             events_found += 1
-            content_hash = generate_content_hash(detail["title"], VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(detail["title"], PLACE_DATA["name"], start_date)
 
             event_record = {
                 "source_id": source_id,

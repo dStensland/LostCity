@@ -19,7 +19,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, enrich_event_record
 
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.livenation.com"
 VENUE_URL = f"{BASE_URL}/venue/KovZpZAEkAaA/synovus-bank-amphitheater-at-chastain-park-events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Synovus Bank Amphitheater at Chastain Park",
     "slug": "chastain-park-amphitheatre",  # Keep for backwards compat
     "address": "4469 Stella Dr NW",
@@ -101,7 +101,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     try:
         with sync_playwright() as p:
@@ -195,7 +195,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_start_time = start_time or "19:30"
                     hash_key = f"{start_date}|{event_start_time}"
-                    content_hash = generate_content_hash(title, VENUE_DATA["name"], hash_key)
+                    content_hash = generate_content_hash(title, PLACE_DATA["name"], hash_key)
 
 
                     # Find image by title match

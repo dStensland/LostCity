@@ -37,7 +37,7 @@ import requests
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -488,7 +488,7 @@ _normalize_mobilize_venue_name = _normalize_venue_name
 
 
 def build_venue_data(location: dict, *, event_title: str = "") -> Optional[dict]:
-    """Convert a Mobilize location dict to venue_data for get_or_create_venue."""
+    """Convert a Mobilize location dict to place_data for get_or_create_place."""
     if not location:
         return None
 
@@ -809,14 +809,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # ----- Location / venue -----
                 location = api_event.get("location") or {}
-                venue_data = build_venue_data(location, event_title=title)
-                if not venue_data:
+                place_data = build_venue_data(location, event_title=title)
+                if not place_data:
                     skipped_no_location += 1
                     logger.debug(f"Skipped (no location): {title[:60]}")
                     continue
 
-                venue_id = get_or_create_venue(venue_data)
-                venue_name_for_hash = venue_data["name"]
+                venue_id = get_or_create_place(place_data)
+                venue_name_for_hash = place_data["name"]
 
                 # ----- Timeslot selection -----
                 timeslots = api_event.get("timeslots") or []

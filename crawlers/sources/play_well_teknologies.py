@@ -46,7 +46,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -251,7 +251,7 @@ def _parse_times(raw: str) -> tuple[Optional[str], Optional[str]]:
 
 def _build_venue_data(location_name: str, city_hint: str, county_name: str) -> dict:
     """
-    Build venue_data dict for a Play-Well host site.
+    Build place_data dict for a Play-Well host site.
     Uses known coordinates where available; falls back to city-level geocode.
     """
     loc_key = location_name.lower().strip()
@@ -430,7 +430,7 @@ def _parse_county_page(
         venue_location = location_raw or current_venue_name or f"Play-Well Camp Site — {current_city}"
 
         # Build venue data
-        venue_data = _build_venue_data(venue_location, current_city, county_name)
+        place_data = _build_venue_data(venue_location, current_city, county_name)
 
         # Full-day if multi-day camp with no meaningful start time
         is_multiday = end_date and end_date != start_date
@@ -459,12 +459,12 @@ def _parse_county_page(
 
         # Upsert
         try:
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
         except Exception as exc:
             logger.error("Play-Well: venue upsert failed for '%s': %s", venue_location, exc)
             continue
 
-        content_hash = generate_content_hash(full_title, venue_data["name"], start_date)
+        content_hash = generate_content_hash(full_title, place_data["name"], start_date)
 
         event_record: dict = {
             "source_id": source_id,
@@ -491,7 +491,7 @@ def _parse_county_page(
             "image_url": None,
             "age_min": age_min,
             "age_max": age_max,
-            "raw_text": f"{full_title} | {start_date} | {venue_data['name']} | {dates_raw}",
+            "raw_text": f"{full_title} | {start_date} | {place_data['name']} | {dates_raw}",
             "extraction_confidence": 0.88,
             "is_recurring": False,
             "content_hash": content_hash,
@@ -510,7 +510,7 @@ def _parse_county_page(
                     "Play-Well: inserted '%s' on %s at %s",
                     full_title,
                     start_date,
-                    venue_data["name"],
+                    place_data["name"],
                 )
             except Exception as exc:
                 logger.error(

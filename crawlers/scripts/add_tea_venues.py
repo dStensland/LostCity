@@ -11,7 +11,7 @@ traditional afternoon tea services across the Atlanta metro area.
 """
 
 import logging
-from db import get_or_create_venue, get_venue_by_slug, get_client
+from db import get_or_create_place, get_venue_by_slug, get_client
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -399,7 +399,7 @@ def main():
 
         # Add venue
         try:
-            venue_id = get_or_create_venue(venue)
+            venue_id = get_or_create_place(venue)
             logger.info(f"  ADD:  {venue['name']:40s} -> ID {venue_id}")
             added_venues += 1
 
@@ -449,7 +449,7 @@ def main():
             skipped_venues += 1
         else:
             try:
-                venue_id = get_or_create_venue(venue)
+                venue_id = get_or_create_place(venue)
                 logger.info(f"  ADD:  {venue['name']:40s} -> ID {venue_id}")
                 added_venues += 1
             except Exception as e:

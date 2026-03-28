@@ -30,7 +30,7 @@ from playwright.sync_api import sync_playwright
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -250,14 +250,14 @@ def _get_venue_for_production(ovation_venue_name: str, venue_cache: dict[str, in
         return venue_cache[key]
 
     # Match against known venues
-    for pattern, venue_data in VENUE_NAME_MAP.items():
+    for pattern, place_data in VENUE_NAME_MAP.items():
         if pattern in key or key in pattern:
-            vid = get_or_create_venue(venue_data)
+            vid = get_or_create_place(place_data)
             venue_cache[key] = vid
             return vid
 
     # Fallback: Morgan Concert Hall
-    fallback_id = get_or_create_venue(MORGAN_CONCERT_HALL)
+    fallback_id = get_or_create_place(MORGAN_CONCERT_HALL)
     venue_cache[key] = fallback_id
     return fallback_id
 
@@ -312,9 +312,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
     try:
         # Pre-create all venue records
         venue_cache: dict[str, int] = {}
-        for venue_data in VENUE_NAME_MAP.values():
-            vid = get_or_create_venue(venue_data)
-            key = venue_data["name"].lower()
+        for place_data in VENUE_NAME_MAP.values():
+            vid = get_or_create_place(place_data)
+            key = place_data["name"].lower()
             venue_cache[key] = vid
 
         productions = _fetch_productions_via_playwright()
@@ -369,9 +369,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 continue
 
             # Venue
-            venue_data = prod.get("venue") or {}
+            place_data = prod.get("venue") or {}
             ovation_venue_name = (
-                venue_data.get("name") if isinstance(venue_data, dict) else ""
+                place_data.get("name") if isinstance(place_data, dict) else ""
             ) or (prod.get("subtitle") or "")
             venue_id = _get_venue_for_production(
                 ovation_venue_name or "Morgan Concert Hall", venue_cache

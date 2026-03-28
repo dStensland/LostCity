@@ -11,7 +11,7 @@ from datetime import datetime
 from html import unescape
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://calendar.gatech.edu"
 RSS_FEED_URL = "https://calendar.gatech.edu/event-calendar-day.xml"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia Tech",
     "slug": "georgia-tech",
     "address": "North Avenue NW",
@@ -109,7 +109,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         # Parse XML
         root = ET.fromstring(response.content)
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Get all items (events) from the feed
         items = root.findall('.//item')
@@ -153,7 +153,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_found += 1
 
                 # Check if event already exists
-                content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
                 # Extract location if available
                 location_text = extract_location_from_description(description)

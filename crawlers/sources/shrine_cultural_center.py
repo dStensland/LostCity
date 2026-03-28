@@ -22,7 +22,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://shrineatl.com"
 EVENTBRITE_URL = "https://www.eventbrite.com/o/shrine-cultural-center-51764997263"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Shrine Cultural Center",
     "slug": "shrine-cultural-center",
     "address": "48 MLK Jr Dr SW",
@@ -164,7 +164,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Shrine Cultural Center from Eventbrite: {EVENTBRITE_URL}")
 

@@ -36,7 +36,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -48,7 +48,7 @@ SCHEDULE_URL = "https://itsmarta.com/meeting-schedule.aspx"
 PUBLIC_MEETING_URL = "https://bit.ly/MARTAPublicMeeting"
 BASE_URL = "https://itsmarta.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "MARTA Headquarters",
     "slug": "marta-headquarters",
     "address": "2424 Piedmont Rd NE",
@@ -369,7 +369,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     html = _fetch_schedule_html()
     if not html:
@@ -413,7 +413,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             series_hint = _series_hint_for(name)
             description = _description_for(name)
 
-            content_hash = generate_content_hash(title, VENUE_DATA["name"], date_str)
+            content_hash = generate_content_hash(title, PLACE_DATA["name"], date_str)
 
             event_record = {
                 "source_id": source_id,

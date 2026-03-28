@@ -24,7 +24,7 @@ from sources._tribe_events_base import TribeConfig, crawl_tribe
 
 _CONFIG = TribeConfig(
     base_url="https://padv.org",
-    venue_data={
+    place_data={
         "name": "Partnership Against Domestic Violence",
         "slug": "padv",
         "address": "P.O. Box 170009",

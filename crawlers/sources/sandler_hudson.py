@@ -35,7 +35,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_exhibition
+from db import get_or_create_place, insert_exhibition
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ USER_AGENT = (
 )
 REQUEST_TIMEOUT = 20
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Sandler Hudson Gallery",
     "slug": "sandler-hudson-gallery",
     "address": "1009 Marietta St NW",
@@ -354,7 +354,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     today = date.today()
     found = new = updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     session = _session()
 
     # Always fetch the home page — it IS the current exhibition
@@ -400,7 +400,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             "title": title,
             "venue_id": venue_id,
             "source_id": source_id,
-            "_venue_name": VENUE_DATA["name"],
+            "_venue_name": PLACE_DATA["name"],
             "opening_date": exhibition["opening_date"],
             "closing_date": exhibition["closing_date"],
             "description": exhibition.get("description"),

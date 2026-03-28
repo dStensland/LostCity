@@ -19,8 +19,8 @@ from copy import deepcopy
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from db import get_client, get_or_create_venue, get_venue_by_slug
-from db.place_vertical import upsert_venue_destination_details
+from db import get_client, get_or_create_place, get_venue_by_slug
+from db.place_vertical import upsert_place_vertical_details
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -753,8 +753,8 @@ def main() -> None:
 
         if not existing:
             if args.apply:
-                venue_id = get_or_create_venue(payload)
-                upsert_venue_destination_details(venue_id, details)
+                venue_id = get_or_create_place(payload)
+                upsert_place_vertical_details(venue_id, details)
                 details_written += 1
             logger.info("%s venue: %s", "CREATE" if args.apply else "WOULD CREATE", seed["slug"])
             created += 1
@@ -767,7 +767,7 @@ def main() -> None:
             skipped += 1
             # Still upsert destination details even when skipping venue updates.
             if args.apply:
-                upsert_venue_destination_details(venue_id, details)
+                upsert_place_vertical_details(venue_id, details)
                 details_written += 1
             continue
 
@@ -787,7 +787,7 @@ def main() -> None:
             updated += 1
 
         if args.apply:
-            upsert_venue_destination_details(venue_id, details)
+            upsert_place_vertical_details(venue_id, details)
             details_written += 1
 
     logger.info("")

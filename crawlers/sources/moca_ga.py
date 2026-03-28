@@ -18,7 +18,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event, insert_exhibition
+from db import find_event_by_hash, get_or_create_place, insert_event, smart_update_existing_event, insert_exhibition
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ HEADERS = {
     )
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "MOCA GA",
     "slug": "moca-ga",
     "address": "75 Bennett St NW",
@@ -169,7 +169,7 @@ def _extract_detail_record(session: requests.Session, detail_url: str) -> Option
         text = _clean_text(paragraph.get_text(" ", strip=True))
         if len(text) >= 40:
             description_parts.append(text)
-    description = " ".join(description_parts[:4])[:1000] if description_parts else f"Event at {VENUE_DATA['name']}."
+    description = " ".join(description_parts[:4])[:1000] if description_parts else f"Event at {PLACE_DATA['name']}."
 
     location_note = None
     meta_group = soup.select_one(".tribe-events-event-meta")
@@ -286,7 +286,7 @@ def _extract_exhibition_records(session: requests.Session) -> list[dict]:
         records.append(
             {
                 "title": title,
-                "description": description or f"Exhibition at {VENUE_DATA['name']}.",
+                "description": description or f"Exhibition at {PLACE_DATA['name']}.",
                 "start_date": start_date,
                 "hash_start_date": start_date_raw,
                 "end_date": normalized_end_date,
@@ -331,15 +331,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 og_img = home_soup.find("meta", property="og:image")
                 og_desc = home_soup.find("meta", property="og:description") or home_soup.find("meta", attrs={"name": "description"})
                 if og_img and og_img.get("content"):
-                    VENUE_DATA["image_url"] = og_img["content"]
+                    PLACE_DATA["image_url"] = og_img["content"]
                     logger.debug("MOCA GA: og:image = %s", og_img["content"])
                 if og_desc and og_desc.get("content"):
-                    VENUE_DATA["description"] = og_desc["content"]
+                    PLACE_DATA["description"] = og_desc["content"]
                     logger.debug("MOCA GA: og:description captured")
         except Exception as _meta_exc:
             logger.debug("MOCA GA: could not extract og meta from homepage: %s", _meta_exc)
 
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         records = _extract_special_event_records(session) + _extract_exhibition_records(session)
 
         today = date.today().isoformat()
@@ -358,7 +358,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "title": record["title"],
                         "venue_id": venue_id,
                         "source_id": source_id,
-                        "_venue_name": VENUE_DATA["name"],
+                        "_venue_name": PLACE_DATA["name"],
                         "opening_date": hash_start_date,
                         "closing_date": record["end_date"],
                         "description": record["description"],
@@ -374,7 +374,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     logger.debug("Exhibition insert failed for %r: %s", record["title"], exc)
                 continue
 
-            content_hash = generate_content_hash(record["title"], VENUE_DATA["name"], hash_start_date)
+            content_hash = generate_content_hash(record["title"], PLACE_DATA["name"], hash_start_date)
             event_record = {
                 "source_id": source_id,
                 "venue_id": venue_id,

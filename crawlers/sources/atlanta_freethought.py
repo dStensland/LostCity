@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -193,7 +193,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Get venue ID for Atlanta Freethought Society
-            venue_id = get_or_create_venue(AFS_VENUE)
+            venue_id = get_or_create_place(AFS_VENUE)
 
             logger.info(f"Fetching Atlanta Freethought Society events: {EVENTS_URL}")
 

@@ -26,7 +26,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ BASE_URL = "https://gc4recovery.org"
 EVENTS_URL = "https://gc4recovery.org/"
 
 # Georgia Council on Substance Abuse headquarters
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia Council on Substance Abuse",
     "slug": "georgia-council-substance-abuse",
     "address": "3750 Habersham Ln NW",
@@ -204,7 +204,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         logger.info(f"Fetching GA Council events: {EVENTS_URL}")
 
@@ -317,7 +317,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # Generate content hash
                 content_hash = generate_content_hash(
-                    title, VENUE_DATA["name"], start_date
+                    title, PLACE_DATA["name"], start_date
                 )
 
                 # Check for existing

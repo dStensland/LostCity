@@ -14,7 +14,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -104,9 +104,9 @@ def parse_date(date_str: str, year: int) -> Optional[str]:
 def find_venue_for_location(location: str) -> Optional[dict]:
     """Try to match location text to a known venue."""
     location_lower = location.lower()
-    for key, venue_data in KNOWN_VENUES.items():
+    for key, place_data in KNOWN_VENUES.items():
         if key in location_lower:
-            return venue_data
+            return place_data
     return None
 
 
@@ -225,9 +225,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Try to match venue
                     venue_id = None
-                    venue_data = find_venue_for_location(location) or find_venue_for_location(title)
-                    if venue_data:
-                        venue_id = get_or_create_venue(venue_data)
+                    place_data = find_venue_for_location(location) or find_venue_for_location(title)
+                    if place_data:
+                        venue_id = get_or_create_place(place_data)
 
                     # Build event URL
                     event_url = href if href.startswith("http") else f"{BASE_URL}{href}" if href else EVENTS_URL

@@ -14,7 +14,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from utils import slugify
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.murfreesborotn.gov"
 CALENDAR_URL = f"{BASE_URL}/Calendar.aspx"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "City of Murfreesboro",
     "slug": "city-of-murfreesboro",
     "address": "111 W Vine St",
@@ -143,7 +143,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -190,7 +190,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         if title:
                             events_found += 1
-                            content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                            content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
                             if find_event_by_hash(content_hash):
                                 events_updated += 1
@@ -277,7 +277,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 event_url = href
 
                         category = determine_category(element_text)
-                        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
                         existing = find_event_by_hash(content_hash)
                         if existing:

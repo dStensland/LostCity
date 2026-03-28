@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 
 from db import (
     get_client,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     find_existing_event_for_insert,
     find_cross_source_canonical_for_insert,
@@ -3607,14 +3607,14 @@ def _format_time_label(time_24: str) -> str:
         return time_24
 
 
-def _build_recurring_description(event_template: dict, venue_data: dict, source_url: str) -> str:
+def _build_recurring_description(event_template: dict, place_data: dict, source_url: str) -> str:
     base = " ".join(str(event_template.get("description") or "").split()).strip()
     day_name = DAY_NAMES[int(event_template["day"])]
     time_label = _format_time_label(str(event_template.get("start_time") or ""))
-    venue_name = str(venue_data.get("name") or "").strip()
-    neighborhood = str(venue_data.get("neighborhood") or "").strip()
-    city = str(venue_data.get("city") or "Atlanta").strip()
-    state = str(venue_data.get("state") or "GA").strip()
+    venue_name = str(place_data.get("name") or "").strip()
+    neighborhood = str(place_data.get("neighborhood") or "").strip()
+    city = str(place_data.get("city") or "Atlanta").strip()
+    state = str(place_data.get("state") or "GA").strip()
     category = str(event_template.get("category") or "event").replace("_", " ")
 
     location = venue_name
@@ -3790,11 +3790,11 @@ def _remove_suppressed_future_events(
     removed = 0
 
     for venue_key in suppressions.keys():
-        venue_data = VENUES.get(venue_key)
-        if not venue_data:
+        place_data = VENUES.get(venue_key)
+        if not place_data:
             continue
         if venue_key not in venue_ids:
-            venue_ids[venue_key] = get_or_create_venue(venue_data)
+            venue_ids[venue_key] = get_or_create_place(place_data)
         venue_id = venue_ids[venue_key]
 
         if not writes_enabled():
@@ -3859,9 +3859,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     for event_template in EVENT_TEMPLATES:
         venue_key = event_template["venue_key"]
-        venue_data = VENUES.get(venue_key)
+        place_data = VENUES.get(venue_key)
 
-        if not venue_data:
+        if not place_data:
             logger.warning(f"Unknown venue key: {venue_key}")
             continue
 
@@ -3874,7 +3874,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         # Skip venues without a real website — badslava is only a research lead,
         # not a valid source URL. If we can't link to the venue, don't generate.
-        if not venue_data.get("website"):
+        if not place_data.get("website"):
             logger.debug(
                 f"Skipping venue '{venue_key}' ({event_template['title']}): "
                 "no website — need a real source before generating events"
@@ -3883,10 +3883,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         # Get or cache venue ID
         if venue_key not in venue_ids:
-            venue_ids[venue_key] = get_or_create_venue(venue_data)
+            venue_ids[venue_key] = get_or_create_place(place_data)
 
         venue_id = venue_ids[venue_key]
-        venue_name = venue_data["name"]
+        venue_name = place_data["name"]
         frequency = event_template.get("frequency", "weekly")
 
         # Generate dates based on frequency and season rules
@@ -3895,10 +3895,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
             continue
 
         # Pre-compute template-level fields (same across all dates)
-        source_url = venue_data["website"]  # guaranteed by skip-check above
+        source_url = place_data["website"]  # guaranteed by skip-check above
         description = _build_recurring_description(
             event_template,
-            venue_data=venue_data,
+            place_data=place_data,
             source_url=source_url,
         )
 

@@ -15,7 +15,7 @@ import requests
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -166,7 +166,7 @@ def parse_watch_parties(
         venue_name = str(business.get("name") or "Atlanta Hawks Bar Network Venue").strip()
         title = f"Atlanta Hawks Watch Party vs. {opponent} at {venue_name}"
         description = str(event.get("description") or "").strip()
-        venue_data = _build_venue_data(business)
+        place_data = _build_venue_data(business)
         image_url = (
             str(event.get("img_url") or "").strip()
             or str((schedule_game or {}).get("opp_logo_url") or "").strip()
@@ -178,7 +178,7 @@ def parse_watch_parties(
                 "title": title,
                 "opponent": opponent,
                 "venue_name": venue_name,
-                "venue_data": venue_data,
+                "venue_data": place_data,
                 "start_date": event_start.strftime("%Y-%m-%d"),
                 "start_time": event_start.strftime("%H:%M"),
                 "tipoff_time": tipoff_time,
@@ -216,7 +216,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     items = parse_watch_parties(events_payload, businesses_payload, schedule_payload)
 
     for item in items:
-        venue_id = get_or_create_venue(item["venue_data"])
+        venue_id = get_or_create_place(item["venue_data"])
         description = (
             f"Official Atlanta Hawks Bar Network watch party at {item['venue_name']} "
             f"for the {item['opponent']} game. Party starts at "

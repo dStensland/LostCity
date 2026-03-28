@@ -25,7 +25,7 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from date_utils import normalize_iso_date
-from db import get_client, get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_client, get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -44,7 +44,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     venue_specials=True,
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "APEX Museum",
     "slug": "apex-museum",
     "address": "135 Auburn Ave NE",
@@ -408,7 +408,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             # Enrich venue with og:image and og:description from APEX homepage on first pass

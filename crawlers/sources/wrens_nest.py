@@ -15,7 +15,7 @@ import requests
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.wrensnest.org"
 CALENDAR_URL = f"{BASE_URL}/calendar"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Wren's Nest House Museum",
     "slug": "wrens-nest",
     "address": "1050 Ralph David Abernathy Blvd SW",
@@ -177,7 +177,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Fetch og:image from homepage to enrich venue record
-        venue_data = dict(VENUE_DATA)
+        place_data = dict(PLACE_DATA)
         try:
             _headers = {
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
@@ -187,7 +187,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 _home_soup = BeautifulSoup(_home_resp.text, "html.parser")
                 _og_image = _home_soup.find("meta", attrs={"property": "og:image"})
                 if _og_image and _og_image.get("content"):
-                    venue_data["image_url"] = _og_image["content"]
+                    place_data["image_url"] = _og_image["content"]
                     logger.debug("Fetched og:image for Wren's Nest")
         except Exception as _e:
             logger.debug(f"Could not fetch og:image for Wren's Nest: {_e}")
@@ -212,7 +212,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1500)
 
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
 
             # Wren's Nest uses .summary-item for their event listings
             event_items = page.query_selector_all(".summary-item")
@@ -349,7 +349,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                    content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
                     # Categorize event
                     category, subcategory, tags = categorize_event(title, description or "")

@@ -15,7 +15,7 @@ from typing import Optional
 import requests
 
 from utils import slugify
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
 from dedupe import generate_content_hash
 from extractors.structured import extract_jsonld_event_fields, extract_open_graph_fields
 
@@ -145,14 +145,14 @@ def parse_event(event_data: dict) -> Optional[dict]:
 
         # Venue
         venues = event_data.get("_embedded", {}).get("venues", [])
-        venue_data = None
+        place_data = None
         if venues:
             v = venues[0]
             address = v.get("address", {})
             city = v.get("city", {})
             state = v.get("state", {})
 
-            venue_data = {
+            place_data = {
                 "name": v.get("name", ""),
                 "slug": slugify(v.get("name", "")),
                 "address": address.get("line1"),
@@ -237,7 +237,7 @@ def parse_event(event_data: dict) -> Optional[dict]:
             "genre": genre,
             "price_min": price_min,
             "price_max": price_max,
-            "venue": venue_data,
+            "venue": place_data,
             "ticketmaster_id": event_data.get("id"),
         }
 
@@ -302,7 +302,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 venue_info = parsed.get("venue")
                 if venue_info and venue_info.get("name"):
                     try:
-                        venue_id = get_or_create_venue(venue_info)
+                        venue_id = get_or_create_place(venue_info)
                     except Exception as e:
                         logger.warning(
                             f"Failed to create venue {venue_info['name']}: {e}"

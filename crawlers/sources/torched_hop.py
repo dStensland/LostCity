@@ -6,13 +6,13 @@ Midtown brewpub on Ponce de Leon - venue-only crawler.
 from __future__ import annotations
 
 import logging
-from db import get_or_create_venue
+from db import get_or_create_place
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://torchedhop.com"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Torched Hop Brewing",
     "slug": "torched-hop",
     "address": "249 Ponce de Leon Ave NE",
@@ -32,7 +32,7 @@ VENUE_DATA = {
 def crawl(source: dict) -> tuple[int, int, int]:
     """Ensure Torched Hop Brewing exists as a venue."""
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
         logger.info(f"Torched Hop Brewing venue record ensured (ID: {venue_id})")
         return 0, 0, 0
     except Exception as e:

@@ -14,7 +14,7 @@ from typing import Optional
 import httpx
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from description_fetcher import fetch_description_from_url
 
@@ -447,7 +447,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     try:
         # Create or verify all venues first
         for location in LOCATIONS:
-            venue_data = {
+            place_data = {
                 "name": location["venue_name"],
                 "slug": location["venue_slug"],
                 "address": location["address"],
@@ -463,7 +463,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "vibes": ["workshop", "creative", "hands-on", "date-night", "paint-and-sip", "byob"],
             }
 
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
 
             # Crawl this location
             found, new, updated = crawl_location(client, location, source_id, venue_id)

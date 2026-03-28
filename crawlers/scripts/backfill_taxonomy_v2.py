@@ -131,8 +131,8 @@ def classify_event_for_backfill(
             source="direct_rename",
         )
 
-    venue_data = event.get("venues") or {}
-    venue_type = venue_data.get("venue_type") if isinstance(venue_data, dict) else None
+    place_data = event.get("venues") or {}
+    venue_type = place_data.get("venue_type") if isinstance(place_data, dict) else None
     title = event.get("title") or ""
     description = event.get("description") or ""
 
@@ -149,7 +149,7 @@ def classify_event_for_backfill(
 
     # For dissolved categories, use LLM fallback if enabled
     if use_llm and old_cat in DISSOLVED_CATEGORIES:
-        venue_name = venue_data.get("name") if isinstance(venue_data, dict) else None
+        venue_name = place_data.get("name") if isinstance(place_data, dict) else None
         llm_result = classify_event(
             title=title,
             description=description,

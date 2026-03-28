@@ -16,7 +16,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from db import find_event_by_hash, smart_update_existing_event, get_or_create_venue, insert_event
+from db import find_event_by_hash, smart_update_existing_event, get_or_create_place, insert_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ BASE_URL = "https://dph.georgia.gov"
 UPCOMING_URL = f"{BASE_URL}/events"
 PAST_URL = f"{BASE_URL}/past-events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia Department of Public Health",
     "slug": "georgia-dph",
     "address": "2 Peachtree St NW",
@@ -164,7 +164,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     seen_hashes: set[str] = set()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     upcoming_html = _fetch(UPCOMING_URL)
     cards = _extract_cards(upcoming_html) if upcoming_html else []
@@ -188,7 +188,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 continue
 
             start_time = _parse_time(card["time_text"])
-            content_hash = generate_content_hash(card["title"], VENUE_DATA["name"], start_date)
+            content_hash = generate_content_hash(card["title"], PLACE_DATA["name"], start_date)
             if content_hash in seen_hashes:
                 continue
             seen_hashes.add(content_hash)

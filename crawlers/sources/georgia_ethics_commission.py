@@ -25,7 +25,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -45,7 +45,7 @@ HEADERS = {
     )
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia Ethics Commission",
     "slug": "georgia-ethics-commission",
     "address": "200 Piedmont Ave SE",
@@ -245,7 +245,7 @@ def _extract_training_events(home_html: str) -> list[dict]:
 
 def crawl(source: dict) -> tuple[int, int, int]:
     source_id = source["id"]
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     events_found = 0
     events_new = 0
     events_updated = 0
@@ -272,7 +272,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         content_hash = generate_content_hash(
             parsed["title"],
-            VENUE_DATA["name"],
+            PLACE_DATA["name"],
             parsed["start_date"],
         )
         seen_hashes.add(content_hash)

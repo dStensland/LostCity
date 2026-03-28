@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -158,7 +158,7 @@ def parse_item(item: dict, today: date) -> Optional[dict]:
     if not any(key in location_lower for key in TARGET_VENUE_KEYS):
         return None
 
-    venue_data = _resolve_venue_data(location_label)
+    place_data = _resolve_venue_data(location_label)
     weekdays, start_time, end_time = schedule
     occurrences = _iter_occurrence_dates(start_date, end_date, weekdays, today)
     if not occurrences:
@@ -166,16 +166,16 @@ def parse_item(item: dict, today: date) -> Optional[dict]:
 
     price_min, price_max, is_free = _extract_prices(description_html)
     time_label = _format_time_label(start_time)
-    normalized_title = f"Adult Swim Lessons ({time_label}) at {venue_data['name']}"
+    normalized_title = f"Adult Swim Lessons ({time_label}) at {place_data['name']}"
     description = (
-        f"Public adult swim lessons at {venue_data['name']} through Atlanta DPR. "
+        f"Public adult swim lessons at {place_data['name']} through Atlanta DPR. "
         "Reserve through the official city registration catalog for current availability."
     )
 
     return {
         "title": normalized_title,
         "description": description,
-        "venue_data": venue_data,
+        "venue_data": place_data,
         "start_date": start_date,
         "end_date": end_date,
         "weekdays": weekdays,
@@ -231,7 +231,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if not parsed:
                 continue
 
-            venue_id = get_or_create_venue(parsed["venue_data"])
+            venue_id = get_or_create_place(parsed["venue_data"])
 
             for event_date, weekday in _iter_occurrence_dates(
                 parsed["start_date"],

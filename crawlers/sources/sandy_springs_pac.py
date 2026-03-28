@@ -16,7 +16,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from db import find_event_by_hash, get_or_create_venue, insert_event, smart_update_existing_event
+from db import find_event_by_hash, get_or_create_place, insert_event, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Sandy Springs Performing Arts Center",
     "slug": "sandy-springs-pac",
     "address": "1 Galambos Way",
@@ -178,7 +178,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     response = requests.get(EVENTS_URL, headers=HEADERS, timeout=30)
     response.raise_for_status()
@@ -209,11 +209,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
             continue
 
         start_time = parse_time(fields.get("Event Starts", ""))
-        description = detail["description"] or f"Event at {VENUE_DATA['name']}"
+        description = detail["description"] or f"Event at {PLACE_DATA['name']}"
         category, subcategory, tags = determine_category(title, description)
 
         events_found += 1
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
         event_record = {
             "source_id": source_id,

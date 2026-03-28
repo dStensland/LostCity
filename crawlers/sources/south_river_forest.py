@@ -20,7 +20,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -225,8 +225,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Get venue ID for coalition
-            venue_data = {**SRFC_VENUE, "website": base_url}
-            venue_id = get_or_create_venue(venue_data)
+            place_data = {**SRFC_VENUE, "website": base_url}
+            venue_id = get_or_create_place(place_data)
 
             logger.info(f"Fetching South River Forest Coalition events: {events_url}")
 

@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Optional
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -136,8 +136,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.info(f"Fetched {len(events)} events from GSU Localist API")
 
         # Get default venue
-        default_venue_id = get_or_create_venue(VENUES["default"])
-        rialto_venue_id = get_or_create_venue(VENUES["rialto"])
+        default_venue_id = get_or_create_place(VENUES["default"])
+        rialto_venue_id = get_or_create_place(VENUES["rialto"])
 
         for item in events:
             event_data = item.get("event", {})

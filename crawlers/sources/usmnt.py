@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 import requests
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -31,7 +31,7 @@ SCHEDULE_URL = f"{BASE_URL}/schedule-tickets/usmnt"
 ATLANTA_LOCATION = "Atlanta, GA"
 EASTERN_TZ = ZoneInfo("America/New_York")
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Mercedes-Benz Stadium",
     "slug": "mercedes-benz-stadium",
     "address": "1 AMB Drive NW",
@@ -142,7 +142,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     )
     response.raise_for_status()
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     for match in extract_usmnt_matches(response.text):
         venue = match.get("venue") or {}
@@ -163,7 +163,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             source_url = SCHEDULE_URL
 
         description = (
-            f"Official U.S. Soccer match hub for {title} at {venue.get('longName', VENUE_DATA['name'])}."
+            f"Official U.S. Soccer match hub for {title} at {venue.get('longName', PLACE_DATA['name'])}."
         )
 
         event_record = {
@@ -190,7 +190,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             "extraction_confidence": 0.95,
             "is_recurring": False,
             "recurrence_rule": None,
-            "content_hash": generate_content_hash(title, VENUE_DATA["name"], start_date),
+            "content_hash": generate_content_hash(title, PLACE_DATA["name"], start_date),
         }
 
         events_found += 1

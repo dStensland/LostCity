@@ -19,7 +19,7 @@ from playwright.sync_api import sync_playwright
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -34,7 +34,7 @@ USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 MAX_FUTURE_DAYS = 270
 TRADE_ONLY_NOTE = "Trade-only market; proof of trade status required for registration."
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "AmericasMart Atlanta",
     "slug": "americasmart",
     "address": "240 Peachtree St NW",
@@ -321,11 +321,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
     if not events:
         raise ValueError("AmericasMart market dates page did not yield any current market windows")
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
 
     for event in events:
         title = event["title"]
-        content_hash = generate_content_hash(title, VENUE_DATA["name"], event["start_date"])
+        content_hash = generate_content_hash(title, PLACE_DATA["name"], event["start_date"])
         current_hashes.add(content_hash)
         events_found += 1
 

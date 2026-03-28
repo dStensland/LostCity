@@ -4,7 +4,7 @@ from sources.fulton_library import _build_branch_destination_envelope
 def test_build_branch_destination_envelope_projects_library_branch_details() -> None:
     envelope = _build_branch_destination_envelope(
         venue_id=901,
-        venue_data={
+        place_data={
             "name": "Sandy Springs Library",
             "venue_type": "library",
         },

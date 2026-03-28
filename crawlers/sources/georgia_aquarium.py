@@ -19,7 +19,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_client, get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_client, get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -40,7 +40,7 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     venue_specials=True,
 )
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Georgia Aquarium",
     "slug": "georgia-aquarium",
     "address": "225 Baker St NW",
@@ -308,7 +308,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
             persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
             # Enrich venue with og:image and og:description from homepage on first pass
@@ -514,7 +514,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 source_id=source_id,
                                 opening_date=start_date,
                                 closing_date=event_record.get("end_date"),
-                                venue_name=VENUE_DATA["name"],
+                                venue_name=PLACE_DATA["name"],
                                 description=description,
                                 image_url=image_map.get(title),
                                 source_url=event_record.get("source_url"),

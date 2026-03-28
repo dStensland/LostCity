@@ -43,7 +43,7 @@ REUSE PATTERN:
 
   _CONFIG = IClassProConfig(
       org_code="buckheadgymnastics",
-      venue_data={...},
+      place_data={...},
       default_category="fitness",
       default_tags=["gymnastics", "kids", "class"],
   )
@@ -65,7 +65,7 @@ import requests
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -378,8 +378,8 @@ class IClassProConfig:
     # iClassPro org code (slug in the portal URL)
     org_code: str
 
-    # Venue data passed to get_or_create_venue()
-    venue_data: dict
+    # Venue data passed to get_or_create_place()
+    place_data: dict
 
     # Default LostCity category for all classes
     default_category: str = "fitness"
@@ -546,7 +546,7 @@ def crawl_iclasspro(source: dict, config: IClassProConfig) -> tuple[int, int, in
 
     # Ensure venue exists
     try:
-        venue_id = get_or_create_venue(config.venue_data)
+        venue_id = get_or_create_place(config.place_data)
     except Exception as exc:
         logger.error(
             "[iclasspro/%s] Failed to create/find venue: %s",
@@ -555,7 +555,7 @@ def crawl_iclasspro(source: dict, config: IClassProConfig) -> tuple[int, int, in
         )
         return 0, 0, 0
 
-    venue_name = config.venue_data["name"]
+    venue_name = config.place_data["name"]
     logger.info("[iclasspro/%s] Starting crawl", config.org_code)
 
     # Fetch classes from iClassPro open API

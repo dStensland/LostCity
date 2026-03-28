@@ -41,7 +41,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -480,12 +480,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     for row in rows:
         location_cell = row[4] if len(row) > 4 else ""
-        venue_data = _get_venue_data(location_cell)
-        venue_slug = venue_data["slug"]
+        place_data = _get_venue_data(location_cell)
+        venue_slug = place_data["slug"]
 
         if venue_slug not in venue_cache:
             try:
-                venue_id = get_or_create_venue(venue_data)
+                venue_id = get_or_create_place(place_data)
                 venue_cache[venue_slug] = venue_id
             except Exception as exc:
                 logger.error(
@@ -494,7 +494,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 continue
 
         venue_id = venue_cache[venue_slug]
-        venue_name = venue_data["name"]
+        venue_name = place_data["name"]
 
         result = _build_event_record(row, source_id, venue_id, venue_name)
         if result is None:

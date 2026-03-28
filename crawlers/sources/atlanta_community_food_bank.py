@@ -34,7 +34,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     smart_update_existing_event,
 )
@@ -364,12 +364,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             location_id: int = shift.get("locationId") or 0
             location_str: str = shift.get("location") or ""
-            venue_data = _venue_for(location_id, location_str)
+            place_data = _venue_for(location_id, location_str)
 
             if location_id not in venue_id_cache:
-                venue_id_cache[location_id] = get_or_create_venue(venue_data)
+                venue_id_cache[location_id] = get_or_create_place(place_data)
             venue_id = venue_id_cache[location_id]
-            venue_name = venue_data["name"]
+            venue_name = place_data["name"]
 
             # Build description from VolunteerHub HTML fields
             short = _clean_html(shift.get("shortDescription") or "")

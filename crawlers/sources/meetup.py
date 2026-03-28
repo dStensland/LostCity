@@ -12,7 +12,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, get_or_create_virtual_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, get_or_create_virtual_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -384,7 +384,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Create venue if we have location info (and not online)
                     venue_id = None
                     if location_text and not is_online:
-                        venue_data = {
+                        place_data = {
                             "name": location_text,
                             "slug": re.sub(
                                 r"[^a-z0-9]+", "-", location_text.lower()
@@ -393,7 +393,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "state": "GA",
                         }
                         try:
-                            venue_id = get_or_create_venue(venue_data)
+                            venue_id = get_or_create_place(place_data)
                         except Exception as e:
                             logger.debug(f"Could not create venue: {e}")
 
@@ -407,7 +407,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "venue_type": "organization",
                         }
                         try:
-                            venue_id = get_or_create_venue(fallback_venue)
+                            venue_id = get_or_create_place(fallback_venue)
                         except Exception as e:
                             logger.debug(f"Could not create fallback venue from group: {e}")
 

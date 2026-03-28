@@ -28,7 +28,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -190,7 +190,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    home_venue_id = get_or_create_venue(CORE_DANCE_VENUE_DATA)
+    home_venue_id = get_or_create_place(CORE_DANCE_VENUE_DATA)
 
     try:
         with sync_playwright() as p:

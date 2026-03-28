@@ -24,7 +24,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -50,7 +50,7 @@ HEADERS = {
     )
 }
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Chastain Park Conservancy",
     "slug": "chastain-park-conservancy",
     "address": "4001 Powers Ferry Rd NW",
@@ -309,7 +309,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    venue_id = get_or_create_venue(VENUE_DATA)
+    venue_id = get_or_create_place(PLACE_DATA)
     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
     try:
@@ -327,7 +327,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     seen_hashes: set[str] = set()
     for item in parsed_events:
-        content_hash = generate_content_hash(item["title"], VENUE_DATA["name"], item["start_date"])
+        content_hash = generate_content_hash(item["title"], PLACE_DATA["name"], item["start_date"])
         if content_hash in seen_hashes:
             continue
         seen_hashes.add(content_hash)
@@ -352,7 +352,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             "is_free": item["is_free"],
             "source_url": item["source_url"],
             "ticket_url": item["ticket_url"],
-            "image_url": VENUE_DATA.get("image_url"),
+            "image_url": PLACE_DATA.get("image_url"),
             "raw_text": item["description"],
             "extraction_confidence": 0.75,
             "is_recurring": False,

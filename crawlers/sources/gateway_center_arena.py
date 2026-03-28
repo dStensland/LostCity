@@ -15,7 +15,7 @@ from datetime import datetime
 from typing import Optional
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://gatewaycenterarena.com"
 API_URL = f"{BASE_URL}/wp-json/tribe/events/v1/events"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Gateway Center Arena",
     "slug": "gateway-center-arena",
     "address": "2330 Convention Center Concourse",
@@ -150,7 +150,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        venue_id = get_or_create_place(PLACE_DATA)
 
         # Fetch upcoming events from API
         # Start from today and fetch forward

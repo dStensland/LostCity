@@ -20,7 +20,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -139,22 +139,22 @@ def get_neighborhood_for_park(park_name: str) -> Optional[str]:
     return None
 
 
-def build_venue_from_api(venue_data: dict) -> Optional[dict]:
+def build_venue_from_api(place_data: dict) -> Optional[dict]:
     """
     Build a venue dict from the Tribe Events API venue object.
     Returns None if the venue object is empty or missing a name.
     """
-    if not isinstance(venue_data, dict):
+    if not isinstance(place_data, dict):
         return None
 
-    park_name = (venue_data.get("venue") or "").strip()
+    park_name = (place_data.get("venue") or "").strip()
     if not park_name:
         return None
 
-    address = (venue_data.get("address") or "").strip()
-    city = (venue_data.get("city") or "Atlanta").strip()
-    state = (venue_data.get("state") or venue_data.get("stateprovince") or "GA").strip()
-    zip_code = (venue_data.get("zip") or "").strip()
+    address = (place_data.get("address") or "").strip()
+    city = (place_data.get("city") or "Atlanta").strip()
+    state = (place_data.get("state") or place_data.get("stateprovince") or "GA").strip()
+    zip_code = (place_data.get("zip") or "").strip()
 
     # Build slug from park name
     slug = re.sub(r"[^a-z0-9]+", "-", park_name.lower()).strip("-")
@@ -175,8 +175,8 @@ def build_venue_from_api(venue_data: dict) -> Optional[dict]:
     }
 
 
-def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityEnvelope | None:
-    venue_type = str(venue_data.get("venue_type") or "").strip().lower()
+def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityEnvelope | None:
+    venue_type = str(place_data.get("venue_type") or "").strip().lower()
     if venue_type != "park":
         return None
 
@@ -198,7 +198,7 @@ def _build_destination_envelope(venue_data: dict, venue_id: int) -> TypedEntityE
             "metadata": {
                 "source_type": "family_destination_enrichment",
                 "venue_type": venue_type,
-                "city": str(venue_data.get("city") or "atlanta").lower(),
+                "city": str(place_data.get("city") or "atlanta").lower(),
                 "supports_org": "park_pride",
             },
         },
@@ -277,7 +277,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Ensure fallback venue exists
-        fallback_venue_id = get_or_create_venue(FALLBACK_VENUE_DATA)
+        fallback_venue_id = get_or_create_place(FALLBACK_VENUE_DATA)
 
         headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -360,7 +360,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if venue_dict:
                             slug = venue_dict["slug"]
                             if slug not in venue_cache:
-                                venue_cache[slug] = get_or_create_venue(venue_dict)
+                                venue_cache[slug] = get_or_create_place(venue_dict)
                             if slug not in enriched_venue_slugs:
                                 destination_envelope = _build_destination_envelope(
                                     venue_dict, venue_cache[slug]

@@ -20,7 +20,7 @@ from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
-    get_or_create_venue,
+    get_or_create_place,
     insert_event,
     remove_stale_source_events,
     smart_update_existing_event,
@@ -216,7 +216,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     if not sessions:
         raise ValueError("Scott Antique Markets did not yield any Atlanta daily sessions")
 
-    venue_id = get_or_create_venue(ATLANTA_VENUE)
+    venue_id = get_or_create_place(ATLANTA_VENUE)
     description = (
         "Scott Antique Markets is one of the Southeast's biggest recurring antique and vintage "
         "markets, filling Atlanta Expo Center with dealers, interiors, furniture, art, jewelry, "

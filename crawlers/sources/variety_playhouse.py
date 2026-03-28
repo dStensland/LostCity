@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, enrich_event_record
 from description_fetcher import fetch_description_playwright
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.variety-playhouse.com"
 CALENDAR_URL = f"{BASE_URL}/calendar/"
 
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Variety Playhouse",
     "slug": "variety-playhouse",
     "address": "1099 Euclid Ave NE",
@@ -119,7 +119,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_place(PLACE_DATA)
 
             logger.info(f"Fetching Variety Playhouse: {CALENDAR_URL}")
             page.goto(CALENDAR_URL, wait_until="domcontentloaded", timeout=30000)

@@ -35,7 +35,7 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from date_utils import parse_human_date
 
@@ -322,11 +322,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Determine venue
             venue_hint = event_data.get("venue_hint")
             if venue_hint:
-                venue_id = get_or_create_venue(venue_hint)
+                venue_id = get_or_create_place(venue_hint)
                 venue_name = venue_hint["name"]
             else:
                 # Default to Grady Hospital for health equity events
-                venue_id = get_or_create_venue(GRADY_HOSPITAL)
+                venue_id = get_or_create_place(GRADY_HOSPITAL)
                 venue_name = GRADY_HOSPITAL["name"]
 
             # Determine category and tags

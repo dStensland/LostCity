@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(env_path)
 
-from db import get_or_create_venue, get_venue_by_slug, get_client
+from db import get_or_create_place, get_venue_by_slug, get_client
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -1139,9 +1139,9 @@ def main():
     skipped_count = 0
     error_count = 0
 
-    for venue_data in VENUES_TO_CREATE:
-        slug = venue_data.get("slug")
-        name = venue_data.get("name")
+    for place_data in VENUES_TO_CREATE:
+        slug = place_data.get("slug")
+        name = place_data.get("name")
 
         try:
             # Check if venue already exists
@@ -1152,7 +1152,7 @@ def main():
                 continue
 
             # Create the venue
-            venue_id = get_or_create_venue(venue_data)
+            venue_id = get_or_create_place(place_data)
             logger.info(f"✓ Created: {name} ({slug}) - ID: {venue_id}")
             created_count += 1
 
