@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getTagDefinitionsByGroup, getAllTagDefinitions } from "@/lib/venue-tags";
+import { getTagDefinitionsByGroup, getAllTagDefinitions } from "@/lib/place-tags";
 import type { TagEntityType } from "@/lib/types";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 

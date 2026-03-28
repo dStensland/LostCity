@@ -5,7 +5,7 @@ import {
   addTagToEntity,
   removeTagFromEntity,
   suggestTag,
-} from "@/lib/venue-tags";
+} from "@/lib/place-tags";
 import type { EventTagGroup, TagGroup } from "@/lib/types";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 

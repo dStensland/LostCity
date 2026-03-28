@@ -32,7 +32,7 @@ import {
   ShareNetwork,
 } from "@phosphor-icons/react";
 import SmartImage from "@/components/SmartImage";
-import { HIGHLIGHT_CONFIG, type HighlightType } from "@/lib/venue-highlights";
+import { HIGHLIGHT_CONFIG, type HighlightType } from "@/lib/place-highlights";
 import { formatDateRange } from "@/lib/types/exhibitions";
 import { SectionHeader } from "@/components/detail/SectionHeader";
 import { QuickActionLink } from "@/components/detail/QuickActionLink";
@@ -51,7 +51,7 @@ import { LibraryPassCallout, type LibraryPassData } from "@/components/family/Li
 import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
 import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
 import { ContentSwap } from "@/components/ui/ContentSwap";
-import { isFeatureHeavyType, type VenueFeature } from "@/lib/venue-features";
+import { isFeatureHeavyType, type PlaceFeature } from "@/lib/place-features";
 import { type VenueSpecial } from "@/lib/specials-utils";
 import VenueFeaturesSection from "@/components/detail/VenueFeaturesSection";
 import VenueSpecialsSection from "@/components/detail/VenueSpecialsSection";
@@ -574,7 +574,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
   // ── CONTENT ZONE ────────────────────────────────────────────────────────
 
   // Cast typed data from API response
-  const typedFeatures = (data?.features ?? []) as unknown as VenueFeature[];
+  const typedFeatures = (data?.features ?? []) as unknown as PlaceFeature[];
   const typedSpecials = (data?.specials ?? []) as unknown as VenueSpecial[];
   const typedHighlights = (data?.highlights ?? []) as unknown as { id: number; highlight_type: string; title: string; description: string | null; image_url: string | null }[];
 
@@ -591,7 +591,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
   // Step 4: Plan Your Visit — only render if there's visit planning data
   const hasVisitPlanningData = spot.typical_price_min != null || spot.typical_duration_minutes != null || spot.indoor_outdoor || typedSpecials.length > 0 || spot.library_pass?.eligible;
 
-  // Highlight type labels — use canonical config from venue-highlights.ts
+  // Highlight type labels — use canonical config from place-highlights.ts
 
   const INDOOR_OUTDOOR_LABELS: Record<string, string> = {
     indoor: "Indoor",

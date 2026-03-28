@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useMemo } from "react";
 import VenueCard from "./VenueCard";
-import { useVenueDiscovery } from "@/lib/hooks/useVenueDiscovery";
+import { usePlaceDiscovery } from "@/lib/hooks/usePlaceDiscovery";
 import VenueFilterBar from "@/components/find/VenueFilterBar";
 import VenueListView, { type SortOption } from "@/components/find/VenueListView";
 import { SPOTS_TABS, getTabChips, type SpotsTab } from "@/lib/spots-constants";
@@ -89,7 +89,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
     setUserLocation,
     activeTab,
     setActiveTab,
-  } = useVenueDiscovery({ portalId, portalSlug, isExclusive });
+  } = usePlaceDiscovery({ portalId, portalSlug, isExclusive });
 
   const [sortByRaw, setSortBy] = useState<SortOption>("category");
 

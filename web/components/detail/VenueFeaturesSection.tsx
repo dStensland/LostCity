@@ -1,10 +1,10 @@
 "use client";
 
 import {
-  type VenueFeature,
+  type PlaceFeature,
   type FeatureType,
   FEATURE_TYPE_LABELS,
-} from "@/lib/venue-features";
+} from "@/lib/place-features";
 import { getFeatureSectionConfig } from "@/lib/venue-features-config";
 import { SectionHeader } from "./SectionHeader";
 import ScopedStyles from "@/components/ScopedStyles";
@@ -12,8 +12,8 @@ import { createCssVarClass } from "@/lib/css-utils";
 import Badge from "@/components/ui/Badge";
 import Image from "@/components/SmartImage";
 
-type VenueFeaturesSectionProps = {
-  features: VenueFeature[];
+type PlaceFeaturesSectionProps = {
+  features: PlaceFeature[];
   venueType: string | null | undefined;
 };
 
@@ -37,7 +37,7 @@ function FeatureBadges({
   seasonalLabel,
   hideType,
 }: {
-  feature: VenueFeature;
+  feature: PlaceFeature;
   seasonalLabel: string | null;
   hideType?: boolean;
 }) {
@@ -107,7 +107,7 @@ function ImageFeatureCard({
   accentClassName,
   hideType,
 }: {
-  feature: VenueFeature;
+  feature: PlaceFeature;
   seasonalLabel: string | null;
   accentClassName: string;
   hideType?: boolean;
@@ -158,7 +158,7 @@ function TextFeatureCard({
   IconComp,
   hideType,
 }: {
-  feature: VenueFeature;
+  feature: PlaceFeature;
   seasonalLabel: string | null;
   accentColor: string;
   accentClassName: string;
@@ -199,10 +199,10 @@ function TextFeatureCard({
   );
 }
 
-export default function VenueFeaturesSection({
+export default function PlaceFeaturesSection({
   features,
   venueType,
-}: VenueFeaturesSectionProps) {
+}: PlaceFeaturesSectionProps) {
   if (!features || features.length === 0) return null;
 
   const config = getFeatureSectionConfig(venueType);
