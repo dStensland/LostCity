@@ -495,7 +495,7 @@ def _step_resolve_venue(event_data: dict, ctx: InsertContext) -> dict:
         ctx.venue = get_venue_by_id_cached(_vid)
         if ctx.venue:
             ctx.venue_vibes = ctx.venue.get("vibes") or []
-            ctx.venue_type = ctx.venue.get("place_type") or ctx.venue.get("place_type")
+            ctx.venue_type = ctx.venue.get("place_type")
             venue_slug = str(ctx.venue.get("slug") or "").strip().lower()
             if ctx.venue.get("is_active") is False or venue_slug in CLOSED_VENUE_SLUGS:
                 ctx.venue_inactive_or_closed = True
