@@ -1,24 +1,24 @@
 "use client";
 
 import { useVenueHangs } from "@/lib/hooks/useHangs";
-import { VenueHangStrip } from "./VenueHangStrip";
+import { PlaceHangStrip } from "./PlaceHangStrip";
 
-interface VenueHangStripLiveProps {
+interface PlaceHangStripLiveProps {
   venueId: number;
   variant?: "compact" | "full";
   className?: string;
 }
 
 /**
- * Client wrapper that fetches venue hang data via useVenueHangs hook
- * and passes it to VenueHangStrip. Use this on venue detail pages
+ * Client wrapper that fetches place hang data via useVenueHangs hook
+ * and passes it to PlaceHangStrip. Use this on place detail pages
  * where data needs to be live-fetched.
  */
-export function VenueHangStripLive({
+export function PlaceHangStripLive({
   venueId,
   variant = "full",
   className,
-}: VenueHangStripLiveProps) {
+}: PlaceHangStripLiveProps) {
   const { data, isLoading } = useVenueHangs(venueId);
 
   if (isLoading) {
@@ -34,7 +34,7 @@ export function VenueHangStripLive({
   if (data.total_count === 0) return null;
 
   return (
-    <VenueHangStrip
+    <PlaceHangStrip
       venueId={venueId}
       hangInfo={data}
       variant={variant}

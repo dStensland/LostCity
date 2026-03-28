@@ -14,13 +14,13 @@ import { formatTimeSplit } from "@/lib/formats";
 import { getEffectiveDate } from "@/lib/event-grouping";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import { InfoCard, SectionHeader } from "@/components/detail";
-import VenueEventsByDay, {
-  VenueEventCard,
-  type VenueEvent,
-} from "@/components/VenueEventsByDay";
+import PlaceEventsByDay, {
+  PlaceEventCard,
+  type PlaceEvent,
+} from "@/components/PlaceEventsByDay";
 
 // Extended event type that includes series info from the joined query
-export type ShowtimeEvent = VenueEvent & {
+export type ShowtimeEvent = PlaceEvent & {
   series_id?: string | null;
   series?: {
     id: string;
@@ -32,7 +32,7 @@ export type ShowtimeEvent = VenueEvent & {
   image_url?: string | null;
 };
 
-interface VenueShowtimesProps {
+interface PlaceShowtimesProps {
   events: ShowtimeEvent[];
   portalSlug: string;
   venueType?: string | null;
@@ -57,7 +57,7 @@ function isHighEventVenue(type: string | null | undefined): boolean {
   return type ? HIGH_EVENT_VENUE_TYPES.has(type) : false;
 }
 
-export default function VenueShowtimes({
+export default function PlaceShowtimes({
   events,
   portalSlug,
   venueType,
@@ -65,7 +65,7 @@ export default function VenueShowtimes({
   title,
   onEventClick,
   bare,
-}: VenueShowtimesProps) {
+}: PlaceShowtimesProps) {
   if (events.length === 0) return null;
 
   // Mode B: Simple list for venues with few events
@@ -82,7 +82,7 @@ export default function VenueShowtimes({
   const content = useShowtimeMode ? (
     <ShowtimesByDate events={events} portalSlug={portalSlug} onEventClick={onEventClick} />
   ) : (
-    <VenueEventsByDay
+    <PlaceEventsByDay
       events={events}
       portalSlug={portalSlug}
       onEventClick={onEventClick}
@@ -306,7 +306,7 @@ function ShowtimesByDate({
 
             {/* Standalone events (no series) */}
             {standaloneEvents.map((event) => (
-              <VenueEventCard
+              <PlaceEventCard
                 key={event.id}
                 event={event}
                 onClick={onEventClick ? () => onEventClick(event.id) : undefined}

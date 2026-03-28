@@ -5,12 +5,12 @@ import TagChip from "./TagChip";
 import AddTagModal from "./AddTagModal";
 import type { VenueTagWithVote } from "@/lib/types";
 
-interface VenueTagListProps {
+interface PlaceTagListProps {
   venueId: number;
   initialTags?: VenueTagWithVote[];
 }
 
-export default function VenueTagList({ venueId, initialTags = [] }: VenueTagListProps) {
+export default function PlaceTagList({ venueId, initialTags = [] }: PlaceTagListProps) {
   const [tags, setTags] = useState<VenueTagWithVote[]>(initialTags);
   const [isLoading, setIsLoading] = useState(initialTags.length === 0);
   const [showAddModal, setShowAddModal] = useState(false);

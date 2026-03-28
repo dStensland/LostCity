@@ -12,7 +12,7 @@ import { createCssVarClass } from "@/lib/css-utils";
 import Badge from "@/components/ui/Badge";
 import Image from "@/components/SmartImage";
 
-type VenueFeaturesSectionProps = {
+type PlaceFeaturesSectionProps = {
   features: VenueFeature[];
   venueType: string | null | undefined;
 };
@@ -199,10 +199,10 @@ function TextFeatureCard({
   );
 }
 
-export default function VenueFeaturesSection({
+export default function PlaceFeaturesSection({
   features,
   venueType,
-}: VenueFeaturesSectionProps) {
+}: PlaceFeaturesSectionProps) {
   if (!features || features.length === 0) return null;
 
   const config = getFeatureSectionConfig(venueType);

@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { SPOT_TYPES, formatPriceLevel, getSpotTypeLabels, type SpotType } from "@/lib/spots-constants";
 import FollowButton from "@/components/FollowButton";
-import VenueTagList from "@/components/VenueTagList";
+import PlaceTagList from "@/components/PlaceTagList";
 import LinkifyText from "@/components/LinkifyText";
 import Skeleton from "@/components/Skeleton";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
@@ -44,7 +44,7 @@ import { DetailStickyBar } from "@/components/detail/DetailStickyBar";
 import Badge from "@/components/ui/Badge";
 import Dot from "@/components/ui/Dot";
 import SaveButton from "@/components/SaveButton";
-import VenueShowtimes, { type ShowtimeEvent } from "@/components/VenueShowtimes";
+import PlaceShowtimes, { type ShowtimeEvent } from "@/components/PlaceShowtimes";
 import DogNearbySection from "@/components/detail/DogNearbySection";
 import { DestinationDetailSections } from "@/components/adventure/DestinationDetailSections";
 import { LibraryPassCallout, type LibraryPassData } from "@/components/family/LibraryPassCallout";
@@ -53,8 +53,8 @@ import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
 import { ContentSwap } from "@/components/ui/ContentSwap";
 import { isFeatureHeavyType, type VenueFeature } from "@/lib/venue-features";
 import { type VenueSpecial } from "@/lib/specials-utils";
-import VenueFeaturesSection from "@/components/detail/VenueFeaturesSection";
-import VenueSpecialsSection from "@/components/detail/VenueSpecialsSection";
+import PlaceFeaturesSection from "@/components/detail/PlaceFeaturesSection";
+import PlaceSpecialsSection from "@/components/detail/PlaceSpecialsSection";
 import dynamic from "next/dynamic";
 import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
 
@@ -66,8 +66,8 @@ const HangButton = dynamic(
   () => import("@/components/hangs/HangButton").then((m) => ({ default: m.HangButton })),
   { ssr: false },
 );
-const VenueHangStripLive = dynamic(
-  () => import("@/components/hangs/VenueHangStripLive").then((m) => ({ default: m.VenueHangStripLive })),
+const PlaceHangStripLive = dynamic(
+  () => import("@/components/hangs/PlaceHangStripLive").then((m) => ({ default: m.PlaceHangStripLive })),
   { ssr: false },
 );
 
@@ -258,7 +258,7 @@ function CollapsibleVenueTags({ venueId }: { venueId: number }) {
 
   return (
     <CollapsibleSection title="Community Tags">
-      <VenueTagList venueId={venueId} />
+      <PlaceTagList venueId={venueId} />
     </CollapsibleSection>
   );
 }
@@ -565,7 +565,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
       {/* Who's here — only renders when active hangs exist */}
       {ENABLE_HANGS_V1 && (
         <div className="px-5 pb-3">
-          <VenueHangStripLive venueId={spot.id} variant="compact" />
+          <PlaceHangStripLive venueId={spot.id} variant="compact" />
         </div>
       )}
     </div>
@@ -697,7 +697,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
           {/* Specials inside plan your visit */}
           {typedSpecials.length > 0 && (
             <div className="border-t border-[var(--twilight)]/40">
-              <VenueSpecialsSection specials={typedSpecials} />
+              <PlaceSpecialsSection specials={typedSpecials} />
             </div>
           )}
 
@@ -782,7 +782,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
     if (upcomingEvents.length === 0) return null;
     return (
       <div>
-        <VenueShowtimes
+        <PlaceShowtimes
           events={upcomingEvents as ShowtimeEvent[]}
           portalSlug={portalSlug}
           venueType={spot.spot_type}
@@ -847,7 +847,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
 
           {/* 4. What's Here (features) */}
           {typedFeatures.length > 0 && (
-            <VenueFeaturesSection features={typedFeatures} venueType={spot.spot_type} />
+            <PlaceFeaturesSection features={typedFeatures} venueType={spot.spot_type} />
           )}
 
           {/* 5. Don't Miss (highlights) */}
@@ -892,7 +892,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose, initialData
 
           {/* 6. What's Here (features) */}
           {typedFeatures.length > 0 && (
-            <VenueFeaturesSection features={typedFeatures} venueType={spot.spot_type} />
+            <PlaceFeaturesSection features={typedFeatures} venueType={spot.spot_type} />
           )}
 
           {/* 7. Don't Miss (highlights) */}

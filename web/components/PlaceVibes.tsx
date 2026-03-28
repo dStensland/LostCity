@@ -1,9 +1,9 @@
 /**
- * VenueVibes - Display venue vibe/atmosphere tags
+ * PlaceVibes - Display place vibe/atmosphere tags
  * Uses the neon atmospheric design system
  */
 
-interface VenueVibesProps {
+interface PlaceVibesProps {
   vibes: string[] | null | undefined;
   className?: string;
   limit?: number;
@@ -53,7 +53,7 @@ function getVibeIcon(vibe: string): string {
   return VIBE_ICONS[normalizedVibe] || VIBE_ICONS["default"];
 }
 
-export default function VenueVibes({ vibes, className = "", limit = 5 }: VenueVibesProps) {
+export default function PlaceVibes({ vibes, className = "", limit = 5 }: PlaceVibesProps) {
   if (!vibes || vibes.length === 0) return null;
 
   const displayVibes = limit ? vibes.slice(0, limit) : vibes;

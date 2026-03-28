@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import type { VenueTagSummary } from "@/lib/types";
 
-interface VenueTagBadgesProps {
+interface PlaceTagBadgesProps {
   venueId: number;
   maxTags?: number;
 }
 
-export default function VenueTagBadges({ venueId, maxTags = 3 }: VenueTagBadgesProps) {
+export default function PlaceTagBadges({ venueId, maxTags = 3 }: PlaceTagBadgesProps) {
   const [tags, setTags] = useState<VenueTagSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

@@ -5,8 +5,8 @@ import Image from "@/components/SmartImage";
 import CategoryIcon from "@/components/CategoryIcon";
 import { OpenStatusBadge } from "@/components/HoursSection";
 import { type HoursData } from "@/lib/hours";
-import VenueEventsByDay from "@/components/VenueEventsByDay";
-import VenueShowtimes, { type ShowtimeEvent } from "@/components/VenueShowtimes";
+import PlaceEventsByDay from "@/components/PlaceEventsByDay";
+import PlaceShowtimes, { type ShowtimeEvent } from "@/components/PlaceShowtimes";
 import { formatTimeSplit } from "@/lib/formats";
 import { SectionHeader } from "@/components/detail/SectionHeader";
 import { getSpotTypeLabel } from "@/lib/spots-constants";
@@ -143,10 +143,10 @@ function MoreAtVenue({
   const isCinemaLike = venueType ? CINEMA_VENUE_TYPES.has(venueType) : false;
   const hasSeries = events.some((e) => e.series_id || e.series);
 
-  // Use VenueShowtimes for cinema/theater venues with series data
+  // Use PlaceShowtimes for cinema/theater venues with series data
   if (isCinemaLike && hasSeries) {
     return (
-      <VenueShowtimes
+      <PlaceShowtimes
         events={events as ShowtimeEvent[]}
         portalSlug={portalSlug}
         venueType={venueType}
@@ -159,7 +159,7 @@ function MoreAtVenue({
   return (
     <div>
       <SectionHeader title={`More at ${venueName}`} count={events.length} />
-      <VenueEventsByDay
+      <PlaceEventsByDay
         events={events}
         onEventClick={onEventClick}
         maxDates={5}

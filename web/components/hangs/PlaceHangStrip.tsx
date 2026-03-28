@@ -19,7 +19,7 @@ interface HangInfo {
   public_count: number;
 }
 
-interface VenueHangStripProps {
+interface PlaceHangStripProps {
   venueId: number;
   /** Pre-loaded data to avoid fetch */
   hangInfo?: HangInfo;
@@ -209,11 +209,11 @@ function FullStrip({ hangInfo }: { hangInfo: HangInfo }) {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export const VenueHangStrip = memo(function VenueHangStrip({
+export const PlaceHangStrip = memo(function PlaceHangStrip({
   hangInfo,
   variant = "compact",
   className,
-}: VenueHangStripProps) {
+}: PlaceHangStripProps) {
   // If no data provided, render nothing (hook integration is deferred)
   if (!hangInfo) return null;
 
@@ -233,4 +233,4 @@ export const VenueHangStrip = memo(function VenueHangStrip({
   );
 });
 
-export type { VenueHangStripProps, HangInfo, FriendHang };
+export type { PlaceHangStripProps, HangInfo, FriendHang };

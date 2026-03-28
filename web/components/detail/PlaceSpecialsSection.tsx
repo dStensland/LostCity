@@ -15,13 +15,13 @@ import {
 
 export type { VenueSpecial };
 
-interface VenueSpecialsSectionProps {
+interface PlaceSpecialsSectionProps {
   specials: VenueSpecial[];
 }
 
-export default function VenueSpecialsSection({
+export default function PlaceSpecialsSection({
   specials,
-}: VenueSpecialsSectionProps) {
+}: PlaceSpecialsSectionProps) {
   if (!specials || specials.length === 0) return null;
 
   const colorClass = createCssVarClass(

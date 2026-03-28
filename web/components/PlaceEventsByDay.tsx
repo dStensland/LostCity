@@ -19,8 +19,8 @@ import { createCssVarClass } from "@/lib/css-utils";
 import { FreeBadge } from "@/components/Badge";
 import { getReflectionClass } from "@/lib/card-utils";
 
-// Common event type that works with both EventDetailView and VenueDetailView
-export type VenueEvent = {
+// Common event type that works with both EventDetailView and PlaceDetailView
+export type PlaceEvent = {
   id: number;
   title: string;
   start_date: string;
@@ -41,8 +41,8 @@ export type VenueEvent = {
   }[];
 };
 
-interface VenueEventsByDayProps {
-  events: VenueEvent[];
+interface PlaceEventsByDayProps {
+  events: PlaceEvent[];
   onEventClick?: (eventId: number) => void; // For client-side navigation
   getEventHref?: (eventId: number) => string; // For SSR/Link-based navigation
   portalSlug?: string; // Alternative to getEventHref — pass from server components
@@ -59,7 +59,7 @@ const normalizeLabel = (value: string | null | undefined) =>
     .replace(/\s+/g, " ")
     .trim();
 
-const buildLineupSummary = (event: VenueEvent) => {
+const buildLineupSummary = (event: PlaceEvent) => {
   const artists = event.artists || [];
   if (artists.length > 0) {
     const sorted = [...artists].sort((a, b) => {
@@ -99,7 +99,7 @@ const buildLineupSummary = (event: VenueEvent) => {
   return lineup;
 };
 
-export default function VenueEventsByDay({
+export default function PlaceEventsByDay({
   events,
   onEventClick,
   getEventHref: getEventHrefProp,
@@ -108,7 +108,7 @@ export default function VenueEventsByDay({
   showDatePicker = false,
   compact = false,
   previewLimit = 5,
-}: VenueEventsByDayProps) {
+}: PlaceEventsByDayProps) {
   // Build getEventHref from prop or portalSlug fallback (safe for server components)
   const getEventHref = getEventHrefProp ?? (portalSlug ? (id: number) => `/${portalSlug}/events/${id}` : undefined);
 
@@ -119,7 +119,7 @@ export default function VenueEventsByDay({
 
   // Group events by effective date (ongoing multi-day events show as Today)
   const eventsByDate = useMemo(() => {
-    const grouped = new Map<string, VenueEvent[]>();
+    const grouped = new Map<string, PlaceEvent[]>();
     for (const event of events) {
       const dateKey = getEffectiveDate(event.start_date, event.end_date);
       if (!grouped.has(dateKey)) {
@@ -205,7 +205,7 @@ export default function VenueEventsByDay({
     return (
       <div className="space-y-2">
         {selectedEvents.map((event) => (
-          <VenueEventCard
+          <PlaceEventCard
             key={event.id}
             event={event}
             onClick={onEventClick ? () => onEventClick(event.id) : undefined}
@@ -322,7 +322,7 @@ export default function VenueEventsByDay({
               </p>
             )}
             {visibleEvents.map((event) => (
-              <VenueEventCard
+              <PlaceEventCard
                 key={event.id}
                 event={event}
                 onClick={onEventClick ? () => onEventClick(event.id) : undefined}
@@ -354,14 +354,14 @@ export default function VenueEventsByDay({
 }
 
 // Event card component — exported for reuse in VenueShowtimes
-export function VenueEventCard({
+export function PlaceEventCard({
   event,
   onClick,
   href,
   compact,
   subtitle,
 }: {
-  event: VenueEvent;
+  event: PlaceEvent;
   onClick?: () => void;
   href?: string;
   compact: boolean;

@@ -11,7 +11,7 @@ import AddToCalendar from "@/components/AddToCalendar";
 import ShareEventButton from "@/components/ShareEventButton";
 import InviteToEventButton from "@/components/InviteToEventButton";
 import SaveButton from "@/components/SaveButton";
-import VenueVibes from "@/components/VenueVibes";
+import PlaceVibes from "@/components/PlaceVibes";
 import LinkifyText from "@/components/LinkifyText";
 import { formatTime, formatPriceDetailed } from "@/lib/formats";
 import { format, parseISO } from "date-fns";
@@ -768,7 +768,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
             </p>
             {event.venue.vibes && event.venue.vibes.length > 0 &&
               event.category && ["food_drink", "nightlife", "music"].includes(event.category) && (
-              <VenueVibes vibes={event.venue.vibes} className="mt-2" />
+              <PlaceVibes vibes={event.venue.vibes} className="mt-2" />
             )}
             <GettingThereSection transit={event.venue} variant="compact" />
           </button>

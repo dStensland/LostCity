@@ -3,7 +3,7 @@
 import React, { useState, useRef, useMemo } from "react";
 import { format, parseISO, isSameDay, isToday, isTomorrow, addDays, startOfDay } from "date-fns";
 import { getEffectiveDate } from "@/lib/event-grouping";
-import { VenueEventCard } from "@/components/VenueEventsByDay";
+import { PlaceEventCard } from "@/components/PlaceEventsByDay";
 import { CalendarBlank } from "@phosphor-icons/react";
 
 type UpcomingEvent = {
@@ -26,17 +26,17 @@ type UpcomingEvent = {
   recommendation_count?: number;
 };
 
-interface VenueEventsSectionProps {
+interface PlaceEventsSectionProps {
   venueName: string;
   events: UpcomingEvent[];
   onEventClick: (id: number) => void;
 }
 
-export default function VenueEventsSection({
+export default function PlaceEventsSection({
   venueName,
   events,
   onEventClick,
-}: VenueEventsSectionProps) {
+}: PlaceEventsSectionProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState("");
@@ -188,7 +188,7 @@ export default function VenueEventsSection({
           </div>
         ) : (
           selectedEvents.map((event) => (
-            <VenueEventCard
+            <PlaceEventCard
               key={event.id}
               event={event}
               onClick={() => onEventClick(event.id)}

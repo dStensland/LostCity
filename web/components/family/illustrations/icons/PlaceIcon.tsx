@@ -1,21 +1,21 @@
 "use client";
 
 /**
- * VenueIcon - Chunky map pin with personality
+ * PlaceIcon - Chunky map pin with personality
  * Bold, friendly location marker
  */
 
-interface VenueIconProps {
+interface PlaceIconProps {
   size?: number;
   color?: string;
   className?: string;
 }
 
-export function VenueIcon({
+export function PlaceIcon({
   size = 16,
   color = "#FF5722",
   className
-}: VenueIconProps) {
+}: PlaceIconProps) {
   return (
     <svg
       width={size}
@@ -54,4 +54,4 @@ export function VenueIcon({
   );
 }
 
-export default VenueIcon;
+export default PlaceIcon;

@@ -6,7 +6,7 @@ import { CategoryIcons, CATEGORY_COLORS } from "@/components/CollapsibleSection"
 import CategoryIcon from "@/components/CategoryIcon";
 import { OpenStatusBadge } from "@/components/HoursSection";
 import { formatCloseTime, type HoursData } from "@/lib/hours";
-import VenueEventsByDay, { VenueEventCard } from "@/components/VenueEventsByDay";
+import PlaceEventsByDay, { PlaceEventCard } from "@/components/PlaceEventsByDay";
 import { SectionHeader } from "@/components/detail/SectionHeader";
 
 // Unified NearbySpot type accommodating both VenueDetailView (rich) and EventDetailView (lean)
@@ -327,7 +327,7 @@ function EventsTabContent({
           <h3 className="text-xs font-mono uppercase tracking-wider text-[var(--muted)] mb-2">
             At {venueName || "this spot"}
           </h3>
-          <VenueEventsByDay
+          <PlaceEventsByDay
             events={venueEvents}
             onEventClick={onEventClick}
             maxDates={5}
@@ -343,7 +343,7 @@ function EventsTabContent({
           </h3>
           <div className="space-y-2">
             {nearbyEvents.map((event) => (
-              <VenueEventCard
+              <PlaceEventCard
                 key={event.id}
                 event={event}
                 onClick={() => onEventClick?.(event.id)}

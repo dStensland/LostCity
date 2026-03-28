@@ -9,7 +9,7 @@ export { SearchIcon } from "./icons/SearchIcon";
 export { TodayIcon } from "./icons/TodayIcon";
 export { WeekendIcon } from "./icons/WeekendIcon";
 export { FreeIcon } from "./icons/FreeIcon";
-export { VenueIcon } from "./icons/VenueIcon";
+export { PlaceIcon } from "./icons/PlaceIcon";
 export { LaunchIcon } from "./icons/LaunchIcon";
 
 // NEW: Doodle-style icons - sketchy, hand-drawn feel
