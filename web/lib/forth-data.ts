@@ -956,7 +956,7 @@ async function fetchDestinationsDirect(
         _score: score,
       } as Destination & { _score: number };
     })
-    .filter((d): d is Destination & { _score: number } => d !== null)
+    .filter((d): d is Destination & { _score: number } => d !== null && (d as Destination & { _score: number })._score >= 0)
     .sort((a, b) => b._score !== a._score ? b._score - a._score : a.distance_km - b.distance_km);
 
   // Split into all destinations and live-only

@@ -10,13 +10,13 @@ ALTER TABLE portals
 
 -- Populate existing FORTH portals with the default config.
 -- The default values match the spec:
---   proximity.walkable=80, close=40, far=15
+--   proximity.walkable=80, close=25, far=15
 --   neighborhood_boost=20
 --   category_boosts={} (neutral by default)
 --   suppress_categories=["support","religious"]
 UPDATE portals
 SET scoring_config = '{
-  "proximity": { "walkable": 80, "close": 40, "far": 15 },
+  "proximity": { "walkable": 80, "close": 25, "far": 15 },
   "neighborhood_boost": 20,
   "category_boosts": {},
   "suppress_categories": ["support", "religious"]

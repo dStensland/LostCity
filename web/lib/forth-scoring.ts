@@ -34,7 +34,7 @@ export interface ScoringConfig {
 }
 
 const DEFAULT_SCORING_CONFIG: ScoringConfig = {
-  proximity: { walkable: 80, close: 40, far: 15 },
+  proximity: { walkable: 80, close: 25, far: 15 },
   neighborhood_boost: 20,
   category_boosts: {},
   suppress_categories: ["support", "religious"],
@@ -55,7 +55,10 @@ export function parseScoringConfig(raw: Record<string, unknown> | null | undefin
       ? raw.neighborhood_boost
       : DEFAULT_SCORING_CONFIG.neighborhood_boost,
     category_boosts: (raw.category_boosts && typeof raw.category_boosts === "object" && !Array.isArray(raw.category_boosts))
-      ? (raw.category_boosts as Record<string, number>)
+      ? Object.fromEntries(
+          Object.entries(raw.category_boosts as Record<string, unknown>)
+            .filter(([, v]) => typeof v === "number")
+        ) as Record<string, number>
       : {},
     suppress_categories: Array.isArray(raw.suppress_categories)
       ? (raw.suppress_categories as string[])
@@ -97,8 +100,9 @@ const SIGNAL_CAP = 25;
 function significanceScore(event: ScoringEvent): number {
   let score = 0;
 
-  if (event.significance === "high")        score += 30;
-  else if (event.significance === "medium") score += 15;
+  if (event.is_tentpole)                     score += 35;
+  else if (event.significance === "high")    score += 30;
+  else if (event.significance === "medium")  score += 22;
 
   if (event.significance_signals && event.significance_signals.length > 0) {
     const signalBonus = event.significance_signals.reduce(
@@ -125,9 +129,9 @@ function proximityScore(
 ): number {
   let score = 0;
 
-  if (proximityTier === "walkable")       score += config.proximity.walkable;
-  else if (proximityTier === "close")     score += config.proximity.close;
-  else                                    score += config.proximity.far;
+  if (proximityTier === "walkable")            score += config.proximity.walkable;
+  else if (proximityTier === "close")          score += config.proximity.close;
+  else /* "destination" or unknown */          score += config.proximity.far;
 
   if (eventNeighborhood && eventNeighborhood === hotelNeighborhood) {
     score += config.neighborhood_boost;
