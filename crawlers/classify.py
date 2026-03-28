@@ -592,6 +592,7 @@ def classify_llm(
         raw = generate_text(
             system_prompt=_SYSTEM_PROMPT,
             user_message=user_msg,
+            provider_override="anthropic",
             model_override="claude-haiku-4-5-20251001",
         )
     except Exception as e:

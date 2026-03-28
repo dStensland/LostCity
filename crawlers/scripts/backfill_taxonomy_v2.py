@@ -33,7 +33,7 @@ from collections import defaultdict
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db import get_client
-from classify import classify_rules, ClassificationResult
+from classify import classify_rules, classify_event, ClassificationResult
 from supabase import Client
 
 logging.basicConfig(
@@ -89,16 +89,28 @@ def fetch_event_batch(
     return result.data or []
 
 
+DISSOLVED_CATEGORIES = {
+    "nightlife", "community", "family", "recreation",
+    "wellness", "exercise", "learning", "support_group",
+}
+
+# Direct renames — no classification needed, just category swap
+DIRECT_RENAMES: dict[str, str] = {
+    "exercise": "fitness",
+    "support_group": "support",
+}
+
+
 def classify_event_for_backfill(
     event: dict,
+    use_llm: bool = True,
 ) -> ClassificationResult:
     """
     Run classification on a single event.
-    Uses source-level defaults first, then rules-based classification.
-    Does NOT invoke the LLM — this backfill uses rules only.
-    LLM classification happens on new ingestion going forward.
+    Uses source-level defaults first, then rules, then LLM for dissolved categories.
     """
     source_id = event.get("source_id")
+    old_cat = event.get("category_id") or ""
 
     # Source-level default
     if source_id in SOURCE_DEFAULTS:
@@ -110,14 +122,46 @@ def classify_event_for_backfill(
             source="source_default",
         )
 
+    # Direct renames — no ambiguity
+    if old_cat in DIRECT_RENAMES:
+        return ClassificationResult(
+            category=DIRECT_RENAMES[old_cat],
+            genres=[],
+            confidence=1.0,
+            source="direct_rename",
+        )
+
     venue_data = event.get("venues") or {}
     venue_type = venue_data.get("venue_type") if isinstance(venue_data, dict) else None
+    title = event.get("title") or ""
+    description = event.get("description") or ""
 
-    return classify_rules(
-        title=event.get("title") or "",
-        description=event.get("description") or "",
+    # Try rules first
+    result = classify_rules(
+        title=title,
+        description=description,
         venue_type=venue_type,
     )
+
+    # If rules are confident, use them
+    if result.category and result.confidence >= 0.7:
+        return result
+
+    # For dissolved categories, use LLM fallback if enabled
+    if use_llm and old_cat in DISSOLVED_CATEGORIES:
+        venue_name = venue_data.get("name") if isinstance(venue_data, dict) else None
+        llm_result = classify_event(
+            title=title,
+            description=description,
+            venue_type=venue_type,
+            venue_name=venue_name,
+            source_id=source_id,
+            category_hint=old_cat,
+        )
+        if llm_result.category and llm_result.confidence > 0.3:
+            return llm_result
+
+    return result
 
 
 def apply_genre_scoping(category: str, genres: list[str]) -> list[str]:
@@ -138,6 +182,7 @@ def run_backfill(
     source_id: int | None,
     batch_size: int,
     max_batches: int | None,
+    use_llm: bool = True,
 ) -> None:
     client = get_supabase()
     today = date.today().isoformat()
@@ -185,7 +230,7 @@ def run_backfill(
                 old_cat = event.get("category_id") or "unknown"
                 category_before[old_cat] += 1
 
-                result = classify_event_for_backfill(event)
+                result = classify_event_for_backfill(event, use_llm=use_llm)
 
                 if not result.category:
                     # No classification result — leave unchanged
@@ -313,6 +358,11 @@ def main() -> None:
         default=None,
         help="Stop after N batches (for incremental runs).",
     )
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help="Disable LLM fallback — rules-only classification.",
+    )
     args = parser.parse_args()
 
     run_backfill(
@@ -320,6 +370,7 @@ def main() -> None:
         source_id=args.source_id,
         batch_size=args.batch_size,
         max_batches=args.max_batches,
+        use_llm=not args.no_llm,
     )
 
 
