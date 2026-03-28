@@ -28,6 +28,44 @@ EVENTS_URL = f"{API_BASE}/events"
 LOCATIONS_URL = f"{API_BASE}/locations"
 IMAGE_BASE = "https://d2snwnmzyr8jue.cloudfront.net"
 
+# BiblioCommons event type name → LostCity category.
+# Keys are the exact .name strings returned in entities.eventTypes[id].name,
+# lowercased for matching.  Applied BEFORE keyword matching so source-provided
+# type wins over title/description guessing.
+#
+# Types confirmed from live API 2026-03-27:
+#   5ea06d53faf3662f0067a316 → "Books and Reading"
+#   5ea06d635ed4ba3a0057c7c9 → "Crafts & DIY"
+#   5ea06d752b699a45005bfd7f → "Computers & Technology"
+#   5ecf0b33952c6824007929e4 → "District 1"    (administrative tag — skip)
+#   5ecf0b5c952c6824007929e7 → "District 6"    (administrative tag — skip)
+#   5ecf0b80952c6824007929e8 → "Storytime"
+#   5ecf0bad952c6824007929e9 → "Arts/Crafts/Hobbies"
+#   5ecf0cad9315aa2f00271261 → "Classes and Workshops"
+#   5ecf0cb8a40b973a00c42a88 → "Games and Gaming"
+#   5ecf0d60a40b973a00c42a90 → "Fitness & Nutrition"
+BIBLIOCOMMONS_TYPE_MAP: dict[str, str] = {
+    "books and reading": "words",
+    "storytime": "words",
+    "crafts & diy": "workshops",
+    "computers & technology": "education",
+    "arts/crafts/hobbies": "workshops",
+    "classes and workshops": "education",
+    "games and gaming": "games",
+    "fitness & nutrition": "fitness",
+    # Substring fallbacks — checked after exact matches
+    "book": "words",
+    "story": "words",
+    "craft": "workshops",
+    "computer": "education",
+    "technology": "education",
+    "game": "games",
+    "gaming": "games",
+    "fitness": "fitness",
+    "nutrition": "fitness",
+    "art": "workshops",
+}
+
 # Category mapping based on event types.
 # ORDER MATTERS — first match wins. More specific patterns go first.
 # "play" is not a valid LostCity category; use "games" instead.
@@ -335,21 +373,45 @@ def audience_tags_and_category(
     return tags, is_family
 
 
-def determine_category(title: str, description: str, type_ids: list) -> str:
+def determine_category(
+    title: str,
+    description: str,
+    type_ids: list,
+    entities: dict | None = None,
+) -> str:
     """
-    Determine event category from title and description.
+    Determine event category, checking BiblioCommons event types first.
 
-    Uses CATEGORY_MAP with ordered keyword matching. First match wins, so
-    more-specific entries (e.g. "english class") appear before broader ones
-    (e.g. "class"). Default is "education" — libraries are primarily
-    educational venues, and the few purely literary events are caught by the
-    words keywords at the top of the map.
+    Priority:
+    1. BiblioCommons eventTypes label → BIBLIOCOMMONS_TYPE_MAP (highest confidence —
+       source-provided type wins over guessing from title+description)
+    2. Title+description keyword matching → CATEGORY_MAP (fallback)
+    3. "education" default (safest for unmatched library events)
 
-    Previously defaulted to "words", which caused chess clubs, STEM programs,
-    fitness classes, and support services to all land in words incorrectly.
+    Args:
+        title: Event title.
+        description: Stripped event description text.
+        type_ids: List of BiblioCommons type ID strings from defn.get("typeIds", []).
+        entities: Full entities dict from the API response (contains "eventTypes").
     """
+    # Step 1: Source-provided type IDs (highest fidelity)
+    if type_ids and entities:
+        type_lookup = entities.get("eventTypes", {})
+        for type_id in type_ids:
+            type_obj = type_lookup.get(str(type_id), {})
+            type_label = (type_obj.get("name") or type_obj.get("label") or "").strip().lower()
+            if not type_label:
+                continue
+            # Exact match first
+            if type_label in BIBLIOCOMMONS_TYPE_MAP:
+                return BIBLIOCOMMONS_TYPE_MAP[type_label]
+            # Substring match: check if any map key appears in the label
+            for key, category in BIBLIOCOMMONS_TYPE_MAP.items():
+                if key in type_label:
+                    return category
+
+    # Step 2: Keyword matching on title + description
     text = f"{title} {description}".lower()
-
     for keyword, category in CATEGORY_MAP.items():
         if re.search(r'\b' + re.escape(keyword) + r'\b', text):
             return category
@@ -614,8 +676,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if defn.get("featuredImageId"):
                         image_url = f"{IMAGE_BASE}/{defn['featuredImageId']}"
 
-                    # Determine category from title/description keywords
-                    category = determine_category(title, description, defn.get("typeIds", []))
+                    # Determine category — type IDs first, keyword fallback
+                    category = determine_category(
+                        title, description, defn.get("typeIds", []), all_entities
+                    )
 
                     # Derive age-band tags and family category from BiblioCommons audience data
                     audience_ids = defn.get("audienceIds", [])

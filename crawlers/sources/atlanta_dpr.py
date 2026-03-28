@@ -1117,6 +1117,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if _is_family_only(name, desc_text, age_min, age_max, category, tags):
                     continue
 
+                # audience_tags: explicit audience column (added in taxonomy Phase 1 migration).
+                # Derived from normalized age range — more precise than the tag list.
+                audience_tags: list[str] = []
+                if age_min is not None and age_min >= 18:
+                    audience_tags.append("adults")
+                elif age_max is not None and age_max <= 3:
+                    audience_tags.append("toddler")
+                elif age_max is not None and age_max <= 5:
+                    audience_tags.append("preschool")
+                elif age_max is not None and age_max <= 11:
+                    audience_tags.append("kids")
+                elif age_max is not None and age_max <= 17:
+                    audience_tags.append("teen")
+                # No audience_tags when age is unknown — leave empty rather than guess
+
                 # Detail URL — prefer the clean slug URL
                 detail_url: str = item.get("detail_url") or ACTIVITY_SEARCH_URL
 
@@ -1149,6 +1164,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "category": category,
                     "subcategory": None,
                     "tags": tags,
+                    "audience_tags": audience_tags if audience_tags else None,
                     "price_min": price_min,
                     "price_max": price_max,
                     "price_note": None,
