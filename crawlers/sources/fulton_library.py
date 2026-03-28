@@ -28,28 +28,141 @@ EVENTS_URL = f"{API_BASE}/events"
 LOCATIONS_URL = f"{API_BASE}/locations"
 IMAGE_BASE = "https://d2snwnmzyr8jue.cloudfront.net"
 
-# Category mapping based on event types
+# Category mapping based on event types.
+# ORDER MATTERS — first match wins. More specific patterns go first.
+# "play" is not a valid LostCity category; use "games" instead.
 CATEGORY_MAP = {
+    # Literary / words
     "book": "words",
     "storytime": "words",
+    "story time": "words",
     "author": "words",
     "writing": "words",
     "reading": "words",
-    "computer": "learning",
-    "technology": "learning",
-    "esl": "learning",
-    "class": "learning",
-    "career": "learning",
-    "music": "music",
+    "poetry": "words",
+    "book club": "words",
+    "literacy": "words",
+    "bookclub": "words",
+    "zine": "words",
+    # Education — STEM, tech, life skills, language
+    "stem": "education",
+    "science": "education",
+    "math": "education",
+    "coding": "education",
+    "robot": "education",
+    "computer": "education",
+    "technology": "education",
+    "tech help": "education",
+    "internet": "education",
+    "microsoft": "education",
+    "genealogy": "education",
+    "career": "education",
+    "resume": "education",
+    "job fair": "education",
+    "homework": "education",
+    "esl": "education",
+    "english class": "education",
+    "english as": "education",
+    "language learning": "education",
+    "citizenship": "education",
+    "ged": "education",
+    "homeschool": "education",
+    "financial literacy": "education",
+    "financial aid": "education",
+    "college prep": "education",
+    "fafsa": "education",
+    "entrepreneurship": "education",
+    "3d print": "education",
+    "learning lab": "education",
+    "class": "education",
+    # Film
     "film": "film",
     "movie": "film",
-    "craft": "art",
+    "cinema": "film",
+    "anime": "film",
+    "screening": "film",
+    # Music
+    "concert": "music",
+    "ukulele": "music",
+    "guitar": "music",
+    "music": "music",
+    "jazz": "music",
+    "blues": "music",
+    # Games — chess, board games, LEGO, Pokémon
+    "chess": "games",
+    "puzzle": "games",
+    "mahjong": "games",
+    "mah jongg": "games",
+    "bingo": "games",
+    "dungeons": "games",
+    "d&d": "games",
+    "lego": "games",
+    "pokemon": "games",
+    "pokémon": "games",
+    "tabletop": "games",
+    "gaming": "games",
+    "game": "games",
+    # Fitness
+    "yoga": "fitness",
+    "tai chi": "fitness",
+    "taichi": "fitness",
+    "qigong": "fitness",
+    "zumba": "fitness",
+    "exercise": "fitness",
+    "dance fitness": "fitness",
+    "fitness": "fitness",
+    "wellness": "fitness",
+    # Dance
+    "bollywood": "dance",
+    "k-pop dance": "dance",
+    "dance class": "dance",
+    "dance lesson": "dance",
+    # Workshops — crafts, making, take-home kits
+    "craft": "workshops",
+    "crochet": "workshops",
+    "knit": "workshops",
+    "sew": "workshops",
+    "jewelry": "workshops",
+    "origami": "workshops",
+    "maker": "workshops",
+    "diy": "workshops",
+    "take home": "workshops",
+    "take and make": "workshops",
+    "take & make": "workshops",
+    "sun catcher": "workshops",
+    "painting": "workshops",
+    "art kit": "workshops",
+    "cricut": "workshops",
+    "embroidery": "workshops",
+    "culinary": "workshops",
+    "cooking": "workshops",
+    "passive program": "workshops",
+    # Art — visual arts, exhibitions, creative production
     "art": "art",
     "arts": "art",
-    "fitness": "fitness",
-    "yoga": "fitness",
-    "game": "play",
-    "gaming": "play",
+    "paint": "art",
+    "draw": "art",
+    "exhibit": "art",
+    "exhibition": "art",
+    "podcast": "art",
+    "screenwriting": "art",
+    "photography": "art",
+    "green screen": "art",
+    # Support services
+    "support group": "support",
+    "special needs": "support",
+    "dementia": "support",
+    "brain health": "support",
+    "caregiver": "support",
+    "medicare": "support",
+    "aarp": "support",
+    "blood drive": "support",
+    "notary": "support",
+    "social security": "support",
+    # Civic — governance, community meetings
+    "board of trustees": "civic",
+    "library board": "civic",
+    "trustee meeting": "civic",
 }
 
 # BiblioCommons audience label → age band tags
@@ -223,14 +336,25 @@ def audience_tags_and_category(
 
 
 def determine_category(title: str, description: str, type_ids: list) -> str:
-    """Determine event category from title and description."""
+    """
+    Determine event category from title and description.
+
+    Uses CATEGORY_MAP with ordered keyword matching. First match wins, so
+    more-specific entries (e.g. "english class") appear before broader ones
+    (e.g. "class"). Default is "education" — libraries are primarily
+    educational venues, and the few purely literary events are caught by the
+    words keywords at the top of the map.
+
+    Previously defaulted to "words", which caused chess clubs, STEM programs,
+    fitness classes, and support services to all land in words incorrectly.
+    """
     text = f"{title} {description}".lower()
 
     for keyword, category in CATEGORY_MAP.items():
         if re.search(r'\b' + re.escape(keyword) + r'\b', text):
             return category
 
-    return "words"  # Default for library events
+    return "education"  # Safer default than "words" for unmatched library events
 
 
 def parse_datetime(dt_str: str) -> tuple[Optional[str], Optional[str]]:

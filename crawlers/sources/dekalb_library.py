@@ -421,8 +421,15 @@ def derive_age_tags_and_category(ages_array: list) -> tuple[list[str], bool]:
 
 
 def determine_category(title: str, description: str = "") -> str:
-    """Determine event category from title and description."""
+    """
+    Determine event category from title and description.
+
+    Previously defaulted to "words", causing chess clubs, STEM programs,
+    fitness classes, and support services to be misclassified. Default is
+    now "education" which is a safer fallback for unmatched library events.
+    """
     CATEGORY_MAP = {
+        # Literary / words
         "book": "words",
         "storytime": "words",
         "story time": "words",
@@ -430,29 +437,122 @@ def determine_category(title: str, description: str = "") -> str:
         "writing": "words",
         "reading": "words",
         "poetry": "words",
-        "computer": "learning",
-        "technology": "learning",
-        "coding": "learning",
-        "esl": "learning",
-        "class": "learning",
-        "career": "learning",
-        "music": "music",
+        "book club": "words",
+        "literacy": "words",
+        "zine": "words",
+        # Education — STEM, tech, life skills, language
+        "stem": "education",
+        "science": "education",
+        "math": "education",
+        "coding": "education",
+        "robot": "education",
+        "computer": "education",
+        "technology": "education",
+        "tech help": "education",
+        "genealogy": "education",
+        "career": "education",
+        "resume": "education",
+        "homework": "education",
+        "esl": "education",
+        "english class": "education",
+        "language learning": "education",
+        "citizenship": "education",
+        "ged": "education",
+        "homeschool": "education",
+        "financial literacy": "education",
+        "college prep": "education",
+        "fafsa": "education",
+        "entrepreneurship": "education",
+        "3d print": "education",
+        "learning lab": "education",
+        "class": "education",
+        # Film
         "film": "film",
         "movie": "film",
-        "craft": "art",
+        "cinema": "film",
+        "anime": "film",
+        "screening": "film",
+        # Music
+        "concert": "music",
+        "ukulele": "music",
+        "guitar": "music",
+        "music": "music",
+        "jazz": "music",
+        "blues": "music",
+        # Games
+        "chess": "games",
+        "puzzle": "games",
+        "mahjong": "games",
+        "mah jongg": "games",
+        "bingo": "games",
+        "dungeons": "games",
+        "lego": "games",
+        "pokemon": "games",
+        "pokémon": "games",
+        "tabletop": "games",
+        "gaming": "games",
+        "game": "games",
+        # Fitness
+        "yoga": "fitness",
+        "tai chi": "fitness",
+        "taichi": "fitness",
+        "qigong": "fitness",
+        "zumba": "fitness",
+        "exercise": "fitness",
+        "fitness": "fitness",
+        "wellness": "fitness",
+        # Dance
+        "bollywood": "dance",
+        "k-pop dance": "dance",
+        "dance class": "dance",
+        "dance lesson": "dance",
+        # Workshops — crafts, making, take-home kits
+        "craft": "workshops",
+        "crochet": "workshops",
+        "knit": "workshops",
+        "sew": "workshops",
+        "jewelry": "workshops",
+        "origami": "workshops",
+        "maker": "workshops",
+        "diy": "workshops",
+        "take home": "workshops",
+        "take and make": "workshops",
+        "take & make": "workshops",
+        "cricut": "workshops",
+        "embroidery": "workshops",
+        "culinary": "workshops",
+        "cooking": "workshops",
+        "passive program": "workshops",
+        # Art — visual arts, exhibitions, creative production
         "art": "art",
         "arts": "art",
-        "fitness": "fitness",
-        "yoga": "fitness",
-        "wellness": "fitness",
-        "game": "play",
-        "gaming": "play",
+        "paint": "art",
+        "draw": "art",
+        "exhibit": "art",
+        "exhibition": "art",
+        "podcast": "art",
+        "screenwriting": "art",
+        "photography": "art",
+        # Support services
+        "support group": "support",
+        "special needs": "support",
+        "dementia": "support",
+        "brain health": "support",
+        "caregiver": "support",
+        "medicare": "support",
+        "aarp": "support",
+        "blood drive": "support",
+        "notary": "support",
+        # Civic
+        "board of trustees": "civic",
+        "library board": "civic",
+        "trustee meeting": "civic",
     }
     text = f"{title} {description}".lower()
     for keyword, category in CATEGORY_MAP.items():
         if re.search(r'\b' + re.escape(keyword) + r'\b', text):
             return category
-    return "words"
+    return "education"
 
 
 def fetch_events(start_date: str, days: int) -> list[dict]:

@@ -132,6 +132,10 @@ def is_auburn_avenue_event(title: str, description: str, link: str) -> bool:
 def determine_category(title: str, description: str) -> tuple[str, str, list[str]]:
     """
     Determine event category, subcategory, and tags based on title and description.
+
+    Previously used "community" as default and was missing most library-specific
+    category patterns (games, fitness, support, dance, workshops). Updated to
+    use "education" as the default fallback — safer than "community" or "words".
     """
     combined = f"{title} {description}".lower()
 
@@ -141,32 +145,56 @@ def determine_category(title: str, description: str) -> tuple[str, str, list[str
     if "black history" in combined or "african american history" in combined:
         tags.append("black-history-month")
 
-    # Literary events
-    if any(w in combined for w in ["book", "author", "literary", "reading", "poetry", "writer"]):
+    # Literary / words
+    if any(w in combined for w in ["book", "author", "literary", "reading", "poetry", "writer", "storytime", "story time", "book club", "literacy", "zine"]):
         tags.append("literary")
         return "words", "reading", tags
 
-    # Educational/lecture events
-    if any(w in combined for w in ["lecture", "talk", "speaker", "discussion", "panel"]):
-        tags.append("community")
-        return "learning", "lecture", tags
+    # Games — chess, board games, LEGO, Pokémon (before generic "game" check)
+    if any(w in combined for w in ["chess", "mahjong", "mah jongg", "lego", "pokemon", "pokémon", "tabletop", "dungeons", "bingo", "game", "gaming"]):
+        return "games", None, tags
 
     # Film/documentary screenings
-    if any(w in combined for w in ["film", "documentary", "screening", "movie"]):
+    if any(w in combined for w in ["film", "documentary", "screening", "movie", "cinema", "anime"]):
         tags.append("educational")
         return "film", "screening", tags
 
-    # Workshops/classes
-    if any(w in combined for w in ["workshop", "class", "training", "tutorial"]):
-        return "learning", "workshop", tags
+    # Music
+    if any(w in combined for w in ["concert", "music", "ukulele", "guitar", "jazz", "blues"]):
+        return "music", None, tags
 
-    # Community events
-    if any(w in combined for w in ["community", "celebration", "gathering"]):
-        tags.append("community")
-        return "community", "gathering", tags
+    # Fitness
+    if any(w in combined for w in ["yoga", "tai chi", "taichi", "qigong", "zumba", "exercise", "fitness", "wellness"]):
+        return "fitness", None, tags
 
-    # Default to community/educational
-    return "community", "educational", tags
+    # Dance
+    if any(w in combined for w in ["bollywood", "k-pop dance", "dance class", "dance lesson"]):
+        return "dance", None, tags
+
+    # Workshops — crafts, making, take-home kits
+    if any(w in combined for w in ["craft", "crochet", "knit", "sew", "origami", "diy", "take and make", "take & make", "cricut", "embroidery", "culinary", "cooking", "passive program", "workshop", "tutorial"]):
+        tags.append("hands-on")
+        return "workshops", "workshop", tags
+
+    # Support services
+    if any(w in combined for w in ["support group", "dementia", "brain health", "caregiver", "medicare", "aarp", "blood drive", "notary"]):
+        return "support", None, tags
+
+    # Civic — governance
+    if any(w in combined for w in ["board of trustees", "library board", "trustee meeting"]):
+        return "civic", None, tags
+
+    # Art — visual arts, exhibitions, creative production
+    if any(w in combined for w in ["art", "arts", "paint", "draw", "exhibit", "exhibition", "podcast", "screenwriting", "photography"]):
+        tags.append("hands-on")
+        return "art", "visual", tags
+
+    # Education — STEM, tech, life skills, language
+    if any(w in combined for w in ["lecture", "talk", "speaker", "discussion", "panel", "stem", "science", "math", "coding", "robot", "computer", "technology", "digital", "genealogy", "career", "resume", "homework", "esl", "english class", "language learning", "ged", "homeschool", "financial literacy", "college prep", "fafsa", "3d print", "learning lab", "class", "training"]):
+        return "education", "lecture", tags
+
+    # Default to education — safer than "community" for unmatched library events
+    return "education", "educational", tags
 
 
 def crawl(source: dict) -> tuple[int, int, int]:

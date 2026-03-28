@@ -359,12 +359,14 @@ def determine_category_and_tags(
 
     tags = base_tags + [t for t in age_tags if t not in base_tags]
 
-    # Category and subcategory
-    if "book club" in text or "reading group" in text or "book discussion" in text:
+    # Category and subcategory — ordered from most specific to least.
+    # Previously used "play" (not a valid category) and defaulted to "words",
+    # causing chess clubs, STEM programs, and support services to be misclassified.
+    if "storytime" in text or "story time" in text:
+        return "family", "words.storytelling", tags
+    elif "book club" in text or "reading group" in text or "book discussion" in text:
         cat = "family" if is_family_audience else "words"
         return cat, "words.bookclub", tags
-    elif "storytime" in text or "story time" in text:
-        return "family", "words.storytelling", tags
     elif "author" in text or "book signing" in text:
         cat = "family" if is_family_audience else "words"
         return cat, "words.reading", tags
@@ -374,31 +376,48 @@ def determine_category_and_tags(
     elif "writing" in text or "writer" in text:
         cat = "family" if is_family_audience else "words"
         return cat, "words.workshop", tags
-    elif any(w in text for w in ["computer", "technology", "coding", "tech", "digital"]):
-        tags.append("educational")
-        cat = "family" if is_family_audience else "learning"
+    elif any(w in text for w in ["book", "reading", "literacy", "zine"]):
+        cat = "family" if is_family_audience else "words"
         return cat, None, tags
-    elif any(w in text for w in ["craft", "art", "make", "create", "diy"]):
+    elif any(w in text for w in ["chess", "mahjong", "mah jongg", "lego", "pokemon", "pokémon", "tabletop", "dungeons", "bingo", "puzzle"]):
+        cat = "family" if is_family_audience else "games"
+        return cat, None, tags
+    elif any(w in text for w in ["game", "gaming"]):
+        cat = "family" if is_family_audience else "games"
+        return cat, None, tags
+    elif any(w in text for w in ["film", "movie", "cinema", "anime", "screening"]):
+        cat = "family" if is_family_audience else "film"
+        return cat, None, tags
+    elif any(w in text for w in ["concert", "music", "ukulele", "guitar", "jazz", "blues"]):
+        cat = "family" if is_family_audience else "music"
+        return cat, None, tags
+    elif any(w in text for w in ["yoga", "tai chi", "taichi", "qigong", "zumba", "exercise", "fitness"]):
+        cat = "family" if is_family_audience else "fitness"
+        return cat, None, tags
+    elif any(w in text for w in ["bollywood", "k-pop dance", "dance class", "dance lesson"]):
+        cat = "family" if is_family_audience else "dance"
+        return cat, None, tags
+    elif any(w in text for w in ["craft", "crochet", "knit", "sew", "origami", "diy", "take and make", "take & make", "cricut", "embroidery", "culinary", "cooking", "passive program"]):
+        tags.append("hands-on")
+        cat = "family" if is_family_audience else "workshops"
+        return cat, None, tags
+    elif any(w in text for w in ["support group", "dementia", "brain health", "caregiver", "medicare", "aarp", "blood drive"]):
+        cat = "support"
+        return cat, None, tags
+    elif any(w in text for w in ["board of trustees", "library board", "trustee meeting"]):
+        return "civic", None, tags
+    elif any(w in text for w in ["stem", "science", "math", "coding", "robot", "computer", "technology", "digital", "genealogy", "career", "resume", "homework", "esl", "english class", "language learning", "ged", "homeschool", "financial literacy", "college prep", "fafsa", "3d print", "learning lab"]):
+        tags.append("educational")
+        cat = "family" if is_family_audience else "education"
+        return cat, None, tags
+    elif any(w in text for w in ["art", "arts", "paint", "draw", "exhibit", "podcast", "screenwriting", "photography"]):
         tags.append("hands-on")
         cat = "family" if is_family_audience else "art"
         return cat, None, tags
-    elif any(w in text for w in ["music", "concert", "sing"]):
-        cat = "family" if is_family_audience else "music"
-        return cat, None, tags
-    elif any(w in text for w in ["film", "movie", "cinema"]):
-        cat = "family" if is_family_audience else "film"
-        return cat, None, tags
-    elif any(w in text for w in ["game", "gaming", "play"]):
-        tags.append("play")
-        cat = "family" if is_family_audience else "play"
-        return cat, None, tags
-    elif any(w in text for w in ["fitness", "yoga", "exercise", "wellness"]):
-        cat = "family" if is_family_audience else "fitness"
-        return cat, None, tags
     else:
         tags.append("educational")
-        cat = "family" if is_family_audience else "words"
-        return cat, "words.lecture", tags
+        cat = "family" if is_family_audience else "education"
+        return cat, None, tags
 
 
 def fetch_events(start_date: str, days: int) -> list[dict]:

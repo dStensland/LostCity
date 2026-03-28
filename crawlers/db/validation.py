@@ -524,6 +524,7 @@ def validate_event_title(title: str) -> bool:
 # ===== CATEGORY NORMALIZATION =====
 
 _CATEGORY_NORMALIZATION_MAP: dict[str, str] = {
+    # --- Aliases → canonical v2 categories ---
     "arts": "art",
     "activism": "civic",
     "civic_engagement": "civic",
@@ -531,27 +532,32 @@ _CATEGORY_NORMALIZATION_MAP: dict[str, str] = {
     "volunteering": "volunteer",
     "service": "volunteer",
     "cultural": "art",       # cultural events are arts/exhibitions
-    "tours": "learning",
     "meetup": "community",
-    "gaming": "community",
+    "gaming": "games",       # gaming → games (not community)
     "markets": "food_drink",  # farmers markets, craft markets, night markets
     "haunted": "nightlife",
     "eatertainment": "nightlife",
     "entertainment": "family",
     "food": "food_drink",
-    "fitness": "exercise",  # legacy alias
-    "yoga": "exercise",
-    "gym": "exercise",
-    "workout": "exercise",
-    "cooking": "learning",
-    "class": "learning",
+    "yoga": "fitness",       # yoga → fitness (canonical v2)
+    "gym": "fitness",
+    "workout": "fitness",
     "outdoor": "outdoors",
     "museums": "art",
     "shopping": "community",
-    "education": "learning",
     "sports_recreation": "recreation",
     "health": "wellness",
     "programs": "family",
+    # --- Legacy v1 → canonical v2 upgrades ---
+    # These legacy categories are in VALID_CATEGORIES for backward compat but
+    # new events should use the v2 equivalents.
+    "learning": "education",  # legacy → v2
+    "exercise": "fitness",    # legacy → v2
+    # "class", "cooking", "tours" previously mapped to "learning" (v1 legacy).
+    # Now map directly to v2 "education".
+    "tours": "education",
+    "cooking": "workshops",   # cooking classes → workshops
+    "class": "education",
 }
 
 
