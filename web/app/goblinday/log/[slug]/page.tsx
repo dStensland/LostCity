@@ -9,12 +9,25 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const serviceClient = createServiceClient();
+  const { data: profile } = await serviceClient
+    .from("profiles")
+    .select("display_name")
+    .eq("username", slug)
+    .maybeSingle();
+  const name = (profile as any)?.display_name || slug;
+
   return {
-    title: `${slug}'s Movie Log — Goblin Day`,
-    description: `Movies watched by ${slug}`,
+    title: `${name}'s Film Log — Goblin Day`,
+    description: `${name}'s ranked movie log on Goblin Day`,
     openGraph: {
-      title: `${slug}'s Movie Log`,
-      description: `Check out what ${slug} has been watching`,
+      title: `${name}'s Film Log`,
+      description: `${name}'s ranked movie log — see what they've been watching`,
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: `${name}'s Film Log — Goblin Day`,
     },
   };
 }

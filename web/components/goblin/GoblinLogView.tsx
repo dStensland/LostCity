@@ -114,7 +114,8 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
 
   const handleCopyShareLink = () => {
     if (!username) return;
-    const url = `${window.location.origin}/goblinday/log/${username}`;
+    // Always use lostcity.ai as canonical host (goblinday.com is an alias)
+    const url = `https://lostcity.ai/goblinday/log/${username}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
