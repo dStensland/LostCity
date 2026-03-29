@@ -7,19 +7,19 @@
  * stream: search bar → Right Now section → lane previews (Arts, Dining, etc.)
  *
  * URL params:
- *   ?lane=<lane>      — drill into a specific vertical lane (Task 4, placeholder)
  *   ?regulars=true    — show the day-of-week RegularsView instead
  */
 
 import { memo, Suspense } from "react";
 import dynamic from "next/dynamic";
-import { useSearchParams, useRouter } from "next/navigation";
-import { MagnifyingGlass } from "@phosphor-icons/react";
+import { useSearchParams } from "next/navigation";
 import type { VerticalLane } from "@/lib/types/discovery";
-import { LANE_CONFIG, DEFAULT_LANE_ORDER } from "@/lib/types/discovery";
+import { DEFAULT_LANE_ORDER } from "@/lib/types/discovery";
 import { RightNowSection } from "./RightNowSection";
 import { LanePreviewSection } from "./LanePreviewSection";
 import { FindSidebar } from "./FindSidebar";
+import FindSearchInput from "@/components/find/FindSearchInput";
+import { FindToolChipRow } from "./FindToolChipRow";
 
 // Lazy-load RegularsView — only needed for ?regulars=true
 const RegularsView = dynamic(() => import("./RegularsView"), {
@@ -29,12 +29,6 @@ const RegularsView = dynamic(() => import("./RegularsView"), {
     </div>
   ),
 });
-
-// Lazy-load LaneView — only needed when ?lane= is present
-const LaneView = dynamic(
-  () => import("./LaneView").then((m) => ({ default: m.LaneView })),
-  { ssr: false },
-);
 
 // -------------------------------------------------------------------------
 // Portal vertical → primary lane mapping + lane order builder
@@ -77,9 +71,7 @@ export default memo(function FindView({
   portalSlug,
   portalSettings,
 }: FindViewProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const laneParam = searchParams.get("lane") as VerticalLane | null;
   const regularsParam = searchParams.get("regulars");
 
   // ── Regulars view ──────────────────────────────────────────────────────
@@ -97,26 +89,6 @@ export default memo(function FindView({
     );
   }
 
-  // ── Lane drill-in ──────────────────────────────────────────────────────
-  if (laneParam && laneParam in LANE_CONFIG) {
-    return (
-      <div className="flex min-h-[50vh]">
-        {/* Desktop sidebar — hidden on mobile */}
-        <div className="hidden lg:block">
-          <FindSidebar
-            portalSlug={portalSlug}
-            portalSettings={portalSettings}
-            activeLane={laneParam}
-          />
-        </div>
-        {/* Main content */}
-        <div className="flex-1">
-          <LaneView lane={laneParam} portalSlug={portalSlug} />
-        </div>
-      </div>
-    );
-  }
-
   // ── Unified discovery stream ───────────────────────────────────────────
   const laneOrder = buildLaneOrder(portalSettings);
 
@@ -127,32 +99,19 @@ export default memo(function FindView({
         <FindSidebar
           portalSlug={portalSlug}
           portalSettings={portalSettings}
-          activeLane={laneParam}
+          activeLane={null}
         />
       </div>
 
       {/* Main content */}
       <div className="flex-1 space-y-0">
-        {/* Search bar — hidden on desktop (sidebar has its own) */}
-        <div className="mb-5 lg:hidden">
-          <div className="relative">
-            <MagnifyingGlass
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]"
-              weight="regular"
-            />
-            <input
-              type="search"
-              placeholder="Search places, events, artists..."
-              className="h-11 w-full rounded-card bg-[var(--dusk)] border border-[var(--twilight)] pl-9 pr-3 font-mono text-sm text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
-              // Read-only for now — full search will use the existing search infrastructure
-              readOnly
-              onClick={() => {
-                router.push(`/${portalSlug}?view=find&q=`);
-              }}
-            />
-          </div>
+        {/* Search bar */}
+        <div className="px-4 pt-2 pb-1">
+          <FindSearchInput portalSlug={portalSlug} placeholder="Search places, events, artists..." />
         </div>
+
+        {/* Tool chip row */}
+        <FindToolChipRow portalSlug={portalSlug} />
 
         {/* Right Now section */}
         <RightNowSection portalSlug={portalSlug} />
