@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Palette, FrameCorners, Star } from "@phosphor-icons/react";
 import Dot from "@/components/ui/Dot";
 import type { DiscoveryPlaceEntity } from "@/lib/types/discovery";
+import { formatRating, formatCloseTime } from "@/lib/utils/place-formatters";
 
 const ARTS_ACCENT = "#C9874F";
 const ICON_BG = `${ARTS_ACCENT}1A`; // 10% opacity
@@ -14,27 +15,13 @@ interface CompactArtsCardProps {
   portalSlug: string;
 }
 
-function formatRating(rating: number | null): string | null {
-  if (rating === null) return null;
-  return rating.toFixed(1);
-}
-
-function formatCloseTime(closesAt: string | null): string | null {
-  if (!closesAt) return null;
-  const [h, m] = closesAt.split(":").map(Number);
-  const period = h >= 12 ? "pm" : "am";
-  const hr = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  if (!m) return `${hr}${period}`;
-  return `${hr}:${m.toString().padStart(2, "0")}${period}`;
-}
-
 export const CompactArtsCard = memo(function CompactArtsCard({
   entity,
   portalSlug,
 }: CompactArtsCardProps) {
   const href = `/${portalSlug}?spot=${entity.slug}`;
-  const rating = formatRating(entity.google_rating);
-  const closeTime = formatCloseTime(entity.closes_at);
+  const rating = entity.google_rating != null ? formatRating(entity.google_rating) : null;
+  const closeTime = entity.closes_at ? formatCloseTime(entity.closes_at) : null;
   const hasExhibition =
     entity.current_exhibition_title !== null &&
     entity.current_exhibition_title !== "";

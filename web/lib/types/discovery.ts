@@ -1,3 +1,13 @@
+import type React from "react";
+import {
+  Palette,
+  ForkKnife,
+  MoonStars,
+  Tree,
+  MusicNotes,
+  Ticket,
+} from "@phosphor-icons/react";
+
 export type DiscoveryEntityType = "place" | "event";
 
 export interface DiscoveryPlaceEntity {
@@ -53,6 +63,41 @@ export type VerticalLane =
   | "outdoors"
   | "music"
   | "entertainment";
+
+// -------------------------------------------------------------------------
+// Shared lane order — used by FindView and FindSidebar
+// -------------------------------------------------------------------------
+
+export const DEFAULT_LANE_ORDER: VerticalLane[] = [
+  "arts",
+  "dining",
+  "nightlife",
+  "outdoors",
+  "music",
+  "entertainment",
+];
+
+// -------------------------------------------------------------------------
+// Shared lane icon map — used by LanePreviewSection, LaneFilterBar, FindSidebar
+// -------------------------------------------------------------------------
+
+export const LANE_ICONS: Record<
+  string,
+  React.ComponentType<{
+    size?: number;
+    className?: string;
+    color?: string;
+    style?: React.CSSProperties;
+    weight?: "duotone" | "regular" | "bold" | "fill" | "thin" | "light";
+  }>
+> = {
+  palette: Palette,
+  "fork-knife": ForkKnife,
+  "moon-stars": MoonStars,
+  tree: Tree,
+  "music-notes": MusicNotes,
+  ticket: Ticket,
+};
 
 export const LANE_CONFIG: Record<
   VerticalLane,

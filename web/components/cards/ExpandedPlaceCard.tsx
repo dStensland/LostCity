@@ -17,31 +17,16 @@ import Dot from "@/components/ui/Dot";
 import type { DiscoveryPlaceEntity, VerticalLane } from "@/lib/types/discovery";
 import { LANE_CONFIG } from "@/lib/types/discovery";
 import SmartImage from "@/components/SmartImage";
+import {
+  formatRating,
+  formatCloseTime,
+  formatDistance,
+  COMMITMENT_LABELS,
+} from "@/lib/utils/place-formatters";
 
 // -------------------------------------------------------------------------
 // Helpers
 // -------------------------------------------------------------------------
-
-function formatRating(rating: number | null): string | null {
-  if (rating === null) return null;
-  return rating.toFixed(1);
-}
-
-function formatDistance(km: number | null): string | null {
-  if (km === null) return null;
-  const miles = km * 0.621371;
-  if (miles < 0.1) return "nearby";
-  return `${miles.toFixed(1)}mi`;
-}
-
-function formatCloseTime(closesAt: string | null): string | null {
-  if (!closesAt) return null;
-  const [h, m] = closesAt.split(":").map(Number);
-  const period = h >= 12 ? "pm" : "am";
-  const hr = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  if (m === 0) return `${hr}${period}`;
-  return `${hr}:${m.toString().padStart(2, "0")}${period}`;
-}
 
 function formatPriceLevel(level: number | null): string | null {
   if (level === null || level === 0) return null;
@@ -166,13 +151,6 @@ interface OutdoorsInlineProps {
   accentColor: string;
 }
 
-const COMMITMENT_LABELS: Record<string, string> = {
-  hour: "~1 hr",
-  halfday: "Half day",
-  fullday: "Full day",
-  weekend: "Weekend",
-};
-
 function OutdoorsInlineBlock({ entity, accentColor }: OutdoorsInlineProps) {
   const commitment = entity.commitment_tier
     ? COMMITMENT_LABELS[entity.commitment_tier] ?? entity.commitment_tier
@@ -257,9 +235,9 @@ export const ExpandedPlaceCard = memo(function ExpandedPlaceCard({
   const config = LANE_CONFIG[lane];
   const accentColor = config.color;
 
-  const rating = formatRating(entity.google_rating);
-  const distance = formatDistance(entity.distance_km);
-  const closeTime = formatCloseTime(entity.closes_at);
+  const rating = entity.google_rating != null ? formatRating(entity.google_rating) : null;
+  const distance = entity.distance_km != null ? formatDistance(entity.distance_km) : null;
+  const closeTime = entity.closes_at ? formatCloseTime(entity.closes_at) : null;
   const typeBadge = getTypeBadgeLabel(entity.place_type);
   const FallbackIcon = FALLBACK_ICONS[lane] ?? Ticket;
 

@@ -5,16 +5,14 @@ import Link from "next/link";
 import { Tree, Star } from "@phosphor-icons/react";
 import Dot from "@/components/ui/Dot";
 import type { DiscoveryPlaceEntity } from "@/lib/types/discovery";
+import {
+  formatRating,
+  formatDistance,
+  COMMITMENT_LABELS,
+} from "@/lib/utils/place-formatters";
 
 const OUTDOOR_ACCENT = "#00D9A0";
 const ICON_BG = `${OUTDOOR_ACCENT}1A`; // 10% opacity
-
-const COMMITMENT_LABELS: Record<string, string> = {
-  hour: "~1 hr",
-  halfday: "Half day",
-  fullday: "Full day",
-  weekend: "Weekend",
-};
 
 const SEASON_LABELS: Record<string, string> = {
   spring: "Spring",
@@ -29,25 +27,13 @@ interface CompactOutdoorCardProps {
   portalSlug: string;
 }
 
-function formatRating(rating: number | null): string | null {
-  if (rating === null) return null;
-  return rating.toFixed(1);
-}
-
-function formatDistance(km: number | null): string | null {
-  if (km === null) return null;
-  const miles = km * 0.621371;
-  if (miles < 0.1) return "nearby";
-  return `${miles.toFixed(1)}mi`;
-}
-
 export const CompactOutdoorCard = memo(function CompactOutdoorCard({
   entity,
   portalSlug,
 }: CompactOutdoorCardProps) {
   const href = `/${portalSlug}?spot=${entity.slug}`;
-  const rating = formatRating(entity.google_rating);
-  const distance = formatDistance(entity.distance_km);
+  const rating = entity.google_rating != null ? formatRating(entity.google_rating) : null;
+  const distance = entity.distance_km != null ? formatDistance(entity.distance_km) : null;
   const commitmentLabel = entity.commitment_tier
     ? COMMITMENT_LABELS[entity.commitment_tier] ?? entity.commitment_tier
     : null;

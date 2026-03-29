@@ -1,101 +1,12 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
+import { memo } from "react";
 import Link from "next/link";
-import {
-  Palette,
-  ForkKnife,
-  MoonStars,
-  Tree,
-  MusicNotes,
-  Ticket,
-} from "@phosphor-icons/react";
-import type { DiscoveryPlaceEntity, VerticalLane } from "@/lib/types/discovery";
-import { LANE_CONFIG } from "@/lib/types/discovery";
+import { Ticket } from "@phosphor-icons/react";
+import type { VerticalLane } from "@/lib/types/discovery";
+import { LANE_CONFIG, LANE_ICONS } from "@/lib/types/discovery";
+import { useLaneSpots } from "@/lib/hooks/useLaneSpots";
 import { DiscoveryCard } from "@/components/cards/DiscoveryCard";
-
-// -------------------------------------------------------------------------
-// Lane icon map
-// -------------------------------------------------------------------------
-
-const LANE_ICONS: Record<
-  string,
-  React.ComponentType<{ size?: number; className?: string; color?: string; weight?: "duotone" | "regular" | "bold" | "fill" | "thin" | "light" }>
-> = {
-  palette: Palette,
-  "fork-knife": ForkKnife,
-  "moon-stars": MoonStars,
-  tree: Tree,
-  "music-notes": MusicNotes,
-  ticket: Ticket,
-};
-
-// -------------------------------------------------------------------------
-// Fetch hook — inline since it's only used here
-// -------------------------------------------------------------------------
-
-interface UseLaneSpotsResult {
-  items: DiscoveryPlaceEntity[];
-  openCount: number;
-  loading: boolean;
-}
-
-function useLaneSpots(
-  portalSlug: string,
-  lane: VerticalLane,
-  limit = 3
-): UseLaneSpotsResult {
-  const [items, setItems] = useState<DiscoveryPlaceEntity[]>([]);
-  const [openCount, setOpenCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const abortRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    const config = LANE_CONFIG[lane];
-    const params = new URLSearchParams({
-      portal: portalSlug,
-      place_type: config.placeTypes.join(","),
-      limit: String(limit),
-    });
-
-    async function run() {
-      try {
-        const res = await fetch(`/api/spots?${params}`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) throw new Error(`spots: ${res.status}`);
-        const data = (await res.json()) as {
-          spots?: DiscoveryPlaceEntity[];
-          meta?: { openCount?: number };
-        };
-        const spots: DiscoveryPlaceEntity[] = data.spots ?? [];
-        const count =
-          data.meta?.openCount ?? spots.filter((s) => s.is_open).length;
-        setItems(spots);
-        setOpenCount(count);
-      } catch (err) {
-        if ((err as Error).name === "AbortError") return;
-        console.error(`[LanePreviewSection:${lane}] fetch error:`, err);
-        setItems([]);
-        setOpenCount(0);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    run();
-
-    return () => {
-      controller.abort();
-    };
-  }, [portalSlug, lane, limit]);
-
-  return { items, openCount, loading };
-}
 
 // -------------------------------------------------------------------------
 // Skeleton
@@ -164,7 +75,8 @@ export const LanePreviewSection = memo(function LanePreviewSection({
         </div>
         <Link
           href={seeAllHref}
-          className="text-xs flex items-center gap-1 text-[var(--muted)] hover:text-[var(--soft)] transition-colors"
+          className="text-xs flex items-center gap-1 hover:opacity-80 transition-opacity"
+          style={{ color: config.color }}
         >
           See all →
         </Link>

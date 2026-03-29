@@ -2,49 +2,12 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import {
-  Palette,
-  ForkKnife,
-  MoonStars,
-  Tree,
-  MusicNotes,
-  Ticket,
-  MagnifyingGlass,
-} from "@phosphor-icons/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { MagnifyingGlass, Ticket } from "@phosphor-icons/react";
 import type { VerticalLane } from "@/lib/types/discovery";
-import { LANE_CONFIG } from "@/lib/types/discovery";
+import { LANE_CONFIG, LANE_ICONS } from "@/lib/types/discovery";
+import { buildLaneOrder } from "@/components/find/FindView";
 import { useWeather } from "@/lib/hooks/useWeather";
-
-// -------------------------------------------------------------------------
-// Lane icon map (mirrors LanePreviewSection)
-// -------------------------------------------------------------------------
-
-const LANE_ICONS: Record<
-  string,
-  React.ComponentType<{
-    size?: number;
-    className?: string;
-    color?: string;
-    weight?: "duotone" | "regular" | "bold" | "fill" | "thin" | "light";
-  }>
-> = {
-  palette: Palette,
-  "fork-knife": ForkKnife,
-  "moon-stars": MoonStars,
-  tree: Tree,
-  "music-notes": MusicNotes,
-  ticket: Ticket,
-};
-
-const LANE_ORDER: VerticalLane[] = [
-  "arts",
-  "dining",
-  "nightlife",
-  "outdoors",
-  "music",
-  "entertainment",
-];
 
 // -------------------------------------------------------------------------
 // Context block — date + weather placeholder
@@ -83,9 +46,12 @@ interface FindSidebarProps {
 
 export const FindSidebar = memo(function FindSidebar({
   portalSlug,
+  portalSettings,
   activeLane,
 }: FindSidebarProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const laneOrder = buildLaneOrder(portalSettings);
 
   // Build lane hrefs — clicking the active lane deselects (returns to stream)
   function laneHref(lane: VerticalLane): string {
@@ -120,7 +86,7 @@ export const FindSidebar = memo(function FindSidebar({
           className="h-9 w-full rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] pl-8 pr-3 font-mono text-sm text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
           readOnly
           onClick={() => {
-            window.location.href = `/${portalSlug}?view=happening`;
+            router.push(`/${portalSlug}?view=happening`);
           }}
         />
       </div>
@@ -131,7 +97,7 @@ export const FindSidebar = memo(function FindSidebar({
           Lanes
         </p>
         <ul className="space-y-0.5">
-          {LANE_ORDER.map((lane) => {
+          {laneOrder.map((lane) => {
             const config = LANE_CONFIG[lane];
             const LaneIcon = LANE_ICONS[config.icon] ?? Ticket;
             const isActive = activeLane === lane;
