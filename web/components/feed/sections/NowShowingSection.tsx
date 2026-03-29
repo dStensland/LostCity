@@ -492,8 +492,16 @@ function FilmRow({
   const today = getLocalDateString();
   const isLastShowing =
     film.remaining_count != null && film.remaining_count <= 2;
+  // OPENING NIGHT: `first_date` is the earliest *remaining* showtime date
+  // (past dates are excluded by the API query). On Sunday a film that opened
+  // Friday still has first_date === today because Fri/Sat events already
+  // passed. Guard against overuse: require a healthy remaining_count (>=5)
+  // which indicates the film truly just arrived at the theater.
   const isOpeningNight =
-    film.first_date != null && film.first_date === today;
+    film.first_date != null &&
+    film.first_date === today &&
+    film.remaining_count != null &&
+    film.remaining_count >= 5;
   // Show only one urgency badge: LAST SHOWING takes priority
   const urgencyBadge: "last" | "opening" | null = isLastShowing
     ? "last"

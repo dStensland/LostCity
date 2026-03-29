@@ -369,7 +369,9 @@ export function DestinationsSectionV2({ portalSlug }: DestinationsSectionV2Props
   const visibleLenses = LENSES.filter((l) => lensAvailability[l.key] === true);
 
   return (
-    <section className="pb-2 feed-section-enter">
+    <section className="mt-8 pb-2 feed-section-enter">
+      {/* Divider — only rendered when section has content */}
+      <div className="h-px bg-[var(--twilight)] mb-6" />
       <FeedSectionHeader
         title="Destinations"
         priority="secondary"

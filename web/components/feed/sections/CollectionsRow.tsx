@@ -31,6 +31,18 @@ interface CollectionsRowProps {
   portalSlug: string;
 }
 
+// Accent color per collection slug for left-border visual distinction
+function getCollectionAccent(slug: string): string {
+  if (slug.startsWith("free")) return "var(--neon-green)";
+  if (slug.includes("closing")) return "var(--neon-red)";
+  if (slug.startsWith("new-in")) return "var(--gold)";
+  if (slug.includes("date")) return "var(--coral)";
+  if (slug.includes("family") || slug.includes("kid")) return "var(--vibe)";
+  if (slug.includes("outdoor") || slug.includes("park")) return "var(--neon-cyan)";
+  // Default accent
+  return "var(--twilight)";
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 
 export function CollectionsRow({ portalSlug }: CollectionsRowProps) {
@@ -92,7 +104,8 @@ export function CollectionsRow({ portalSlug }: CollectionsRowProps) {
           <Link
             key={collection.slug}
             href={collection.href}
-            className="flex-shrink-0 min-w-[180px] rounded-lg border border-[var(--twilight)]/60 bg-[var(--night)] px-3.5 py-2.5 transition-all hover:border-[var(--twilight)] hover:bg-[var(--dusk)]"
+            className="flex-shrink-0 min-w-[180px] rounded-lg border border-[var(--twilight)]/60 border-l-2 bg-[var(--night)] px-3.5 py-2.5 transition-all hover:border-[var(--twilight)] hover:bg-[var(--dusk)]"
+            style={{ borderLeftColor: getCollectionAccent(collection.slug) }}
           >
             {/* Title */}
             <h3 className="text-sm font-medium text-[var(--cream)] truncate">

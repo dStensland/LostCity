@@ -243,13 +243,23 @@ function WeatherIcon({ icon, className }: { icon: string; className?: string }) 
 
 // ── Hero quick links ──────────────────────────────────────────────────────────
 
-function HeroQuickLinks({ links }: { links?: QuickLink[] }) {
+function HeroQuickLinks({
+  links,
+  categoryCounts,
+}: {
+  links?: QuickLink[];
+  categoryCounts?: Record<string, number> | null;
+}) {
   if (!links || links.length === 0) return null;
 
   return (
     <div className="flex flex-wrap gap-1.5 mt-2.5">
       {links.filter((link) => QUICK_LINK_ICONS[link.icon]).map((link) => {
         const IconComp = QUICK_LINK_ICONS[link.icon];
+        const count =
+          link.category_key && categoryCounts
+            ? categoryCounts[link.category_key] ?? null
+            : null;
         return (
           <Link
             key={link.label}
@@ -268,6 +278,9 @@ function HeroQuickLinks({ links }: { links?: QuickLink[] }) {
               style={{ color: link.accent_color }}
             >
               {link.label}
+              {count != null && count > 0 && (
+                <span className="ml-1 opacity-70">{count}</span>
+              )}
             </span>
           </Link>
         );
@@ -517,7 +530,7 @@ function CenteredLayout({
           className="animate-fade-in hero-stagger-3 flex justify-center"
           style={{ transform: "translateY(var(--parallax-meta, 0px))" }}
         >
-          <HeroQuickLinks links={quickLinks} />
+          <HeroQuickLinks links={quickLinks} categoryCounts={categoryCounts?.today} />
         </div>
       </div>
     </div>
@@ -568,7 +581,7 @@ function BottomLeftLayout({
           className="animate-fade-in hero-stagger-3 mt-3"
           style={{ transform: "translateY(var(--parallax-meta, 0px))" }}
         >
-          <HeroQuickLinks links={quickLinks} />
+          <HeroQuickLinks links={quickLinks} categoryCounts={categoryCounts?.today} />
         </div>
       </div>
     </div>
@@ -624,7 +637,7 @@ function SplitLayout({
         >
           <HeadlineSubtitle headline={headline} bodyShadow={treatment.bodyShadow} />
           <SummaryLine tabCounts={tabCounts} categoryCounts={categoryCounts} weather={context.weather} />
-          <HeroQuickLinks links={quickLinks} />
+          <HeroQuickLinks links={quickLinks} categoryCounts={categoryCounts?.today} />
         </div>
       </div>
     </div>
@@ -679,7 +692,7 @@ function EditorialLayout({
       >
         <HeadlineSubtitle headline={headline} bodyShadow={treatment.bodyShadow} />
         <SummaryLine tabCounts={tabCounts} categoryCounts={categoryCounts} weather={context.weather} />
-        <HeroQuickLinks links={quickLinks} />
+        <HeroQuickLinks links={quickLinks} categoryCounts={categoryCounts?.today} />
       </div>
     </div>
   );
@@ -695,6 +708,7 @@ function FlagshipHeroContent({
   quickLinks,
   context,
   sportsTentpole,
+  categoryCounts,
 }: {
   flagship: FlagshipEvent;
   weather: FeedContext["weather"];
@@ -703,6 +717,7 @@ function FlagshipHeroContent({
   quickLinks?: QuickLink[];
   context: FeedContext;
   sportsTentpole?: ResolvedHeader["sports_tentpole"];
+  categoryCounts?: { today: Record<string, number> } | null;
 }) {
   return (
     <div className="relative z-10 flex flex-col justify-end min-h-[300px] sm:min-h-[520px] px-6 sm:px-10 pb-8 pt-5">
@@ -781,7 +796,7 @@ function FlagshipHeroContent({
           className="animate-fade-in hero-stagger-3 mt-3"
           style={{ transform: "translateY(var(--parallax-meta, 0px))" }}
         >
-          <HeroQuickLinks links={quickLinks} />
+          <HeroQuickLinks links={quickLinks} categoryCounts={categoryCounts?.today} />
         </div>
       </div>
     </div>
@@ -965,6 +980,7 @@ export default function CityBriefing({
               quickLinks={effectiveQuickLinks}
               context={context}
               sportsTentpole={header.sports_tentpole}
+              categoryCounts={categoryCounts}
             />
           ) : (
             <>

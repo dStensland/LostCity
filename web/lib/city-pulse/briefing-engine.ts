@@ -93,6 +93,22 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/** Convert ALL-CAPS strings to Title Case. Leaves mixed-case strings untouched. */
+function toTitleCase(str: string): string {
+  if (str !== str.toUpperCase()) return str; // Only transform fully uppercase strings
+  const minorWords = new Set(["a", "an", "the", "and", "but", "or", "for", "nor", "at", "by", "in", "of", "on", "to", "up"]);
+  return str
+    .toLowerCase()
+    .split(" ")
+    .map((word, i) => {
+      if (i === 0 || !minorWords.has(word)) {
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      }
+      return word;
+    })
+    .join(" ");
+}
+
 // ---------------------------------------------------------------------------
 // Time-of-day labels for activity clauses
 // ---------------------------------------------------------------------------
@@ -178,17 +194,18 @@ function extractExhibitionClosing(ctx: BriefingContext): Signal | null {
   if (ctx.closingSoonExhibitions.length === 0) return null;
 
   const ex = ctx.closingSoonExhibitions[0];
+  const title = toTitleCase(ex.title);
   const venueClause = ex.venue_name ? ` at ${ex.venue_name}` : "";
-  const headline = `${ex.title}${venueClause} closes in ${ex.days_remaining} days.`;
+  const headline = `${title}${venueClause} closes in ${ex.days_remaining} days.`;
 
   return {
     type: "exhibition_closing",
     headline,
     pill: {
-      label: `${ex.title} — closing soon`,
+      label: `${title} — closing soon`,
       href: `/${ctx.portalSlug}?view=find&lane=arts`,
       accent: "var(--copper)",
-      ariaLabel: `See ${ex.title} exhibition`,
+      ariaLabel: `See ${title} exhibition`,
     },
   };
 }

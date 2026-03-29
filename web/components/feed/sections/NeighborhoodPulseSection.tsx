@@ -143,7 +143,9 @@ export function NeighborhoodPulseSection({ portalSlug }: NeighborhoodPulseSectio
   const subtitle = evening ? `Where ${cityName} is alive tonight` : `Where ${cityName} is alive today`;
 
   return (
-    <section>
+    <section className="mt-8">
+      {/* Divider — only rendered when section has content */}
+      <div className="h-px bg-[var(--twilight)] mb-6" />
       {/* Header */}
       <div className="px-4">
         <FeedSectionHeader

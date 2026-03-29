@@ -33,6 +33,8 @@ export interface QuickLink {
   icon: string;
   href: string;
   accent_color: string;
+  /** Category key for count enrichment (e.g. "music", "comedy"). Only set for event-category links. */
+  category_key?: string;
 }
 
 export interface FeedContext {

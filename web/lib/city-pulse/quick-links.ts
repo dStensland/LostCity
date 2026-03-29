@@ -21,6 +21,8 @@ export interface QuickLink {
   /** Pre-filtered Find view URL (portal slug injected at build time) */
   href: string;
   accent_color: string;
+  /** Category key for count enrichment (e.g. "music", "comedy"). Only set for event-category links. */
+  category_key?: string;
 }
 
 type DayType = "weekday" | "weekend";
@@ -75,6 +77,7 @@ const LINKS = {
     icon: "Barbell",
     href: buildHref(p, { categories: "fitness", date: "today" }),
     accent_color: "var(--neon-cyan)",
+    category_key: "fitness",
   }),
   farmersMarkets: (p: string): QuickLink => ({
     label: "Markets",
@@ -117,12 +120,14 @@ const LINKS = {
     icon: "MusicNotes",
     href: buildHref(p, { categories: "music", date: "today" }),
     accent_color: "var(--neon-magenta)",
+    category_key: "music",
   }),
   comedy: (p: string): QuickLink => ({
     label: "Comedy",
     icon: "SmileyWink",
     href: buildHref(p, { categories: "comedy", date: "today" }),
     accent_color: "var(--gold)",
+    category_key: "comedy",
   }),
   nightlife: (p: string): QuickLink => ({
     label: "Going Out",
@@ -177,12 +182,14 @@ const LINKS = {
     icon: "UsersThree",
     href: buildHref(p, { audience: "family", date: "today" }),
     accent_color: "var(--neon-green)",
+    category_key: "family",
   }),
   arts: (p: string): QuickLink => ({
     label: "Art & Culture",
     icon: "PaintBrush",
     href: buildHref(p, { categories: "art", date: "today" }),
     accent_color: "var(--neon-magenta)",
+    category_key: "arts",
   }),
   tacoTuesday: (p: string): QuickLink => ({
     label: "Taco Spots",

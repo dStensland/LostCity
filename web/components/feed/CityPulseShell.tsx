@@ -507,36 +507,33 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         </ContentSwap>
       </div>
 
-      {/* Destinations (Worth Checking Out) — contextual venues from the city */}
+      {/* Destinations (Worth Checking Out) — contextual venues from the city.
+           No outer divider — the section renders its own divider when it has content.
+           minHeight=0 so a null-returning section doesn't leave a visible gap. */}
       <div
         id="city-pulse-destinations"
         data-feed-anchor="true"
         data-index-label="Destinations"
         data-block-id="destinations"
-        className="mt-8 scroll-mt-28"
+        className="scroll-mt-28"
       >
-        <div className="h-px bg-[var(--twilight)]" />
-        <div className="pt-6">
-          <LazySection minHeight={300}>
-            <DestinationsSectionV2 portalSlug={portalSlug} />
-          </LazySection>
-        </div>
+        <LazySection minHeight={0}>
+          <DestinationsSectionV2 portalSlug={portalSlug} />
+        </LazySection>
       </div>
 
-      {/* Neighborhoods — contextual neighborhood insights */}
+      {/* Neighborhoods — contextual neighborhood insights.
+           Same pattern: no outer divider, section self-manages. */}
       <div
         id="city-pulse-neighborhoods"
         data-feed-anchor="true"
         data-index-label="Neighborhoods"
         data-block-id="neighborhoods"
-        className="mt-8 scroll-mt-28"
+        className="scroll-mt-28"
       >
-        <div className="h-px bg-[var(--twilight)]" />
-        <div className="pt-6">
-          <LazySection minHeight={200}>
-            <NeighborhoodPulseSection portalSlug={portalSlug} />
-          </LazySection>
-        </div>
+        <LazySection minHeight={0}>
+          <NeighborhoodPulseSection portalSlug={portalSlug} />
+        </LazySection>
       </div>
 
       {/* 6. Interest Channels — only on civic portals where groups are meaningful */}

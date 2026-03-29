@@ -201,11 +201,29 @@ export const PlanningHorizonCard = memo(function PlanningHorizonCard({
             fill
             sizes="310px"
             className={`object-cover transition-transform group-hover:scale-105 ${isDisabled ? "opacity-40 grayscale" : ""}`}
+            fallback={
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={{
+                  background: `linear-gradient(135deg, var(--dusk) 0%, color-mix(in srgb, ${catColor} 20%, var(--twilight)) 50%, color-mix(in srgb, ${catColor} 10%, var(--void)) 100%)`,
+                }}
+              >
+                <CategoryIcon
+                  type={event.category || "other"}
+                  size={40}
+                  glow="none"
+                  weight="thin"
+                  className="opacity-30"
+                />
+              </div>
+            }
           />
         ) : (
           <div
             className="absolute inset-0 flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, var(--night), var(--dusk), var(--twilight))" }}
+            style={{
+              background: `linear-gradient(135deg, var(--dusk) 0%, color-mix(in srgb, ${catColor} 20%, var(--twilight)) 50%, color-mix(in srgb, ${catColor} 10%, var(--void)) 100%)`,
+            }}
           >
             <CategoryIcon
               type={event.category || "other"}

@@ -38,6 +38,30 @@ export type TieredFeedEvent = FeedEventData & {
   importance?: "flagship" | "major" | "standard" | null;
 };
 
+// ---------------------------------------------------------------------------
+// Editorial relevance guard
+// ---------------------------------------------------------------------------
+
+/**
+ * Categories where venue-level editorial mentions (restaurant reviews, bar
+ * features, etc.) are relevant context.  Editorial sources in the
+ * `editorial_mentions` table are food/drink/tourism publications.  Showing a
+ * restaurant review on a fitness class or education workshop at the same venue
+ * creates confusing mismatches.
+ */
+const EDITORIAL_RELEVANT_CATEGORIES = new Set([
+  "food_drink",
+  "nightlife",
+  "arts",
+  "music",
+  "community",
+]);
+
+function isEditorialRelevant(event: TieredFeedEvent): boolean {
+  const cat = event.category ?? "";
+  return EDITORIAL_RELEVANT_CATEGORIES.has(cat);
+}
+
 interface TieredEventListProps {
   events: TieredFeedEvent[];
   portalSlug?: string;
@@ -239,7 +263,11 @@ export function TieredEventList({
           event={event as FeedEventData & { card_tier?: "hero"; editorial_mentions?: EditorialMention[] }}
           portalSlug={portalSlug}
           friendsGoing={event.friends_going}
-          editorialBlurb={event.editorial_mentions?.[0]?.snippet ?? null}
+          editorialBlurb={
+            isEditorialRelevant(event)
+              ? (event.editorial_mentions?.[0]?.snippet ?? null)
+              : null
+          }
           index={idx}
         />
       ))}
