@@ -111,7 +111,7 @@ export default memo(function FindView({
         </div>
 
         {/* Tool chip row */}
-        <FindToolChipRow portalSlug={portalSlug} />
+        <FindToolChipRow portalSlug={portalSlug} pulse={serverFindData?.pulse} />
 
         {/* Right Now section — server-rendered, no loading state */}
         {serverFindData?.rightNow && serverFindData.rightNow.length > 0 && (

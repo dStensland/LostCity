@@ -19,6 +19,7 @@ import {
   MapTrifold,
 } from "@phosphor-icons/react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
+import type { CategoryPulse } from "@/lib/find-data";
 
 // ---------------------------------------------------------------------------
 // Chip definitions
@@ -132,14 +133,31 @@ function prioritize(ids: string[], first: string[]): string[] {
 }
 
 // ---------------------------------------------------------------------------
+// Badge count helper
+// ---------------------------------------------------------------------------
+
+const CHIP_PULSE_MAPPING: Record<string, string> = {
+  music: "music",
+  film: "entertainment",
+};
+
+function getBadgeCount(chipId: string, pulse?: CategoryPulse[]): number {
+  if (!pulse) return 0;
+  const category = CHIP_PULSE_MAPPING[chipId];
+  if (!category) return 0;
+  return pulse.find((p) => p.category === category)?.count ?? 0;
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 interface FindToolChipRowProps {
   portalSlug: string;
+  pulse?: CategoryPulse[];
 }
 
-export function FindToolChipRow({ portalSlug }: FindToolChipRowProps) {
+export function FindToolChipRow({ portalSlug, pulse }: FindToolChipRowProps) {
   const orderedChips = useMemo(() => {
     const order = getChipOrder();
     const chipMap = new Map(CHIPS.map((c) => [c.id, c]));
@@ -151,6 +169,7 @@ export function FindToolChipRow({ portalSlug }: FindToolChipRowProps) {
       {orderedChips.map((chip) => {
         const IconComponent = chip.icon;
         const href = `/${portalSlug}${chip.href}`;
+        const badge = getBadgeCount(chip.id, pulse);
 
         return (
           <Link
@@ -165,6 +184,16 @@ export function FindToolChipRow({ portalSlug }: FindToolChipRowProps) {
           >
             <IconComponent weight="duotone" className="w-5 h-5" />
             {chip.label}
+            {badge > 0 && (
+              <span
+                className="font-mono text-2xs font-bold tabular-nums px-1.5 py-0.5 rounded-full leading-none"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${chip.accent} 25%, transparent)`,
+                }}
+              >
+                {badge}
+              </span>
+            )}
           </Link>
         );
       })}
