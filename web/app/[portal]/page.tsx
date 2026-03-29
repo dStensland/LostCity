@@ -186,6 +186,8 @@ type PortalSearchParams = {
   org?: string;
   // Concierge pillar
   pillar?: string;
+  // Navigation context
+  from?: string;
 };
 
 type Props = {
@@ -331,6 +333,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
   const normalizedParams = normalizeFinURLParams(rawParams);
 
   const viewParam = normalizedParams.get("view") ?? undefined;
+  const fromParam = normalizedParams.get("from") || searchParamsData?.from || "";
   const findTypeParam = normalizedParams.get("type") ?? undefined;
   const findDisplayParam = normalizedParams.get("display") ?? undefined;
   const contentParam = normalizedParams.get("content") ?? undefined;
@@ -501,6 +504,14 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
                   {viewMode === "happening" && (
                     <div data-skeleton-route="happening-view" className="contents">
+                      {fromParam === "find" && (
+                        <div className="px-4 pt-3 pb-1">
+                          <a href={`/${portal.slug}?view=find`} className="inline-flex items-center gap-1.5 text-sm text-[var(--soft)] hover:text-[var(--cream)] transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"/></svg>
+                            Find
+                          </a>
+                        </div>
+                      )}
                       <HappeningView
                         portalId={portal.id}
                         portalSlug={portal.slug}
@@ -515,6 +526,14 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
                   {viewMode === "places" && (
                     <div data-skeleton-route="places-view" className="contents">
+                      {fromParam === "find" && (
+                        <div className="px-4 pt-3 pb-1">
+                          <a href={`/${portal.slug}?view=find`} className="inline-flex items-center gap-1.5 text-sm text-[var(--soft)] hover:text-[var(--cream)] transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"/></svg>
+                            Find
+                          </a>
+                        </div>
+                      )}
                       <Suspense fallback={<div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading places...</div>}>
                         <SpotsFinder
                           portalId={portal.id}
