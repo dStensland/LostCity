@@ -5,6 +5,7 @@ import { isOpenAt } from "@/lib/hours";
 import { fetchSocialProofCounts } from "@/lib/social-proof";
 import { applyVenueGate } from "@/lib/feed-gate";
 import { ATTACHED_CHILD_DESTINATION_VENUE_TYPES } from "@/lib/destination-graph";
+import type { PlaceProfile, PlaceDiningDetails, PlaceOutdoorDetails, PlaceGoogleDetails } from "@/lib/types/places";
 import {
   getYonderDestinationIntelligence,
   type YonderDestinationIntelligence,
@@ -203,6 +204,12 @@ export type SpotDetailPayload = {
   occasions: VenueOccasionRow[];
   exhibitions: VenueExhibitionRow[];
   walkableNeighbors: WalkableNeighbor[];
+  placeProfile: PlaceProfile | null;
+  placeVerticalDetails: {
+    dining: PlaceDiningDetails | null;
+    outdoor: PlaceOutdoorDetails | null;
+    google: PlaceGoogleDetails | null;
+  } | null;
   yonderDestinationIntelligence: YonderDestinationIntelligence | null;
   yonderAccommodationInventorySource: YonderAccommodationInventorySource | null;
   yonderRuntimeInventorySnapshot: YonderRuntimeInventorySnapshot | null;
@@ -507,6 +514,18 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
           .limit(10)
       : Promise.resolve({ data: [] as WalkableRow[] });
 
+  const placeProfilePromise = supabase
+    .from("place_profile")
+    .select("*")
+    .eq("place_id", spot.id)
+    .maybeSingle();
+
+  const placeVerticalDetailsPromise = supabase
+    .from("place_vertical_details")
+    .select("dining, outdoor, google")
+    .eq("place_id", spot.id)
+    .maybeSingle();
+
   const isCinema = (spotData as Record<string, unknown>).place_type === "cinema";
 
   // Over-fetch to allow post-query slot dedupe and quality ranking.
@@ -567,6 +586,8 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     { data: occasions },
     { data: exhibitions },
     { data: walkableNeighborsRaw },
+    { data: placeProfileData },
+    { data: verticalDetailsData },
   ] = await Promise.all([
     upcomingCountsPromise,
     nearbyDestinationsPromise,
@@ -579,6 +600,8 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     occasionsPromise,
     exhibitionsPromise,
     walkableNeighborsPromise,
+    placeProfilePromise,
+    placeVerticalDetailsPromise,
   ]);
 
   const upcomingEventsWithCounts: Array<Record<string, unknown>> = dedupedRows.map((event) => {
@@ -629,6 +652,14 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     occasions: (occasions as VenueOccasionRow[] | null) || [],
     exhibitions: (exhibitions as VenueExhibitionRow[] | null) || [],
     walkableNeighbors,
+    placeProfile: (placeProfileData as unknown as PlaceProfile) ?? null,
+    placeVerticalDetails: verticalDetailsData
+      ? {
+          dining: ((verticalDetailsData as unknown as Record<string, unknown>).dining as PlaceDiningDetails) ?? null,
+          outdoor: ((verticalDetailsData as unknown as Record<string, unknown>).outdoor as PlaceOutdoorDetails) ?? null,
+          google: ((verticalDetailsData as unknown as Record<string, unknown>).google as PlaceGoogleDetails) ?? null,
+        }
+      : null,
     yonderDestinationIntelligence,
     yonderAccommodationInventorySource,
     yonderRuntimeInventorySnapshot,
