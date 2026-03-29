@@ -150,7 +150,7 @@ export function FindToolChipRow({ portalSlug }: FindToolChipRowProps) {
     <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 py-2">
       {orderedChips.map((chip) => {
         const IconComponent = chip.icon;
-        const href = `/${portalSlug}/find${chip.href}`;
+        const href = `/${portalSlug}${chip.href}`;
 
         return (
           <Link
