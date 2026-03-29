@@ -43,6 +43,7 @@ import {
 } from "@/lib/my-theaters";
 import { useAuth } from "@/lib/auth-context";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import Dot from "@/components/ui/Dot";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -70,6 +71,8 @@ type TheaterItem = {
   venue_name: string;
   venue_slug: string;
   neighborhood: string | null;
+  google_rating: number | null;
+  google_rating_count: number | null;
   films: TheaterFilm[];
 };
 
@@ -432,9 +435,19 @@ function TheaterCard({
         href={`/${portalSlug}?spot=${theater.venue_slug}`}
         className="group block px-3 pt-3 pb-2"
       >
-        <span className="text-base font-semibold text-[var(--cream)] group-hover:text-[var(--vibe)] transition-colors truncate">
-          {theater.venue_name}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-base font-semibold text-[var(--cream)] group-hover:text-[var(--vibe)] transition-colors truncate flex-1 min-w-0">
+            {theater.venue_name}
+          </span>
+          {theater.google_rating != null && (
+            <>
+              <Dot className="shrink-0" />
+              <span className="shrink-0 text-xs text-[var(--gold)]">
+                {theater.google_rating.toFixed(1)} ★
+              </span>
+            </>
+          )}
+        </div>
       </Link>
 
       {/* Film rows */}

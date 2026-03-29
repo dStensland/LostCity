@@ -36,6 +36,8 @@ type ShowtimeVenue = {
   slug: string;
   neighborhood: string | null;
   city: string | null;
+  google_rating?: number | null;
+  google_rating_count?: number | null;
 };
 type ShowtimeSeries = {
   id: string;
@@ -95,6 +97,8 @@ function buildFilmMap(events: ShowtimeEvent[]) {
           venue_name: string;
           venue_slug: string;
           neighborhood: string | null;
+          google_rating: number | null;
+          google_rating_count: number | null;
           times: { time: string; event_id: number }[];
         }
       >;
@@ -136,11 +140,19 @@ function buildFilmMap(events: ShowtimeEvent[]) {
 
     let theater = film.theaters.get(venue.id);
     if (!theater) {
+      // Flatten google rating from place_vertical_details
+      const raw = venue as typeof venue & {
+        place_vertical_details?: { google?: { rating?: number | null; rating_count?: number | null } | null } | null;
+      };
+      const googleData = raw.place_vertical_details?.google ?? null;
+
       theater = {
         venue_id: venue.id,
         venue_name: venue.name,
         venue_slug: venue.slug,
         neighborhood: venue.neighborhood,
+        google_rating: googleData?.rating ?? null,
+        google_rating_count: googleData?.rating_count ?? null,
         times: [],
       };
       film.theaters.set(venue.id, theater);
@@ -225,6 +237,8 @@ function toTheatersResponse(
       venue_name: string;
       venue_slug: string;
       neighborhood: string | null;
+      google_rating: number | null;
+      google_rating_count: number | null;
       films: {
         title: string;
         series_id: string | null;
@@ -254,6 +268,8 @@ function toTheatersResponse(
           venue_name: theater.venue_name,
           venue_slug: theater.venue_slug,
           neighborhood: theater.neighborhood,
+          google_rating: theater.google_rating,
+          google_rating_count: theater.google_rating_count,
           films: [],
         };
         theaterMap.set(venueId, theaterEntry);
@@ -354,7 +370,8 @@ export async function GET(request: NextRequest) {
         name,
         slug,
         neighborhood,
-        city
+        city,
+        place_vertical_details(google)
       ),
       series:series!events_series_id_fkey(
         id,
