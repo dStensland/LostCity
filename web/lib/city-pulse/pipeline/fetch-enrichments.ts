@@ -62,6 +62,13 @@ export type PhaseAEnrichments = {
   headerCandidates: FeedHeaderRow[];
   userProfile: { display_name: string | null; username: string | null } | null;
   userSignals: UserSignals | null;
+  closingSoonExhibitions: Array<{
+    id: number;
+    title: string;
+    closing_date: string;
+    venue_name?: string;
+    days_remaining: number;
+  }>;
 };
 
 /**
@@ -210,6 +217,7 @@ export async function fetchPhaseAEnrichments(
       username: string | null;
     } | null,
     userSignals,
+    closingSoonExhibitions: [],
   };
 }
 
