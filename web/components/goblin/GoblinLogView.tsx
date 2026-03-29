@@ -43,7 +43,7 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
     if (!isAuthenticated) return;
     fetch("/api/auth/profile")
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d?.username) setUsername(d.username); })
+      .then((d) => { if (d?.profile?.username) setUsername(d.profile.username); })
       .catch(() => {});
   }, [isAuthenticated]);
 
