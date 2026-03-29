@@ -93,6 +93,13 @@ export default async function PublicLogPage({ params, searchParams }: PageProps)
     tags: entryTags[e.id] || [],
   }));
 
+  // Fetch user's tags for filter pills
+  const { data: userTags } = await serviceClient
+    .from("goblin_tags")
+    .select("id, name, color")
+    .eq("user_id", (profile as any).id)
+    .order("created_at", { ascending: true });
+
   return (
     <GoblinLogPublicView
       user={{
@@ -101,6 +108,7 @@ export default async function PublicLogPage({ params, searchParams }: PageProps)
         avatarUrl: (profile as any).avatar_url,
       }}
       entries={logEntries}
+      tags={userTags || []}
       year={parseInt(currentYear)}
     />
   );

@@ -1,9 +1,10 @@
 "use client";
 
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import GoblinLogEntryCard from "@/components/goblin/GoblinLogEntryCard";
 import SmartImage from "@/components/SmartImage";
-import type { LogEntry } from "@/lib/goblin-log-utils";
+import type { LogEntry, GoblinTag } from "@/lib/goblin-log-utils";
 
 interface Props {
   user: {
@@ -12,6 +13,7 @@ interface Props {
     avatarUrl: string | null;
   };
   entries: LogEntry[];
+  tags: GoblinTag[];
   year: number;
 }
 
@@ -20,48 +22,128 @@ const YEARS = Array.from(
   (_, i) => new Date().getFullYear() - i
 );
 
-export default function GoblinLogPublicView({ user, entries, year }: Props) {
+export default function GoblinLogPublicView({ user, entries, tags, year }: Props) {
   const router = useRouter();
   const pathname = usePathname();
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [activeDirector, setActiveDirector] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Directors with 2+ movies
+  const directors = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const e of entries) {
+      const d = e.movie.director;
+      if (d) counts.set(d, (counts.get(d) || 0) + 1);
+    }
+    return [...counts.entries()]
+      .filter(([, count]) => count >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count }));
+  }, [entries]);
+
+  const filteredEntries = useMemo(() => {
+    let result = entries;
+    if (activeTag) result = result.filter((e) => e.tags.some((t) => t.name === activeTag));
+    if (activeDirector) result = result.filter((e) => e.movie.director === activeDirector);
+    return result;
+  }, [entries, activeTag, activeDirector]);
+
+  // Retro grid animation
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animId: number;
+    let offset = 0;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Perspective grid — horizontal lines receding into distance
+      const horizon = canvas.height * 0.65;
+      const vanishX = canvas.width * 0.5;
+      const gridSpacing = 40;
+      const numLines = 20;
+
+      // Horizontal lines (scrolling toward viewer)
+      for (let i = 0; i < numLines; i++) {
+        const t = ((i * gridSpacing + offset) % (numLines * gridSpacing)) / (numLines * gridSpacing);
+        const y = horizon + (canvas.height - horizon) * (t * t); // quadratic for perspective
+        const alpha = t * 0.12;
+
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.strokeStyle = `rgba(0, 240, 255, ${alpha})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // Vertical lines converging to vanishing point
+      const numVLines = 16;
+      for (let i = -numVLines / 2; i <= numVLines / 2; i++) {
+        const bottomX = vanishX + i * 120;
+        const alpha = 0.06 - Math.abs(i) * 0.003;
+        if (alpha <= 0) continue;
+
+        ctx.beginPath();
+        ctx.moveTo(vanishX, horizon);
+        ctx.lineTo(bottomX, canvas.height);
+        ctx.strokeStyle = `rgba(0, 240, 255, ${Math.max(alpha, 0)})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+
+      // Horizon glow
+      const glow = ctx.createRadialGradient(vanishX, horizon, 0, vanishX, horizon, 300);
+      glow.addColorStop(0, "rgba(255, 0, 170, 0.04)");
+      glow.addColorStop(0.5, "rgba(0, 240, 255, 0.02)");
+      glow.addColorStop(1, "transparent");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, horizon - 200, canvas.width, 400);
+
+      offset += 0.3;
+      animId = requestAnimationFrame(draw);
+    };
+
+    draw();
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
 
   return (
     <main className="min-h-screen bg-black text-white font-mono relative overflow-hidden">
-      {/* Laser grid background */}
-      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.04]"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(0,240,255,0.3) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,240,255,0.3) 1px, transparent 1px)
-          `,
-          backgroundSize: "60px 60px",
-        }}
-      />
-      {/* Horizon glow */}
-      <div className="fixed bottom-0 left-0 right-0 h-64 pointer-events-none z-0"
-        style={{
-          background: "radial-gradient(ellipse at 50% 100%, rgba(0,240,255,0.06) 0%, transparent 70%)",
-        }}
+      {/* Animated retro grid background */}
+      <canvas
+        ref={canvasRef}
+        className="fixed inset-0 pointer-events-none z-0"
       />
 
       {/* Top laser line */}
-      <div className="h-px w-full"
-        style={{ background: "linear-gradient(to right, transparent, rgba(0,240,255,0.5), rgba(255,0,170,0.5), transparent)" }} />
+      <div className="h-px w-full relative z-10"
+        style={{ background: "linear-gradient(to right, transparent, rgba(0,240,255,0.6), rgba(255,0,170,0.6), transparent)" }} />
 
       <div className="max-w-3xl mx-auto px-4 py-12 sm:py-20 relative z-10">
         {/* Header */}
-        <div className="mb-12 pb-6"
+        <div className="mb-10 pb-6"
           style={{ borderBottom: "1px solid rgba(0,240,255,0.15)" }}>
           <div className="flex items-end gap-4">
             {user.avatarUrl && (
               <div className="relative">
-                <SmartImage
-                  src={user.avatarUrl}
-                  alt=""
-                  width={56}
-                  height={56}
-                  className="border border-cyan-800/40"
-                />
-                {/* Neon corner accents */}
+                <SmartImage src={user.avatarUrl} alt="" width={56} height={56}
+                  className="border border-cyan-800/40" />
                 <div className="absolute -top-px -left-px w-2 h-2 border-t border-l border-cyan-500/60" />
                 <div className="absolute -top-px -right-px w-2 h-2 border-t border-r border-cyan-500/60" />
                 <div className="absolute -bottom-px -left-px w-2 h-2 border-b border-l border-cyan-500/60" />
@@ -84,9 +166,12 @@ export default function GoblinLogPublicView({ user, entries, year }: Props) {
           <div className="flex items-center justify-between mt-8">
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
               {YEARS.map((y) => (
-                <button
-                  key={y}
-                  onClick={() => router.push(`${pathname}?year=${y}`)}
+                <button key={y}
+                  onClick={() => {
+                    router.push(`${pathname}?year=${y}`);
+                    setActiveTag(null);
+                    setActiveDirector(null);
+                  }}
                   className={`flex-shrink-0 px-3 py-1 font-mono text-2xs font-bold tracking-wider uppercase
                     border transition-all duration-200 ${
                       y === year
@@ -99,15 +184,68 @@ export default function GoblinLogPublicView({ user, entries, year }: Props) {
               ))}
             </div>
             <span className="text-2xs text-zinc-600 tracking-[0.3em] uppercase flex-shrink-0 ml-4 tabular-nums">
-              {entries.length} film{entries.length !== 1 ? "s" : ""}
+              {filteredEntries.length} film{filteredEntries.length !== 1 ? "s" : ""}
             </span>
           </div>
+
+          {/* Tag + Director filters */}
+          {(tags.length > 0 || directors.length > 0) && (
+            <div className="flex items-center gap-4 mt-4 overflow-x-auto scrollbar-hide">
+              {tags.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  {tags.map((tag) => (
+                    <button key={tag.id}
+                      onClick={() => setActiveTag(activeTag === tag.name ? null : tag.name)}
+                      className="flex-shrink-0 px-2 py-0.5 font-mono text-2xs font-medium
+                        border transition-all duration-200"
+                      style={{
+                        backgroundColor: activeTag === tag.name ? `${tag.color}15` : "transparent",
+                        borderColor: activeTag === tag.name ? `${tag.color}40` : "rgba(63,63,70,1)",
+                        color: activeTag === tag.name ? tag.color || "#a1a1aa" : "rgb(82,82,91)",
+                        textShadow: activeTag === tag.name ? `0 0 8px ${tag.color}40` : "none",
+                      }}
+                    >
+                      {tag.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {tags.length > 0 && directors.length > 0 && (
+                <div className="w-px h-4 bg-zinc-800 flex-shrink-0" />
+              )}
+              {directors.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  {directors.map(({ name, count }) => (
+                    <button key={name}
+                      onClick={() => setActiveDirector(activeDirector === name ? null : name)}
+                      className={`flex-shrink-0 px-2 py-0.5 font-mono text-2xs font-medium
+                        border transition-all duration-200 ${
+                          activeDirector === name
+                            ? "border-fuchsia-600 text-fuchsia-300 bg-fuchsia-950/30 shadow-[0_0_8px_rgba(255,0,170,0.1)]"
+                            : "border-zinc-800 text-zinc-600 hover:text-fuchsia-400/60 hover:border-fuchsia-800/40"
+                        }`}
+                    >
+                      {name} [{count}]
+                    </button>
+                  ))}
+                </div>
+              )}
+              {(activeTag || activeDirector) && (
+                <button
+                  onClick={() => { setActiveTag(null); setActiveDirector(null); }}
+                  className="flex-shrink-0 text-2xs text-zinc-700 hover:text-white font-mono
+                    tracking-wider uppercase transition-colors">
+                  CLEAR
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* List */}
-        {entries.length > 0 ? (
+        {filteredEntries.length > 0 ? (
           <div className="space-y-2">
-            {entries.map((entry, i) => (
+            {filteredEntries.map((entry, i) => (
               <GoblinLogEntryCard
                 key={entry.id}
                 entry={entry}
@@ -120,7 +258,9 @@ export default function GoblinLogPublicView({ user, entries, year }: Props) {
         ) : (
           <div className="flex flex-col items-center justify-center py-24">
             <p className="text-zinc-600 font-mono text-sm tracking-widest uppercase">
-              // No films logged in {year}
+              {activeTag || activeDirector
+                ? "// No films match filters"
+                : `// No films logged in ${year}`}
             </p>
           </div>
         )}
@@ -130,8 +270,7 @@ export default function GoblinLogPublicView({ user, entries, year }: Props) {
           style={{ borderTop: "1px solid rgba(0,240,255,0.1)" }}>
           <a href="/goblinday"
             className="text-2xs text-zinc-700 font-mono tracking-[0.2em] uppercase
-              hover:text-cyan-500 transition-colors"
-            style={{ textShadow: "0 0 10px rgba(0,240,255,0)" }}>
+              hover:text-cyan-500 transition-colors">
             Goblin Day
           </a>
           <span className="text-2xs text-zinc-800 font-mono tracking-[0.15em]">
