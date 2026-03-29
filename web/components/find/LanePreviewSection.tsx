@@ -9,6 +9,20 @@ import { useLaneSpots } from "@/lib/hooks/useLaneSpots";
 import { DiscoveryCard } from "@/components/cards/DiscoveryCard";
 
 // -------------------------------------------------------------------------
+// Lane → "See all" URL mapping
+// Routes to existing tool views with from=find breadcrumb
+// -------------------------------------------------------------------------
+
+export const LANE_SEE_ALL_URLS: Record<string, string> = {
+  arts: "?view=places&tab=things-to-do&venue_type=museum,gallery,arts_center,theater&from=find",
+  dining: "?view=places&tab=eat-drink&from=find",
+  nightlife: "?view=places&tab=nightlife&from=find",
+  outdoors: "?view=places&tab=things-to-do&venue_type=park,trail,recreation,viewpoint,landmark&from=find",
+  music: "?view=happening&content=showtimes&vertical=music&from=find",
+  entertainment: "?view=places&tab=things-to-do&venue_type=arcade,attraction,entertainment,escape_room,bowling,zoo,aquarium,cinema&from=find",
+};
+
+// -------------------------------------------------------------------------
 // Skeleton
 // -------------------------------------------------------------------------
 
@@ -41,11 +55,25 @@ export const LanePreviewSection = memo(function LanePreviewSection({
 }: LanePreviewSectionProps) {
   const { items, openCount, totalCount, loading } = useLaneSpots(portalSlug, lane, 3);
 
-  if (!loading && items.length === 0) return null;
-
   const config = LANE_CONFIG[lane];
   const LaneIcon = LANE_ICONS[config.icon] ?? Ticket;
-  const seeAllHref = `/${portalSlug}?view=find&lane=${lane}`;
+  const seeAllHref = `/${portalSlug}${LANE_SEE_ALL_URLS[lane] ?? `?view=find&lane=${lane}`}`;
+
+  if (!loading && items.length === 0) {
+    return (
+      <section className="px-4 pb-2 pt-4">
+        <div className="flex items-center">
+          <div className="flex items-center gap-2">
+            <LaneIcon size={16} style={{ color: config.color }} weight="duotone" />
+            <h2 className="font-mono text-xs font-bold uppercase tracking-wider" style={{ color: config.color }}>{config.label}</h2>
+          </div>
+          <div className="flex-1" />
+          <Link href={seeAllHref} className="text-xs flex items-center gap-1 hover:opacity-80" style={{ color: config.color }}>See all →</Link>
+        </div>
+        <p className="mt-3 text-sm text-[var(--muted)]">Nothing nearby right now</p>
+      </section>
+    );
+  }
 
   return (
     <section>
