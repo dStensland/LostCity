@@ -22,6 +22,7 @@ import { HotelTemplate } from "./_templates/hotel";
 // Pillar type import removed — Discover feed doesn't use pillars
 import { isPCMDemoPortal } from "@/lib/marketplace-art";
 import { normalizeMarketplacePersona } from "@/lib/marketplace-art";
+import { normalizeFinURLParams } from "@/lib/normalize-find-url";
 import { MarketplaceTemplate } from "./_templates/marketplace";
 import { DogTemplate } from "./_templates/dog";
 import { FamilyFeed } from "@/components/family";
@@ -319,10 +320,18 @@ export default async function PortalPage({ params, searchParams }: Props) {
     );
   }
 
-  const viewParam = searchParamsData.view;
-  const findTypeParam = searchParamsData.type;
-  const findDisplayParam = searchParamsData.display;
-  const contentParam = searchParamsData.content;
+  // Normalize legacy URL patterns (happening/places/tab/content) to unified Find scheme
+  const rawParams = new URLSearchParams(
+    Object.entries(searchParamsData)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [k, v as string])
+  );
+  const normalizedParams = normalizeFinURLParams(rawParams);
+
+  const viewParam = normalizedParams.get("view") ?? undefined;
+  const findTypeParam = normalizedParams.get("type") ?? undefined;
+  const findDisplayParam = normalizedParams.get("display") ?? undefined;
+  const contentParam = normalizedParams.get("content") ?? undefined;
   const hasFindSignals = Boolean(
     findTypeParam ||
       findDisplayParam ||
