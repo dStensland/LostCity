@@ -256,18 +256,20 @@ export async function getServerFindData(
         : pulse.slice(0, 3);
 
     const spotlightResults = await Promise.all(
-      spotlightCategories.map((cat) =>
-        supabase
+      spotlightCategories.map(async (cat) => {
+        const types = CATEGORY_MAP[cat.category]?.types ?? [];
+        const result = await supabase
           .from("places")
           .select(
             "id, name, slug, image_url, place_type, neighborhood, short_description, price_level, vibes"
           )
           .neq("is_active", false)
           .ilike("city", `${city}%`)
-          .in("place_type", CATEGORY_MAP[cat.category]?.types ?? [])
-          .order("final_score", { ascending: false, nullsFirst: false })
-          .limit(3)
-      )
+          .in("place_type", types)
+          .order("name")
+          .limit(3);
+        return result;
+      })
     );
 
     const spotlights: FindSpotlight[] = spotlightCategories
