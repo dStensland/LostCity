@@ -1,6 +1,5 @@
--- Add venue_name to get_right_now_feed RPC response
--- Events show the place name as venue_name; places return NULL (name field is the venue itself)
--- Must DROP first because return type is changing (adding a column)
+-- get_right_now_feed RPC — final definition (with venue_name + GRANT)
+-- Consolidated from supabase migrations 20260329100000..20260329100002
 
 DROP FUNCTION IF EXISTS get_right_now_feed(UUID, TEXT, INTEGER);
 

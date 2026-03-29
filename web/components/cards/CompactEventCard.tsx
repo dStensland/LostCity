@@ -4,7 +4,6 @@ import { memo } from "react";
 import Link from "next/link";
 import {
   Ticket,
-  MusicNote,
   FilmSlate,
   MicrophoneStage,
   MaskHappy,
@@ -16,26 +15,15 @@ import type { DiscoveryEventEntity } from "@/lib/types/discovery";
 const MUSIC_ACCENT = "#A78BFA";
 const DEFAULT_ACCENT = "#FF6B7A";
 
-type PhosphorIcon = React.ComponentType<{
-  size?: number;
-  color?: string;
-  weight?: "duotone" | "regular" | "bold" | "fill" | "thin" | "light";
-}>;
-
-function getCategoryIcon(categoryId: string | null): PhosphorIcon {
+function renderCategoryIcon(categoryId: string | null, accent: string) {
+  const props = { size: 15, color: accent, weight: "duotone" as const };
   switch (categoryId) {
-    case "film":
-      return FilmSlate;
-    case "music":
-      return MicrophoneStage;
+    case "film": return <FilmSlate {...props} />;
+    case "music": return <MicrophoneStage {...props} />;
     case "comedy":
-      return MaskHappy;
-    case "theater":
-      return MaskHappy;
-    case "education":
-      return GraduationCap;
-    default:
-      return Ticket;
+    case "theater": return <MaskHappy {...props} />;
+    case "education": return <GraduationCap {...props} />;
+    default: return <Ticket {...props} />;
   }
 }
 
@@ -96,7 +84,6 @@ export const CompactEventCard = memo(function CompactEventCard({
   const accent = getAccentColor(entity);
   const timeSplit = formatTimeSplit(entity.start_time);
   const dateLabel = formatSmartDate(entity.start_date);
-  const CategoryIcon = getCategoryIcon(entity.category_id ?? null);
   const primaryGenre =
     entity.genres && entity.genres.length > 0 ? entity.genres[0] : null;
 
@@ -136,7 +123,7 @@ export const CompactEventCard = memo(function CompactEventCard({
           className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg"
           style={{ backgroundColor: `${accent}1A` }}
         >
-          <CategoryIcon size={15} color={accent} weight="duotone" />
+          {renderCategoryIcon(entity.category_id ?? null, accent)}
         </div>
 
         {/* Text content */}
