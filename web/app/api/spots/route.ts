@@ -231,6 +231,7 @@ export async function GET(request: NextRequest) {
       vibes: string[] | null;
       short_description: string | null;
       genres: string[] | null;
+      place_vertical_details: { google: { rating: number | null; rating_count: number | null } | null } | null;
     };
 
     type EventRow = {
@@ -257,6 +258,8 @@ export async function GET(request: NextRequest) {
       is_open: boolean;
       closes_at: string | null | undefined;
       distance_km: number | null;
+      google_rating: number | null;
+      google_rating_count: number | null;
       // Conditionally included fields
       address?: string | null;
       walking_minutes?: number | null;
@@ -269,7 +272,7 @@ export async function GET(request: NextRequest) {
     // Note: is_24_hours column may not exist in all environments
     let query = supabase
       .from("places")
-      .select("id, name, slug, address, neighborhood, place_type, location_designator, city, image_url, lat, lng, price_level, hours, hours_display, vibes, short_description, genres")
+      .select("id, name, slug, address, neighborhood, place_type, location_designator, city, image_url, lat, lng, price_level, hours, hours_display, vibes, short_description, genres, place_vertical_details(google)")
       .neq("is_active", false); // Exclude deactivated venues
 
     // Venues table has no portal_id column, so we scope by city.
@@ -547,6 +550,7 @@ export async function GET(request: NextRequest) {
       const distanceKm = hasCenter && venue.lat !== null && venue.lng !== null
         ? haversineDistanceKm(centerLat!, centerLng!, venue.lat, venue.lng)
         : null;
+      const googleData = venue.place_vertical_details?.google ?? null;
       const baseSpot: SpotRow = {
         id: venue.id,
         name: venue.name,
@@ -567,6 +571,8 @@ export async function GET(request: NextRequest) {
         is_open: openStatus.isOpen,
         closes_at: openStatus.closesAt,
         distance_km: distanceKm !== null ? Math.round(distanceKm * 100) / 100 : null,
+        google_rating: googleData?.rating ?? null,
+        google_rating_count: googleData?.rating_count ?? null,
       };
 
       // Geo fields only when a center point is provided

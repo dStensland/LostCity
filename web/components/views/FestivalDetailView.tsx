@@ -1,14 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import Skeleton from "@/components/Skeleton";
 import ScopedStyles from "@/components/ScopedStyles";
-import RSVPButton from "@/components/RSVPButton";
-import AddToCalendar from "@/components/AddToCalendar";
 import { createCssVarClass } from "@/lib/css-utils";
 import { format, parseISO } from "date-fns";
-import { decodeHtmlEntities, formatTimeSplit } from "@/lib/formats";
 import { usePortal } from "@/lib/portal-context";
 import LinkifyText from "../LinkifyText";
 import SmartImage from "@/components/SmartImage";
@@ -18,20 +15,16 @@ import {
   CalendarBlank,
   Ticket,
   Globe,
-  CaretRight,
   ArrowCounterClockwise,
   ArrowLeft,
   Train,
   Car,
   Path,
-  MusicNotes,
-  BeerStein,
-  SunHorizon,
-  ForkKnife,
-  UsersThree,
 } from "@phosphor-icons/react";
 import DetailShell from "@/components/detail/DetailShell";
 import { DetailStickyBar } from "@/components/detail/DetailStickyBar";
+import { ExperienceTagStrip } from "@/components/detail/ExperienceTagStrip";
+import { FestivalScheduleGrid } from "@/components/detail/FestivalScheduleGrid";
 import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
 import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
 
@@ -118,40 +111,7 @@ const FESTIVAL_TYPE_LABELS: Record<string, string> = {
   wine_festival: "Wine Festival",
 };
 
-const STAGE_ACCENT_COLORS = [
-  "#FFD93D",
-  "#00D9A0",
-  "#A78BFA",
-  "#00D4E8",
-  "#E855A0",
-];
-
-// Maps experience_tags slugs → display label + Phosphor icon element
-const EXPERIENCE_TAG_META: Record<string, { label: string; icon: React.ReactNode }> = {
-  live_music:      { label: "Live Music",     icon: <MusicNotes size={11} weight="fill" /> },
-  craft_beer:      { label: "Craft Beer",     icon: <BeerStein size={11} weight="fill" /> },
-  outdoor:         { label: "Outdoor",        icon: <SunHorizon size={11} weight="fill" /> },
-  food_vendors:    { label: "Food Vendors",   icon: <ForkKnife size={11} weight="fill" /> },
-  all_ages:        { label: "All Ages",       icon: <UsersThree size={11} weight="fill" /> },
-  family_friendly: { label: "Family",         icon: <UsersThree size={11} weight="fill" /> },
-};
-
-function getTagMeta(tag: string): { label: string; icon: React.ReactNode } {
-  const key = tag.toLowerCase().replace(/[\s-]/g, "_");
-  if (EXPERIENCE_TAG_META[key]) return EXPERIENCE_TAG_META[key];
-  const label = tag.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-  return { label, icon: null };
-}
-
 // ── Helpers ──────────────────────────────────────────────────────────────
-
-function formatSessionTime(time: string | null): string {
-  if (!time) return "TBA";
-  // Treat midnight placeholder as unknown time
-  if (time === "00:00:00" || time === "00:00") return "TBA";
-  const { time: t, period } = formatTimeSplit(time, false);
-  return period ? `${t} ${period}` : t;
-}
 
 function formatDayDuration(startDate: string, endDate: string | null): string {
   if (!endDate || startDate === endDate) return "1 day";
@@ -171,7 +131,6 @@ export default function FestivalDetailView({
 }: FestivalDetailViewProps) {
   const { portal } = usePortal();
   const { toEvent, toSeries: handleProgramClick } = useDetailNavigation(portalSlug);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   const fetchUrl = useMemo(() => {
     if (!portal?.id) return null;
@@ -209,28 +168,6 @@ export default function FestivalDetailView({
     const venueIds = new Set(allSessions.filter((s) => s.venue).map((s) => s.venue!.id));
     return venueIds.size === 1 ? allSessions.find((s) => s.venue)?.venue ?? null : null;
   }, [allSessions]);
-
-  // Unique sorted dates for day tabs
-  const uniqueDates = useMemo(() => {
-    const dates = [...new Set(allSessions.map((s) => s.start_date))].sort();
-    return dates;
-  }, [allSessions]);
-
-  // Effective selected day (defaults to today if in range, else first date)
-  const todayStr = format(new Date(), "yyyy-MM-dd");
-  const defaultDay = uniqueDates.includes(todayStr) ? todayStr : uniqueDates[0] ?? null;
-  const activeDay = selectedDay && uniqueDates.includes(selectedDay) ? selectedDay : defaultDay;
-
-  // Programs filtered to active day
-  const dayPrograms = useMemo(() => {
-    if (!activeDay) return programs;
-    return programs
-      .map((p) => ({
-        ...p,
-        sessions: p.sessions.filter((s) => s.start_date === activeDay),
-      }))
-      .filter((p) => p.sessions.length > 0);
-  }, [programs, activeDay]);
 
   const accentClass = createCssVarClass("--accent-color", FESTIVAL_ACCENT, "accent");
 
@@ -324,10 +261,38 @@ export default function FestivalDetailView({
     ? formatDayDuration(summary.startDate, summary.endDate ?? null)
     : null;
 
-  // Stats pills: programs as "stages", duration
+  // Stats pills: programs as "stages", duration, + newly surfaced metadata
   const statPills: string[] = [];
   if (summary?.programCount) statPills.push(`${summary.programCount} Stage${summary.programCount !== 1 ? "s" : ""}`);
+  if (summary?.sessionCount && summary.sessionCount > 1) statPills.push(`${summary.sessionCount} Performers`);
   if (durationLabel) statPills.push(durationLabel);
+  if (festival.size_tier) {
+    const sizeLabel: Record<string, string> = {
+      intimate: "Intimate",
+      small: "Small",
+      medium: "Medium",
+      large: "Large",
+      massive: "Massive",
+    };
+    statPills.push(sizeLabel[festival.size_tier] ?? festival.size_tier);
+  }
+  if (festival.indoor_outdoor) {
+    const indoorLabel: Record<string, string> = {
+      indoor: "Indoor",
+      outdoor: "Outdoor",
+      mixed: "Indoor + Outdoor",
+    };
+    statPills.push(indoorLabel[festival.indoor_outdoor] ?? festival.indoor_outdoor);
+  }
+  if (festival.price_tier) {
+    const priceLabel: Record<string, string> = {
+      free: "Free",
+      cheap: "Budget-Friendly",
+      moderate: "Moderate Price",
+      premium: "Premium",
+    };
+    statPills.push(priceLabel[festival.price_tier] ?? festival.price_tier);
+  }
 
   // Hero image fallback chain: festival image → first program image → null (renders gradient)
   const heroImageUrl = festival.image_url
@@ -421,37 +386,7 @@ export default function FestivalDetailView({
             <p className="font-mono text-2xs font-bold text-[var(--muted)] uppercase tracking-[0.12em]">
               Experience
             </p>
-            <div className="flex flex-wrap gap-1.5">
-              {festival.experience_tags.map((tag, i) => {
-                const { label, icon } = getTagMeta(tag);
-                const isPrimary = i === 0;
-                return (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs"
-                    style={
-                      isPrimary
-                        ? {
-                            color: "var(--accent-color)",
-                            background: "color-mix(in srgb, var(--accent-color) 15%, transparent)",
-                          }
-                        : {
-                            color: "var(--soft)",
-                            background: "var(--dusk)",
-                            border: "1px solid var(--twilight)",
-                          }
-                    }
-                  >
-                    {icon && (
-                      <span style={isPrimary ? { color: "var(--accent-color)" } : { color: "var(--muted)" }}>
-                        {icon}
-                      </span>
-                    )}
-                    {label}
-                  </span>
-                );
-              })}
-            </div>
+            <ExperienceTagStrip tags={festival.experience_tags} />
           </div>
         </>
       )}
@@ -585,202 +520,12 @@ export default function FestivalDetailView({
             </span>
           )}
         </div>
-
-        {/* Day tabs */}
-        {uniqueDates.length > 1 && (
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-4 -mx-1 px-1">
-            {uniqueDates.map((date) => {
-              const isActive = date === activeDay;
-              return (
-                <button
-                  key={date}
-                  onClick={() => setSelectedDay(date)}
-                  className="flex-shrink-0 flex flex-col items-center px-4 py-2 rounded-lg transition-colors focus-ring"
-                  style={
-                    isActive
-                      ? { background: "var(--accent-color)" }
-                      : {
-                          background: "var(--dusk)",
-                          border: "1px solid var(--twilight)",
-                        }
-                  }
-                >
-                  <span
-                    className="font-mono text-2xs font-bold tracking-[0.06em] uppercase"
-                    style={{ color: isActive ? "var(--void)" : "var(--muted)" }}
-                  >
-                    {format(parseISO(date), "EEE")}
-                  </span>
-                  <span
-                    className="text-sm font-bold"
-                    style={{ color: isActive ? "var(--void)" : "var(--soft)" }}
-                  >
-                    {format(parseISO(date), "MMM d")}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Stage cards */}
-        {dayPrograms.length > 0 ? (
-          <div className="space-y-4">
-            {dayPrograms.map((program, programIndex) => {
-              const stageColor = STAGE_ACCENT_COLORS[programIndex % STAGE_ACCENT_COLORS.length];
-
-              // Detect headliner: last session with a known start_time
-              const sorted = [...program.sessions].sort((a, b) =>
-                (a.start_time ?? "").localeCompare(b.start_time ?? "")
-              );
-              const timedSessions = sorted.filter(
-                (s) => s.start_time && s.start_time !== "00:00:00" && s.start_time !== "00:00"
-              );
-              const headlinerId = timedSessions.length > 1 ? timedSessions[timedSessions.length - 1].id : null;
-
-              return (
-                <div
-                  key={program.id}
-                  className="rounded-xl border border-[var(--twilight)] overflow-hidden"
-                  style={{ background: "var(--night)" }}
-                >
-                  {/* Stage header */}
-                  <div
-                    className="flex items-center px-4 py-3 border-b"
-                    style={{
-                      background: `color-mix(in srgb, ${stageColor} 8%, transparent)`,
-                      borderColor: "rgba(37,37,48,0.5)",
-                    }}
-                  >
-                    <span
-                      className="w-2 h-2 rounded-full flex-shrink-0 mr-3"
-                      style={{ background: stageColor }}
-                    />
-                    <h3 className="text-sm font-bold text-[var(--cream)] flex-1 min-w-0 truncate">
-                      {program.title}
-                    </h3>
-                    {program.sessions.length > 0 && (
-                      <span
-                        className="font-mono text-xs ml-3 flex-shrink-0"
-                        style={{ color: "var(--muted)" }}
-                      >
-                        {program.sessions.length} set{program.sessions.length !== 1 ? "s" : ""}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Session rows */}
-                  <div>
-                    {sorted.map((session, rowIndex) => {
-                      const sessionTitle = decodeHtmlEntities(session.title);
-                      const isHeadliner = session.id === headlinerId && sorted.length > 1;
-
-                      return (
-                        <div
-                          key={session.id}
-                          className="flex items-center gap-3 px-4 group"
-                          style={
-                            isHeadliner
-                              ? {
-                                  background: `color-mix(in srgb, ${stageColor} 8%, transparent)`,
-                                  borderBottom: rowIndex < sorted.length - 1 ? "1px solid rgba(37,37,48,0.3)" : undefined,
-                                }
-                              : {
-                                  borderBottom: rowIndex < sorted.length - 1 ? "1px solid rgba(37,37,48,0.3)" : undefined,
-                                }
-                          }
-                        >
-                          <button
-                            onClick={() => toEvent(session.id)}
-                            className="flex-1 min-w-0 flex items-center gap-3 py-2.5 text-left focus-ring"
-                            style={{ minHeight: "44px" }}
-                          >
-                            <span
-                              className="font-mono text-xs shrink-0 w-16 tabular-nums"
-                              style={{ color: isHeadliner ? stageColor : "var(--muted)" }}
-                            >
-                              {formatSessionTime(session.start_time)}
-                            </span>
-                            <span className="min-w-0 flex-1 flex items-center gap-2">
-                              <span
-                                className={`truncate block ${isHeadliner ? "text-sm font-semibold" : "text-sm font-medium"}`}
-                                style={{ color: "var(--cream)" }}
-                              >
-                                {sessionTitle}
-                              </span>
-                              {isHeadliner && (
-                                <span
-                                  className="flex-shrink-0 font-mono text-2xs font-bold px-1.5 py-0.5 rounded"
-                                  style={{
-                                    color: stageColor,
-                                    background: `color-mix(in srgb, ${stageColor} 20%, transparent)`,
-                                  }}
-                                >
-                                  HEADLINER
-                                </span>
-                              )}
-                            </span>
-                          </button>
-
-                          <div className="flex shrink-0 items-center gap-1">
-                            {!isHeadliner && (
-                              <AddToCalendar
-                                eventId={session.id}
-                                title={sessionTitle}
-                                date={session.start_date}
-                                time={session.start_time}
-                                venue={session.venue?.name}
-                                variant="icon"
-                              />
-                            )}
-                            <RSVPButton
-                              eventId={session.id}
-                              eventTitle={sessionTitle}
-                              venueId={session.venue?.id}
-                              venueName={session.venue?.name}
-                              variant="compact"
-                            />
-                          </div>
-
-                          <CaretRight
-                            size={14}
-                            weight="bold"
-                            className="flex-shrink-0"
-                            style={{
-                              color: isHeadliner
-                                ? `color-mix(in srgb, ${stageColor} 60%, transparent)`
-                                : "rgba(139,139,148,0.4)",
-                            }}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* View program link */}
-                  <div className="px-4 border-t border-[var(--twilight)]/20">
-                    <button
-                      onClick={() => handleProgramClick(program.slug)}
-                      className="min-h-[44px] text-xs font-mono text-[var(--soft)] hover:text-[var(--cream)] transition-colors flex items-center gap-1 focus-ring"
-                    >
-                      View full program
-                      <CaretRight size={11} weight="bold" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="py-8 text-center border border-[var(--twilight)] rounded-xl bg-[var(--night)]">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
-              <CalendarBlank size={24} weight="light" className="text-[var(--muted)]" aria-hidden="true" />
-            </div>
-            <p className="text-[var(--muted)] text-sm">
-              {programs.length > 0 ? "No sessions on this day" : "Program details coming soon"}
-            </p>
-          </div>
-        )}
+        <FestivalScheduleGrid
+          programs={programs}
+          portalSlug={portalSlug}
+          onEventClick={toEvent}
+          onProgramClick={handleProgramClick}
+        />
       </div>
     </div>
   );

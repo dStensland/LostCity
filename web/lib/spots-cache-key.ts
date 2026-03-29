@@ -6,6 +6,7 @@ const SPOTS_CACHE_KEY_PARAMS = new Set([
   "with_events",
   "price_level",
   "venue_type",
+  "place_type",
   "neighborhood",
   "vibes",
   "genres",
@@ -23,6 +24,7 @@ const SPOTS_CACHE_KEY_PARAMS = new Set([
 const SPOTS_MULTI_VALUE_PARAMS = new Set([
   "price_level",
   "venue_type",
+  "place_type",
   "neighborhood",
   "vibes",
   "genres",

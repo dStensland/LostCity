@@ -11,6 +11,9 @@ import dynamic from "next/dynamic";
 const SpotsFinder = dynamic(() => import("@/components/find/SpotsFinder"), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading places...</div>,
 });
+const FindView = dynamic(() => import("@/components/find/FindView"), {
+  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading...</div>,
+});
 import CommunityHub from "@/components/community/CommunityHub";
 import DetailViewRouter from "@/components/views/DetailViewRouter";
 import { DefaultTemplate } from "./_templates/default";
@@ -21,6 +24,7 @@ import { HotelTemplate } from "./_templates/hotel";
 // Pillar type import removed — Discover feed doesn't use pillars
 import { isPCMDemoPortal } from "@/lib/marketplace-art";
 import { normalizeMarketplacePersona } from "@/lib/marketplace-art";
+import { normalizeFinURLParams } from "@/lib/normalize-find-url";
 import { MarketplaceTemplate } from "./_templates/marketplace";
 import { DogTemplate } from "./_templates/dog";
 import { FamilyFeed } from "@/components/family";
@@ -133,7 +137,7 @@ export async function generateMetadata({
   };
 }
 
-type ViewMode = "feed" | "happening" | "places" | "community";
+type ViewMode = "feed" | "find" | "happening" | "places" | "community";
 type FindDisplay = "list" | "map" | "calendar";
 
 type PortalSearchParams = {
@@ -318,10 +322,18 @@ export default async function PortalPage({ params, searchParams }: Props) {
     );
   }
 
-  const viewParam = searchParamsData.view;
-  const findTypeParam = searchParamsData.type;
-  const findDisplayParam = searchParamsData.display;
-  const contentParam = searchParamsData.content;
+  // Normalize legacy URL patterns (happening/places/tab/content) to unified Find scheme
+  const rawParams = new URLSearchParams(
+    Object.entries(searchParamsData)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [k, v as string])
+  );
+  const normalizedParams = normalizeFinURLParams(rawParams);
+
+  const viewParam = normalizedParams.get("view") ?? undefined;
+  const findTypeParam = normalizedParams.get("type") ?? undefined;
+  const findDisplayParam = normalizedParams.get("display") ?? undefined;
+  const contentParam = normalizedParams.get("content") ?? undefined;
   const hasFindSignals = Boolean(
     findTypeParam ||
       findDisplayParam ||
@@ -336,12 +348,14 @@ export default async function PortalPage({ params, searchParams }: Props) {
     viewMode = "feed";
   } else if (viewParam === "community") {
     viewMode = "community";
+  } else if (viewParam === "find") {
+    viewMode = "find";
   } else if (viewParam === "places") {
     viewMode = "places";
   } else if (viewParam === "happening") {
     viewMode = "happening";
-  } else if (viewParam === "find" || viewParam === "events" || viewParam === "spots" || viewParam === "map" || viewParam === "calendar") {
-    // Backward compat: view=find routes to happening or places based on type
+  } else if (viewParam === "events" || viewParam === "spots" || viewParam === "map" || viewParam === "calendar") {
+    // Backward compat: legacy view params route to happening or places based on type
     const typeP = findTypeParam;
     if (typeP === "destinations" || typeP === "spots" || viewParam === "spots") {
       viewMode = "places";
@@ -472,6 +486,16 @@ export default async function PortalPage({ params, searchParams }: Props) {
                           <DefaultCityTemplate portal={portal} serverHeroUrl={serverHeroUrl} />
                         )
                       )}
+                    </Suspense>
+                  )}
+
+                  {viewMode === "find" && (
+                    <Suspense fallback={<div data-skeleton-route="find-view" />}>
+                      <FindView
+                        portalId={portal.id}
+                        portalSlug={portal.slug}
+                        portalSettings={portal.settings as Record<string, unknown>}
+                      />
                     </Suspense>
                   )}
 

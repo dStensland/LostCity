@@ -30,16 +30,20 @@ import {
   ArrowCounterClockwise,
   ArrowLeft,
   ShareNetwork,
+  BookOpen,
 } from "@phosphor-icons/react";
 import SmartImage from "@/components/SmartImage";
 import { HIGHLIGHT_CONFIG, type HighlightType } from "@/lib/place-highlights";
+import type { PlaceProfile, PlaceGoogleDetails, PlaceDiningDetails } from "@/lib/types/places";
 import { formatDateRange } from "@/lib/types/exhibitions";
 import { SectionHeader } from "@/components/detail/SectionHeader";
 import { QuickActionLink } from "@/components/detail/QuickActionLink";
+import { DiningDetailsSection } from "@/components/detail/DiningDetailsSection";
 import { CollapsibleSection } from "@/components/detail/CollapsibleSection";
 import NeonBackButton from "@/components/detail/NeonBackButton";
 import DetailShell from "@/components/detail/DetailShell";
 import DetailHeroImage from "@/components/detail/DetailHeroImage";
+import { HeroGallery } from "@/components/detail/HeroGallery";
 import { DetailStickyBar } from "@/components/detail/DetailStickyBar";
 import Badge from "@/components/ui/Badge";
 import Dot from "@/components/ui/Dot";
@@ -55,6 +59,8 @@ import { isFeatureHeavyType, type PlaceFeature } from "@/lib/place-features";
 import { type VenueSpecial } from "@/lib/specials-utils";
 import PlaceFeaturesSection from "@/components/detail/PlaceFeaturesSection";
 import PlaceSpecialsSection from "@/components/detail/PlaceSpecialsSection";
+import { PlanYourVisitSection } from "@/components/detail/PlanYourVisitSection";
+import { AccessibilitySection } from "@/components/detail/AccessibilitySection";
 import dynamic from "next/dynamic";
 import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
 
@@ -212,6 +218,12 @@ export type SpotApiResponse = {
   attachedChildDestinations: { id: number; name: string; slug: string | null; image_url: string | null; short_description: string | null }[];
   artifacts?: { id: number; name: string; slug: string | null; image_url: string | null; short_description: string | null }[];
   walkableNeighbors: WalkableNeighbor[];
+  placeProfile?: PlaceProfile | null;
+  placeVerticalDetails?: {
+    dining: PlaceDiningDetails | null;
+    outdoor: unknown | null;
+    google: PlaceGoogleDetails | null;
+  } | null;
 };
 
 interface PlaceDetailViewProps {
@@ -288,6 +300,9 @@ export default function PlaceDetailView({ slug, portalSlug, onClose, initialData
   );
   const exhibitions = useMemo(() => data?.exhibitions ?? [], [data]);
   const walkableNeighbors = useMemo(() => data?.walkableNeighbors ?? [], [data]);
+  const placeProfile = data?.placeProfile ?? null;
+  const googleData = data?.placeVerticalDetails?.google ?? null;
+  const diningData = data?.placeVerticalDetails?.dining ?? null;
   const vibes = vibesOverride ?? spot?.vibes ?? null;
 
   const isDog = isDogPortal(portalSlug);
@@ -380,16 +395,35 @@ export default function PlaceDetailView({ slug, portalSlug, onClose, initialData
 
   const hasTransit = spot.nearest_marta_station || spot.beltline_adjacent || (spot.parking_type && spot.parking_type.length > 0) || spot.transit_score;
 
+  // ── Gallery images — build array from profile then fall back to spot image ──
+  const galleryImages = [
+    placeProfile?.hero_image_url,
+    ...(placeProfile?.gallery_urls ?? []),
+  ].filter(Boolean) as string[];
+  const heroImages = galleryImages.length > 0
+    ? galleryImages
+    : spot.image_url
+      ? [spot.image_url]
+      : [];
+
   // ── SIDEBAR ─────────────────────────────────────────────────────────────
   const sidebarContent = (
     <div className="flex flex-col h-full">
-      {/* Hero image — compact */}
-      <DetailHeroImage
-        imageUrl={spot.image_url}
-        alt={spot.name}
-        category={primaryType}
-        priority
-      />
+      {/* Hero gallery */}
+      {heroImages.length > 0 ? (
+        <HeroGallery
+          images={heroImages}
+          placeName={spot.name}
+          placeType={primaryType ?? ""}
+        />
+      ) : (
+        <DetailHeroImage
+          imageUrl={null}
+          alt={spot.name}
+          category={primaryType}
+          priority
+        />
+      )}
 
       {/* Identity */}
       <div className="px-5 pt-4 pb-3 space-y-2">
@@ -427,6 +461,16 @@ export default function PlaceDetailView({ slug, portalSlug, onClose, initialData
             </span></>
           )}
         </p>
+
+        {/* Google rating */}
+        {googleData?.rating && (
+          <span className="flex items-center gap-1.5">
+            <span className="text-sm font-semibold text-[#FFD93D]">★ {googleData.rating}</span>
+            {googleData.rating_count && (
+              <span className="text-xs text-[var(--muted)]">({googleData.rating_count.toLocaleString()})</span>
+            )}
+          </span>
+        )}
       </div>
 
       {/* Divider */}
@@ -434,11 +478,29 @@ export default function PlaceDetailView({ slug, portalSlug, onClose, initialData
 
       {/* Quick Actions */}
       <div className="px-3 py-2 grid grid-cols-4 gap-1">
-        {spot.website && (
+        {diningData?.reservation_url ? (
+          <a
+            href={diningData.reservation_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col items-center justify-center gap-1 py-2 min-h-[44px] bg-[var(--coral)] text-[var(--void)] hover:brightness-110 rounded-lg text-xs font-mono font-medium transition-all focus-ring"
+          >
+            <BookOpen size={16} weight="light" aria-hidden="true" />
+            Reserve
+          </a>
+        ) : spot.website ? (
           <QuickActionLink
             href={spot.website}
             icon={<Globe size={16} weight="light" aria-hidden="true" />}
             label="Website"
+            compact
+          />
+        ) : null}
+        {diningData?.menu_url && (
+          <QuickActionLink
+            href={diningData.menu_url}
+            icon={<BookOpen size={16} weight="light" aria-hidden="true" />}
+            label="Menu"
             compact
           />
         )}
@@ -842,6 +904,14 @@ export default function PlaceDetailView({ slug, portalSlug, onClose, initialData
           {/* 2. Plan Your Visit */}
           {renderPlanYourVisit()}
 
+          {/* 2b. Plan Your Visit + Accessibility (placeProfile-backed) */}
+          {placeProfile && (
+            <>
+              <PlanYourVisitSection placeProfile={placeProfile} googleData={googleData} />
+              <AccessibilitySection placeProfile={placeProfile} />
+            </>
+          )}
+
           {/* 3. Upcoming Events */}
           {renderUpcomingEvents()}
 
@@ -880,6 +950,11 @@ export default function PlaceDetailView({ slug, portalSlug, onClose, initialData
 
           {/* 2. About + Community Tags */}
           {renderAbout()}
+
+          {/* 2b. Dining Details */}
+          {diningData && (
+            <DiningDetailsSection diningData={diningData} placeProfile={placeProfile} />
+          )}
 
           {/* 3. On View (exhibitions) */}
           {exhibitions.length > 0 && renderExhibitions(exhibitions)}

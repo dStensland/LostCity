@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Skeleton from "@/components/Skeleton";
 import { getCategoryColor } from "@/components/CategoryIcon";
 import FriendsGoing from "@/components/FriendsGoing";
@@ -22,11 +22,11 @@ import { createCssVarClass } from "@/lib/css-utils";
 import { isDogPortal } from "@/lib/dog-art";
 import { usePortal } from "@/lib/portal-context";
 import { getDisplayParticipants, getLineupLabels, type EventArtist } from "@/lib/artists-utils";
-import LineupSection from "@/components/LineupSection";
+import { RichArtistCard } from "@/components/detail/RichArtistCard";
+import { ProducerSection } from "@/components/detail/ProducerSection";
 import GettingThereSection from "@/components/GettingThereSection";
 import { deriveShowSignals } from "@/lib/show-signals";
 import ShowSignalsPanel from "@/components/ShowSignalsPanel";
-import { inferLineupGenreFallback } from "@/lib/artist-fallbacks";
 import { isTicketingUrl } from "@/lib/card-utils";
 import dynamic from "next/dynamic";
 import {
@@ -266,6 +266,10 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
     [displayParticipants, event?.category, event]
   );
 
+  // Expand/collapse for rich artist lineup (max 5 visible before expand)
+  const [lineupExpanded, setLineupExpanded] = useState(false);
+  const LINEUP_PREVIEW_COUNT = 5;
+
   // ── ERROR STATE ───────────────────────────────────────────────────────
   // Only show error when not still loading — during loading, event is null but that's expected.
   if (!isLoading && (fetchError || !event)) {
@@ -365,7 +369,6 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
     : null;
 
   const descriptionText = cleanDescription(event.display_description || event.description);
-  const lineupGenreFallback = inferLineupGenreFallback(event.genres, event.tags, event.category);
   const derivedSignals = deriveShowSignals({
     title: event.title,
     description: descriptionText,
@@ -757,12 +760,18 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
             className="block w-full text-left p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)] focus-ring"
           >
             <p className="text-[var(--soft)]">
-              <span className="text-[var(--cream)] font-medium group-hover:text-[var(--coral)] transition-colors">
-                {event.venue.name}
+              <span className="flex items-center gap-1 flex-wrap">
+                <span className="text-[var(--cream)] font-medium group-hover:text-[var(--coral)] transition-colors">
+                  {event.venue.name}
+                </span>
+                <CaretRight size={16} weight="bold" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" />
+                {event.venue.place_type && (
+                  <span className="text-xs font-mono text-[var(--muted)] bg-[var(--twilight)]/50 px-1.5 py-0.5 rounded capitalize">
+                    {event.venue.place_type.replace(/_/g, " ")}
+                  </span>
+                )}
               </span>
-              <CaretRight size={16} weight="bold" className="inline-block ml-1 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" />
-              <br />
-              <span className="text-sm text-[var(--muted)]">
+              <span className="block text-sm text-[var(--muted)] mt-0.5">
                 {event.venue.address}{!venueAddressContainsCity && ` · ${event.venue.city}, ${event.venue.state}`}
               </span>
             </p>
@@ -776,20 +785,85 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
       )}
 
       {/* ── 3. LINEUP ────────────────────────────────────────── */}
-      {hasLineup && (
-        <div>
-          <LineupSection
-            artists={displayParticipants}
-            portalSlug={portalSlug}
-            maxDisplay={20}
-            title={participantLabels.sectionTitle}
-            headlinerLabel={participantLabels.headlinerLabel}
-            supportLabel={participantLabels.supportLabel}
-            eventCategory={event.category}
-            fallbackImageUrl={event.image_url}
-            fallbackGenres={lineupGenreFallback}
-          />
-        </div>
+      {hasLineup && (() => {
+        const isTiered = participantLabels.grouping === "tiered";
+        const headliners = displayParticipants.filter(
+          (a) => a.is_headliner || a.billing_order === 1
+        );
+        const support = displayParticipants.filter(
+          (a) => !a.is_headliner && a.billing_order !== 1
+        );
+        const allVisible = lineupExpanded
+          ? displayParticipants
+          : displayParticipants.slice(0, LINEUP_PREVIEW_COUNT);
+        const visibleHeadliners = lineupExpanded
+          ? headliners
+          : headliners.slice(0, LINEUP_PREVIEW_COUNT);
+        const visibleSupport = lineupExpanded
+          ? support
+          : support.slice(
+              0,
+              Math.max(0, LINEUP_PREVIEW_COUNT - visibleHeadliners.length)
+            );
+        const hasMore = displayParticipants.length > LINEUP_PREVIEW_COUNT;
+
+        return (
+          <div>
+            <SectionHeader
+              title={participantLabels.sectionTitle}
+              count={displayParticipants.length}
+              variant="divider"
+              className="mb-1"
+            />
+
+            {isTiered ? (
+              <div className="space-y-2">
+                {visibleHeadliners.length > 0 && (
+                  <>
+                    {visibleHeadliners.length > 0 && visibleSupport.length > 0 && (
+                      <p className="font-mono text-2xs uppercase tracking-[0.12em] text-[var(--muted)] pt-1">
+                        {participantLabels.headlinerLabel}
+                      </p>
+                    )}
+                    {visibleHeadliners.map((a) => (
+                      <RichArtistCard key={a.id} artist={a} portalSlug={portalSlug} />
+                    ))}
+                  </>
+                )}
+                {visibleSupport.length > 0 && (
+                  <>
+                    <p className="font-mono text-2xs uppercase tracking-[0.12em] text-[var(--muted)] pt-2">
+                      {participantLabels.supportLabel}
+                    </p>
+                    {visibleSupport.map((a) => (
+                      <RichArtistCard key={a.id} artist={a} portalSlug={portalSlug} />
+                    ))}
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {allVisible.map((a) => (
+                  <RichArtistCard key={a.id} artist={a} portalSlug={portalSlug} />
+                ))}
+              </div>
+            )}
+
+            {hasMore && !lineupExpanded && (
+              <button
+                onClick={() => setLineupExpanded(true)}
+                className="mt-3 w-full py-2.5 text-sm font-medium text-[var(--soft)] hover:text-[var(--cream)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--card-bg-hover)] transition-colors"
+              >
+                See all {displayParticipants.length} {participantLabels.artistNoun}
+              </button>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── 3b. PRODUCER ─────────────────────────────────────── */}
+      {event.producer && (
+        <ProducerSection producer={event.producer} portalSlug={portalSlug} />
       )}
 
       {/* ── 4. SOCIAL PROOF ──────────────────────────────────── */}
