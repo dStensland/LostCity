@@ -244,15 +244,15 @@ export async function getRelatedEvents(
 
       // Geographic scoping: neighborhood > bounding box > city-wide fallback
       if (neighborhood) {
-        q = q.eq("venues.neighborhood", neighborhood);
+        q = q.eq("places.neighborhood", neighborhood);
       } else if (venueLat != null && venueLng != null) {
         const LAT_DELTA = 0.022; // ~1.5 miles
         const LNG_DELTA = 0.027;
         q = q
-          .gte("venues.lat", venueLat - LAT_DELTA)
-          .lte("venues.lat", venueLat + LAT_DELTA)
-          .gte("venues.lng", venueLng - LNG_DELTA)
-          .lte("venues.lng", venueLng + LNG_DELTA);
+          .gte("places.lat", venueLat - LAT_DELTA)
+          .lte("places.lat", venueLat + LAT_DELTA)
+          .gte("places.lng", venueLng - LNG_DELTA)
+          .lte("places.lng", venueLng + LNG_DELTA);
       }
       // If neither neighborhood nor lat/lng: city-wide fallback (filterByPortalCity handles scoping below)
 

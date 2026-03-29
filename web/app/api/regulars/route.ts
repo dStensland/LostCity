@@ -121,13 +121,13 @@ export async function GET(request: NextRequest) {
 
   query = excludeSensitiveEvents(query);
 
-  // Push city filter to Postgres via the joined venues relation.
+  // Push city filter to Postgres via the joined places relation.
   // expandCityFilterForMetro handles the Atlanta case: "Atlanta" expands to
   // Atlanta + 23 metro cities so Decatur, Marietta, etc. are included.
   if (portalCity) {
     const expandedCities = expandCityFilterForMetro([portalCity]);
     query = (query as unknown as { filter: (col: string, op: string, val: string) => typeof query }).filter(
-      "venues.city",
+      "places.city",
       "in",
       `(${expandedCities.join(",")})`,
     ) as typeof query;

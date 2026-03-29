@@ -269,12 +269,12 @@ async function fetchRegulars(
     .or("is_class.eq.false,is_class.is.null")
     .or("is_sensitive.eq.false,is_sensitive.is.null")
     .not("category_id", "in", "(film,cinema)")
-    .not("venues.lat", "is", null)
-    .not("venues.lng", "is", null)
-    .gte("venues.lat", centerLat - latDelta)
-    .lte("venues.lat", centerLat + latDelta)
-    .gte("venues.lng", centerLng - lngDelta)
-    .lte("venues.lng", centerLng + lngDelta)
+    .not("places.lat", "is", null)
+    .not("places.lng", "is", null)
+    .gte("places.lat", centerLat - latDelta)
+    .lte("places.lat", centerLat + latDelta)
+    .gte("places.lng", centerLng - lngDelta)
+    .lte("places.lng", centerLng + lngDelta)
     .limit(50);
 
   // Apply portal-level category exclusions (e.g. FORTH excludes civic/volunteer content)

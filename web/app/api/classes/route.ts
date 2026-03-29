@@ -233,7 +233,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (neighborhood && isValidString(neighborhood, 1, 100)) {
-      query = query.eq("venues.neighborhood", neighborhood);
+      query = query.eq("places.neighborhood", neighborhood);
     }
 
     if (search.length >= 2) {
