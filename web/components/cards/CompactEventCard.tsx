@@ -109,7 +109,7 @@ export const CompactEventCard = memo(function CompactEventCard({
             {dateLabel}
           </span>
         )}
-        {timeSplit && (
+        {timeSplit && dateLabel !== "Today" && (
           <span className="font-mono text-2xs text-[var(--muted)] mt-0.5">
             {dateLabel}
           </span>

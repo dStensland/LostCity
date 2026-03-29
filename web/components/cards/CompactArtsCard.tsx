@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import { Palette, FrameCorners, Star } from "@phosphor-icons/react";
+import { Palette, Star } from "@phosphor-icons/react";
 import Dot from "@/components/ui/Dot";
 import type { DiscoveryPlaceEntity } from "@/lib/types/discovery";
 import { formatRating, formatCloseTime } from "@/lib/utils/place-formatters";
@@ -56,21 +56,12 @@ export const CompactArtsCard = memo(function CompactArtsCard({
           )}
         </div>
 
-        {/* Row 2: exhibition badge (if present) */}
+        {/* Row 2: exhibition label (if present) */}
         {hasExhibition && (
-          <div className="mt-0.5 flex items-center gap-1 overflow-hidden">
-            <span
-              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-2xs font-mono"
-              style={{
-                backgroundColor: `${ARTS_ACCENT}20`,
-                color: ARTS_ACCENT,
-              }}
-            >
-              <FrameCorners size={10} color={ARTS_ACCENT} weight="duotone" />
-              <span className="truncate max-w-[160px]">
-                {entity.current_exhibition_title}
-              </span>
-            </span>
+          <div className="mt-0.5 truncate text-2xs font-mono"
+            style={{ color: ARTS_ACCENT }}
+          >
+            {entity.current_exhibition_title}
           </div>
         )}
 

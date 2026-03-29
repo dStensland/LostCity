@@ -38,12 +38,25 @@ export function useRightNow(
         });
         if (!res.ok) throw new Error(`right-now: ${res.status}`);
         const data = (await res.json()) as DiscoveryEntity[];
-        // Deduplicate events by name — keep first occurrence (closest in time)
+        // Deduplicate: same venue+time (exact dupe) or fuzzy name prefix (title variants)
         const seen = new Set<string>();
         const deduped = data.filter((item: DiscoveryEntity) => {
-          const key = item.name.toLowerCase().trim();
-          if (seen.has(key)) return false;
-          seen.add(key);
+          if (item.entity_type === "event") {
+            // Deduplicate by venue + start time (same show at same place)
+            const venueKey = `venue:${(item.venue_name || "").toLowerCase()}_${item.start_time || ""}`;
+            if (seen.has(venueKey)) return false;
+            seen.add(venueKey);
+
+            // Also deduplicate by fuzzy name prefix (first 15 chars catches title variants)
+            const namePrefix = `name:${item.name.toLowerCase().trim().slice(0, 15)}`;
+            if (seen.has(namePrefix)) return false;
+            seen.add(namePrefix);
+          } else {
+            // Places: deduplicate by exact name
+            const key = `place:${item.name.toLowerCase().trim()}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+          }
           return true;
         });
         setItems(deduped);

@@ -39,7 +39,7 @@ export const LanePreviewSection = memo(function LanePreviewSection({
   lane,
   portalSlug,
 }: LanePreviewSectionProps) {
-  const { items, openCount, loading } = useLaneSpots(portalSlug, lane, 3);
+  const { items, openCount, totalCount, loading } = useLaneSpots(portalSlug, lane, 3);
 
   if (!loading && items.length === 0) return null;
 
@@ -60,8 +60,8 @@ export const LanePreviewSection = memo(function LanePreviewSection({
           <span className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--cream)]">
             {config.label}
           </span>
-          {/* Count badge — visible once loaded */}
-          {!loading && openCount > 0 && (
+          {/* Count badge — visible once loaded; prefer openCount, fall back to totalCount */}
+          {!loading && (openCount > 0 || totalCount > 0) && (
             <span
               className="font-mono text-2xs font-bold uppercase tracking-wider rounded px-1.5 py-0.5"
               style={{
@@ -69,7 +69,7 @@ export const LanePreviewSection = memo(function LanePreviewSection({
                 color: config.color,
               }}
             >
-              {openCount} OPEN
+              {openCount > 0 ? `${openCount} OPEN` : `${totalCount} PLACES`}
             </span>
           )}
         </div>

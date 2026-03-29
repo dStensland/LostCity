@@ -37,7 +37,9 @@ export const CompactDiningCard = memo(function CompactDiningCard({
   const cuisineLabel =
     entity.cuisine && entity.cuisine.length > 0
       ? entity.cuisine[0]
-      : entity.place_type.replace(/_/g, " ");
+      : entity.place_type
+          ? entity.place_type.charAt(0).toUpperCase() + entity.place_type.slice(1).replace(/_/g, " ")
+          : "";
 
   return (
     <Link

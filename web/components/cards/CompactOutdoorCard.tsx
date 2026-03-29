@@ -3,6 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import { Tree, Star } from "@phosphor-icons/react";
+import { formatCloseTime } from "@/lib/utils/place-formatters";
 import Dot from "@/components/ui/Dot";
 import type { DiscoveryPlaceEntity } from "@/lib/types/discovery";
 import {
@@ -41,7 +42,10 @@ export const CompactOutdoorCard = memo(function CompactOutdoorCard({
     entity.best_seasons && entity.best_seasons.length > 0
       ? SEASON_LABELS[entity.best_seasons[0]] ?? entity.best_seasons[0]
       : null;
-  const typeLabel = entity.place_type.replace(/_/g, " ");
+  const typeLabel = entity.place_type
+    ? entity.place_type.charAt(0).toUpperCase() + entity.place_type.slice(1).replace(/_/g, " ")
+    : "";
+  const closeTime = entity.closes_at ? formatCloseTime(entity.closes_at) : null;
 
   return (
     <Link
@@ -101,9 +105,26 @@ export const CompactOutdoorCard = memo(function CompactOutdoorCard({
           </div>
         )}
 
-        {/* Row 3: type + distance */}
+        {/* Row 3: open/close + event count + type + distance */}
         <div className="flex items-center gap-1.5 text-2xs mt-0.5">
-          <span className="capitalize text-[var(--muted)]">{typeLabel}</span>
+          {entity.is_open ? (
+            <span className="flex items-center gap-1 text-[#00D9A0]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#00D9A0]" />
+              <span>
+                {closeTime ? `Open · Closes ${closeTime}` : "Open"}
+              </span>
+            </span>
+          ) : (
+            <span className="text-[var(--muted)]">{typeLabel || "Outdoor"}</span>
+          )}
+          {entity.event_count > 0 && (
+            <>
+              <Dot />
+              <span className="font-mono text-[var(--muted)]">
+                {entity.event_count === 1 ? "1 event" : `${entity.event_count} events`}
+              </span>
+            </>
+          )}
           {distance && (
             <>
               <Dot />
