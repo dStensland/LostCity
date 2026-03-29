@@ -47,13 +47,14 @@ interface FeedPageIndexProps {
 
 /** Block display labels for edit mode — must match actual section titles */
 const BLOCK_LABELS: Record<FeedBlockId, string> = {
+  briefing: "The Briefing",
   events: "The Lineup",
   hangs: "Hangs",
   recurring: "Regular Hangs",
   festivals: "The Big Stuff",
   experiences: "Things to Do",
   community: "The Network",
-  cinema: "Now Showing",
+  cinema: "See Shows",
   horizon: "On the Horizon",
   browse: "Browse by Category",
 };

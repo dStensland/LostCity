@@ -34,6 +34,9 @@ import { useQuery } from "@tanstack/react-query";
 import { matchActivityType } from "@/lib/scene-event-routing";
 import { ENABLE_LINEUP_RECURRING } from "@/lib/launch-flags";
 import { RecurringStrip } from "./lineup/RecurringStrip";
+import { RegularsToggle } from "./lineup/RegularsToggle";
+import { RegularsNudge } from "./lineup/RegularsNudge";
+import { TimeFlowMarker } from "./lineup/TimeFlowMarker";
 import FeedSectionHeader from "./FeedSectionHeader";
 import { TieredEventList } from "@/components/feed/TieredEventList";
 import { useAuth } from "@/lib/auth-context";
@@ -196,6 +199,10 @@ export default function LineupSection({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [tabFetchError, setTabFetchError] = useState<string | null>(null);
 
+  // Regulars toggle state (gated by ENABLE_LINEUP_RECURRING)
+  const [regularsActive, setRegularsActive] = useState(false);
+  const [filteredRegulars, setFilteredRegulars] = useState<CityPulseEventItem[]>([]);
+
   // Login nudge state
   const filterInteractionCount = useRef(0);
   const [showLoginNudge, setShowLoginNudge] = useState(false);
@@ -245,6 +252,10 @@ export default function LineupSection({
     setIsSaving(false);
     setPickerOpen(false);
   }, [localInterests, onSaveInterests]);
+
+  const handleFilteredRegulars = useCallback((events: CityPulseEventItem[]) => {
+    setFilteredRegulars(events);
+  }, []);
 
   const pendingInterestsRef = useRef<string[] | null>(null);
 
@@ -626,6 +637,19 @@ export default function LineupSection({
           <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[var(--void)] to-transparent" />
         </div>
 
+      {/* Regulars toggle — activity chips + day pills when active */}
+      {ENABLE_LINEUP_RECURRING && recurringEvents.length > 0 && (
+        <div className="mb-3">
+          <RegularsToggle
+            active={regularsActive}
+            onToggle={setRegularsActive}
+            activeTab={activeTabId as "today" | "this_week" | "coming_up"}
+            regularsEvents={recurringEvents}
+            onFilteredEvents={handleFilteredRegulars}
+          />
+        </div>
+      )}
+
       {/* Unsaved lineup changes — prominent save bar */}
       {hasUnsavedChanges && (
         <div className="flex items-center gap-3 mb-3 px-4 py-3 rounded-xl bg-[var(--coral)]/[0.08] border border-[var(--coral)]/30 animate-[fadeInSave_0.25s_ease-out]">
@@ -706,25 +730,46 @@ export default function LineupSection({
       {/* Event list — tiered rendering */}
       {loadingTab !== activeTabId && !tabFetchError && (
         <>
-          <TieredEventList
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            events={visibleItems.map((item) => item.event as any)}
-            portalSlug={portalSlug}
-            sectionType={activeTabId === "today" ? "tonight" : activeTabId}
-            maxHero={1}
-            maxFeatured={4}
-          />
+          {/* TimeFlowMarker — contextual label for Today tab */}
+          {ENABLE_LINEUP_RECURRING && activeTabId === "today" && visibleItems.length > 0 && (
+            <TimeFlowMarker
+              variant={new Date().getHours() < 17 ? "happening_now" : "tonight"}
+            />
+          )}
 
-          {ENABLE_LINEUP_RECURRING && recurringEvents.length > 0 && (
+          {/* When regulars toggle is active, show filtered regulars prominently */}
+          {ENABLE_LINEUP_RECURRING && regularsActive && filteredRegulars.length > 0 && (
+            <RecurringStrip events={filteredRegulars} portalSlug={portalSlug} activeTab={activeTabId} />
+          )}
+
+          {/* Standard event list — hide when regulars toggle replaces it */}
+          {!regularsActive && (
+            <TieredEventList
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              events={visibleItems.map((item) => item.event as any)}
+              portalSlug={portalSlug}
+              sectionType={activeTabId === "today" ? "tonight" : activeTabId}
+              maxHero={1}
+              maxFeatured={4}
+            />
+          )}
+
+          {/* RecurringStrip below the lineup when toggle is OFF */}
+          {ENABLE_LINEUP_RECURRING && !regularsActive && recurringEvents.length > 0 && (
             <RecurringStrip events={recurringEvents} portalSlug={portalSlug} activeTab={activeTabId} />
           )}
 
-          {events.length === 0 && (
+          {events.length === 0 && !regularsActive && (
             <p className="text-center text-[var(--muted)] text-sm py-8 font-mono">
               No events matching this filter
             </p>
           )}
         </>
+      )}
+
+      {/* Regulars nudge — discoverability prompt when regulars exist but toggle is off */}
+      {ENABLE_LINEUP_RECURRING && !regularsActive && recurringEvents.length > 0 && (
+        <RegularsNudge onActivateToggle={() => setRegularsActive(true)} />
       )}
 
       {/* See all — glow button, contextual to active chip */}

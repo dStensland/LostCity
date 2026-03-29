@@ -31,6 +31,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCityPulseFeed } from "@/lib/hooks/useCityPulseFeed";
 import { useFeedPreferences } from "@/lib/hooks/useFeedPreferences";
 import { getFeedThemeVars } from "@/lib/city-pulse/theme";
@@ -41,6 +42,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import CityBriefing from "./CityBriefing";
 import GreetingBar from "./GreetingBar";
+import { BriefingSection } from "./BriefingSection";
 import LineupSection from "./LineupSection";
 import CityPulseSection from "./CityPulseSection";
 import LazySection from "./LazySection";
@@ -64,7 +66,7 @@ import type {
   CityPulseResponse,
 } from "@/lib/city-pulse/types";
 import { DEFAULT_FEED_ORDER, ALWAYS_VISIBLE_BLOCKS, FIXED_LAST_BLOCKS } from "@/lib/city-pulse/types";
-import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
+import { ENABLE_HANGS_V1, ENABLE_LINEUP_RECURRING } from "@/lib/launch-flags";
 
 // Client-safe pure functions for instant shell rendering
 import { getDayOfWeek, getDayTheme } from "@/lib/city-pulse/time-slots";
@@ -199,6 +201,7 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
   const showTimeMachine = searchParams.get("admin") !== null;
   const { user } = useAuth();
   const { portal } = usePortal();
+  const queryClient = useQueryClient();
   const isAuthenticated = !!user;
 
   const [dayOverride, setDayOverride] = useState<string | undefined>();
@@ -260,6 +263,30 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
       window.history.replaceState({}, "", url.pathname + (url.search || ""));
     }
   }, []);
+
+  // Pre-fetch regulars in the background after lineup loads.
+  // Warms the ["regulars", portalSlug] cache so LineupSection gets a cache hit.
+  useEffect(() => {
+    if (!ENABLE_LINEUP_RECURRING || isLoading || !data) return;
+    queryClient.prefetchQuery({
+      queryKey: ["regulars", portalSlug],
+      queryFn: async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10_000);
+        try {
+          const res = await fetch(`/api/regulars?portal=${portalSlug}`, {
+            signal: controller.signal,
+          });
+          if (!res.ok) throw new Error(`Regulars prefetch failed: ${res.status}`);
+          return res.json();
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      },
+      staleTime: 3 * 60 * 1000,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [portalSlug, isLoading, !!data]);
 
   // Compute hidden block set and middle section order from feedLayout
   const hiddenBlockSet = useMemo(() => {
@@ -437,6 +464,9 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
       {/* 3. Holiday Hero — seasonal card (self-gating, renders null when inactive).
            No wrapper margin — HolidayHero manages its own spacing when active. */}
       <HolidayHero portalSlug={portalSlug} />
+
+      {/* 3b. BriefingSection — editorial briefing from the pipeline */}
+      <BriefingSection briefing={header?.briefing} eventCount={data?.events_pulse?.total_active} />
 
       {/* 4. LineupSection — crossfade skeleton → content */}
       <div
