@@ -2,11 +2,10 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import { useRightNow } from "@/lib/hooks/useRightNow";
-import { DiscoveryCard } from "@/components/cards/DiscoveryCard";
+import type { RightNowItem } from "@/lib/find-data";
 
 // -------------------------------------------------------------------------
-// Header label — contextual based on time of day
+// Helpers
 // -------------------------------------------------------------------------
 
 function getRightNowLabel(): string {
@@ -27,22 +26,11 @@ function getRightNowLabel(): string {
   return `Right Now · ${dayName} ${timeStr}`;
 }
 
-// -------------------------------------------------------------------------
-// Skeleton — shown while loading
-// -------------------------------------------------------------------------
-
-function RightNowSkeleton() {
-  return (
-    <div className="space-y-2" aria-hidden>
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="h-[72px] rounded-card bg-[var(--dusk)] animate-pulse"
-          style={{ animationDelay: `${i * 80}ms` }}
-        />
-      ))}
-    </div>
-  );
+function formatTime(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  const period = h >= 12 ? "pm" : "am";
+  const hour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return m === 0 ? `${hour}${period}` : `${hour}:${String(m).padStart(2, "0")}${period}`;
 }
 
 // -------------------------------------------------------------------------
@@ -50,16 +38,19 @@ function RightNowSkeleton() {
 // -------------------------------------------------------------------------
 
 interface RightNowSectionProps {
+  items: RightNowItem[];
   portalSlug: string;
 }
 
 export const RightNowSection = memo(function RightNowSection({
+  items,
   portalSlug,
 }: RightNowSectionProps) {
-  const { items, loading } = useRightNow(portalSlug, 6);
+  if (items.length === 0) return null;
 
   const seeAllHref = `/${portalSlug}?view=find&display=list`;
   const label = getRightNowLabel();
+  const displayItems = items.slice(0, 4);
 
   return (
     <section>
@@ -76,20 +67,35 @@ export const RightNowSection = memo(function RightNowSection({
         </Link>
       </div>
 
-      {/* Content */}
-      {loading ? (
-        <RightNowSkeleton />
-      ) : items.length === 0 ? null : (
-        <div className="space-y-2">
-          {items.map((item) => (
-            <DiscoveryCard
-              key={`${item.entity_type}-${item.id}`}
-              entity={item}
-              portalSlug={portalSlug}
-            />
-          ))}
-        </div>
-      )}
+      {/* Compact rows */}
+      <div className="space-y-0.5">
+        {displayItems.map((item) => (
+          <Link
+            key={`${item.entity_type}-${item.id}`}
+            href={`/${portalSlug}?${item.entity_type === "place" ? "spot" : "event"}=${item.entity_type === "place" ? item.slug : item.id}`}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--dusk)] transition-colors group"
+          >
+            {/* Time or status */}
+            <span className="font-mono text-xs font-bold tabular-nums text-[var(--gold)] w-12 shrink-0 text-right">
+              {item.entity_type === "event" && item.start_time
+                ? formatTime(item.start_time)
+                : item.is_open
+                  ? "Open"
+                  : ""}
+            </span>
+            {/* Name + venue */}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-[var(--cream)] truncate group-hover:text-[var(--coral)] transition-colors">
+                {item.name}
+              </p>
+              <p className="text-xs text-[var(--muted)] truncate">
+                {item.venue_name ?? item.place_type}
+                {item.neighborhood ? ` · ${item.neighborhood}` : ""}
+              </p>
+            </div>
+          </Link>
+        ))}
+      </div>
     </section>
   );
 });

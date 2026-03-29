@@ -19,6 +19,7 @@ import type { ServerFindData } from "@/lib/find-data";
 import { FindSidebar } from "./FindSidebar";
 import FindSearchInput from "@/components/find/FindSearchInput";
 import { FindToolChipRow } from "./FindToolChipRow";
+import { RightNowSection } from "./RightNowSection";
 
 // Lazy-load RegularsView — only needed for ?regulars=true
 const RegularsView = dynamic(() => import("./RegularsView"), {
@@ -111,15 +112,11 @@ export default memo(function FindView({
         {/* Tool chip row */}
         <FindToolChipRow portalSlug={portalSlug} />
 
-        {/* Debug output: proves server data is flowing correctly */}
-        {serverFindData && (
-          <pre className="text-xs text-[var(--muted)] p-4 overflow-auto">
-            {JSON.stringify({
-              rightNow: serverFindData.rightNow.length,
-              pulse: serverFindData.pulse,
-              spotlights: serverFindData.spotlights.map((s) => s.label),
-            }, null, 2)}
-          </pre>
+        {/* Right Now section — server-rendered, no loading state */}
+        {serverFindData?.rightNow && serverFindData.rightNow.length > 0 && (
+          <div className="px-4 pt-3">
+            <RightNowSection items={serverFindData.rightNow} portalSlug={portalSlug} />
+          </div>
         )}
       </div>
     </div>
