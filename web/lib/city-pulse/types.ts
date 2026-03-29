@@ -432,6 +432,7 @@ export interface DashboardCard {
 // ---------------------------------------------------------------------------
 
 export type FeedBlockId =
+  | "briefing"
   | "events"
   | "hangs"
   | "recurring"
@@ -463,16 +464,15 @@ export interface FeedLayout {
 }
 
 export const DEFAULT_FEED_ORDER: FeedBlockId[] = [
+  "briefing",
   "events",
-  "recurring",
-  "hangs",
   "cinema",
   "horizon",
   "browse",
 ];
 
 /** Blocks that cannot be hidden */
-export const ALWAYS_VISIBLE_BLOCKS: FeedBlockId[] = ["events"];
+export const ALWAYS_VISIBLE_BLOCKS: FeedBlockId[] = ["events", "briefing"];
 
 /** Blocks pinned to fixed positions (browse always last) */
 export const FIXED_LAST_BLOCKS: FeedBlockId[] = ["browse"];
