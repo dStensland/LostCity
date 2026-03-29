@@ -28,11 +28,14 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
     deleteEntry,
     createTag,
     searchTMDB,
+    reorderEntries,
   } = useGoblinLog(isAuthenticated);
 
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<LogEntry | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
 
   const filteredEntries = useMemo(() => {
     if (!activeTag) return entries;
@@ -41,17 +44,46 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
 
   const swapEntries = useCallback(
     async (indexA: number, indexB: number) => {
-      const entryA = filteredEntries[indexA];
-      const entryB = filteredEntries[indexB];
-      if (!entryA || !entryB) return;
-
-      // Use 1-based sort_order
-      await Promise.all([
-        updateEntry(entryA.id, { sort_order: indexB + 1 }),
-        updateEntry(entryB.id, { sort_order: indexA + 1 }),
-      ]);
+      if (indexB < 0 || indexB >= filteredEntries.length) return;
+      const reordered = [...filteredEntries];
+      [reordered[indexA], reordered[indexB]] = [reordered[indexB], reordered[indexA]];
+      await reorderEntries(reordered);
     },
-    [filteredEntries, updateEntry]
+    [filteredEntries, reorderEntries]
+  );
+
+  const handleDrop = useCallback(
+    async (toIndex: number) => {
+      if (dragFrom === null || dragFrom === toIndex) {
+        setDragFrom(null);
+        setDragOver(null);
+        return;
+      }
+
+      const reordered = [...filteredEntries];
+      const [moved] = reordered.splice(dragFrom, 1);
+      reordered.splice(toIndex, 0, moved);
+
+      setDragFrom(null);
+      setDragOver(null);
+
+      await reorderEntries(reordered);
+    },
+    [dragFrom, filteredEntries, reorderEntries]
+  );
+
+  const moveToRank = useCallback(
+    async (currentIndex: number, newRank: number) => {
+      const targetIndex = Math.max(0, Math.min(newRank - 1, filteredEntries.length - 1));
+      if (targetIndex === currentIndex) return;
+
+      const reordered = [...filteredEntries];
+      const [moved] = reordered.splice(currentIndex, 1);
+      reordered.splice(targetIndex, 0, moved);
+
+      await reorderEntries(reordered);
+    },
+    [filteredEntries, reorderEntries]
   );
 
   if (!isAuthenticated) {
@@ -172,7 +204,10 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
         </div>
       ) : (
         /* Vertical ranked list */
-        <div className="space-y-1">
+        <div
+          className="space-y-1"
+          onDragLeave={() => setDragOver(null)}
+        >
           {filteredEntries.map((entry, i) => (
             <GoblinLogEntryCard
               key={entry.id}
@@ -181,8 +216,14 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
               onEdit={setEditEntry}
               onMoveUp={() => swapEntries(i, i - 1)}
               onMoveDown={() => swapEntries(i, i + 1)}
+              onMoveToRank={(rank) => moveToRank(i, rank)}
               isFirst={i === 0}
               isLast={i === filteredEntries.length - 1}
+              onDragStart={() => setDragFrom(i)}
+              onDragOver={() => setDragOver(i)}
+              onDrop={() => handleDrop(i)}
+              isDragging={dragFrom === i}
+              isDragTarget={dragOver === i && dragFrom !== i}
             />
           ))}
         </div>

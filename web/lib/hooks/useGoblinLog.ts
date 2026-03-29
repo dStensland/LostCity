@@ -33,6 +33,7 @@ interface UseGoblinLogActions {
   createTag: (name: string) => Promise<GoblinTag | null>;
   updateTag: (tagId: number, data: { name?: string; color?: string }) => Promise<boolean>;
   deleteTag: (tagId: number) => Promise<boolean>;
+  reorderEntries: (newOrder: LogEntry[]) => Promise<boolean>;
   searchTMDB: (query: string) => Promise<TMDBSearchResult[]>;
   refreshEntries: () => Promise<void>;
   refreshTags: () => Promise<void>;
@@ -202,6 +203,31 @@ export function useGoblinLog(
     [fetchTags, fetchEntries, year]
   );
 
+  const reorderEntries = useCallback(
+    async (newOrder: LogEntry[]): Promise<boolean> => {
+      // Optimistic: update UI immediately
+      setEntries(newOrder);
+
+      const order = newOrder.map((e, i) => ({ id: e.id, sort_order: i + 1 }));
+      try {
+        const res = await fetch("/api/goblinday/me/log/reorder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order }),
+        });
+        if (!res.ok) {
+          await fetchEntries(year); // rollback
+          return false;
+        }
+        return true;
+      } catch {
+        await fetchEntries(year);
+        return false;
+      }
+    },
+    [year, fetchEntries]
+  );
+
   const searchTMDB = useCallback(async (query: string): Promise<TMDBSearchResult[]> => {
     if (query.length < 2) return [];
     try {
@@ -228,6 +254,7 @@ export function useGoblinLog(
     createTag,
     updateTag,
     deleteTag,
+    reorderEntries,
     searchTMDB,
     refreshEntries: useCallback(() => fetchEntries(year), [fetchEntries, year]),
     refreshTags: fetchTags,

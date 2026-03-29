@@ -10,10 +10,17 @@ interface Props {
   onEdit: (entry: LogEntry) => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
+  onMoveToRank?: (rank: number) => void;
   isFirst?: boolean;
   isLast?: boolean;
   /** If true, render read-only (for public page) */
   readOnly?: boolean;
+  /** Drag-and-drop handlers */
+  onDragStart?: () => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: () => void;
+  isDragTarget?: boolean;
+  isDragging?: boolean;
 }
 
 export default function GoblinLogEntryCard({
@@ -22,18 +29,47 @@ export default function GoblinLogEntryCard({
   onEdit,
   onMoveUp,
   onMoveDown,
+  onMoveToRank,
   isFirst,
   isLast,
   readOnly,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  isDragTarget,
+  isDragging,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [editingRank, setEditingRank] = useState(false);
+  const [rankInput, setRankInput] = useState("");
   const movie = entry.movie;
 
   return (
     <div
-      className="group animate-slide-up flex items-stretch gap-0
-        bg-zinc-950 border border-zinc-800 hover:border-zinc-700
-        transition-all duration-200 overflow-hidden"
+      draggable={!readOnly}
+      onDragStart={(e) => {
+        if (readOnly) return;
+        e.dataTransfer.effectAllowed = "move";
+        onDragStart?.();
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        onDragOver?.(e);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDrop?.();
+      }}
+      onDragEnd={(e) => {
+        e.preventDefault();
+      }}
+      className={`group animate-slide-up flex items-stretch gap-0
+        bg-zinc-950 border hover:border-zinc-700
+        transition-all duration-200 overflow-hidden
+        ${isDragging ? "opacity-40 scale-[0.98]" : ""}
+        ${isDragTarget ? "border-[var(--coral)] border-t-2" : "border-zinc-800"}
+        ${!readOnly ? "cursor-grab active:cursor-grabbing" : ""}`}
       style={{ animationDelay: `${rank * 40}ms` }}
     >
       {/* Rank number + move buttons */}
@@ -48,9 +84,41 @@ export default function GoblinLogEntryCard({
             ▲
           </button>
         )}
-        <span className="text-zinc-500 font-mono text-sm font-bold">
-          {rank}
-        </span>
+        {!readOnly && editingRank ? (
+          <input
+            type="number"
+            min={1}
+            autoFocus
+            value={rankInput}
+            onChange={(e) => setRankInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const val = parseInt(rankInput);
+                if (!isNaN(val) && val >= 1) onMoveToRank?.(val);
+                setEditingRank(false);
+              } else if (e.key === "Escape") {
+                setEditingRank(false);
+              }
+            }}
+            onBlur={() => setEditingRank(false)}
+            className="w-8 text-center bg-transparent border border-zinc-600 rounded
+              text-zinc-300 font-mono text-sm font-bold
+              focus:outline-none focus:border-[var(--coral)]
+              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+        ) : (
+          <button
+            onClick={() => {
+              if (readOnly) return;
+              setRankInput(String(rank));
+              setEditingRank(true);
+            }}
+            className={`text-zinc-500 font-mono text-sm font-bold
+              ${!readOnly ? "hover:text-[var(--coral)] hover:underline cursor-text transition-colors" : ""}`}
+          >
+            {rank}
+          </button>
+        )}
         {!readOnly && onMoveDown && !isLast && (
           <button
             onClick={onMoveDown}
