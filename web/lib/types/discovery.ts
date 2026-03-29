@@ -62,7 +62,7 @@ export const LANE_CONFIG: Record<
     label: "Arts & Culture",
     icon: "palette",
     color: "#C9874F",
-    placeTypes: ["museum", "gallery", "arts_center", "theater", "cinema"],
+    placeTypes: ["museum", "gallery", "arts_center", "theater"],
   },
   dining: {
     label: "Eat & Drink",
@@ -83,7 +83,7 @@ export const LANE_CONFIG: Record<
   nightlife: {
     label: "Nightlife",
     icon: "moon-stars",
-    color: "#FF6B7A",
+    color: "#E855A0",
     placeTypes: [
       "bar",
       "nightclub",
@@ -110,7 +110,7 @@ export const LANE_CONFIG: Record<
   entertainment: {
     label: "Entertainment",
     icon: "ticket",
-    color: "#FF6B7A",
+    color: "#A78BFA",
     placeTypes: [
       "arcade",
       "attraction",
@@ -119,6 +119,7 @@ export const LANE_CONFIG: Record<
       "bowling",
       "zoo",
       "aquarium",
+      "cinema",
     ],
   },
 };

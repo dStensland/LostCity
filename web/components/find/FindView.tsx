@@ -13,7 +13,7 @@
 
 import { memo, Suspense, lazy } from "react";
 import dynamic from "next/dynamic";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import type { VerticalLane } from "@/lib/types/discovery";
 import { LANE_CONFIG } from "@/lib/types/discovery";
@@ -80,6 +80,7 @@ export default memo(function FindView({
   portalSlug,
   portalSettings,
 }: FindViewProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const laneParam = searchParams.get("lane") as VerticalLane | null;
   const regularsParam = searchParams.get("regulars");
@@ -150,8 +151,7 @@ export default memo(function FindView({
               // Read-only for now — full search will use the existing search infrastructure
               readOnly
               onClick={() => {
-                // Navigate to the happening view with search focus
-                window.location.href = `/${portalSlug}?view=happening`;
+                router.push(`/${portalSlug}?view=find&q=`);
               }}
             />
           </div>

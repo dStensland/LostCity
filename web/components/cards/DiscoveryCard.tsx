@@ -17,7 +17,6 @@ const ARTS_PLACE_TYPES = new Set([
   "gallery",
   "arts_center",
   "theater",
-  "cinema",
   "studio",
 ]);
 
