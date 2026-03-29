@@ -2,120 +2,216 @@
 
 import { useState } from "react";
 import SmartImage from "@/components/SmartImage";
-import { formatWatchedDate, TMDB_POSTER_W342, type LogEntry } from "@/lib/goblin-log-utils";
+import { formatWatchedDate, formatRuntime, TMDB_POSTER_W185, type LogEntry } from "@/lib/goblin-log-utils";
 
 interface Props {
   entry: LogEntry;
-  index: number;
+  rank: number;
   onEdit: (entry: LogEntry) => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  isFirst?: boolean;
+  isLast?: boolean;
   /** If true, render read-only (for public page) */
   readOnly?: boolean;
 }
 
-export default function GoblinLogEntryCard({ entry, index, onEdit, readOnly }: Props) {
+export default function GoblinLogEntryCard({
+  entry,
+  rank,
+  onEdit,
+  onMoveUp,
+  onMoveDown,
+  isFirst,
+  isLast,
+  readOnly,
+}: Props) {
   const [expanded, setExpanded] = useState(false);
   const movie = entry.movie;
-  const hasDetails = entry.note || entry.watched_with;
 
   return (
     <div
-      className="group relative animate-slide-up"
-      style={{ animationDelay: `${index * 60}ms` }}
+      className="group animate-slide-up flex items-stretch gap-0
+        bg-zinc-950 border border-zinc-800 hover:border-zinc-700
+        transition-all duration-200 overflow-hidden"
+      style={{ animationDelay: `${rank * 40}ms` }}
     >
-      {/* Poster */}
-      <button
-        onClick={() => (readOnly ? setExpanded(!expanded) : onEdit(entry))}
-        className="relative w-full aspect-[2/3] rounded-lg overflow-hidden
-          bg-[var(--twilight)] shadow-card-sm
-          transition-all duration-300 ease-out
-          hover:shadow-card-lg hover:-translate-y-1 hover:scale-[1.02]
-          focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]"
-      >
+      {/* Rank number + move buttons */}
+      <div className="flex flex-col items-center justify-center w-10 sm:w-12 flex-shrink-0
+        border-r border-zinc-800 bg-zinc-950">
+        {!readOnly && onMoveUp && !isFirst && (
+          <button
+            onClick={onMoveUp}
+            className="text-zinc-600 hover:text-zinc-300 text-xs py-0.5 transition-colors
+              opacity-0 group-hover:opacity-100"
+          >
+            ▲
+          </button>
+        )}
+        <span className="text-zinc-500 font-mono text-sm font-bold">
+          {rank}
+        </span>
+        {!readOnly && onMoveDown && !isLast && (
+          <button
+            onClick={onMoveDown}
+            className="text-zinc-600 hover:text-zinc-300 text-xs py-0.5 transition-colors
+              opacity-0 group-hover:opacity-100"
+          >
+            ▼
+          </button>
+        )}
+      </div>
+
+      {/* Poster thumbnail */}
+      <div className="w-16 sm:w-20 flex-shrink-0 bg-zinc-900">
         {movie.poster_path ? (
           <SmartImage
-            src={`${TMDB_POSTER_W342}${movie.poster_path}`}
+            src={`${TMDB_POSTER_W185}${movie.poster_path}`}
             alt={movie.title}
-            fill
-            className="object-cover"
+            width={80}
+            height={120}
+            className="object-cover w-full h-full"
           />
         ) : (
-          <div className="flex items-center justify-center h-full p-3">
-            <span className="text-sm text-[var(--muted)] text-center font-mono">
-              {movie.title}
-            </span>
+          <div className="flex items-center justify-center h-full min-h-[96px]
+            text-2xs text-zinc-600 font-mono p-1 text-center">
+            {movie.title}
           </div>
         )}
+      </div>
 
-        {/* Hover overlay */}
-        <div
-          className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent
-            opacity-0 group-hover:opacity-100 transition-opacity duration-300
-            flex flex-col justify-end p-3"
-        >
-          <p className="text-sm font-semibold text-white leading-tight">
+      {/* Content */}
+      <button
+        onClick={() => (readOnly ? setExpanded(!expanded) : onEdit(entry))}
+        className="flex-1 min-w-0 p-2.5 sm:p-3 text-left hover:bg-zinc-900/50 transition-colors"
+      >
+        {/* Title row */}
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-bold text-white text-sm sm:text-base leading-tight line-clamp-1 uppercase tracking-wide">
             {movie.title}
-          </p>
-          {movie.director && (
-            <p className="text-xs text-white/60 mt-0.5">{movie.director}</p>
-          )}
+          </h3>
           {!readOnly && (
-            <p className="text-xs text-[var(--coral)] font-mono mt-1">Edit</p>
+            <span className="text-zinc-600 text-2xs font-mono flex-shrink-0
+              opacity-0 group-hover:opacity-100 transition-opacity">
+              EDIT
+            </span>
           )}
         </div>
 
-        {/* Date badge */}
-        <div
-          className="absolute top-2 left-2 px-1.5 py-0.5 rounded
-            bg-black/60 backdrop-blur-sm"
-        >
-          <span className="text-2xs font-mono font-bold text-white/80">
+        {/* Director + year + runtime */}
+        <div className="flex items-center gap-1.5 mt-0.5 text-2xs text-zinc-500 font-mono">
+          {movie.director && (
+            <span className="text-zinc-400">{movie.director}</span>
+          )}
+          {movie.director && movie.year && <span>·</span>}
+          {movie.year && <span>{movie.year}</span>}
+          {movie.runtime_minutes && (
+            <>
+              <span>·</span>
+              <span>{formatRuntime(movie.runtime_minutes)}</span>
+            </>
+          )}
+          {movie.mpaa_rating && (
+            <>
+              <span>·</span>
+              <span>{movie.mpaa_rating}</span>
+            </>
+          )}
+        </div>
+
+        {/* Scores row */}
+        <div className="flex items-center gap-2 mt-1.5 text-2xs font-mono">
+          {movie.rt_critics_score != null && (
+            <span
+              className={`px-1.5 py-0.5 ${
+                movie.rt_critics_score >= 75
+                  ? "bg-red-900/60 text-red-400 border border-red-800/50"
+                  : movie.rt_critics_score >= 60
+                    ? "bg-red-950/40 text-red-500/80 border border-red-900/30"
+                    : "bg-zinc-900 text-zinc-500 border border-zinc-800"
+              }`}
+            >
+              RT {movie.rt_critics_score}%
+            </span>
+          )}
+          {movie.rt_audience_score != null && (
+            <span
+              className={`px-1.5 py-0.5 ${
+                movie.rt_audience_score >= 75
+                  ? "bg-amber-900/40 text-amber-400 border border-amber-800/40"
+                  : movie.rt_audience_score >= 60
+                    ? "bg-amber-950/30 text-amber-500/70 border border-amber-900/30"
+                    : "bg-zinc-900 text-zinc-500 border border-zinc-800"
+              }`}
+            >
+              AUD {movie.rt_audience_score}%
+            </span>
+          )}
+          {movie.tmdb_vote_average != null && (
+            <span
+              className={`${
+                movie.tmdb_vote_average >= 7
+                  ? "text-amber-500"
+                  : movie.tmdb_vote_average >= 5
+                    ? "text-zinc-400"
+                    : "text-zinc-600"
+              }`}
+            >
+              TMDB {movie.tmdb_vote_average.toFixed(1)}
+            </span>
+          )}
+        </div>
+
+        {/* Tags + date + watched with */}
+        <div className="flex items-center flex-wrap gap-1.5 mt-2">
+          <span className="text-2xs text-zinc-500 font-mono">
             {formatWatchedDate(entry.watched_date)}
           </span>
+          {entry.watched_with && (
+            <>
+              <span className="text-zinc-700">·</span>
+              <span className="text-2xs text-zinc-500 font-mono">
+                w/ {entry.watched_with}
+              </span>
+            </>
+          )}
+          {entry.tags.map((tag) => (
+            <span
+              key={tag.id}
+              className="px-1.5 py-0.5 rounded-full text-2xs font-mono font-medium"
+              style={{
+                backgroundColor: `${tag.color}20`,
+                color: tag.color || "var(--soft)",
+              }}
+            >
+              {tag.name}
+            </span>
+          ))}
         </div>
-      </button>
 
-      {/* Title + tags below poster */}
-      <div className="mt-2 px-0.5">
-        <p className="text-sm font-medium text-[var(--cream)] leading-tight truncate">
-          {movie.title}
-        </p>
+        {/* Note */}
+        {entry.note && (
+          <p className={`mt-1.5 text-xs text-zinc-400 italic leading-relaxed ${
+            !expanded && readOnly ? "line-clamp-1" : ""
+          }`}>
+            &ldquo;{entry.note}&rdquo;
+          </p>
+        )}
 
-        {/* Tags */}
-        {entry.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
-            {entry.tags.map((tag) => (
+        {/* Genres */}
+        {movie.genres && movie.genres.length > 0 && (
+          <div className="flex items-center gap-1 mt-1.5">
+            {movie.genres.slice(0, 3).map((genre) => (
               <span
-                key={tag.id}
-                className="px-1.5 py-0.5 rounded-full text-2xs font-mono font-medium"
-                style={{
-                  backgroundColor: `${tag.color}20`,
-                  color: tag.color || "var(--soft)",
-                }}
+                key={genre}
+                className="text-2xs text-zinc-600 font-mono uppercase tracking-wider"
               >
-                {tag.name}
+                {genre}
               </span>
             ))}
           </div>
         )}
-
-        {/* Watched with */}
-        {entry.watched_with && (
-          <p className="text-xs text-[var(--muted)] mt-1 truncate">
-            w/ {entry.watched_with}
-          </p>
-        )}
-      </div>
-
-      {/* Expanded details (public page click-to-expand) */}
-      {readOnly && expanded && hasDetails && (
-        <div className="mt-2 px-0.5 animate-fade-in">
-          {entry.note && (
-            <p className="text-xs text-[var(--soft)] leading-relaxed">
-              {entry.note}
-            </p>
-          )}
-        </div>
-      )}
+      </button>
     </div>
   );
 }

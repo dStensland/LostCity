@@ -48,12 +48,14 @@ export default async function PublicLogPage({ params, searchParams }: PageProps)
       id, watched_date, note, watched_with, sort_order,
       movie:goblin_movies!movie_id (
         id, tmdb_id, title, poster_path, backdrop_path, release_date, genres,
-        runtime_minutes, director, year
+        runtime_minutes, director, year, rt_critics_score, rt_audience_score,
+        tmdb_vote_average, tmdb_vote_count, mpaa_rating, imdb_id
       )
     `)
     .eq("user_id", (profile as any).id)
     .gte("watched_date", `${currentYear}-01-01`)
     .lte("watched_date", `${currentYear}-12-31`)
+    .order("sort_order", { ascending: true, nullsFirst: false })
     .order("watched_date", { ascending: false });
 
   // Fetch tags

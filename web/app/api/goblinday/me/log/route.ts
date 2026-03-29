@@ -15,10 +15,12 @@ export const GET = withAuth(async (request: NextRequest, { user, serviceClient }
       id, watched_date, note, watched_with, sort_order, created_at, updated_at,
       movie:goblin_movies!movie_id (
         id, tmdb_id, title, poster_path, backdrop_path, release_date, genres,
-        runtime_minutes, director, year
+        runtime_minutes, director, year, rt_critics_score, rt_audience_score,
+        tmdb_vote_average, tmdb_vote_count, mpaa_rating, imdb_id
       )
     `)
     .eq("user_id", user.id)
+    .order("sort_order", { ascending: true, nullsFirst: false })
     .order("watched_date", { ascending: false });
 
   if (year) {

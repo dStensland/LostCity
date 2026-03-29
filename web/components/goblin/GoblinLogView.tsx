@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useGoblinLog } from "@/lib/hooks/useGoblinLog";
 import GoblinLogEntryCard from "./GoblinLogEntryCard";
 import GoblinAddMovieModal from "./GoblinAddMovieModal";
@@ -38,6 +38,21 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
     if (!activeTag) return entries;
     return entries.filter((e) => e.tags.some((t) => t.name === activeTag));
   }, [entries, activeTag]);
+
+  const swapEntries = useCallback(
+    async (indexA: number, indexB: number) => {
+      const entryA = filteredEntries[indexA];
+      const entryB = filteredEntries[indexB];
+      if (!entryA || !entryB) return;
+
+      // Use 1-based sort_order
+      await Promise.all([
+        updateEntry(entryA.id, { sort_order: indexB + 1 }),
+        updateEntry(entryB.id, { sort_order: indexA + 1 }),
+      ]);
+    },
+    [filteredEntries, updateEntry]
+  );
 
   if (!isAuthenticated) {
     return (
@@ -124,11 +139,16 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
 
       {/* Loading state */}
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="aspect-[2/3] rounded-lg bg-[var(--twilight)]/40" />
-              <div className="mt-2 h-3 bg-[var(--twilight)]/40 rounded w-3/4" />
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="animate-pulse flex items-center gap-3 h-24
+              bg-[var(--twilight)]/20 rounded border border-[var(--twilight)]/30">
+              <div className="w-12 h-full bg-[var(--twilight)]/40" />
+              <div className="w-16 h-full bg-[var(--twilight)]/30" />
+              <div className="flex-1 space-y-2 py-3">
+                <div className="h-4 bg-[var(--twilight)]/40 rounded w-1/3" />
+                <div className="h-3 bg-[var(--twilight)]/30 rounded w-1/2" />
+              </div>
             </div>
           ))}
         </div>
@@ -151,14 +171,18 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
           )}
         </div>
       ) : (
-        /* Poster grid */
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        /* Vertical ranked list */
+        <div className="space-y-1">
           {filteredEntries.map((entry, i) => (
             <GoblinLogEntryCard
               key={entry.id}
               entry={entry}
-              index={i}
+              rank={i + 1}
               onEdit={setEditEntry}
+              onMoveUp={() => swapEntries(i, i - 1)}
+              onMoveDown={() => swapEntries(i, i + 1)}
+              isFirst={i === 0}
+              isLast={i === filteredEntries.length - 1}
             />
           ))}
         </div>

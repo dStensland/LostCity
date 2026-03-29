@@ -34,6 +34,13 @@ export function toISODate(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
+/** Format runtime as "1h 42m" */
+export function formatRuntime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? `${h}h${m > 0 ? ` ${m}m` : ""}` : `${m}m`;
+}
+
 /** TMDB image base URL */
 export const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 export const TMDB_POSTER_W500 = `${TMDB_IMAGE_BASE}/w500`;
@@ -61,6 +68,12 @@ export interface LogEntry {
     runtime_minutes: number | null;
     director: string | null;
     year: number | null;
+    rt_critics_score: number | null;
+    rt_audience_score: number | null;
+    tmdb_vote_average: number | null;
+    tmdb_vote_count: number | null;
+    mpaa_rating: string | null;
+    imdb_id: string | null;
   };
   tags: GoblinTag[];
 }

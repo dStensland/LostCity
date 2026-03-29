@@ -69,14 +69,14 @@ export default function GoblinLogPublicView({ user, entries, year }: Props) {
           {entries.length} movie{entries.length !== 1 ? "s" : ""} in {year}
         </p>
 
-        {/* Grid */}
+        {/* List */}
         {entries.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          <div className="space-y-1">
             {entries.map((entry, i) => (
               <GoblinLogEntryCard
                 key={entry.id}
                 entry={entry}
-                index={i}
+                rank={i + 1}
                 onEdit={() => {}}
                 readOnly
               />
