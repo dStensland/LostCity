@@ -2,13 +2,14 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { MagnifyingGlass, Ticket } from "@phosphor-icons/react";
+import { useSearchParams } from "next/navigation";
+import { Ticket } from "@phosphor-icons/react";
 import type { VerticalLane } from "@/lib/types/discovery";
 import { LANE_CONFIG, LANE_ICONS } from "@/lib/types/discovery";
 import { buildLaneOrder } from "@/components/find/FindView";
 import { useWeather } from "@/lib/hooks/useWeather";
 import FindSearchInput from "@/components/find/FindSearchInput";
+import type { FindSpotlight } from "@/lib/find-data";
 
 // -------------------------------------------------------------------------
 // Lane → "See all" URL map (mirrors FindStream lane headers)
@@ -56,15 +57,22 @@ interface FindSidebarProps {
   portalSlug: string;
   portalSettings: Record<string, unknown>;
   activeLane: string | null;
+  spotlights?: FindSpotlight[];
 }
 
 export const FindSidebar = memo(function FindSidebar({
   portalSlug,
   portalSettings,
   activeLane,
+  spotlights,
 }: FindSidebarProps) {
   const searchParams = useSearchParams();
   const laneOrder = buildLaneOrder(portalSettings);
+
+  // Map spotlight data to lane names for count display
+  const spotlightCounts = new Map(
+    spotlights?.map((s) => [s.category, s.items.length]) ?? []
+  );
 
   // Build lane hrefs — use LANE_SEE_ALL_URLS when available, falling back to
   // the stream lane filter. Clicking the active lane deselects (returns to stream).
@@ -133,6 +141,17 @@ export const FindSidebar = memo(function FindSidebar({
                   >
                     {config.label}
                   </span>
+                  {spotlightCounts.has(lane) && (
+                    <span
+                      className="text-2xs font-mono font-bold tabular-nums px-1.5 py-0.5 rounded-full"
+                      style={{
+                        backgroundColor: `${config.color}20`,
+                        color: config.color,
+                      }}
+                    >
+                      {spotlightCounts.get(lane)}
+                    </span>
+                  )}
                 </Link>
               </li>
             );

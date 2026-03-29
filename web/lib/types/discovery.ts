@@ -8,54 +8,6 @@ import {
   Ticket,
 } from "@phosphor-icons/react";
 
-export type DiscoveryEntityType = "place" | "event";
-
-export interface DiscoveryPlaceEntity {
-  entity_type: "place";
-  id: number;
-  name: string;
-  slug: string;
-  image_url: string | null;
-  place_type: string;
-  neighborhood: string | null;
-  short_description: string | null;
-  is_open: boolean;
-  closes_at: string | null;
-  google_rating: number | null;
-  google_rating_count: number | null;
-  price_level: number | null;
-  vibes: string[];
-  genres: string[];
-  distance_km: number | null;
-  event_count: number;
-  current_exhibition_title: string | null;
-  current_exhibition_status: string | null;
-  commitment_tier: string | null;
-  best_seasons: string[] | null;
-  cuisine: string[] | null;
-}
-
-export interface DiscoveryEventEntity {
-  entity_type: "event";
-  id: number;
-  name: string;
-  slug: string;
-  image_url: string | null;
-  place_type: string | null;
-  neighborhood: string | null;
-  venue_name: string | null;
-  start_date: string;
-  start_time: string | null;
-  category_id: string | null;
-  is_free: boolean;
-  price_min: number | null;
-  genres: string[];
-}
-
-export type DiscoveryEntity = DiscoveryPlaceEntity | DiscoveryEventEntity;
-
-export type CardFidelity = "compact" | "expanded";
-
 export type VerticalLane =
   | "arts"
   | "dining"
@@ -78,7 +30,7 @@ export const DEFAULT_LANE_ORDER: VerticalLane[] = [
 ];
 
 // -------------------------------------------------------------------------
-// Shared lane icon map — used by LanePreviewSection, LaneFilterBar, FindSidebar
+// Shared lane icon map — used by LaneFilterBar, FindSidebar
 // -------------------------------------------------------------------------
 
 export const LANE_ICONS: Record<

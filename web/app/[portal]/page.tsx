@@ -7,12 +7,11 @@ import { AmbientBackground } from "@/components/ambient";
 import HappeningView from "@/components/find/HappeningView";
 import type { HappeningContent } from "@/components/find/HappeningView";
 import dynamic from "next/dynamic";
+import FindView from "@/components/find/FindView";
+import { getServerFindData, type ServerFindData } from "@/lib/find-data";
 
 const SpotsFinder = dynamic(() => import("@/components/find/SpotsFinder"), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading places...</div>,
-});
-const FindView = dynamic(() => import("@/components/find/FindView"), {
-  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading...</div>,
 });
 import CommunityHub from "@/components/community/CommunityHub";
 import DetailViewRouter from "@/components/views/DetailViewRouter";
@@ -95,6 +94,46 @@ async function DefaultCityTemplate({
       />
       <DefaultTemplate portal={portal} serverHeroUrl={serverHeroUrl} serverFeedData={feedData} />
     </>
+  );
+}
+
+/**
+ * Async RSC wrapper for the unified Find tab.
+ * Fetches all Find data server-side and passes it to FindView as props,
+ * eliminating the parallel client-side fetches that were firing on every load.
+ */
+async function ServerFindView({
+  portal,
+  portalSlug,
+}: {
+  portal: { settings: unknown };
+  portalSlug: string;
+}) {
+  const findData = await getServerFindData(portalSlug);
+  return (
+    <FindView
+      portalSlug={portalSlug}
+      portalSettings={portal.settings as Record<string, unknown>}
+      serverFindData={findData}
+    />
+  );
+}
+
+function FindSkeleton() {
+  return (
+    <div className="space-y-4 py-4">
+      <div className="h-10 rounded-lg skeleton-shimmer mx-4" />
+      <div className="flex gap-2 px-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-9 w-24 rounded-full skeleton-shimmer" style={{ animationDelay: `${i * 40}ms` }} />
+        ))}
+      </div>
+      <div className="space-y-3 px-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-20 rounded-xl skeleton-shimmer" style={{ animationDelay: `${i * 60}ms` }} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -493,12 +532,8 @@ export default async function PortalPage({ params, searchParams }: Props) {
                   )}
 
                   {viewMode === "find" && (
-                    <Suspense fallback={<div data-skeleton-route="find-view" />}>
-                      <FindView
-                        portalId={portal.id}
-                        portalSlug={portal.slug}
-                        portalSettings={portal.settings as Record<string, unknown>}
-                      />
+                    <Suspense fallback={<FindSkeleton />}>
+                      <ServerFindView portal={portal} portalSlug={portal.slug} />
                     </Suspense>
                   )}
 

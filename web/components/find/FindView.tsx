@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * FindView — unified discovery stream.
+ * FindView — unified discovery stream (pure presentation component).
  *
- * Replaces the separate Happening + Places tabs with a single scrollable
- * stream: search bar → Right Now section → lane previews (Arts, Dining, etc.)
+ * Data arrives server-side via `serverFindData` prop from the async
+ * ServerFindView RSC wrapper in page.tsx. No client-side data fetching.
  *
  * URL params:
  *   ?regulars=true    — show the day-of-week RegularsView instead
@@ -15,11 +15,12 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import type { VerticalLane } from "@/lib/types/discovery";
 import { DEFAULT_LANE_ORDER } from "@/lib/types/discovery";
-import { RightNowSection } from "./RightNowSection";
-import { LanePreviewSection } from "./LanePreviewSection";
+import type { ServerFindData } from "@/lib/find-data";
 import { FindSidebar } from "./FindSidebar";
 import FindSearchInput from "@/components/find/FindSearchInput";
 import { FindToolChipRow } from "./FindToolChipRow";
+import { RightNowSection } from "./RightNowSection";
+import { FindSpotlight } from "./FindSpotlight";
 
 // Lazy-load RegularsView — only needed for ?regulars=true
 const RegularsView = dynamic(() => import("./RegularsView"), {
@@ -60,16 +61,16 @@ export function buildLaneOrder(portalSettings: Record<string, unknown>): Vertica
 // -------------------------------------------------------------------------
 
 interface FindViewProps {
-  portalId: string;
   portalSlug: string;
   portalSettings: Record<string, unknown>;
+  serverFindData: ServerFindData | null;
 }
 
-// Default export required for dynamic import in page.tsx
+// Default export required for dynamic import compatibility
 export default memo(function FindView({
-  portalId,
   portalSlug,
   portalSettings,
+  serverFindData,
 }: FindViewProps) {
   const searchParams = useSearchParams();
   const regularsParam = searchParams.get("regulars");
@@ -84,13 +85,12 @@ export default memo(function FindView({
           </div>
         }
       >
-        <RegularsView portalId={portalId} portalSlug={portalSlug} />
+        <RegularsView portalId={""} portalSlug={portalSlug} />
       </Suspense>
     );
   }
 
   // ── Unified discovery stream ───────────────────────────────────────────
-  const laneOrder = buildLaneOrder(portalSettings);
 
   return (
     <div className="flex min-h-[50vh]">
@@ -111,16 +111,20 @@ export default memo(function FindView({
         </div>
 
         {/* Tool chip row */}
-        <FindToolChipRow portalSlug={portalSlug} />
+        <FindToolChipRow portalSlug={portalSlug} pulse={serverFindData?.pulse} />
 
-        {/* Right Now section */}
-        <RightNowSection portalSlug={portalSlug} />
+        {/* Right Now section — server-rendered, no loading state */}
+        {serverFindData?.rightNow && serverFindData.rightNow.length > 0 && (
+          <div className="px-4 pt-3">
+            <RightNowSection items={serverFindData.rightNow} portalSlug={portalSlug} />
+          </div>
+        )}
 
-        {/* Lane previews */}
-        {laneOrder.map((lane) => (
-          <div key={lane}>
-            <div className="my-5 border-t border-[var(--twilight)] opacity-50" />
-            <LanePreviewSection lane={lane} portalSlug={portalSlug} />
+        {/* Spotlight sections — one per qualifying category */}
+        {serverFindData?.spotlights.map((spotlight) => (
+          <div key={spotlight.category} className="px-4 pt-5">
+            <div className="my-3 border-t border-[var(--twilight)] opacity-50" />
+            <FindSpotlight spotlight={spotlight} portalSlug={portalSlug} />
           </div>
         ))}
       </div>
