@@ -11,6 +11,7 @@ import dynamic from "next/dynamic";
 const SpotsFinder = dynamic(() => import("@/components/find/SpotsFinder"), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading places...</div>,
 });
+const FindView = dynamic(() => import("@/components/find/FindView"), { ssr: false });
 import CommunityHub from "@/components/community/CommunityHub";
 import DetailViewRouter from "@/components/views/DetailViewRouter";
 import { DefaultTemplate } from "./_templates/default";
@@ -479,9 +480,11 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
                   {viewMode === "find" && (
                     <Suspense fallback={<div data-skeleton-route="find-view" />}>
-                      <div className="flex min-h-[50vh] items-center justify-center">
-                        <p className="text-[var(--muted)]">Find view — coming soon</p>
-                      </div>
+                      <FindView
+                        portalId={portal.id}
+                        portalSlug={portal.slug}
+                        portalSettings={portal.settings as Record<string, unknown>}
+                      />
                     </Suspense>
                   )}
 
