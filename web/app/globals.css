@@ -7065,6 +7065,36 @@ body:has([data-vertical="hospital"]) .rain-overlay {
   50%       { opacity: 0.5; }
 }
 
+/* Goblin Log: poster entrance with scale */
+@keyframes posterEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Goblin Log: entry removal */
+@keyframes posterExit {
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+/* Goblin Log: year crossfade */
+@keyframes gridFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .pulse-live {
   animation: pulse-live 2s ease-in-out infinite;
 }
