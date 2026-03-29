@@ -1,9 +1,5 @@
--- RPC: get_right_now_feed
--- Returns up to 6 items (events + places) ranked by temporal relevance
--- Used by the unified Find stream's "Right Now" section
---
--- Portal scoping for events: e.portal_id = p_portal_id (exact match) or NULL for global events
--- Portal scoping for places: city-based (places table has no portal_id column)
+-- Fix: remove reference to non-existent final_score column on places table
+-- The original RPC used p.final_score which doesn't exist on the remote schema
 
 CREATE OR REPLACE FUNCTION get_right_now_feed(
   p_portal_id UUID DEFAULT NULL,
@@ -108,5 +104,3 @@ BEGIN
   LIMIT p_limit;
 END;
 $$ LANGUAGE plpgsql STABLE;
-
-GRANT EXECUTE ON FUNCTION get_right_now_feed TO anon, authenticated;
