@@ -70,6 +70,14 @@ export const StandardRow = memo(function StandardRow({
                     {part}
                   </span>
                 ))}
+                {event.venue?.google_rating != null && (
+                  <>
+                    <Dot />
+                    <span className="text-xs text-[var(--gold)]">
+                      {event.venue.google_rating.toFixed(1)} ★
+                    </span>
+                  </>
+                )}
               </p>
             )}
           </div>

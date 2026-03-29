@@ -31,7 +31,7 @@ export const EVENT_SELECT = `
   ticket_status, ticket_status_checked_at, ticket_url, source_url,
   cost_tier, duration, booking_required, indoor_outdoor, significance, significance_signals,
   series:series_id(id, frequency, day_of_week, series_type),
-  venue:places(id, name, neighborhood, slug, place_type, location_designator, city, image_url, is_active)
+  venue:places(id, name, neighborhood, slug, place_type, location_designator, city, image_url, is_active, place_vertical_details(google))
 `;
 
 // ---------------------------------------------------------------------------
@@ -70,12 +70,37 @@ function filterRegistrationEvents(events: FeedEventData[]): FeedEventData[] {
   );
 }
 
+/**
+ * Flatten place_vertical_details.google from the raw PostgREST join into
+ * top-level google_rating / google_rating_count fields on the venue object.
+ *
+ * PostgREST returns the 1:1 join as a nested object:
+ *   venue.place_vertical_details = { google: { rating, rating_count, ... } } | null
+ *
+ * We strip the nested key and write the flat fields so downstream components
+ * can access venue.google_rating without knowing about the DB join structure.
+ */
+function flattenGoogleRatings(events: FeedEventData[]): FeedEventData[] {
+  for (const event of events) {
+    if (!event.venue) continue;
+    const raw = event.venue as typeof event.venue & {
+      place_vertical_details?: { google?: { rating?: number | null; rating_count?: number | null } | null } | null;
+    };
+    const googleData = raw.place_vertical_details?.google ?? null;
+    event.venue.google_rating = googleData?.rating ?? null;
+    event.venue.google_rating_count = googleData?.rating_count ?? null;
+    // Remove the nested key — it's not part of FeedEventData and wastes memory
+    delete (raw as Record<string, unknown>).place_vertical_details;
+  }
+  return events;
+}
+
 /** Standard post-processing: dedupe → filter inactive venues → suppress bad images → filter registration noise */
 export function postProcessEvents(raw: FeedEventData[]): FeedEventData[] {
   return filterRegistrationEvents(
     dedupeEventsById(
       filterOutInactiveVenueEvents(
-        suppressEventImagesIfVenueFlagged(raw) as FeedEventData[],
+        suppressEventImagesIfVenueFlagged(flattenGoogleRatings(raw)) as FeedEventData[],
       ),
     ),
   );
@@ -503,7 +528,7 @@ export async function fetchEventPools(
     todayEvents: postProcessEvents(applySourceDiversity(processedTodayRaw)),
     trendingEvents: postProcessEvents((trendingResult.data || []) as unknown as FeedEventData[]),
     horizonEvents: dedupeEventsById(
-      filterOutInactiveVenueEvents((horizonResult.data || []) as unknown as FeedEventData[]),
+      filterOutInactiveVenueEvents(flattenGoogleRatings((horizonResult.data || []) as unknown as FeedEventData[])),
     ),
   };
 }

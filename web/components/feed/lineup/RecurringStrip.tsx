@@ -267,6 +267,14 @@ export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStrip
                   {timeStr && (
                     <span className="font-mono text-2xs">{timeStr}</span>
                   )}
+                  {venue?.google_rating != null && (
+                    <>
+                      <Dot />
+                      <span className="text-[var(--gold)]">
+                        {venue.google_rating.toFixed(1)} ★
+                      </span>
+                    </>
+                  )}
                 </span>
               </Link>
             );

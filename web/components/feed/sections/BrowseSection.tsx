@@ -6,18 +6,20 @@
  * Only shows categories with real results (non-zero counts).
  * Destination counts come from venue_type_counts in section meta.
  * Event counts come from category_counts in section meta.
+ * category_representatives (new field) provides a snippet for each tile.
  */
 
 import { useMemo } from "react";
-import Link from "next/link";
 import type { CityPulseSection } from "@/lib/city-pulse/types";
 import { THINGS_TO_DO_TILES } from "@/lib/spots-constants";
-import CategoryIcon, {
+import {
   getCategoryLabel,
   getCategoryColor,
 } from "@/components/CategoryIcon";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import { MapPin, Compass } from "@phosphor-icons/react";
+import { BrowseGridTile } from "./BrowseGridTile";
+import { CollectionsRow } from "./CollectionsRow";
 
 interface Props {
   section: CityPulseSection;
@@ -48,6 +50,11 @@ const EVENT_CATEGORIES = [
 export default function BrowseSection({ section, portalSlug }: Props) {
   const venueTypeCounts = section.meta?.venue_type_counts as Record<string, number> | undefined;
   const eventCategoryCounts = section.meta?.category_counts as Record<string, number> | undefined;
+
+  // category_representatives is new — may be absent in cached responses
+  const representatives = (
+    section.meta?.category_representatives ?? {}
+  ) as Record<string, { title: string; venue_name: string }>;
 
   // Destination tiles with aggregated counts from venue types
   const destinationTiles = useMemo(() => {
@@ -85,34 +92,18 @@ export default function BrowseSection({ section, portalSlug }: Props) {
             seeAllHref={`/${portalSlug}?view=happening`}
           />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-            {eventTiles.map(({ key: cat, count }) => {
-              const catColor = getCategoryColor(cat);
-              return (
-                <Link
-                  key={cat}
-                  href={`/${portalSlug}?view=happening&categories=${cat}`}
-                  className="relative flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl border transition-all hover:scale-105 active:scale-95"
-                  style={{
-                    borderColor: `color-mix(in srgb, ${catColor} 28%, transparent)`,
-                    backgroundColor: `color-mix(in srgb, ${catColor} 10%, transparent)`,
-                  }}
-                >
-                  <CategoryIcon type={cat} size={28} />
-                  <span
-                    className="font-mono text-xs font-medium tracking-wide text-center leading-tight"
-                    style={{ color: catColor }}
-                  >
-                    {getCategoryLabel(cat)}
-                  </span>
-                  <span
-                    className="font-mono text-2xs tabular-nums"
-                    style={{ color: `color-mix(in srgb, ${catColor} 70%, var(--muted))` }}
-                  >
-                    {count} {count === 1 ? "event" : "events"}
-                  </span>
-                </Link>
-              );
-            })}
+            {eventTiles.map(({ key: cat, count }) => (
+              <BrowseGridTile
+                key={cat}
+                category={cat}
+                label={getCategoryLabel(cat)}
+                count={count}
+                accentColor={getCategoryColor(cat)}
+                snippet={representatives[cat] ?? null}
+                badge={null}
+                href={`/${portalSlug}?view=happening&categories=${cat}`}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -129,33 +120,25 @@ export default function BrowseSection({ section, portalSlug }: Props) {
           />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
             {destinationTiles.map((tile) => (
-              <Link
+              <BrowseGridTile
                 key={tile.key}
+                category={tile.key}
+                label={tile.label}
+                count={tile.count}
+                accentColor={tile.color}
+                snippet={null}
+                badge={null}
                 href={`/${portalSlug}?view=places`}
-                className="relative flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl border transition-all hover:scale-105 active:scale-95"
-                style={{
-                  borderColor: `color-mix(in srgb, ${tile.color} 28%, transparent)`,
-                  backgroundColor: `color-mix(in srgb, ${tile.color} 10%, transparent)`,
-                }}
-              >
-                <CategoryIcon type={tile.iconType} size={28} />
-                <span
-                  className="font-mono text-xs font-medium tracking-wide text-center leading-tight"
-                  style={{ color: tile.color }}
-                >
-                  {tile.label}
-                </span>
-                <span
-                  className="font-mono text-2xs tabular-nums"
-                  style={{ color: `color-mix(in srgb, ${tile.color} 70%, var(--muted))` }}
-                >
-                  {tile.count} {tile.count === 1 ? "place" : "places"}
-                </span>
-              </Link>
+              />
             ))}
           </div>
         </div>
       )}
+
+      {/* Data-driven collections */}
+      <div className="mt-6">
+        <CollectionsRow portalSlug={portalSlug} />
+      </div>
     </section>
   );
 }

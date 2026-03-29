@@ -144,6 +144,8 @@ export type FeedEventData = {
     image_url?: string | null;
     blurhash?: string | null;
     location_designator?: LocationDesignator;
+    google_rating?: number | null;
+    google_rating_count?: number | null;
   } | null;
 };
 
