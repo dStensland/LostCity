@@ -20,6 +20,7 @@ import { FindSidebar } from "./FindSidebar";
 import FindSearchInput from "@/components/find/FindSearchInput";
 import { FindToolChipRow } from "./FindToolChipRow";
 import { RightNowSection } from "./RightNowSection";
+import { FindSpotlight } from "./FindSpotlight";
 
 // Lazy-load RegularsView — only needed for ?regulars=true
 const RegularsView = dynamic(() => import("./RegularsView"), {
@@ -118,6 +119,14 @@ export default memo(function FindView({
             <RightNowSection items={serverFindData.rightNow} portalSlug={portalSlug} />
           </div>
         )}
+
+        {/* Spotlight sections — one per qualifying category */}
+        {serverFindData?.spotlights.map((spotlight) => (
+          <div key={spotlight.category} className="px-4 pt-5">
+            <div className="my-3 border-t border-[var(--twilight)] opacity-50" />
+            <FindSpotlight spotlight={spotlight} portalSlug={portalSlug} />
+          </div>
+        ))}
       </div>
     </div>
   );
