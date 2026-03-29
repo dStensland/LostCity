@@ -133,3 +133,6 @@ crawlers/FEBRUARY_HOLIDAY_TAGGING_REPORT.md
 # Design artifacts (large images)
 artifacts/
 .claire/
+
+# Git worktrees
+.worktrees/
