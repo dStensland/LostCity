@@ -92,8 +92,16 @@ export function SceneEventRow({
           {event.title}
         </p>
         <p className="text-xs text-[var(--muted)] truncate leading-tight">
+          {recurrenceLabel && (
+            <>
+              <span className="font-mono text-2xs font-medium uppercase tracking-wider text-[var(--vibe)]">
+                {recurrenceLabel}
+              </span>
+              <span className="opacity-50"> &middot; </span>
+            </>
+          )}
           {event.venue?.name}
-          <span className="opacity-50"> &middot; </span>
+          {(event.venue?.name || dayStr) && <span className="opacity-50"> &middot; </span>}
           {dayStr && <>{dayStr} </>}
           {timeStr}
         </p>
