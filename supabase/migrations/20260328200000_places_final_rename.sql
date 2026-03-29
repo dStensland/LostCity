@@ -787,10 +787,38 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Drop old trigger and recreate pointing at new function
-DROP TRIGGER IF EXISTS venue_location_trigger ON places;
-CREATE TRIGGER place_location_trigger
-  BEFORE INSERT OR UPDATE OF lat, lng ON places
-  FOR EACH ROW EXECUTE FUNCTION update_place_location();
+DO $$
+DECLARE
+  tbl TEXT;
+BEGIN
+  -- Find which table the trigger is on (could be places or venues depending on migration state)
+  SELECT event_object_table INTO tbl
+  FROM information_schema.triggers
+  WHERE trigger_name = 'venue_location_trigger' AND trigger_schema = 'public'
+  LIMIT 1;
+
+  IF tbl IS NOT NULL THEN
+    EXECUTE format('DROP TRIGGER IF EXISTS venue_location_trigger ON %I', tbl);
+    RAISE NOTICE 'Dropped venue_location_trigger from %', tbl;
+  END IF;
+
+  -- Also drop any existing place_location_trigger
+  IF EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_name = 'place_location_trigger' AND trigger_schema = 'public') THEN
+    EXECUTE format('DROP TRIGGER IF EXISTS place_location_trigger ON %I',
+      (SELECT event_object_table FROM information_schema.triggers WHERE trigger_name = 'place_location_trigger' LIMIT 1));
+  END IF;
+END $$;
+
+-- Recreate trigger on places table
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'places') THEN
+    CREATE TRIGGER place_location_trigger
+      BEFORE INSERT OR UPDATE OF lat, lng ON places
+      FOR EACH ROW EXECUTE FUNCTION update_place_location();
+    RAISE NOTICE 'Created place_location_trigger on places';
+  END IF;
+END $$;
 
 -- Drop old function (only after trigger is recreated)
 DROP FUNCTION IF EXISTS update_venue_location();

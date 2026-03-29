@@ -1,0 +1,177 @@
+<h2>How rich should vertical-aware cards get?</h2>
+<p class="subtitle">Same unified stream, but cards render differently based on what they are. Where's the ceiling?</p>
+
+<div style="margin-bottom: 32px;">
+  <h3 style="margin-bottom: 4px;">The Data You Have (per vertical)</h3>
+  <p class="subtitle" style="margin-top: 0;">This is what the new data model actually supports</p>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px;">
+    <div style="padding: 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; font-size: 11px; line-height: 1.6;">
+      <div style="color: #ff6b6b; font-weight: 600; margin-bottom: 4px;">🍽 Dining</div>
+      <div style="color: #8892b0;">cuisine[], price_level, reservations, dietary options, menu_url, outdoor_seating, meal services, service_style, Google rating</div>
+    </div>
+    <div style="padding: 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; font-size: 11px; line-height: 1.6;">
+      <div style="color: #c9874f; font-weight: 600; margin-bottom: 4px;">🎨 Arts & Culture</div>
+      <div style="color: #8892b0;">exhibitions, opening receptions, gallery_urls[], highlights (art, architecture, history), explore_blurb, Google rating, free/paid</div>
+    </div>
+    <div style="padding: 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; font-size: 11px; line-height: 1.6;">
+      <div style="color: #64ffda; font-weight: 600; margin-bottom: 4px;">🌿 Outdoors</div>
+      <div style="color: #8892b0;">commitment_tier, difficulty, trail_length, elevation, surface_type, best_seasons, dog_friendly, parking, conditions, weather_fit_tags</div>
+    </div>
+    <div style="padding: 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; font-size: 11px; line-height: 1.6;">
+      <div style="color: #e6c07b; font-weight: 600; margin-bottom: 4px;">🎵 Music / Stage</div>
+      <div style="color: #8892b0;">headliner, support acts, genres[], showtimes, series runs, venue capacity, all-ages, free badge</div>
+    </div>
+    <div style="padding: 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; font-size: 11px; line-height: 1.6;">
+      <div style="color: #a78bfa; font-weight: 600; margin-bottom: 4px;">🎬 Film</div>
+      <div style="color: #8892b0;">showtimes across theaters, poster_image, series info, multi-theater grouping</div>
+    </div>
+    <div style="padding: 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; font-size: 11px; line-height: 1.6;">
+      <div style="color: #f472b6; font-weight: 600; margin-bottom: 4px;">🌙 Nightlife</div>
+      <div style="color: #8892b0;">vibes[], genres[], open/close times, price_level, event lineup tonight, venue_type (cocktail bar, dive, etc)</div>
+    </div>
+  </div>
+</div>
+
+<div class="cards">
+
+  <!-- Option A: Conservative -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 20px; background: linear-gradient(135deg, #1a1a2e, #16213e);">
+      <!-- Restaurant card mockup -->
+      <div style="font-family: system-ui; font-size: 12px; color: #ccd6f6;">
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div style="width: 48px; height: 48px; border-radius: 6px; background: #2a2a4a; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">🍽</div>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; font-size: 14px;">Fox Bros BBQ</div>
+            <div style="color: #8892b0; font-size: 11px; margin-top: 2px;">Southern · BBQ · $$</div>
+            <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+              <span style="background: rgba(100,255,218,0.15); color: #64ffda; padding: 2px 6px; border-radius: 4px; font-size: 10px;">Open now</span>
+              <span style="color: #8892b0; font-size: 10px; padding: 2px 0;">Candler Park</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="border-top: 1px solid rgba(255,255,255,0.06); margin: 12px 0;"></div>
+      <!-- Museum card mockup -->
+      <div style="font-family: system-ui; font-size: 12px; color: #ccd6f6;">
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div style="width: 48px; height: 48px; border-radius: 6px; background: #2a2a4a; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">🖼</div>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; font-size: 14px;">High Museum of Art</div>
+            <div style="color: #8892b0; font-size: 11px; margin-top: 2px;">Museum · Free First Saturdays</div>
+            <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+              <span style="background: rgba(230,192,123,0.15); color: #e6c07b; padding: 2px 6px; border-radius: 4px; font-size: 10px;">Exhibition opens today</span>
+              <span style="color: #8892b0; font-size: 10px; padding: 2px 0;">Midtown</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A: Tight & Uniform</h3>
+      <p>All cards same height/layout. Vertical data shows as 1-2 contextual chips (cuisine + price for dining, "exhibition opens today" for museum). Clean grid, easy to scan.</p>
+      <div style="margin-top: 8px; font-size: 12px; color: #8892b0;">
+        <strong>Pro:</strong> Scannable, consistent rhythm<br>
+        <strong>Con:</strong> Wastes the rich data — a restaurant card and a trail card barely differ
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B: Rich -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 20px; background: linear-gradient(135deg, #1a1a2e, #16213e);">
+      <!-- Rich restaurant card -->
+      <div style="font-family: system-ui; font-size: 12px; color: #ccd6f6; margin-bottom: 16px;">
+        <div style="display: flex; gap: 12px;">
+          <div style="width: 80px; height: 80px; border-radius: 8px; background: linear-gradient(135deg, #3a2a1a, #4a3a2a); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 24px;">🍖</div>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; font-size: 14px;">Fox Bros BBQ</div>
+            <div style="display: flex; gap: 4px; margin-top: 4px; align-items: center;">
+              <span style="color: #e6c07b;">★ 4.6</span>
+              <span style="color: #8892b0; font-size: 10px;">· Southern · BBQ · $$</span>
+            </div>
+            <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+              <span style="background: rgba(100,255,218,0.15); color: #64ffda; padding: 2px 6px; border-radius: 4px; font-size: 10px;">Open · Closes 10pm</span>
+              <span style="background: rgba(255,107,107,0.1); color: #ff6b6b; padding: 2px 6px; border-radius: 4px; font-size: 10px;">Dine-in · Takeout</span>
+            </div>
+            <div style="color: #8892b0; font-size: 10px; margin-top: 4px;">Outdoor seating · Vegetarian options · Candler Park</div>
+          </div>
+        </div>
+      </div>
+      <!-- Rich museum card -->
+      <div style="font-family: system-ui; font-size: 12px; color: #ccd6f6;">
+        <div style="display: flex; gap: 12px;">
+          <div style="width: 80px; height: 80px; border-radius: 8px; background: linear-gradient(135deg, #2a1a3a, #3a2a4a); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 24px;">🖼</div>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; font-size: 14px;">High Museum of Art</div>
+            <div style="display: flex; gap: 4px; margin-top: 4px; align-items: center;">
+              <span style="color: #e6c07b;">★ 4.7</span>
+              <span style="color: #8892b0; font-size: 10px;">· Museum · Midtown</span>
+            </div>
+            <div style="background: rgba(201,135,79,0.1); border-left: 2px solid #c9874f; padding: 6px 8px; margin-top: 6px; border-radius: 0 4px 4px 0;">
+              <div style="color: #c9874f; font-size: 10px; font-weight: 600;">Current Exhibition</div>
+              <div style="color: #ccd6f6; font-size: 11px;">Picasso to Pollock: Modern Art Masterworks</div>
+              <div style="color: #8892b0; font-size: 10px;">Through Apr 15 · Opening reception tonight 6pm</div>
+            </div>
+            <div style="display: flex; gap: 6px; margin-top: 6px;">
+              <span style="background: rgba(100,255,218,0.15); color: #64ffda; padding: 2px 6px; border-radius: 4px; font-size: 10px;">Open · Closes 5pm</span>
+              <span style="background: rgba(100,255,218,0.1); color: #64ffda; padding: 2px 6px; border-radius: 4px; font-size: 10px;">♿ Accessible</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B: Vertically Rich</h3>
+      <p>Cards expand to show what matters for their type. Restaurants get ratings + cuisine + dining options. Museums get current exhibition inline. Trails get difficulty + length. Cards vary in height — the data earns its space.</p>
+      <div style="margin-top: 8px; font-size: 12px; color: #8892b0;">
+        <strong>Pro:</strong> Shows off the rich data, each card tells a complete story<br>
+        <strong>Con:</strong> Variable heights, harder to scan, heavier page
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C: Adaptive -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 20px; background: linear-gradient(135deg, #1a1a2e, #16213e);">
+      <!-- Compact card in stream -->
+      <div style="font-family: system-ui; font-size: 12px; color: #ccd6f6; margin-bottom: 8px;">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div style="width: 40px; height: 40px; border-radius: 6px; background: #2a2a4a; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">🍽</div>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; font-size: 13px;">Fox Bros BBQ <span style="color: #e6c07b; font-size: 10px;">★ 4.6</span></div>
+            <div style="color: #8892b0; font-size: 10px;">Southern · $$ · <span style="color: #64ffda;">Open</span> · Candler Park</div>
+          </div>
+        </div>
+      </div>
+      <div style="color: #64748b; font-size: 9px; text-align: center; letter-spacing: 1px; margin: 8px 0;">— COMPACT IN STREAM —</div>
+      <div style="border-top: 1px solid rgba(255,255,255,0.04); margin: 8px 0;"></div>
+      <div style="color: #64748b; font-size: 9px; text-align: center; letter-spacing: 1px; margin: 8px 0;">— EXPANDED IN LANE VIEW —</div>
+      <!-- Rich card in lane -->
+      <div style="font-family: system-ui; font-size: 12px; color: #ccd6f6; margin-top: 8px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px;">
+        <div style="display: flex; gap: 12px;">
+          <div style="width: 72px; height: 72px; border-radius: 8px; background: linear-gradient(135deg, #3a2a1a, #4a3a2a); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 20px;">🍖</div>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; font-size: 14px;">Fox Bros BBQ <span style="color: #e6c07b; font-size: 11px;">★ 4.6</span></div>
+            <div style="color: #8892b0; font-size: 11px; margin-top: 2px;">Southern · BBQ · $$ · Candler Park</div>
+            <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+              <span style="background: rgba(100,255,218,0.15); color: #64ffda; padding: 2px 6px; border-radius: 4px; font-size: 10px;">Open · Closes 10pm</span>
+              <span style="background: rgba(255,107,107,0.1); color: #ff6b6b; padding: 2px 6px; border-radius: 4px; font-size: 10px;">Dine-in</span>
+              <span style="background: rgba(255,107,107,0.1); color: #ff6b6b; padding: 2px 6px; border-radius: 4px; font-size: 10px;">Takeout</span>
+            </div>
+            <div style="color: #8892b0; font-size: 10px; margin-top: 4px;">Outdoor seating · Vegetarian options</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C: Context-Adaptive</h3>
+      <p>Cards render at <strong>two fidelity levels</strong>. In the unified stream: compact, scannable, key signals only. In a lane view ("See all Dining →"): expanded with full vertical data. Same component, different density.</p>
+      <div style="margin-top: 8px; font-size: 12px; color: #8892b0;">
+        <strong>Pro:</strong> Stream stays scannable, lanes go deep. Best of both worlds.<br>
+        <strong>Con:</strong> Two render modes per card type = more engineering. But you're already building both.
+      </div>
+    </div>
+  </div>
+
+</div>

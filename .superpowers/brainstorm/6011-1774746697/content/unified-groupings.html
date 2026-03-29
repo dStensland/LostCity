@@ -1,0 +1,119 @@
+<h2>How should the unified "Find" surface organize content?</h2>
+<p class="subtitle">Editorial groupings that shift with time of day — the user can see WHY things are grouped</p>
+
+<div class="cards">
+
+  <!-- Option A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 24px; background: linear-gradient(135deg, #1a1a2e, #16213e);">
+      <div style="font-family: monospace; font-size: 11px; color: #8892b0; line-height: 1.8;">
+        <div style="color: #e6c07b; font-weight: bold; margin-bottom: 8px;">☀️ SATURDAY 11AM</div>
+        <div style="color: #ccd6f6; font-size: 13px; font-weight: 600; margin-bottom: 4px;">Open Right Now</div>
+        <div style="padding-left: 12px; border-left: 2px solid #64ffda; margin-bottom: 12px;">
+          <div>🖼 High Museum — <span style="color:#e6c07b">New exhibition opens today</span></div>
+          <div>🌿 Piedmont Park — <span style="color:#64ffda">Perfect weather</span></div>
+          <div>☕ Revelator Coffee — <span style="color:#8892b0">Closes 3pm</span></div>
+        </div>
+        <div style="color: #ccd6f6; font-size: 13px; font-weight: 600; margin-bottom: 4px;">Happening This Afternoon</div>
+        <div style="padding-left: 12px; border-left: 2px solid #e6c07b; margin-bottom: 12px;">
+          <div>🎭 Dad's Garage — <span style="color:#e6c07b">Improv 2pm</span></div>
+          <div>🎵 Tabernacle — <span style="color:#e6c07b">Doors 4pm</span></div>
+          <div>🍺 Monday Night Brewing — <span style="color:#64ffda">Tour 3pm</span></div>
+        </div>
+        <div style="color: #ccd6f6; font-size: 13px; font-weight: 600; margin-bottom: 4px;">Worth the Trip</div>
+        <div style="padding-left: 12px; border-left: 2px solid #ff6b6b;">
+          <div>🥾 Sweetwater Creek — <span style="color:#8892b0">Half day · Easy</span></div>
+          <div>🎨 Callanwolde — <span style="color:#e6c07b">Art market today</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A: Time-Based Groupings</h3>
+      <p>Sections shift with the clock: "Open Right Now," "This Afternoon," "Tonight," "This Weekend." Each section mixes events + places. The label tells you <strong>when</strong>.</p>
+      <div style="margin-top: 8px; font-size: 12px; color: #8892b0;">
+        <strong>Legibility:</strong> High — "why is this here?" = "because it's relevant to your next few hours"<br>
+        <strong>Risk:</strong> Morning/weekday views could feel thin
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 24px; background: linear-gradient(135deg, #1a1a2e, #16213e);">
+      <div style="font-family: monospace; font-size: 11px; color: #8892b0; line-height: 1.8;">
+        <div style="color: #e6c07b; font-weight: bold; margin-bottom: 8px;">☀️ SATURDAY 11AM</div>
+        <div style="color: #ccd6f6; font-size: 13px; font-weight: 600; margin-bottom: 4px;">🎨 Arts & Culture</div>
+        <div style="padding-left: 12px; border-left: 2px solid #c9874f; margin-bottom: 12px;">
+          <div>High Museum — <span style="color:#e6c07b">Exhibition opens today</span></div>
+          <div>MOCA GA — <span style="color:#64ffda">Open now · Free</span></div>
+          <div>Callanwolde — <span style="color:#e6c07b">Art market 12pm</span></div>
+        </div>
+        <div style="color: #ccd6f6; font-size: 13px; font-weight: 600; margin-bottom: 4px;">🍽 Dining</div>
+        <div style="padding-left: 12px; border-left: 2px solid #ff6b6b; margin-bottom: 12px;">
+          <div>Staplehouse — <span style="color:#e6c07b">$$$ · Reservations open</span></div>
+          <div>Fox Bros BBQ — <span style="color:#64ffda">Open now · $$ · Southern</span></div>
+          <div>Ponce City Market — <span style="color:#8892b0">Food hall · 15 vendors</span></div>
+        </div>
+        <div style="color: #ccd6f6; font-size: 13px; font-weight: 600; margin-bottom: 4px;">🌿 Outdoors</div>
+        <div style="padding-left: 12px; border-left: 2px solid #64ffda;">
+          <div>Piedmont Park — <span style="color:#64ffda">Perfect weather</span></div>
+          <div>Sweetwater Creek — <span style="color:#8892b0">Half day · Easy</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B: Vertical Lanes as Sections</h3>
+      <p>Sections are the verticals: Arts & Culture, Dining, Nightlife, Outdoors, Entertainment. Within each, items sorted by temporal relevance. The label tells you <strong>what kind</strong>.</p>
+      <div style="margin-top: 8px; font-size: 12px; color: #8892b0;">
+        <strong>Legibility:</strong> High — "why is this grouped?" = "same category"<br>
+        <strong>Risk:</strong> Feels like the current Places sub-tabs with extra steps
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 24px; background: linear-gradient(135deg, #1a1a2e, #16213e);">
+      <div style="font-family: monospace; font-size: 11px; color: #8892b0; line-height: 1.8;">
+        <div style="color: #e6c07b; font-weight: bold; margin-bottom: 8px;">☀️ SATURDAY 11AM</div>
+        <div style="color: #ccd6f6; font-size: 13px; font-weight: 600; margin-bottom: 4px;">Right Now</div>
+        <div style="padding-left: 12px; border-left: 2px solid #64ffda; margin-bottom: 12px;">
+          <div>🖼 High Museum — <span style="color:#e6c07b">Exhibition opens today</span></div>
+          <div>☕ Revelator Coffee — <span style="color:#64ffda">Open · Closes 3pm</span></div>
+          <div>🌿 Piedmont Park — <span style="color:#64ffda">Perfect weather</span></div>
+        </div>
+        <div style="color: #ccd6f6; font-size: 13px; font-weight: 600; margin-bottom: 4px;">🎨 Arts & Culture · <span style="color:#8892b0; font-weight: 400; font-size: 11px;">See all →</span></div>
+        <div style="padding-left: 12px; border-left: 2px solid #c9874f; margin-bottom: 12px;">
+          <div>MOCA GA — <span style="color:#64ffda">Open · Free admission</span></div>
+          <div>Callanwolde — <span style="color:#e6c07b">Art market 12pm</span></div>
+          <div>Dad's Garage — <span style="color:#e6c07b">Improv 2pm</span></div>
+        </div>
+        <div style="color: #ccd6f6; font-size: 13px; font-weight: 600; margin-bottom: 4px;">🍽 Eat & Drink · <span style="color:#8892b0; font-weight: 400; font-size: 11px;">See all →</span></div>
+        <div style="padding-left: 12px; border-left: 2px solid #ff6b6b; margin-bottom: 12px;">
+          <div>Fox Bros BBQ — <span style="color:#64ffda">Open · $$ · Southern</span></div>
+          <div>Monday Night Brewing — <span style="color:#e6c07b">Tour at 3pm</span></div>
+        </div>
+        <div style="color: #ccd6f6; font-size: 13px; font-weight: 600; margin-bottom: 4px;">🌿 Get Outside · <span style="color:#8892b0; font-weight: 400; font-size: 11px;">See all →</span></div>
+        <div style="padding-left: 12px; border-left: 2px solid #64ffda;">
+          <div>Sweetwater Creek — <span style="color:#8892b0">Half day · Easy</span></div>
+          <div>BeltLine Eastside — <span style="color:#64ffda">2.5 mi · Flat</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C: Hybrid — Time Lead, Vertical Lanes</h3>
+      <p>Top section is time-driven ("Right Now" mixes everything relevant). Below that, vertical lanes take over — each with "See all →" into a focused lane view. <strong>Time answers "what now?" Verticals answer "what kind?"</strong></p>
+      <div style="margin-top: 8px; font-size: 12px; color: #8892b0;">
+        <strong>Legibility:</strong> Highest — two clear organizing principles, both visible<br>
+        <strong>Risk:</strong> More complex to build; need to decide when "Right Now" collapses (late night? nothing happening?)
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top: 24px; padding: 16px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: rgba(255,255,255,0.02);">
+  <p style="color: #8892b0; font-size: 13px; margin: 0;">
+    <strong style="color: #ccd6f6;">Key context:</strong> All options support deep-linking into lanes. "See all →" on any vertical section opens the full filtered lane view. The question is about the <em>default</em> landing experience.
+  </p>
+</div>
