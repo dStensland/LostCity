@@ -30,13 +30,15 @@ import {
   ArrowCounterClockwise,
   ArrowLeft,
   ShareNetwork,
+  BookOpen,
 } from "@phosphor-icons/react";
 import SmartImage from "@/components/SmartImage";
 import { HIGHLIGHT_CONFIG, type HighlightType } from "@/lib/place-highlights";
-import type { PlaceProfile, PlaceGoogleDetails } from "@/lib/types/places";
+import type { PlaceProfile, PlaceGoogleDetails, PlaceDiningDetails } from "@/lib/types/places";
 import { formatDateRange } from "@/lib/types/exhibitions";
 import { SectionHeader } from "@/components/detail/SectionHeader";
 import { QuickActionLink } from "@/components/detail/QuickActionLink";
+import { DiningDetailsSection } from "@/components/detail/DiningDetailsSection";
 import { CollapsibleSection } from "@/components/detail/CollapsibleSection";
 import NeonBackButton from "@/components/detail/NeonBackButton";
 import DetailShell from "@/components/detail/DetailShell";
@@ -218,7 +220,7 @@ export type SpotApiResponse = {
   walkableNeighbors: WalkableNeighbor[];
   placeProfile?: PlaceProfile | null;
   placeVerticalDetails?: {
-    dining: unknown | null;
+    dining: PlaceDiningDetails | null;
     outdoor: unknown | null;
     google: PlaceGoogleDetails | null;
   } | null;
@@ -300,6 +302,7 @@ export default function PlaceDetailView({ slug, portalSlug, onClose, initialData
   const walkableNeighbors = useMemo(() => data?.walkableNeighbors ?? [], [data]);
   const placeProfile = data?.placeProfile ?? null;
   const googleData = data?.placeVerticalDetails?.google ?? null;
+  const diningData = data?.placeVerticalDetails?.dining ?? null;
   const vibes = vibesOverride ?? spot?.vibes ?? null;
 
   const isDog = isDogPortal(portalSlug);
@@ -475,11 +478,29 @@ export default function PlaceDetailView({ slug, portalSlug, onClose, initialData
 
       {/* Quick Actions */}
       <div className="px-3 py-2 grid grid-cols-4 gap-1">
-        {spot.website && (
+        {diningData?.reservation_url ? (
+          <a
+            href={diningData.reservation_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col items-center justify-center gap-1 py-2 min-h-[44px] bg-[var(--coral)] text-[var(--void)] hover:brightness-110 rounded-lg text-xs font-mono font-medium transition-all focus-ring"
+          >
+            <BookOpen size={16} weight="light" aria-hidden="true" />
+            Reserve
+          </a>
+        ) : spot.website ? (
           <QuickActionLink
             href={spot.website}
             icon={<Globe size={16} weight="light" aria-hidden="true" />}
             label="Website"
+            compact
+          />
+        ) : null}
+        {diningData?.menu_url && (
+          <QuickActionLink
+            href={diningData.menu_url}
+            icon={<BookOpen size={16} weight="light" aria-hidden="true" />}
+            label="Menu"
             compact
           />
         )}
@@ -929,6 +950,11 @@ export default function PlaceDetailView({ slug, portalSlug, onClose, initialData
 
           {/* 2. About + Community Tags */}
           {renderAbout()}
+
+          {/* 2b. Dining Details */}
+          {diningData && (
+            <DiningDetailsSection diningData={diningData} placeProfile={placeProfile} />
+          )}
 
           {/* 3. On View (exhibitions) */}
           {exhibitions.length > 0 && renderExhibitions(exhibitions)}
