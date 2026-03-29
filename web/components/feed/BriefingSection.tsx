@@ -92,7 +92,7 @@ export const BriefingSection = memo(function BriefingSection({
 
         {briefing.weatherBadge && (
           <span className="text-xs font-semibold text-[var(--neon-green)] bg-[var(--neon-green)]/10 px-2 py-1 rounded-md">
-            {briefing.weatherBadge.temp}°
+            {briefing.weatherBadge.temp}
           </span>
         )}
       </div>
