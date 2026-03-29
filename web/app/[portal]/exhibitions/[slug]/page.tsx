@@ -18,6 +18,7 @@ import {
   ARTIST_ROLE_LABELS,
 } from "@/lib/exhibitions-utils";
 import type { ExhibitionWithVenue } from "@/lib/exhibitions-utils";
+import { Ticket } from "@phosphor-icons/react/dist/ssr";
 
 export const revalidate = 300;
 
@@ -46,6 +47,50 @@ async function fetchExhibition(
   } catch {
     return null;
   }
+}
+
+type VenueEvent = {
+  id: number;
+  title: string;
+  start_date: string;
+  start_time: string | null;
+  is_all_day: boolean | null;
+  category: string | null;
+};
+
+async function fetchVenueEvents(
+  venueId: number,
+  baseUrl: string
+): Promise<VenueEvent[]> {
+  try {
+    const res = await fetch(
+      `${baseUrl}/api/places/${venueId}/events?limit=5`,
+      { next: { revalidate: 300 } }
+    );
+    if (!res.ok) return [];
+    const json = await res.json();
+    return (json.events ?? []) as VenueEvent[];
+  } catch {
+    return [];
+  }
+}
+
+function formatEventTime(startTime: string | null, isAllDay: boolean | null): string {
+  if (isAllDay) return "All day";
+  if (!startTime) return "";
+  const [h, m] = startTime.split(":").map(Number);
+  const date = new Date();
+  date.setHours(h, m, 0, 0);
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: m === 0 ? undefined : "2-digit",
+    hour12: true,
+  });
+}
+
+function formatEventDate(startDate: string): string {
+  const d = new Date(startDate + "T12:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -90,6 +135,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ExhibitionDetailPage({ params }: Props) {
   const { slug, portal: portalSlug } = await params;
+
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000");
+
   const [exhibition, portal] = await Promise.all([
     fetchExhibition(slug),
     getCachedPortalBySlug(portalSlug),
@@ -107,6 +159,18 @@ export default async function ExhibitionDetailPage({ params }: Props) {
   const dateRange = formatDateRange(exhibition.opening_date, exhibition.closing_date);
   const closingSoon = isClosingSoon(exhibition, 7);
   const currentlyShowing = isCurrentlyShowing(exhibition);
+
+  // Curators — find artists with role = "curator"
+  const curators = artists.filter((a) => a.role === "curator");
+
+  // Closing countdown (30-day window)
+  const daysLeft = exhibition.closing_date
+    ? Math.ceil(
+        (new Date(exhibition.closing_date).getTime() - Date.now()) /
+          (1000 * 60 * 60 * 24)
+      )
+    : null;
+  const showCountdown = daysLeft !== null && daysLeft > 0 && daysLeft <= 30;
 
   const typeLabel = exhibition.exhibition_type
     ? EXHIBITION_TYPE_LABELS[exhibition.exhibition_type]
@@ -145,6 +209,11 @@ export default async function ExhibitionDetailPage({ params }: Props) {
       : []),
   ];
 
+  // Fetch venue events in parallel if we have a venue
+  const venueEvents: VenueEvent[] = venue
+    ? await fetchVenueEvents(venue.id, baseUrl)
+    : [];
+
   return (
     <>
       <div className="min-h-screen">
@@ -182,7 +251,29 @@ export default async function ExhibitionDetailPage({ params }: Props) {
               {exhibition.title}
             </h1>
 
-            {/* Artists */}
+            {/* Curator credit — copper, below title, before artist list */}
+            {curators.length > 0 && (
+              <p className="font-[family-name:var(--font-ibm-plex-mono)] text-sm font-semibold text-[#C9874F] mt-0.5">
+                Curated by{" "}
+                {curators.map((curator, i) => (
+                  <span key={i}>
+                    {i > 0 && ", "}
+                    {curator.artist_id ? (
+                      <Link
+                        href={`/${activePortalSlug}?artist=${curator.artist_id}`}
+                        className="hover:underline"
+                      >
+                        {curator.artist_name}
+                      </Link>
+                    ) : (
+                      curator.artist_name
+                    )}
+                  </span>
+                ))}
+              </p>
+            )}
+
+            {/* Artists (non-curators) */}
             {artists.length > 0 && (
               <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1">
                 {artists.map((artist, i) => (
@@ -209,17 +300,24 @@ export default async function ExhibitionDetailPage({ params }: Props) {
               </div>
             )}
 
-            {/* Date range */}
-            <p
-              className={`font-[family-name:var(--font-ibm-plex-mono)] text-sm mt-1 ${
-                closingSoon
-                  ? "text-[var(--action-primary)]"
-                  : "text-[var(--muted)]"
-              }`}
-            >
-              {closingSoon && "Closing soon — "}
-              {dateRange}
-            </p>
+            {/* Date range + closing countdown badge */}
+            <div className="flex items-center gap-2 mt-1">
+              <p
+                className={`font-[family-name:var(--font-ibm-plex-mono)] text-sm ${
+                  closingSoon
+                    ? "text-[var(--action-primary)]"
+                    : "text-[var(--muted)]"
+                }`}
+              >
+                {closingSoon && "Closing soon — "}
+                {dateRange}
+              </p>
+              {showCountdown && (
+                <span className="rounded bg-[#FF5A5A1A] px-2 py-0.5 font-mono text-2xs font-medium text-[#FF5A5A]">
+                  Closes in {daysLeft} days
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Info card */}
@@ -236,6 +334,38 @@ export default async function ExhibitionDetailPage({ params }: Props) {
               </>
             )}
 
+            {/* Details grid — admission + medium info cards */}
+            {(admissionLabel || exhibition.medium) && (
+              <div className="flex gap-3 mb-6">
+                {admissionLabel && (
+                  <div className="flex-1 rounded-lg bg-[var(--dusk)] p-3.5">
+                    <p className="font-[family-name:var(--font-ibm-plex-mono)] text-2xs uppercase tracking-[0.12em] text-[var(--muted)] mb-1">
+                      Admission
+                    </p>
+                    <p
+                      className={`text-sm font-semibold ${
+                        exhibition.admission_type === "free"
+                          ? "text-[var(--neon-green)]"
+                          : "text-[var(--cream)]"
+                      }`}
+                    >
+                      {admissionLabel}
+                    </p>
+                  </div>
+                )}
+                {exhibition.medium && (
+                  <div className="flex-1 rounded-lg bg-[var(--dusk)] p-3.5">
+                    <p className="font-[family-name:var(--font-ibm-plex-mono)] text-2xs uppercase tracking-[0.12em] text-[var(--muted)] mb-1">
+                      Medium
+                    </p>
+                    <p className="text-sm font-semibold text-[var(--cream)]">
+                      {exhibition.medium}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Tags / medium pills */}
             {exhibition.tags && exhibition.tags.length > 0 && (
               <>
@@ -249,6 +379,51 @@ export default async function ExhibitionDetailPage({ params }: Props) {
                       {tag.replace(/_/g, " ")}
                     </span>
                   ))}
+                </div>
+              </>
+            )}
+
+            {/* Related events at this venue */}
+            {venueEvents.length > 0 && venue && (
+              <>
+                <SectionHeader title={`Also at ${venue.name}`} />
+                <div className="space-y-2 mb-6">
+                  {venueEvents.map((event) => {
+                    const timeStr = formatEventTime(event.start_time, event.is_all_day);
+                    const dateStr = formatEventDate(event.start_date);
+                    const isFreeAdmission =
+                      exhibition.admission_type === "free" || exhibition.admission_type === "donation";
+                    return (
+                      <Link
+                        key={event.id}
+                        href={`/${activePortalSlug}/events/${event.id}`}
+                        className="group flex items-stretch gap-0 rounded-lg overflow-hidden border border-[var(--twilight)] border-l-[2px] border-l-[#C9874F] hover:border-[var(--soft)] transition-colors bg-[var(--dusk)]/40"
+                      >
+                        {/* Time block */}
+                        <div className="flex flex-col items-center justify-center px-3 py-2.5 min-w-[60px] bg-[#C9874F]/10 border-r border-[var(--twilight)]">
+                          <span className="font-[family-name:var(--font-ibm-plex-mono)] text-xs font-bold text-[#C9874F] leading-tight tabular-nums">
+                            {dateStr}
+                          </span>
+                          {timeStr && (
+                            <span className="font-[family-name:var(--font-ibm-plex-mono)] text-2xs text-[var(--muted)] leading-tight mt-0.5">
+                              {timeStr}
+                            </span>
+                          )}
+                        </div>
+                        {/* Content */}
+                        <div className="flex-1 px-3 py-2.5 min-w-0">
+                          <p className="font-[family-name:var(--font-ibm-plex-mono)] text-sm font-medium text-[var(--cream)] group-hover:text-[#C9874F] transition-colors leading-snug line-clamp-2">
+                            {event.title}
+                          </p>
+                          {isFreeAdmission && (
+                            <p className="font-[family-name:var(--font-ibm-plex-mono)] text-2xs text-[var(--neon-green)] mt-0.5">
+                              Free with admission
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               </>
             )}
@@ -294,6 +469,17 @@ export default async function ExhibitionDetailPage({ params }: Props) {
                   </Link>
                 </div>
               </>
+            )}
+
+            {/* Plan My Visit CTA */}
+            {venue && (
+              <Link
+                href={`/${activePortalSlug}?spot=${venue.slug}`}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#C9874F] px-4 py-3 font-[family-name:var(--font-ibm-plex-mono)] text-sm font-semibold text-[var(--void)] transition-opacity hover:opacity-90 mb-4"
+              >
+                <Ticket size={16} weight="bold" aria-hidden="true" />
+                Plan My Visit
+              </Link>
             )}
 
             {/* Source link */}
