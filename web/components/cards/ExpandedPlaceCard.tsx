@@ -6,6 +6,12 @@ import {
   Star,
   FrameCorners,
   MapPin,
+  Palette,
+  ForkKnife,
+  MoonStars,
+  Tree,
+  MusicNotes,
+  Ticket,
 } from "@phosphor-icons/react";
 import type { DiscoveryPlaceEntity, VerticalLane } from "@/lib/types/discovery";
 import { LANE_CONFIG } from "@/lib/types/discovery";
@@ -219,6 +225,19 @@ function DefaultDescription({ description }: DefaultDescriptionProps) {
 }
 
 // -------------------------------------------------------------------------
+// Fallback icon map — used when hero image fails to load
+// -------------------------------------------------------------------------
+
+const FALLBACK_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>> = {
+  arts: Palette,
+  dining: ForkKnife,
+  nightlife: MoonStars,
+  outdoors: Tree,
+  music: MusicNotes,
+  entertainment: Ticket,
+};
+
+// -------------------------------------------------------------------------
 // ExpandedPlaceCard
 // -------------------------------------------------------------------------
 
@@ -241,6 +260,7 @@ export const ExpandedPlaceCard = memo(function ExpandedPlaceCard({
   const distance = formatDistance(entity.distance_km);
   const closeTime = formatCloseTime(entity.closes_at);
   const typeBadge = getTypeBadgeLabel(entity.place_type);
+  const FallbackIcon = FALLBACK_ICONS[lane] ?? Ticket;
 
   return (
     <Link
@@ -249,23 +269,21 @@ export const ExpandedPlaceCard = memo(function ExpandedPlaceCard({
     >
       {/* Hero image frame — 140px height */}
       <div className="relative h-[140px] w-full overflow-hidden bg-[var(--dusk)]">
-        {entity.image_url ? (
-          <SmartImage
-            src={entity.image_url}
-            alt={entity.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 600px"
-          />
-        ) : (
-          /* Placeholder gradient when no image */
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `linear-gradient(135deg, ${accentColor}20 0%, var(--dusk) 100%)`,
-            }}
-          />
-        )}
+        <SmartImage
+          src={entity.image_url ?? ""}
+          alt={entity.name}
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 600px"
+          fallback={
+            <div
+              className="flex h-full w-full items-center justify-center"
+              style={{ background: `linear-gradient(135deg, ${accentColor}20 0%, var(--dusk) 100%)` }}
+            >
+              <FallbackIcon size={48} className="text-[var(--muted)]" style={{ opacity: 0.3 }} />
+            </div>
+          }
+        />
 
         {/* Bottom gradient overlay */}
         <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />

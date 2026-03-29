@@ -14,6 +14,7 @@ import {
 } from "@phosphor-icons/react";
 import type { VerticalLane } from "@/lib/types/discovery";
 import { LANE_CONFIG } from "@/lib/types/discovery";
+import { useWeather } from "@/lib/hooks/useWeather";
 
 // -------------------------------------------------------------------------
 // Lane icon map (mirrors LanePreviewSection)
@@ -50,6 +51,7 @@ const LANE_ORDER: VerticalLane[] = [
 // -------------------------------------------------------------------------
 
 function ContextBlock() {
+  const weather = useWeather();
   const now = new Date();
   const dateLabel = now.toLocaleDateString("en-US", {
     weekday: "long",
@@ -60,7 +62,11 @@ function ContextBlock() {
   return (
     <div className="border-t border-[var(--twilight)] pt-4 space-y-1">
       <p className="font-mono text-xs font-bold text-[var(--cream)]">{dateLabel}</p>
-      <p className="text-xs text-[var(--muted)]">72°F · Clear · Atlanta</p>
+      {!weather.loading && weather.temp > 0 && (
+        <p className="text-xs text-[var(--muted)]">
+          {Math.round(weather.temp)}°F · {weather.condition} · Atlanta
+        </p>
+      )}
     </div>
   );
 }

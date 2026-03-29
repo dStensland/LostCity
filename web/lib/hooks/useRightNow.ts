@@ -38,7 +38,15 @@ export function useRightNow(
         });
         if (!res.ok) throw new Error(`right-now: ${res.status}`);
         const data = (await res.json()) as DiscoveryEntity[];
-        setItems(data);
+        // Deduplicate events by name — keep first occurrence (closest in time)
+        const seen = new Set<string>();
+        const deduped = data.filter((item: DiscoveryEntity) => {
+          const key = item.name.toLowerCase().trim();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setItems(deduped);
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
         console.error("[useRightNow] fetch error:", err);
