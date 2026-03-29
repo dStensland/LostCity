@@ -79,5 +79,28 @@ export function normalizeFinURLParams(params: URLSearchParams): URLSearchParams 
     result.delete("type");
   }
 
+  // Lane → tool redirects: ?view=find&lane=X → existing tool URL + from=find
+  if (result.get("view") === "find" && result.has("lane")) {
+    const lane = result.get("lane")!;
+    const LANE_REDIRECTS: Record<string, { view: string; tab?: string; content?: string; vertical?: string; venue_type?: string }> = {
+      dining: { view: "places", tab: "eat-drink" },
+      nightlife: { view: "places", tab: "nightlife" },
+      arts: { view: "places", tab: "things-to-do", venue_type: "museum,gallery,arts_center,theater" },
+      outdoors: { view: "places", tab: "things-to-do", venue_type: "park,trail,recreation,viewpoint,landmark" },
+      music: { view: "happening", content: "showtimes", vertical: "music" },
+      entertainment: { view: "places", tab: "things-to-do", venue_type: "arcade,attraction,entertainment,escape_room,bowling,zoo,aquarium,cinema" },
+    };
+    const redirect = LANE_REDIRECTS[lane];
+    if (redirect) {
+      result.set("view", redirect.view);
+      result.delete("lane");
+      if (redirect.tab) result.set("tab", redirect.tab);
+      if (redirect.content) result.set("content", redirect.content);
+      if (redirect.vertical) result.set("vertical", redirect.vertical);
+      if (redirect.venue_type) result.set("venue_type", redirect.venue_type);
+      result.set("from", "find");
+    }
+  }
+
   return result;
 }
