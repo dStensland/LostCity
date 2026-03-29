@@ -62,6 +62,7 @@ export function SceneEventRow({
   const dayStr = event.start_date
     ? new Date(event.start_date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short" })
     : null;
+  const recurrenceLabel = event.recurrence_label;
 
   return (
     <Link
