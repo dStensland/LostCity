@@ -34,6 +34,7 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<LogEntry | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [activeDirector, setActiveDirector] = useState<string | null>(null);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
@@ -47,10 +48,29 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
       .catch(() => {});
   }, [isAuthenticated]);
 
+  // Directors with 2+ movies in the current year
+  const directors = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const e of entries) {
+      const d = e.movie.director;
+      if (d) counts.set(d, (counts.get(d) || 0) + 1);
+    }
+    return [...counts.entries()]
+      .filter(([, count]) => count >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count }));
+  }, [entries]);
+
   const filteredEntries = useMemo(() => {
-    if (!activeTag) return entries;
-    return entries.filter((e) => e.tags.some((t) => t.name === activeTag));
-  }, [entries, activeTag]);
+    let result = entries;
+    if (activeTag) {
+      result = result.filter((e) => e.tags.some((t) => t.name === activeTag));
+    }
+    if (activeDirector) {
+      result = result.filter((e) => e.movie.director === activeDirector);
+    }
+    return result;
+  }, [entries, activeTag, activeDirector]);
 
   const swapEntries = useCallback(
     async (indexA: number, indexB: number) => {
@@ -121,6 +141,7 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
             <p className="text-2xs text-zinc-500 font-mono mt-1 tracking-widest uppercase">
               {filteredEntries.length} movie{filteredEntries.length !== 1 ? "s" : ""} ranked in {year}
               {activeTag && <span className="text-amber-500/70"> · #{activeTag}</span>}
+              {activeDirector && <span className="text-amber-500/70"> · {activeDirector}</span>}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -154,6 +175,7 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
                 onClick={() => {
                   setYear(y);
                   setActiveTag(null);
+                  setActiveDirector(null);
                 }}
                 className={`flex-shrink-0 px-3 py-1 font-mono text-2xs font-bold tracking-wider uppercase
                   border transition-all duration-200 ${
@@ -183,6 +205,27 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
                     }}
                   >
                     {tag.name}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {directors.length > 0 && (
+            <>
+              <div className="w-px h-4 bg-zinc-800 flex-shrink-0" />
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+                {directors.map(({ name, count }) => (
+                  <button
+                    key={name}
+                    onClick={() => setActiveDirector(activeDirector === name ? null : name)}
+                    className={`flex-shrink-0 px-2 py-0.5 font-mono text-2xs font-medium
+                      border transition-all duration-200 ${
+                        activeDirector === name
+                          ? "bg-violet-500/15 border-violet-500/40 text-violet-400"
+                          : "border-zinc-800 text-zinc-600 hover:text-zinc-400 hover:border-zinc-700"
+                      }`}
+                  >
+                    {name} [{count}]
                   </button>
                 ))}
               </div>
