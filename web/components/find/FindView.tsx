@@ -12,6 +12,7 @@
  */
 
 import { memo, Suspense, lazy } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import type { VerticalLane } from "@/lib/types/discovery";
@@ -21,6 +22,12 @@ import { LanePreviewSection } from "./LanePreviewSection";
 
 // Lazy-load RegularsView — only needed for ?regulars=true
 const RegularsView = lazy(() => import("./RegularsView"));
+
+// Lazy-load LaneView — only needed when ?lane= is present
+const LaneView = dynamic(
+  () => import("./LaneView").then((m) => ({ default: m.LaneView })),
+  { ssr: false },
+);
 
 // -------------------------------------------------------------------------
 // Default lane order + portal vertical → primary lane mapping
@@ -91,15 +98,10 @@ export default memo(function FindView({
     );
   }
 
-  // ── Lane drill-in (Task 4 placeholder) ────────────────────────────────
+  // ── Lane drill-in ──────────────────────────────────────────────────────
   if (laneParam && laneParam in LANE_CONFIG) {
-    const config = LANE_CONFIG[laneParam];
     return (
-      <div className="py-8 text-center">
-        <p className="font-mono text-sm text-[var(--muted)]">
-          {config.label} — full lane view coming soon
-        </p>
-      </div>
+      <LaneView lane={laneParam} portalSlug={portalSlug} />
     );
   }
 
