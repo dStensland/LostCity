@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getPortalBySlug } from "@/lib/portal";
+import { isOpenAt, type HoursData } from "@/lib/hours";
 
 export interface RightNowItem {
   entity_type: "event" | "place";
@@ -155,7 +156,18 @@ function buildSpotlightReason(hourEt: number): string {
   if (hourEt < 11) return "Open now and worth a visit";
   if (hourEt < 15) return "Explore this afternoon";
   if (hourEt < 20) return "Tonight's best spots";
-  return "Weekend picks";
+  return "Late night picks";
+}
+
+/**
+ * Returns category priority order based on time of day.
+ * Categories earlier in the list are preferred for spotlight slots.
+ */
+function getTimePriority(hourEt: number): string[] {
+  if (hourEt < 11) return ["outdoors", "dining", "arts", "entertainment", "music", "nightlife"];
+  if (hourEt < 15) return ["arts", "dining", "outdoors", "entertainment", "music", "nightlife"];
+  if (hourEt < 20) return ["nightlife", "dining", "music", "arts", "entertainment", "outdoors"];
+  return ["nightlife", "music", "dining", "entertainment", "arts", "outdoors"];
 }
 
 // ---------------------------------------------------------------------------
@@ -192,51 +204,50 @@ export async function getServerFindData(
 
     // -----------------------------------------------------------------------
     // Phase 1: right-now feed + pulse counts (parallel)
+    // 7 queries: 1 RPC + 6 category count queries (head:true — no row data)
     // -----------------------------------------------------------------------
 
-    const [rightNowResult, pulseResult] = await Promise.all([
+    const categoryEntries = Object.entries(CATEGORY_MAP);
+
+    const [rightNowResult, ...pulseCountResults] = await Promise.all([
       supabase.rpc("get_right_now_feed", {
         p_portal_id: portal?.id ?? null,
         p_city: city,
         p_limit: 6,
       } as never),
 
-      supabase
-        .from("places")
-        .select("place_type")
-        .neq("is_active", false)
-        .ilike("city", `${city}%`),
+      // 6 parallel count queries — head:true returns only the count, no rows
+      ...categoryEntries.map(([, cfg]) =>
+        supabase
+          .from("places")
+          .select("id", { count: "exact", head: true })
+          .neq("is_active", false)
+          .ilike("city", `${city}%`)
+          .in("place_type", cfg.types)
+      ),
     ]);
 
     const rightNow: RightNowItem[] = rightNowResult.data ?? [];
 
-    // Aggregate place_type counts into category buckets
-    const typeCounts: Record<string, number> = {};
-    for (const row of pulseResult.data ?? []) {
-      const pt = (row as { place_type: string | null }).place_type;
-      if (pt) typeCounts[pt] = (typeCounts[pt] ?? 0) + 1;
-    }
-
-    // Roll up type counts into category counts
-    const categoryCounts: Record<string, number> = {};
-    for (const [cat, cfg] of Object.entries(CATEGORY_MAP)) {
-      categoryCounts[cat] = cfg.types.reduce(
-        (sum, t) => sum + (typeCounts[t] ?? 0),
-        0
-      );
-    }
-
-    // Build pulse array (all categories, ordered by count desc)
-    const pulse: CategoryPulse[] = Object.entries(CATEGORY_MAP)
-      .map(([cat, cfg]) => ({
+    // Build pulse array from count results, sorted by time-of-day priority
+    const timePriority = getTimePriority(hourEt);
+    const pulse: CategoryPulse[] = categoryEntries
+      .map(([cat, cfg], idx) => ({
         category: cat,
         label: cfg.label,
-        count: categoryCounts[cat] ?? 0,
+        count: pulseCountResults[idx]?.count ?? 0,
         icon: cfg.icon,
         color: cfg.color,
         href: cfg.href,
       }))
-      .sort((a, b) => b.count - a.count);
+      .sort((a, b) => {
+        // Primary: time-of-day priority (lower index = higher priority)
+        const aPriority = timePriority.indexOf(a.category);
+        const bPriority = timePriority.indexOf(b.category);
+        if (aPriority !== bPriority) return aPriority - bPriority;
+        // Secondary: count
+        return b.count - a.count;
+      });
 
     // -----------------------------------------------------------------------
     // Phase 2: spotlight queries for top 3 qualifying categories (parallel)
@@ -244,31 +255,43 @@ export async function getServerFindData(
 
     const SPOTLIGHT_MIN = 3;
 
-    const spotlightCandidates = pulse
-      .filter((p) => p.count >= SPOTLIGHT_MIN)
-      .slice(0, 3);
+    // Pick top 3 categories meeting the min threshold (already sorted by time priority)
+    const spotlightCandidates = pulse.filter((p) => p.count >= SPOTLIGHT_MIN);
 
-    // If fewer than 3 candidates with data, pad with top categories by order
-    // (global fallback — still queries; just may return fewer items)
-    const spotlightCategories =
-      spotlightCandidates.length >= 1
-        ? spotlightCandidates
-        : pulse.slice(0, 3);
+    // If fewer than 3 qualify, pad from the full pulse list (preserving time priority order)
+    const spotlightCategories: CategoryPulse[] = [];
+    const used = new Set<string>();
+    for (const cat of spotlightCandidates) {
+      if (spotlightCategories.length >= 3) break;
+      spotlightCategories.push(cat);
+      used.add(cat.category);
+    }
+    // Pad from full pulse if needed
+    if (spotlightCategories.length < 3) {
+      for (const cat of pulse) {
+        if (spotlightCategories.length >= 3) break;
+        if (!used.has(cat.category)) {
+          spotlightCategories.push(cat);
+          used.add(cat.category);
+        }
+      }
+    }
 
+    // Spotlight queries include hours for is_open computation
+    const now = new Date();
     const spotlightResults = await Promise.all(
       spotlightCategories.map(async (cat) => {
         const types = CATEGORY_MAP[cat.category]?.types ?? [];
-        const result = await supabase
+        return supabase
           .from("places")
           .select(
-            "id, name, slug, image_url, place_type, neighborhood, short_description, price_level, vibes"
+            "id, name, slug, image_url, place_type, neighborhood, short_description, price_level, vibes, hours"
           )
           .neq("is_active", false)
           .ilike("city", `${city}%`)
           .in("place_type", types)
           .order("name")
           .limit(3);
-        return result;
       })
     );
 
@@ -284,22 +307,28 @@ export async function getServerFindData(
           short_description: string | null;
           price_level: number | null;
           vibes: string[] | null;
+          hours: HoursData | null;
         }>;
 
         if (rows.length === 0) return null;
 
-        const items: SpotlightItem[] = rows.map((row) => ({
-          entity_type: "place" as const,
-          id: row.id,
-          name: row.name,
-          slug: row.slug,
-          image_url: row.image_url,
-          place_type: row.place_type,
-          neighborhood: row.neighborhood,
-          short_description: row.short_description,
-          price_level: row.price_level,
-          vibes: row.vibes ?? undefined,
-        }));
+        const items: SpotlightItem[] = rows.map((row) => {
+          const openStatus = isOpenAt(row.hours, now);
+          return {
+            entity_type: "place" as const,
+            id: row.id,
+            name: row.name,
+            slug: row.slug,
+            image_url: row.image_url,
+            place_type: row.place_type,
+            neighborhood: row.neighborhood,
+            short_description: row.short_description,
+            price_level: row.price_level,
+            vibes: row.vibes ?? undefined,
+            is_open: openStatus.isOpen,
+            closes_at: openStatus.closesAt ?? null,
+          };
+        });
 
         return {
           category: cat.category,
