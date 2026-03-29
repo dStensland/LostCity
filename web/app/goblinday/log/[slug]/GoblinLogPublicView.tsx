@@ -57,19 +57,43 @@ export default function GoblinLogPublicView({ user, entries, tags, year }: Props
     if (!ctx) return;
 
     let animId: number;
-    let time = 0;
+    let t = 0;
+    let sY = 0;
 
-    // Star field
-    const stars: { x: number; y: number; speed: number; size: number; hue: number }[] = [];
-    for (let i = 0; i < 80; i++) {
-      stars.push({
-        x: Math.random(),
-        y: Math.random(),
-        speed: 0.0002 + Math.random() * 0.0008,
-        size: 0.3 + Math.random() * 1.2,
-        hue: Math.random() > 0.5 ? 185 : 320, // cyan or fuchsia
-      });
+    // === Simplex-like noise (fast 2D hash-based) ===
+    const perm = new Uint8Array(512);
+    for (let i = 0; i < 256; i++) perm[i] = i;
+    for (let i = 255; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [perm[i], perm[j]] = [perm[j], perm[i]];
     }
+    for (let i = 0; i < 256; i++) perm[i + 256] = perm[i];
+
+    const fade = (n: number) => n * n * n * (n * (n * 6 - 15) + 10);
+    const lerp = (a: number, b: number, n: number) => a + n * (b - a);
+    const grad2 = (hash: number, x: number, y: number) => {
+      const h = hash & 3;
+      return (h === 0 ? x + y : h === 1 ? -x + y : h === 2 ? x - y : -x - y);
+    };
+    const noise2d = (x: number, y: number) => {
+      const xi = Math.floor(x) & 255, yi = Math.floor(y) & 255;
+      const xf = x - Math.floor(x), yf = y - Math.floor(y);
+      const u = fade(xf), v = fade(yf);
+      const aa = perm[perm[xi] + yi], ab = perm[perm[xi] + yi + 1];
+      const ba = perm[perm[xi + 1] + yi], bb = perm[perm[xi + 1] + yi + 1];
+      return lerp(lerp(grad2(aa, xf, yf), grad2(ba, xf - 1, yf), u),
+                  lerp(grad2(ab, xf, yf - 1), grad2(bb, xf - 1, yf - 1), u), v);
+    };
+
+    // Ring parameters
+    const NUM_RINGS = 65;
+    const CHAOS = 1.5;
+    const ox = Math.random() * 100;
+    const oy_init = Math.random() * 100;
+    let oy_offset = 0;
+
+    const onScroll = () => { sY = window.scrollY; };
+    window.addEventListener("scroll", onScroll, { passive: true });
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -81,143 +105,71 @@ export default function GoblinLogPublicView({ user, entries, tags, year }: Props
     const draw = () => {
       const W = canvas.width;
       const H = canvas.height;
+
+      // Full clear each frame (no trails — cleaner)
       ctx.clearRect(0, 0, W, H);
 
-      // Focal point: upper-left area where the title sits
-      const cx = W * 0.28;
-      const cy = H * 0.15;
-      const maxR = Math.max(W, H) * 1.2;
+      // Center point — behind the username, fixed position (no parallax)
+      const cx = W * 0.38;
+      const cy = H * 0.3;
 
-      // === Ambient glow behind the header ===
-      const ambient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 350);
-      ambient.addColorStop(0, "rgba(0, 240, 255, 0.06)");
-      ambient.addColorStop(0.4, "rgba(255, 0, 170, 0.03)");
-      ambient.addColorStop(1, "transparent");
-      ctx.fillStyle = ambient;
-      ctx.fillRect(0, 0, W, H);
+      oy_offset -= 0.015;
 
-      // === Concentric rings pulsing outward from header ===
-      const numRings = 6;
-      for (let i = 0; i < numRings; i++) {
-        const baseR = ((time * 0.4 + i * (maxR / numRings)) % maxR);
-        const alpha = 0.12 * (1 - baseR / maxR);
-        if (alpha <= 0) continue;
+      // Draw trunk rings — concentric, noise-distorted
+      for (let ring = 0; ring < NUM_RINGS; ring++) {
+        const baseR = ring * 7 + 20;
+        const noiseScale = 0.02;
 
         ctx.beginPath();
-        ctx.arc(cx, cy, baseR, 0, Math.PI * 2);
-        ctx.strokeStyle = i % 2 === 0
-          ? `rgba(0, 240, 255, ${alpha})`
-          : `rgba(255, 0, 170, ${alpha * 0.7})`;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
+        for (let angle = 0; angle <= 360; angle += 2) {
+          const rad = (angle * Math.PI) / 180;
+          const nx = Math.cos(rad) * noiseScale * ring + ox;
+          const ny = Math.sin(rad) * noiseScale * ring + oy_init + oy_offset;
+          const n = noise2d(nx, ny);
+          const r = baseR + CHAOS * n * 25;
 
-      // === Radial laser lines from focal point ===
-      const numRays = 36;
-      for (let i = 0; i < numRays; i++) {
-        const angle = (i / numRays) * Math.PI * 2 + time * 0.001;
-        const length = maxR;
-        const endX = cx + Math.cos(angle) * length;
-        const endY = cy + Math.sin(angle) * length;
+          const x = cx + Math.cos(rad) * r;
+          const y = cy + Math.sin(rad) * r;
 
-        const isMajor = i % 6 === 0;
-        const alpha = isMajor ? 0.04 : 0.012;
-
-        // Fade out rays with a gradient so they're strongest near center
-        const grad = ctx.createLinearGradient(cx, cy, endX, endY);
-        grad.addColorStop(0, i % 3 === 0
-          ? `rgba(255, 0, 170, ${alpha * 2})`
-          : `rgba(0, 240, 255, ${alpha * 2})`);
-        grad.addColorStop(0.3, i % 3 === 0
-          ? `rgba(255, 0, 170, ${alpha})`
-          : `rgba(0, 240, 255, ${alpha})`);
-        grad.addColorStop(1, "transparent");
-
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.lineTo(endX, endY);
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = isMajor ? 0.6 : 0.3;
-        ctx.stroke();
-      }
-
-      // === Perspective grid (lower portion — below content) ===
-      const horizon = H * 0.7;
-      const gridVanish = W * 0.5;
-      const gridOffset = time * 0.6;
-      const gridLines = 20;
-      const gridSpacing = 50;
-
-      for (let i = 0; i < gridLines; i++) {
-        const t = ((i * gridSpacing + gridOffset) % (gridLines * gridSpacing)) / (gridLines * gridSpacing);
-        const y = horizon + (H - horizon) * (t * t);
-        const alpha = t * 0.35;
-
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(W, y);
-        ctx.strokeStyle = `rgba(0, 240, 255, ${alpha})`;
-        ctx.lineWidth = 0.5 + t * 1.5;
-        ctx.stroke();
-      }
-
-      // Vertical converging lines
-      for (let i = -12; i <= 12; i++) {
-        const bottomX = gridVanish + i * 100;
-        const dist = Math.abs(i) / 12;
-        const alpha = 0.2 * (1 - dist * 0.6);
-
-        ctx.beginPath();
-        ctx.moveTo(gridVanish, horizon);
-        ctx.lineTo(bottomX, H);
-        ctx.strokeStyle = `rgba(0, 240, 255, ${alpha})`;
-        ctx.lineWidth = 0.5;
-        ctx.stroke();
-      }
-
-      // Horizon glow line
-      ctx.beginPath();
-      ctx.moveTo(0, horizon);
-      ctx.lineTo(W, horizon);
-      const hGrad = ctx.createLinearGradient(0, 0, W, 0);
-      hGrad.addColorStop(0, "transparent");
-      hGrad.addColorStop(0.3, "rgba(0, 240, 255, 0.25)");
-      hGrad.addColorStop(0.5, "rgba(255, 0, 170, 0.4)");
-      hGrad.addColorStop(0.7, "rgba(0, 240, 255, 0.25)");
-      hGrad.addColorStop(1, "transparent");
-      ctx.strokeStyle = hGrad;
-      ctx.lineWidth = 1.5;
-      ctx.shadowColor = "rgba(255, 0, 170, 0.25)";
-      ctx.shadowBlur = 12;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // === Drifting stars ===
-      for (const star of stars) {
-        // Move outward from focal point
-        star.x += (star.x - cx / W) * star.speed;
-        star.y += (star.y - cy / H) * star.speed;
-
-        // Wrap
-        if (star.x < -0.1 || star.x > 1.1 || star.y < -0.1 || star.y > 1.1) {
-          star.x = cx / W + (Math.random() - 0.5) * 0.1;
-          star.y = cy / H + (Math.random() - 0.5) * 0.1;
+          if (angle === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         }
+        ctx.closePath();
 
-        const sx = star.x * W;
-        const sy = star.y * H;
-        const dist = Math.hypot(sx - cx, sy - cy) / maxR;
-        const alpha = 0.15 + dist * 0.4;
+        // Color: inner rings are fuchsia, outer rings fade to cyan
+        const ringT = ring / NUM_RINGS;
+        const cr = Math.floor(lerp(180, 0, ringT));
+        const cg = Math.floor(lerp(0, 200, ringT));
+        const cb = Math.floor(lerp(120, 255, ringT));
+        const alpha = 0.4 - ringT * 0.25;
 
-        ctx.beginPath();
-        ctx.arc(sx, sy, star.size, 0, Math.PI * 2);
-        ctx.fillStyle = star.hue === 185
-          ? `rgba(0, 240, 255, ${alpha})`
-          : `rgba(255, 0, 170, ${alpha})`;
-        ctx.fill();
+        ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, ${Math.max(alpha, 0.05)})`;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
       }
 
-      time += 1;
+      // === Glow rings radiating from trunk center — rippling pond ===
+      const numGlowRings = 5;
+      const maxGlowR = Math.max(W, H) * 0.8;
+      for (let i = 0; i < numGlowRings; i++) {
+        const baseR = ((t * 0.8 + i * (maxGlowR / numGlowRings)) % maxGlowR);
+        const ringAlpha = 0.07 * (1 - baseR / maxGlowR);
+        if (ringAlpha <= 0.005) continue;
+
+        const isCyan = i % 2 === 0;
+        const color = isCyan ? "0, 240, 255" : "220, 0, 140";
+
+        // Soft glow ring — thick line with radial fade
+        const grad = ctx.createRadialGradient(cx, cy, Math.max(baseR - 30, 0), cx, cy, baseR + 30);
+        grad.addColorStop(0, `rgba(${color}, 0)`);
+        grad.addColorStop(0.4, `rgba(${color}, ${ringAlpha})`);
+        grad.addColorStop(0.6, `rgba(${color}, ${ringAlpha})`);
+        grad.addColorStop(1, `rgba(${color}, 0)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      t += 1;
       animId = requestAnimationFrame(draw);
     };
 
@@ -225,6 +177,7 @@ export default function GoblinLogPublicView({ user, entries, tags, year }: Props
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener("resize", resize);
+      window.removeEventListener("scroll", onScroll);
     };
   }, []);
 
@@ -236,14 +189,25 @@ export default function GoblinLogPublicView({ user, entries, tags, year }: Props
         className="fixed inset-0 pointer-events-none z-0"
       />
 
+      {/* Vignette — between canvas and content for readability */}
+      <div className="fixed inset-0 pointer-events-none z-[1]"
+        style={{
+          background: "radial-gradient(ellipse 65% 55% at 38% 30%, transparent 0%, transparent 40%, rgba(0,0,0,0.35) 75%, rgba(0,0,0,0.5) 100%)",
+        }} />
+
       {/* Top laser line */}
       <div className="h-px w-full relative z-10"
-        style={{ background: "linear-gradient(to right, transparent, rgba(0,240,255,0.6), rgba(255,0,170,0.6), transparent)" }} />
+        style={{
+          background: "linear-gradient(to right, transparent 5%, rgba(0,240,255,0.8) 35%, rgba(220,0,140,0.8) 65%, transparent 95%)",
+          boxShadow: "0 0 8px rgba(0,240,255,0.4), 0 0 16px rgba(0,240,255,0.15)",
+        }} />
 
-      <div className="max-w-3xl mx-auto px-4 py-12 sm:py-20 relative z-10">
-        {/* Header */}
-        <div className="mb-10 pb-6"
-          style={{ borderBottom: "1px solid rgba(0,240,255,0.15)" }}>
+      <div className="max-w-2xl mx-auto px-4 py-12 sm:py-20 relative z-10">
+        {/* Header — glassmorphic panel */}
+        <div className="mb-10 pb-6 px-6 pt-6 rounded-lg
+          bg-white/[0.04] backdrop-blur-xl
+          border border-white/[0.12]
+          shadow-[0_0_0_1px_rgba(0,240,255,0.06),0_8px_32px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.06)]">
           <div className="flex items-end gap-4">
             {user.avatarUrl && (
               <div className="relative">
@@ -256,12 +220,12 @@ export default function GoblinLogPublicView({ user, entries, tags, year }: Props
               </div>
             )}
             <div>
-              <p className="text-2xs text-cyan-700 tracking-[0.4em] uppercase mb-1.5"
-                style={{ textShadow: "0 0 10px rgba(0,240,255,0.2)" }}>
+              <p className="text-2xs text-cyan-700/80 tracking-[0.5em] uppercase mb-1.5 font-mono"
+                style={{ textShadow: "0 0 6px rgba(0,240,255,0.2)" }}>
                 Film Log
               </p>
               <h1 className="text-3xl sm:text-5xl font-black text-white uppercase tracking-[0.15em] leading-none"
-                style={{ textShadow: "0 0 40px rgba(0,240,255,0.15), 0 0 80px rgba(0,240,255,0.05)" }}>
+                style={{ textShadow: "0 0 2px rgba(0,240,255,0.6), 0 0 20px rgba(0,240,255,0.35), 0 0 60px rgba(0,240,255,0.12)" }}>
                 {user.displayName || user.username}
               </h1>
             </div>
@@ -349,7 +313,7 @@ export default function GoblinLogPublicView({ user, entries, tags, year }: Props
 
         {/* List */}
         {filteredEntries.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {filteredEntries.map((entry, i) => (
               <GoblinLogEntryCard
                 key={entry.id}
@@ -372,13 +336,13 @@ export default function GoblinLogPublicView({ user, entries, tags, year }: Props
 
         {/* Footer */}
         <div className="mt-20 pt-6 flex items-center justify-between"
-          style={{ borderTop: "1px solid rgba(0,240,255,0.1)" }}>
+          style={{ borderTop: "1px solid rgba(0,240,255,0.15)", boxShadow: "0 -1px 0 0 rgba(0,240,255,0.04)" }}>
           <a href="/goblinday"
-            className="text-2xs text-zinc-700 font-mono tracking-[0.2em] uppercase
-              hover:text-cyan-500 transition-colors">
+            className="text-2xs text-cyan-700 font-mono tracking-[0.2em] uppercase
+              hover:text-cyan-400 transition-colors">
             Goblin Day
           </a>
-          <span className="text-2xs text-zinc-800 font-mono tracking-[0.15em]">
+          <span className="text-2xs text-zinc-600 font-mono tracking-[0.15em]">
             Lost City
           </span>
         </div>

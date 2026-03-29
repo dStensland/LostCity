@@ -25,7 +25,7 @@ interface Props {
 const RANK_NEON = {
   hero: { color: "#00f0ff", glow: "0 0 10px rgba(0,240,255,0.4), 0 0 30px rgba(0,240,255,0.15)" },
   mid: { color: "#ff00aa", glow: "0 0 8px rgba(255,0,170,0.3), 0 0 20px rgba(255,0,170,0.1)" },
-  rest: { color: "#3f3f46", glow: "none" },
+  rest: { color: "#52525b", glow: "none" },
 };
 
 export default function GoblinLogEntryCard({
@@ -66,14 +66,13 @@ export default function GoblinLogEntryCard({
         hover:border-zinc-700/60`}
       style={{
         animationDelay: `${Math.min(rank, 15) * 50}ms`,
-        // Neon left border
         borderLeft: `2px solid ${tier.color}`,
-        // Subtle glow on hover
-      }}
+        '--card-neon': tier.color,
+      } as React.CSSProperties}
     >
       {/* Rank column */}
       <div className={`relative flex flex-col items-center justify-center flex-shrink-0
-        ${isHero ? "w-14 sm:w-16" : "w-11 sm:w-13"}`}>
+        ${isHero ? "w-14 sm:w-16" : "w-11 sm:w-14"}`}>
         {!readOnly && onMoveUp && !isFirst && (
           <button onClick={onMoveUp}
             className="text-zinc-700 hover:text-cyan-400 text-2xs transition-colors
@@ -199,11 +198,14 @@ export default function GoblinLogEntryCard({
                 </span>
               )}
               {movie.tmdb_vote_average != null && (
-                <span className={`font-bold ${
-                  movie.tmdb_vote_average >= 7 ? "text-amber-400"
-                    : movie.tmdb_vote_average >= 5 ? "text-zinc-500" : "text-zinc-700"
+                <span className={`px-1.5 py-0.5 border ${
+                  movie.tmdb_vote_average >= 7
+                    ? "text-amber-300 border-amber-800/40 bg-amber-950/20"
+                    : movie.tmdb_vote_average >= 5
+                      ? "text-amber-600/70 border-amber-900/20 bg-amber-950/10"
+                      : "text-zinc-600 border-zinc-800/50 bg-zinc-950/30"
                 }`}>
-                  {movie.tmdb_vote_average.toFixed(1)}
+                  {movie.tmdb_vote_average.toFixed(1)} TMDB
                 </span>
               )}
             </div>

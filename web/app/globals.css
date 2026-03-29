@@ -7085,6 +7085,10 @@ body:has([data-vertical="hospital"]) .rain-overlay {
   animation: goblinCardEnter 0.35s ease-out backwards;
 }
 
+.goblin-log-card:hover {
+  box-shadow: inset 2px 0 0 var(--card-neon, rgba(0,240,255,0.3)), -1px 0 12px color-mix(in srgb, var(--card-neon, rgba(0,240,255,0.2)) 20%, transparent);
+}
+
 /* Goblin Log: entry removal */
 @keyframes posterExit {
   to {
