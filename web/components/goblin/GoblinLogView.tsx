@@ -27,6 +27,7 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
     updateEntry,
     deleteEntry,
     createTag,
+    deleteTag,
     searchTMDB,
     reorderEntries,
   } = useGoblinLog(isAuthenticated);
@@ -193,19 +194,34 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
               <div className="w-px h-4 bg-zinc-800 flex-shrink-0" />
               <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
                 {tags.map((tag) => (
-                  <button
+                  <div
                     key={tag.id}
-                    onClick={() => setActiveTag(activeTag === tag.name ? null : tag.name)}
-                    className="flex-shrink-0 px-2 py-0.5 rounded-full font-mono text-2xs font-medium
-                      border transition-all duration-200"
+                    className="flex-shrink-0 flex items-center gap-0.5 rounded-full font-mono text-2xs font-medium
+                      border transition-all duration-200 group/tag"
                     style={{
                       backgroundColor: activeTag === tag.name ? `${tag.color}20` : "transparent",
                       borderColor: activeTag === tag.name ? `${tag.color}60` : "var(--twilight)",
                       color: activeTag === tag.name ? tag.color || "var(--cream)" : "var(--muted)",
                     }}
                   >
-                    {tag.name}
-                  </button>
+                    <button
+                      onClick={() => setActiveTag(activeTag === tag.name ? null : tag.name)}
+                      className="pl-2 pr-0.5 py-0.5"
+                    >
+                      {tag.name}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (activeTag === tag.name) setActiveTag(null);
+                        await deleteTag(tag.id);
+                      }}
+                      className="pr-1.5 py-0.5 opacity-0 group-hover/tag:opacity-100
+                        hover:text-red-400 transition-all"
+                      title={`Delete "${tag.name}" tag`}
+                    >
+                      ×
+                    </button>
+                  </div>
                 ))}
               </div>
             </>
