@@ -120,6 +120,17 @@ export interface PlaceOutdoorDetails {
   seasonal_hazards: string[] | null;
 }
 
+/** Google Places enrichment JSONB from place_vertical_details.google */
+export interface PlaceGoogleDetails {
+  place_id: string | null;
+  rating: number | null;
+  rating_count: number | null;
+  price_level: number | null;
+  types: string[] | null;
+  google_maps_url: string | null;
+  enriched_at: string | null;
+}
+
 /** Composed types for different rendering contexts */
 export type PlaceWithProfile = Place & { profile: PlaceProfile | null };
 export type PlaceWithDining = Place & { dining: PlaceDiningDetails | null };
@@ -128,4 +139,5 @@ export type PlaceDetail = Place & {
   profile: PlaceProfile | null;
   dining: PlaceDiningDetails | null;
   outdoor: PlaceOutdoorDetails | null;
+  google: PlaceGoogleDetails | null;
 };
