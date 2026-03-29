@@ -62,14 +62,14 @@ export default function GoblinLogEntryCard({
       onDrop={(e) => { e.preventDefault(); onDrop?.(); }}
       onDragEnd={(e) => e.preventDefault()}
       className={`goblin-log-card group relative flex items-stretch overflow-hidden
-        transition-all duration-200 ease-out bg-black/80 backdrop-blur-sm
-        border border-zinc-800/40
+        transition-[border-color,opacity,transform] duration-200 ease-out
+        bg-[rgba(5,5,8,0.92)] border border-zinc-800/40
         ${isDragging ? "opacity-30 scale-[0.98]" : ""}
         ${isDragTarget ? "border-t-2 border-t-cyan-400" : ""}
         ${!readOnly ? "cursor-grab active:cursor-grabbing" : ""}
         hover:border-zinc-700/60`}
       style={{
-        animationDelay: `${Math.min(rank, 15) * 50}ms`,
+        animationDelay: `${Math.min(rank, 8) * 40}ms`,
         borderLeft: `2px solid ${tier.color}`,
         '--card-neon': tier.color,
       } as React.CSSProperties}
@@ -126,12 +126,9 @@ export default function GoblinLogEntryCard({
           <>
             <SmartImage src={posterSrc} alt={movie.title}
               width={isHero ? 110 : 75} height={isHero ? 165 : 112}
-              className="object-cover w-full h-full transition-all duration-500
-                group-hover:scale-105 group-hover:brightness-110"
+              loading="lazy"
+              className="object-cover w-full h-full"
             />
-            {/* Neon edge glow on poster */}
-            <div className="absolute inset-y-0 right-0 w-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-              style={{ boxShadow: `0 0 8px ${tier.color}, 0 0 2px ${tier.color}`, backgroundColor: tier.color }} />
           </>
         ) : (
           <div className="flex items-center justify-center h-full min-h-[90px]

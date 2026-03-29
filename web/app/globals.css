@@ -7083,6 +7083,8 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 
 .goblin-log-card {
   animation: goblinCardEnter 0.35s ease-out backwards;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 140px;
 }
 
 .goblin-log-card:hover {
