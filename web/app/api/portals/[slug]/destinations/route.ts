@@ -210,7 +210,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .select(
         `id, name, slug, neighborhood, place_type, image_url, hours, indoor_outdoor, created_at,
          place_profile(hero_image_url, short_description, wheelchair_accessible, family_suitability),
-         place_vertical_details(google, outdoor)`,
+         place_vertical_details(google)`,
       )
       .eq("is_active", true)
       .eq("city", portalCity)

@@ -55,7 +55,6 @@ import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 import { ContentSwap } from "@/components/ui/ContentSwap";
 import ActiveContestSection from "./sections/ActiveContestSection";
 import HolidayHero from "./HolidayHero";
-import { DestinationsSection } from "./sections/DestinationsSection";
 import FeedPageIndex from "./FeedPageIndex";
 import type {
   FeedBlockId,
@@ -87,6 +86,10 @@ const FeedTimeMachine = dynamic(() => import("./FeedTimeMachine"), { ssr: false 
 const YonderRegionalEscapesSection = dynamic(() => import("./sections/YonderRegionalEscapesSection"), { ssr: false });
 const YonderDestinationNodeQuestsSection = dynamic(
   () => import("./sections/YonderDestinationNodeQuestsSection"),
+  { ssr: false }
+);
+const DestinationsSectionV2 = dynamic(
+  () => import("./sections/DestinationsSectionV2").then(m => ({ default: m.DestinationsSectionV2 })),
   { ssr: false }
 );
 
@@ -500,7 +503,21 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         </ContentSwap>
       </div>
 
-      {/* Destinations (Worth Checking Out) — removed, didn't deliver on the promise */}
+      {/* Destinations (Worth Checking Out) — contextual venues from the city */}
+      <div
+        id="city-pulse-destinations"
+        data-feed-anchor="true"
+        data-index-label="Destinations"
+        data-block-id="destinations"
+        className="mt-8 scroll-mt-28"
+      >
+        <div className="h-px bg-[var(--twilight)]" />
+        <div className="pt-6">
+          <LazySection minHeight={300}>
+            <DestinationsSectionV2 portalSlug={portalSlug} />
+          </LazySection>
+        </div>
+      </div>
 
       {/* 6. Interest Channels — only on civic portals where groups are meaningful */}
       {portal?.settings?.vertical === "community" && (

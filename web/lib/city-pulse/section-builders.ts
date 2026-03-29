@@ -1267,7 +1267,22 @@ export function buildBrowseSection(
   portalSlug: string,
   venueTypeCounts?: Record<string, number>,
   eventCategoryCounts?: Record<string, number>,
+  todayEvents?: FeedEventData[],
 ): CityPulseSection {
+  // Pick one representative event per category (first match wins)
+  const categoryRepresentatives: Record<string, { title: string; venue_name: string }> = {};
+  if (todayEvents) {
+    for (const event of todayEvents) {
+      const cat = event.category;
+      if (cat && !categoryRepresentatives[cat] && event.title) {
+        categoryRepresentatives[cat] = {
+          title: event.title,
+          venue_name: event.venue?.name ?? "",
+        };
+      }
+    }
+  }
+
   return {
     id: "browse",
     type: "browse",
@@ -1281,6 +1296,9 @@ export function buildBrowseSection(
       portal_slug: portalSlug,
       ...(venueTypeCounts && { venue_type_counts: venueTypeCounts }),
       ...(eventCategoryCounts && { category_counts: eventCategoryCounts }),
+      ...(Object.keys(categoryRepresentatives).length > 0 && {
+        category_representatives: categoryRepresentatives,
+      }),
     },
   };
 }

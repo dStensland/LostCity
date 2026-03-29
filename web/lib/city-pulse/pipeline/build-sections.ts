@@ -158,7 +158,7 @@ export function buildSections(
     buildNewFromSpotsSection(newFromSpots, editorialMap),
     buildTrendingSection(trendingEventsWithProof, trendingDestinations, userSignals, friendsGoingMap, editorialMap),
     buildPlanningHorizonSection(horizonEvents, editorialMap),
-    buildBrowseSection(ctx.canonicalSlug, venueTypeCounts, allEventCategoryCounts),
+    buildBrowseSection(ctx.canonicalSlug, venueTypeCounts, allEventCategoryCounts, todayEventsWithProof),
   ].filter(Boolean) as CityPulseSection[];
 
   // Filter sections suppressed by the portal's content policy
