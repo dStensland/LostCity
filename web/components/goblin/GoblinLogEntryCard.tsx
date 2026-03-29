@@ -37,22 +37,20 @@ export default function GoblinLogEntryCard({
   isDragTarget,
   isDragging,
 }: Props) {
-  const [expanded, setExpanded] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [editingRank, setEditingRank] = useState(false);
   const [rankInput, setRankInput] = useState("");
   const movie = entry.movie;
 
-  const trailerUrl = movie.trailer_url
-    ?? `https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + " " + (movie.year || "") + " trailer")}`;
-  const imdbUrl = movie.imdb_id ? `https://www.imdb.com/title/${movie.imdb_id}` : null;
-  const letterboxdUrl = `https://letterboxd.com/search/${encodeURIComponent(movie.title)}/`;
-
-  // Top 3 get hero treatment
   const isHero = rank <= 3;
   const posterSrc = movie.poster_path
     ? `${isHero ? TMDB_POSTER_W342 : TMDB_POSTER_W185}${movie.poster_path}`
     : null;
+
+  const trailerUrl = movie.trailer_url
+    ?? `https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + " " + (movie.year || "") + " trailer")}`;
+  const imdbUrl = movie.imdb_id ? `https://www.imdb.com/title/${movie.imdb_id}` : null;
+  const letterboxdUrl = `https://letterboxd.com/search/${encodeURIComponent(movie.title)}/`;
 
   return (
     <div
@@ -85,11 +83,12 @@ export default function GoblinLogEntryCard({
       <div className={`flex flex-col items-center justify-center flex-shrink-0
         border-r border-zinc-800/60
         ${isHero ? "w-12 sm:w-14" : "w-10 sm:w-12"}`}>
+        {/* Up arrow — always visible on mobile, hover on desktop */}
         {!readOnly && onMoveUp && !isFirst && (
           <button
             onClick={onMoveUp}
             className="text-zinc-600 hover:text-zinc-300 text-2xs py-0.5 transition-colors
-              opacity-0 group-hover:opacity-100"
+              sm:opacity-0 sm:group-hover:opacity-100"
           >
             ▲
           </button>
@@ -132,11 +131,12 @@ export default function GoblinLogEntryCard({
             {rank}
           </button>
         )}
+        {/* Down arrow — always visible on mobile, hover on desktop */}
         {!readOnly && onMoveDown && !isLast && (
           <button
             onClick={onMoveDown}
             className="text-zinc-600 hover:text-zinc-300 text-2xs py-0.5 transition-colors
-              opacity-0 group-hover:opacity-100"
+              sm:opacity-0 sm:group-hover:opacity-100"
           >
             ▼
           </button>
@@ -166,7 +166,7 @@ export default function GoblinLogEntryCard({
       <div className="flex-1 min-w-0 p-2.5 sm:p-3">
         {/* Title row — clickable for edit */}
         <div
-          onClick={() => (readOnly ? setExpanded(!expanded) : onEdit(entry))}
+          onClick={() => (readOnly ? setShowInfo(!showInfo) : onEdit(entry))}
           className="cursor-pointer hover:bg-zinc-900/30 -m-2.5 sm:-m-3 p-2.5 sm:p-3 transition-colors"
         >
           <div className="flex items-start justify-between gap-2">
@@ -270,69 +270,33 @@ export default function GoblinLogEntryCard({
           {/* Note */}
           {entry.note && (
             <p className={`mt-1.5 text-xs text-zinc-400 italic leading-relaxed ${
-              !showInfo && !expanded && readOnly ? "line-clamp-1" : ""
+              !showInfo ? "line-clamp-1" : ""
             }`}>
               &ldquo;{entry.note}&rdquo;
             </p>
           )}
-
-          {/* Genres */}
-          {movie.genres && movie.genres.length > 0 && (
-            <div className="flex items-center gap-1.5 mt-1.5">
-              {movie.genres.slice(0, 3).map((genre) => (
-                <span
-                  key={genre}
-                  className="text-2xs text-zinc-600 font-mono uppercase tracking-wider"
-                >
-                  {genre}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* Action links — always visible */}
-        <div className="flex items-center gap-3 mt-2 pt-1.5 border-t border-zinc-800/40">
+        {/* Action links — compact, subtle */}
+        <div className="flex items-center gap-2.5 mt-2 pt-1.5 border-t border-zinc-800/30
+          text-2xs font-mono text-zinc-600">
           <button
             onClick={() => setShowInfo(!showInfo)}
-            className={`text-2xs font-mono font-bold uppercase tracking-wider transition-colors ${
-              showInfo ? "text-amber-400" : "text-zinc-600 hover:text-zinc-400"
-            }`}
+            className={`transition-colors ${showInfo ? "text-amber-400" : "hover:text-zinc-400"}`}
           >
-            {showInfo ? "HIDE" : "INFO"}
+            {showInfo ? "−" : "i"}
           </button>
-          <a
-            href={trailerUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <a href={trailerUrl} target="_blank" rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="text-2xs font-mono font-bold uppercase tracking-wider
-              text-zinc-600 hover:text-red-400 transition-colors"
-          >
-            TRAILER
-          </a>
+            className="hover:text-red-400 transition-colors">▶</a>
           {imdbUrl && (
-            <a
-              href={imdbUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <a href={imdbUrl} target="_blank" rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="text-2xs font-mono font-bold uppercase tracking-wider
-                text-zinc-600 hover:text-amber-400 transition-colors"
-            >
-              IMDB
-            </a>
+              className="hover:text-amber-400 transition-colors">IMDb</a>
           )}
-          <a
-            href={letterboxdUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <a href={letterboxdUrl} target="_blank" rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="text-2xs font-mono font-bold uppercase tracking-wider
-              text-zinc-600 hover:text-emerald-400 transition-colors"
-          >
-            LETTERBOXD
-          </a>
+            className="hover:text-emerald-400 transition-colors">LB</a>
         </div>
 
         {/* Expandable synopsis */}

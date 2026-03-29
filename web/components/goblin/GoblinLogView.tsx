@@ -168,7 +168,8 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
         </div>
 
         {/* Year pills + tag filters */}
-        <div className="flex items-center gap-4 mt-4">
+        <div className="flex items-center gap-4 mt-4 overflow-x-auto scrollbar-hide
+          [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] sm:[mask-image:none]">
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
             {YEARS.map((y) => (
               <button
@@ -287,7 +288,7 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
       ) : (
         /* Ranked list */
         <div
-          className="space-y-0.5"
+          className="space-y-1.5"
           onDragLeave={() => setDragOver(null)}
         >
           {filteredEntries.map((entry, i) => (
