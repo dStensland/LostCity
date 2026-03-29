@@ -76,10 +76,11 @@ export const LaneFilterBar = memo(function LaneFilterBar({
       <div className="flex items-center gap-3">
         <Link
           href={`/${portalSlug}?view=find`}
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-[var(--twilight)] bg-[var(--night)] text-[var(--soft)] hover:text-[var(--cream)] transition-colors"
+          className="flex h-8 flex-shrink-0 items-center gap-1.5 rounded-lg border border-[var(--twilight)] bg-[var(--night)] px-2 text-[var(--soft)] hover:text-[var(--cream)] transition-colors"
           aria-label="Back to Find"
         >
           <ArrowLeft size={16} weight="regular" />
+          <span className="text-xs text-[var(--soft)]">Find</span>
         </Link>
 
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -121,7 +122,7 @@ export const LaneFilterBar = memo(function LaneFilterBar({
                   ? {
                       backgroundColor: config.color,
                       borderColor: config.color,
-                      color: "#09090B",
+                      color: "var(--void)",
                     }
                   : undefined
               }

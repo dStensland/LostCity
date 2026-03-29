@@ -2,11 +2,42 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import { MusicNote, Ticket } from "@phosphor-icons/react";
+import {
+  Ticket,
+  MusicNote,
+  FilmSlate,
+  MicrophoneStage,
+  MaskHappy,
+  GraduationCap,
+} from "@phosphor-icons/react";
+import Dot from "@/components/ui/Dot";
 import type { DiscoveryEventEntity } from "@/lib/types/discovery";
 
 const MUSIC_ACCENT = "#A78BFA";
 const DEFAULT_ACCENT = "#FF6B7A";
+
+type PhosphorIcon = React.ComponentType<{
+  size?: number;
+  color?: string;
+  weight?: "duotone" | "regular" | "bold" | "fill" | "thin" | "light";
+}>;
+
+function getCategoryIcon(categoryId: string | null): PhosphorIcon {
+  switch (categoryId) {
+    case "film":
+      return FilmSlate;
+    case "music":
+      return MicrophoneStage;
+    case "comedy":
+      return MaskHappy;
+    case "theater":
+      return MaskHappy;
+    case "education":
+      return GraduationCap;
+    default:
+      return Ticket;
+  }
+}
 
 function getAccentColor(entity: DiscoveryEventEntity): string {
   const cat = entity.category_id ?? "";
@@ -65,7 +96,7 @@ export const CompactEventCard = memo(function CompactEventCard({
   const accent = getAccentColor(entity);
   const timeSplit = formatTimeSplit(entity.start_time);
   const dateLabel = formatSmartDate(entity.start_date);
-  const isMusic = accent === MUSIC_ACCENT;
+  const CategoryIcon = getCategoryIcon(entity.category_id ?? null);
   const primaryGenre =
     entity.genres && entity.genres.length > 0 ? entity.genres[0] : null;
 
@@ -105,11 +136,7 @@ export const CompactEventCard = memo(function CompactEventCard({
           className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg"
           style={{ backgroundColor: `${accent}1A` }}
         >
-          {isMusic ? (
-            <MusicNote size={15} color={accent} weight="duotone" />
-          ) : (
-            <Ticket size={15} color={accent} weight="duotone" />
-          )}
+          <CategoryIcon size={15} color={accent} weight="duotone" />
         </div>
 
         {/* Text content */}
@@ -124,9 +151,7 @@ export const CompactEventCard = memo(function CompactEventCard({
             {entity.venue_name && (
               <span className="truncate">{entity.venue_name}</span>
             )}
-            {entity.venue_name && entity.neighborhood && (
-              <span className="opacity-40">·</span>
-            )}
+            {entity.venue_name && entity.neighborhood && <Dot />}
             {entity.neighborhood && (
               <span className="truncate">{entity.neighborhood}</span>
             )}

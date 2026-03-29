@@ -3,6 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import { Palette, FrameCorners, Star } from "@phosphor-icons/react";
+import Dot from "@/components/ui/Dot";
 import type { DiscoveryPlaceEntity } from "@/lib/types/discovery";
 
 const ARTS_ACCENT = "#C9874F";
@@ -100,7 +101,7 @@ export const CompactArtsCard = memo(function CompactArtsCard({
           )}
           {entity.neighborhood && (
             <>
-              <span className="text-[var(--muted)] opacity-40">·</span>
+              <Dot />
               <span className="text-[var(--muted)] truncate">
                 {entity.neighborhood}
               </span>
@@ -108,7 +109,7 @@ export const CompactArtsCard = memo(function CompactArtsCard({
           )}
           {entity.price_level === 0 && (
             <>
-              <span className="text-[var(--muted)] opacity-40">·</span>
+              <Dot />
               <span className="text-[#00D9A0] font-mono">Free</span>
             </>
           )}

@@ -3,6 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import { Tree, Star } from "@phosphor-icons/react";
+import Dot from "@/components/ui/Dot";
 import type { DiscoveryPlaceEntity } from "@/lib/types/discovery";
 
 const OUTDOOR_ACCENT = "#00D9A0";
@@ -119,7 +120,7 @@ export const CompactOutdoorCard = memo(function CompactOutdoorCard({
           <span className="capitalize text-[var(--muted)]">{typeLabel}</span>
           {distance && (
             <>
-              <span className="text-[var(--muted)] opacity-40">·</span>
+              <Dot />
               <span className="font-mono text-[var(--muted)]">{distance}</span>
             </>
           )}

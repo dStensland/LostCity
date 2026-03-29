@@ -3,6 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import { MoonStars } from "@phosphor-icons/react";
+import Dot from "@/components/ui/Dot";
 import type { DiscoveryPlaceEntity } from "@/lib/types/discovery";
 
 const NIGHTLIFE_ACCENT = "#FF6B7A";
@@ -76,7 +77,7 @@ export const CompactNightlifeCard = memo(function CompactNightlifeCard({
           )}
           {entity.event_count > 0 && (
             <>
-              <span className="text-[var(--muted)] opacity-40">·</span>
+              <Dot />
               <span className="font-mono text-[var(--muted)]">
                 {entity.event_count === 1
                   ? "1 event tonight"

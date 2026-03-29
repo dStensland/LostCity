@@ -11,18 +11,24 @@
  *   ?regulars=true    — show the day-of-week RegularsView instead
  */
 
-import { memo, Suspense, lazy } from "react";
+import { memo, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import type { VerticalLane } from "@/lib/types/discovery";
-import { LANE_CONFIG } from "@/lib/types/discovery";
+import { LANE_CONFIG, DEFAULT_LANE_ORDER } from "@/lib/types/discovery";
 import { RightNowSection } from "./RightNowSection";
 import { LanePreviewSection } from "./LanePreviewSection";
 import { FindSidebar } from "./FindSidebar";
 
 // Lazy-load RegularsView — only needed for ?regulars=true
-const RegularsView = lazy(() => import("./RegularsView"));
+const RegularsView = dynamic(() => import("./RegularsView"), {
+  loading: () => (
+    <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">
+      Loading...
+    </div>
+  ),
+});
 
 // Lazy-load LaneView — only needed when ?lane= is present
 const LaneView = dynamic(
@@ -31,17 +37,8 @@ const LaneView = dynamic(
 );
 
 // -------------------------------------------------------------------------
-// Default lane order + portal vertical → primary lane mapping
+// Portal vertical → primary lane mapping + lane order builder
 // -------------------------------------------------------------------------
-
-const DEFAULT_LANE_ORDER: VerticalLane[] = [
-  "arts",
-  "dining",
-  "nightlife",
-  "outdoors",
-  "music",
-  "entertainment",
-];
 
 const VERTICAL_TO_LANE: Record<string, VerticalLane> = {
   arts: "arts",
@@ -50,7 +47,7 @@ const VERTICAL_TO_LANE: Record<string, VerticalLane> = {
   citizen: "arts",
 };
 
-function buildLaneOrder(portalSettings: Record<string, unknown>): VerticalLane[] {
+export function buildLaneOrder(portalSettings: Record<string, unknown>): VerticalLane[] {
   const vertical = portalSettings?.vertical as string | undefined;
   if (!vertical) return DEFAULT_LANE_ORDER;
 

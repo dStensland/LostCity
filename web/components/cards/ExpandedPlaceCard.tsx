@@ -13,6 +13,7 @@ import {
   MusicNotes,
   Ticket,
 } from "@phosphor-icons/react";
+import Dot from "@/components/ui/Dot";
 import type { DiscoveryPlaceEntity, VerticalLane } from "@/lib/types/discovery";
 import { LANE_CONFIG } from "@/lib/types/discovery";
 import SmartImage from "@/components/SmartImage";
@@ -342,7 +343,7 @@ export const ExpandedPlaceCard = memo(function ExpandedPlaceCard({
           {/* Neighborhood */}
           {entity.neighborhood && (
             <>
-              <span className="text-[var(--muted)] opacity-40">·</span>
+              <Dot />
               <span className="flex items-center gap-0.5 text-[var(--muted)]">
                 <MapPin size={11} weight="duotone" />
                 <span className="truncate max-w-[120px]">
@@ -355,7 +356,7 @@ export const ExpandedPlaceCard = memo(function ExpandedPlaceCard({
           {/* Distance */}
           {distance && (
             <>
-              <span className="text-[var(--muted)] opacity-40">·</span>
+              <Dot />
               <span className="font-mono text-[var(--muted)]">{distance}</span>
             </>
           )}
@@ -363,7 +364,7 @@ export const ExpandedPlaceCard = memo(function ExpandedPlaceCard({
           {/* Free indicator */}
           {entity.price_level === 0 && (
             <>
-              <span className="text-[var(--muted)] opacity-40">·</span>
+              <Dot />
               <span className="font-mono text-[#00D9A0]">Free</span>
             </>
           )}

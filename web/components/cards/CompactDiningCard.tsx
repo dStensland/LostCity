@@ -3,6 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import { ForkKnife, Coffee, Star } from "@phosphor-icons/react";
+import Dot from "@/components/ui/Dot";
 import type { DiscoveryPlaceEntity } from "@/lib/types/discovery";
 
 const DINING_ACCENT = "#FF6B7A";
@@ -94,7 +95,7 @@ export const CompactDiningCard = memo(function CompactDiningCard({
           <span className="capitalize">{cuisineLabel}</span>
           {price && (
             <>
-              <span className="opacity-40">·</span>
+              <Dot />
               <span className="font-mono">{price}</span>
             </>
           )}
@@ -114,7 +115,7 @@ export const CompactDiningCard = memo(function CompactDiningCard({
           )}
           {entity.neighborhood && (
             <>
-              <span className="text-[var(--muted)] opacity-40">·</span>
+              <Dot />
               <span className="text-[var(--muted)] truncate">
                 {entity.neighborhood}
               </span>
@@ -122,7 +123,7 @@ export const CompactDiningCard = memo(function CompactDiningCard({
           )}
           {distance && (
             <>
-              <span className="text-[var(--muted)] opacity-40">·</span>
+              <Dot />
               <span className="font-mono text-[var(--muted)]">{distance}</span>
             </>
           )}
