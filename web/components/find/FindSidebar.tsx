@@ -8,6 +8,20 @@ import type { VerticalLane } from "@/lib/types/discovery";
 import { LANE_CONFIG, LANE_ICONS } from "@/lib/types/discovery";
 import { buildLaneOrder } from "@/components/find/FindView";
 import { useWeather } from "@/lib/hooks/useWeather";
+import FindSearchInput from "@/components/find/FindSearchInput";
+
+// -------------------------------------------------------------------------
+// Lane → "See all" URL map (mirrors FindStream lane headers)
+// -------------------------------------------------------------------------
+
+const LANE_SEE_ALL_URLS: Record<string, string> = {
+  arts: "?view=places&tab=things-to-do&venue_type=museum,gallery,arts_center,theater&from=find",
+  dining: "?view=places&tab=eat-drink&from=find",
+  nightlife: "?view=places&tab=nightlife&from=find",
+  outdoors: "?view=places&tab=things-to-do&venue_type=park,trail,recreation,viewpoint,landmark&from=find",
+  music: "?view=happening&content=showtimes&vertical=music&from=find",
+  entertainment: "?view=places&tab=things-to-do&venue_type=arcade,attraction,entertainment,escape_room,bowling,zoo,aquarium,cinema&from=find",
+};
 
 // -------------------------------------------------------------------------
 // Context block — date + weather placeholder
@@ -49,12 +63,16 @@ export const FindSidebar = memo(function FindSidebar({
   portalSettings,
   activeLane,
 }: FindSidebarProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const laneOrder = buildLaneOrder(portalSettings);
 
-  // Build lane hrefs — clicking the active lane deselects (returns to stream)
+  // Build lane hrefs — use LANE_SEE_ALL_URLS when available, falling back to
+  // the stream lane filter. Clicking the active lane deselects (returns to stream).
   function laneHref(lane: VerticalLane): string {
+    const seeAllUrl = LANE_SEE_ALL_URLS[lane];
+    if (seeAllUrl && activeLane !== lane) {
+      return `/${portalSlug}${seeAllUrl}`;
+    }
     const params = new URLSearchParams(searchParams.toString());
     params.set("view", "find");
     if (activeLane === lane) {
@@ -74,22 +92,7 @@ export const FindSidebar = memo(function FindSidebar({
       <h2 className="text-2xl font-bold text-[var(--cream)] leading-none">Find</h2>
 
       {/* Search bar */}
-      <div className="relative">
-        <MagnifyingGlass
-          size={14}
-          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]"
-          weight="regular"
-        />
-        <input
-          type="search"
-          placeholder="Search..."
-          className="h-9 w-full rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] pl-8 pr-3 font-mono text-sm text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors"
-          readOnly
-          onClick={() => {
-            router.push(`/${portalSlug}?view=happening`);
-          }}
-        />
-      </div>
+      <FindSearchInput portalSlug={portalSlug} placeholder="Search..." />
 
       {/* Lane navigation */}
       <nav className="flex-1">
