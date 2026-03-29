@@ -396,11 +396,11 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
   ]);
 
   const TAB_CONFIG = [
-    { key: "next" as const, label: "\u2666 NEXT", labelLong: "\u2666 NEXT GOBLIN DAY", active: "bg-red-900/80 text-red-300 border-red-500 shadow-[0_4px_12px_rgba(185,28,28,0.3)]" },
-    { key: "contenders" as const, label: "\u2620 CONTENDERS", labelLong: "\u2620 CONTENDERS", active: "bg-zinc-900 text-white border-zinc-400 shadow-[0_4px_12px_rgba(255,255,255,0.05)]" },
-    { key: "upcoming" as const, label: "\u29D6 UPCOMING", labelLong: "\u29D6 UPCOMING", active: "bg-zinc-900 text-violet-400 border-violet-500 shadow-[0_4px_12px_rgba(139,92,246,0.15)]" },
+    { key: "next" as const, label: "\u2720 NEXT", labelLong: "\u2720 NEXT GOBLIN DAY", active: "bg-red-900/80 text-red-300 border-red-500 shadow-[0_4px_12px_rgba(185,28,28,0.3)]" },
+    { key: "contenders" as const, label: "\u2625 CONTENDERS", labelLong: "\u2625 CONTENDERS", active: "bg-zinc-900 text-white border-zinc-400 shadow-[0_4px_12px_rgba(255,255,255,0.05)]" },
+    { key: "upcoming" as const, label: "\u262F UPCOMING", labelLong: "\u262F UPCOMING", active: "bg-zinc-900 text-violet-400 border-violet-500 shadow-[0_4px_12px_rgba(139,92,246,0.15)]" },
     { key: "watched" as const, label: "\u2620 WATCHED", labelLong: "\u2620 WATCHED", active: "bg-zinc-900 text-emerald-400 border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.15)]" },
-    { key: "log" as const, label: "\ud83d\udcd3 MY LOG", labelLong: "\ud83d\udcd3 MY LOG", active: "bg-zinc-900 text-amber-400 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.15)]" },
+    { key: "log" as const, label: "\u269D THE LOG", labelLong: "\u269D THE LOG", active: "bg-black text-cyan-300 border-cyan-500 shadow-[0_0_15px_rgba(0,240,255,0.2)]" },
   ];
 
   // Matrix rain of ancient/occult symbols

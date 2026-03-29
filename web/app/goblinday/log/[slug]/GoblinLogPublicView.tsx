@@ -49,7 +49,7 @@ export default function GoblinLogPublicView({ user, entries, tags, year }: Props
     return result;
   }, [entries, activeTag, activeDirector]);
 
-  // Retro grid animation
+  // Retro animation — radiates from header area
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -57,7 +57,19 @@ export default function GoblinLogPublicView({ user, entries, tags, year }: Props
     if (!ctx) return;
 
     let animId: number;
-    let offset = 0;
+    let time = 0;
+
+    // Star field
+    const stars: { x: number; y: number; speed: number; size: number; hue: number }[] = [];
+    for (let i = 0; i < 80; i++) {
+      stars.push({
+        x: Math.random(),
+        y: Math.random(),
+        speed: 0.0002 + Math.random() * 0.0008,
+        size: 0.3 + Math.random() * 1.2,
+        hue: Math.random() > 0.5 ? 185 : 320, // cyan or fuchsia
+      });
+    }
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -67,91 +79,145 @@ export default function GoblinLogPublicView({ user, entries, tags, year }: Props
     window.addEventListener("resize", resize);
 
     const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const W = canvas.width;
+      const H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
 
-      const horizon = canvas.height * 0.55;
-      const vanishX = canvas.width * 0.5;
-      const gridSpacing = 50;
-      const numLines = 24;
+      // Focal point: upper-left area where the title sits
+      const cx = W * 0.28;
+      const cy = H * 0.15;
+      const maxR = Math.max(W, H) * 1.2;
 
-      // Neon sun at horizon
-      const sunRadius = 80;
-      const sunGrad = ctx.createRadialGradient(vanishX, horizon, 0, vanishX, horizon, sunRadius * 2.5);
-      sunGrad.addColorStop(0, "rgba(255, 0, 170, 0.25)");
-      sunGrad.addColorStop(0.3, "rgba(255, 0, 100, 0.12)");
-      sunGrad.addColorStop(0.6, "rgba(0, 240, 255, 0.05)");
-      sunGrad.addColorStop(1, "transparent");
-      ctx.fillStyle = sunGrad;
-      ctx.fillRect(0, horizon - sunRadius * 2, canvas.width, sunRadius * 4);
+      // === Ambient glow behind the header ===
+      const ambient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 350);
+      ambient.addColorStop(0, "rgba(0, 240, 255, 0.06)");
+      ambient.addColorStop(0.4, "rgba(255, 0, 170, 0.03)");
+      ambient.addColorStop(1, "transparent");
+      ctx.fillStyle = ambient;
+      ctx.fillRect(0, 0, W, H);
 
-      // Sun disc with horizontal slices cut out
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(vanishX, horizon, sunRadius, Math.PI, 0); // top half only
-      ctx.fillStyle = "rgba(255, 0, 120, 0.15)";
-      ctx.fill();
+      // === Concentric rings pulsing outward from header ===
+      const numRings = 6;
+      for (let i = 0; i < numRings; i++) {
+        const baseR = ((time * 0.4 + i * (maxR / numRings)) % maxR);
+        const alpha = 0.12 * (1 - baseR / maxR);
+        if (alpha <= 0) continue;
 
-      // Slice lines through the sun
-      ctx.globalCompositeOperation = "destination-out";
-      for (let i = 1; i < 8; i++) {
-        const sliceY = horizon - sunRadius + i * (sunRadius / 4);
-        const sliceH = 2 + i * 0.5;
-        ctx.fillStyle = "rgba(0,0,0,1)";
-        ctx.fillRect(vanishX - sunRadius, sliceY, sunRadius * 2, sliceH);
+        ctx.beginPath();
+        ctx.arc(cx, cy, baseR, 0, Math.PI * 2);
+        ctx.strokeStyle = i % 2 === 0
+          ? `rgba(0, 240, 255, ${alpha})`
+          : `rgba(255, 0, 170, ${alpha * 0.7})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
       }
-      ctx.restore();
 
-      // Horizontal grid lines (scrolling toward viewer)
-      for (let i = 0; i < numLines; i++) {
-        const t = ((i * gridSpacing + offset) % (numLines * gridSpacing)) / (numLines * gridSpacing);
-        const y = horizon + (canvas.height - horizon) * (t * t);
-        const alpha = t * 0.5;
-        const lineWidth = 0.5 + t * 1.5;
+      // === Radial laser lines from focal point ===
+      const numRays = 36;
+      for (let i = 0; i < numRays; i++) {
+        const angle = (i / numRays) * Math.PI * 2 + time * 0.001;
+        const length = maxR;
+        const endX = cx + Math.cos(angle) * length;
+        const endY = cy + Math.sin(angle) * length;
+
+        const isMajor = i % 6 === 0;
+        const alpha = isMajor ? 0.04 : 0.012;
+
+        // Fade out rays with a gradient so they're strongest near center
+        const grad = ctx.createLinearGradient(cx, cy, endX, endY);
+        grad.addColorStop(0, i % 3 === 0
+          ? `rgba(255, 0, 170, ${alpha * 2})`
+          : `rgba(0, 240, 255, ${alpha * 2})`);
+        grad.addColorStop(0.3, i % 3 === 0
+          ? `rgba(255, 0, 170, ${alpha})`
+          : `rgba(0, 240, 255, ${alpha})`);
+        grad.addColorStop(1, "transparent");
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(endX, endY);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = isMajor ? 0.6 : 0.3;
+        ctx.stroke();
+      }
+
+      // === Perspective grid (lower portion — below content) ===
+      const horizon = H * 0.7;
+      const gridVanish = W * 0.5;
+      const gridOffset = time * 0.6;
+      const gridLines = 20;
+      const gridSpacing = 50;
+
+      for (let i = 0; i < gridLines; i++) {
+        const t = ((i * gridSpacing + gridOffset) % (gridLines * gridSpacing)) / (gridLines * gridSpacing);
+        const y = horizon + (H - horizon) * (t * t);
+        const alpha = t * 0.35;
 
         ctx.beginPath();
         ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
+        ctx.lineTo(W, y);
         ctx.strokeStyle = `rgba(0, 240, 255, ${alpha})`;
-        ctx.lineWidth = lineWidth;
+        ctx.lineWidth = 0.5 + t * 1.5;
         ctx.stroke();
       }
 
-      // Vertical lines converging to vanishing point
-      const numVLines = 24;
-      for (let i = -numVLines / 2; i <= numVLines / 2; i++) {
-        const bottomX = vanishX + i * 100;
-        const dist = Math.abs(i) / (numVLines / 2);
-        const alpha = 0.3 * (1 - dist * 0.7);
+      // Vertical converging lines
+      for (let i = -12; i <= 12; i++) {
+        const bottomX = gridVanish + i * 100;
+        const dist = Math.abs(i) / 12;
+        const alpha = 0.2 * (1 - dist * 0.6);
 
         ctx.beginPath();
-        ctx.moveTo(vanishX, horizon);
-        ctx.lineTo(bottomX, canvas.height);
+        ctx.moveTo(gridVanish, horizon);
+        ctx.lineTo(bottomX, H);
         ctx.strokeStyle = `rgba(0, 240, 255, ${alpha})`;
-        ctx.lineWidth = 0.5 + (1 - dist) * 0.5;
+        ctx.lineWidth = 0.5;
         ctx.stroke();
       }
 
-      // Horizon laser line
+      // Horizon glow line
       ctx.beginPath();
       ctx.moveTo(0, horizon);
-      ctx.lineTo(canvas.width, horizon);
-      const horizonGrad = ctx.createLinearGradient(0, 0, canvas.width, 0);
-      horizonGrad.addColorStop(0, "transparent");
-      horizonGrad.addColorStop(0.3, "rgba(0, 240, 255, 0.4)");
-      horizonGrad.addColorStop(0.5, "rgba(255, 0, 170, 0.6)");
-      horizonGrad.addColorStop(0.7, "rgba(0, 240, 255, 0.4)");
-      horizonGrad.addColorStop(1, "transparent");
-      ctx.strokeStyle = horizonGrad;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Glow below horizon line
-      ctx.shadowColor = "rgba(255, 0, 170, 0.3)";
-      ctx.shadowBlur = 15;
+      ctx.lineTo(W, horizon);
+      const hGrad = ctx.createLinearGradient(0, 0, W, 0);
+      hGrad.addColorStop(0, "transparent");
+      hGrad.addColorStop(0.3, "rgba(0, 240, 255, 0.25)");
+      hGrad.addColorStop(0.5, "rgba(255, 0, 170, 0.4)");
+      hGrad.addColorStop(0.7, "rgba(0, 240, 255, 0.25)");
+      hGrad.addColorStop(1, "transparent");
+      ctx.strokeStyle = hGrad;
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = "rgba(255, 0, 170, 0.25)";
+      ctx.shadowBlur = 12;
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      offset += 0.6;
+      // === Drifting stars ===
+      for (const star of stars) {
+        // Move outward from focal point
+        star.x += (star.x - cx / W) * star.speed;
+        star.y += (star.y - cy / H) * star.speed;
+
+        // Wrap
+        if (star.x < -0.1 || star.x > 1.1 || star.y < -0.1 || star.y > 1.1) {
+          star.x = cx / W + (Math.random() - 0.5) * 0.1;
+          star.y = cy / H + (Math.random() - 0.5) * 0.1;
+        }
+
+        const sx = star.x * W;
+        const sy = star.y * H;
+        const dist = Math.hypot(sx - cx, sy - cy) / maxR;
+        const alpha = 0.15 + dist * 0.4;
+
+        ctx.beginPath();
+        ctx.arc(sx, sy, star.size, 0, Math.PI * 2);
+        ctx.fillStyle = star.hue === 185
+          ? `rgba(0, 240, 255, ${alpha})`
+          : `rgba(255, 0, 170, ${alpha})`;
+        ctx.fill();
+      }
+
+      time += 1;
       animId = requestAnimationFrame(draw);
     };
 
