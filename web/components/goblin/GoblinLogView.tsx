@@ -131,38 +131,47 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto relative">
+      {/* Subtle noise texture overlay */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03] z-0"
+        style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }}
+      />
+
       {/* Header */}
-      <div className="mb-6 pb-4 border-b border-zinc-800/60">
-        <div className="flex items-end justify-between gap-4">
+      <div className="mb-8 relative z-10">
+        <div className="flex items-end justify-between gap-4 pb-4
+          border-b-2 border-red-900/40">
           <div>
-            <h2 className="text-lg sm:text-xl font-black text-white uppercase tracking-[0.15em]">
-              My Movie Log
+            <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-[0.2em] leading-none">
+              The Log
             </h2>
-            <p className="text-2xs text-zinc-500 font-mono mt-1 tracking-widest uppercase">
-              {filteredEntries.length} movie{filteredEntries.length !== 1 ? "s" : ""} ranked in {year}
-              {activeTag && <span className="text-amber-500/70"> · #{activeTag}</span>}
-              {activeDirector && <span className="text-amber-500/70"> · {activeDirector}</span>}
+            <p className="text-2xs text-zinc-600 font-mono mt-2 tracking-[0.3em] uppercase">
+              {filteredEntries.length} film{filteredEntries.length !== 1 ? "s" : ""} / {year}
+              {activeTag && <span className="text-amber-500/70"> / #{activeTag}</span>}
+              {activeDirector && <span className="text-red-500/70"> / {activeDirector}</span>}
             </p>
           </div>
           <div className="flex items-center gap-2">
             {username && (
               <button
                 onClick={handleCopyShareLink}
-                className="px-3 py-1.5 text-2xs font-mono font-bold tracking-wider uppercase
-                  border border-zinc-700 text-zinc-400 hover:text-amber-400 hover:border-amber-500/40
-                  transition-all"
+                className="px-3 py-1.5 text-2xs font-mono font-bold tracking-[0.2em] uppercase
+                  border-2 border-zinc-700 text-zinc-500
+                  hover:text-white hover:border-red-700 hover:bg-red-950/30
+                  active:scale-95 transition-all"
               >
                 {copied ? "COPIED!" : "SHARE"}
               </button>
             )}
             <button
               onClick={() => setAddModalOpen(true)}
-              className="px-4 py-1.5 bg-amber-500 text-black
-                font-mono text-2xs font-black tracking-wider uppercase
-                hover:bg-amber-400 active:scale-95 transition-all"
+              className="px-4 py-1.5 bg-red-700 text-white
+                font-mono text-2xs font-black tracking-[0.2em] uppercase
+                border-2 border-red-600
+                hover:bg-red-600 hover:shadow-[0_0_20px_rgba(185,28,28,0.3)]
+                active:scale-95 transition-all"
             >
-              + LOG MOVIE
+              + LOG
             </button>
           </div>
         </div>
@@ -288,7 +297,7 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
       ) : (
         /* Ranked list */
         <div
-          className="space-y-1.5"
+          className="space-y-2 relative z-10"
           onDragLeave={() => setDragOver(null)}
         >
           {filteredEntries.map((entry, i) => (

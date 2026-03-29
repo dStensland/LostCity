@@ -7065,34 +7065,74 @@ body:has([data-vertical="hospital"]) .rain-overlay {
   50%       { opacity: 0.5; }
 }
 
-/* Goblin Log: poster entrance with scale */
-@keyframes posterEnter {
+/* Goblin Log: card entrance — slide from left with slight rotation */
+@keyframes goblinCardEnter {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.92);
+    transform: translateX(-20px) rotate(-0.5deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(3px) rotate(0.1deg);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateX(0) rotate(0);
   }
+}
+
+.goblin-log-card {
+  animation: goblinCardEnter 0.4s ease-out backwards;
+}
+
+/* Goblin Log: glitch flicker on hover */
+@keyframes goblinGlitch {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-2px) skewX(-0.5deg); }
+  40% { transform: translateX(1px); }
+  60% { transform: translateX(-1px) skewX(0.3deg); }
+  80% { transform: translateX(1px); }
+  100% { transform: translateX(0); }
+}
+
+.goblin-log-card:hover {
+  animation: none;
+}
+
+/* Goblin Log: scan line effect on cards */
+.goblin-log-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(255, 255, 255, 0.008) 2px,
+    rgba(255, 255, 255, 0.008) 4px
+  );
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.goblin-log-card:hover::after {
+  opacity: 1;
 }
 
 /* Goblin Log: entry removal */
 @keyframes posterExit {
   to {
     opacity: 0;
-    transform: scale(0.9);
+    transform: translateX(-30px) scale(0.95);
   }
 }
 
 /* Goblin Log: year crossfade */
 @keyframes gridFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .pulse-live {
