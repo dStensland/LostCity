@@ -57,6 +57,8 @@ import { isFeatureHeavyType, type PlaceFeature } from "@/lib/place-features";
 import { type VenueSpecial } from "@/lib/specials-utils";
 import PlaceFeaturesSection from "@/components/detail/PlaceFeaturesSection";
 import PlaceSpecialsSection from "@/components/detail/PlaceSpecialsSection";
+import { PlanYourVisitSection } from "@/components/detail/PlanYourVisitSection";
+import { AccessibilitySection } from "@/components/detail/AccessibilitySection";
 import dynamic from "next/dynamic";
 import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
 
@@ -880,6 +882,14 @@ export default function PlaceDetailView({ slug, portalSlug, onClose, initialData
 
           {/* 2. Plan Your Visit */}
           {renderPlanYourVisit()}
+
+          {/* 2b. Plan Your Visit + Accessibility (placeProfile-backed) */}
+          {placeProfile && (
+            <>
+              <PlanYourVisitSection placeProfile={placeProfile} googleData={googleData} />
+              <AccessibilitySection placeProfile={placeProfile} />
+            </>
+          )}
 
           {/* 3. Upcoming Events */}
           {renderUpcomingEvents()}
