@@ -11,6 +11,7 @@ interface BrowseGridTileProps {
   snippet?: { title: string; venue_name: string } | null;
   badge?: "pulse" | "new" | "closing" | null;
   href: string;
+  countLabel?: string;
 }
 
 export const BrowseGridTile = memo(function BrowseGridTile({
@@ -20,6 +21,7 @@ export const BrowseGridTile = memo(function BrowseGridTile({
   snippet,
   badge,
   href,
+  countLabel = "this week",
 }: BrowseGridTileProps) {
   return (
     <Link
@@ -62,7 +64,7 @@ export const BrowseGridTile = memo(function BrowseGridTile({
       </span>
 
       {/* Count label */}
-      <span className="text-2xs text-[var(--muted)]">this week</span>
+      <span className="text-2xs text-[var(--muted)]">{countLabel}</span>
 
       {/* Content snippet — desktop only */}
       {snippet && (snippet.title || snippet.venue_name) && (

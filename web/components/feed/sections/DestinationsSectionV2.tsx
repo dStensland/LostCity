@@ -199,7 +199,7 @@ function DestinationCard({ item, activeLens, portalSlug }: DestinationCardProps)
   const contextualLine = (() => {
     if (activeLens === "closing_soon" && item.closing_exhibition) {
       return (
-        <p className="text-xs leading-tight" style={{ color: "var(--neon-red)" }}>
+        <p className="text-xs leading-tight text-[var(--neon-red)]">
           &ldquo;{item.closing_exhibition.title}&rdquo; closes in{" "}
           {item.closing_exhibition.days_remaining} day
           {item.closing_exhibition.days_remaining !== 1 ? "s" : ""}
@@ -284,7 +284,7 @@ function DestinationCard({ item, activeLens, portalSlug }: DestinationCardProps)
       {/* Content */}
       <div className="flex-1 min-w-0 space-y-0.5">
         {/* Name */}
-        <p className="text-base font-semibold text-[var(--cream)] leading-tight truncate group-hover:text-[var(--neon-green)] transition-colors">
+        <p className="text-base font-semibold text-[var(--cream)] leading-tight truncate group-hover:text-[var(--cream)] transition-colors">
           {item.name}
         </p>
 

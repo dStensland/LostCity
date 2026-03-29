@@ -11,6 +11,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -60,15 +61,30 @@ export function CollectionsRow({ portalSlug }: CollectionsRowProps) {
     return () => { clearTimeout(timeoutId); controller.abort(); };
   }, [portalSlug]);
 
-  // Return null if no collections or loading (we don't show a skeleton for this row)
-  if (loading || collections.length === 0) return null;
+  // Skeleton loading state
+  if (loading) {
+    return (
+      <section className="space-y-2 pb-2">
+        <div className="px-4">
+          <FeedSectionHeader title="Collections" priority="tertiary" accentColor="var(--gold)" />
+        </div>
+        <div className="px-4 space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-14 rounded-lg bg-[var(--cream)]/[0.03] animate-pulse" />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (collections.length === 0) return null;
 
   return (
     <section className="space-y-2 pb-2">
-      {/* Section label */}
-      <h2 className="text-2xs uppercase tracking-wider text-[var(--muted)] font-mono px-4">
-        Collections
-      </h2>
+      {/* Section header */}
+      <div className="px-4">
+        <FeedSectionHeader title="Collections" priority="tertiary" accentColor="var(--gold)" />
+      </div>
 
       {/* Horizontal scroll container */}
       <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4">
@@ -76,7 +92,7 @@ export function CollectionsRow({ portalSlug }: CollectionsRowProps) {
           <Link
             key={collection.slug}
             href={collection.href}
-            className="flex-shrink-0 min-w-[180px] rounded-lg border border-[var(--cream)]/[0.08] bg-[var(--cream)]/[0.04] px-3.5 py-2.5 transition-all hover:border-[var(--cream)]/[0.12] hover:bg-[var(--cream)]/[0.06]"
+            className="flex-shrink-0 min-w-[180px] rounded-lg border border-[var(--twilight)]/60 bg-[var(--night)] px-3.5 py-2.5 transition-all hover:border-[var(--twilight)] hover:bg-[var(--dusk)]"
           >
             {/* Title */}
             <h3 className="text-sm font-medium text-[var(--cream)] truncate">

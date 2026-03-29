@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MapPin } from "@phosphor-icons/react";
+import { MapPin, CaretRight } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -31,64 +31,74 @@ function isEvening(): boolean {
   return new Date().getHours() >= 14;
 }
 
+const MAX_NEIGHBORHOODS = 6;
 
-// ── Neighborhood card ──────────────────────────────────────────────────────────
+// ── Neighborhood row ──────────────────────────────────────────────────────────
 
-interface NeighborhoodCardProps {
+interface NeighborhoodRowProps {
   item: NeighborhoodPulseItem;
   portalSlug: string;
   countLabel: string;
 }
 
-function NeighborhoodCard({ item, portalSlug, countLabel }: NeighborhoodCardProps) {
+function NeighborhoodRow({ item, portalSlug, countLabel }: NeighborhoodRowProps) {
   const { name, slug, accentColor, eventsTodayCount, topCategories } = item;
-  const displayCategories = topCategories.slice(0, 3).join(" · ");
+  const displayCategories = topCategories.slice(0, 3).join(" \u00b7 ");
 
   return (
     <Link
       href={`/${portalSlug}?view=find&neighborhoods=${slug}`}
-      className="block min-w-[140px] flex-shrink-0 snap-start rounded-lg p-3.5 border transition-all hover:scale-[1.02]"
-      style={{
-        background: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
-        borderColor: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
-      }}
+      className="flex items-center gap-3 px-4 py-3 border-b border-[var(--twilight)]/40 hover:bg-[var(--dusk)] transition-colors group"
     >
-      {/* Neighborhood name */}
-      <p className="text-sm font-semibold text-[var(--cream)] leading-tight truncate">
-        {name}
-      </p>
+      {/* Left accent bar */}
+      <div
+        className="w-0.5 self-stretch rounded-full shrink-0"
+        style={{ backgroundColor: accentColor }}
+      />
 
-      {/* Count */}
-      <p
-        className="text-2xl font-bold leading-tight mt-1 tabular-nums"
-        style={{ color: accentColor }}
-      >
-        {eventsTodayCount}
-      </p>
-
-      {/* Label */}
-      <p className="text-2xs text-[var(--muted)]">{countLabel}</p>
-
-      {/* Top categories */}
-      {displayCategories && (
-        <p className="text-2xs text-[var(--muted)] mt-1.5 truncate">
-          {displayCategories}
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <p className="text-base font-semibold text-[var(--cream)] leading-tight truncate">
+          {name}
         </p>
-      )}
+        {displayCategories && (
+          <p className="text-xs text-[var(--muted)] mt-0.5 truncate">
+            {displayCategories}
+          </p>
+        )}
+      </div>
+
+      {/* Count + arrow */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <span className="text-sm text-[var(--soft)]">
+          {eventsTodayCount} {countLabel}
+        </span>
+        <CaretRight
+          weight="bold"
+          className="w-3 h-3 text-[var(--muted)] group-hover:text-[var(--soft)] transition-colors"
+        />
+      </div>
     </Link>
   );
 }
 
 // ── Skeleton ───────────────────────────────────────────────────────────────────
 
-function SkeletonCards() {
+function SkeletonRows() {
   return (
     <>
       {[0, 1, 2, 3].map((i) => (
         <div
           key={i}
-          className="min-w-[140px] h-[140px] flex-shrink-0 rounded-lg bg-white/[0.03] animate-pulse"
-        />
+          className="flex items-center gap-3 px-4 py-3 border-b border-[var(--twilight)]/40"
+        >
+          <div className="w-0.5 h-10 rounded-full bg-[var(--twilight)]/40 shrink-0 animate-pulse" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-4 w-32 rounded bg-[var(--cream)]/[0.04] animate-pulse" />
+            <div className="h-3 w-24 rounded bg-[var(--cream)]/[0.03] animate-pulse" />
+          </div>
+          <div className="h-4 w-24 rounded bg-[var(--cream)]/[0.03] animate-pulse shrink-0" />
+        </div>
       ))}
     </>
   );
@@ -128,7 +138,7 @@ export function NeighborhoodPulseSection({ portalSlug }: NeighborhoodPulseSectio
   if (!loading && neighborhoods.length < 3) return null;
 
   const evening = isEvening();
-  const countLabel = evening ? "events tonight" : "events today";
+  const countLabel = evening ? "tonight" : "today";
   const cityName = portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
   const subtitle = evening ? `Where ${cityName} is alive tonight` : `Where ${cityName} is alive today`;
 
@@ -146,13 +156,13 @@ export function NeighborhoodPulseSection({ portalSlug }: NeighborhoodPulseSectio
         <p className="text-xs text-[var(--muted)] -mt-2 mb-3">{subtitle}</p>
       </div>
 
-      {/* Horizontal scroll */}
-      <div className="flex gap-2.5 overflow-x-auto scrollbar-hide snap-x snap-mandatory px-4">
+      {/* Vertical list */}
+      <div>
         {loading ? (
-          <SkeletonCards />
+          <SkeletonRows />
         ) : (
-          neighborhoods.map((item) => (
-            <NeighborhoodCard
+          neighborhoods.slice(0, MAX_NEIGHBORHOODS).map((item) => (
+            <NeighborhoodRow
               key={item.slug}
               item={item}
               portalSlug={portalSlug}
@@ -164,5 +174,3 @@ export function NeighborhoodPulseSection({ portalSlug }: NeighborhoodPulseSectio
     </section>
   );
 }
-
-

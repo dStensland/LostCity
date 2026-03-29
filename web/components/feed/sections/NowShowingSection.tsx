@@ -43,6 +43,7 @@ import {
 } from "@/lib/my-theaters";
 import { useAuth } from "@/lib/auth-context";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import SmartImage from "@/components/SmartImage";
 import Dot from "@/components/ui/Dot";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -409,13 +410,14 @@ function TheaterCard({
               key={i}
               className={`flex-1 relative ${i < posters.length - 1 ? "border-r border-[var(--twilight)]/30" : ""}`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <SmartImage
                 src={url}
                 alt=""
-                className="absolute inset-0 w-full h-full object-cover"
-                loading="lazy"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                fill
+                className="object-cover"
+                fallback={
+                  <div className="absolute inset-0 bg-[var(--dusk)]" />
+                }
               />
             </div>
           ))}

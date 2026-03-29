@@ -128,7 +128,7 @@ export default function BrowseSection({ section, portalSlug }: Props) {
                 accentColor={tile.color}
                 snippet={null}
                 badge={null}
-                href={`/${portalSlug}?view=places`}
+                href={`/${portalSlug}?view=places&venue_type=${tile.venueTypes?.[0] ?? ""}`}
               />
             ))}
           </div>

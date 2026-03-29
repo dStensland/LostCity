@@ -60,14 +60,14 @@ export const RegularsNudge = function RegularsNudge({
   };
 
   return (
-    <div className="mx-4 mt-2 mb-4 px-3 py-2 rounded-lg bg-[var(--cream)]/[0.03] border border-[var(--cream)]/[0.06]">
+    <div className="mx-4 mt-2 mb-4 px-3 py-3 rounded-lg bg-[var(--cream)]/[0.03] border border-[var(--cream)]/[0.06]">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-[var(--cream)]/60">
+        <p className="text-sm text-[var(--cream)]/60">
           Looking for weekly trivia, karaoke, comedy?
         </p>
         <button
           onClick={handleToggleClick}
-          className="flex-shrink-0 text-xs text-[var(--vibe)] font-medium hover:opacity-80 transition-opacity active:scale-95"
+          className="flex-shrink-0 min-h-[44px] flex items-center text-sm text-[var(--vibe)] font-medium hover:opacity-80 transition-opacity active:scale-95"
           aria-label="Toggle Regulars view"
         >
           Toggle Regulars →

@@ -55,7 +55,7 @@ interface Signal {
 // ---------------------------------------------------------------------------
 // Threshold: collapse if event count is below this AND no other signals fire
 // ---------------------------------------------------------------------------
-const QUIET_DAY_THRESHOLD = 50;
+const QUIET_DAY_THRESHOLD = 20;
 
 // ---------------------------------------------------------------------------
 // Day label helpers

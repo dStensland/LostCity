@@ -67,7 +67,7 @@ export const TimeFlowMarker = memo(function TimeFlowMarker({
 
       {/* Label */}
       <span
-        className="font-mono text-2xs font-bold uppercase tracking-[0.14em]"
+        className="font-mono text-xs font-bold uppercase tracking-[0.14em]"
         style={{ color: config.color }}
       >
         {displayLabel}
