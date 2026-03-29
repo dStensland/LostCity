@@ -92,6 +92,10 @@ const DestinationsSectionV2 = dynamic(
   () => import("./sections/DestinationsSectionV2").then(m => ({ default: m.DestinationsSectionV2 })),
   { ssr: false }
 );
+const NeighborhoodPulseSection = dynamic(
+  () => import("./sections/NeighborhoodPulseSection").then(m => ({ default: m.NeighborhoodPulseSection })),
+  { ssr: false }
+);
 
 /** Section types that LineupSection absorbs */
 const TIMELINE_SECTION_TYPES = new Set<CityPulseSectionType>([
@@ -515,6 +519,22 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         <div className="pt-6">
           <LazySection minHeight={300}>
             <DestinationsSectionV2 portalSlug={portalSlug} />
+          </LazySection>
+        </div>
+      </div>
+
+      {/* Neighborhoods — contextual neighborhood insights */}
+      <div
+        id="city-pulse-neighborhoods"
+        data-feed-anchor="true"
+        data-index-label="Neighborhoods"
+        data-block-id="neighborhoods"
+        className="mt-8 scroll-mt-28"
+      >
+        <div className="h-px bg-[var(--twilight)]" />
+        <div className="pt-6">
+          <LazySection minHeight={200}>
+            <NeighborhoodPulseSection portalSlug={portalSlug} />
           </LazySection>
         </div>
       </div>
