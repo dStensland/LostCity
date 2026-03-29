@@ -384,6 +384,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     supabase,
     portalCity: ctx.portalCity,
     todayEvents: todayEventsWithProof,
+    closingSoonExhibitions: phaseA.closingSoonExhibitions,
   });
 
   // Stage 6: Final response assembly

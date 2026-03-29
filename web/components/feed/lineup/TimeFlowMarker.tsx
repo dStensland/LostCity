@@ -1,27 +1,43 @@
 "use client";
 
+/**
+ * TimeFlowMarker — visual divider that separates time sections in the Lineup.
+ *
+ * Variants:
+ *   - happening_now: "Happening Now" (neon-green pulse dot)
+ *   - tonight / this_afternoon: "Tonight" or "This Afternoon" (gold)
+ *   - on_the_horizon: "On the Horizon" (gold — temporal concept)
+ */
+
 import { memo } from "react";
 
+type TimeFlowVariant = "happening_now" | "tonight" | "this_afternoon" | "on_the_horizon";
+
 interface TimeFlowMarkerProps {
-  variant: "happening_now" | "tonight" | "on_the_horizon";
+  variant: TimeFlowVariant;
   label?: string; // Override default label
 }
 
-const VARIANT_CONFIG = {
+const VARIANT_CONFIG: Record<
+  TimeFlowVariant,
+  { label: string; color: string; pulse?: boolean }
+> = {
   happening_now: {
+    label: "Happening Now",
     color: "var(--neon-green)",
-    defaultLabel: "Happening Now",
-    hasPulse: true,
+    pulse: true,
   },
   tonight: {
+    label: "Tonight",
     color: "var(--gold)",
-    defaultLabel: "Tonight",
-    hasPulse: false,
+  },
+  this_afternoon: {
+    label: "This Afternoon",
+    color: "var(--gold)",
   },
   on_the_horizon: {
+    label: "On the Horizon",
     color: "var(--gold)",
-    defaultLabel: "On the Horizon",
-    hasPulse: false,
   },
 };
 
@@ -30,49 +46,43 @@ export const TimeFlowMarker = memo(function TimeFlowMarker({
   label,
 }: TimeFlowMarkerProps) {
   const config = VARIANT_CONFIG[variant];
-  const displayLabel = label || config.defaultLabel;
-
-  // Check if we're before 2pm (14:00) for "Tonight" → "This Afternoon"
-  const effectiveLabel =
-    variant === "tonight" && label === undefined
-      ? new Date().getHours() < 14
-        ? "This Afternoon"
-        : "Tonight"
-      : displayLabel;
+  const displayLabel = label ?? config.label;
 
   return (
-    <div className="flex items-center gap-3 my-4">
-      {/* Dot with optional pulse */}
-      <div
-        className={`flex-shrink-0 w-1.5 h-1.5 rounded-full ${
-          config.hasPulse ? "animate-pulse" : ""
-        }`}
+    <div className="flex items-center gap-2.5 py-3">
+      {/* Dot indicator */}
+      <span
+        className={[
+          "w-2 h-2 rounded-full shrink-0",
+          config.pulse ? "animate-pulse" : "",
+        ].join(" ")}
         style={{
           backgroundColor: config.color,
-          boxShadow: config.hasPulse
-            ? `0 0 12px ${config.color}, 0 0 24px color-mix(in srgb, ${config.color} 40%, transparent)`
-            : "none",
+          boxShadow: config.pulse
+            ? `0 0 6px color-mix(in srgb, ${config.color} 40%, transparent)`
+            : undefined,
         }}
         aria-hidden="true"
       />
 
       {/* Label */}
       <span
-        className="text-2xs uppercase tracking-wider font-semibold flex-shrink-0"
+        className="font-mono text-2xs font-bold uppercase tracking-[0.14em]"
         style={{ color: config.color }}
       >
-        {effectiveLabel}
+        {displayLabel}
       </span>
 
-      {/* Horizontal line extending to right edge */}
+      {/* Fading line */}
       <div
         className="flex-1 h-px"
         style={{
-          backgroundColor: `color-mix(in srgb, ${config.color} 15%, transparent)`,
+          background: `linear-gradient(90deg, ${config.color}, transparent)`,
+          opacity: 0.25,
         }}
       />
     </div>
   );
 });
 
-export type { TimeFlowMarkerProps };
+export type { TimeFlowMarkerProps, TimeFlowVariant };

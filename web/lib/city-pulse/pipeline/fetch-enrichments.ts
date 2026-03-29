@@ -10,6 +10,7 @@
  *    - Feed headers
  *    - User profile (for display_name in header)
  *    - User signals (prefs, follows, friends)
+ *    - Exhibitions closing soon
  *
  *  Phase B (depends on Phase A + event IDs):
  *    - Social proof counts
@@ -62,6 +63,13 @@ export type PhaseAEnrichments = {
   headerCandidates: FeedHeaderRow[];
   userProfile: { display_name: string | null; username: string | null } | null;
   userSignals: UserSignals | null;
+  closingSoonExhibitions: Array<{
+    id: string;
+    title: string;
+    closing_date: string;
+    venue_name?: string;
+    days_remaining: number;
+  }>;
 };
 
 /**
@@ -124,13 +132,19 @@ export async function fetchPhaseAEnrichments(
         return q.limit(50);
       })();
 
+  const today = new Date().toISOString().split("T")[0];
+  const twoWeeksFromNow = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
+
   const [
     weatherVenuesResult,
     specialsResult,
     curatedResult,
     headersResult,
     profileResult,
-    userSignals,
+    userSignalsResult,
+    exhibitionsResult,
   ] = await Promise.all([
     weatherVenuePromise,
     specialsPromise,
@@ -165,6 +179,18 @@ export async function fetchPhaseAEnrichments(
       : Promise.resolve({ data: null }),
     // User personalization signals
     loadUserSignals(supabase, ctx.userId, ctx.portalData.id),
+    // Exhibitions closing soon (within 14 days)
+    supabase
+      .from("exhibitions")
+      .select(`
+        id, title, closing_date,
+        place:places!inner(name)
+      `)
+      .eq("is_active", true)
+      .gte("closing_date", today)
+      .lte("closing_date", twoWeeksFromNow)
+      .order("closing_date", { ascending: true })
+      .limit(5),
   ]);
 
   // Process specials: compute live status and filter to active/soon
@@ -199,6 +225,29 @@ export async function fetchPhaseAEnrichments(
     return (a.starts_in_minutes ?? 999) - (b.starts_in_minutes ?? 999);
   });
 
+  // Process exhibitions: compute days_remaining
+  const rawExhibitions = (exhibitionsResult.data || []) as unknown as Array<{
+    id: string;
+    title: string;
+    closing_date: string;
+    place: { name: string };
+  }>;
+
+  const closingSoonExhibitions = rawExhibitions.map((e) => {
+    const closingDate = new Date(e.closing_date);
+    closingDate.setUTCHours(0, 0, 0, 0);
+    const daysRemaining = Math.ceil(
+      (closingDate.getTime() - Date.now()) / 86400000
+    );
+    return {
+      id: e.id,
+      title: e.title,
+      closing_date: e.closing_date,
+      venue_name: e.place?.name ?? undefined,
+      days_remaining: daysRemaining,
+    };
+  });
+
   return {
     weatherVenues: (weatherVenuesResult.data || []) as Spot[],
     weatherFilter,
@@ -209,7 +258,8 @@ export async function fetchPhaseAEnrichments(
       display_name: string | null;
       username: string | null;
     } | null,
-    userSignals,
+    userSignals: userSignalsResult,
+    closingSoonExhibitions,
   };
 }
 

@@ -1,7 +1,8 @@
 /**
  * GET /api/regulars
  *
- * Returns recurring weekly events (series_id IS NOT NULL) for the next 7 days.
+ * Returns recurring weekly events (series_id IS NOT NULL) for a configurable date range.
+ * Default is 7 days. Pass ?range=30 for a 30-day window (used by Coming Up tab).
  * Used by the Regulars Find tab. Mirrors the city-pulse recurring query
  * but returns raw events for client-side activity-type matching.
  */
@@ -57,6 +58,8 @@ export async function GET(request: NextRequest) {
   // Optional weekday filter: "monday", "tuesday,wednesday", etc.
   const weekdayParam = searchParams.get("weekday");
   const portalExclusive = searchParams.get("portal_exclusive") === "true";
+  const range = searchParams.get("range");
+  const rangeDays = range === "30" ? 30 : 7;
 
   const supabase = await createClient();
   const portalContext = await resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request));
@@ -70,10 +73,10 @@ export async function GET(request: NextRequest) {
   const sourceAccess = portalId ? await getPortalSourceAccess(portalId) : null;
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
-  // Date range: today through +7 days (portal-local time, not UTC)
+  // Date range: today through +N days (portal-local time, not UTC)
   const now = new Date();
   const today = getLocalDateString(now);
-  const weekAhead = getLocalDateString(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000));
+  const dateAhead = getLocalDateString(new Date(now.getTime() + rangeDays * 24 * 60 * 60 * 1000));
 
   // Cache
   const cacheBucket = Math.floor(Date.now() / CACHE_TTL_MS);
@@ -81,6 +84,7 @@ export async function GET(request: NextRequest) {
     portalId || "no-portal",
     portalCity || "all-cities",
     weekdayParam || "all-days",
+    range || "7",
     cacheBucket,
   ].join("|");
 
@@ -101,7 +105,7 @@ export async function GET(request: NextRequest) {
     .from("events")
     .select(EVENT_SELECT)
     .gte("start_date", today)
-    .lte("start_date", weekAhead)
+    .lte("start_date", dateAhead)
     .not("series_id", "is", null)
     .is("canonical_event_id", null)
     .eq("is_regular_ready", true)
@@ -135,7 +139,7 @@ export async function GET(request: NextRequest) {
 
   // Optional weekday filtering — compute target dates
   if (weekdayParam) {
-    const targetDates = computeWeekdayDates(weekdayParam, today, weekAhead);
+    const targetDates = computeWeekdayDates(weekdayParam, today, dateAhead);
     if (targetDates.length > 0) {
       query = query.in("start_date", targetDates);
     }

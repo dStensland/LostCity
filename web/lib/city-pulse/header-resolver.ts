@@ -11,6 +11,8 @@ import { getLocalDateString } from "@/lib/formats";
 import { sanitizeCssColor } from "@/lib/css-utils";
 import { getEditorialHeadline, getCityPhoto, getDefaultAccentColor, getTimeLabel } from "./header-defaults";
 import { getDashboardCards } from "./dashboard-cards";
+import { composeBriefing } from "./briefing-engine";
+import type { BriefingContext } from "./briefing-engine";
 import type { FeedEventData } from "@/components/EventCard";
 import type {
   FeedContext,
@@ -42,13 +44,21 @@ export interface ResolveHeaderOpts {
   portalCity?: string;
   /** Today's events (with social proof) — used to identify the flagship hero event */
   todayEvents?: FeedEventData[];
+  /** Exhibitions closing within 14 days — fed into the briefing engine */
+  closingSoonExhibitions?: Array<{
+    id: string;
+    title: string;
+    closing_date: string;
+    venue_name?: string;
+    days_remaining: number;
+  }>;
 }
 
 export async function resolveHeader(opts: ResolveHeaderOpts): Promise<ResolvedHeader> {
   const {
     candidates, context, portalSlug, portalName,
     eventsPulse, now, user, supabase, portalCity, portalId,
-    todayEvents,
+    todayEvents, closingSoonExhibitions,
   } = opts;
 
   // 1. Find first matching candidate
@@ -125,6 +135,42 @@ export async function resolveHeader(opts: ResolveHeaderOpts): Promise<ResolvedHe
   // 7. Identify sports tentpole — for signal strip display (e.g. "Braves vs Mets · 7:20")
   const sportsTentpole = resolveSportsTentpole(todayEvents, portalSlug);
 
+  // 8. Build briefing context and compose the editorial briefing
+  const briefingCtx: BriefingContext = {
+    tentpoleEvent: flagshipEvent
+      ? {
+          title: flagshipEvent.title,
+          starts_tomorrow: false,
+          location: flagshipEvent.venue_name ?? undefined,
+        }
+      : null,
+    activeHolidays: context.active_holidays.map((h) => ({
+      title: h.title,
+      slug: h.slug,
+    })),
+    closingSoonExhibitions: (closingSoonExhibitions ?? []).map((e) => ({
+      title: e.title,
+      venue_name: e.venue_name,
+      days_remaining: e.days_remaining,
+    })),
+    schoolCalendarEvents: (context.school_calendar_events ?? []).map((e) => ({
+      event_type: e.event_type,
+      school_system: e.school_system,
+      title: e.title,
+    })),
+    weather: context.weather
+      ? { temperature_f: context.weather.temperature_f, condition: context.weather.condition }
+      : null,
+    weatherSignal: context.weather_signal ?? null,
+    todayEventCount: eventsPulse.total_active,
+    topCategories: [],
+    timeSlot: context.time_slot,
+    dayOfWeek: context.day_of_week,
+    portalSlug,
+  };
+
+  const briefing = composeBriefing(briefingCtx);
+
   return {
     config_id: winner?.id ?? null,
     config_slug: winner?.slug ?? null,
@@ -142,6 +188,7 @@ export async function resolveHeader(opts: ResolveHeaderOpts): Promise<ResolvedHe
     boosted_event_ids: boostedEventIds,
     flagship_event: flagshipEvent,
     sports_tentpole: sportsTentpole,
+    briefing,
   };
 }
 

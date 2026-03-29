@@ -252,6 +252,14 @@ export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStrip
                   {item.event.title}
                 </span>
                 <span className="flex items-center gap-1 text-xs text-[var(--muted)] flex-shrink-0">
+                  {recurrenceLabel && (
+                    <>
+                      <span className="font-mono text-2xs font-medium uppercase tracking-wider text-[var(--vibe)]">
+                        {recurrenceLabel}
+                      </span>
+                      {(venue?.name || timeStr) && <Dot />}
+                    </>
+                  )}
                   {venue?.name && (
                     <span className="truncate max-w-[100px]">{venue.name}</span>
                   )}

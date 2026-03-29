@@ -45,6 +45,10 @@ type ShowtimeSeries = {
   genres: string[] | null;
   director: string | null;
   year: number | null;
+  runtime_minutes: number | null;
+  rating: string | null;
+  festival_id: string | null;
+  festival: { name: string } | null;
 };
 type ShowtimeEvent = {
   id: number;
@@ -80,6 +84,10 @@ function buildFilmMap(events: ShowtimeEvent[]) {
       genres: string[];
       director: string | null;
       year: number | null;
+      runtime_minutes: number | null;
+      rating: string | null;
+      festival_id: string | null;
+      festival_name: string | null;
       theaters: Map<
         number,
         {
@@ -111,6 +119,12 @@ function buildFilmMap(events: ShowtimeEvent[]) {
         genres: series?.genres || [],
         director: series?.director || null,
         year: series?.year || null,
+        runtime_minutes: series?.runtime_minutes ?? null,
+        rating: series?.rating ?? null,
+        festival_id: series?.festival_id ?? null,
+        festival_name: series?.festival
+          ? (Array.isArray(series.festival) ? (series.festival[0]?.name ?? null) : (series.festival as { name: string } | null)?.name ?? null)
+          : null,
         theaters: new Map(),
       };
       filmMap.set(groupKey, film);
@@ -184,6 +198,10 @@ function toFilmsResponse(filmMap: ReturnType<typeof buildFilmMap>) {
       genres: film.genres,
       director: film.director,
       year: film.year,
+      runtime_minutes: film.runtime_minutes,
+      rating: film.rating,
+      festival_id: film.festival_id,
+      festival_name: film.festival_name,
       theaters: Array.from(film.theaters.values()).map((theater) => ({
         venue_id: theater.venue_id,
         venue_name: theater.venue_name,
@@ -196,7 +214,10 @@ function toFilmsResponse(filmMap: ReturnType<typeof buildFilmMap>) {
 }
 
 /** Convert film map to by-theater response array */
-function toTheatersResponse(filmMap: ReturnType<typeof buildFilmMap>) {
+function toTheatersResponse(
+  filmMap: ReturnType<typeof buildFilmMap>,
+  urgencyMap?: Map<string, { remaining_count: number; first_date: string | null }>,
+) {
   const theaterMap = new Map<
     number,
     {
@@ -212,12 +233,19 @@ function toTheatersResponse(filmMap: ReturnType<typeof buildFilmMap>) {
         genres: string[];
         director: string | null;
         year: number | null;
+        runtime_minutes: number | null;
+        rating: string | null;
+        festival_id: string | null;
+        festival_name: string | null;
+        remaining_count: number | null;
+        first_date: string | null;
         times: { time: string; event_id: number }[];
       }[];
     }
   >();
 
   for (const film of filmMap.values()) {
+    const urgency = film.series_id ? urgencyMap?.get(film.series_id) : undefined;
     for (const [venueId, theater] of film.theaters) {
       let theaterEntry = theaterMap.get(venueId);
       if (!theaterEntry) {
@@ -238,6 +266,12 @@ function toTheatersResponse(filmMap: ReturnType<typeof buildFilmMap>) {
         genres: film.genres,
         director: film.director,
         year: film.year,
+        runtime_minutes: film.runtime_minutes,
+        rating: film.rating,
+        festival_id: film.festival_id,
+        festival_name: film.festival_name,
+        remaining_count: urgency?.remaining_count ?? null,
+        first_date: urgency?.first_date ?? null,
         times: theater.times.sort((a, b) => a.time.localeCompare(b.time)),
       });
     }
@@ -329,7 +363,11 @@ export async function GET(request: NextRequest) {
         image_url,
         genres,
         director,
-        year
+        year,
+        runtime_minutes,
+        rating,
+        festival_id,
+        festival:festivals!series_festival_id_fkey(name)
       )
     `,
         )
@@ -382,11 +420,45 @@ export async function GET(request: NextRequest) {
       // Build film map and response
       const filmMap = buildFilmMap(displayEvents);
 
+      // Build urgency map for by-theater mode (remaining showtimes + first date per series)
+      let urgencyMap: Map<string, { remaining_count: number; first_date: string | null }> | undefined;
+      if (mode === "by-theater") {
+        const seriesIds = Array.from(filmMap.values())
+          .map((f) => f.series_id)
+          .filter((id): id is string => id !== null);
+
+        if (seriesIds.length > 0) {
+          const { data: urgencyRows } = await supabase
+            .from("events")
+            .select("series_id, start_date")
+            .in("series_id", seriesIds)
+            .eq("category_id", "film")
+            .contains("tags", ["showtime"])
+            .gte("start_date", date)
+            .not("start_time", "is", null)
+            .limit(5000);
+
+          urgencyMap = new Map();
+          for (const row of (urgencyRows as unknown as { series_id: string; start_date: string }[] | null) || []) {
+            if (!row.series_id) continue;
+            const existing = urgencyMap.get(row.series_id);
+            if (!existing) {
+              urgencyMap.set(row.series_id, { remaining_count: 1, first_date: row.start_date });
+            } else {
+              existing.remaining_count += 1;
+              if (!existing.first_date || row.start_date < existing.first_date) {
+                existing.first_date = row.start_date;
+              }
+            }
+          }
+        }
+      }
+
       // Build response
       const responsePayload: Record<string, unknown> = { date };
 
       if (mode === "by-theater") {
-        responsePayload.theaters = toTheatersResponse(filmMap);
+        responsePayload.theaters = toTheatersResponse(filmMap, urgencyMap);
       } else {
         responsePayload.films = toFilmsResponse(filmMap);
       }

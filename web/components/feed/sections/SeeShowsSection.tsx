@@ -8,7 +8,7 @@ import { PlaceGroupedShowsList } from "@/components/feed/PlaceGroupedShowsList";
 
 // ── Types ─────────────────────────────────────────────────────────
 
-type ShowTab = "film" | "music" | "theater" | "clowns";
+type ShowTab = "film" | "music" | "theater";
 
 interface SeeShowsSectionProps {
   portalSlug: string;
@@ -18,7 +18,6 @@ const TABS: { id: ShowTab; label: string; accent: string }[] = [
   { id: "film", label: "Film", accent: "var(--vibe)" },
   { id: "music", label: "Music", accent: "#E855A0" },
   { id: "theater", label: "Theater", accent: "var(--neon-cyan)" },
-  { id: "clowns", label: "Clowns", accent: "var(--gold)" },
 ];
 
 // ── Component ─────────────────────────────────────────────────────
@@ -91,16 +90,6 @@ export default function SeeShowsSection({ portalSlug }: SeeShowsSectionProps) {
             portalSlug={portalSlug}
             categories="theater,dance"
             accentColor="var(--neon-cyan)"
-          />
-        )}
-      </div>
-
-      <div className={activeTab === "clowns" ? "block" : "hidden"}>
-        {visited.has("clowns") && (
-          <PlaceGroupedShowsList
-            portalSlug={portalSlug}
-            categories="comedy"
-            accentColor="var(--gold)"
           />
         )}
       </div>

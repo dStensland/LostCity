@@ -44,6 +44,12 @@ export interface FeedContext {
   quick_links: QuickLink[];
   day_theme?: string; // "taco_tuesday" | "wine_wednesday" | "brunch_weekend" etc.
   weather_signal?: string; // "rain" | "cold" | "nice" | "hot"
+  school_calendar_events?: Array<{
+    event_type: string;
+    school_system: string;
+    date: string;
+    title: string;
+  }>;
 }
 
 export interface HolidayInfo {
@@ -84,6 +90,27 @@ export interface EditorialMention {
   snippet: string;
   article_url: string;
   guide_name?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Briefing Engine Types
+// ---------------------------------------------------------------------------
+
+export interface BriefingSignal {
+  type: "tentpole" | "holiday" | "exhibition_closing" | "school_calendar" | "weather" | "general_activity";
+  priority: number;
+  headline: string;
+  detail?: string;
+  link?: { label: string; href: string };
+  accent?: string;
+}
+
+export interface BriefingOutput {
+  prose: string;
+  collapsed: boolean;
+  pills: Array<{ label: string; href: string; accent?: string; ariaLabel: string }>;
+  dayLabel: string;
+  weatherBadge?: { temp: string; condition: string };
 }
 
 // ---------------------------------------------------------------------------
@@ -306,6 +333,7 @@ export interface ResolvedHeader {
     venue_name?: string;
     href: string;
   } | null;
+  briefing?: BriefingOutput;
 }
 
 // ---------------------------------------------------------------------------

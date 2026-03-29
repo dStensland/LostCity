@@ -62,6 +62,7 @@ export function SceneEventRow({
   const dayStr = event.start_date
     ? new Date(event.start_date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short" })
     : null;
+  const recurrenceLabel = event.recurrence_label;
 
   return (
     <Link
@@ -91,8 +92,16 @@ export function SceneEventRow({
           {event.title}
         </p>
         <p className="text-xs text-[var(--muted)] truncate leading-tight">
+          {recurrenceLabel && (
+            <>
+              <span className="font-mono text-2xs font-medium uppercase tracking-wider text-[var(--vibe)]">
+                {recurrenceLabel}
+              </span>
+              <span className="opacity-50"> &middot; </span>
+            </>
+          )}
           {event.venue?.name}
-          <span className="opacity-50"> &middot; </span>
+          {(event.venue?.name || dayStr) && <span className="opacity-50"> &middot; </span>}
           {dayStr && <>{dayStr} </>}
           {timeStr}
         </p>
