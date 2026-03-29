@@ -74,6 +74,10 @@ function buildMetadataRow(event: FeedEventData): string[] {
     parts.push(`From $${event.price_min}`);
   }
 
+  if (event.venue?.google_rating != null) {
+    parts.push(`${event.venue.google_rating.toFixed(1)} ★`);
+  }
+
   return parts;
 }
 
