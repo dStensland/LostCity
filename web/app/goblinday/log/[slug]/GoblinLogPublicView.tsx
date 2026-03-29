@@ -25,57 +25,80 @@ export default function GoblinLogPublicView({ user, entries, year }: Props) {
   const pathname = usePathname();
 
   return (
-    <main className="min-h-screen bg-black text-white font-mono relative">
-      {/* Film grain overlay */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.04] z-50"
-        style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }}
+    <main className="min-h-screen bg-black text-white font-mono relative overflow-hidden">
+      {/* Laser grid background */}
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.04]"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(0,240,255,0.3) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,240,255,0.3) 1px, transparent 1px)
+          `,
+          backgroundSize: "60px 60px",
+        }}
+      />
+      {/* Horizon glow */}
+      <div className="fixed bottom-0 left-0 right-0 h-64 pointer-events-none z-0"
+        style={{
+          background: "radial-gradient(ellipse at 50% 100%, rgba(0,240,255,0.06) 0%, transparent 70%)",
+        }}
       />
 
-      {/* Top accent bar */}
-      <div className="h-1 bg-gradient-to-r from-transparent via-red-700 to-transparent" />
+      {/* Top laser line */}
+      <div className="h-px w-full"
+        style={{ background: "linear-gradient(to right, transparent, rgba(0,240,255,0.5), rgba(255,0,170,0.5), transparent)" }} />
 
-      <div className="max-w-3xl mx-auto px-4 py-10 sm:py-16 relative z-10">
+      <div className="max-w-3xl mx-auto px-4 py-12 sm:py-20 relative z-10">
         {/* Header */}
-        <div className="mb-10 pb-6 border-b-2 border-red-900/40">
+        <div className="mb-12 pb-6"
+          style={{ borderBottom: "1px solid rgba(0,240,255,0.15)" }}>
           <div className="flex items-end gap-4">
             {user.avatarUrl && (
-              <SmartImage
-                src={user.avatarUrl}
-                alt=""
-                width={48}
-                height={48}
-                className="rounded-none border-2 border-zinc-700 grayscale"
-              />
+              <div className="relative">
+                <SmartImage
+                  src={user.avatarUrl}
+                  alt=""
+                  width={56}
+                  height={56}
+                  className="border border-cyan-800/40"
+                />
+                {/* Neon corner accents */}
+                <div className="absolute -top-px -left-px w-2 h-2 border-t border-l border-cyan-500/60" />
+                <div className="absolute -top-px -right-px w-2 h-2 border-t border-r border-cyan-500/60" />
+                <div className="absolute -bottom-px -left-px w-2 h-2 border-b border-l border-cyan-500/60" />
+                <div className="absolute -bottom-px -right-px w-2 h-2 border-b border-r border-cyan-500/60" />
+              </div>
             )}
             <div>
-              <p className="text-2xs text-zinc-600 tracking-[0.4em] uppercase mb-1">
-                The Film Log of
+              <p className="text-2xs text-cyan-700 tracking-[0.4em] uppercase mb-1.5"
+                style={{ textShadow: "0 0 10px rgba(0,240,255,0.2)" }}>
+                Film Log
               </p>
-              <h1 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-[0.2em] leading-none">
+              <h1 className="text-3xl sm:text-5xl font-black text-white uppercase tracking-[0.15em] leading-none"
+                style={{ textShadow: "0 0 40px rgba(0,240,255,0.15), 0 0 80px rgba(0,240,255,0.05)" }}>
                 {user.displayName || user.username}
               </h1>
             </div>
           </div>
 
           {/* Year pills + count */}
-          <div className="flex items-center justify-between mt-6">
+          <div className="flex items-center justify-between mt-8">
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
               {YEARS.map((y) => (
                 <button
                   key={y}
                   onClick={() => router.push(`${pathname}?year=${y}`)}
                   className={`flex-shrink-0 px-3 py-1 font-mono text-2xs font-bold tracking-wider uppercase
-                    border-2 transition-all duration-200 ${
+                    border transition-all duration-200 ${
                       y === year
-                        ? "bg-red-700 border-red-600 text-white"
-                        : "border-zinc-800 text-zinc-600 hover:text-zinc-400 hover:border-zinc-700"
+                        ? "border-cyan-600 text-cyan-300 bg-cyan-950/30 shadow-[0_0_10px_rgba(0,240,255,0.1)]"
+                        : "border-zinc-800 text-zinc-600 hover:text-cyan-400/60 hover:border-cyan-800/40"
                     }`}
                 >
                   {y}
                 </button>
               ))}
             </div>
-            <span className="text-2xs text-zinc-600 tracking-[0.3em] uppercase flex-shrink-0 ml-4">
+            <span className="text-2xs text-zinc-600 tracking-[0.3em] uppercase flex-shrink-0 ml-4 tabular-nums">
               {entries.length} film{entries.length !== 1 ? "s" : ""}
             </span>
           </div>
@@ -103,12 +126,12 @@ export default function GoblinLogPublicView({ user, entries, year }: Props) {
         )}
 
         {/* Footer */}
-        <div className="mt-16 pt-6 border-t-2 border-zinc-900 flex items-center justify-between">
-          <a
-            href="/goblinday"
+        <div className="mt-20 pt-6 flex items-center justify-between"
+          style={{ borderTop: "1px solid rgba(0,240,255,0.1)" }}>
+          <a href="/goblinday"
             className="text-2xs text-zinc-700 font-mono tracking-[0.2em] uppercase
-              hover:text-red-500 transition-colors"
-          >
+              hover:text-cyan-500 transition-colors"
+            style={{ textShadow: "0 0 10px rgba(0,240,255,0)" }}>
             Goblin Day
           </a>
           <span className="text-2xs text-zinc-800 font-mono tracking-[0.15em]">

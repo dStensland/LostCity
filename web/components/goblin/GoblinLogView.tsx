@@ -133,23 +133,19 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
 
   return (
     <div className="max-w-3xl mx-auto relative">
-      {/* Subtle noise texture overlay */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.03] z-0"
-        style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }}
-      />
-
       {/* Header */}
       <div className="mb-8 relative z-10">
-        <div className="flex items-end justify-between gap-4 pb-4
-          border-b-2 border-red-900/40">
+        <div className="flex items-end justify-between gap-4 pb-4"
+          style={{ borderBottom: "1px solid rgba(0,240,255,0.15)" }}>
           <div>
-            <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-[0.2em] leading-none">
+            <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-[0.25em] leading-none"
+              style={{ textShadow: "0 0 30px rgba(0,240,255,0.2), 0 0 60px rgba(0,240,255,0.05)" }}>
               The Log
             </h2>
             <p className="text-2xs text-zinc-600 font-mono mt-2 tracking-[0.3em] uppercase">
               {filteredEntries.length} film{filteredEntries.length !== 1 ? "s" : ""} / {year}
-              {activeTag && <span className="text-amber-500/70"> / #{activeTag}</span>}
-              {activeDirector && <span className="text-red-500/70"> / {activeDirector}</span>}
+              {activeTag && <span className="text-cyan-400/70"> / #{activeTag}</span>}
+              {activeDirector && <span className="text-fuchsia-400/70"> / {activeDirector}</span>}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -157,8 +153,8 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
               <button
                 onClick={handleCopyShareLink}
                 className="px-3 py-1.5 text-2xs font-mono font-bold tracking-[0.2em] uppercase
-                  border-2 border-zinc-700 text-zinc-500
-                  hover:text-white hover:border-red-700 hover:bg-red-950/30
+                  border border-zinc-700 text-zinc-500
+                  hover:text-cyan-300 hover:border-cyan-700 hover:shadow-[0_0_12px_rgba(0,240,255,0.15)]
                   active:scale-95 transition-all"
               >
                 {copied ? "COPIED!" : "SHARE"}
@@ -166,10 +162,10 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
             )}
             <button
               onClick={() => setAddModalOpen(true)}
-              className="px-4 py-1.5 bg-red-700 text-white
+              className="px-4 py-1.5 text-white
                 font-mono text-2xs font-black tracking-[0.2em] uppercase
-                border-2 border-red-600
-                hover:bg-red-600 hover:shadow-[0_0_20px_rgba(185,28,28,0.3)]
+                border border-cyan-600 bg-cyan-950/40
+                hover:bg-cyan-900/40 hover:shadow-[0_0_20px_rgba(0,240,255,0.2)]
                 active:scale-95 transition-all"
             >
               + LOG
@@ -192,8 +188,8 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
                 className={`flex-shrink-0 px-3 py-1 font-mono text-2xs font-bold tracking-wider uppercase
                   border transition-all duration-200 ${
                     y === year
-                      ? "bg-amber-500/15 border-amber-500/40 text-amber-400"
-                      : "border-zinc-800 text-zinc-600 hover:text-zinc-400 hover:border-zinc-700"
+                      ? "border-cyan-600 text-cyan-300 bg-cyan-950/30 shadow-[0_0_10px_rgba(0,240,255,0.1)]"
+                      : "border-zinc-800 text-zinc-600 hover:text-cyan-400/60 hover:border-cyan-800/40"
                   }`}
               >
                 {y}
@@ -248,8 +244,8 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
                     className={`flex-shrink-0 px-2 py-0.5 font-mono text-2xs font-medium
                       border transition-all duration-200 ${
                         activeDirector === name
-                          ? "bg-violet-500/15 border-violet-500/40 text-violet-400"
-                          : "border-zinc-800 text-zinc-600 hover:text-zinc-400 hover:border-zinc-700"
+                          ? "border-fuchsia-600 text-fuchsia-300 bg-fuchsia-950/30 shadow-[0_0_8px_rgba(255,0,170,0.1)]"
+                          : "border-zinc-800 text-zinc-600 hover:text-fuchsia-400/60 hover:border-fuchsia-800/40"
                       }`}
                   >
                     {name} [{count}]

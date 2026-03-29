@@ -7065,20 +7065,24 @@ body:has([data-vertical="hospital"]) .rain-overlay {
   50%       { opacity: 0.5; }
 }
 
-/* Goblin Log: card entrance — clean fade + slide */
+/* Goblin Log: card entrance — fade + slide + brief neon flash */
 @keyframes goblinCardEnter {
-  from {
+  0% {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
+    border-left-color: rgba(0, 240, 255, 0.6);
   }
-  to {
+  50% {
+    border-left-color: rgba(0, 240, 255, 0.4);
+  }
+  100% {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
 .goblin-log-card {
-  animation: goblinCardEnter 0.3s ease-out backwards;
+  animation: goblinCardEnter 0.35s ease-out backwards;
 }
 
 /* Goblin Log: entry removal */
