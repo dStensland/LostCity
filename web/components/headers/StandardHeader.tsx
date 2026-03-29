@@ -28,7 +28,7 @@ interface StandardHeaderProps {
 }
 
 type NavTab = {
-  key: "feed" | "happening" | "places" | "community" | "support";
+  key: "feed" | "find" | "happening" | "places" | "community" | "support";
   defaultLabel: string;
   authRequired?: boolean;
   icon?: React.ReactNode;
@@ -45,21 +45,11 @@ const DEFAULT_TABS: NavTab[] = [
     ),
   },
   {
-    key: "happening",
-    defaultLabel: "Happening",
+    key: "find",
+    defaultLabel: "Find",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    ),
-  },
-  {
-    key: "places",
-    defaultLabel: "Places",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
     ),
   },
@@ -97,11 +87,9 @@ export default function StandardHeader({
   // Get custom nav labels from portal settings
   const navLabels = (portal.settings?.nav_labels || {}) as Record<string, string | undefined>;
   const showSupportTab = isHelpAtlSupportDirectoryEnabled(portalSlug);
-  const portalVertical = portal.settings?.vertical;
-  const isCommunityPortal = portalVertical === "community";
 
   // Build tabs with custom labels, filtering out auth-required tabs when not logged in
-  // Community portals don't show Places tab
+  // Find tab replaces both Happening and Places — always visible on all portal verticals
   const TABS = [
     ...DEFAULT_TABS,
     ...(showSupportTab
@@ -114,7 +102,6 @@ export default function StandardHeader({
       : []),
   ]
     .filter(tab => !tab.authRequired || user)
-    .filter(tab => !(isCommunityPortal && tab.key === "places"))
     .map(tab => ({
       ...tab,
       label: getPortalNavLabel(navLabels, tab.key, tab.defaultLabel),
@@ -170,7 +157,14 @@ export default function StandardHeader({
     params.delete("festival");
     params.delete("org");
 
-    if (tab.key === "happening") {
+    if (tab.key === "find") {
+      params.set("view", "find");
+      params.delete("content");
+      params.delete("tab");
+      params.delete("type");
+      params.delete("display");
+      params.delete("lane");
+    } else if (tab.key === "happening") {
       params.set("view", "happening");
       params.delete("tab");
       params.delete("type");
@@ -200,6 +194,24 @@ export default function StandardHeader({
 
     if (tab.key === "feed") {
       return isFeedRoute && (!currentView || currentView === "feed");
+    }
+    if (tab.key === "find") {
+      return (
+        isFindRoute ||
+        pathname.startsWith(`/${portalSlug}/spots/`) ||
+        pathname.startsWith(`/${portalSlug}/events/`) ||
+        pathname.startsWith(`/${portalSlug}/series/`) ||
+        pathname.startsWith(`/${portalSlug}/festivals/`) ||
+        (isPortalPage && (
+          currentView === "find" ||
+          currentView === "happening" ||
+          currentView === "places" ||
+          currentView === "events" ||
+          currentView === "spots" ||
+          currentView === "map" ||
+          currentView === "calendar"
+        ))
+      );
     }
     if (tab.key === "happening") {
       return (

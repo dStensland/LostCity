@@ -133,7 +133,7 @@ export async function generateMetadata({
   };
 }
 
-type ViewMode = "feed" | "happening" | "places" | "community";
+type ViewMode = "feed" | "find" | "happening" | "places" | "community";
 type FindDisplay = "list" | "map" | "calendar";
 
 type PortalSearchParams = {
@@ -336,12 +336,14 @@ export default async function PortalPage({ params, searchParams }: Props) {
     viewMode = "feed";
   } else if (viewParam === "community") {
     viewMode = "community";
+  } else if (viewParam === "find") {
+    viewMode = "find";
   } else if (viewParam === "places") {
     viewMode = "places";
   } else if (viewParam === "happening") {
     viewMode = "happening";
-  } else if (viewParam === "find" || viewParam === "events" || viewParam === "spots" || viewParam === "map" || viewParam === "calendar") {
-    // Backward compat: view=find routes to happening or places based on type
+  } else if (viewParam === "events" || viewParam === "spots" || viewParam === "map" || viewParam === "calendar") {
+    // Backward compat: legacy view params route to happening or places based on type
     const typeP = findTypeParam;
     if (typeP === "destinations" || typeP === "spots" || viewParam === "spots") {
       viewMode = "places";
@@ -472,6 +474,14 @@ export default async function PortalPage({ params, searchParams }: Props) {
                           <DefaultCityTemplate portal={portal} serverHeroUrl={serverHeroUrl} />
                         )
                       )}
+                    </Suspense>
+                  )}
+
+                  {viewMode === "find" && (
+                    <Suspense fallback={<div data-skeleton-route="find-view" />}>
+                      <div className="flex min-h-[50vh] items-center justify-center">
+                        <p className="text-[var(--muted)]">Find view — coming soon</p>
+                      </div>
                     </Suspense>
                   )}
 
