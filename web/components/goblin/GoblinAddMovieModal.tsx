@@ -178,14 +178,19 @@ export default function GoblinAddMovieModal({
                       />
                     )}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-[var(--cream)] truncate
                       group-hover:text-[var(--coral)] transition-colors">
                       {movie.title}
+                      <span className="text-[var(--muted)] ml-1.5 font-normal">
+                        {movie.release_date?.split("-")[0] || ""}
+                      </span>
                     </p>
-                    <p className="text-xs text-[var(--muted)]">
-                      {movie.release_date?.split("-")[0] || "Unknown year"}
-                    </p>
+                    {movie.overview && (
+                      <p className="text-2xs text-[var(--muted)] line-clamp-1 mt-0.5">
+                        {movie.overview}
+                      </p>
+                    )}
                   </div>
                 </button>
               ))}
