@@ -142,7 +142,7 @@ export async function fetchFeedCounts(
     supabase.rpc("get_venue_type_counts", {
       p_city: ctx.portalCity ?? null,
     } as never) as unknown as Promise<{
-      data: { venue_type: string; cnt: number }[] | null;
+      data: { place_type: string; cnt: number }[] | null;
     }>,
   ]);
 
@@ -187,9 +187,9 @@ export async function fetchFeedCounts(
   }
 
   const venueTypeCounts: Record<string, number> = {};
-  for (const row of (venueTypeResult.data || []) as { venue_type: string; cnt: number }[]) {
-    if (row.venue_type) {
-      venueTypeCounts[row.venue_type] = row.cnt || 0;
+  for (const row of (venueTypeResult.data || []) as { place_type: string; cnt: number }[]) {
+    if (row.place_type) {
+      venueTypeCounts[row.place_type] = row.cnt || 0;
     }
   }
 

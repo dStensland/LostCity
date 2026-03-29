@@ -80,8 +80,8 @@ export async function GET(request: NextRequest) {
 
       const { data: eventRows, error: eventError } = await serviceClient
         .from("events")
-        .select("id, title, venue_id, start_time, end_time")
-        .in("venue_id", venueIds)
+        .select("id, title, place_id, start_time, end_time")
+        .in("place_id", venueIds)
         .eq("start_date", todayDate)
         .not("start_time", "is", null)
         .lte("start_time", currentTimeStr)
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
         type EventRow = {
           id: number;
           title: string;
-          venue_id: number;
+          place_id: number;
           start_time: string | null;
           end_time: string | null;
         };
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
 
         for (const event of events) {
           // Skip if already found an event for this venue
-          if (currentEventsByVenue.has(event.venue_id)) continue;
+          if (currentEventsByVenue.has(event.place_id)) continue;
 
           // Check the event hasn't ended
           if (event.end_time) {
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
             if (nowMinutes >= startMinutes + 180) continue;
           }
 
-          currentEventsByVenue.set(event.venue_id, event.title);
+          currentEventsByVenue.set(event.place_id, event.title);
         }
       }
     }

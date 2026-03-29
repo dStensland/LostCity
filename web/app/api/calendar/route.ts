@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
     blurhash: string | null;
     is_tentpole: boolean;
     featured_blurb: string | null;
-    venue_id: number | null;
+    place_id: number | null;
   };
 
   type VenueRow = {
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
         blurhash,
         is_tentpole,
         featured_blurb,
-        venue_id
+        place_id
       `)
       .gte("start_date", startDate)
       .lte("start_date", endDate)
@@ -239,7 +239,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Batch-fetch venue data for all unique venue IDs
-        const venueIds = [...new Set(allEvents.map(e => e.venue_id).filter((id): id is number => id !== null))];
+        const venueIds = [...new Set(allEvents.map(e => e.place_id).filter((id): id is number => id !== null))];
         const venueMap = new Map<number, VenueRow>();
         if (venueIds.length > 0) {
           // Fetch in chunks of 500 to stay under Supabase URL length limits
@@ -258,11 +258,11 @@ export async function GET(request: NextRequest) {
         }
 
         // Merge venue data onto events, dropping venue_id from response
-        type CalendarEvent = Omit<CalendarEventRow, "venue_id"> & {
+        type CalendarEvent = Omit<CalendarEventRow, "place_id"> & {
           venue: { id: number; name: string; neighborhood: string | null; city: string | null; lat: number | null; lng: number | null } | null;
         };
-        const eventsWithVenues: CalendarEvent[] = allEvents.map(({ venue_id, ...event }) => {
-          const venue = venue_id ? venueMap.get(venue_id) ?? null : null;
+        const eventsWithVenues: CalendarEvent[] = allEvents.map(({ place_id, ...event }) => {
+          const venue = place_id ? venueMap.get(place_id) ?? null : null;
           return { ...event, venue };
         });
 

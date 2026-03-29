@@ -369,9 +369,9 @@ export async function GET(request: NextRequest) {
 
           const discoveryCounts = new Map<number, number>();
           for (const row of
-            ((discoveryEvents as Array<{ venue_id: number; event_count: number }> | null) ||
+            ((discoveryEvents as Array<{ place_id: number; event_count: number }> | null) ||
               [])) {
-            discoveryCounts.set(row.venue_id, Number(row.event_count) || 0);
+            discoveryCounts.set(row.place_id, Number(row.event_count) || 0);
           }
           sortedVenueCounts = Array.from(discoveryCounts.entries()).sort(
             (left, right) => right[1] - left[1],

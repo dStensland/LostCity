@@ -8299,7 +8299,7 @@ export type Database = {
         }
         Returns: {
           event_count: number
-          venue_id: number
+          place_id: number
         }[]
       }
       get_user_trust_score: { Args: { user_id: string }; Returns: number }

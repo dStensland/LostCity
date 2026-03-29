@@ -58,7 +58,7 @@ async function getNeighborhoodSpots(neighborhoodName: string): Promise<(Spot & {
 
   const { data: eventCounts } = await supabase
     .from("events")
-    .select("venue_id")
+    .select("place_id")
     .in("place_id", venueIds)
     .gte("start_date", today)
     .or("is_sensitive.eq.false,is_sensitive.is.null");
