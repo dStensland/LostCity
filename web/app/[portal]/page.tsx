@@ -11,7 +11,9 @@ import dynamic from "next/dynamic";
 const SpotsFinder = dynamic(() => import("@/components/find/SpotsFinder"), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading places...</div>,
 });
-const FindView = dynamic(() => import("@/components/find/FindView"), { ssr: false });
+const FindView = dynamic(() => import("@/components/find/FindView"), {
+  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading...</div>,
+});
 import CommunityHub from "@/components/community/CommunityHub";
 import DetailViewRouter from "@/components/views/DetailViewRouter";
 import { DefaultTemplate } from "./_templates/default";
