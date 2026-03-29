@@ -153,6 +153,31 @@ async function getActiveFestivals(
 }
 
 // ---------------------------------------------------------------------------
+// School calendar query
+// ---------------------------------------------------------------------------
+
+/**
+ * Query upcoming school calendar events for the next 1-2 days.
+ */
+async function getUpcomingSchoolEvents(
+  now: Date,
+): Promise<FeedContext["school_calendar_events"]> {
+  const supabase = await createClient();
+
+  const today = now.toISOString().split("T")[0];
+  const tomorrow = new Date(now.getTime() + 86400000).toISOString().split("T")[0];
+
+  const { data } = await supabase
+    .from("school_calendar_events")
+    .select("event_type, school_system, date, title")
+    .gte("date", today)
+    .lte("date", tomorrow)
+    .limit(10);
+
+  return data ?? [];
+}
+
+// ---------------------------------------------------------------------------
 // Context builder
 // ---------------------------------------------------------------------------
 
@@ -169,7 +194,7 @@ export interface BuildContextOptions {
 
 /**
  * Build the complete FeedContext for a City Pulse request.
- * Runs weather + festival queries in parallel.
+ * Runs weather + festival + school calendar queries in parallel.
  */
 export async function buildFeedContext(
   options: BuildContextOptions,
@@ -181,12 +206,13 @@ export async function buildFeedContext(
   const timeSlot = timeSlotOverride ?? getTimeSlot(now.getHours());
   const dayOfWeek = dayOverride || getDayOfWeek(now);
 
-  // Parallel: weather + festivals
-  const [weather, activeFestivals] = await Promise.all([
+  // Parallel: weather + festivals + school calendar
+  const [weather, activeFestivals, schoolCalendarEvents] = await Promise.all([
     portalLat && portalLng
       ? getPortalWeather(portalId, portalLat, portalLng)
       : Promise.resolve(null),
     getActiveFestivals(portalId, today),
+    getUpcomingSchoolEvents(now),
   ]);
 
   const activeHolidays = getActiveHolidays(now);
@@ -218,6 +244,7 @@ export async function buildFeedContext(
     quick_links: quickLinks,
     day_theme: dayTheme,
     weather_signal: weatherSignal ?? undefined,
+    school_calendar_events: schoolCalendarEvents?.length ? schoolCalendarEvents : undefined,
   };
 }
 
