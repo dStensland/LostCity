@@ -52,16 +52,14 @@ export default function GoblinLogEntryCard({
       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; onDragOver?.(e); }}
       onDrop={(e) => { e.preventDefault(); onDrop?.(); }}
       onDragEnd={(e) => e.preventDefault()}
-      className={`goblin-log-card group relative flex items-stretch overflow-visible
-        transition-all duration-300
-        ${isDragging ? "opacity-30 scale-[0.96] rotate-[-1deg]" : ""}
-        ${isDragTarget ? "translate-y-1" : ""}
+      className={`goblin-log-card group relative flex items-stretch overflow-hidden
+        transition-all duration-200 ease-out
+        ${isDragging ? "opacity-30 scale-[0.98]" : ""}
+        ${isDragTarget ? "border-t-2 border-t-red-600" : ""}
         ${!readOnly ? "cursor-grab active:cursor-grabbing" : ""}
-        hover:translate-x-1 hover:-translate-y-[1px]`}
+        hover:bg-zinc-900/40`}
       style={{
         animationDelay: `${Math.min(rank, 15) * 50}ms`,
-        // Drop target indicator
-        ...(isDragTarget ? { boxShadow: `0 -3px 0 0 rgb(220, 38, 38)` } : {}),
       }}
     >
       {/* Rank — oversized, bleeding out */}
@@ -142,8 +140,7 @@ export default function GoblinLogEntryCard({
       <div className="flex-1 min-w-0 bg-zinc-950/80 border-l border-zinc-900/50">
         <div
           onClick={() => (readOnly ? setShowInfo(!showInfo) : onEdit(entry))}
-          className="cursor-pointer p-3 sm:p-3.5 transition-colors
-            hover:bg-zinc-900/40"
+          className="cursor-pointer p-3 sm:p-3.5"
         >
           {/* Title */}
           <div className="flex items-start justify-between gap-2">
