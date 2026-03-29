@@ -27,7 +27,7 @@ import {
   GearSix,
   Minus,
 } from "@phosphor-icons/react";
-import { formatTime } from "@/lib/formats";
+import { formatTime, getLocalDateString } from "@/lib/formats";
 import {
   isIndieCinemaVenue,
   isChainCinemaVenue,
@@ -56,6 +56,12 @@ type TheaterFilm = {
   genres?: string[];
   director?: string | null;
   year?: number | null;
+  runtime_minutes?: number | null;
+  rating?: string | null;
+  festival_id?: string | null;
+  festival_name?: string | null;
+  remaining_count?: number | null;
+  first_date?: string | null;
   times: ShowtimeEntry[];
 };
 
@@ -467,11 +473,50 @@ function FilmRow({
     ? `/${portalSlug}/series/${film.series_slug}`
     : undefined;
 
+  // ── Urgency badge logic ──────────────────────────────────────────
+  const today = getLocalDateString();
+  const isLastShowing =
+    film.remaining_count != null && film.remaining_count <= 2;
+  const isOpeningNight =
+    film.first_date != null && film.first_date === today;
+  // Show only one urgency badge: LAST SHOWING takes priority
+  const urgencyBadge: "last" | "opening" | null = isLastShowing
+    ? "last"
+    : isOpeningNight
+    ? "opening"
+    : null;
+
+  // ── Metadata row ─────────────────────────────────────────────────
+  const metaParts: string[] = [];
+  if (film.rating) metaParts.push(film.rating);
+  if (film.runtime_minutes) {
+    const h = Math.floor(film.runtime_minutes / 60);
+    const m = film.runtime_minutes % 60;
+    metaParts.push(h > 0 ? `${h}h ${m}m` : `${m}m`);
+  }
+  if (film.director) metaParts.push(`Dir. ${film.director}`);
+  const metaString = metaParts.join(" · ");
+
   const row = (
     <div className="group px-3 py-1.5 transition-colors hover:bg-[var(--cream)]/[0.03]">
-      <span className="text-sm text-[var(--soft)] truncate block group-hover:text-[var(--cream)] transition-colors">
-        {film.title}
-      </span>
+      {/* Title + urgency badge */}
+      <div className="flex items-start gap-1.5">
+        <span className="text-sm text-[var(--soft)] truncate flex-1 min-w-0 group-hover:text-[var(--cream)] transition-colors">
+          {film.title}
+        </span>
+        {urgencyBadge === "last" && (
+          <span className="shrink-0 text-2xs font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--neon-red)]/15 text-[var(--neon-red)]">
+            Last Showing
+          </span>
+        )}
+        {urgencyBadge === "opening" && (
+          <span className="shrink-0 text-2xs font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--gold)]/15 text-[var(--gold)]">
+            Opening Night
+          </span>
+        )}
+      </div>
+
+      {/* Showtime chips */}
       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
         {times.map((entry) => {
           const raw = extractTime(entry);
@@ -490,6 +535,20 @@ function FilmRow({
           </span>
         )}
       </div>
+
+      {/* Metadata row — only when at least one field is present */}
+      {metaString && (
+        <p className="text-2xs text-[var(--muted)] mt-0.5 leading-snug">
+          {metaString}
+        </p>
+      )}
+
+      {/* Festival parent link */}
+      {film.festival_name && (
+        <p className="text-2xs text-[var(--gold)] mt-0.5">
+          Part of {film.festival_name}
+        </p>
+      )}
     </div>
   );
 
