@@ -292,29 +292,76 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
           )}
         </div>
       ) : (
-        /* Ranked list */
+        /* Ranked list with tier groups */
         <div
-          className="space-y-2 relative z-10"
+          className="relative z-10"
           onDragLeave={() => setDragOver(null)}
         >
-          {filteredEntries.map((entry, i) => (
-            <GoblinLogEntryCard
-              key={entry.id}
-              entry={entry}
-              rank={i + 1}
-              onEdit={setEditEntry}
-              onMoveUp={() => swapEntries(i, i - 1)}
-              onMoveDown={() => swapEntries(i, i + 1)}
-              onMoveToRank={(rank) => moveToRank(i, rank)}
-              isFirst={i === 0}
-              isLast={i === filteredEntries.length - 1}
-              onDragStart={() => setDragFrom(i)}
-              onDragOver={() => setDragOver(i)}
-              onDrop={() => handleDrop(i)}
-              isDragging={dragFrom === i}
-              isDragTarget={dragOver === i && dragFrom !== i}
-            />
-          ))}
+          {(() => {
+            // Compute tier groups
+            const groups: { tierName: string | null; tierColor: string | null; entries: { entry: LogEntry; globalIdx: number }[] }[] = [];
+            let currentGroup: typeof groups[0] | null = null;
+
+            filteredEntries.forEach((entry, i) => {
+              if (entry.tier_name || !currentGroup) {
+                currentGroup = {
+                  tierName: entry.tier_name || null,
+                  tierColor: entry.tier_color || null,
+                  entries: [],
+                };
+                groups.push(currentGroup);
+              }
+              currentGroup.entries.push({ entry, globalIdx: i });
+            });
+
+            return groups.map((group, gi) => (
+              <div key={gi} className="flex mb-3">
+                {/* Tier label — vertical text on the left */}
+                {group.tierName ? (
+                  <div
+                    className="flex-shrink-0 w-6 sm:w-8 flex items-center justify-center relative"
+                    style={{ borderLeft: `2px solid ${group.tierColor || "#00f0ff"}` }}
+                  >
+                    <span
+                      className="font-mono text-2xs font-black uppercase tracking-[0.3em] whitespace-nowrap
+                        [writing-mode:vertical-lr] rotate-180"
+                      style={{
+                        color: group.tierColor || "#00f0ff",
+                        textShadow: `0 0 8px ${group.tierColor || "#00f0ff"}40`,
+                      }}
+                    >
+                      {group.tierName}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="w-0" />
+                )}
+
+                {/* Cards in this tier */}
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  {group.entries.map(({ entry, globalIdx: i }) => (
+                    <GoblinLogEntryCard
+                      key={entry.id}
+                      entry={entry}
+                      rank={i + 1}
+                      tierColor={group.tierColor}
+                      onEdit={setEditEntry}
+                      onMoveUp={() => swapEntries(i, i - 1)}
+                      onMoveDown={() => swapEntries(i, i + 1)}
+                      onMoveToRank={(rank) => moveToRank(i, rank)}
+                      isFirst={i === 0}
+                      isLast={i === filteredEntries.length - 1}
+                      onDragStart={() => setDragFrom(i)}
+                      onDragOver={() => setDragOver(i)}
+                      onDrop={() => handleDrop(i)}
+                      isDragging={dragFrom === i}
+                      isDragTarget={dragOver === i && dragFrom !== i}
+                    />
+                  ))}
+                </div>
+              </div>
+            ));
+          })()}
         </div>
       )}
 

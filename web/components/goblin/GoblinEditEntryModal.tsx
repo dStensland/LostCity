@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import SmartImage from "@/components/SmartImage";
 import GoblinTagPicker from "./GoblinTagPicker";
-import { TMDB_POSTER_W185, type LogEntry, type GoblinTag } from "@/lib/goblin-log-utils";
+import { TMDB_POSTER_W185, TAG_COLORS, type LogEntry, type GoblinTag } from "@/lib/goblin-log-utils";
 
 interface Props {
   entry: LogEntry | null;
@@ -17,6 +17,8 @@ interface Props {
       note?: string;
       watched_with?: string;
       tag_ids?: number[];
+      tier_name?: string | null;
+      tier_color?: string | null;
     }
   ) => Promise<boolean>;
   onDelete: (entryId: number) => Promise<boolean>;
@@ -39,6 +41,9 @@ export default function GoblinEditEntryModal({
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [tierEnabled, setTierEnabled] = useState(false);
+  const [tierName, setTierName] = useState("");
+  const [tierColor, setTierColor] = useState<string>(TAG_COLORS[0]);
 
   // Populate form when entry changes
   useEffect(() => {
@@ -48,6 +53,9 @@ export default function GoblinEditEntryModal({
       setWatchedWith(entry.watched_with || "");
       setSelectedTagIds(entry.tags.map((t) => t.id));
       setConfirmDelete(false);
+      setTierEnabled(!!entry.tier_name);
+      setTierName(entry.tier_name || "");
+      setTierColor(entry.tier_color || TAG_COLORS[0] as string);
     }
   }, [entry]);
 
@@ -74,6 +82,8 @@ export default function GoblinEditEntryModal({
       note: note.trim() || undefined,
       watched_with: watchedWith.trim() || undefined,
       tag_ids: selectedTagIds,
+      tier_name: tierEnabled ? tierName.trim() || undefined : null,
+      tier_color: tierEnabled ? tierColor : null,
     });
     setSubmitting(false);
     if (success) onClose();
@@ -202,6 +212,52 @@ export default function GoblinEditEntryModal({
             onToggle={toggleTag}
             onCreate={onCreateTag}
           />
+        </div>
+
+        {/* Tier */}
+        <div className="mb-6 border-t border-[var(--twilight)] pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <label className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
+              Start New Tier
+            </label>
+            <button
+              onClick={() => setTierEnabled(!tierEnabled)}
+              className={`w-10 h-5 rounded-full transition-colors relative ${
+                tierEnabled ? "bg-cyan-600" : "bg-zinc-700"
+              }`}
+            >
+              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                tierEnabled ? "translate-x-5" : "translate-x-0.5"
+              }`} />
+            </button>
+          </div>
+          {tierEnabled && (
+            <div className="space-y-3 animate-fade-in">
+              <input
+                type="text"
+                value={tierName}
+                onChange={(e) => setTierName(e.target.value)}
+                placeholder="e.g. Transcendent, Great, Solid..."
+                className="w-full px-3 py-2.5 rounded-lg
+                  bg-[var(--dusk)] border border-[var(--twilight)]
+                  text-[var(--cream)] font-mono text-sm
+                  placeholder:text-[var(--muted)]
+                  focus:outline-none focus:border-cyan-500 transition-colors"
+              />
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {TAG_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setTierColor(c)}
+                    className={`w-6 h-6 rounded-full border-2 transition-all ${
+                      tierColor === c ? "border-white scale-110" : "border-transparent opacity-60 hover:opacity-100"
+                    }`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Actions */}

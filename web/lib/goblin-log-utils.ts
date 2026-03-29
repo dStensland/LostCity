@@ -55,6 +55,8 @@ export interface LogEntry {
   note: string | null;
   watched_with: string | null;
   sort_order: number | null;
+  tier_name: string | null;
+  tier_color: string | null;
   created_at: string;
   updated_at: string;
   movie: {

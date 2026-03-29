@@ -311,18 +311,40 @@ export default function GoblinLogPublicView({ user, entries, tags, year }: Props
           )}
         </div>
 
-        {/* List */}
+        {/* List with tier groups */}
         {filteredEntries.length > 0 ? (
-          <div className="space-y-3">
-            {filteredEntries.map((entry, i) => (
-              <GoblinLogEntryCard
-                key={entry.id}
-                entry={entry}
-                rank={i + 1}
-                onEdit={() => {}}
-                readOnly
-              />
-            ))}
+          <div>
+            {(() => {
+              const groups: { tierName: string | null; tierColor: string | null; entries: { entry: LogEntry; idx: number }[] }[] = [];
+              let cur: typeof groups[0] | null = null;
+              filteredEntries.forEach((entry, i) => {
+                if (entry.tier_name || !cur) {
+                  cur = { tierName: entry.tier_name || null, tierColor: entry.tier_color || null, entries: [] };
+                  groups.push(cur);
+                }
+                cur.entries.push({ entry, idx: i });
+              });
+              return groups.map((g, gi) => (
+                <div key={gi} className="flex mb-3">
+                  {g.tierName ? (
+                    <div className="flex-shrink-0 w-6 sm:w-8 flex items-center justify-center"
+                      style={{ borderLeft: `2px solid ${g.tierColor || "#00f0ff"}` }}>
+                      <span className="font-mono text-2xs font-black uppercase tracking-[0.3em] whitespace-nowrap
+                        [writing-mode:vertical-lr] rotate-180"
+                        style={{ color: g.tierColor || "#00f0ff", textShadow: `0 0 8px ${g.tierColor || "#00f0ff"}40` }}>
+                        {g.tierName}
+                      </span>
+                    </div>
+                  ) : <div className="w-0" />}
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    {g.entries.map(({ entry, idx }) => (
+                      <GoblinLogEntryCard key={entry.id} entry={entry} rank={idx + 1}
+                        tierColor={g.tierColor} onEdit={() => {}} readOnly />
+                    ))}
+                  </div>
+                </div>
+              ));
+            })()}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-24">

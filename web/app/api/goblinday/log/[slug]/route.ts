@@ -27,7 +27,7 @@ export async function GET(
   const { data: entries, error } = await serviceClient
     .from("goblin_log_entries")
     .select(`
-      id, watched_date, note, watched_with, sort_order,
+      id, watched_date, note, watched_with, sort_order, tier_name, tier_color,
       movie:goblin_movies!movie_id (
         id, tmdb_id, title, poster_path, backdrop_path, release_date, genres,
         runtime_minutes, director, year, rt_critics_score, rt_audience_score,

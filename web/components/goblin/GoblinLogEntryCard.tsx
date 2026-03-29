@@ -11,6 +11,7 @@ interface Props {
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   onMoveToRank?: (rank: number) => void;
+  tierColor?: string | null;
   isFirst?: boolean;
   isLast?: boolean;
   readOnly?: boolean;
@@ -30,7 +31,7 @@ const RANK_NEON = {
 
 export default function GoblinLogEntryCard({
   entry, rank, onEdit, onMoveUp, onMoveDown, onMoveToRank,
-  isFirst, isLast, readOnly,
+  tierColor: tierColorProp, isFirst, isLast, readOnly,
   onDragStart, onDragOver, onDrop, isDragTarget, isDragging,
 }: Props) {
   const [showInfo, setShowInfo] = useState(false);
@@ -40,7 +41,10 @@ export default function GoblinLogEntryCard({
 
   const isHero = rank <= 3;
   const isMid = rank > 3 && rank <= 10;
-  const tier = isHero ? RANK_NEON.hero : isMid ? RANK_NEON.mid : RANK_NEON.rest;
+  // Use tier color from bucket if provided, otherwise fall back to rank-based
+  const tier = tierColorProp
+    ? { color: tierColorProp, glow: `0 0 8px ${tierColorProp}40, 0 0 20px ${tierColorProp}15` }
+    : isHero ? RANK_NEON.hero : isMid ? RANK_NEON.mid : RANK_NEON.rest;
   const posterSrc = movie.poster_path
     ? `${isHero ? TMDB_POSTER_W342 : TMDB_POSTER_W185}${movie.poster_path}`
     : null;

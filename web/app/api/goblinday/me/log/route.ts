@@ -12,7 +12,7 @@ export const GET = withAuth(async (request: NextRequest, { user, serviceClient }
   let query = serviceClient
     .from("goblin_log_entries")
     .select(`
-      id, watched_date, note, watched_with, sort_order, created_at, updated_at,
+      id, watched_date, note, watched_with, sort_order, tier_name, tier_color, created_at, updated_at,
       movie:goblin_movies!movie_id (
         id, tmdb_id, title, poster_path, backdrop_path, release_date, genres,
         runtime_minutes, director, year, rt_critics_score, rt_audience_score,

@@ -28,6 +28,8 @@ export const PATCH = withAuthAndParams<{ id: string }>(
     if (body.note !== undefined) updates.note = body.note?.trim() || null;
     if (body.watched_with !== undefined) updates.watched_with = body.watched_with?.trim() || null;
     if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
+    if (body.tier_name !== undefined) updates.tier_name = body.tier_name?.trim() || null;
+    if (body.tier_color !== undefined) updates.tier_color = body.tier_color?.trim() || null;
 
     if (Object.keys(updates).length > 0) {
       updates.updated_at = new Date().toISOString();
