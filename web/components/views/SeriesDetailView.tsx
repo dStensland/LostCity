@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Image from "@/components/SmartImage";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import LinkifyText from "../LinkifyText";
 import Skeleton from "@/components/Skeleton";
 import ScopedStyles from "@/components/ScopedStyles";
@@ -21,16 +21,18 @@ import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
 import { formatRecurrence, type Frequency, type DayOfWeek } from "@/lib/recurrence";
 import {
   CaretDown,
-  Play,
+  PlayCircle,
   Repeat,
   MapPin,
   CalendarBlank,
   FilmSlate,
   CaretRight,
+  StarFour,
   Ticket,
   ArrowCounterClockwise,
   ArrowLeft,
 } from "@phosphor-icons/react";
+import { ShowtimesTheaterCard } from "@/components/detail/ShowtimesTheaterCard";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -120,6 +122,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
   const { portal } = usePortal();
   const { toEvent, toSpot, toFestival } = useDetailNavigation(portalSlug);
   const [expandedDates, setExpandedDates] = useState(false);
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
 
   const fetchUrl = useMemo(() => {
     if (!portal?.id) return null;
@@ -155,6 +158,31 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
     if (venueShowtimes.length !== 1) return null;
     return venueShowtimes[0].venue;
   }, [venueShowtimes]);
+
+  // Film date pills — unique sorted dates across all venues
+  const seriesIsFilm = series?.series_type === "film";
+  const filmDates = useMemo(() => {
+    if (!seriesIsFilm) return [];
+    const dateSet = new Set<string>();
+    for (const vs of venueShowtimes) {
+      for (const e of vs.events) {
+        dateSet.add(e.date);
+      }
+    }
+    return [...dateSet].sort();
+  }, [venueShowtimes, seriesIsFilm]);
+
+  // Active date for film theater cards — default to first date
+  const activeDateKey = selectedDateKey ?? (filmDates[0] ?? null);
+
+  // Theater cards for active date — grouped by venue, showtimes on that date
+  const theaterCardsForDate = useMemo(() => {
+    if (!activeDateKey) return venueShowtimes;
+    return venueShowtimes.map((vs) => ({
+      ...vs,
+      events: vs.events.filter((e) => e.date === activeDateKey),
+    })).filter((vs) => vs.events.length > 0);
+  }, [venueShowtimes, activeDateKey]);
 
   // ── LOADING ──────────────────────────────────────────────────────────
 
@@ -343,9 +371,9 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
                 href={series.trailer_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-accent hover:text-[var(--cream)] transition-colors focus-ring"
+                className="inline-flex items-center gap-2 text-sm text-[var(--coral)] hover:text-[var(--cream)] transition-colors focus-ring"
               >
-                <Play size={16} weight="fill" aria-hidden="true" />
+                <PlayCircle size={18} weight="fill" aria-hidden="true" />
                 Watch Trailer
               </a>
             )}
@@ -357,16 +385,17 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
       {series.festival && (
         <>
           <div className="mx-5 border-t border-[var(--twilight)]/40" />
-          <div className="px-5 py-3">
+          <div className="px-5 py-2">
             <button
               onClick={() => toFestival(series.festival!.slug)}
-              className="w-full flex items-center justify-between p-3 min-h-[44px] rounded-lg border border-[var(--twilight)] bg-[var(--dusk)] hover:border-[var(--coral)]/40 transition-colors text-left focus-ring"
+              className="w-full flex items-center gap-3 px-4 py-3 min-h-[44px] rounded-lg bg-[var(--gold)]/10 border border-[var(--gold)]/25 hover:bg-[var(--gold)]/15 hover:border-[var(--gold)]/40 transition-colors text-left focus-ring"
             >
-              <div className="min-w-0">
-                <p className="text-xs font-mono uppercase tracking-[0.14em] text-[var(--muted)]">Part of</p>
+              <StarFour size={16} weight="fill" className="text-[var(--gold)] flex-shrink-0" aria-hidden="true" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-mono uppercase tracking-[0.14em] text-[var(--gold)]/70">Part of</p>
                 <p className="text-[var(--cream)] font-medium text-sm truncate">{series.festival.name}</p>
               </div>
-              <CaretRight size={16} weight="bold" className="text-[var(--muted)] flex-shrink-0 ml-2" />
+              <CaretRight size={14} weight="bold" className="text-[var(--gold)]/60 flex-shrink-0" />
             </button>
           </div>
         </>
@@ -457,7 +486,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
         </>
       )}
 
-      {/* Upcoming Dates */}
+      {/* Upcoming Dates / Showtimes */}
       <SectionHeader
         title={
           totalEvents > 0
@@ -468,49 +497,111 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
       />
 
       {allEvents.length > 0 ? (
-        <div className="space-y-1">
-          {visibleEvents.map((event, index) => (
-            <button
-              key={event.id}
-              onClick={() => toEvent(event.id)}
-              className={`w-full flex items-center gap-3 px-3 min-h-[44px] rounded-lg transition-colors focus-ring ${
-                index === 0
-                  ? "py-2.5 bg-accent-20 hover:brightness-110"
-                  : "py-2 hover:bg-[var(--twilight)]/30"
-              }`}
-            >
-              <span className={`text-sm ${index === 0 ? "font-medium text-[var(--cream)]" : "text-[var(--soft)]"}`}>
-                {formatDate(event.date)}
-              </span>
-              {event.time && (
-                <span className="font-mono text-xs text-[var(--muted)]">{formatTime(event.time)}</span>
-              )}
-              {/* Show venue name for multi-venue series */}
-              {venueShowtimes.length > 1 && event.venueName && (
-                <>
-                  <span className="flex-1" />
-                  <span className="text-xs text-[var(--muted)] truncate max-w-[140px]">{event.venueName}</span>
-                </>
-              )}
-              <CaretRight size={14} weight="bold" className={`ml-auto flex-shrink-0 ${index === 0 ? "text-accent" : "text-[var(--muted)]"}`} />
-            </button>
-          ))}
+        isFilm ? (
+          /* ── Film path: date pill strip + theater cards ── */
+          <div className="space-y-3">
+            {/* Date pill strip */}
+            {filmDates.length > 1 && (
+              <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
+                {filmDates.map((dateStr) => {
+                  const date = parseISO(dateStr);
+                  const isActive = dateStr === activeDateKey;
+                  const dayLabel = isToday(date) ? "Today" : isTomorrow(date) ? "Tmrw" : format(date, "EEE");
+                  return (
+                    <button
+                      key={dateStr}
+                      onClick={() => setSelectedDateKey(dateStr)}
+                      className={`flex-shrink-0 flex flex-col items-center rounded-lg border transition-all px-2 py-1.5 min-w-[44px] focus-ring ${
+                        isActive
+                          ? "bg-[var(--coral)]/20 border-[var(--coral)]/50 text-[var(--coral)]"
+                          : "bg-[var(--dusk)] border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--coral)]/30"
+                      }`}
+                    >
+                      <span className="font-mono uppercase tracking-wider text-2xs">{dayLabel}</span>
+                      <span className="font-mono font-bold leading-tight text-sm">{format(date, "d")}</span>
+                      <span className="font-mono text-[var(--muted)] uppercase text-2xs">{format(date, "MMM")}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
-          {showExpandDates && (
-            <button
-              onClick={() => setExpandedDates((prev) => !prev)}
-              aria-expanded={expandedDates}
-              className="w-full py-2.5 min-h-[44px] text-sm font-medium text-accent hover:text-[var(--cream)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--card-bg-hover)] transition-colors flex items-center justify-center gap-2 mt-2 focus-ring"
-            >
-              {expandedDates ? "Show fewer dates" : `See all ${allEvents.length} dates`}
-              <CaretDown
-                size={16}
-                weight="bold"
-                className={`transition-transform ${expandedDates ? "rotate-180" : ""}`}
-              />
-            </button>
-          )}
-        </div>
+            {/* Theater cards for active date */}
+            {theaterCardsForDate.length > 0 ? (
+              <div className="space-y-2">
+                {theaterCardsForDate.map((vs) => (
+                  <ShowtimesTheaterCard
+                    key={vs.venue.id}
+                    theater={{
+                      venue_name: vs.venue.name,
+                      venue_slug: vs.venue.slug,
+                      neighborhood: vs.venue.neighborhood,
+                      showtimes: vs.events
+                        .filter((e) => e.time != null)
+                        .sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""))
+                        .map((e) => ({ time: e.time!, event_id: e.id })),
+                      nearest_marta_station: vs.venue.nearest_marta_station,
+                      marta_walk_minutes: vs.venue.marta_walk_minutes,
+                      parking_type: vs.venue.parking_type,
+                      parking_free: vs.venue.parking_free,
+                    }}
+                    portalSlug={portalSlug}
+                    laneColor={typeColor}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-[var(--muted)] text-sm py-3 text-center font-mono">
+                No showtimes on this date
+              </p>
+            )}
+          </div>
+        ) : (
+          /* ── Non-film path: flat date list (unchanged) ── */
+          <div className="space-y-1">
+            {visibleEvents.map((event, index) => (
+              <button
+                key={event.id}
+                onClick={() => toEvent(event.id)}
+                className={`w-full flex items-center gap-3 px-3 min-h-[44px] rounded-lg transition-colors focus-ring ${
+                  index === 0
+                    ? "py-2.5 bg-accent-20 hover:brightness-110"
+                    : "py-2 hover:bg-[var(--twilight)]/30"
+                }`}
+              >
+                <span className={`text-sm ${index === 0 ? "font-medium text-[var(--cream)]" : "text-[var(--soft)]"}`}>
+                  {formatDate(event.date)}
+                </span>
+                {event.time && (
+                  <span className="font-mono text-xs text-[var(--muted)]">{formatTime(event.time)}</span>
+                )}
+                {/* Show venue name for multi-venue series */}
+                {venueShowtimes.length > 1 && event.venueName && (
+                  <>
+                    <span className="flex-1" />
+                    <span className="text-xs text-[var(--muted)] truncate max-w-[140px]">{event.venueName}</span>
+                  </>
+                )}
+                <CaretRight size={14} weight="bold" className={`ml-auto flex-shrink-0 ${index === 0 ? "text-accent" : "text-[var(--muted)]"}`} />
+              </button>
+            ))}
+
+            {showExpandDates && (
+              <button
+                onClick={() => setExpandedDates((prev) => !prev)}
+                aria-expanded={expandedDates}
+                className="w-full py-2.5 min-h-[44px] text-sm font-medium text-accent hover:text-[var(--cream)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--card-bg-hover)] transition-colors flex items-center justify-center gap-2 mt-2 focus-ring"
+              >
+                {expandedDates ? "Show fewer dates" : `See all ${allEvents.length} dates`}
+                <CaretDown
+                  size={16}
+                  weight="bold"
+                  className={`transition-transform ${expandedDates ? "rotate-180" : ""}`}
+                />
+              </button>
+            )}
+          </div>
+        )
       ) : (
         <div className="py-8 text-center border border-[var(--twilight)] rounded-xl bg-[var(--card-bg,var(--night))]">
           <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
