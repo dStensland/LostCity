@@ -200,7 +200,7 @@ export async function GET(request: NextRequest) {
         is_recurring,
         recurrence_rule,
         series_id,
-        venue_id,
+        place_id,
         venue:places(id, name, slug, address, neighborhood, city, state, lat, lng),
         ${seriesSelect}
       `,
@@ -244,7 +244,7 @@ export async function GET(request: NextRequest) {
         `instructor.ilike.%${escapedSearch}%`,
       ];
       if (matchingVenueIds.length > 0) {
-        searchClauses.push(`venue_id.in.(${matchingVenueIds.join(",")})`);
+        searchClauses.push(`place_id.in.(${matchingVenueIds.join(",")})`);
       }
 
       query = query.or(searchClauses.join(","));
