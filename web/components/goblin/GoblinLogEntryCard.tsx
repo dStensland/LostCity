@@ -58,7 +58,7 @@ export default function GoblinLogEntryCard({
       onDrop={(e) => { e.preventDefault(); onDrop?.(); }}
       onDragEnd={(e) => e.preventDefault()}
       className={`goblin-log-card group relative flex items-stretch overflow-hidden
-        transition-all duration-200 ease-out bg-black/80 backdrop-blur-sm
+        transition-all duration-200 ease-out bg-black/70 backdrop-blur-sm
         border border-zinc-800/40
         ${isDragging ? "opacity-30 scale-[0.98]" : ""}
         ${isDragTarget ? "border-t-2 border-t-cyan-400" : ""}

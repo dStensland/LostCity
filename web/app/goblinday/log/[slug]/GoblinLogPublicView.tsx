@@ -69,50 +69,89 @@ export default function GoblinLogPublicView({ user, entries, tags, year }: Props
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Perspective grid — horizontal lines receding into distance
-      const horizon = canvas.height * 0.65;
+      const horizon = canvas.height * 0.55;
       const vanishX = canvas.width * 0.5;
-      const gridSpacing = 40;
-      const numLines = 20;
+      const gridSpacing = 50;
+      const numLines = 24;
 
-      // Horizontal lines (scrolling toward viewer)
+      // Neon sun at horizon
+      const sunRadius = 80;
+      const sunGrad = ctx.createRadialGradient(vanishX, horizon, 0, vanishX, horizon, sunRadius * 2.5);
+      sunGrad.addColorStop(0, "rgba(255, 0, 170, 0.25)");
+      sunGrad.addColorStop(0.3, "rgba(255, 0, 100, 0.12)");
+      sunGrad.addColorStop(0.6, "rgba(0, 240, 255, 0.05)");
+      sunGrad.addColorStop(1, "transparent");
+      ctx.fillStyle = sunGrad;
+      ctx.fillRect(0, horizon - sunRadius * 2, canvas.width, sunRadius * 4);
+
+      // Sun disc with horizontal slices cut out
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(vanishX, horizon, sunRadius, Math.PI, 0); // top half only
+      ctx.fillStyle = "rgba(255, 0, 120, 0.15)";
+      ctx.fill();
+
+      // Slice lines through the sun
+      ctx.globalCompositeOperation = "destination-out";
+      for (let i = 1; i < 8; i++) {
+        const sliceY = horizon - sunRadius + i * (sunRadius / 4);
+        const sliceH = 2 + i * 0.5;
+        ctx.fillStyle = "rgba(0,0,0,1)";
+        ctx.fillRect(vanishX - sunRadius, sliceY, sunRadius * 2, sliceH);
+      }
+      ctx.restore();
+
+      // Horizontal grid lines (scrolling toward viewer)
       for (let i = 0; i < numLines; i++) {
         const t = ((i * gridSpacing + offset) % (numLines * gridSpacing)) / (numLines * gridSpacing);
-        const y = horizon + (canvas.height - horizon) * (t * t); // quadratic for perspective
-        const alpha = t * 0.12;
+        const y = horizon + (canvas.height - horizon) * (t * t);
+        const alpha = t * 0.5;
+        const lineWidth = 0.5 + t * 1.5;
 
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(canvas.width, y);
         ctx.strokeStyle = `rgba(0, 240, 255, ${alpha})`;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = lineWidth;
         ctx.stroke();
       }
 
       // Vertical lines converging to vanishing point
-      const numVLines = 16;
+      const numVLines = 24;
       for (let i = -numVLines / 2; i <= numVLines / 2; i++) {
-        const bottomX = vanishX + i * 120;
-        const alpha = 0.06 - Math.abs(i) * 0.003;
-        if (alpha <= 0) continue;
+        const bottomX = vanishX + i * 100;
+        const dist = Math.abs(i) / (numVLines / 2);
+        const alpha = 0.3 * (1 - dist * 0.7);
 
         ctx.beginPath();
         ctx.moveTo(vanishX, horizon);
         ctx.lineTo(bottomX, canvas.height);
-        ctx.strokeStyle = `rgba(0, 240, 255, ${Math.max(alpha, 0)})`;
-        ctx.lineWidth = 0.5;
+        ctx.strokeStyle = `rgba(0, 240, 255, ${alpha})`;
+        ctx.lineWidth = 0.5 + (1 - dist) * 0.5;
         ctx.stroke();
       }
 
-      // Horizon glow
-      const glow = ctx.createRadialGradient(vanishX, horizon, 0, vanishX, horizon, 300);
-      glow.addColorStop(0, "rgba(255, 0, 170, 0.04)");
-      glow.addColorStop(0.5, "rgba(0, 240, 255, 0.02)");
-      glow.addColorStop(1, "transparent");
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, horizon - 200, canvas.width, 400);
+      // Horizon laser line
+      ctx.beginPath();
+      ctx.moveTo(0, horizon);
+      ctx.lineTo(canvas.width, horizon);
+      const horizonGrad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+      horizonGrad.addColorStop(0, "transparent");
+      horizonGrad.addColorStop(0.3, "rgba(0, 240, 255, 0.4)");
+      horizonGrad.addColorStop(0.5, "rgba(255, 0, 170, 0.6)");
+      horizonGrad.addColorStop(0.7, "rgba(0, 240, 255, 0.4)");
+      horizonGrad.addColorStop(1, "transparent");
+      ctx.strokeStyle = horizonGrad;
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
-      offset += 0.3;
+      // Glow below horizon line
+      ctx.shadowColor = "rgba(255, 0, 170, 0.3)";
+      ctx.shadowBlur = 15;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      offset += 0.6;
       animId = requestAnimationFrame(draw);
     };
 
