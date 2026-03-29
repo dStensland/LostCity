@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import SmartImage from "@/components/SmartImage";
-import { formatWatchedDate, formatRuntime, TMDB_POSTER_W185, type LogEntry } from "@/lib/goblin-log-utils";
+import { formatWatchedDate, formatRuntime, TMDB_POSTER_W185, TMDB_POSTER_W342, type LogEntry } from "@/lib/goblin-log-utils";
 
 interface Props {
   entry: LogEntry;
@@ -13,9 +13,7 @@ interface Props {
   onMoveToRank?: (rank: number) => void;
   isFirst?: boolean;
   isLast?: boolean;
-  /** If true, render read-only (for public page) */
   readOnly?: boolean;
-  /** Drag-and-drop handlers */
   onDragStart?: () => void;
   onDragOver?: (e: React.DragEvent) => void;
   onDrop?: () => void;
@@ -44,6 +42,12 @@ export default function GoblinLogEntryCard({
   const [rankInput, setRankInput] = useState("");
   const movie = entry.movie;
 
+  // Top 3 get hero treatment
+  const isHero = rank <= 3;
+  const posterSrc = movie.poster_path
+    ? `${isHero ? TMDB_POSTER_W342 : TMDB_POSTER_W185}${movie.poster_path}`
+    : null;
+
   return (
     <div
       draggable={!readOnly}
@@ -61,24 +65,24 @@ export default function GoblinLogEntryCard({
         e.preventDefault();
         onDrop?.();
       }}
-      onDragEnd={(e) => {
-        e.preventDefault();
-      }}
-      className={`group animate-slide-up flex items-stretch gap-0
-        bg-zinc-950 border hover:border-zinc-700
+      onDragEnd={(e) => e.preventDefault()}
+      className={`group animate-slide-up flex items-stretch
         transition-all duration-200 overflow-hidden
+        ${isHero ? "border-l-2 border-l-amber-500/60" : ""}
         ${isDragging ? "opacity-40 scale-[0.98]" : ""}
-        ${isDragTarget ? "border-[var(--coral)] border-t-2" : "border-zinc-800"}
-        ${!readOnly ? "cursor-grab active:cursor-grabbing" : ""}`}
-      style={{ animationDelay: `${rank * 40}ms` }}
+        ${isDragTarget ? "border-t-2 border-t-[var(--coral)]" : ""}
+        ${!readOnly ? "cursor-grab active:cursor-grabbing" : ""}
+        bg-zinc-950 border border-zinc-800/60 hover:border-zinc-700`}
+      style={{ animationDelay: `${Math.min(rank, 10) * 40}ms` }}
     >
-      {/* Rank number + move buttons */}
-      <div className="flex flex-col items-center justify-center w-10 sm:w-12 flex-shrink-0
-        border-r border-zinc-800 bg-zinc-950">
+      {/* Rank column */}
+      <div className={`flex flex-col items-center justify-center flex-shrink-0
+        border-r border-zinc-800/60
+        ${isHero ? "w-12 sm:w-14" : "w-10 sm:w-12"}`}>
         {!readOnly && onMoveUp && !isFirst && (
           <button
             onClick={onMoveUp}
-            className="text-zinc-600 hover:text-zinc-300 text-xs py-0.5 transition-colors
+            className="text-zinc-600 hover:text-zinc-300 text-2xs py-0.5 transition-colors
               opacity-0 group-hover:opacity-100"
           >
             ▲
@@ -103,7 +107,7 @@ export default function GoblinLogEntryCard({
             onBlur={() => setEditingRank(false)}
             className="w-8 text-center bg-transparent border border-zinc-600 rounded
               text-zinc-300 font-mono text-sm font-bold
-              focus:outline-none focus:border-[var(--coral)]
+              focus:outline-none focus:border-amber-500
               [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
         ) : (
@@ -113,8 +117,11 @@ export default function GoblinLogEntryCard({
               setRankInput(String(rank));
               setEditingRank(true);
             }}
-            className={`text-zinc-500 font-mono text-sm font-bold
-              ${!readOnly ? "hover:text-[var(--coral)] hover:underline cursor-text transition-colors" : ""}`}
+            className={`font-mono font-black transition-colors
+              ${isHero
+                ? "text-lg text-amber-500/90 hover:text-amber-400"
+                : "text-sm text-zinc-500 hover:text-amber-500/70"}
+              ${!readOnly ? "cursor-text" : ""}`}
           >
             {rank}
           </button>
@@ -122,7 +129,7 @@ export default function GoblinLogEntryCard({
         {!readOnly && onMoveDown && !isLast && (
           <button
             onClick={onMoveDown}
-            className="text-zinc-600 hover:text-zinc-300 text-xs py-0.5 transition-colors
+            className="text-zinc-600 hover:text-zinc-300 text-2xs py-0.5 transition-colors
               opacity-0 group-hover:opacity-100"
           >
             ▼
@@ -130,14 +137,15 @@ export default function GoblinLogEntryCard({
         )}
       </div>
 
-      {/* Poster thumbnail */}
-      <div className="w-16 sm:w-20 flex-shrink-0 bg-zinc-900">
-        {movie.poster_path ? (
+      {/* Poster */}
+      <div className={`flex-shrink-0 bg-zinc-900
+        ${isHero ? "w-20 sm:w-28" : "w-16 sm:w-20"}`}>
+        {posterSrc ? (
           <SmartImage
-            src={`${TMDB_POSTER_W185}${movie.poster_path}`}
+            src={posterSrc}
             alt={movie.title}
-            width={80}
-            height={120}
+            width={isHero ? 112 : 80}
+            height={isHero ? 168 : 120}
             className="object-cover w-full h-full"
           />
         ) : (
@@ -151,84 +159,79 @@ export default function GoblinLogEntryCard({
       {/* Content */}
       <button
         onClick={() => (readOnly ? setExpanded(!expanded) : onEdit(entry))}
-        className="flex-1 min-w-0 p-2.5 sm:p-3 text-left hover:bg-zinc-900/50 transition-colors"
+        className="flex-1 min-w-0 p-2.5 sm:p-3 text-left hover:bg-zinc-900/30 transition-colors"
       >
-        {/* Title row */}
+        {/* Title */}
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-bold text-white text-sm sm:text-base leading-tight line-clamp-1 uppercase tracking-wide">
+          <h3 className={`font-bold text-white leading-tight line-clamp-1 uppercase tracking-wide
+            ${isHero ? "text-base sm:text-lg" : "text-sm"}`}>
             {movie.title}
           </h3>
           {!readOnly && (
             <span className="text-zinc-600 text-2xs font-mono flex-shrink-0
-              opacity-0 group-hover:opacity-100 transition-opacity">
+              opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">
               EDIT
             </span>
           )}
         </div>
 
-        {/* Director + year + runtime */}
+        {/* Director · year · runtime · rating */}
         <div className="flex items-center gap-1.5 mt-0.5 text-2xs text-zinc-500 font-mono">
-          {movie.director && (
-            <span className="text-zinc-400">{movie.director}</span>
-          )}
-          {movie.director && movie.year && <span>·</span>}
+          {movie.director && <span className="text-zinc-400">{movie.director}</span>}
+          {movie.director && movie.year && <span className="text-zinc-700">·</span>}
           {movie.year && <span>{movie.year}</span>}
           {movie.runtime_minutes && (
             <>
-              <span>·</span>
+              <span className="text-zinc-700">·</span>
               <span>{formatRuntime(movie.runtime_minutes)}</span>
             </>
           )}
           {movie.mpaa_rating && (
             <>
-              <span>·</span>
+              <span className="text-zinc-700">·</span>
               <span>{movie.mpaa_rating}</span>
             </>
           )}
         </div>
 
-        {/* Scores row */}
-        <div className="flex items-center gap-2 mt-1.5 text-2xs font-mono">
-          {movie.rt_critics_score != null && (
-            <span
-              className={`px-1.5 py-0.5 ${
+        {/* Scores */}
+        {(movie.rt_critics_score != null || movie.rt_audience_score != null || movie.tmdb_vote_average != null) && (
+          <div className="flex items-center gap-2 mt-1.5 text-2xs font-mono">
+            {movie.rt_critics_score != null && (
+              <span className={`px-1.5 py-0.5 ${
                 movie.rt_critics_score >= 75
                   ? "bg-red-900/60 text-red-400 border border-red-800/50"
                   : movie.rt_critics_score >= 60
                     ? "bg-red-950/40 text-red-500/80 border border-red-900/30"
                     : "bg-zinc-900 text-zinc-500 border border-zinc-800"
-              }`}
-            >
-              RT {movie.rt_critics_score}%
-            </span>
-          )}
-          {movie.rt_audience_score != null && (
-            <span
-              className={`px-1.5 py-0.5 ${
+              }`}>
+                RT {movie.rt_critics_score}%
+              </span>
+            )}
+            {movie.rt_audience_score != null && (
+              <span className={`px-1.5 py-0.5 ${
                 movie.rt_audience_score >= 75
                   ? "bg-amber-900/40 text-amber-400 border border-amber-800/40"
                   : movie.rt_audience_score >= 60
                     ? "bg-amber-950/30 text-amber-500/70 border border-amber-900/30"
                     : "bg-zinc-900 text-zinc-500 border border-zinc-800"
-              }`}
-            >
-              AUD {movie.rt_audience_score}%
-            </span>
-          )}
-          {movie.tmdb_vote_average != null && (
-            <span
-              className={`${
+              }`}>
+                AUD {movie.rt_audience_score}%
+              </span>
+            )}
+            {movie.tmdb_vote_average != null && (
+              <span className={`${
                 movie.tmdb_vote_average >= 7
                   ? "text-amber-500"
                   : movie.tmdb_vote_average >= 5
                     ? "text-zinc-400"
                     : "text-zinc-600"
-              }`}
-            >
-              TMDB {movie.tmdb_vote_average.toFixed(1)}
-            </span>
-          )}
-        </div>
+              }`}>
+                TMDB {movie.tmdb_vote_average.toFixed(1)}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Tags + date + watched with */}
         <div className="flex items-center flex-wrap gap-1.5 mt-2">
@@ -268,7 +271,7 @@ export default function GoblinLogEntryCard({
 
         {/* Genres */}
         {movie.genres && movie.genres.length > 0 && (
-          <div className="flex items-center gap-1 mt-1.5">
+          <div className="flex items-center gap-1.5 mt-1.5">
             {movie.genres.slice(0, 3).map((genre) => (
               <span
                 key={genre}

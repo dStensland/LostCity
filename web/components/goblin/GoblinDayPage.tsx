@@ -646,7 +646,9 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6 pb-16 relative z-10">
-        {activeTab === "next" ? (
+        {activeTab === "log" ? (
+          <GoblinLogView isAuthenticated={!!goblinUser.user} />
+        ) : activeTab === "next" ? (
           // Session view + proposed movies
           <>
             {activeSession?.status === "planning" && sessionData ? (
@@ -743,9 +745,6 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
               </p>
             )}
           </>
-        )}
-        {activeTab === "log" && (
-          <GoblinLogView isAuthenticated={!!goblinUser.user} />
         )}
       </main>
 

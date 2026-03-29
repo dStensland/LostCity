@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useGoblinLog } from "@/lib/hooks/useGoblinLog";
 import GoblinLogEntryCard from "./GoblinLogEntryCard";
 import GoblinAddMovieModal from "./GoblinAddMovieModal";
@@ -36,6 +36,16 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetch("/api/auth/profile")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.username) setUsername(d.username); })
+      .catch(() => {});
+  }, [isAuthenticated]);
 
   const filteredEntries = useMemo(() => {
     if (!activeTag) return entries;
@@ -59,14 +69,11 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
         setDragOver(null);
         return;
       }
-
       const reordered = [...filteredEntries];
       const [moved] = reordered.splice(dragFrom, 1);
       reordered.splice(toIndex, 0, moved);
-
       setDragFrom(null);
       setDragOver(null);
-
       await reorderEntries(reordered);
     },
     [dragFrom, filteredEntries, reorderEntries]
@@ -76,20 +83,26 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
     async (currentIndex: number, newRank: number) => {
       const targetIndex = Math.max(0, Math.min(newRank - 1, filteredEntries.length - 1));
       if (targetIndex === currentIndex) return;
-
       const reordered = [...filteredEntries];
       const [moved] = reordered.splice(currentIndex, 1);
       reordered.splice(targetIndex, 0, moved);
-
       await reorderEntries(reordered);
     },
     [filteredEntries, reorderEntries]
   );
 
+  const handleCopyShareLink = () => {
+    if (!username) return;
+    const url = `${window.location.origin}/goblinday/log/${username}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-4">
-        <p className="text-[var(--muted)] font-mono text-sm text-center">
+        <p className="text-zinc-500 font-mono text-sm text-center">
           Sign in to start logging movies
         </p>
       </div>
@@ -97,115 +110,125 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
   }
 
   return (
-    <div className="px-4 sm:px-0">
-      {/* Header row: year pills + add button */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-          {YEARS.map((y) => (
+    <div className="max-w-3xl mx-auto">
+      {/* Header */}
+      <div className="mb-6 pb-4 border-b border-zinc-800/60">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h2 className="text-lg sm:text-xl font-black text-white uppercase tracking-[0.15em]">
+              My Movie Log
+            </h2>
+            <p className="text-2xs text-zinc-500 font-mono mt-1 tracking-widest uppercase">
+              {filteredEntries.length} movie{filteredEntries.length !== 1 ? "s" : ""} ranked in {year}
+              {activeTag && <span className="text-amber-500/70"> · #{activeTag}</span>}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {username && (
+              <button
+                onClick={handleCopyShareLink}
+                className="px-3 py-1.5 text-2xs font-mono font-bold tracking-wider uppercase
+                  border border-zinc-700 text-zinc-400 hover:text-amber-400 hover:border-amber-500/40
+                  transition-all"
+              >
+                {copied ? "COPIED!" : "SHARE"}
+              </button>
+            )}
             <button
-              key={y}
-              onClick={() => {
-                setYear(y);
-                setActiveTag(null);
-              }}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full font-mono text-xs font-medium
-                border transition-all duration-200 ${
-                  y === year
-                    ? "bg-[var(--coral)]/15 border-[var(--coral)]/40 text-[var(--coral)]"
-                    : "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--soft)]"
-                }`}
+              onClick={() => setAddModalOpen(true)}
+              className="px-4 py-1.5 bg-amber-500 text-black
+                font-mono text-2xs font-black tracking-wider uppercase
+                hover:bg-amber-400 active:scale-95 transition-all"
             >
-              {y}
+              + LOG MOVIE
             </button>
-          ))}
+          </div>
         </div>
 
-        <button
-          onClick={() => setAddModalOpen(true)}
-          className="flex-shrink-0 ml-3 px-4 py-1.5 rounded-full
-            bg-[var(--coral)] text-[var(--void)]
-            font-mono text-xs font-medium
-            hover:brightness-110 active:scale-95 transition-all"
-        >
-          + Log Movie
-        </button>
+        {/* Year pills + tag filters */}
+        <div className="flex items-center gap-4 mt-4">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+            {YEARS.map((y) => (
+              <button
+                key={y}
+                onClick={() => {
+                  setYear(y);
+                  setActiveTag(null);
+                }}
+                className={`flex-shrink-0 px-3 py-1 font-mono text-2xs font-bold tracking-wider uppercase
+                  border transition-all duration-200 ${
+                    y === year
+                      ? "bg-amber-500/15 border-amber-500/40 text-amber-400"
+                      : "border-zinc-800 text-zinc-600 hover:text-zinc-400 hover:border-zinc-700"
+                  }`}
+              >
+                {y}
+              </button>
+            ))}
+          </div>
+          {tags.length > 0 && (
+            <>
+              <div className="w-px h-4 bg-zinc-800 flex-shrink-0" />
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+                {tags.map((tag) => (
+                  <button
+                    key={tag.id}
+                    onClick={() => setActiveTag(activeTag === tag.name ? null : tag.name)}
+                    className="flex-shrink-0 px-2 py-0.5 rounded-full font-mono text-2xs font-medium
+                      border transition-all duration-200"
+                    style={{
+                      backgroundColor: activeTag === tag.name ? `${tag.color}20` : "transparent",
+                      borderColor: activeTag === tag.name ? `${tag.color}60` : "var(--twilight)",
+                      color: activeTag === tag.name ? tag.color || "var(--cream)" : "var(--muted)",
+                    }}
+                  >
+                    {tag.name}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Tag filter strip */}
-      {tags.length > 0 && (
-        <div className="flex items-center gap-1.5 mb-4 overflow-x-auto scrollbar-hide">
-          <button
-            onClick={() => setActiveTag(null)}
-            className={`flex-shrink-0 px-2.5 py-1 rounded-full font-mono text-xs
-              border transition-all duration-200 ${
-                !activeTag
-                  ? "border-[var(--soft)]/40 text-[var(--cream)]"
-                  : "border-[var(--twilight)] text-[var(--muted)]"
-              }`}
-          >
-            All
-          </button>
-          {tags.map((tag) => (
-            <button
-              key={tag.id}
-              onClick={() => setActiveTag(activeTag === tag.name ? null : tag.name)}
-              className="flex-shrink-0 px-2.5 py-1 rounded-full font-mono text-xs
-                border transition-all duration-200"
-              style={{
-                backgroundColor: activeTag === tag.name ? `${tag.color}20` : "transparent",
-                borderColor: activeTag === tag.name ? `${tag.color}60` : "var(--twilight)",
-                color: activeTag === tag.name ? tag.color || "var(--cream)" : "var(--muted)",
-              }}
-            >
-              {tag.name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Count */}
-      <p className="text-xs text-[var(--muted)] font-mono mb-4">
-        {filteredEntries.length} movie{filteredEntries.length !== 1 ? "s" : ""} in {year}
-        {activeTag && ` tagged "${activeTag}"`}
-      </p>
-
-      {/* Loading state */}
+      {/* Loading */}
       {loading ? (
-        <div className="space-y-2">
+        <div className="space-y-1">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="animate-pulse flex items-center gap-3 h-24
-              bg-[var(--twilight)]/20 rounded border border-[var(--twilight)]/30">
-              <div className="w-12 h-full bg-[var(--twilight)]/40" />
-              <div className="w-16 h-full bg-[var(--twilight)]/30" />
-              <div className="flex-1 space-y-2 py-3">
-                <div className="h-4 bg-[var(--twilight)]/40 rounded w-1/3" />
-                <div className="h-3 bg-[var(--twilight)]/30 rounded w-1/2" />
+            <div key={i} className="animate-pulse flex items-stretch h-24
+              bg-zinc-950 border border-zinc-800/40">
+              <div className="w-12 bg-zinc-900/50" />
+              <div className="w-20 bg-zinc-900/30" />
+              <div className="flex-1 p-3 space-y-2">
+                <div className="h-4 bg-zinc-800/40 rounded w-1/3" />
+                <div className="h-3 bg-zinc-800/30 rounded w-1/2" />
+                <div className="h-3 bg-zinc-800/20 rounded w-1/4" />
               </div>
             </div>
           ))}
         </div>
       ) : filteredEntries.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16">
-          <p className="text-[var(--muted)] font-mono text-sm text-center mb-4">
+          <p className="text-zinc-500 font-mono text-sm text-center mb-1 tracking-widest uppercase">
             {activeTag
-              ? `No movies tagged "${activeTag}" in ${year}`
-              : `No movies logged in ${year} yet`}
+              ? `// Nothing tagged "${activeTag}" in ${year}`
+              : `// No movies logged in ${year}`}
           </p>
           {!activeTag && (
             <button
               onClick={() => setAddModalOpen(true)}
-              className="px-4 py-2 rounded-lg border border-dashed border-[var(--twilight)]
-                text-[var(--soft)] font-mono text-sm
-                hover:border-[var(--coral)] hover:text-[var(--coral)] transition-colors"
+              className="mt-4 px-5 py-2 border border-dashed border-zinc-700
+                text-zinc-500 font-mono text-xs uppercase tracking-wider
+                hover:border-amber-500/40 hover:text-amber-400 transition-colors"
             >
               Log your first movie
             </button>
           )}
         </div>
       ) : (
-        /* Vertical ranked list */
+        /* Ranked list */
         <div
-          className="space-y-1"
+          className="space-y-0.5"
           onDragLeave={() => setDragOver(null)}
         >
           {filteredEntries.map((entry, i) => (
