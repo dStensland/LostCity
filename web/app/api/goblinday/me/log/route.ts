@@ -16,7 +16,7 @@ export const GET = withAuth(async (request: NextRequest, { user, serviceClient }
       movie:goblin_movies!movie_id (
         id, tmdb_id, title, poster_path, backdrop_path, release_date, genres,
         runtime_minutes, director, year, rt_critics_score, rt_audience_score,
-        tmdb_vote_average, tmdb_vote_count, mpaa_rating, imdb_id
+        tmdb_vote_average, tmdb_vote_count, mpaa_rating, imdb_id, synopsis, trailer_url
       )
     `)
     .eq("user_id", user.id)

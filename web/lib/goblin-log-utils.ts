@@ -74,6 +74,8 @@ export interface LogEntry {
     tmdb_vote_count: number | null;
     mpaa_rating: string | null;
     imdb_id: string | null;
+    synopsis: string | null;
+    trailer_url: string | null;
   };
   tags: GoblinTag[];
 }

@@ -38,9 +38,15 @@ export default function GoblinLogEntryCard({
   isDragging,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const [editingRank, setEditingRank] = useState(false);
   const [rankInput, setRankInput] = useState("");
   const movie = entry.movie;
+
+  const trailerUrl = movie.trailer_url
+    ?? `https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + " " + (movie.year || "") + " trailer")}`;
+  const imdbUrl = movie.imdb_id ? `https://www.imdb.com/title/${movie.imdb_id}` : null;
+  const letterboxdUrl = `https://letterboxd.com/search/${encodeURIComponent(movie.title)}/`;
 
   // Top 3 get hero treatment
   const isHero = rank <= 3;
@@ -157,132 +163,187 @@ export default function GoblinLogEntryCard({
       </div>
 
       {/* Content */}
-      <button
-        onClick={() => (readOnly ? setExpanded(!expanded) : onEdit(entry))}
-        className="flex-1 min-w-0 p-2.5 sm:p-3 text-left hover:bg-zinc-900/30 transition-colors"
-      >
-        {/* Title */}
-        <div className="flex items-start justify-between gap-2">
-          <h3 className={`font-bold text-white leading-tight line-clamp-1 uppercase tracking-wide
-            ${isHero ? "text-base sm:text-lg" : "text-sm"}`}>
-            {movie.title}
-          </h3>
-          {!readOnly && (
-            <span className="text-zinc-600 text-2xs font-mono flex-shrink-0
-              opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">
-              EDIT
-            </span>
-          )}
-        </div>
-
-        {/* Director · year · runtime · rating */}
-        <div className="flex items-center gap-1.5 mt-0.5 text-2xs text-zinc-500 font-mono">
-          {movie.director && <span className="text-zinc-400">{movie.director}</span>}
-          {movie.director && movie.year && <span className="text-zinc-700">·</span>}
-          {movie.year && <span>{movie.year}</span>}
-          {movie.runtime_minutes && (
-            <>
-              <span className="text-zinc-700">·</span>
-              <span>{formatRuntime(movie.runtime_minutes)}</span>
-            </>
-          )}
-          {movie.mpaa_rating && (
-            <>
-              <span className="text-zinc-700">·</span>
-              <span>{movie.mpaa_rating}</span>
-            </>
-          )}
-        </div>
-
-        {/* Scores */}
-        {(movie.rt_critics_score != null || movie.rt_audience_score != null || movie.tmdb_vote_average != null) && (
-          <div className="flex items-center gap-2 mt-1.5 text-2xs font-mono">
-            {movie.rt_critics_score != null && (
-              <span className={`px-1.5 py-0.5 ${
-                movie.rt_critics_score >= 75
-                  ? "bg-red-900/60 text-red-400 border border-red-800/50"
-                  : movie.rt_critics_score >= 60
-                    ? "bg-red-950/40 text-red-500/80 border border-red-900/30"
-                    : "bg-zinc-900 text-zinc-500 border border-zinc-800"
-              }`}>
-                RT {movie.rt_critics_score}%
-              </span>
-            )}
-            {movie.rt_audience_score != null && (
-              <span className={`px-1.5 py-0.5 ${
-                movie.rt_audience_score >= 75
-                  ? "bg-amber-900/40 text-amber-400 border border-amber-800/40"
-                  : movie.rt_audience_score >= 60
-                    ? "bg-amber-950/30 text-amber-500/70 border border-amber-900/30"
-                    : "bg-zinc-900 text-zinc-500 border border-zinc-800"
-              }`}>
-                AUD {movie.rt_audience_score}%
-              </span>
-            )}
-            {movie.tmdb_vote_average != null && (
-              <span className={`${
-                movie.tmdb_vote_average >= 7
-                  ? "text-amber-500"
-                  : movie.tmdb_vote_average >= 5
-                    ? "text-zinc-400"
-                    : "text-zinc-600"
-              }`}>
-                TMDB {movie.tmdb_vote_average.toFixed(1)}
+      <div className="flex-1 min-w-0 p-2.5 sm:p-3">
+        {/* Title row — clickable for edit */}
+        <div
+          onClick={() => (readOnly ? setExpanded(!expanded) : onEdit(entry))}
+          className="cursor-pointer hover:bg-zinc-900/30 -m-2.5 sm:-m-3 p-2.5 sm:p-3 transition-colors"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <h3 className={`font-bold text-white leading-tight line-clamp-1 uppercase tracking-wide
+              ${isHero ? "text-base sm:text-lg" : "text-sm"}`}>
+              {movie.title}
+            </h3>
+            {!readOnly && (
+              <span className="text-zinc-600 text-2xs font-mono flex-shrink-0
+                opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">
+                EDIT
               </span>
             )}
           </div>
-        )}
 
-        {/* Tags + date + watched with */}
-        <div className="flex items-center flex-wrap gap-1.5 mt-2">
-          <span className="text-2xs text-zinc-500 font-mono">
-            {formatWatchedDate(entry.watched_date)}
-          </span>
-          {entry.watched_with && (
-            <>
-              <span className="text-zinc-700">·</span>
-              <span className="text-2xs text-zinc-500 font-mono">
-                w/ {entry.watched_with}
-              </span>
-            </>
+          {/* Director · year · runtime · rating */}
+          <div className="flex items-center gap-1.5 mt-0.5 text-2xs text-zinc-500 font-mono">
+            {movie.director && <span className="text-zinc-400">{movie.director}</span>}
+            {movie.director && movie.year && <span className="text-zinc-700">·</span>}
+            {movie.year && <span>{movie.year}</span>}
+            {movie.runtime_minutes && (
+              <>
+                <span className="text-zinc-700">·</span>
+                <span>{formatRuntime(movie.runtime_minutes)}</span>
+              </>
+            )}
+            {movie.mpaa_rating && (
+              <>
+                <span className="text-zinc-700">·</span>
+                <span>{movie.mpaa_rating}</span>
+              </>
+            )}
+          </div>
+
+          {/* Scores */}
+          {(movie.rt_critics_score != null || movie.rt_audience_score != null || movie.tmdb_vote_average != null) && (
+            <div className="flex items-center gap-2 mt-1.5 text-2xs font-mono">
+              {movie.rt_critics_score != null && (
+                <span className={`px-1.5 py-0.5 ${
+                  movie.rt_critics_score >= 75
+                    ? "bg-red-900/60 text-red-400 border border-red-800/50"
+                    : movie.rt_critics_score >= 60
+                      ? "bg-red-950/40 text-red-500/80 border border-red-900/30"
+                      : "bg-zinc-900 text-zinc-500 border border-zinc-800"
+                }`}>
+                  RT {movie.rt_critics_score}%
+                </span>
+              )}
+              {movie.rt_audience_score != null && (
+                <span className={`px-1.5 py-0.5 ${
+                  movie.rt_audience_score >= 75
+                    ? "bg-amber-900/40 text-amber-400 border border-amber-800/40"
+                    : movie.rt_audience_score >= 60
+                      ? "bg-amber-950/30 text-amber-500/70 border border-amber-900/30"
+                      : "bg-zinc-900 text-zinc-500 border border-zinc-800"
+                }`}>
+                  AUD {movie.rt_audience_score}%
+                </span>
+              )}
+              {movie.tmdb_vote_average != null && (
+                <span className={`${
+                  movie.tmdb_vote_average >= 7
+                    ? "text-amber-500"
+                    : movie.tmdb_vote_average >= 5
+                      ? "text-zinc-400"
+                      : "text-zinc-600"
+                }`}>
+                  TMDB {movie.tmdb_vote_average.toFixed(1)}
+                </span>
+              )}
+            </div>
           )}
-          {entry.tags.map((tag) => (
-            <span
-              key={tag.id}
-              className="px-1.5 py-0.5 rounded-full text-2xs font-mono font-medium"
-              style={{
-                backgroundColor: `${tag.color}20`,
-                color: tag.color || "var(--soft)",
-              }}
-            >
-              {tag.name}
+
+          {/* Tags + date + watched with */}
+          <div className="flex items-center flex-wrap gap-1.5 mt-2">
+            <span className="text-2xs text-zinc-500 font-mono">
+              {formatWatchedDate(entry.watched_date)}
             </span>
-          ))}
-        </div>
-
-        {/* Note */}
-        {entry.note && (
-          <p className={`mt-1.5 text-xs text-zinc-400 italic leading-relaxed ${
-            !expanded && readOnly ? "line-clamp-1" : ""
-          }`}>
-            &ldquo;{entry.note}&rdquo;
-          </p>
-        )}
-
-        {/* Genres */}
-        {movie.genres && movie.genres.length > 0 && (
-          <div className="flex items-center gap-1.5 mt-1.5">
-            {movie.genres.slice(0, 3).map((genre) => (
+            {entry.watched_with && (
+              <>
+                <span className="text-zinc-700">·</span>
+                <span className="text-2xs text-zinc-500 font-mono">
+                  w/ {entry.watched_with}
+                </span>
+              </>
+            )}
+            {entry.tags.map((tag) => (
               <span
-                key={genre}
-                className="text-2xs text-zinc-600 font-mono uppercase tracking-wider"
+                key={tag.id}
+                className="px-1.5 py-0.5 rounded-full text-2xs font-mono font-medium"
+                style={{
+                  backgroundColor: `${tag.color}20`,
+                  color: tag.color || "var(--soft)",
+                }}
               >
-                {genre}
+                {tag.name}
               </span>
             ))}
           </div>
+
+          {/* Note */}
+          {entry.note && (
+            <p className={`mt-1.5 text-xs text-zinc-400 italic leading-relaxed ${
+              !showInfo && !expanded && readOnly ? "line-clamp-1" : ""
+            }`}>
+              &ldquo;{entry.note}&rdquo;
+            </p>
+          )}
+
+          {/* Genres */}
+          {movie.genres && movie.genres.length > 0 && (
+            <div className="flex items-center gap-1.5 mt-1.5">
+              {movie.genres.slice(0, 3).map((genre) => (
+                <span
+                  key={genre}
+                  className="text-2xs text-zinc-600 font-mono uppercase tracking-wider"
+                >
+                  {genre}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Action links — always visible */}
+        <div className="flex items-center gap-3 mt-2 pt-1.5 border-t border-zinc-800/40">
+          <button
+            onClick={() => setShowInfo(!showInfo)}
+            className={`text-2xs font-mono font-bold uppercase tracking-wider transition-colors ${
+              showInfo ? "text-amber-400" : "text-zinc-600 hover:text-zinc-400"
+            }`}
+          >
+            {showInfo ? "HIDE" : "INFO"}
+          </button>
+          <a
+            href={trailerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-2xs font-mono font-bold uppercase tracking-wider
+              text-zinc-600 hover:text-red-400 transition-colors"
+          >
+            TRAILER
+          </a>
+          {imdbUrl && (
+            <a
+              href={imdbUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-2xs font-mono font-bold uppercase tracking-wider
+                text-zinc-600 hover:text-amber-400 transition-colors"
+            >
+              IMDB
+            </a>
+          )}
+          <a
+            href={letterboxdUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-2xs font-mono font-bold uppercase tracking-wider
+              text-zinc-600 hover:text-emerald-400 transition-colors"
+          >
+            LETTERBOXD
+          </a>
+        </div>
+
+        {/* Expandable synopsis */}
+        {showInfo && movie.synopsis && (
+          <div className="mt-2 animate-fade-in">
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              {movie.synopsis}
+            </p>
+          </div>
         )}
-      </button>
+      </div>
     </div>
   );
 }
