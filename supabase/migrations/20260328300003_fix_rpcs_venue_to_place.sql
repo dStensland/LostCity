@@ -31,6 +31,9 @@
 --    Return column: venue_id → place_id
 -- ============================================================
 
+-- Must DROP first because return type changed (venue_id → place_id)
+DROP FUNCTION IF EXISTS get_spot_event_counts(DATE, DATE, UUID, TEXT[], INTEGER);
+
 CREATE OR REPLACE FUNCTION get_spot_event_counts(
   p_start_date DATE,
   p_end_date DATE,
@@ -83,6 +86,8 @@ GRANT EXECUTE ON FUNCTION get_spot_event_counts(DATE, DATE, UUID, TEXT[], INTEGE
 --    v.venue_type → p.place_type
 --    Return column: venue_type → place_type
 -- ============================================================
+
+DROP FUNCTION IF EXISTS get_venue_type_counts(TEXT);
 
 CREATE OR REPLACE FUNCTION get_venue_type_counts(p_city TEXT DEFAULT NULL)
 RETURNS TABLE(place_type TEXT, cnt BIGINT)
