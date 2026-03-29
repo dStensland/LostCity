@@ -338,6 +338,7 @@ export function DestinationsSectionV2({ portalSlug }: DestinationsSectionV2Props
 
   useEffect(() => {
     const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
     fetch(`/api/portals/${portalSlug}/destinations`, {
       signal: controller.signal,
@@ -357,7 +358,7 @@ export function DestinationsSectionV2({ portalSlug }: DestinationsSectionV2Props
         setLoading(false);
       });
 
-    return () => controller.abort();
+    return () => { clearTimeout(timeoutId); controller.abort(); };
   }, [portalSlug]);
 
   if (loading) return <DestinationSkeletons />;

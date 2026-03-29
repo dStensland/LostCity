@@ -326,11 +326,10 @@ export async function fetchPhaseBEnrichments(
   }
 
   // Build place_id → EditorialMention[] lookup map
-  // (DB column is still venue_id until Deploy 10)
   const editorialMap: Record<number, EditorialMention[]> = {};
-  for (const row of editorialRows as Array<EditorialMention & { venue_id: number }>) {
+  for (const row of editorialRows as Array<EditorialMention & { place_id: number }>) {
     if (!row.snippet || !isQualitySnippet(row.snippet)) continue;
-    const placeId = row.venue_id;
+    const placeId = row.place_id;
     if (!editorialMap[placeId]) editorialMap[placeId] = [];
     editorialMap[placeId].push({
       source_key: row.source_key,

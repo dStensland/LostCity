@@ -25,14 +25,11 @@ export const BriefingSection = memo(function BriefingSection({
   briefing,
   eventCount,
 }: BriefingSectionProps) {
-  // If no briefing or all data is missing, render nothing
-  if (!briefing) {
-    return null;
-  }
-
   // Split prose into headline (first sentence) + supporting text
+  // Hook must be called unconditionally (before any early return)
   const { headline, supportText } = useMemo(() => {
-    const prose = briefing.prose || "";
+    if (!briefing?.prose) return { headline: "", supportText: "" };
+    const prose = briefing.prose;
     const firstSentenceMatch = prose.match(/^([^.!?]+[.!?])\s*(.*)/);
 
     if (firstSentenceMatch) {
@@ -46,7 +43,12 @@ export const BriefingSection = memo(function BriefingSection({
       headline: prose,
       supportText: "",
     };
-  }, [briefing.prose]);
+  }, [briefing?.prose]);
+
+  // If no briefing or all data is missing, render nothing
+  if (!briefing) {
+    return null;
+  }
 
   // Collapsed state: single row with day + weather + count
   if (briefing.collapsed) {

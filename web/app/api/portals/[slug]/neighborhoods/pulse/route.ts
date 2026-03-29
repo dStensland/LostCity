@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { createClient } from "@/lib/supabase/server";
 import { getPortalBySlug } from "@/lib/portal";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { getNeighborhoodByName } from "@/config/neighborhoods";
@@ -90,9 +90,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // city names array — fall back to Atlanta if not specified
     const cityNames = portalCity ? [portalCity] : ["Atlanta"];
 
-    let serviceClient: ReturnType<typeof createServiceClient>;
+    let serviceClient: Awaited<ReturnType<typeof createClient>>;
     try {
-      serviceClient = createServiceClient();
+      serviceClient = await createClient();
     } catch {
       return NextResponse.json({ neighborhoods: [] }, { status: 200 });
     }
@@ -120,13 +120,20 @@ export async function GET(request: NextRequest, context: RouteContext) {
     weekEnd.setDate(weekEnd.getDate() + 7);
     const weekEndStr = weekEnd.toISOString().slice(0, 10);
 
-    const { data: eventRows, error: eventError } = await serviceClient
+    // City-scoped: filter events to those at venues in this portal's city
+    let eventQuery = serviceClient
       .from("events")
       .select("category_id, venue:places!events_place_id_fkey(neighborhood)")
       .eq("is_active", true)
       .is("canonical_event_id", null)
       .gte("start_date", todayStr)
       .lte("start_date", weekEndStr);
+
+    if (portalCity) {
+      eventQuery = eventQuery.eq("venue.city", portalCity);
+    }
+
+    const { data: eventRows, error: eventError } = await eventQuery;
 
     // Build neighborhood → category count map
     const categoryCountsByNeighborhood: Record<string, Record<string, number>> = {};

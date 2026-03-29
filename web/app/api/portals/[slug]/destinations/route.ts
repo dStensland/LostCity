@@ -222,6 +222,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     supabase
       .from("exhibitions")
       .select("id, title, closing_date, place_id")
+      .eq("is_active", true)
       .gte("closing_date", today)
       .lte("closing_date", fourteenDaysFromNow)
       .limit(10) as unknown as Promise<{

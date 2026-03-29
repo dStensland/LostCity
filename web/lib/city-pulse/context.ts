@@ -169,12 +169,19 @@ async function getUpcomingSchoolEvents(
 
   const { data } = await supabase
     .from("school_calendar_events")
-    .select("event_type, school_system, date, title")
-    .gte("date", today)
-    .lte("date", tomorrow)
+    .select("event_type, school_system, start_date, name")
+    .gte("start_date", today)
+    .lte("start_date", tomorrow)
     .limit(10);
 
-  return data ?? [];
+  // Map DB columns to FeedContext shape (date/title)
+  if (!data) return [];
+  return (data as Array<{ event_type: string; school_system: string; start_date: string; name: string }>).map((row) => ({
+    event_type: row.event_type,
+    school_system: row.school_system,
+    date: row.start_date,
+    title: row.name,
+  }));
 }
 
 // ---------------------------------------------------------------------------

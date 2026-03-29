@@ -10,7 +10,7 @@ import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 interface NeighborhoodPulseItem {
   name: string;
   slug: string;
-  tier: string;
+  tier: number;
   eventsTodayCount: number;
   eventsWeekCount: number;
   topCategories: string[];
@@ -31,28 +31,6 @@ function isEvening(): boolean {
   return new Date().getHours() >= 14;
 }
 
-// ── Sparkline ─────────────────────────────────────────────────────────────────
-
-const SPARKLINE_OPACITIES = [1.0, 0.7, 0.9, 0.5, 0.8];
-const SPARKLINE_HEIGHTS = [20, 12, 16, 8, 14]; // px
-
-function Sparkline({ accentColor }: { accentColor: string }) {
-  return (
-    <div className="flex gap-0.5 mt-2 items-end">
-      {SPARKLINE_HEIGHTS.map((height, i) => (
-        <div
-          key={i}
-          className="w-1 rounded-sm"
-          style={{
-            height: `${height}px`,
-            backgroundColor: accentColor,
-            opacity: SPARKLINE_OPACITIES[i],
-          }}
-        />
-      ))}
-    </div>
-  );
-}
 
 // ── Neighborhood card ──────────────────────────────────────────────────────────
 
@@ -91,9 +69,6 @@ function NeighborhoodCard({ item, portalSlug, countLabel }: NeighborhoodCardProp
       {/* Label */}
       <p className="text-2xs text-[var(--muted)]">{countLabel}</p>
 
-      {/* Sparkline */}
-      <Sparkline accentColor={accentColor} />
-
       {/* Top categories */}
       {displayCategories && (
         <p className="text-2xs text-[var(--muted)] mt-1.5 truncate">
@@ -127,6 +102,7 @@ export function NeighborhoodPulseSection({ portalSlug }: NeighborhoodPulseSectio
 
   useEffect(() => {
     const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
     fetch(`/api/portals/${portalSlug}/neighborhoods/pulse`, {
       signal: controller.signal,
@@ -145,7 +121,7 @@ export function NeighborhoodPulseSection({ portalSlug }: NeighborhoodPulseSectio
         setLoading(false);
       });
 
-    return () => controller.abort();
+    return () => { clearTimeout(timeoutId); controller.abort(); };
   }, [portalSlug]);
 
   // Empty state: fewer than 3 neighborhoods
@@ -153,7 +129,8 @@ export function NeighborhoodPulseSection({ portalSlug }: NeighborhoodPulseSectio
 
   const evening = isEvening();
   const countLabel = evening ? "events tonight" : "events today";
-  const subtitle = evening ? "Where Atlanta is alive tonight" : "Where Atlanta is alive today";
+  const cityName = portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
+  const subtitle = evening ? `Where ${cityName} is alive tonight` : `Where ${cityName} is alive today`;
 
   return (
     <section>

@@ -13,7 +13,7 @@
  *   - Activity chip selection persists across tab switches
  */
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { CityPulseEventItem } from "@/lib/city-pulse/types";
 import { SCENE_ACTIVITY_TYPES, matchActivityType } from "@/lib/scene-event-routing";
 
@@ -67,6 +67,12 @@ export const RegularsToggle = memo(function RegularsToggle({
   const [activeDay, setActiveDay] = useState<number | null>(null);
 
   const todayIsoDay = useMemo(() => getTodayIsoDay(), []);
+
+  // Stable ref for onFilteredEvents to avoid infinite effect loops
+  const onFilteredEventsRef = useRef(onFilteredEvents);
+  useEffect(() => {
+    onFilteredEventsRef.current = onFilteredEvents;
+  });
 
   // Reset day pill on tab switch, per spec
   useEffect(() => {
@@ -144,16 +150,16 @@ export const RegularsToggle = memo(function RegularsToggle({
   // Notify parent whenever filtered set changes
   useEffect(() => {
     if (active) {
-      onFilteredEvents(filteredEvents);
+      onFilteredEventsRef.current(filteredEvents);
     }
-  }, [active, filteredEvents, onFilteredEvents]);
+  }, [active, filteredEvents]);
 
   // Notify parent with full set when toggled off
   useEffect(() => {
     if (!active) {
-      onFilteredEvents(regularsEvents);
+      onFilteredEventsRef.current(regularsEvents);
     }
-  }, [active, regularsEvents, onFilteredEvents]);
+  }, [active, regularsEvents]);
 
   // ---------------------------------------------------------------------------
   // Render

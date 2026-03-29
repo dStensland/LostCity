@@ -163,7 +163,7 @@ export async function resolveHeader(opts: ResolveHeaderOpts): Promise<ResolvedHe
       : null,
     weatherSignal: context.weather_signal ?? null,
     todayEventCount: eventsPulse.total_active,
-    topCategories: [],
+    topCategories: deriveTopCategories(todayEvents),
     timeSlot: context.time_slot,
     dayOfWeek: context.day_of_week,
     portalSlug,
@@ -575,4 +575,24 @@ const DAY_THEME_LABELS: Record<string, string> = {
 function humanizeDayTheme(theme?: string): string {
   if (!theme) return "";
   return DAY_THEME_LABELS[theme] ?? theme.replace(/_/g, " ");
+}
+
+/**
+ * Derive top 3 categories from today's event pool.
+ * Excludes noise categories (recreation, unknown).
+ */
+function deriveTopCategories(todayEvents?: FeedEventData[]): string[] {
+  if (!todayEvents || todayEvents.length === 0) return [];
+  const NOISE = new Set(["recreation", "unknown"]);
+  const counts: Record<string, number> = {};
+  for (const e of todayEvents) {
+    const cat = e.category;
+    if (cat && !NOISE.has(cat)) {
+      counts[cat] = (counts[cat] ?? 0) + 1;
+    }
+  }
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([cat]) => cat);
 }

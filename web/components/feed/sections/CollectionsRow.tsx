@@ -38,6 +38,7 @@ export function CollectionsRow({ portalSlug }: CollectionsRowProps) {
 
   useEffect(() => {
     const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
     fetch(`/api/portals/${portalSlug}/collections`, {
       signal: controller.signal,
@@ -56,7 +57,7 @@ export function CollectionsRow({ portalSlug }: CollectionsRowProps) {
         if (!controller.signal.aborted) setLoading(false);
       });
 
-    return () => controller.abort();
+    return () => { clearTimeout(timeoutId); controller.abort(); };
   }, [portalSlug]);
 
   // Return null if no collections or loading (we don't show a skeleton for this row)
@@ -75,7 +76,7 @@ export function CollectionsRow({ portalSlug }: CollectionsRowProps) {
           <Link
             key={collection.slug}
             href={collection.href}
-            className="flex-shrink-0 min-w-[180px] rounded-lg border border-white/[0.08] bg-white/[0.04] px-3.5 py-2.5 transition-all hover:border-white/[0.12] hover:bg-white/[0.06]"
+            className="flex-shrink-0 min-w-[180px] rounded-lg border border-[var(--cream)]/[0.08] bg-[var(--cream)]/[0.04] px-3.5 py-2.5 transition-all hover:border-[var(--cream)]/[0.12] hover:bg-[var(--cream)]/[0.06]"
           >
             {/* Title */}
             <h3 className="text-sm font-medium text-[var(--cream)] truncate">

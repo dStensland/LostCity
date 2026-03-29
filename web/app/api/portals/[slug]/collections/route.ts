@@ -16,7 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { normalizePortalSlug, resolvePortalSlugAlias } from "@/lib/portal-aliases";
 import { getLocalDateString } from "@/lib/formats";
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const requestSlug = normalizePortalSlug(slug);
   const canonicalSlug = resolvePortalSlugAlias(requestSlug);
 
-  const supabase = createServiceClient();
+  const supabase = await createClient();
 
   // Resolve portal to get city filter
   const { data: portalData } = await supabase
@@ -167,28 +167,31 @@ export async function GET(request: NextRequest, context: RouteContext) {
     familySundayResult,
     closingSoonResult,
   ] = await Promise.all([
-    // 1. Free This Weekend
+    // 1. Free This Weekend — portal-scoped
     supabase
       .from("events")
       .select("id", { count: "exact", head: true })
       .eq("is_free", true)
       .eq("is_active", true)
+      .or(`portal_id.eq.${portalData.id},portal_id.is.null`)
       .in("start_date", [nextSaturday, nextSunday])
       .limit(10) as unknown as Promise<CountResult & { error: unknown }>,
 
-    // 2. Date Night — find tonight's top neighborhood
+    // 2. Date Night — find tonight's top neighborhood, portal-scoped via city
     supabase
       .from("events")
-      .select("places!events_venue_id_fkey(neighborhood)")
+      .select("places!events_place_id_fkey(neighborhood, city)")
       .eq("is_active", true)
       .eq("start_date", today)
+      .or(`portal_id.eq.${portalData.id},portal_id.is.null`)
       .not("places.neighborhood", "is", null)
+      .eq("places.city", portalCity)
       .limit(200) as unknown as Promise<{
-        data: Array<{ places: { neighborhood: string } | null }> | null;
+        data: Array<{ places: { neighborhood: string; city: string } | null }> | null;
         error: unknown;
       }>,
 
-    // 3. New in Atlanta — places created in last 30 days
+    // 3. New in Atlanta — places created in last 30 days (already city-scoped)
     supabase
       .from("places")
       .select("id", { count: "exact", head: true })
@@ -197,22 +200,25 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .gte("created_at", thirtyDaysAgo)
       .limit(10) as unknown as Promise<CountResult & { error: unknown }>,
 
-    // 4. Family Sunday (only on Sat/Sun)
+    // 4. Family Sunday (only on Sat/Sun) — portal-scoped
     isWeekend
       ? (supabase
           .from("events")
           .select("id", { count: "exact", head: true })
-          .eq("category", "family")
+          .eq("category_id", "family")
           .eq("is_active", true)
+          .or(`portal_id.eq.${portalData.id},portal_id.is.null`)
           .eq("start_date", nextSunday)
           .limit(10) as unknown as Promise<CountResult & { error: unknown }>)
       : Promise.resolve({ count: 0, error: null }),
 
     // 5. Closing Soon — exhibitions closing in next 14 days
+    // Note: exhibitions table has no portal_id; scoped via place city
     supabase
       .from("exhibitions")
-      .select("id", { count: "exact", head: true })
+      .select("id, place:places!inner(city)", { count: "exact", head: true })
       .eq("is_active", true)
+      .eq("place.city", portalCity)
       .gte("closing_date", today)
       .lte("closing_date", fourteenDaysFromNow)
       .limit(10) as unknown as Promise<CountResult & { error: unknown }>,

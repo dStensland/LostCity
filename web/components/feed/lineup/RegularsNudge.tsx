@@ -60,7 +60,7 @@ export const RegularsNudge = function RegularsNudge({
   };
 
   return (
-    <div className="mx-4 mt-2 mb-4 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+    <div className="mx-4 mt-2 mb-4 px-3 py-2 rounded-lg bg-[var(--cream)]/[0.03] border border-[var(--cream)]/[0.06]">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-[var(--cream)]/60">
           Looking for weekly trivia, karaoke, comedy?
