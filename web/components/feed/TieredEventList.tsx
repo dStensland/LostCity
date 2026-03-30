@@ -18,9 +18,6 @@ import type { FeedEventData } from "@/components/EventCard";
 import type { CardTier, EditorialMention, FriendGoingInfo } from "@/lib/city-pulse/types";
 import { HeroCard } from "@/components/feed/HeroCard";
 import { StandardRow } from "@/components/feed/StandardRow";
-import { EditorialCallout } from "@/components/feed/EditorialCallout";
-import { PressQuote } from "@/components/feed/PressQuote";
-import { generateEditorialCallout } from "@/lib/editorial-templates";
 import CategoryPlaceholder from "@/components/CategoryPlaceholder";
 import SmartImage from "@/components/SmartImage";
 import { formatTime } from "@/lib/formats";
@@ -42,25 +39,6 @@ export type TieredFeedEvent = FeedEventData & {
 // Editorial relevance guard
 // ---------------------------------------------------------------------------
 
-/**
- * Categories where venue-level editorial mentions (restaurant reviews, bar
- * features, etc.) are relevant context.  Editorial sources in the
- * `editorial_mentions` table are food/drink/tourism publications.  Showing a
- * restaurant review on a fitness class or education workshop at the same venue
- * creates confusing mismatches.
- */
-const EDITORIAL_RELEVANT_CATEGORIES = new Set([
-  "food_drink",
-  "nightlife",
-  "arts",
-  "music",
-  "community",
-]);
-
-function isEditorialRelevant(event: TieredFeedEvent): boolean {
-  const cat = event.category ?? "";
-  return EDITORIAL_RELEVANT_CATEGORIES.has(cat);
-}
 
 interface TieredEventListProps {
   events: TieredFeedEvent[];
@@ -96,8 +74,6 @@ function FeaturedMiniCard({
   portalSlug: string;
 }) {
   const imageUrl = event.image_url || event.series?.image_url;
-  const firstMention = event.editorial_mentions?.[0];
-
   return (
     <Link
       href={`/${portalSlug}/events/${event.id}`}
@@ -148,19 +124,6 @@ function FeaturedMiniCard({
 
         {event.venue?.name && (
           <p className="text-xs text-[var(--muted)] truncate">{event.venue.name}</p>
-        )}
-
-        {/* Press quote if available */}
-        {firstMention && (
-          <div className="mt-0.5">
-            <PressQuote
-              snippet={firstMention.snippet}
-              source={firstMention.source_key
-                .replace(/_/g, " ")
-                .replace(/\b\w/g, (c) => c.toUpperCase())}
-              articleUrl={firstMention.article_url}
-            />
-          </div>
         )}
 
         {/* Price + social proof badges */}
@@ -228,34 +191,10 @@ export function TieredEventList({
     return { heroEvents: hero, featuredEvents: featured, standardEvents: standard };
   }, [events, maxHero, maxFeatured]);
 
-  // Try to generate an editorial callout from section context
-  const editorialCallout = useMemo(() => {
-    return generateEditorialCallout({
-      events: events.map((e) => ({
-        category_id: e.category ?? undefined,
-        is_tentpole: e.is_tentpole,
-        festival_id: e.festival_id,
-        title: e.title,
-        importance: e.importance ?? undefined,
-      })),
-      sectionType,
-      categoryCounts,
-      holidays,
-    });
-  }, [events, sectionType, categoryCounts, holidays]);
-
   if (events.length === 0) return null;
 
   return (
     <div className="space-y-2.5">
-      {/* Editorial callout — only when there's a meaningful signal */}
-      {editorialCallout && (
-        <EditorialCallout
-          highlightText={editorialCallout.highlightText}
-          remainderText={editorialCallout.remainderText}
-        />
-      )}
-
       {/* Hero card — flagship / festival / tentpole event */}
       {heroEvents.map((event, idx) => (
         <HeroCard
@@ -263,11 +202,7 @@ export function TieredEventList({
           event={event as FeedEventData & { card_tier?: "hero"; editorial_mentions?: EditorialMention[] }}
           portalSlug={portalSlug}
           friendsGoing={event.friends_going}
-          editorialBlurb={
-            isEditorialRelevant(event)
-              ? (event.editorial_mentions?.[0]?.snippet ?? null)
-              : null
-          }
+          editorialBlurb={null}
           index={idx}
         />
       ))}
