@@ -30,8 +30,6 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import SmartImage from "@/components/SmartImage";
-import ScopedStyles from "@/components/ScopedStyles";
-import { createCssVarClass } from "@/lib/css-utils";
 import { formatTime, getLocalDateString } from "@/lib/formats";
 import {
   getMyTeams,
@@ -44,6 +42,8 @@ import {
 import {
   TEAMS,
   GROUP_LABELS,
+  SPORT_PHOTOS,
+  SPORT_LABELS,
   type TeamConfig,
   type TeamSchedule,
   type GameDayResponse,
@@ -51,7 +51,7 @@ import {
 
 // ── Constants ────────────────────────────────────────────────────────
 
-const CARD_WIDTH = 256; // w-64
+const CARD_WIDTH = 288; // w-72
 const GAP = 12; // gap-3
 const MAX_UPCOMING = 3;
 
@@ -62,6 +62,17 @@ function formatShortDate(dateStr: string): string {
   const [year, month, day] = dateStr.split("-").map(Number);
   const d = new Date(year, month - 1, day);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/** Extract opponent name from full game title. "Atlanta Braves vs. Athletics" → "vs. Athletics" */
+function formatOpponent(title: string, shortName: string): string {
+  const vsMatch = title.match(/\s+vs\.?\s+/i);
+  if (!vsMatch || vsMatch.index === undefined) return title;
+  const before = title.substring(0, vsMatch.index).trim();
+  const after = title.substring(vsMatch.index + vsMatch[0].length).trim();
+  const isHomeFirst = before.toLowerCase().includes(shortName.toLowerCase());
+  const opponent = isHomeFirst ? after : before;
+  return `vs. ${opponent}`;
 }
 
 // ── Component ────────────────────────────────────────────────────────
@@ -244,16 +255,14 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="flex-shrink-0 w-64 rounded-card overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/40 animate-pulse"
+              className="flex-shrink-0 w-72 rounded-card overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/40 animate-pulse"
             >
-              <div className="h-8 bg-[var(--twilight)]/30" />
+              <div className="h-36 bg-[var(--twilight)]/20" />
               <div className="p-3 space-y-2.5">
                 <div className="h-4 bg-[var(--twilight)]/30 rounded w-3/4" />
-                <div className="h-3 bg-[var(--twilight)]/20 rounded w-full" />
-                <div className="space-y-1.5 mt-2">
+                <div className="space-y-1.5">
+                  <div className="h-3 bg-[var(--twilight)]/15 rounded w-full" />
                   <div className="h-3 bg-[var(--twilight)]/15 rounded w-5/6" />
-                  <div className="h-3 bg-[var(--twilight)]/15 rounded w-2/3" />
-                  <div className="h-3 bg-[var(--twilight)]/15 rounded w-3/4" />
                 </div>
               </div>
             </div>
@@ -360,150 +369,168 @@ function TeamCard({
   portalSlug: string;
   isDefault: boolean;
 }) {
+  const sportPhoto = SPORT_PHOTOS[team.sport] ?? null;
+  const sportLabel = SPORT_LABELS[team.sport] ?? team.sport;
   const today = getLocalDateString(new Date());
-  const accentClass = createCssVarClass("--team-accent", team.accentColor, "team-accent");
+  const isTonight = team.nextGame?.startDate === today;
   const upcoming = team.upcoming.slice(0, MAX_UPCOMING);
   const overflowCount = team.totalUpcoming > MAX_UPCOMING ? team.totalUpcoming - MAX_UPCOMING : 0;
 
-  const isTonight =
-    team.nextGame?.startDate === today &&
-    team.nextGame?.startTime !== null;
-
   return (
-    <>
-      {accentClass && <ScopedStyles css={accentClass.css} />}
-      <div
-        className={`flex-shrink-0 w-64 snap-start rounded-card overflow-hidden bg-[var(--night)] shadow-card-sm hover-lift border border-[var(--twilight)]/40 ${accentClass?.className ?? ""}`}
-      >
-        {/* Accent band — h-8 gradient + border-t-2 stripe */}
-        <div
-          className="h-8 border-t-2 relative overflow-hidden"
-          style={{
-            borderTopColor: team.accentColor,
-            background: `linear-gradient(135deg, ${team.accentColor}20 0%, ${team.accentColor}08 100%)`,
-          }}
-        >
-          {/* Subtle diagonal shimmer */}
+    <div className="flex-shrink-0 w-72 snap-start rounded-card overflow-hidden bg-[var(--night)] shadow-card-sm hover-lift border border-[var(--twilight)]/40">
+      {/* Photo strip */}
+      <div className="relative h-36 overflow-hidden">
+        {sportPhoto ? (
+          <SmartImage
+            src={sportPhoto}
+            alt=""
+            fill
+            sizes="288px"
+            className="object-cover"
+            fallback={
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: `linear-gradient(135deg, ${team.accentColor}30 0%, var(--night) 100%)`,
+                }}
+              />
+            }
+          />
+        ) : (
           <div
-            className="absolute inset-0 opacity-[0.06]"
+            className="absolute inset-0"
             style={{
-              background: `repeating-linear-gradient(45deg, ${team.accentColor}, ${team.accentColor} 1px, transparent 1px, transparent 8px)`,
+              background: `linear-gradient(135deg, ${team.accentColor}30 0%, var(--night) 100%)`,
             }}
           />
+        )}
+
+        {/* Gradient fade into card body */}
+        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[var(--night)] via-[var(--night)]/70 to-transparent pointer-events-none" />
+
+        {/* Sport pill */}
+        <span className="absolute bottom-2 right-2 z-10 px-2 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--night)]/70 backdrop-blur-sm text-[var(--cream)]/80">
+          {sportLabel}
+        </span>
+
+        {/* Team logo — overlapping card boundary */}
+        <div className="absolute -bottom-5 left-3 z-10 w-12 h-12 rounded-full bg-[var(--night)] shadow-card-sm border border-[var(--twilight)]/60 p-1.5 flex items-center justify-center">
+          <SmartImage
+            src={team.logoUrl}
+            alt={team.shortName}
+            width={32}
+            height={32}
+            className="rounded-full object-contain"
+            fallback={
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                style={{ backgroundColor: team.accentColor }}
+              >
+                {team.shortName.charAt(0)}
+              </div>
+            }
+          />
         </div>
+      </div>
 
-        {/* Card header */}
-        <div className="px-3 pt-2.5 pb-1.5">
-          <div className="flex items-center gap-2">
-            {/* Team logo */}
-            <div className="shrink-0 w-6 h-6 relative">
-              <SmartImage
-                src={team.logoUrl}
-                alt={team.shortName}
-                width={24}
-                height={24}
-                className="object-contain"
-                fallback={
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-2xs font-bold text-white"
-                    style={{ backgroundColor: team.accentColor }}
-                  >
-                    {team.shortName.slice(0, 1)}
-                  </div>
-                }
-              />
-            </div>
-
-            {/* Team name + league badge */}
-            <span className="text-base font-semibold text-[var(--cream)] truncate flex-1 min-w-0">
-              {team.shortName}
-            </span>
-            <span className="shrink-0 font-mono text-2xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--twilight)] text-[var(--muted)]">
+      {/* Card header — with spacer for logo overlap */}
+      <div className="px-3 pt-1">
+        <div className="h-6" />
+        <div className="flex items-center gap-2">
+          <span className="text-base font-semibold text-[var(--cream)] truncate flex-1 min-w-0">
+            {team.shortName}
+          </span>
+          {team.league && (
+            <span className="shrink-0 text-2xs font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--twilight)] text-[var(--muted)]">
               {team.league}
             </span>
-          </div>
+          )}
         </div>
-
-        {/* Next game */}
-        {team.nextGame && (
-          <div className="px-3 pb-2">
-            <Link
-              href={`/${portalSlug}/events/${team.nextGame.id}`}
-              className="group block"
-            >
-              <div className="text-sm text-[var(--soft)] group-hover:text-[var(--cream)] transition-colors truncate leading-snug">
-                {team.nextGame.title}
-              </div>
-              {/* Time chips */}
-              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                {isTonight && (
-                  <span className="px-1.5 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--neon-red)]/15 text-[var(--neon-red)]">
-                    Tonight
-                  </span>
-                )}
-                {team.nextGame.startTime && (
-                  <span className="px-1.5 py-0.5 rounded bg-[var(--gold)]/10 text-2xs font-mono tabular-nums text-[var(--gold)]/80">
-                    {formatTime(team.nextGame.startTime)}
-                  </span>
-                )}
-                {!isTonight && team.nextGame.startDate && (
-                  <span className="px-1.5 py-0.5 rounded bg-[var(--gold)]/10 text-2xs font-mono tabular-nums text-[var(--gold)]/80">
-                    {formatShortDate(team.nextGame.startDate)}
-                  </span>
-                )}
-                {team.nextGame.isFree && (
-                  <span className="px-1.5 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--neon-cyan)]/15 text-[var(--neon-cyan)]">
-                    Free
-                  </span>
-                )}
-              </div>
-              {/* Venue */}
-              {team.nextGame.venueName && (
-                <div className="text-xs text-[var(--muted)] mt-0.5 truncate">
-                  {team.nextGame.venueName}
-                </div>
-              )}
-            </Link>
-          </div>
-        )}
-
-        {/* Divider — only when upcoming list is non-empty */}
-        {upcoming.length > 0 && (
-          <div className="mx-3 border-t border-[var(--twilight)]/60" />
-        )}
-
-        {/* Upcoming rows */}
-        {upcoming.length > 0 && (
-          <div className="pb-1">
-            {upcoming.map((game) => (
-              <Link
-                key={game.id}
-                href={`/${portalSlug}/events/${game.id}`}
-                className="group flex items-center justify-between gap-2 px-3 py-1.5 hover:bg-[var(--cream)]/[0.03] transition-colors"
-              >
-                <span className="text-xs text-[var(--soft)] truncate flex-1 min-w-0 group-hover:text-[var(--cream)] transition-colors">
-                  {game.title}
-                </span>
-                <span className="shrink-0 font-mono text-2xs tabular-nums text-[var(--muted)]">
-                  {formatShortDate(game.startDate)}
-                  {game.startTime ? ` · ${formatTime(game.startTime)}` : ""}
-                </span>
-              </Link>
-            ))}
-
-            {/* +N more overflow link */}
-            {overflowCount > 0 && (
-              <Link
-                href={`/${portalSlug}?view=happening&category=sports&q=${encodeURIComponent(team.shortName)}`}
-                className="block px-3 py-1 text-xs text-[var(--neon-cyan)]/70 hover:text-[var(--neon-cyan)] transition-colors"
-              >
-                +{overflowCount} more →
-              </Link>
-            )}
-          </div>
-        )}
       </div>
-    </>
+
+      {/* Next game */}
+      {team.nextGame && (
+        <div className="px-3 pb-2 pt-1.5">
+          <Link
+            href={`/${portalSlug}/events/${team.nextGame.id}`}
+            className="group block"
+          >
+            <p className="text-sm font-semibold text-[var(--soft)] group-hover:text-[var(--cream)] transition-colors truncate">
+              {formatOpponent(team.nextGame.title, team.shortName)}
+            </p>
+            {/* Time chips */}
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+              {isTonight && (
+                <span className="px-1.5 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--neon-red)]/15 text-[var(--neon-red)]">
+                  Tonight
+                </span>
+              )}
+              {team.nextGame.startTime && (
+                <span className="px-1.5 py-0.5 rounded bg-[var(--gold)]/10 text-2xs font-mono tabular-nums text-[var(--gold)]/80">
+                  {formatTime(team.nextGame.startTime)}
+                </span>
+              )}
+              {!isTonight && team.nextGame.startDate && (
+                <span className="px-1.5 py-0.5 rounded bg-[var(--gold)]/10 text-2xs font-mono tabular-nums text-[var(--gold)]/80">
+                  {formatShortDate(team.nextGame.startDate)}
+                </span>
+              )}
+              {team.nextGame.isFree && (
+                <span className="px-1.5 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--neon-cyan)]/15 text-[var(--neon-cyan)]">
+                  Free
+                </span>
+              )}
+            </div>
+            {/* Venue */}
+            {team.nextGame.venueName && (
+              <div className="text-xs text-[var(--muted)] mt-0.5 truncate">
+                {team.nextGame.venueName}
+              </div>
+            )}
+          </Link>
+        </div>
+      )}
+
+      {/* Divider — only when upcoming list is non-empty */}
+      {upcoming.length > 0 && (
+        <div className="mx-3 border-t border-[var(--twilight)]/60" />
+      )}
+
+      {/* Upcoming rows */}
+      {upcoming.length > 0 && (
+        <div className="pb-1">
+          {upcoming.map((game) => (
+            <Link
+              key={game.id}
+              href={`/${portalSlug}/events/${game.id}`}
+              className="group flex items-center gap-2 px-3 py-1.5 hover:bg-[var(--cream)]/[0.03] transition-colors"
+            >
+              <span className="text-xs text-[var(--muted)] group-hover:text-[var(--soft)] transition-colors truncate flex-1 min-w-0">
+                {formatOpponent(game.title, team.shortName)}
+                <span className="text-[var(--twilight)] mx-1">·</span>
+                {formatShortDate(game.startDate)}
+                {game.startTime && (
+                  <>
+                    <span className="text-[var(--twilight)] mx-1">·</span>
+                    {formatTime(game.startTime)}
+                  </>
+                )}
+              </span>
+            </Link>
+          ))}
+
+          {/* +N more overflow link */}
+          {overflowCount > 0 && (
+            <Link
+              href={`/${portalSlug}?view=happening&category=sports&q=${encodeURIComponent(team.shortName)}`}
+              className="block px-3 py-1 text-xs text-[var(--neon-cyan)]/70 hover:text-[var(--neon-cyan)] transition-colors"
+            >
+              +{overflowCount} more →
+            </Link>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
