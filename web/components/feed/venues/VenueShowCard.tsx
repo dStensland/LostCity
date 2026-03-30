@@ -4,7 +4,7 @@ import { memo } from "react";
 import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
 import CategoryIcon from "@/components/CategoryIcon";
-import { formatTime } from "@/lib/formats";
+import { formatTime, formatSmartDate } from "@/lib/formats";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -13,6 +13,7 @@ import { formatTime } from "@/lib/formats";
 interface VenueShow {
   id: number;
   title: string;
+  start_date?: string;
   start_time: string | null;
   is_free?: boolean;
   price_min?: number | null;
@@ -88,26 +89,37 @@ export const VenueShowCard = memo(function VenueShowCard({
           <p className="text-2xs text-[var(--muted)] truncate mb-1.5">{venue.neighborhood}</p>
         )}
 
-        {/* Show rows with time chips */}
+        {/* Show rows with time/date chips */}
         <div className="space-y-1">
-          {visibleShows.map((show) => (
+          {visibleShows.map((show) => {
+            const dateInfo = show.start_date ? formatSmartDate(show.start_date) : null;
+            const isToday = dateInfo?.label === "Today";
+            const timeLabel = show.start_time ? formatTime(show.start_time) : null;
+            const chipLabel = isToday || !dateInfo
+              ? timeLabel
+              : timeLabel
+                ? `${dateInfo.label} ${timeLabel}`
+                : dateInfo.label;
+
+            return (
             <div key={show.id} className="flex items-center justify-between gap-1.5">
               <p className="text-xs text-[var(--soft)] truncate leading-snug flex-1 min-w-0">
                 {show.title}
               </p>
-              {show.start_time && (
+              {chipLabel && (
                 <span
-                  className="flex-shrink-0 px-1.5 py-0.5 rounded text-2xs font-mono tabular-nums"
+                  className="flex-shrink-0 px-1.5 py-0.5 rounded text-2xs font-mono tabular-nums whitespace-nowrap"
                   style={{
                     backgroundColor: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
                     color: `color-mix(in srgb, ${accentColor} 80%, white)`,
                   }}
                 >
-                  {formatTime(show.start_time)}
+                  {chipLabel}
                 </span>
               )}
             </div>
-          ))}
+            );
+          })}
 
           {overflowCount > 0 && (
             <p className="text-2xs font-mono" style={{ color: accentColor }}>

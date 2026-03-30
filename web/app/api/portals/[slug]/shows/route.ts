@@ -125,11 +125,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       !isNoiseEvent(event.title, event.venue?.place_type ?? null)
     );
 
-    // Split into today vs rest of week
+    // Split into today vs rest of week for counting
     const todayEvents = filteredEvents.filter(e => e.start_date === today);
-    const weekEvents = filteredEvents;
 
-    // Group today's events by venue
+    // Group ALL week's events by venue (not just today)
+    // This ensures venues with shows later this week still appear
     type VenueRow = {
       id: number;
       name: string;
@@ -141,6 +141,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     type ShowRow = {
       id: number;
       title: string;
+      start_date: string;
       start_time: string | null;
       price_min: number | null;
       image_url: string | null;
@@ -149,7 +150,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const venueMap = new Map<number, { venue: VenueRow; shows: ShowRow[] }>();
 
-    for (const event of todayEvents) {
+    for (const event of filteredEvents) {
       const venue = event.venue as VenueRow | null;
       if (!venue?.id) continue;
 
@@ -160,6 +161,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       venueMap.get(venue.id)!.shows.push({
         id: event.id,
         title: event.title,
+        start_date: event.start_date,
         start_time: event.start_time,
         price_min: event.price_min,
         image_url: event.image_url,
@@ -167,13 +169,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       });
     }
 
-    // Sort venues by show count (most shows first)
-    const venues = Array.from(venueMap.values()).sort(
-      (a, b) => b.shows.length - a.shows.length,
-    );
+    // Sort venues: those with today's shows first, then by total show count
+    const venues = Array.from(venueMap.values()).sort((a, b) => {
+      const aHasToday = a.shows.some(s => s.start_date === today) ? 1 : 0;
+      const bHasToday = b.shows.some(s => s.start_date === today) ? 1 : 0;
+      if (bHasToday !== aHasToday) return bHasToday - aHasToday;
+      return b.shows.length - a.shows.length;
+    });
 
     // Count unique shows this week (dedup by title to avoid recurrence inflation)
-    const weekTitles = new Set(weekEvents.map(e => e.title));
+    const weekTitles = new Set(filteredEvents.map((e: { title: string }) => e.title));
     const thisWeekCount = weekTitles.size;
     const todayCount = new Set(todayEvents.map(e => e.title)).size;
 
