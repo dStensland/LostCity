@@ -228,11 +228,11 @@ export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStrip
           No regulars {activeDay !== null ? `on ${DAY_LABELS[activeDay - 1]}` : "matching"}
         </p>
       ) : (
-        <div className="space-y-0.5">
+        <div className="space-y-1">
           {visible.map(({ item, activityId }) => {
             const color = ACTIVITY_COLORS[activityId ?? ""] ?? "var(--vibe)";
+            const activityLabel = ACTIVITY_LABELS[activityId ?? ""] ?? "";
             const venue = item.event.venue;
-            const recurrenceLabel = item.event.recurrence_label;
             const startTime = item.event.start_time;
             const timeStr = startTime
               ? new Date(`2000-01-01T${startTime}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
@@ -242,40 +242,55 @@ export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStrip
               <Link
                 key={item.event.id}
                 href={`/${portalSlug}?event=${item.event.id}`}
-                className="flex items-center gap-2.5 py-1.5 px-2 -mx-2 hover:bg-[var(--dusk)]/40 transition-colors group"
+                className="group flex items-center gap-3 py-2 px-2 -mx-2 rounded-xl hover:bg-[var(--dusk)]/50 transition-colors"
               >
-                <span
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: color }}
-                />
-                <span className="flex-1 min-w-0 text-sm text-[var(--cream)] truncate group-hover:text-[var(--soft)] transition-colors">
-                  {item.event.title}
-                </span>
-                <span className="flex items-center gap-1 text-xs text-[var(--muted)] flex-shrink-0">
-                  {recurrenceLabel && (
-                    <>
-                      <span className="font-mono text-2xs font-medium uppercase tracking-wider text-[var(--vibe)]">
-                        {recurrenceLabel}
-                      </span>
-                      {(venue?.name || timeStr) && <Dot />}
-                    </>
-                  )}
+                {/* Activity icon box */}
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, var(--night))` }}
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{ backgroundColor: color }}
+                  />
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  {/* Activity label + time */}
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span
+                      className="font-mono text-2xs font-bold uppercase tracking-wider"
+                      style={{ color }}
+                    >
+                      {activityLabel}
+                    </span>
+                    {timeStr && (
+                      <>
+                        <Dot className="text-[var(--twilight)]" />
+                        <span className="text-2xs text-[var(--muted)]">{timeStr}</span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Title */}
+                  <p className="text-sm font-medium text-[var(--cream)] truncate leading-snug group-hover:text-white transition-colors">
+                    {item.event.title}
+                  </p>
+
+                  {/* Venue */}
                   {venue?.name && (
-                    <span className="truncate max-w-[100px]">{venue.name}</span>
+                    <p className="text-xs text-[var(--muted)] truncate leading-snug mt-0.5">
+                      {venue.name}
+                      {venue.neighborhood && (
+                        <>
+                          <span className="mx-1 opacity-40">·</span>
+                          {venue.neighborhood}
+                        </>
+                      )}
+                    </p>
                   )}
-                  {venue?.name && timeStr && <Dot />}
-                  {timeStr && (
-                    <span className="font-mono text-2xs">{timeStr}</span>
-                  )}
-                  {venue?.google_rating != null && (
-                    <>
-                      <Dot />
-                      <span className="text-[var(--gold)]">
-                        {venue.google_rating.toFixed(1)} ★
-                      </span>
-                    </>
-                  )}
-                </span>
+                </div>
               </Link>
             );
           })}
