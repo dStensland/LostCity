@@ -753,7 +753,8 @@ export default function FestivalDetailView({
               const isPast = event.start_date < today;
               const title = decodeHtmlEntities(event.title);
               const time = formatSessionTime(event.start_time);
-              const venueName = event.venue?.name;
+              const rawVenue = event.venue?.name;
+              const venueName = rawVenue && rawVenue !== "Unknown Venue" ? rawVenue : null;
               const metaParts = [
                 !activeDay ? format(parseISO(event.start_date), "EEE, MMM d") : null,
                 time,
