@@ -1,19 +1,16 @@
 version: 1
-slug: imagine-music-festival
-name: Imagine Music Festival
+slug: atlanta-record-show
+name: Atlanta Record & CD Show
 integration_method: festival_schedule
 defaults: {}
 discovery:
   enabled: true
-  render_js: true
   type: list
   urls:
-  - https://www.imaginefestival.com
+  - https://recordshowsofamerica.com/show/the-atlanta-record-cd-show/
 detail:
   enabled: true
-  render_js: true
 data_goals:
 - events
 - images
-- lineup
 - tickets

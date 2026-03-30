@@ -1,19 +1,17 @@
 version: 1
-slug: imagine-music-festival
-name: Imagine Music Festival
+slug: atlanta-jewish-film-festival
+name: Atlanta Jewish Film Festival
 integration_method: festival_schedule
 defaults: {}
 discovery:
   enabled: true
-  render_js: true
   type: list
+  render_js: true
   urls:
-  - https://www.imaginefestival.com
+  - https://ajff.org/festival-series/2026-annual-festival/schedule-grid
 detail:
   enabled: true
-  render_js: true
 data_goals:
 - events
 - images
-- lineup
 - tickets

@@ -1,19 +1,16 @@
 version: 1
-slug: imagine-music-festival
-name: Imagine Music Festival
+slug: johns-creek-international-fest
+name: Johns Creek International Festival
 integration_method: festival_schedule
 defaults: {}
 discovery:
   enabled: true
-  render_js: true
   type: list
   urls:
-  - https://www.imaginefestival.com
+  - https://johnscreekga.gov/recreation-parks/special-events/international-festival/
 detail:
   enabled: true
-  render_js: true
 data_goals:
 - events
 - images
-- lineup
 - tickets

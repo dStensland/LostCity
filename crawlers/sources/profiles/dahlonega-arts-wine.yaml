@@ -1,19 +1,16 @@
 version: 1
-slug: imagine-music-festival
-name: Imagine Music Festival
+slug: dahlonega-arts-wine
+name: Dahlonega Arts & Wine Festival
 integration_method: festival_schedule
 defaults: {}
 discovery:
   enabled: true
-  render_js: true
   type: list
   urls:
-  - https://www.imaginefestival.com
+  - https://www.dahlonega.org/events/festivals-and-annual-events/dahlonega-arts-and-wine-festival/
 detail:
   enabled: true
-  render_js: true
 data_goals:
 - events
 - images
-- lineup
 - tickets

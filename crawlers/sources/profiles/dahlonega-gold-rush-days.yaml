@@ -1,19 +1,16 @@
 version: 1
-slug: imagine-music-festival
-name: Imagine Music Festival
+slug: dahlonega-gold-rush-days
+name: Dahlonega Gold Rush Days
 integration_method: festival_schedule
 defaults: {}
 discovery:
   enabled: true
-  render_js: true
   type: list
   urls:
-  - https://www.imaginefestival.com
+  - https://goldrushdaysfestival.com/gold-rush-days-festival-schedule/
 detail:
   enabled: true
-  render_js: true
 data_goals:
 - events
 - images
-- lineup
 - tickets

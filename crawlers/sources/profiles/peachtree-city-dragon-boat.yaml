@@ -1,0 +1,17 @@
+version: 1
+slug: peachtree-city-dragon-boat
+name: Peachtree City Dragon Boat Festival
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://psdba.org/dragon-boat-and-international-festival/
+  - https://psdba.org/dragon-boat-and-international-festival/entertainment/
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets

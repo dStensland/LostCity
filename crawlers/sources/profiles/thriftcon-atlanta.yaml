@@ -1,19 +1,16 @@
 version: 1
-slug: imagine-music-festival
-name: Imagine Music Festival
+slug: thriftcon-atlanta
+name: ThriftCon Atlanta
 integration_method: festival_schedule
 defaults: {}
 discovery:
   enabled: true
-  render_js: true
   type: list
   urls:
-  - https://www.imaginefestival.com
+  - https://tickets.thriftcon.co/landing/thriftcon-atlanta
 detail:
   enabled: true
-  render_js: true
 data_goals:
 - events
 - images
-- lineup
 - tickets
