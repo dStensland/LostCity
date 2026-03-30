@@ -4,13 +4,29 @@
  */
 
 export const NOISE_TITLE_PATTERNS = [
-  "bingo", "trivia", "game night", "language learning",
-  "book club", "pop up", "pop-up", "popup",
+  // Games & recreation
+  "bingo", "trivia", "game night", "board game",
+  "mtg ", "mtg:", "magic the gathering", "commander league",
+  "ttrpg", "tabletop", "d&d", "dungeons",
+  "mahjong", "mah jong", "chess night",
+  "bocce", "bowling", "duckpin", "skee-ball", "skeeball",
+  "cornhole", "shuffleboard", "pool league", "billiards",
+  // Not shows
+  "pro wrestling", "wrestling show",
+  "drone show", "light show",
+  "skating", "skate night", "roller skate",
+  "open gym", "pickup basketball", "rec league",
+  // Education/community
+  "language learning", "book club",
+  "pop up", "pop-up", "popup",
   "tax aide", "tax help", "story time",
+  "welding", "moms morning out",
+  "family tour", "weekend family",
 ];
 
 export const EXCLUDED_VENUE_TYPES = new Set([
-  "library", "recreation", "school", "government", "religious",
+  "library", "recreation", "recreation_center", "school", "government", "religious",
+  "community_center", "institution",
 ]);
 
 /**
