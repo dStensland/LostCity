@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
-import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { filterByPortalCity } from "@/lib/portal-scope";
@@ -83,7 +82,6 @@ export async function GET(
   }[];
 
   const programIds = programs.map((p) => p.id);
-  const today = getLocalDateString();
 
   const eventSelect = `
     id,
@@ -104,9 +102,9 @@ export async function GET(
       .from("events")
       .select(eventSelect)
       .in("series_id", programIds)
-      .gte("start_date", today)
       .order("start_date", { ascending: true })
-      .order("start_time", { ascending: true });
+      .order("start_time", { ascending: true })
+      .limit(200);
     programEvents = (data || []) as SessionRow[];
   }
 
@@ -116,9 +114,9 @@ export async function GET(
     .select(eventSelect)
     .eq("festival_id", festival.id)
     .is("series_id", null)
-    .gte("start_date", today)
     .order("start_date", { ascending: true })
-    .order("start_time", { ascending: true });
+    .order("start_time", { ascending: true })
+    .limit(200);
   const directEvents = (directEventsData || []) as SessionRow[];
 
   const rawSessions: SessionRow[] = [...programEvents];
