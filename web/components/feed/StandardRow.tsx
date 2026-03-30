@@ -33,11 +33,19 @@ export const StandardRow = memo(function StandardRow({
   const imageUrl = event.image_url || event.series?.image_url;
 
   const { label: dateLabel } = formatSmartDate(event.start_date);
+  const isToday = dateLabel === "Today";
   const timeStr = event.is_all_day
     ? "All Day"
     : event.start_time
       ? formatTime(event.start_time)
       : null;
+
+  // Today: just show time. Future dates: show date + time.
+  const whenLabel = isToday
+    ? (timeStr || dateLabel)
+    : timeStr
+      ? `${dateLabel} · ${timeStr}`
+      : dateLabel;
 
   return (
     <Link
@@ -87,7 +95,7 @@ export const StandardRow = memo(function StandardRow({
             </span>
             <Dot className="text-[var(--twilight)]" />
             <span className="text-2xs text-[var(--muted)]">
-              {timeStr || dateLabel}
+              {whenLabel}
             </span>
           </div>
 
