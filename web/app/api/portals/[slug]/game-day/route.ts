@@ -242,7 +242,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         logoUrl: team.logoUrl,
         nextGame,
         upcoming,
-        totalUpcoming: eventsForTeam.length,
+        totalUpcoming: Math.max(0, eventsForTeam.length - 1),
       });
     }
 
