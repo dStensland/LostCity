@@ -173,8 +173,9 @@ function getTemporalState(
     };
   }
 
-  const start = announcedStart;
-  const end = announcedEnd;
+  // Normalize to YYYY-MM-DD in case DB stores timestamps
+  const start = announcedStart.substring(0, 10);
+  const end = announcedEnd?.substring(0, 10) ?? null;
 
   if (today < start) {
     const daysUntil = differenceInCalendarDays(parseISO(start), parseISO(today));
@@ -189,6 +190,17 @@ function getTemporalState(
 
   if (!end) {
     // Has start, no end, and today >= start
+    // Staleness check: if 30+ days past start with no end date, treat as ended
+    const daysSinceStart = differenceInCalendarDays(parseISO(today), parseISO(start));
+    if (daysSinceStart > 30) {
+      return {
+        state: "ended",
+        bannerText: null,
+        bannerColor: "",
+        ctaColor: "",
+        showTicketCta: false,
+      };
+    }
     return {
       state: "happening-no-end",
       bannerText: "Happening now",
@@ -601,7 +613,7 @@ export default function FestivalDetailView({
                 }}
               >
                 <Ticket size={16} weight="bold" aria-hidden="true" />
-                Get Festival Passes
+                Get Passes
               </a>
             )}
             {festival.website && (
@@ -701,16 +713,14 @@ export default function FestivalDetailView({
             <div
               className="inline-flex items-center gap-0.5 p-[3px] rounded-lg mb-4 overflow-x-auto scrollbar-hide max-w-full"
               style={{ background: "var(--dusk)" }}
-              role="tablist"
-              aria-label="Festival days"
+              aria-label="Filter by festival day"
             >
               {uniqueDates.map((date) => {
                 const isActive = date === activeDay;
                 return (
                   <button
                     key={date}
-                    role="tab"
-                    aria-selected={isActive}
+                    aria-pressed={isActive}
                     onClick={() => setSelectedDay(date)}
                     className="flex flex-col items-center px-3.5 py-1.5 rounded-md transition-colors focus-ring flex-shrink-0"
                     style={
@@ -842,16 +852,32 @@ export default function FestivalDetailView({
       {!festival.description && allEvents.length === 0 && (
         <div className="text-center py-12">
           <CalendarBlank size={32} weight="light" className="mx-auto mb-4 text-[var(--twilight)]" aria-hidden="true" />
-          <p className="text-sm text-[var(--muted)] mb-2">Details coming soon</p>
-          {festival.website && (
-            <a
-              href={festival.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-[var(--soft)] underline hover:text-[var(--cream)]"
-            >
-              Check the festival website for updates
-            </a>
+          {temporal.showTicketCta && festival.ticket_url ? (
+            <p className="text-sm text-[var(--muted)]">
+              Schedule announced closer to the dates —{" "}
+              <a
+                href={festival.ticket_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-[var(--soft)]"
+              >
+                passes available now
+              </a>
+            </p>
+          ) : festival.website ? (
+            <>
+              <p className="text-sm text-[var(--muted)] mb-2">Details coming soon</p>
+              <a
+                href={festival.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-[var(--soft)] underline hover:text-[var(--cream)]"
+              >
+                Check the festival website for updates
+              </a>
+            </>
+          ) : (
+            <p className="text-sm text-[var(--muted)]">Details coming soon</p>
           )}
         </div>
       )}
