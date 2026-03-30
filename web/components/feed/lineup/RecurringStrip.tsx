@@ -143,7 +143,7 @@ export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStrip
           {label}
         </span>
         <Link
-          href={`/${portalSlug}/regulars`}
+          href={`/${portalSlug}?regulars=true`}
           className="flex items-center gap-0.5 text-2xs font-mono text-[var(--vibe)] opacity-70 hover:opacity-100 transition-opacity"
         >
           All regulars

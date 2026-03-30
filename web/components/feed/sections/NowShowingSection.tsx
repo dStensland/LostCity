@@ -414,6 +414,7 @@ function TheaterCard({
                 src={url}
                 alt=""
                 fill
+                sizes="(max-width: 640px) 50vw, 200px"
                 className="object-cover"
                 fallback={
                   <div className="absolute inset-0 bg-[var(--dusk)]" />

@@ -30,13 +30,7 @@ import {
 } from "@/lib/city-pulse/interests";
 import { isSceneEvent } from "@/lib/city-pulse/section-builders";
 
-import { useQuery } from "@tanstack/react-query";
-import { matchActivityType } from "@/lib/scene-event-routing";
 import { ENABLE_LINEUP_RECURRING } from "@/lib/launch-flags";
-import { RecurringStrip } from "./lineup/RecurringStrip";
-import { RegularsToggle } from "./lineup/RegularsToggle";
-import { RegularsNudge } from "./lineup/RegularsNudge";
-import { TimeFlowMarker } from "./lineup/TimeFlowMarker";
 import FeedSectionHeader from "./FeedSectionHeader";
 import { TieredEventList } from "@/components/feed/TieredEventList";
 import { useAuth } from "@/lib/auth-context";
@@ -199,10 +193,6 @@ export default function LineupSection({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [tabFetchError, setTabFetchError] = useState<string | null>(null);
 
-  // Regulars toggle state (gated by ENABLE_LINEUP_RECURRING)
-  const [regularsActive, setRegularsActive] = useState(false);
-  const [filteredRegulars, setFilteredRegulars] = useState<CityPulseEventItem[]>([]);
-
   // Login nudge state
   const filterInteractionCount = useRef(0);
   const [showLoginNudge, setShowLoginNudge] = useState(false);
@@ -253,9 +243,7 @@ export default function LineupSection({
     setPickerOpen(false);
   }, [localInterests, onSaveInterests]);
 
-  const handleFilteredRegulars = useCallback((events: CityPulseEventItem[]) => {
-    setFilteredRegulars(events);
-  }, []);
+
 
   const pendingInterestsRef = useRef<string[] | null>(null);
 
@@ -406,14 +394,41 @@ export default function LineupSection({
     return pools;
   }, [sections, lazyData, keepRecurring]);
 
-  // Events for the active tab only
+  // Events for the active tab only — on TODAY tab, push past events to the end
+  // so the hero card picks something upcoming rather than a show that ended hours ago.
   const tabDateEvents = useMemo(() => {
-    const pool = tabEventPools[activeTabId];
-    if (pool) return pool;
-    // Fallback: filter initial sections by date (before lazy data arrives)
-    return (tabEventPools["today"] || []).filter(
+    const pool = tabEventPools[activeTabId] ?? (tabEventPools["today"] || []).filter(
       (e) => activeTab.dateFilter(e.event),
     );
+
+    // Only reorder on the TODAY tab
+    if (activeTabId !== "today") return pool;
+
+    const nowHHMM = (() => {
+      const n = new Date();
+      return `${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`;
+    })();
+
+    const upcoming: CityPulseEventItem[] = [];
+    const past: CityPulseEventItem[] = [];
+    for (const item of pool) {
+      const t = item.event.start_time;
+      // Events without a start_time or all-day events stay in upcoming
+      if (!t || item.event.is_all_day) {
+        upcoming.push(item);
+      } else {
+        // start_time is "HH:MM:SS" — compare just HH:MM
+        const eventHHMM = t.slice(0, 5);
+        // Add 2-hour buffer — a 7pm show is still relevant at 8:30pm
+        const eventEndApprox = `${String(Math.min(23, parseInt(eventHHMM.slice(0, 2)) + 2)).padStart(2, "0")}:${eventHHMM.slice(3, 5)}`;
+        if (eventEndApprox < nowHHMM) {
+          past.push(item);
+        } else {
+          upcoming.push(item);
+        }
+      }
+    }
+    return [...upcoming, ...past];
   }, [tabEventPools, activeTabId, activeTab]);
 
   // Apply interest-based filtering on top of the active tab's events
@@ -436,53 +451,6 @@ export default function LineupSection({
 
     return evts;
   }, [tabDateEvents, activeChipId, unionMatcher]);
-
-  // Regulars data — shares React Query cache with TheSceneSection (same queryKey).
-  // No duplicate fetch: if TheSceneSection already loaded, this is instant from cache.
-  const { data: regularsData } = useQuery<{ events: FeedEventData[] }>({
-    queryKey: ["regulars", portalSlug],
-    queryFn: async () => {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10_000);
-      try {
-        const res = await fetch(`/api/regulars?portal=${portalSlug}`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) throw new Error(`Regulars fetch failed: ${res.status}`);
-        return res.json();
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    },
-    staleTime: 3 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    enabled: ENABLE_LINEUP_RECURRING,
-  });
-
-  const recurringEvents = useMemo<CityPulseEventItem[]>(() => {
-    if (!ENABLE_LINEUP_RECURRING || !regularsData?.events) return [];
-    // Dedup: one per title+venue (same trivia night at same bar = one row)
-    const seen = new Set<string>();
-    return regularsData.events
-      .filter((event: FeedEventData) => {
-        if (!matchActivityType(event as unknown as Parameters<typeof matchActivityType>[0])) return false;
-        const venueId = event.venue?.id ?? 0;
-        const key = `${event.title}|${venueId}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      .map((event: FeedEventData) => ({
-        item_type: "event" as const,
-        event: {
-          ...event,
-          is_recurring: true,
-          recurrence_label: (event as Record<string, unknown>).recurrence_label as string | undefined,
-        },
-      }));
-  }, [regularsData]);
-
-  const standardEvents = events;
 
   // Merged category counts: initial response + lazy-loaded tab overrides
   // Date tab counts — show TOTAL lineup depth per tab (not filtered by interests).
@@ -516,7 +484,7 @@ export default function LineupSection({
     return counts;
   }, [tabDateEvents, unionMatcher]);
 
-  const visibleItems = standardEvents;
+  const visibleItems = events;
 
   // If no sections have any events at all, hide entirely
   const hasAnyContent = sections.some((s) =>
@@ -637,19 +605,6 @@ export default function LineupSection({
           <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[var(--void)] to-transparent" />
         </div>
 
-      {/* Regulars toggle — activity chips + day pills when active */}
-      {ENABLE_LINEUP_RECURRING && recurringEvents.length > 0 && (
-        <div className="mb-3">
-          <RegularsToggle
-            active={regularsActive}
-            onToggle={setRegularsActive}
-            activeTab={activeTabId as "today" | "this_week" | "coming_up"}
-            regularsEvents={recurringEvents}
-            onFilteredEvents={handleFilteredRegulars}
-          />
-        </div>
-      )}
-
       {/* Unsaved lineup changes — prominent save bar */}
       {hasUnsavedChanges && (
         <div className="flex items-center gap-3 mb-3 px-4 py-3 rounded-xl bg-[var(--coral)]/[0.08] border border-[var(--coral)]/30 animate-[fadeInSave_0.25s_ease-out]">
@@ -730,46 +685,21 @@ export default function LineupSection({
       {/* Event list — tiered rendering */}
       {loadingTab !== activeTabId && !tabFetchError && (
         <>
-          {/* TimeFlowMarker — contextual label for Today tab */}
-          {ENABLE_LINEUP_RECURRING && activeTabId === "today" && visibleItems.length > 0 && (
-            <TimeFlowMarker
-              variant={new Date().getHours() < 17 ? "happening_now" : "tonight"}
-            />
-          )}
+          <TieredEventList
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            events={visibleItems.map((item) => item.event as any)}
+            portalSlug={portalSlug}
+            sectionType={activeTabId === "today" ? "tonight" : activeTabId}
+            maxHero={1}
+            maxFeatured={4}
+          />
 
-          {/* When regulars toggle is active, show filtered regulars prominently */}
-          {ENABLE_LINEUP_RECURRING && regularsActive && filteredRegulars.length > 0 && (
-            <RecurringStrip events={filteredRegulars} portalSlug={portalSlug} activeTab={activeTabId} />
-          )}
-
-          {/* Standard event list — hide when regulars toggle replaces it */}
-          {!regularsActive && (
-            <TieredEventList
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              events={visibleItems.map((item) => item.event as any)}
-              portalSlug={portalSlug}
-              sectionType={activeTabId === "today" ? "tonight" : activeTabId}
-              maxHero={1}
-              maxFeatured={4}
-            />
-          )}
-
-          {/* RecurringStrip below the lineup when toggle is OFF */}
-          {ENABLE_LINEUP_RECURRING && !regularsActive && recurringEvents.length > 0 && (
-            <RecurringStrip events={recurringEvents} portalSlug={portalSlug} activeTab={activeTabId} />
-          )}
-
-          {events.length === 0 && !regularsActive && (
+          {events.length === 0 && (
             <p className="text-center text-[var(--muted)] text-sm py-8 font-mono">
               No events matching this filter
             </p>
           )}
         </>
-      )}
-
-      {/* Regulars nudge — discoverability prompt when regulars exist but toggle is off */}
-      {ENABLE_LINEUP_RECURRING && !regularsActive && recurringEvents.length > 0 && (
-        <RegularsNudge onActivateToggle={() => setRegularsActive(true)} />
       )}
 
       {/* See all — glow button, contextual to active chip */}

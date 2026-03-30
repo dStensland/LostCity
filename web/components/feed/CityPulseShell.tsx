@@ -12,18 +12,16 @@
  *  scroll  LazySection triggers → self-fetching sections load on demand.
  *
  * Feed blocks (top → bottom):
- *  1. GreetingBar — photo hero + headline + pulse text
- *  2. CTA banner (optional, from CMS header override)
- *  3. InterestChannelsSection — join/follow groups for civic/topic routing
- *  4. LineupSection — tabbed timeline: Today / This Week / Coming Up
- *  5. TheSceneSection (Regular Hangs) — self-fetching, lazy-loaded
- *  6. FestivalsSection — self-fetching, lazy-loaded
- *  7. NetworkFeedSection — self-fetching, lazy-loaded
- *  8. SeeShowsSection — Film/Music/Stage tabs, self-fetching, lazy-loaded
- *  9. Browse by Category — orderedSections (user-customizable order)
+ *  1. CityBriefing — hero photo + weather + quick links
+ *  2. TodayInAtlantaSection — tabbed local news
+ *  3. LineupSection — tabbed timeline: Today / This Week / Coming Up (events only)
+ *  4. RegularHangsSection — recurring weekly events (trivia, run clubs, etc.)
+ *  5. Destinations + Neighborhoods
+ *  6. SeeShowsSection — Film/Music/Stage tabs
+ *  7. PlanningHorizonSection — big future events
+ *  8. Browse by Category
  *
  * Section visibility and order are controlled by FeedLayout preferences.
- * The FeedPageIndex TOC doubles as the customizer (auth-gated edit mode).
  *
  * Admin-only:
  *  - FeedTimeMachine (?admin flag) — day/time slot override for testing
@@ -42,7 +40,6 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import CityBriefing from "./CityBriefing";
 import GreetingBar from "./GreetingBar";
-import { BriefingSection } from "./BriefingSection";
 import LineupSection from "./LineupSection";
 import CityPulseSection from "./CityPulseSection";
 import LazySection from "./LazySection";
@@ -54,8 +51,9 @@ const HangFeedSection = dynamic(
 import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 import { ContentSwap } from "@/components/ui/ContentSwap";
 import ActiveContestSection from "./sections/ActiveContestSection";
+import { TodayInAtlantaSection } from "./sections/TodayInAtlantaSection";
+import RegularHangsSection from "./sections/RegularHangsSection";
 import HolidayHero from "./HolidayHero";
-import FeedPageIndex from "./FeedPageIndex";
 import type {
   FeedBlockId,
   CityPulseSectionType,
@@ -75,13 +73,8 @@ import { getContextualQuickLinks } from "@/lib/city-pulse/quick-links";
 
 // Below-fold sections: dynamically imported so their JS is in separate chunks
 // loaded on demand when LazySection triggers (not bundled in the main feed chunk).
-const TheSceneSection = dynamic(() => import("./sections/TheSceneSection"), { ssr: false });
 const SeeShowsSection = dynamic(() => import("./sections/SeeShowsSection"), { ssr: false });
 const PlanningHorizonSection = dynamic(() => import("./sections/PlanningHorizonSection"), { ssr: false });
-const PortalTeasersSection = dynamic(
-  () => import("./sections/PortalTeasersSection").then((m) => ({ default: m.PortalTeasersSection })),
-  { ssr: false }
-);
 const FeedTimeMachine = dynamic(() => import("./FeedTimeMachine"), { ssr: false });
 const YonderRegionalEscapesSection = dynamic(() => import("./sections/YonderRegionalEscapesSection"), { ssr: false });
 const YonderDestinationNodeQuestsSection = dynamic(
@@ -272,7 +265,7 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
   }, []);
 
   // Pre-fetch regulars in the background after lineup loads.
-  // Warms the ["regulars", portalSlug] cache so LineupSection gets a cache hit.
+  // Warms the ["regulars", portalSlug] cache so RegularHangsSection gets a cache hit.
   useEffect(() => {
     if (!ENABLE_LINEUP_RECURRING || isLoading || !data) return;
     queryClient.prefetchQuery({
@@ -378,7 +371,7 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         ) : null;
 
       case "recurring":
-        // Regular Hangs absorbed into RecurringStrip inside the Lineup
+        // Regular Hangs rendered as standalone RegularHangsSection above
         return null;
 
       case "cinema":
@@ -472,8 +465,8 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
            No wrapper margin — HolidayHero manages its own spacing when active. */}
       <HolidayHero portalSlug={portalSlug} />
 
-      {/* 3b. BriefingSection — editorial briefing from the pipeline */}
-      <BriefingSection briefing={header?.briefing} eventCount={data?.events_pulse?.total_active} />
+      {/* Today in Atlanta — tabbed category news */}
+      <TodayInAtlantaSection portalSlug={portalSlug} />
 
       {/* 4. LineupSection — crossfade skeleton → content */}
       <div
@@ -506,6 +499,9 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
           )}
         </ContentSwap>
       </div>
+
+      {/* Regular Hangs — recurring weekly events (trivia, run clubs, karaoke, etc.) */}
+      <RegularHangsSection portalSlug={portalSlug} />
 
       {/* Destinations (Worth Checking Out) — contextual venues from the city.
            No outer divider — the section renders its own divider when it has content.
@@ -618,13 +614,6 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         />
       )}
 
-      <FeedPageIndex
-        portalSlug={portalSlug}
-        loading={isLoading}
-        isAuthenticated={isAuthenticated}
-        feedLayout={feedLayout}
-        onSaveLayout={handleSaveLayout}
-      />
     </div>
   );
 }

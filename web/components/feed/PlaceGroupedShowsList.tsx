@@ -276,6 +276,7 @@ function VenueShowCard({
               src={venue.image_url}
               alt=""
               fill
+              sizes="256px"
               className="object-cover"
             />
             {/* Gradient overlay */}

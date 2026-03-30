@@ -9,6 +9,7 @@ import Badge from "@/components/ui/Badge";
 import Dot from "@/components/ui/Dot";
 import FilterChip from "@/components/filters/FilterChip";
 import { formatRelativeTime } from "@/lib/formats";
+import { getVenueTypeLabel } from "@/lib/spots-constants";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -267,6 +268,7 @@ function DestinationCard({ item, activeLens, portalSlug }: DestinationCardProps)
             src={item.image_url}
             alt={item.name}
             fill
+            sizes="52px"
             className="object-cover"
             fallback={
               <div className="absolute inset-0 flex items-center justify-center bg-[var(--dusk)]">
@@ -293,7 +295,7 @@ function DestinationCard({ item, activeLens, portalSlug }: DestinationCardProps)
           <div className="flex items-center gap-1 text-xs text-[var(--muted)] leading-tight flex-wrap">
             {item.neighborhood && <span>{item.neighborhood}</span>}
             {item.neighborhood && item.place_type && <Dot />}
-            {item.place_type && <span>{item.place_type}</span>}
+            {item.place_type && <span>{getVenueTypeLabel(item.place_type)}</span>}
             {item.google_rating != null && (
               <>
                 {(item.neighborhood || item.place_type) && <Dot />}

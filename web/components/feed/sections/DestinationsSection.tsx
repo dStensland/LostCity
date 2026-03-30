@@ -64,6 +64,7 @@ function DestinationCard({ item, portalSlug }: DestinationCardProps) {
             src={venue.image_url}
             alt={venue.name}
             fill
+            sizes="220px"
             className="object-cover"
           />
         ) : (
