@@ -236,7 +236,7 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
         <FeedSectionHeader
           title="Game Day"
           priority="secondary"
-          accentColor="var(--neon-green)"
+          accentColor="var(--neon-cyan)"
           icon={<Trophy weight="duotone" className="w-5 h-5" />}
           seeAllHref={`/${portalSlug}?view=happening&category=sports`}
         />
@@ -271,7 +271,7 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
       <FeedSectionHeader
         title="Game Day"
         priority="secondary"
-        accentColor="var(--neon-green)"
+        accentColor="var(--neon-cyan)"
         icon={<Trophy weight="duotone" className="w-5 h-5" />}
         seeAllHref={`/${portalSlug}?view=happening&category=sports`}
         actionIcon={user ? <GearSix weight="bold" className="w-3.5 h-3.5" /> : undefined}
@@ -313,7 +313,7 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
                   }}
                   className={`h-1.5 rounded-full transition-all ${
                     idx === activeIndex
-                      ? "bg-[var(--neon-green)] w-4"
+                      ? "bg-[var(--neon-cyan)] w-4"
                       : "bg-[var(--twilight)] hover:bg-[var(--muted)] w-1.5"
                   }`}
                   aria-label={`Go to card ${idx + 1}`}
@@ -452,7 +452,7 @@ function TeamCard({
                   </span>
                 )}
                 {team.nextGame.isFree && (
-                  <span className="px-1.5 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--neon-green)]/15 text-[var(--neon-green)]">
+                  <span className="px-1.5 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--neon-cyan)]/15 text-[var(--neon-cyan)]">
                     Free
                   </span>
                 )}
@@ -495,7 +495,7 @@ function TeamCard({
             {overflowCount > 0 && (
               <Link
                 href={`/${portalSlug}?view=happening&category=sports&q=${encodeURIComponent(team.shortName)}`}
-                className="block px-3 py-1 text-xs text-[var(--neon-green)]/70 hover:text-[var(--neon-green)] transition-colors"
+                className="block px-3 py-1 text-xs text-[var(--neon-cyan)]/70 hover:text-[var(--neon-cyan)] transition-colors"
               >
                 +{overflowCount} more →
               </Link>
@@ -588,7 +588,7 @@ function TeamCustomizer({
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search teams..."
-          className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-xs text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--neon-green)] transition-colors"
+          className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-xs text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--neon-cyan)] transition-colors"
         />
       </div>
 
@@ -671,7 +671,7 @@ function TeamCustomizer({
                           </div>
                           <button
                             onClick={() => onAdd(team.slug, isDefault)}
-                            className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--neon-green)]/15 text-[var(--neon-green)] text-2xs font-semibold hover:bg-[var(--neon-green)]/25 transition-colors"
+                            className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--neon-cyan)]/15 text-[var(--neon-cyan)] text-2xs font-semibold hover:bg-[var(--neon-cyan)]/25 transition-colors"
                           >
                             <Plus weight="bold" className="w-2.5 h-2.5" />
                             Add
