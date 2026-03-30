@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import Skeleton from "@/components/Skeleton";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, differenceInCalendarDays } from "date-fns";
 import { usePortal } from "@/lib/portal-context";
 import LinkifyText from "../LinkifyText";
 import SmartImage from "@/components/SmartImage";
@@ -17,6 +17,7 @@ import {
   Globe,
   ArrowCounterClockwise,
   ArrowLeft,
+  CaretRight,
   Train,
   Car,
   Path,
@@ -24,9 +25,9 @@ import {
 import DetailShell from "@/components/detail/DetailShell";
 import { DetailStickyBar } from "@/components/detail/DetailStickyBar";
 import { ExperienceTagStrip } from "@/components/detail/ExperienceTagStrip";
-import { FestivalScheduleGrid } from "@/components/detail/FestivalScheduleGrid";
 import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
 import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
+import { decodeHtmlEntities, formatTimeSplit } from "@/lib/formats";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -44,11 +45,8 @@ interface FestivalData {
   experience_tags?: string[] | null;
   announced_start?: string | null;
   announced_end?: string | null;
-  audience?: string | null;
-  size_tier?: string | null;
   indoor_outdoor?: string | null;
   price_tier?: string | null;
-  festival_type?: string | null;
 }
 
 interface SessionData {
@@ -96,8 +94,6 @@ interface FestivalDetailViewProps {
 
 // ── Config ───────────────────────────────────────────────────────────────
 
-const FESTIVAL_ACCENT = "#FFD93D";
-
 const FESTIVAL_TYPE_LABELS: Record<string, string> = {
   music_festival: "Music Festival",
   food_festival: "Food Festival",
@@ -107,18 +103,168 @@ const FESTIVAL_TYPE_LABELS: Record<string, string> = {
   comedy_festival: "Comedy Festival",
   tech_festival: "Tech Festival",
   community_festival: "Community Festival",
+  community: "Community Festival",
   beer_festival: "Beer Festival",
   wine_festival: "Wine Festival",
+  conference: "Conference",
+  tech_conference: "Conference",
+  market: "Market",
+  holiday_spectacle: "Holiday Event",
+  performing_arts_festival: "Performing Arts",
+  fair: "Fair",
+  fashion_event: "Fashion Event",
+  athletic_event: "Athletic Event",
+  hobby_expo: "Expo",
+  pop_culture_con: "Convention",
 };
+
+const PRICE_LABELS: Record<string, string> = {
+  free: "Free",
+  budget: "$",
+  mid: "$$",
+  moderate: "$$",
+  premium: "$$$",
+};
+
+const INDOOR_OUTDOOR_LABELS: Record<string, string> = {
+  indoor: "Indoor",
+  outdoor: "Outdoor",
+  both: "Indoor + Outdoor",
+  mixed: "Indoor + Outdoor",
+};
+
+/** Max events to show before "See all" overflow link */
+const EVENT_LIST_CAP = 20;
+
+/** Min events spanning 2+ days to show day tabs */
+const DAY_TAB_THRESHOLD = 6;
+
+// ── Temporal State ───────────────────────────────────────────────────────
+
+type TemporalState =
+  | "no-dates"
+  | "upcoming"
+  | "happening-first"
+  | "happening-mid"
+  | "happening-last"
+  | "happening-no-end"
+  | "ended";
+
+interface TemporalInfo {
+  state: TemporalState;
+  bannerText: string | null;
+  bannerColor: string; // CSS variable name
+  ctaColor: string;    // hex for accent
+  showTicketCta: boolean;
+}
+
+function getTemporalState(
+  announcedStart: string | null | undefined,
+  announcedEnd: string | null | undefined,
+  today: string
+): TemporalInfo {
+  if (!announcedStart) {
+    return {
+      state: "no-dates",
+      bannerText: null,
+      bannerColor: "",
+      ctaColor: "#FF6B7A", // --coral
+      showTicketCta: true,
+    };
+  }
+
+  const start = announcedStart;
+  const end = announcedEnd;
+
+  if (today < start) {
+    const daysUntil = differenceInCalendarDays(parseISO(start), parseISO(today));
+    return {
+      state: "upcoming",
+      bannerText: daysUntil === 1 ? "Starts tomorrow" : `Starts in ${daysUntil} days`,
+      bannerColor: "--gold",
+      ctaColor: "#FF6B7A", // --coral
+      showTicketCta: true,
+    };
+  }
+
+  if (!end) {
+    // Has start, no end, and today >= start
+    return {
+      state: "happening-no-end",
+      bannerText: "Happening now",
+      bannerColor: "--neon-green",
+      ctaColor: "#FFD93D", // --gold
+      showTicketCta: true,
+    };
+  }
+
+  if (today > end) {
+    return {
+      state: "ended",
+      bannerText: `Ended ${format(parseISO(end), "MMM d")}`,
+      bannerColor: "--twilight",
+      ctaColor: "",
+      showTicketCta: false,
+    };
+  }
+
+  if (today === start) {
+    return {
+      state: "happening-first",
+      bannerText: "Starts today",
+      bannerColor: "--neon-green",
+      ctaColor: "#FFD93D",
+      showTicketCta: true,
+    };
+  }
+
+  if (today === end) {
+    return {
+      state: "happening-last",
+      bannerText: "Last day — ends tonight",
+      bannerColor: "--neon-green",
+      ctaColor: "#FFD93D",
+      showTicketCta: true,
+    };
+  }
+
+  // Mid-festival
+  const dayNum = differenceInCalendarDays(parseISO(today), parseISO(start)) + 1;
+  const totalDays = differenceInCalendarDays(parseISO(end), parseISO(start)) + 1;
+  return {
+    state: "happening-mid",
+    bannerText: `Day ${dayNum} of ${totalDays} — happening now`,
+    bannerColor: "--neon-green",
+    ctaColor: "#FFD93D",
+    showTicketCta: true,
+  };
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-function formatDayDuration(startDate: string, endDate: string | null): string {
+function formatDuration(startDate: string, endDate: string | null): string {
   if (!endDate || startDate === endDate) return "1 day";
-  const start = parseISO(startDate);
-  const end = parseISO(endDate);
-  const days = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+  const days = differenceInCalendarDays(parseISO(endDate), parseISO(startDate)) + 1;
   return `${days} day${days !== 1 ? "s" : ""}`;
+}
+
+function formatSessionTime(time: string | null): string {
+  if (!time || time === "00:00:00" || time === "00:00") return "";
+  const { time: t, period } = formatTimeSplit(time, false);
+  return period ? `${t} ${period}` : t;
+}
+
+function getTodayString(): string {
+  // Client-side date in US Eastern (matches server getLocalDateString)
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = fmt.formatToParts(new Date());
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
 // ── Component ────────────────────────────────────────────────────────────
@@ -130,7 +276,7 @@ export default function FestivalDetailView({
   showOpenPageLink = true,
 }: FestivalDetailViewProps) {
   const { portal } = usePortal();
-  const { toEvent, toSeries: handleProgramClick } = useDetailNavigation(portalSlug);
+  const { toEvent } = useDetailNavigation(portalSlug);
 
   const fetchUrl = useMemo(() => {
     if (!portal?.id) return null;
@@ -144,32 +290,74 @@ export default function FestivalDetailView({
   const festival = data?.festival ?? null;
   const programs = useMemo(() => data?.programs ?? [], [data]);
 
-  const allSessions = useMemo(() => programs.flatMap((p) => p.sessions || []), [programs]);
-
-  const summary = useMemo(() => {
-    if (allSessions.length === 0 && !festival) return null;
-    const dates = allSessions.map((s) => s.start_date).sort();
-    const startDate = festival?.announced_start || dates[0] || null;
-    const endDate = festival?.announced_end || dates[dates.length - 1] || null;
-    const venues = new Map<number, SessionData["venue"]>();
-    allSessions.forEach((s) => {
-      if (s.venue) venues.set(s.venue.id, s.venue);
+  // Flatten programs[].sessions[] into a single sorted event list
+  const allEvents = useMemo(() => {
+    const events = programs.flatMap((p) => p.sessions || []);
+    return events.sort((a, b) => {
+      const dateComp = a.start_date.localeCompare(b.start_date);
+      if (dateComp !== 0) return dateComp;
+      return (a.start_time ?? "").localeCompare(b.start_time ?? "");
     });
-    return {
-      startDate,
-      endDate,
-      programCount: programs.length,
-      sessionCount: allSessions.length,
-      venueCount: venues.size,
-    };
-  }, [allSessions, programs.length, festival]);
+  }, [programs]);
 
+  const today = useMemo(() => getTodayString(), []);
+
+  // Temporal state
+  const temporal = useMemo(() => {
+    if (!festival) return null;
+    return getTemporalState(festival.announced_start, festival.announced_end, today);
+  }, [festival, today]);
+
+  // Single venue detection (for Getting There)
   const singleVenue = useMemo(() => {
-    const venueIds = new Set(allSessions.filter((s) => s.venue).map((s) => s.venue!.id));
-    return venueIds.size === 1 ? allSessions.find((s) => s.venue)?.venue ?? null : null;
-  }, [allSessions]);
+    const venueIds = new Set(allEvents.filter((s) => s.venue).map((s) => s.venue!.id));
+    return venueIds.size === 1 ? allEvents.find((s) => s.venue)?.venue ?? null : null;
+  }, [allEvents]);
 
-  const accentClass = createCssVarClass("--accent-color", FESTIVAL_ACCENT, "accent");
+  // Hero image: festival → first program → null
+  const heroImageUrl = useMemo(() => {
+    return festival?.image_url
+      ?? programs.find((p) => p.image_url)?.image_url
+      ?? null;
+  }, [festival, programs]);
+
+  const accentClass = useMemo(
+    () => createCssVarClass("--accent-color", temporal?.ctaColor || "#FFD93D", "accent"),
+    [temporal?.ctaColor]
+  );
+
+  // Day tabs state
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+
+  const uniqueDates = useMemo(() => {
+    return [...new Set(allEvents.map((e) => e.start_date))].sort();
+  }, [allEvents]);
+
+  const showDayTabs = uniqueDates.length >= 2 && allEvents.length >= DAY_TAB_THRESHOLD;
+
+  const defaultDay = useMemo(() => {
+    if (!showDayTabs) return null;
+    return uniqueDates.includes(today) ? today : uniqueDates[0] ?? null;
+  }, [showDayTabs, uniqueDates, today]);
+
+  const activeDay = showDayTabs
+    ? (selectedDay && uniqueDates.includes(selectedDay) ? selectedDay : defaultDay)
+    : null;
+
+  // Filter and cap events for display
+  const displayEvents = useMemo(() => {
+    const events = activeDay
+      ? allEvents.filter((e) => e.start_date === activeDay)
+      : allEvents;
+    return events.slice(0, EVENT_LIST_CAP);
+  }, [allEvents, activeDay]);
+
+  const totalEventCount = activeDay
+    ? allEvents.filter((e) => e.start_date === activeDay).length
+    : allEvents.length;
+
+  const hasOverflow = totalEventCount > EVENT_LIST_CAP;
+  const allPast = displayEvents.length > 0 && displayEvents.every((e) => e.start_date < today);
 
   // ── LOADING ──────────────────────────────────────────────────────────
 
@@ -185,14 +373,9 @@ export default function FestivalDetailView({
         </div>
         <div className="mx-5 border-t border-[var(--twilight)]/40" />
         <div className="px-5 py-3 flex gap-2">
-          <Skeleton className="h-6 w-20 rounded" delay="0.2s" />
-          <Skeleton className="h-6 w-20 rounded" delay="0.22s" />
-        </div>
-        <div className="mx-5 border-t border-[var(--twilight)]/40" />
-        <div className="px-5 py-3 flex gap-2">
-          <Skeleton className="h-6 w-16 rounded" delay="0.26s" />
-          <Skeleton className="h-6 w-16 rounded" delay="0.28s" />
-          <Skeleton className="h-6 w-14 rounded" delay="0.3s" />
+          <Skeleton className="h-6 w-16 rounded" delay="0.2s" />
+          <Skeleton className="h-6 w-16 rounded" delay="0.22s" />
+          <Skeleton className="h-6 w-14 rounded" delay="0.26s" />
         </div>
       </div>
     );
@@ -200,13 +383,9 @@ export default function FestivalDetailView({
       <div className="p-6 lg:p-8 space-y-6">
         <Skeleton className="h-4 w-full rounded" delay="0.28s" />
         <Skeleton className="h-4 w-[75%] rounded" delay="0.3s" />
-        <div className="flex gap-2 pt-2">
-          <Skeleton className="h-9 w-20 rounded-lg" delay="0.4s" />
-          <Skeleton className="h-9 w-20 rounded-lg" delay="0.42s" />
-        </div>
-        <div className="space-y-3">
-          <Skeleton className="h-20 w-full rounded-xl" delay="0.46s" />
-          <Skeleton className="h-20 w-full rounded-xl" delay="0.5s" />
+        <div className="space-y-3 pt-4">
+          <Skeleton className="h-14 w-full rounded-xl" delay="0.4s" />
+          <Skeleton className="h-14 w-full rounded-xl" delay="0.44s" />
         </div>
       </div>
     );
@@ -215,7 +394,7 @@ export default function FestivalDetailView({
 
   // ── ERROR ────────────────────────────────────────────────────────────
 
-  if (error || !festival) {
+  if (error || !festival || !temporal) {
     return (
       <DetailShell
         onClose={onClose}
@@ -251,53 +430,27 @@ export default function FestivalDetailView({
     ? FESTIVAL_TYPE_LABELS[festival.primary_type] || "Festival"
     : "Festival";
 
-  const dateRange = summary?.startDate
-    ? summary.startDate === summary.endDate
-      ? format(parseISO(summary.startDate), "EEE, MMM d")
-      : `${format(parseISO(summary.startDate), "MMM d")}–${format(parseISO(summary.endDate!), "MMM d, yyyy")}`
-    : "Schedule TBD";
+  const dateRange = festival.announced_start
+    ? festival.announced_start === (festival.announced_end ?? festival.announced_start)
+      ? format(parseISO(festival.announced_start), "EEE, MMM d, yyyy")
+      : `${format(parseISO(festival.announced_start), "MMM d")}–${format(parseISO(festival.announced_end!), "MMM d, yyyy")}`
+    : "Dates TBD";
 
-  const durationLabel = summary?.startDate
-    ? formatDayDuration(summary.startDate, summary.endDate ?? null)
+  const durationLabel = festival.announced_start
+    ? formatDuration(festival.announced_start, festival.announced_end ?? null)
     : null;
 
-  // Stats pills: programs as "stages", duration, + newly surfaced metadata
+  // Stat pills: duration, price, indoor/outdoor
   const statPills: string[] = [];
-  if (summary?.programCount) statPills.push(`${summary.programCount} Stage${summary.programCount !== 1 ? "s" : ""}`);
-  if (summary?.sessionCount && summary.sessionCount > 1) statPills.push(`${summary.sessionCount} Performers`);
   if (durationLabel) statPills.push(durationLabel);
-  if (festival.size_tier) {
-    const sizeLabel: Record<string, string> = {
-      intimate: "Intimate",
-      small: "Small",
-      medium: "Medium",
-      large: "Large",
-      massive: "Massive",
-    };
-    statPills.push(sizeLabel[festival.size_tier] ?? festival.size_tier);
+  if (festival.price_tier) {
+    const label = PRICE_LABELS[festival.price_tier];
+    if (label) statPills.push(label);
   }
   if (festival.indoor_outdoor) {
-    const indoorLabel: Record<string, string> = {
-      indoor: "Indoor",
-      outdoor: "Outdoor",
-      mixed: "Indoor + Outdoor",
-    };
-    statPills.push(indoorLabel[festival.indoor_outdoor] ?? festival.indoor_outdoor);
+    const label = INDOOR_OUTDOOR_LABELS[festival.indoor_outdoor];
+    if (label) statPills.push(label);
   }
-  if (festival.price_tier) {
-    const priceLabel: Record<string, string> = {
-      free: "Free",
-      cheap: "Budget-Friendly",
-      moderate: "Moderate Price",
-      premium: "Premium",
-    };
-    statPills.push(priceLabel[festival.price_tier] ?? festival.price_tier);
-  }
-
-  // Hero image fallback chain: festival image → first program image → null (renders gradient)
-  const heroImageUrl = festival.image_url
-    ?? programs.find((p) => p.image_url)?.image_url
-    ?? null;
 
   // ── SIDEBAR ─────────────────────────────────────────────────────────
 
@@ -334,8 +487,40 @@ export default function FestivalDetailView({
         </div>
       </div>
 
-      {/* Festival identity */}
+      {/* Identity zone */}
       <div className="px-5 pt-3 pb-3 space-y-2">
+        {/* Temporal banner */}
+        {temporal.bannerText && (
+          <div
+            className="rounded-md px-3 py-1.5 flex items-center gap-2 mb-1"
+            style={{
+              background: temporal.state === "ended"
+                ? "var(--twilight)"
+                : `color-mix(in srgb, var(${temporal.bannerColor}) 12%, transparent)`,
+              border: temporal.state === "ended"
+                ? "1px solid var(--twilight)"
+                : `1px solid color-mix(in srgb, var(${temporal.bannerColor}) 25%, transparent)`,
+            }}
+          >
+            {temporal.state !== "ended" && (
+              <span
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{ background: `var(${temporal.bannerColor})` }}
+              />
+            )}
+            <span
+              className="text-xs font-semibold"
+              style={{
+                color: temporal.state === "ended"
+                  ? "var(--muted)"
+                  : `var(${temporal.bannerColor})`,
+              }}
+            >
+              {temporal.bannerText}
+            </span>
+          </div>
+        )}
+
         <div className="flex items-start justify-between gap-2">
           <h1 className="text-xl font-bold text-[var(--cream)] leading-tight">
             {festival.name}
@@ -359,10 +544,7 @@ export default function FestivalDetailView({
             style={{ color: "var(--accent-color)" }}
             aria-hidden="true"
           />
-          <span className="text-sm text-[var(--cream)]">
-            {dateRange}
-            {durationLabel && <span className="text-[var(--soft)]"> · {durationLabel}</span>}
-          </span>
+          <span className="text-sm text-[var(--cream)]">{dateRange}</span>
         </div>
 
         {/* Location row */}
@@ -378,42 +560,36 @@ export default function FestivalDetailView({
         )}
       </div>
 
-      {/* Experience tags */}
-      {festival.experience_tags && festival.experience_tags.length > 0 && (
+      {/* Stat pills + experience tags (merged) */}
+      {(statPills.length > 0 || (festival.experience_tags && festival.experience_tags.length > 0)) && (
         <>
           <div className="mx-5 border-t border-[var(--twilight)]/40" />
           <div className="px-5 py-2.5 space-y-2">
-            <p className="font-mono text-2xs font-bold text-[var(--muted)] uppercase tracking-[0.12em]">
-              Experience
-            </p>
-            <ExperienceTagStrip tags={festival.experience_tags} />
-          </div>
-        </>
-      )}
-
-      {/* Stats row */}
-      {statPills.length > 0 && (
-        <>
-          <div className="mx-5 border-t border-[var(--twilight)]/40" />
-          <div className="px-5 py-2.5 flex flex-wrap gap-1.5">
-            {statPills.map((pill) => (
-              <span
-                key={pill}
-                className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium text-[var(--cream)] bg-[var(--dusk)] border border-[var(--twilight)]"
-              >
-                {pill}
-              </span>
-            ))}
+            {statPills.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {statPills.map((pill) => (
+                  <span
+                    key={pill}
+                    className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium text-[var(--cream)] bg-[var(--dusk)] border border-[var(--twilight)]"
+                  >
+                    {pill}
+                  </span>
+                ))}
+              </div>
+            )}
+            {festival.experience_tags && festival.experience_tags.length > 0 && (
+              <ExperienceTagStrip tags={festival.experience_tags} />
+            )}
           </div>
         </>
       )}
 
       {/* CTAs */}
-      {(festival.ticket_url || festival.website) && (
+      {(temporal.showTicketCta && festival.ticket_url) || festival.website ? (
         <>
           <div className="mx-5 border-t border-[var(--twilight)]/40" />
           <div className="px-5 py-3 space-y-2">
-            {festival.ticket_url && (
+            {temporal.showTicketCta && festival.ticket_url && (
               <a
                 href={festival.ticket_url}
                 target="_blank"
@@ -434,20 +610,20 @@ export default function FestivalDetailView({
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`w-full flex items-center justify-center gap-2 transition-colors focus-ring ${
-                  festival.ticket_url
+                  temporal.showTicketCta && festival.ticket_url
                     ? "min-h-[44px] text-sm text-[var(--soft)] hover:text-[var(--cream)]"
                     : "min-h-[44px] rounded-lg border border-[var(--twilight)] text-sm font-medium text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--soft)]"
                 }`}
               >
-                <Globe size={15} weight={festival.ticket_url ? "light" : "bold"} aria-hidden="true" />
+                <Globe size={15} weight={temporal.showTicketCta && festival.ticket_url ? "light" : "bold"} aria-hidden="true" />
                 Visit Website
               </a>
             )}
           </div>
         </>
-      )}
+      ) : null}
 
-      {/* Getting There (single venue, inline icon rows) */}
+      {/* Getting There (single venue only) */}
       {singleVenue && (singleVenue.nearest_marta_station || singleVenue.beltline_adjacent || (singleVenue.parking_type && singleVenue.parking_type.length > 0)) && (
         <>
           <div className="mx-5 border-t border-[var(--twilight)]/40" />
@@ -506,40 +682,192 @@ export default function FestivalDetailView({
       )}
 
       {/* Schedule */}
-      <div>
-        <div className="flex items-center gap-3 mb-4">
-          <p className="font-mono text-xs font-bold text-[var(--muted)] uppercase tracking-[0.12em]">
-            Schedule
-          </p>
-          {allSessions.length > 0 && (
+      {allEvents.length > 0 ? (
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <p className="font-mono text-xs font-bold text-[var(--muted)] uppercase tracking-[0.12em]">
+              {allPast ? "Past Schedule" : "Schedule"}
+            </p>
             <span
               className="inline-flex items-center px-2 py-0.5 rounded-full font-mono text-2xs text-[var(--cream)] border border-[var(--twilight)]"
               style={{ background: "rgba(37,37,48,0.5)" }}
             >
-              {allSessions.length}
+              {allEvents.length}
             </span>
+          </div>
+
+          {/* Day tabs */}
+          {showDayTabs && (
+            <div
+              className="inline-flex items-center gap-0.5 p-[3px] rounded-lg mb-4 overflow-x-auto scrollbar-hide max-w-full"
+              style={{ background: "var(--dusk)" }}
+              role="tablist"
+              aria-label="Festival days"
+            >
+              {uniqueDates.map((date) => {
+                const isActive = date === activeDay;
+                return (
+                  <button
+                    key={date}
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => setSelectedDay(date)}
+                    className="flex flex-col items-center px-3.5 py-1.5 rounded-md transition-colors focus-ring flex-shrink-0"
+                    style={
+                      isActive
+                        ? { background: "var(--accent-color)", color: "var(--void)" }
+                        : { color: "var(--soft)" }
+                    }
+                  >
+                    <span
+                      className="font-mono text-2xs font-bold tracking-[0.06em] uppercase"
+                      style={{ color: isActive ? "var(--void)" : "var(--muted)" }}
+                    >
+                      {format(parseISO(date), "EEE")}
+                    </span>
+                    <span
+                      className={`text-sm ${isActive ? "font-semibold" : ""}`}
+                      style={{ color: isActive ? "var(--void)" : "var(--soft)" }}
+                    >
+                      {format(parseISO(date), "MMM d")}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Event list */}
+          <div className="bg-[var(--night)] border border-[var(--twilight)] rounded-xl overflow-hidden">
+            {displayEvents.map((event, idx) => {
+              const isPast = event.start_date < today;
+              const title = decodeHtmlEntities(event.title);
+              const time = formatSessionTime(event.start_time);
+              const venueName = event.venue?.name;
+              const metaParts = [
+                !activeDay ? format(parseISO(event.start_date), "EEE, MMM d") : null,
+                time,
+                venueName,
+              ].filter(Boolean);
+
+              return (
+                <button
+                  key={event.id}
+                  onClick={() => toEvent(event.id)}
+                  className="w-full flex items-center gap-3 px-4 text-left focus-ring transition-colors hover:bg-[var(--dusk)]/50"
+                  style={{
+                    minHeight: "48px",
+                    opacity: isPast ? 0.7 : 1,
+                    borderBottom: idx < displayEvents.length - 1
+                      ? "1px solid color-mix(in srgb, var(--twilight) 40%, transparent)"
+                      : undefined,
+                  }}
+                >
+                  <div className="flex-1 min-w-0 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-[var(--cream)] truncate">
+                        {title}
+                      </span>
+                      {isPast && (
+                        <span className="flex-shrink-0 font-mono text-2xs font-bold px-1.5 py-0.5 rounded bg-[var(--twilight)] text-[var(--muted)]">
+                          PAST
+                        </span>
+                      )}
+                    </div>
+                    {metaParts.length > 0 && (
+                      <p className="text-xs text-[var(--muted)] mt-0.5 truncate">
+                        {metaParts.join(" · ")}
+                      </p>
+                    )}
+                  </div>
+                  <CaretRight size={14} weight="bold" className="flex-shrink-0 text-[var(--twilight)]" />
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Overflow link — navigates to Find view.
+              NOTE: Find view doesn't support a festival= filter param yet.
+              This just opens Find, which is better than rendering 100+ rows.
+              A festival-scoped Find filter is a follow-up. */}
+          {hasOverflow && (
+            <Link
+              href={`/${portalSlug}?view=find`}
+              className="mt-3 inline-flex items-center gap-1 text-xs font-mono hover:opacity-80 transition-opacity"
+              style={{ color: "var(--accent-color)" }}
+            >
+              See all {totalEventCount} events
+              <CaretRight size={11} weight="bold" />
+            </Link>
           )}
         </div>
-        <FestivalScheduleGrid
-          programs={programs}
-          portalSlug={portalSlug}
-          onEventClick={toEvent}
-          onProgramClick={handleProgramClick}
-        />
-      </div>
+      ) : (
+        /* Empty schedule — actionable hint */
+        !festival.description ? null : (
+          <div className="border-t border-[var(--twilight)] pt-6">
+            <div className="text-center py-8">
+              <CalendarBlank size={28} weight="light" className="mx-auto mb-3 text-[var(--twilight)]" aria-hidden="true" />
+              {temporal.showTicketCta && festival.ticket_url ? (
+                <p className="text-sm text-[var(--muted)]">
+                  Schedule announced closer to the dates —{" "}
+                  <a
+                    href={festival.ticket_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-[var(--soft)]"
+                  >
+                    passes available now
+                  </a>
+                </p>
+              ) : festival.website ? (
+                <a
+                  href={festival.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-[var(--muted)] underline hover:text-[var(--soft)]"
+                >
+                  Check the festival website for schedule updates
+                </a>
+              ) : (
+                <p className="text-sm text-[var(--muted)] italic">
+                  Schedule details will appear when announced
+                </p>
+              )}
+            </div>
+          </div>
+        )
+      )}
+
+      {/* Empty content fallback (no description AND no events) */}
+      {!festival.description && allEvents.length === 0 && (
+        <div className="text-center py-12">
+          <CalendarBlank size={32} weight="light" className="mx-auto mb-4 text-[var(--twilight)]" aria-hidden="true" />
+          <p className="text-sm text-[var(--muted)] mb-2">Details coming soon</p>
+          {festival.website && (
+            <a
+              href={festival.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-[var(--soft)] underline hover:text-[var(--cream)]"
+            >
+              Check the festival website for updates
+            </a>
+          )}
+        </div>
+      )}
     </div>
   );
 
   // ── MOBILE STICKY BAR ───────────────────────────────────────────────
 
-  const mobileBottomBar = festival.ticket_url ? (
+  const mobileBottomBar = temporal.showTicketCta && festival.ticket_url ? (
     <DetailStickyBar
       primaryAction={{
         label: "Get Passes",
         href: festival.ticket_url,
         icon: <Ticket size={16} weight="light" />,
       }}
-      primaryColor={FESTIVAL_ACCENT}
+      primaryColor={temporal.ctaColor}
       containerClassName="max-w-3xl"
       scrollThreshold={0}
       className="lg:hidden"
