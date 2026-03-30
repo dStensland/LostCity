@@ -434,7 +434,7 @@ function TeamCard({
             alt={team.shortName}
             width={36}
             height={36}
-            className="rounded-full object-contain"
+            className="object-contain"
             fallback={
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white"

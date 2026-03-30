@@ -414,15 +414,15 @@ export const GROUP_LABELS: Record<TeamConfig["group"], string> = {
 
 /** Maps sport type to atmospheric photo path */
 export const SPORT_PHOTOS: Record<string, string> = {
-  basketball: "/sports/basketball.svg",
-  baseball: "/sports/baseball.svg",
-  soccer: "/sports/soccer.svg",
-  football: "/sports/football.svg",
-  hockey: "/sports/hockey.svg",
-  volleyball: "/sports/volleyball.svg",
-  lacrosse: "/sports/lacrosse.svg",
-  multi: "/sports/multi.svg",
-  ultimate: "/sports/multi.svg",
+  basketball: "/sports/basketball.jpg",
+  baseball: "/sports/baseball.jpg",
+  soccer: "/sports/soccer.jpg",
+  football: "/sports/football.jpg",
+  hockey: "/sports/hockey.jpg",
+  volleyball: "/sports/volleyball.jpg",
+  lacrosse: "/sports/lacrosse.jpg",
+  multi: "/sports/multi.jpg",
+  ultimate: "/sports/multi.jpg",
 };
 
 /** Readable sport labels for display */
