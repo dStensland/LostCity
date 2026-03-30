@@ -75,10 +75,9 @@ interface RecurringStripProps {
 
 export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStripProps) {
   const [activeActivity, setActiveActivity] = useState<string>("all");
-  const [activeDay, setActiveDay] = useState<number | null>(null); // null = today (default)
-  const [expanded, setExpanded] = useState(false);
-
   const todayIsoDay = useMemo(() => getTodayIsoDay(), []);
+  const [activeDay, setActiveDay] = useState<number | null>(todayIsoDay);
+  const [expanded, setExpanded] = useState(false);
   const currentTime = useMemo(() => getCurrentHourMinute(), []);
 
   // Compute activity type for each event + filter out past events for today
