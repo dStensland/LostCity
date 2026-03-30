@@ -37,8 +37,7 @@ interface VenueShowCardProps {
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Maximum number of show rows rendered before the "+N more" overflow label */
-const MAX_VISIBLE_SHOWS = 2;
+const MAX_VISIBLE_SHOWS = 3;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -59,92 +58,103 @@ export const VenueShowCard = memo(function VenueShowCard({
     <Link
       href={`/${portalSlug}/spots/${venue.slug}`}
       prefetch={false}
-      className="group block rounded-lg overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/30 hover:bg-[var(--dusk)]/50 hover:border-[var(--twilight)]/50 transition-colors"
+      className="group block rounded-lg overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/30 hover:border-[var(--twilight)]/50 transition-colors"
+      style={{ borderTopColor: `color-mix(in srgb, ${accentColor} 40%, transparent)`, borderTopWidth: 2 }}
       aria-label={venue.name}
     >
-      {/* Header: icon/image + venue name + neighborhood */}
-      <div className="flex items-center gap-3 px-3 pt-3 pb-2.5">
-        {/* 48px venue icon or image */}
-        <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-[var(--twilight)]/40">
-          {venue.image_url ? (
-            <SmartImage
-              src={venue.image_url}
-              alt=""
-              fill
-              sizes="48px"
-              className="object-cover"
-              fallback={
-                <div
-                  className="w-full h-full flex items-center justify-center"
-                  style={{ backgroundColor: `color-mix(in srgb, ${accentColor} 15%, var(--night))` }}
-                >
-                  <CategoryIcon
-                    type={venueType}
-                    size={20}
-                    glow="none"
-                    weight="bold"
-                    className="opacity-70"
-                  />
-                </div>
-              }
-            />
-          ) : (
-            <div
-              className="w-full h-full flex items-center justify-center"
-              style={{ backgroundColor: `color-mix(in srgb, ${accentColor} 15%, var(--night))` }}
-            >
-              <CategoryIcon
-                type={venueType}
-                size={20}
-                glow="none"
-                weight="bold"
-                className="opacity-70"
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Venue name + neighborhood */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[var(--cream)] truncate leading-snug group-hover:text-white transition-colors">
-            {venue.name}
-          </p>
-          {venue.neighborhood && (
-            <p className="text-xs text-[var(--muted)] truncate leading-snug mt-0.5">
-              {venue.neighborhood}
+      {/* Banner image or gradient fallback */}
+      {venue.image_url ? (
+        <div className="relative h-24 overflow-hidden bg-[var(--dusk)]">
+          <SmartImage
+            src={venue.image_url}
+            alt=""
+            fill
+            sizes="(max-width: 640px) 100vw, 50vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            fallback={
+              <GradientBanner accentColor={accentColor} venueType={venueType} />
+            }
+          />
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[var(--night)] to-transparent" />
+          <div className="absolute bottom-0 inset-x-0 px-3 pb-2">
+            <p className="text-sm font-semibold text-white leading-tight truncate drop-shadow-sm">
+              {venue.name}
             </p>
-          )}
+            {venue.neighborhood && (
+              <p className="text-xs text-white/60 truncate">{venue.neighborhood}</p>
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <GradientBanner accentColor={accentColor} venueType={venueType}>
+          <div className="absolute bottom-0 inset-x-0 px-3 pb-2">
+            <p className="text-sm font-semibold text-[var(--cream)] leading-tight truncate">
+              {venue.name}
+            </p>
+            {venue.neighborhood && (
+              <p className="text-xs text-[var(--muted)] truncate">{venue.neighborhood}</p>
+            )}
+          </div>
+        </GradientBanner>
+      )}
 
-      {/* Divider */}
-      <div className="border-t border-[var(--twilight)]/30 mx-3" />
-
-      {/* Show rows */}
+      {/* Show rows with time chips */}
       <div className="px-3 pt-2 pb-2.5 space-y-1.5">
         {visibleShows.map((show) => (
           <div key={show.id} className="flex items-center justify-between gap-2">
             <p className="text-xs text-[var(--soft)] truncate leading-snug flex-1 min-w-0">
               {show.title}
             </p>
-            <span className="text-2xs text-[var(--muted)] font-mono flex-shrink-0">
-              {formatTime(show.start_time)}
-            </span>
+            {show.start_time && (
+              <span
+                className="flex-shrink-0 px-1.5 py-0.5 rounded text-2xs font-mono tabular-nums"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
+                  color: `color-mix(in srgb, ${accentColor} 80%, white)`,
+                }}
+              >
+                {formatTime(show.start_time)}
+              </span>
+            )}
           </div>
         ))}
 
-        {/* Overflow label — only shown when totalCount exceeds visible rows */}
         {overflowCount > 0 && (
-          <p
-            className="text-2xs font-mono"
-            style={{ color: accentColor }}
-          >
-            +{overflowCount} more today
+          <p className="text-2xs font-mono" style={{ color: accentColor }}>
+            +{overflowCount} more
           </p>
         )}
       </div>
     </Link>
   );
 });
+
+// ---------------------------------------------------------------------------
+// Gradient banner fallback — used when no venue image
+// ---------------------------------------------------------------------------
+
+function GradientBanner({
+  accentColor,
+  venueType,
+  children,
+}: {
+  accentColor: string;
+  venueType: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div
+      className="relative h-20 overflow-hidden"
+      style={{
+        background: `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 12%, var(--night)), color-mix(in srgb, ${accentColor} 5%, var(--dusk)))`,
+      }}
+    >
+      <div className="absolute inset-0 flex items-center justify-center opacity-15">
+        <CategoryIcon type={venueType} size={36} glow="none" weight="thin" />
+      </div>
+      {children}
+    </div>
+  );
+}
 
 export type { VenueShowCardProps, VenueShow };
