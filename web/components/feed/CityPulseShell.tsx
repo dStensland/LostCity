@@ -81,14 +81,6 @@ const YonderDestinationNodeQuestsSection = dynamic(
   () => import("./sections/YonderDestinationNodeQuestsSection"),
   { ssr: false }
 );
-const DestinationsSectionV2 = dynamic(
-  () => import("./sections/DestinationsSectionV2").then(m => ({ default: m.DestinationsSectionV2 })),
-  { ssr: false }
-);
-const NeighborhoodPulseSection = dynamic(
-  () => import("./sections/NeighborhoodPulseSection").then(m => ({ default: m.NeighborhoodPulseSection })),
-  { ssr: false }
-);
 
 /** Section types that LineupSection absorbs */
 const TIMELINE_SECTION_TYPES = new Set<CityPulseSectionType>([
@@ -503,34 +495,6 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
       {/* Regular Hangs — recurring weekly events (trivia, run clubs, karaoke, etc.) */}
       <RegularHangsSection portalSlug={portalSlug} />
 
-      {/* Destinations (Worth Checking Out) — contextual venues from the city.
-           No outer divider — the section renders its own divider when it has content.
-           minHeight=0 so a null-returning section doesn't leave a visible gap. */}
-      <div
-        id="city-pulse-destinations"
-        data-feed-anchor="true"
-        data-index-label="Destinations"
-        data-block-id="destinations"
-        className="scroll-mt-28"
-      >
-        <LazySection minHeight={0}>
-          <DestinationsSectionV2 portalSlug={portalSlug} />
-        </LazySection>
-      </div>
-
-      {/* Neighborhoods — contextual neighborhood insights.
-           Same pattern: no outer divider, section self-manages. */}
-      <div
-        id="city-pulse-neighborhoods"
-        data-feed-anchor="true"
-        data-index-label="Neighborhoods"
-        data-block-id="neighborhoods"
-        className="scroll-mt-28"
-      >
-        <LazySection minHeight={0}>
-          <NeighborhoodPulseSection portalSlug={portalSlug} />
-        </LazySection>
-      </div>
 
       {/* 6. Interest Channels — only on civic portals where groups are meaningful */}
       {portal?.settings?.vertical === "community" && (
