@@ -32,11 +32,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   const { slug } = await context.params;
   const searchParams = request.nextUrl.searchParams;
-  const categoriesParam = searchParams.get("categories") ?? "music";
+  const categoriesParam = searchParams.get("categories") ?? "";
   const categories = categoriesParam
     .split(",")
     .map((c) => c.trim())
     .filter(Boolean);
+
+  const venueTypesParam = searchParams.get("venue_types") ?? null;
+  const venueTypes = venueTypesParam
+    ? venueTypesParam.split(",").map((t) => t.trim()).filter(Boolean)
+    : null;
 
   const today = getLocalDateString(new Date());
 
@@ -61,14 +66,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
       sourceIds: sourceAccess.sourceIds,
     });
 
-    // Venue types that host live performances (music, comedy, theater)
-    const PERFORMANCE_VENUE_TYPES = [
-      "music_venue", "concert_hall", "bar_live_music", "theater",
-      "comedy_club", "performing_arts_center", "arena", "amphitheater",
-      "nightclub", "bar", "lounge", "restaurant_live_music",
-      "art_gallery", "community_arts_center", "event_space",
-    ];
-
     // Fetch today's shows for display + this week's count for the "N more this week" note
     const weekEnd = new Date();
     weekEnd.setDate(weekEnd.getDate() + 7);
@@ -88,7 +85,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
         is_free,
         venue:places!inner(id, name, slug, neighborhood, image_url, place_type)
       `)
-      .in("category_id", categories)
       .gte("start_date", today)
       .lte("start_date", weekEndStr)
       .eq("is_active", true)
@@ -96,6 +92,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .or("is_class.eq.false,is_class.is.null")
       .order("start_date", { ascending: true })
       .order("start_time", { ascending: true });
+
+    if (categories.length > 0) {
+      query = query.in("category_id", categories);
+    }
+
+    if (venueTypes && venueTypes.length > 0) {
+      query = query.in("places.place_type", venueTypes);
+    }
 
     query = applyFeedGate(query);
     query = applyManifestFederatedScopeToQuery(query, manifest, {
