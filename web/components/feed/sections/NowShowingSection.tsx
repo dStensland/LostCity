@@ -490,25 +490,12 @@ function FilmRow({
     : undefined;
 
   // ── Urgency badge logic ──────────────────────────────────────────
-  const today = getLocalDateString();
   const isLastShowing =
     film.remaining_count != null && film.remaining_count <= 2;
-  // OPENING NIGHT: `first_date` is the earliest *remaining* showtime date
-  // (past dates are excluded by the API query). On Sunday a film that opened
-  // Friday still has first_date === today because Fri/Sat events already
-  // passed. Guard against overuse: require a healthy remaining_count (>=5)
-  // which indicates the film truly just arrived at the theater.
-  const isOpeningNight =
-    film.first_date != null &&
-    film.first_date === today &&
-    film.remaining_count != null &&
-    film.remaining_count >= 5;
-  // Show only one urgency badge: LAST SHOWING takes priority
-  const urgencyBadge: "last" | "opening" | null = isLastShowing
-    ? "last"
-    : isOpeningNight
-    ? "opening"
-    : null;
+  // "Opening Night" removed — first_date is MIN(remaining start_date), not
+  // the film's actual premiere. A film showing for 3 weeks gets first_date
+  // === today once prior dates expire, producing false "OPENING NIGHT" labels.
+  const urgencyBadge: "last" | null = isLastShowing ? "last" : null;
 
   // ── Metadata row ─────────────────────────────────────────────────
   const metaParts: string[] = [];
@@ -531,11 +518,6 @@ function FilmRow({
         {urgencyBadge === "last" && (
           <span className="shrink-0 text-2xs font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--neon-red)]/15 text-[var(--neon-red)]">
             Last Showing
-          </span>
-        )}
-        {urgencyBadge === "opening" && (
-          <span className="shrink-0 text-2xs font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--gold)]/15 text-[var(--gold)]">
-            Opening Night
           </span>
         )}
       </div>
