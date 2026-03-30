@@ -58,101 +58,81 @@ export const VenueShowCard = memo(function VenueShowCard({
     <Link
       href={`/${portalSlug}/spots/${venue.slug}`}
       prefetch={false}
-      className="group block rounded-lg overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/30 hover:border-[var(--twilight)]/50 transition-colors"
-      style={{ borderTopColor: `color-mix(in srgb, ${accentColor} 40%, transparent)`, borderTopWidth: 2 }}
+      className="group flex rounded-lg overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/30 hover:border-[var(--twilight)]/50 transition-colors"
+      style={{ borderLeftColor: `color-mix(in srgb, ${accentColor} 50%, transparent)`, borderLeftWidth: 2 }}
       aria-label={venue.name}
     >
-      {/* Banner image or gradient fallback */}
-      {venue.image_url ? (
-        <div className="relative h-24 overflow-hidden bg-[var(--dusk)]">
+      {/* Square image or icon fallback — left rail */}
+      <div className="relative w-20 sm:w-24 flex-shrink-0 overflow-hidden bg-[var(--dusk)]">
+        {venue.image_url ? (
           <SmartImage
             src={venue.image_url}
             alt=""
             fill
-            sizes="(max-width: 640px) 100vw, 50vw"
+            sizes="96px"
             className="object-cover group-hover:scale-105 transition-transform duration-300"
-            fallback={
-              <GradientBanner accentColor={accentColor} venueType={venueType} />
-            }
+            fallback={<IconFallback accentColor={accentColor} venueType={venueType} />}
           />
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[var(--night)] to-transparent" />
-          <div className="absolute bottom-0 inset-x-0 px-3 pb-2">
-            <p className="text-sm font-semibold text-white leading-tight truncate drop-shadow-sm">
-              {venue.name}
-            </p>
-            {venue.neighborhood && (
-              <p className="text-xs text-white/60 truncate">{venue.neighborhood}</p>
-            )}
-          </div>
-        </div>
-      ) : (
-        <GradientBanner accentColor={accentColor} venueType={venueType}>
-          <div className="absolute bottom-0 inset-x-0 px-3 pb-2">
-            <p className="text-sm font-semibold text-[var(--cream)] leading-tight truncate">
-              {venue.name}
-            </p>
-            {venue.neighborhood && (
-              <p className="text-xs text-[var(--muted)] truncate">{venue.neighborhood}</p>
-            )}
-          </div>
-        </GradientBanner>
-      )}
-
-      {/* Show rows with time chips */}
-      <div className="px-3 pt-2 pb-2.5 space-y-1.5">
-        {visibleShows.map((show) => (
-          <div key={show.id} className="flex items-center justify-between gap-2">
-            <p className="text-xs text-[var(--soft)] truncate leading-snug flex-1 min-w-0">
-              {show.title}
-            </p>
-            {show.start_time && (
-              <span
-                className="flex-shrink-0 px-1.5 py-0.5 rounded text-2xs font-mono tabular-nums"
-                style={{
-                  backgroundColor: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
-                  color: `color-mix(in srgb, ${accentColor} 80%, white)`,
-                }}
-              >
-                {formatTime(show.start_time)}
-              </span>
-            )}
-          </div>
-        ))}
-
-        {overflowCount > 0 && (
-          <p className="text-2xs font-mono" style={{ color: accentColor }}>
-            +{overflowCount} more
-          </p>
+        ) : (
+          <IconFallback accentColor={accentColor} venueType={venueType} />
         )}
+      </div>
+
+      {/* Content — right side */}
+      <div className="flex-1 min-w-0 px-3 py-2.5">
+        {/* Venue name + neighborhood */}
+        <p className="text-sm font-semibold text-[var(--cream)] truncate leading-snug group-hover:text-white transition-colors">
+          {venue.name}
+        </p>
+        {venue.neighborhood && (
+          <p className="text-2xs text-[var(--muted)] truncate mb-1.5">{venue.neighborhood}</p>
+        )}
+
+        {/* Show rows with time chips */}
+        <div className="space-y-1">
+          {visibleShows.map((show) => (
+            <div key={show.id} className="flex items-center justify-between gap-1.5">
+              <p className="text-xs text-[var(--soft)] truncate leading-snug flex-1 min-w-0">
+                {show.title}
+              </p>
+              {show.start_time && (
+                <span
+                  className="flex-shrink-0 px-1.5 py-0.5 rounded text-2xs font-mono tabular-nums"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
+                    color: `color-mix(in srgb, ${accentColor} 80%, white)`,
+                  }}
+                >
+                  {formatTime(show.start_time)}
+                </span>
+              )}
+            </div>
+          ))}
+
+          {overflowCount > 0 && (
+            <p className="text-2xs font-mono" style={{ color: accentColor }}>
+              +{overflowCount} more
+            </p>
+          )}
+        </div>
       </div>
     </Link>
   );
 });
 
 // ---------------------------------------------------------------------------
-// Gradient banner fallback — used when no venue image
+// Icon fallback — tinted background with category icon
 // ---------------------------------------------------------------------------
 
-function GradientBanner({
-  accentColor,
-  venueType,
-  children,
-}: {
-  accentColor: string;
-  venueType: string;
-  children?: React.ReactNode;
-}) {
+function IconFallback({ accentColor, venueType }: { accentColor: string; venueType: string }) {
   return (
     <div
-      className="relative h-20 overflow-hidden"
+      className="absolute inset-0 flex items-center justify-center"
       style={{
-        background: `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 12%, var(--night)), color-mix(in srgb, ${accentColor} 5%, var(--dusk)))`,
+        background: `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 15%, var(--night)), color-mix(in srgb, ${accentColor} 6%, var(--dusk)))`,
       }}
     >
-      <div className="absolute inset-0 flex items-center justify-center opacity-15">
-        <CategoryIcon type={venueType} size={36} glow="none" weight="thin" />
-      </div>
-      {children}
+      <CategoryIcon type={venueType} size={28} glow="none" weight="thin" className="opacity-30" />
     </div>
   );
 }
