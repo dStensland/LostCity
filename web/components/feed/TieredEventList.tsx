@@ -71,8 +71,8 @@ export function TieredEventList({
 
   return (
     <div className="space-y-1.5">
-      {/* Event rows */}
-      <div className="space-y-1.5 card-stagger">
+      {/* Event rows — 2-col grid on desktop */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 card-stagger">
         {visibleEvents.map((event, idx) => (
           <StandardRow
             key={`event-${event.id}`}

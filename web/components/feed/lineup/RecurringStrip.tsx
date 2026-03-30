@@ -251,7 +251,7 @@ export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStrip
           No regulars {activeDay !== null ? `on ${DAY_LABELS[activeDay - 1]}` : "matching"}
         </p>
       ) : (
-        <div className="space-y-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
           {visible.map(({ item, activityId }) => {
             const color = ACTIVITY_COLORS[activityId ?? ""] ?? "var(--vibe)";
             const activityLabel = ACTIVITY_LABELS[activityId ?? ""] ?? "";
@@ -265,7 +265,7 @@ export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStrip
               <Link
                 key={item.event.id}
                 href={`/${portalSlug}?event=${item.event.id}`}
-                className="group flex items-center gap-3 py-2 px-2 -mx-2 rounded-xl hover:bg-[var(--dusk)]/50 transition-colors"
+                className="group flex items-center gap-3 py-2.5 px-3 rounded-xl bg-[var(--night)] border border-[var(--twilight)]/30 hover:bg-[var(--dusk)]/50 hover:border-[var(--twilight)]/50 transition-colors"
               >
                 {/* Activity icon box */}
                 {(() => {

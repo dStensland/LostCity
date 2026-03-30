@@ -43,7 +43,7 @@ export const StandardRow = memo(function StandardRow({
     <Link
       href={`/${portalSlug}/events/${event.id}`}
       prefetch={false}
-      className="group block w-full rounded-xl overflow-hidden hover:bg-[var(--dusk)]/50 transition-colors"
+      className="group block w-full rounded-xl overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/30 hover:bg-[var(--dusk)]/50 hover:border-[var(--twilight)]/50 transition-colors"
       aria-label={event.title}
     >
       <div className="flex items-center gap-3 px-2 py-2.5">
