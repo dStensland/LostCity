@@ -74,6 +74,8 @@ import { getContextualQuickLinks } from "@/lib/city-pulse/quick-links";
 // Below-fold sections: dynamically imported so their JS is in separate chunks
 // loaded on demand when LazySection triggers (not bundled in the main feed chunk).
 const SeeShowsSection = dynamic(() => import("./sections/SeeShowsSection"), { ssr: false });
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const GameDaySection = dynamic<{ portalSlug: string }>(() => import("./sections/GameDaySection") as any, { ssr: false });
 const PlanningHorizonSection = dynamic(() => import("./sections/PlanningHorizonSection"), { ssr: false });
 const FeedTimeMachine = dynamic(() => import("./FeedTimeMachine"), { ssr: false });
 const YonderRegionalEscapesSection = dynamic(() => import("./sections/YonderRegionalEscapesSection"), { ssr: false });
@@ -380,6 +382,25 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
             <div className="pt-6">
               <LazySection minHeight={300}>
                 <SeeShowsSection portalSlug={portalSlug} />
+              </LazySection>
+            </div>
+          </div>
+        );
+
+      case "sports":
+        return (
+          <div
+            key="city-pulse-sports"
+            id="city-pulse-sports"
+            data-feed-anchor="true"
+            data-index-label="Game Day"
+            data-block-id="sports"
+            className="mt-8 scroll-mt-28"
+          >
+            <div className="h-px bg-[var(--twilight)]" />
+            <div className="pt-6">
+              <LazySection minHeight={200}>
+                <GameDaySection portalSlug={portalSlug} />
               </LazySection>
             </div>
           </div>

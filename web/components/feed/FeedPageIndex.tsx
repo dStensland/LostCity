@@ -55,6 +55,7 @@ const BLOCK_LABELS: Record<FeedBlockId, string> = {
   experiences: "Things to Do",
   community: "The Network",
   cinema: "See Shows",
+  sports: "Game Day",
   horizon: "On the Horizon",
   browse: "Browse by Category",
 };
