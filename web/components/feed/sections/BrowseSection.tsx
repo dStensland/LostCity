@@ -19,7 +19,7 @@ import {
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import { MapPin, Compass } from "@phosphor-icons/react";
 import { BrowseGridTile } from "./BrowseGridTile";
-import { CollectionsRow } from "./CollectionsRow";
+
 
 interface Props {
   section: CityPulseSection;
@@ -135,10 +135,6 @@ export default function BrowseSection({ section, portalSlug }: Props) {
         </div>
       )}
 
-      {/* Data-driven collections */}
-      <div className="mt-6">
-        <CollectionsRow portalSlug={portalSlug} />
-      </div>
     </section>
   );
 }
