@@ -374,7 +374,7 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
             key="city-pulse-cinema"
             id="city-pulse-cinema"
             data-feed-anchor="true"
-            data-index-label="See Shows"
+            data-index-label="Venues"
             data-block-id="cinema"
             className="mt-8 scroll-mt-28"
           >

@@ -295,7 +295,11 @@ export default function NowShowingSection({ portalSlug, embedded = false }: NowS
       </div>
     );
   }
-  if (failed) return null;
+  if (failed) {
+    return embedded
+      ? <p className="py-6 text-center text-sm text-[var(--muted)]">No film tonight</p>
+      : null;
+  }
 
   // Hide if no indie theaters have showtimes (and user hasn't added any chains)
   const hasIndieShowtimes = allTheaters.some(
@@ -303,7 +307,11 @@ export default function NowShowingSection({ portalSlug, embedded = false }: NowS
       isIndieCinemaVenue({ name: t.venue_name, slug: t.venue_slug }) &&
       t.films.length > 0
   );
-  if (!hasIndieShowtimes && myTheaterSlugs.length === 0) return null;
+  if (!hasIndieShowtimes && myTheaterSlugs.length === 0) {
+    return embedded
+      ? <p className="py-6 text-center text-sm text-[var(--muted)]">No film tonight</p>
+      : null;
+  }
 
   const Wrapper = embedded ? "div" : "section";
 
