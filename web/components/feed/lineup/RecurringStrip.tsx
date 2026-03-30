@@ -250,11 +250,12 @@ export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStrip
           No regulars {activeDay !== null ? `on ${DAY_LABELS[activeDay - 1]}` : "matching"}
         </p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
           {visible.map(({ item, activityId }) => {
             const color = ACTIVITY_COLORS[activityId ?? ""] ?? "var(--vibe)";
             const activityLabel = ACTIVITY_LABELS[activityId ?? ""] ?? "";
             const venue = item.event.venue;
+            const recurrenceLabel = item.event.recurrence_label;
             const startTime = item.event.start_time;
             const timeStr = startTime
               ? new Date(`2000-01-01T${startTime}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
@@ -309,15 +310,21 @@ export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStrip
                     {item.event.title}
                   </p>
 
-                  {/* Venue */}
-                  {venue?.name && (
+                  {/* Venue + recurrence */}
+                  {(venue?.name || recurrenceLabel) && (
                     <p className="text-xs text-[var(--muted)] truncate leading-snug mt-0.5">
-                      {venue.name}
-                      {venue.neighborhood && (
+                      {venue?.name}
+                      {venue?.name && venue?.neighborhood && (
                         <>
                           <span className="mx-1 opacity-40">·</span>
                           {venue.neighborhood}
                         </>
+                      )}
+                      {venue?.name && recurrenceLabel && (
+                        <span className="mx-1 opacity-40">·</span>
+                      )}
+                      {recurrenceLabel && (
+                        <span className="text-[var(--vibe)]/70 font-mono text-2xs">{recurrenceLabel}</span>
                       )}
                     </p>
                   )}
