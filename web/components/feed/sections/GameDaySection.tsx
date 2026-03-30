@@ -376,8 +376,17 @@ function TeamCard({
   const upcoming = team.upcoming.slice(0, MAX_UPCOMING);
   const overflowCount = team.totalUpcoming > MAX_UPCOMING ? team.totalUpcoming - MAX_UPCOMING : 0;
 
+  const accentGradient = `radial-gradient(ellipse at 20% 50%, ${team.accentColor}55 0%, ${team.accentColor}15 50%, var(--void) 100%)`;
+
   return (
-    <div className="flex-shrink-0 w-72 snap-start rounded-card overflow-hidden bg-[var(--night)] shadow-card-sm hover-lift border border-[var(--twilight)]/40">
+    <div
+      className={`flex-shrink-0 w-72 snap-start rounded-card overflow-hidden bg-[var(--night)] shadow-card-sm hover-lift ${
+        isTonight
+          ? "border border-[var(--neon-red)]/30"
+          : "border border-[var(--twilight)]/40"
+      }`}
+      style={isTonight ? { boxShadow: `0 0 0 1px ${team.accentColor}40, 0 4px 20px ${team.accentColor}15` } : undefined}
+    >
       {/* Photo strip */}
       <div className="relative h-36 overflow-hidden">
         {sportPhoto ? (
@@ -388,42 +397,47 @@ function TeamCard({
             sizes="288px"
             className="object-cover"
             fallback={
-              <div
-                className="absolute inset-0"
-                style={{
-                  background: `linear-gradient(135deg, ${team.accentColor}30 0%, var(--night) 100%)`,
-                }}
-              />
+              <div className="absolute inset-0" style={{ background: accentGradient }} />
             }
           />
         ) : (
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `linear-gradient(135deg, ${team.accentColor}30 0%, var(--night) 100%)`,
-            }}
-          />
+          <div className="absolute inset-0" style={{ background: accentGradient }} />
+        )}
+
+        {/* Tonight atmospheric wash */}
+        {isTonight && (
+          <div className="absolute inset-0 bg-gradient-to-b from-[var(--neon-red)]/[0.06] to-transparent pointer-events-none z-[1]" />
         )}
 
         {/* Gradient fade into card body */}
-        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[var(--night)] via-[var(--night)]/70 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[var(--night)] via-[var(--night)]/50 to-transparent pointer-events-none" />
 
-        {/* Sport pill */}
-        <span className="absolute bottom-2 right-2 z-10 px-2 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--night)]/70 backdrop-blur-sm text-[var(--cream)]/80">
+        {/* Sport pill — accent colored */}
+        <span
+          className="absolute bottom-2 right-2 z-10 px-2 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider backdrop-blur-sm"
+          style={{
+            backgroundColor: `${team.accentColor}20`,
+            color: team.accentColor,
+            border: `1px solid ${team.accentColor}40`,
+          }}
+        >
           {sportLabel}
         </span>
 
-        {/* Team logo — overlapping card boundary */}
-        <div className="absolute -bottom-5 left-3 z-10 w-12 h-12 rounded-full bg-[var(--night)] shadow-card-sm border border-[var(--twilight)]/60 p-1.5 flex items-center justify-center">
+        {/* Team logo — overlapping card boundary, accent ring + glow */}
+        <div
+          className="absolute -bottom-6 left-3 z-10 w-14 h-14 rounded-full bg-[var(--night)] p-1.5 flex items-center justify-center"
+          style={{ boxShadow: `0 0 0 2px ${team.accentColor}80, 0 0 16px ${team.accentColor}30` }}
+        >
           <SmartImage
             src={team.logoUrl}
             alt={team.shortName}
-            width={32}
-            height={32}
+            width={36}
+            height={36}
             className="rounded-full object-contain"
             fallback={
               <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white"
                 style={{ backgroundColor: team.accentColor }}
               >
                 {team.shortName.charAt(0)}
@@ -435,13 +449,19 @@ function TeamCard({
 
       {/* Card header — with spacer for logo overlap */}
       <div className="px-3 pt-1">
-        <div className="h-6" />
+        <div className="h-7" />
         <div className="flex items-center gap-2">
           <span className="text-base font-semibold text-[var(--cream)] truncate flex-1 min-w-0">
             {team.shortName}
           </span>
           {team.league && (
-            <span className="shrink-0 text-2xs font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--twilight)] text-[var(--muted)]">
+            <span
+              className="shrink-0 text-2xs font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+              style={{
+                backgroundColor: `${team.accentColor}18`,
+                color: team.accentColor,
+              }}
+            >
               {team.league}
             </span>
           )}
@@ -453,9 +473,10 @@ function TeamCard({
         <div className="px-3 pb-2 pt-1.5">
           <Link
             href={`/${portalSlug}/events/${team.nextGame.id}`}
+            prefetch={false}
             className="group block"
           >
-            <p className="text-sm font-semibold text-[var(--soft)] group-hover:text-[var(--cream)] transition-colors truncate">
+            <p className="text-sm font-semibold text-[var(--cream)] truncate">
               {formatOpponent(team.nextGame.title, team.shortName)}
             </p>
             {/* Time chips */}
@@ -498,23 +519,20 @@ function TeamCard({
 
       {/* Upcoming rows */}
       {upcoming.length > 0 && (
-        <div className="pb-1">
+        <div className="pb-1.5">
           {upcoming.map((game) => (
             <Link
               key={game.id}
               href={`/${portalSlug}/events/${game.id}`}
+              prefetch={false}
               className="group flex items-center gap-2 px-3 py-1.5 hover:bg-[var(--cream)]/[0.03] transition-colors"
             >
-              <span className="text-xs text-[var(--muted)] group-hover:text-[var(--soft)] transition-colors truncate flex-1 min-w-0">
+              <span className="text-xs text-[var(--soft)] group-hover:text-[var(--cream)] transition-colors truncate flex-1 min-w-0 font-medium">
                 {formatOpponent(game.title, team.shortName)}
-                <span className="text-[var(--twilight)] mx-1">·</span>
+              </span>
+              <span className="text-xs text-[var(--muted)] shrink-0 font-mono tabular-nums">
                 {formatShortDate(game.startDate)}
-                {game.startTime && (
-                  <>
-                    <span className="text-[var(--twilight)] mx-1">·</span>
-                    {formatTime(game.startTime)}
-                  </>
-                )}
+                {game.startTime && ` ${formatTime(game.startTime)}`}
               </span>
             </Link>
           ))}
