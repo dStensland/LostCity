@@ -215,6 +215,10 @@ def classify_description(desc: Optional[str]) -> DescriptionQuality:
     if "category: " in desc_stripped[:200].lower() and len(desc_stripped) < 250:
         return "boilerplate"
 
+    # Synthetic: template-assembled descriptions from enrichment scripts
+    if is_synthetic_description(desc_stripped):
+        return "boilerplate"
+
     return "good"
 
 
