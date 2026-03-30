@@ -73,7 +73,7 @@ export const TEAMS: TeamConfig[] = [
     league: "NBA",
     city: "atlanta",
     accentColor: "#E03A3E",
-    logoUrl: "/teams/hawks.svg",
+    logoUrl: "https://cdn.nba.com/logos/nba/1610612737/global/D/logo.svg",
     sourceSlugs: ["atlanta-hawks"],
     tags: ["hawks", "atlanta-hawks"],
     venueSlug: "state-farm-arena",
@@ -105,7 +105,7 @@ export const TEAMS: TeamConfig[] = [
     league: "MLB",
     city: "atlanta",
     accentColor: "#CE1141",
-    logoUrl: "/teams/braves.svg",
+    logoUrl: "https://www.mlbstatic.com/team-logos/share/144.jpg",
     sourceSlugs: ["truist-park"],
     tags: ["braves", "atlanta-braves"],
     venueSlug: "truist-park",
@@ -410,4 +410,37 @@ export const GROUP_LABELS: Record<TeamConfig["group"], string> = {
   college: "College",
   nearby: "Nearby / Occasional",
   alternative: "Alternative / Action",
+};
+
+/** Maps sport type to atmospheric photo path */
+export const SPORT_PHOTOS: Record<string, string> = {
+  basketball: "/sports/basketball.svg",
+  baseball: "/sports/baseball.svg",
+  soccer: "/sports/soccer.svg",
+  football: "/sports/football.svg",
+  hockey: "/sports/hockey.svg",
+  volleyball: "/sports/volleyball.svg",
+  lacrosse: "/sports/lacrosse.svg",
+  multi: "/sports/multi.svg",
+  ultimate: "/sports/multi.svg",
+};
+
+/** Readable sport labels for display */
+export const SPORT_LABELS: Record<string, string> = {
+  basketball: "Basketball",
+  baseball: "Baseball",
+  soccer: "Soccer",
+  football: "Football",
+  hockey: "Hockey",
+  volleyball: "Volleyball",
+  lacrosse: "Lacrosse",
+  multi: "College",
+  ultimate: "Ultimate",
+  "roller-derby": "Roller Derby",
+  racing: "Racing",
+  motocross: "Motocross",
+  "monster-trucks": "Monster Trucks",
+  wrestling: "Wrestling",
+  "bull-riding": "Bull Riding",
+  esports: "Esports",
 };
