@@ -99,9 +99,11 @@ function extractTime(entry: ShowtimeEntry): string {
 
 interface NowShowingSectionProps {
   portalSlug: string;
+  /** When true, suppresses the section header and wrapper — for embedding inside a parent tab shell */
+  embedded?: boolean;
 }
 
-export default function NowShowingSection({ portalSlug }: NowShowingSectionProps) {
+export default function NowShowingSection({ portalSlug, embedded = false }: NowShowingSectionProps) {
   const { user } = useAuth();
   const [allTheaters, setAllTheaters] = useState<TheaterItem[]>([]);
   const [myTheaterSlugs, setMyTheaterSlugs] = useState<string[]>([]);
@@ -262,14 +264,16 @@ export default function NowShowingSection({ portalSlug }: NowShowingSectionProps
 
   if (loading) {
     return (
-      <section className="pb-2">
-        <FeedSectionHeader
-          title="Now Showing"
-          priority="secondary"
-          accentColor="var(--vibe)"
-          icon={<FilmSlate weight="duotone" className="w-5 h-5" />}
-          seeAllHref={`/${portalSlug}?view=happening&content=showtimes`}
-        />
+      <div className={embedded ? "" : "pb-2"}>
+        {!embedded && (
+          <FeedSectionHeader
+            title="Now Showing"
+            priority="secondary"
+            accentColor="var(--vibe)"
+            icon={<FilmSlate weight="duotone" className="w-5 h-5" />}
+            seeAllHref={`/${portalSlug}?view=happening&content=showtimes`}
+          />
+        )}
         <div className="flex gap-3 overflow-hidden">
           {[0, 1, 2].map((i) => (
             <div
@@ -288,7 +292,7 @@ export default function NowShowingSection({ portalSlug }: NowShowingSectionProps
             </div>
           ))}
         </div>
-      </section>
+      </div>
     );
   }
   if (failed) return null;
@@ -301,20 +305,24 @@ export default function NowShowingSection({ portalSlug }: NowShowingSectionProps
   );
   if (!hasIndieShowtimes && myTheaterSlugs.length === 0) return null;
 
+  const Wrapper = embedded ? "div" : "section";
+
   return (
-    <section className="pb-2 feed-section-enter">
-      {/* Section header */}
-      <FeedSectionHeader
-        title="Now Showing"
-        priority="secondary"
-        accentColor="var(--vibe)"
-        icon={<FilmSlate weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=happening&content=showtimes`}
-        actionIcon={user ? <GearSix weight="bold" className="w-3.5 h-3.5" /> : undefined}
-        onAction={user ? () => setCustomizerOpen((v) => !v) : undefined}
-        actionActive={customizerOpen}
-        actionLabel="Customize theaters"
-      />
+    <Wrapper className={embedded ? "" : "pb-2 feed-section-enter"}>
+      {/* Section header — hidden when embedded inside VenuesSection tab */}
+      {!embedded && (
+        <FeedSectionHeader
+          title="Now Showing"
+          priority="secondary"
+          accentColor="var(--vibe)"
+          icon={<FilmSlate weight="duotone" className="w-5 h-5" />}
+          seeAllHref={`/${portalSlug}?view=happening&content=showtimes`}
+          actionIcon={user ? <GearSix weight="bold" className="w-3.5 h-3.5" /> : undefined}
+          onAction={user ? () => setCustomizerOpen((v) => !v) : undefined}
+          actionActive={customizerOpen}
+          actionLabel="Customize theaters"
+        />
+      )}
 
       {/* Carousel */}
       <div className="relative">
@@ -378,7 +386,7 @@ export default function NowShowingSection({ portalSlug }: NowShowingSectionProps
           }}
         />
       )}
-    </section>
+    </Wrapper>
   );
 }
 

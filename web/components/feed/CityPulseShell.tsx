@@ -17,7 +17,7 @@
  *  3. LineupSection — tabbed timeline: Today / This Week / Coming Up (events only)
  *  4. RegularHangsSection — recurring weekly events (trivia, run clubs, etc.)
  *  5. Destinations + Neighborhoods
- *  6. SeeShowsSection — Film/Music/Stage tabs
+ *  6. VenuesSection — Film/Music/Comedy/Theater/Nightlife/Arts/Attractions
  *  7. PlanningHorizonSection — big future events
  *  8. Browse by Category
  *
@@ -73,7 +73,7 @@ import { getContextualQuickLinks } from "@/lib/city-pulse/quick-links";
 
 // Below-fold sections: dynamically imported so their JS is in separate chunks
 // loaded on demand when LazySection triggers (not bundled in the main feed chunk).
-const SeeShowsSection = dynamic(() => import("./sections/SeeShowsSection"), { ssr: false });
+const VenuesSection = dynamic(() => import("./sections/VenuesSection"), { ssr: false });
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const GameDaySection = dynamic<{ portalSlug: string }>(() => import("./sections/GameDaySection") as any, { ssr: false });
 const PlanningHorizonSection = dynamic(() => import("./sections/PlanningHorizonSection"), { ssr: false });
@@ -381,7 +381,7 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
             <div className="h-px bg-[var(--twilight)]" />
             <div className="pt-6">
               <LazySection minHeight={300}>
-                <SeeShowsSection portalSlug={portalSlug} />
+                <VenuesSection portalSlug={portalSlug} />
               </LazySection>
             </div>
           </div>
