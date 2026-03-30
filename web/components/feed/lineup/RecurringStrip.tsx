@@ -10,7 +10,17 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight } from "@phosphor-icons/react";
+import type { ComponentType } from "react";
+import type { IconProps } from "@phosphor-icons/react";
+import {
+  ArrowRight, Question, Smiley, Coffee, Headphones, Crown, Wine,
+  MusicNotes, PersonSimpleRun, Barbell, Trophy, Palette, BookOpen,
+  Microphone, Sparkle, Waveform, ForkKnife, Leaf,
+} from "@phosphor-icons/react";
+import {
+  MicrophoneStage, NumberCircleNine, Sword, BowlingBall, BeerStein,
+  Club, Disc, VinylRecord, FilmStrip,
+} from "@phosphor-icons/react/dist/ssr";
 import Dot from "@/components/ui/Dot";
 import type { CityPulseEventItem } from "@/lib/city-pulse/types";
 import { SCENE_ACTIVITY_TYPES, matchActivityType } from "@/lib/scene-event-routing";
@@ -19,9 +29,22 @@ const INITIAL_SHOW = 6;
 
 const ACTIVITY_COLORS: Record<string, string> = {};
 const ACTIVITY_LABELS: Record<string, string> = {};
+const ACTIVITY_ICONS: Record<string, ComponentType<IconProps>> = {};
 for (const a of SCENE_ACTIVITY_TYPES) {
   ACTIVITY_COLORS[a.id] = a.color;
   ACTIVITY_LABELS[a.id] = a.label;
+}
+
+// Map iconName strings to Phosphor components
+const ICON_MAP: Record<string, ComponentType<IconProps>> = {
+  Question, MicrophoneStage, Smiley, NumberCircleNine, Coffee, Headphones,
+  Crown, Sword, BowlingBall, Wine, BeerStein, Leaf, ForkKnife, MusicNotes,
+  Club, PersonSimpleRun, Barbell, Trophy, Palette, Disc, VinylRecord,
+  BookOpen, Microphone, Sparkle, FilmStrip, Waveform,
+};
+for (const a of SCENE_ACTIVITY_TYPES) {
+  const Icon = ICON_MAP[a.iconName];
+  if (Icon) ACTIVITY_ICONS[a.id] = Icon;
 }
 
 // ISO day names for display
@@ -245,15 +268,24 @@ export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStrip
                 className="group flex items-center gap-3 py-2 px-2 -mx-2 rounded-xl hover:bg-[var(--dusk)]/50 transition-colors"
               >
                 {/* Activity icon box */}
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, var(--night))` }}
-                >
-                  <span
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: color }}
-                  />
-                </div>
+                {(() => {
+                  const Icon = ACTIVITY_ICONS[activityId ?? ""];
+                  return (
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, var(--night))` }}
+                    >
+                      {Icon ? (
+                        <Icon weight="bold" className="w-5 h-5" style={{ color }} />
+                      ) : (
+                        <span
+                          className="w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: color }}
+                        />
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
