@@ -445,102 +445,16 @@ def sweep_null_source_short_descriptions(
 
 
 def run_short_description_sweep(args: argparse.Namespace, py: str, portal_slug: Optional[str]) -> int:
-    if args.skip_short_description_sweep:
-        print("\n== Short-description sweep ==")
-        print("[SKIP] --skip-short-description-sweep set")
-        return 0
+    """Disabled: synthetic description enrichment removed.
 
-    if not portal_slug:
-        print("\n== Short-description sweep ==")
-        print("[SKIP] No portal scope resolved for this run")
-        return 0
-
-    max_passes = 1 if args.dry_run else max(1, int(args.short_description_sweep_max_passes))
-    batch_size = max(1, int(args.short_description_sweep_batch_size))
-    limit = max(1, int(args.short_description_sweep_limit))
-    threshold = max(1, int(args.short_description_threshold))
-
-    previous_total: Optional[int] = None
-
-    for sweep_pass in range(1, max_passes + 1):
-        source_counts, null_source_short_count = fetch_short_description_source_counts(
-            portal_slug=portal_slug,
-            start_date=args.start_date,
-            threshold=threshold,
-        )
-        total_short = sum(count for _, count in source_counts) + int(null_source_short_count)
-        source_total = len(source_counts) + (1 if null_source_short_count > 0 else 0)
-        print(
-            f"\n== Short-description sweep pass {sweep_pass}/{max_passes} =="
-            f"\nTarget scope portal={portal_slug}, start_date={args.start_date}, "
-            f"short<{threshold}, sources={source_total}, events={total_short}"
-            f"\nsource-less short events={null_source_short_count}"
-        )
-
-        if total_short <= 0:
-            print("[OK] No short descriptions remain in scoped visible future events.")
-            return 0
-        if previous_total is not None and total_short >= previous_total:
-            print("[STOP] No further reduction detected; ending sweep loop.")
-            return 0
-        previous_total = total_short
-
-        source_slugs = [slug for slug, _ in source_counts]
-        eventbrite_slugs = [slug for slug in source_slugs if slug.startswith("eventbrite")]
-        non_eventbrite_slugs = [slug for slug in source_slugs if not slug.startswith("eventbrite")]
-
-        if non_eventbrite_slugs:
-            batches = chunked(non_eventbrite_slugs, batch_size)
-            for idx, batch in enumerate(batches, start=1):
-                cmd = [
-                    py,
-                    str(SCRIPTS / "enrich_non_eventbrite_descriptions.py"),
-                    "--portal",
-                    portal_slug,
-                    "--start-date",
-                    args.start_date,
-                    "--limit",
-                    str(limit),
-                    "--source-slugs",
-                    ",".join(batch),
-                ]
-                if not args.dry_run:
-                    cmd.append("--apply")
-                rc = run_step(
-                    f"Short-desc non-Eventbrite sweep {sweep_pass}.{idx}/{len(batches)}",
-                    cmd,
-                )
-                if rc != 0:
-                    return rc
-
-        if eventbrite_slugs:
-            cmd = [
-                py,
-                str(SCRIPTS / "enrich_eventbrite_descriptions.py"),
-                "--portal",
-                portal_slug,
-                "--start-date",
-                args.start_date,
-                "--limit",
-                str(limit),
-                "--source-slug",
-                "eventbrite",
-            ]
-            if not args.dry_run:
-                cmd.append("--apply")
-            rc = run_step(f"Short-desc Eventbrite sweep {sweep_pass}", cmd)
-            if rc != 0:
-                return rc
-
-        if null_source_short_count > 0:
-            sweep_null_source_short_descriptions(
-                portal_slug=portal_slug,
-                start_date=args.start_date,
-                threshold=threshold,
-                limit=limit,
-                apply_updates=not args.dry_run,
-            )
-
+    Previously invoked enrich_eventbrite_descriptions.py and
+    enrich_non_eventbrite_descriptions.py to fill short descriptions
+    with template-assembled metadata. This produced machine-readable
+    descriptions that degraded content quality. See spec:
+    docs/superpowers/specs/2026-03-30-description-pipeline-fix.md
+    """
+    print("\n== Short-description sweep ==")
+    print("[SKIP] Synthetic description enrichment disabled (pipeline fix 2026-03-30)")
     return 0
 
 
