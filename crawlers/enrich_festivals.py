@@ -423,7 +423,7 @@ def enrich_festivals(
         use_jsonld=True,
         use_open_graph=True,
         use_heuristic=True,
-        use_llm=False,
+        use_llm=True,  # Enable LLM fallback for description extraction
     )
 
     logger.info(f"Festival Enrichment Pipeline")
