@@ -154,8 +154,8 @@ export function RecurringStrip({ events, portalSlug, activeTab }: RecurringStrip
   // Dynamic label
   const dayName = activeDay !== null
     ? DAY_LABELS[activeDay - 1]
-    : (activeTab === "this_week" ? "this week" : "tonight");
-  const label = `Regulars ${activeDay !== null ? dayName : (activeTab === "this_week" ? "this week" : "tonight")}`;
+    : (activeTab === "this_week" ? "this week" : "today");
+  const label = `Regulars ${activeDay !== null ? dayName : (activeTab === "this_week" ? "this week" : "today")}`;
 
   return (
     <div className="mt-4 pt-3 border-t border-[var(--twilight)]/30">

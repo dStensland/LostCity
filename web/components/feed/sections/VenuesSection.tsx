@@ -119,7 +119,7 @@ function ProgrammingTabContent({
   if (venues.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-[var(--muted)]">
-        No {label} tonight
+        No {label} today
       </p>
     );
   }
@@ -180,7 +180,7 @@ function ArtsTabContent({
   if (venues.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-[var(--muted)]">
-        No arts tonight
+        No arts today
       </p>
     );
   }
@@ -248,7 +248,7 @@ function AttractionsTabContent({
   if (venues.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-[var(--muted)]">
-        No attractions tonight
+        No attractions today
       </p>
     );
   }

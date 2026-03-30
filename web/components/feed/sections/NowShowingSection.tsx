@@ -297,7 +297,7 @@ export default function NowShowingSection({ portalSlug, embedded = false }: NowS
   }
   if (failed) {
     return embedded
-      ? <p className="py-6 text-center text-sm text-[var(--muted)]">No film tonight</p>
+      ? <p className="py-6 text-center text-sm text-[var(--muted)]">No film today</p>
       : null;
   }
 
@@ -309,7 +309,7 @@ export default function NowShowingSection({ portalSlug, embedded = false }: NowS
   );
   if (!hasIndieShowtimes && myTheaterSlugs.length === 0) {
     return embedded
-      ? <p className="py-6 text-center text-sm text-[var(--muted)]">No film tonight</p>
+      ? <p className="py-6 text-center text-sm text-[var(--muted)]">No film today</p>
       : null;
   }
 

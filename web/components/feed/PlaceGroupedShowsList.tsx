@@ -166,7 +166,7 @@ export function PlaceGroupedShowsList({
         style={{ "--show-accent": accentColor } as React.CSSProperties}
       >
         <p className="text-sm text-[var(--soft)]">
-          No shows tonight ·{" "}
+          No shows today ·{" "}
           <Link
             href={`/${portalSlug}?view=happening&content=showtimes&vertical=${linkVertical}`}
             className="text-[var(--show-accent)] hover:underline font-mono text-xs"
@@ -207,7 +207,7 @@ export function PlaceGroupedShowsList({
             href={`/${portalSlug}?view=happening&content=showtimes&vertical=${linkVertical}`}
             className="text-xs font-mono text-[var(--show-accent)] hover:underline"
           >
-            {todayCount} tonight · {restOfWeekCount} more this week →
+            {todayCount} today · {restOfWeekCount} more this week →
           </Link>
         </div>
       )}
