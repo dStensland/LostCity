@@ -28,6 +28,7 @@ PLACE_DATA = {
     "spot_type": "arts_district",
     "website": "https://castleberryhill.org",
     "description": "Historic warehouse district turned arts neighborhood with galleries, lofts, and monthly art stroll.",
+    "is_active": True,
 }
 
 

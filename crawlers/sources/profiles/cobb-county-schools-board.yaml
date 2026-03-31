@@ -1,0 +1,7 @@
+version: 1
+slug: cobb-county-schools-board
+name: Cobb County Schools Board of Education
+data_goals:
+- events
+- images
+- tickets

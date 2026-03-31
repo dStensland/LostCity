@@ -25,7 +25,6 @@ import { getCardTier } from "./tier-assignment";
 export type EditorialMap = Record<number, EditorialMention[]>;
 import type { FeedEventData } from "@/components/EventCard";
 import type { Spot } from "@/lib/spots-constants";
-import { THINGS_TO_DO_TILES } from "@/lib/spots-constants";
 import { getTimeSlotLabel, isNightlifeTime } from "./time-slots";
 import { scoreEvent, scoreDestination, applyWildCardSorting } from "./scoring";
 import { getWeatherContextLabel } from "./weather-mapping";
@@ -1036,83 +1035,6 @@ export function buildTheSceneSection(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Experiences section (always-on venue destinations)
-// ---------------------------------------------------------------------------
-
-/** Category mapping derived from THINGS_TO_DO_TILES (single source of truth) */
-const EXPERIENCE_CATEGORIES: Record<string, string[]> = {};
-for (const tile of THINGS_TO_DO_TILES) {
-  EXPERIENCE_CATEGORIES[tile.key] = [...tile.venueTypes];
-}
-// Extra venue types that qualify but aren't in tiles
-EXPERIENCE_CATEGORIES["parks"]?.push("outdoor_venue");
-EXPERIENCE_CATEGORIES["entertainment-games"]?.push("entertainment");
-EXPERIENCE_CATEGORIES["markets"]?.push("market");
-EXPERIENCE_CATEGORIES["fitness"]?.push("fitness_center");
-
-function categorizeVenueType(venueType: string | null): string {
-  if (!venueType) return "museums";
-  for (const [cat, types] of Object.entries(EXPERIENCE_CATEGORIES)) {
-    if (types.includes(venueType)) return cat;
-  }
-  return "museums";
-}
-
-/**
- * Build experiences section from real venue data.
- * Returns null when no qualifying venues exist (graceful degradation).
- */
-export function buildExperiencesSection(
-  venues: Spot[],
-  eventCountMap: Map<number, number>,
-): CityPulseSection | null {
-  if (venues.length === 0) return null;
-
-  // Deduplicate by venue ID (data can have dupes from slug conflicts)
-  const seen = new Set<number>();
-  const unique = venues.filter((v) => {
-    if (seen.has(v.id)) return false;
-    seen.add(v.id);
-    return true;
-  });
-
-  // Sort: venues with events first (by count desc), then alphabetical
-  const sorted = [...unique].sort((a, b) => {
-    const aCount = eventCountMap.get(a.id) ?? 0;
-    const bCount = eventCountMap.get(b.id) ?? 0;
-    if (bCount !== aCount) return bCount - aCount;
-    return a.name.localeCompare(b.name);
-  });
-
-  const items: CityPulseItem[] = sorted.map((venue) =>
-    makeDestinationItem(venue, {
-      contextual_label: categorizeVenueType(venue.place_type),
-    }),
-  );
-
-  // Attach per-category counts + per-venue event counts as meta
-  // so the client can filter without refetching
-  const categoryCounts: Record<string, number> = {};
-  const venueEventCounts: Record<number, number> = {};
-  for (const venue of unique) {
-    const cat = categorizeVenueType(venue.place_type);
-    categoryCounts[cat] = (categoryCounts[cat] ?? 0) + 1;
-    const evCount = eventCountMap.get(venue.id) ?? 0;
-    if (evCount > 0) venueEventCounts[venue.id] = evCount;
-  }
-
-  return {
-    id: "experiences",
-    type: "experiences",
-    title: "Things to Do",
-    subtitle: "Parks, museums, galleries, trails & more",
-    priority: "tertiary",
-    accent_color: "var(--neon-green)",
-    items,
-    meta: { category_counts: categoryCounts, venue_event_counts: venueEventCounts },
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Planning Horizon section (7+ days out, tentpoles / festivals / multi-day events only)
@@ -1120,13 +1042,20 @@ export function buildExperiencesSection(
 
 /**
  * Build a "On the Horizon" section for events more than 7 days away.
- * Quality-gated to genuinely plan-ahead events:
+ * Quality-gated to genuinely plan-ahead, showcase-worthy events:
+ *
+ *   Structural requirements (all events):
+ *   - Must have image_url — it's a carousel, imageless cards look broken
+ *   - Far-future events (90+ days out) must also have a real description
+ *
+ *   At least one of:
  *   - is_tentpole = true
  *   - festival_id is set (multi-day festival)
- *   - end_date differs from start_date (multi-day event)
+ *   - end_date differs from start_date AND no series_id
+ *     (multi-day one-off event; recurring series are excluded)
  *   - importance = 'flagship'
- * Single-day recurring events (open mics, weekly bar nights) are excluded
- * even if they have importance = 'major'.
+ *
+ * Single-day recurring events and recurring multi-day series are excluded.
  * Returns null when fewer than 2 qualifying events remain after filtering.
  *
  * This builder reads from the same events pool already fetched for the feed,
@@ -1145,12 +1074,13 @@ export function buildPlanningHorizonSection(
   const horizonEvents = events.filter((e) => {
     const raw = e as Record<string, unknown>;
     const importance = raw.importance as string | undefined;
-    // Accept tentpoles, festival sub-events, multi-day events, and flagships
+    // Accept tentpoles, festival sub-events, multi-day events, and flagships.
+    // Note: "major" is intentionally excluded here — major single-day events
+    // belong in the Lineup, not the planning carousel.
     const qualifies =
       raw.is_tentpole ||
       raw.festival_id ||
       importance === "flagship" ||
-      importance === "major" ||
       (e.end_date && e.end_date !== e.start_date);
     return qualifies && e.start_date >= weekFromNowStr;
   });
@@ -1204,15 +1134,44 @@ export function buildPlanningHorizonSection(
   // The pool query is already filtered to tentpoles/festivals/flagships, but
   // the section builder also receives events from other pools (e.g. trending).
   // This gate ensures no single-day recurring events slip through either path.
+  //
+  // Additional tightening:
+  //   1. Require image_url — a showcase carousel without images is noise.
+  //   2. Exclude series events from the multi-day path — a recurring class that
+  //      happens to span multiple days is not "On the Horizon" material. Series
+  //      events can still pass via is_tentpole or festival_id.
+  //   3. Far-future events (90+ days out) also require a description — thin
+  //      placeholder entries 3+ months away with no details get cut.
+  const ninetyDaysAhead = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+  const ninetyDaysAheadStr = ninetyDaysAhead.toISOString().split("T")[0];
+
   const qualityFiltered = deduped.filter((e) => {
     const raw = e as Record<string, unknown>;
-    // Always include tentpoles and festival sub-events
+
+    // Gate 1: All events in this section must have an image — it's a showcase carousel.
+    if (!e.image_url) return false;
+
+    // Gate 2: Far-future events (90+ days out) need a real description too.
+    // Placeholder entries with no copy don't earn a slot months in advance.
+    if (e.start_date >= ninetyDaysAheadStr) {
+      const desc = (e.description ?? "").trim();
+      if (desc.length < 20) return false;
+    }
+
+    // Always include tentpoles and festival sub-events (they already cleared Gate 1+2)
     if (raw.is_tentpole) return true;
     if (raw.festival_id) return true;
-    // Include multi-day events (end_date differs from start_date)
-    if (e.end_date && e.end_date !== e.start_date) return true;
+
     // Include flagship importance
-    if ((e as any).importance === "flagship") return true; // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (e.importance === "flagship") return true;
+
+    // Include multi-day events — but NOT if they belong to a recurring series.
+    // A 3-day workshop that recurs monthly is a class, not a landmark event.
+    if (e.end_date && e.end_date !== e.start_date) {
+      if (e.series_id) return false;
+      return true;
+    }
+
     // Exclude everything else (single-day non-tentpole events)
     return false;
   });

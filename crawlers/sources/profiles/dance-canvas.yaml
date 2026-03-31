@@ -1,0 +1,7 @@
+version: 1
+slug: dance-canvas
+name: Dance Canvas
+data_goals:
+- events
+- images
+- tickets

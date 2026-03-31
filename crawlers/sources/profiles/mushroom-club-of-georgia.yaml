@@ -2,6 +2,8 @@ version: 1
 slug: mushroom-club-of-georgia
 name: "Mushroom Club of Georgia"
 integration_method: llm_crawler
+defaults:
+  venue_name: "Mushroom Club of Georgia"
 data_goals:
   - events
 discovery:

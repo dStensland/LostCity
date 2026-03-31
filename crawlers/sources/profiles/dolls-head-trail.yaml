@@ -1,0 +1,7 @@
+version: 1
+slug: dolls-head-trail
+name: Doll's Head Trail
+data_goals:
+- events
+- images
+- tickets

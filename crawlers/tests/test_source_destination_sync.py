@@ -134,3 +134,10 @@ def test_refresh_venue_specials_from_website_skips_fresh_venues(monkeypatch):
     stats = sync.refresh_venue_specials_from_website(99, max_age_days=7)
 
     assert stats == {"skipped": "fresh"}
+
+
+def test_venue_select_uses_place_type_column():
+    import source_destination_sync as sync
+
+    assert "place_type" in sync._VENUE_SELECT
+    assert "venue_type" not in sync._VENUE_SELECT

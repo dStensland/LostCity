@@ -24,6 +24,7 @@ from db import (
     smart_update_existing_event,
     update_event,
 )
+from db.programs import insert_program
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -171,6 +172,50 @@ def _build_tags(title: str) -> tuple[str, list[str]]:
     return subcategory, list(dict.fromkeys(tags))
 
 
+def _build_program_record(
+    title: str,
+    occurrences: list[dict],
+    *,
+    source_id: int,
+    venue_id: int,
+) -> dict:
+    first = occurrences[0]
+    start_dates = sorted(occurrence["start_date"] for occurrence in occurrences)
+    schedule_days = sorted(
+        {
+            datetime.strptime(occurrence["start_date"], "%Y-%m-%d").isoweekday()
+            for occurrence in occurrences
+        }
+    )
+
+    return {
+        "source_id": source_id,
+        "place_id": venue_id,
+        "name": title,
+        "description": first["description"],
+        "program_type": "class",
+        "provider_name": PLACE_DATA["name"],
+        "season": "year_round",
+        "session_start": start_dates[0],
+        "session_end": start_dates[-1],
+        "schedule_days": schedule_days,
+        "schedule_start_time": first["start_time"],
+        "schedule_end_time": first["end_time"],
+        "cost_amount": None,
+        "cost_period": None,
+        "cost_notes": None,
+        "registration_status": "open",
+        "registration_url": first["ticket_url"],
+        "tags": first["tags"],
+        "status": "active",
+        "metadata": {
+            "occurrence_count": len(occurrences),
+            "instructor": first.get("instructor"),
+        },
+        "_venue_name": PLACE_DATA["name"],
+    }
+
+
 def parse_upcoming_html(
     html: str,
     page_url: str,
@@ -306,6 +351,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
         parsed_events = parse_upcoming_html(page.content(), page.url)
 
         browser.close()
+
+    events_by_title: dict[str, list[dict]] = {}
+    for parsed in parsed_events:
+        events_by_title.setdefault(parsed["title"], []).append(parsed)
+
+    for title, occurrences in events_by_title.items():
+        insert_program(
+            _build_program_record(
+                title,
+                occurrences,
+                source_id=source_id,
+                venue_id=venue_id,
+            )
+        )
 
     for parsed in parsed_events:
         events_found += 1

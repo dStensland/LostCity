@@ -667,6 +667,10 @@ class VenueInfo:
     lat: float
     lng: float
     venue_type: str = "recreation"
+    website: Optional[str] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    hours: Optional[dict[str, dict[str, str]]] = None
 
 
 @dataclass
@@ -1239,6 +1243,14 @@ def _resolve_venue(
         "place_type": matched_venue.venue_type,
         "spot_type": matched_venue.venue_type,
     }
+    if matched_venue.website:
+        place_data["website"] = matched_venue.website
+    if matched_venue.description:
+        place_data["description"] = matched_venue.description
+    if matched_venue.image_url:
+        place_data["image_url"] = matched_venue.image_url
+    if matched_venue.hours:
+        place_data["hours"] = matched_venue.hours
 
     vid = get_or_create_place(place_data)
     if tenant.venue_enrichment_builder:
@@ -1321,6 +1333,10 @@ def crawl_tenant(source: dict, tenant: TenantConfig) -> tuple[int, int, int]:
             "lng": tenant.default_venue.lng,
             "place_type": tenant.default_venue.venue_type,
             "spot_type": tenant.default_venue.venue_type,
+            "website": tenant.default_venue.website,
+            "description": tenant.default_venue.description,
+            "image_url": tenant.default_venue.image_url,
+            "hours": tenant.default_venue.hours,
         }
     )
     venue_id_cache[""] = default_vid

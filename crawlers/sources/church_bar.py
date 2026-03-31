@@ -25,6 +25,18 @@ PLACE_DATA = {
     "place_type": "nightclub",
     "spot_type": "bar",
     "website": BASE_URL,
+    "description": (
+        "Church Bar is an Atlanta nightclub with a classic dive feel, late-night dance-floor energy, "
+        "patio hangout space, and a DJ-driven Edgewood nightlife crowd."
+    ),
+    "image_url": "https://lh3.googleusercontent.com/place-photos/AL8-SNEiS_e91LI9dv0NqEnKYMoyLyyYpKVc7F0sdrvjdxVGEPInc7MkLBd_a34aoMis4Fm7046gaOZdvmKU776c5LDQYlWaVZRdI--FY_O_DFFJQW_SBQyo36_P00ZoZ0pfMP9_FLtfOpgymytKIQ=s4800-w800",
+    "hours": {
+        "monday": {"open": "10:00", "close": "16:00"},
+        "tuesday": {"open": "10:00", "close": "16:00"},
+        "wednesday": {"open": "10:00", "close": "16:00"},
+        "thursday": {"open": "10:00", "close": "16:00"},
+        "sunday": {"open": "09:30", "close": "12:30"},
+    },
     "vibes": ["dive-bar", "dance-club", "late-night", "dj", "patio"],
 }
 

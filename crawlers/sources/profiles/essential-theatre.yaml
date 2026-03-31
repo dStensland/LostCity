@@ -5,7 +5,9 @@ source_type: organization
 integration_method: api
 discovery:
   enabled: true
-  type: json
+  type: api
+  api:
+    adapter: custom
   urls:
     - https://www.essentialtheatre.com/wp-json/wp/v2/et_play?per_page=100
     - https://www.essentialtheatre.com/wp-json/wp/v2/et_program?per_page=50

@@ -54,9 +54,9 @@ def parse_show_window(page_text: str, today: date | None = None) -> dict:
     """Extract the announced current Atlanta Jewelry Show season from homepage text."""
     today = today or datetime.now().date()
     match = re.search(
-        r"(AJS\s+(Spring|Fall)\s+(\d{4}))\s*\|\s*([A-Za-z]+\s+\d{1,2}-\d{1,2},\s*\d{4})\s*\|\s*Cobb Convention Center,\s*Atlanta",
+        r"(AJS\s+(Spring|Fall)\s+(\d{4})).{0,160}?([A-Za-z]+\s+\d{1,2}-\d{1,2},\s*\d{4}).{0,160}?Cobb Convention Center,\s*Atlanta",
         page_text,
-        re.IGNORECASE,
+        re.IGNORECASE | re.DOTALL,
     )
     if not match:
         raise ValueError("Could not find Atlanta Jewelry Show date window on official homepage")

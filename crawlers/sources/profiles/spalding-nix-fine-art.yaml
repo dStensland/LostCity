@@ -1,0 +1,7 @@
+version: 1
+slug: spalding-nix-fine-art
+name: Spalding Nix Fine Art
+data_goals:
+- events
+- images
+- tickets

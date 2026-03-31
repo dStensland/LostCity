@@ -19,6 +19,7 @@ from db.client import (
     _normalize_image_url,
     _normalize_source_url,
     events_support_show_signal_columns,
+    events_support_is_show_column,
     events_support_film_identity_columns,
     events_support_content_kind_column,
     events_support_is_active_column,
@@ -70,6 +71,37 @@ from tba_policy import classify_tba_event
 
 logger = logging.getLogger(__name__)
 
+_DURATION_NORMALIZATION_MAP = {
+    "quick": "short",
+    "short": "short",
+    "medium": "medium",
+    "long": "half-day",
+    "half-day": "half-day",
+    "all-day": "full-day",
+    "full-day": "full-day",
+    "multi-day": "multi-day",
+}
+
+_CLASSIFY_V2_REWRITE_SOURCE_CATEGORIES = frozenset(
+    {
+        "art",
+        "music",
+        "nightlife",
+        "community",
+        "other",
+        "family",
+        "education",
+        "learning",
+        "words",
+        "support",
+        "support_group",
+        "exercise",
+        "recreation",
+        "wellness",
+    }
+)
+_CLASSIFY_V2_REWRITE_MIN_CONFIDENCE = 0.8
+
 _RECOVERABLE_EVENT_DUPLICATE_INDEXES = (
     "idx_events_unique_source_venue_slot_norm_title_timed",
     "idx_events_unique_source_venue_slot_norm_title_notimed",
@@ -101,6 +133,14 @@ _RRULE_BYDAY_TO_WEEKDAY = {
 }
 _WEEKDAY_TO_BYDAY = {v: k for k, v in _RRULE_BYDAY_TO_WEEKDAY.items()}
 _BYDAY_RE = re.compile(r"BYDAY=([A-Z]{2})", re.IGNORECASE)
+
+
+def _normalize_classification_duration(value: Optional[str]) -> Optional[str]:
+    """Map classifier duration labels onto the DB's accepted enum values."""
+    normalized = (value or "").strip().lower()
+    if not normalized:
+        return None
+    return _DURATION_NORMALIZATION_MAP.get(normalized)
 
 
 def _fix_recurrence_day_mismatch(event_data: dict) -> None:
@@ -831,7 +871,8 @@ def _step_infer_tags(event_data: dict, ctx: InsertContext) -> dict:
 def _step_classify_v2(event_data: dict, ctx: InsertContext) -> dict:
     """
     Run new hybrid classification engine (Phase 2).
-    Populates derived columns WITHOUT overwriting category_id.
+    Populates derived columns and can optionally rewrite category when
+    CLASSIFY_V2_REWRITE_CATEGORY is enabled.
     Guarded by CLASSIFY_V2_ENABLED env var and column-existence check.
     """
     import os as _os
@@ -876,9 +917,17 @@ def _step_classify_v2(event_data: dict, ctx: InsertContext) -> dict:
         logger.info("classify_v2 disagrees: old=%s new=%s title='%s'",
                     old_category, result.category, title[:60])
 
-    # Populate derived attributes (additive — DON'T overwrite category)
+    if _should_rewrite_category_from_v2(
+        old_category, result.category, result.confidence
+    ):
+        event_data["category"] = result.category
+    event_data["_classification_confidence"] = result.confidence
+
+    # Populate derived attributes.
     if result.duration:
-        event_data["duration"] = result.duration
+        normalized_duration = _normalize_classification_duration(result.duration)
+        if normalized_duration:
+            event_data["duration"] = normalized_duration
     if result.cost_tier:
         event_data["cost_tier"] = result.cost_tier
     if result.skill_level:
@@ -896,6 +945,143 @@ def _step_classify_v2(event_data: dict, ctx: InsertContext) -> dict:
         event_data["audience_tags"] = [result.audience]
     event_data["classification_prompt_version"] = result.prompt_version
 
+    return event_data
+
+
+def _classify_v2_category_rewrite_enabled() -> bool:
+    import os as _os
+
+    return bool(_os.environ.get("CLASSIFY_V2_REWRITE_CATEGORY"))
+
+
+def _should_rewrite_category_from_v2(
+    existing_category: Optional[str],
+    incoming_category: Optional[str],
+    confidence: Optional[float] = None,
+) -> bool:
+    existing_normalized = str(existing_category or "").strip().lower()
+    incoming_normalized = str(incoming_category or "").strip().lower()
+
+    if not _classify_v2_category_rewrite_enabled():
+        return False
+    if not incoming_normalized or incoming_normalized not in VALID_CATEGORIES:
+        return False
+    if not existing_normalized or existing_normalized == incoming_normalized:
+        return False
+    if confidence is None or confidence < _CLASSIFY_V2_REWRITE_MIN_CONFIDENCE:
+        return False
+
+    return existing_normalized in _CLASSIFY_V2_REWRITE_SOURCE_CATEGORIES
+
+
+_IS_SHOW_STAGE_VENUE_TYPES = frozenset(
+    {
+        "music_venue",
+        "concert_hall",
+        "amphitheater",
+        "arena",
+        "stadium",
+        "theater",
+        "comedy_club",
+    }
+)
+_IS_SHOW_OPEN_FORMAT_TAGS = frozenset({"open-mic", "karaoke", "jam", "open-format"})
+_IS_SHOW_DANCE_SOCIAL_TAGS = frozenset(
+    {"salsa", "bachata", "swing", "line-dancing", "latin", "dance-party"}
+)
+_IS_SHOW_PERFORMANCE_TAGS = frozenset(
+    {"concert", "live-music", "headliner", "tour", "residency", "ballet", "opera"}
+)
+_IS_SHOW_STRONG_TICKET_STATUSES = frozenset(
+    {"sold-out", "low-tickets", "last-tickets", "limited-availability", "waitlist"}
+)
+_IS_SHOW_OPEN_FORMAT_TITLE_RE = re.compile(
+    r"\b(open[\s-]?mic|karaoke|jam(?:\s+session)?|songwriters?\s+open[\s-]?mic)\b",
+    re.IGNORECASE,
+)
+
+
+def _coerce_price_value(value: object) -> float:
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _compute_is_show(event_data: dict, venue_type: Optional[str]) -> bool:
+    """Return True when the event is a booked performance worth planning around."""
+    content_kind = str(event_data.get("content_kind") or "event").strip().lower()
+    if content_kind in {"exhibit", "special"}:
+        return False
+
+    category = str(
+        event_data.get("category_id") or event_data.get("category") or ""
+    ).strip().lower()
+    title = str(event_data.get("title") or "").strip()
+    normalized_venue_type = str(venue_type or "").strip().lower()
+    signal_tags = {
+        str(value).strip().lower()
+        for value in (
+            list(event_data.get("tags") or []) + list(event_data.get("genres") or [])
+        )
+        if value
+    }
+
+    has_ticket_url = bool(str(event_data.get("ticket_url") or "").strip())
+    ticket_status = str(event_data.get("ticket_status") or "").strip().lower()
+    has_strong_ticket_status = ticket_status in _IS_SHOW_STRONG_TICKET_STATUSES
+    has_paid_price = (
+        _coerce_price_value(event_data.get("price_min")) > 0
+        or _coerce_price_value(event_data.get("price_max")) > 0
+    )
+    is_stage_venue = normalized_venue_type in _IS_SHOW_STAGE_VENUE_TYPES
+    is_recurring = bool(event_data.get("is_recurring"))
+    has_explicit_performance_tag = bool(signal_tags & _IS_SHOW_PERFORMANCE_TAGS)
+    has_open_format_signal = bool(signal_tags & _IS_SHOW_OPEN_FORMAT_TAGS)
+    has_explicit_open_format_title = bool(_IS_SHOW_OPEN_FORMAT_TITLE_RE.search(title))
+    has_booked_show_signal = (
+        has_ticket_url
+        or has_strong_ticket_status
+        or has_paid_price
+        or has_explicit_performance_tag
+    )
+
+    if category in {"theater", "film"}:
+        return True
+
+    if category == "dance":
+        if event_data.get("is_class"):
+            return False
+        if signal_tags & _IS_SHOW_DANCE_SOCIAL_TAGS and not has_booked_show_signal:
+            return False
+        return has_booked_show_signal or (is_stage_venue and not is_recurring)
+
+    if category == "comedy":
+        if "open-mic" in signal_tags and not has_booked_show_signal:
+            return False
+        return (
+            normalized_venue_type in {"comedy_club", "theater"}
+            or has_booked_show_signal
+        )
+
+    if category == "music":
+        if has_open_format_signal and (
+            is_recurring
+            or has_explicit_open_format_title
+            or (not has_booked_show_signal and not is_stage_venue)
+        ):
+            return False
+        return has_booked_show_signal or (is_stage_venue and not is_recurring)
+
+    return False
+
+
+def _step_infer_is_show(event_data: dict, ctx: InsertContext) -> dict:
+    """Populate is_show when the schema supports it."""
+    if events_support_is_show_column():
+        event_data["is_show"] = _compute_is_show(event_data, ctx.venue_type)
+    else:
+        event_data.pop("is_show", None)
     return event_data
 
 
@@ -1210,7 +1396,6 @@ def _step_finalize(event_data: dict, ctx: InsertContext) -> dict:
 
     event_data.pop("subcategory", None)
     event_data.pop("subcategory_id", None)
-
     return event_data
 
 
@@ -1238,6 +1423,7 @@ INSERT_PIPELINE = [
     _step_classify_v2,          # NEW — taxonomy v2 derived columns
     _step_infer_content_kind,
     _step_show_signals,
+    _step_infer_is_show,
     _step_field_metadata,
     _step_data_quality,
     _step_finalize,
@@ -1416,6 +1602,7 @@ def insert_event(
     if cross_source_canonical_id:
         event_data["canonical_event_id"] = cross_source_canonical_id
 
+    event_data.pop("_classification_confidence", None)
     event_data.pop("_parsed_artists", None)
     event_data.pop("_suppress_title_participants", None)
 
@@ -1519,6 +1706,7 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     )
 
     updates: dict = {}
+    classification_rewrite_applied = False
     existing_category = str(existing.get("category_id") or "").strip().lower()
     incoming_category = str(
         incoming.get("category_id") or incoming.get("category") or ""
@@ -1670,8 +1858,20 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
             updates["category_id"] = incoming_category
         elif (
             incoming_category != existing_category
-            and existing_category in {"community", "other"}
-            and incoming_category not in {"community", "other"}
+            and (
+                (
+                    existing_category in {"community", "other"}
+                    and incoming_category not in {"community", "other"}
+                )
+                or (
+                    _should_rewrite_category_from_v2(
+                        existing_category,
+                        incoming_category,
+                        incoming.get("_classification_confidence"),
+                    )
+                    and incoming.get("classification_prompt_version")
+                )
+            )
         ):
             # Never override the category of a volunteer event — it is
             # intentionally ``community`` regardless of venue type or title
@@ -1685,6 +1885,34 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
             )
             if not existing_is_volunteer:
                 updates["category_id"] = incoming_category
+                classification_rewrite_applied = True
+
+    if incoming.get("classification_prompt_version"):
+        existing_prompt_version = str(existing.get("classification_prompt_version") or "").strip()
+        incoming_prompt_version = str(incoming.get("classification_prompt_version") or "").strip()
+        if incoming_prompt_version and (
+            classification_rewrite_applied
+            or not existing_prompt_version
+            or incoming_prompt_version != existing_prompt_version
+        ):
+            updates["classification_prompt_version"] = incoming_prompt_version
+
+    for field in (
+        "duration",
+        "cost_tier",
+        "skill_level",
+        "booking_required",
+        "indoor_outdoor",
+        "significance",
+        "significance_signals",
+        "audience_tags",
+    ):
+        incoming_value = incoming.get(field)
+        existing_value = existing.get(field)
+        if incoming_value in (None, "", [], {}):
+            continue
+        if classification_rewrite_applied or existing_value in (None, "", [], {}):
+            updates[field] = incoming_value
 
     if not existing.get("is_sensitive"):
         source_id = existing.get("source_id") or incoming.get("source_id")
@@ -1723,6 +1951,12 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
                 existing_kind == "event" and incoming_kind in {"exhibit", "special"}
             ):
                 updates["content_kind"] = incoming_kind
+
+    if events_support_is_show_column():
+        incoming_is_show = incoming.get("is_show")
+        existing_is_show = existing.get("is_show")
+        if incoming_is_show is True and existing_is_show is not True:
+            updates["is_show"] = True
 
     if events_support_film_identity_columns() and existing.get("category_id") == "film":
         if incoming.get("film_title") and not existing.get("film_title"):

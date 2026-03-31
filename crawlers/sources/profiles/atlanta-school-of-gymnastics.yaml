@@ -1,0 +1,8 @@
+version: 1
+slug: atlanta-school-of-gymnastics
+name: Atlanta School of Gymnastics
+data_goals:
+- classes
+- events
+- images
+- tickets

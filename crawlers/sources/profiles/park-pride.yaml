@@ -1,0 +1,7 @@
+version: 1
+slug: park-pride
+name: Park Pride
+data_goals:
+- events
+- images
+- tickets

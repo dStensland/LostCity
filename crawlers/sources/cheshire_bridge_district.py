@@ -29,8 +29,9 @@ PLACE_DATA = {
     "lng": -84.3560,
     "place_type": "entertainment_district",
     "spot_type": "entertainment_district",
-    "website": None,
+    "website": "https://cheshirebridge.com",
     "description": "Atlanta's LGBTQ+ entertainment corridor with nightlife venues, drag shows, and unique businesses.",
+    "is_active": True,
 }
 
 

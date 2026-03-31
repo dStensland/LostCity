@@ -1,0 +1,6 @@
+version: 1
+slug: besharat-gallery
+name: Besharat Gallery
+data_goals:
+- exhibits
+- images

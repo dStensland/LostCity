@@ -23,5 +23,4 @@ detail:
   use_llm: false
 data_goals:
 - events
-- classes
 - tickets

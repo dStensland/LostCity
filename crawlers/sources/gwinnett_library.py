@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from urllib.parse import quote
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -576,14 +576,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
             }
 
             existing = find_event_by_hash(content_hash)
-            if existing:
-                smart_update_existing_event(existing, event_record)
-                events_updated += 1
-                continue
-
             try:
                 insert_event(event_record)
-                events_new += 1
+                if existing:
+                    events_updated += 1
+                else:
+                    events_new += 1
                 logger.debug(f"Added: {title} on {start_date_str} at {place_data['name']}")
             except Exception as e:
                 logger.error(f"Failed to insert '{title}': {e}")

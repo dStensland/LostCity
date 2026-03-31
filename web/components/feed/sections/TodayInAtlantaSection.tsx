@@ -1,13 +1,13 @@
 "use client";
 
 /**
- * TodayInAtlantaSection — standalone news module, self-fetching.
+ * TodayInAtlantaSection — tabbed category news browser.
  *
- * Extracted from CityBriefing so it renders BELOW The Lineup rather than
- * inside the hero area. Default category is "culture" (not "all") so the
- * first thing users see is arts/culture/food, not crime.
+ * Compact section with category tabs (Culture, Arts, Food, etc.).
+ * Each tab shows up to 3 stories. Stays near the top of the feed
+ * without taking vertical space — user flips tabs to browse.
  *
- * Fetch: /api/portals/[slug]/network-feed?limit=20
+ * Fetch: /api/portals/[slug]/network-feed?limit=60
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -17,10 +17,11 @@ import {
   Broadcast,
 } from "@phosphor-icons/react";
 import Dot from "@/components/ui/Dot";
+import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import SmartImage from "@/components/SmartImage";
 import type { NetworkPost } from "./NetworkFeedSection";
 import {
   getCategoryColor,
-  CATEGORY_COLORS,
   CATEGORY_ICONS,
 } from "./NetworkFeedSection";
 
@@ -28,19 +29,22 @@ import {
 
 export interface TodayInAtlantaSectionProps {
   portalSlug: string;
-  portalId?: string;
 }
 
-// ── Category tab config — culture-first order ─────────────────────────────────
+// ── Category display order — culture-positive first ──────────────────────────
 
-const FILTER_CATEGORIES = [
-  { id: "culture",   label: "Culture" },
-  { id: "arts",      label: "Arts" },
-  { id: "food",      label: "Food" },
-  { id: "music",     label: "Music" },
+const CATEGORY_ORDER = [
+  { id: "culture", label: "Culture" },
+  { id: "arts", label: "Arts" },
+  { id: "food", label: "Food & Drink" },
+  { id: "music", label: "Music" },
   { id: "community", label: "Community" },
-  { id: "all",       label: "All" },
+  { id: "civic", label: "Civic" },
+  { id: "politics", label: "Politics" },
 ];
+
+/** Max stories per tab */
+const MAX_PER_TAB = 3;
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -56,83 +60,52 @@ function timeAgo(dateStr: string | null): string {
   return `${Math.floor(days / 7)}w ago`;
 }
 
-// ── NewsRow — single post row ─────────────────────────────────────────────────
+// ── NewsRow — single post row ────────────────────────────────────────────────
 
 function NewsRow({ post, isLast }: { post: NetworkPost; isLast: boolean }) {
-  const cats = post.categories ?? post.source?.categories ?? [];
-  const catColor = getCategoryColor(cats);
-  const CatIcon = CATEGORY_ICONS[cats[0] || "news"] || CATEGORY_ICONS.news;
-  const catLabel = (cats[0] || "news").replace(/_/g, " ");
-
   return (
     <a
       href={post.url}
       target="_blank"
       rel="noopener noreferrer"
       className={[
-        "flex items-start gap-3 py-3 px-2 transition-colors group",
-        "hover:bg-[var(--dusk)]/40 rounded-lg",
+        "flex flex-col gap-0.5 py-2.5 transition-colors group",
         !isLast && "border-b border-[var(--twilight)]/20",
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      {/* Category icon */}
-      <div
-        className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center mt-0.5"
-        style={{ backgroundColor: `${catColor}18` }}
-      >
-        <CatIcon weight="duotone" className="w-3.5 h-3.5" style={{ color: catColor }} />
-      </div>
-
-      {/* Headline + source */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-[var(--cream)] leading-snug line-clamp-2 group-hover:underline underline-offset-2">
-          {post.title}
-        </p>
-        <div className="flex items-center gap-1.5 mt-1">
-          {post.source?.name && (
-            <span className="text-2xs text-[var(--soft)] font-medium truncate">{post.source.name}</span>
-          )}
-          {post.source?.name && <Dot className="text-[var(--muted)]" />}
-          <span className="text-2xs text-[var(--muted)] flex-shrink-0">{timeAgo(post.published_at)}</span>
-          {catLabel !== "news" && (
-            <>
-              <Dot className="text-[var(--muted)]" />
-              <span
-                className="text-2xs font-mono uppercase tracking-wider"
-                style={{ color: catColor }}
-              >
-                {catLabel}
-              </span>
-            </>
-          )}
-        </div>
+      <p className="text-sm text-[var(--cream)] leading-snug line-clamp-2 group-hover:underline underline-offset-2">
+        {post.title}
+      </p>
+      <div className="flex items-center gap-1.5 mt-0.5">
+        {post.source?.name && (
+          <span className="text-2xs text-[var(--soft)] font-medium truncate">{post.source.name}</span>
+        )}
+        {post.source?.name && <Dot className="text-[var(--muted)]" />}
+        <span className="text-2xs text-[var(--muted)] flex-shrink-0">{timeAgo(post.published_at)}</span>
       </div>
     </a>
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// ── Main component ───────────────────────────────────────────────────────────
 
 export function TodayInAtlantaSection({ portalSlug }: TodayInAtlantaSectionProps) {
   const [posts, setPosts] = useState<NetworkPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>("all");
 
-  // Default to "culture" — positive/aspirational first, "All" (crime-inclusive) last
-  const [activeCategory, setActiveCategory] = useState("culture");
-
-  // ── Fetch ────────────────────────────────────────────────────────────────
+  // ── Fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch(`/api/portals/${portalSlug}/network-feed?limit=20`, {
+    fetch(`/api/portals/${portalSlug}/network-feed?limit=60`, {
       signal: controller.signal,
     })
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => {
         if (controller.signal.aborted) return;
-        // Deduplicate by title
         const seenTitles = new Set<string>();
         const deduped = ((data.posts || []) as NetworkPost[]).filter((p) => {
           const norm = p.title.toLowerCase().trim();
@@ -150,39 +123,48 @@ export function TodayInAtlantaSection({ portalSlug }: TodayInAtlantaSectionProps
     return () => controller.abort();
   }, [portalSlug]);
 
-  // ── Derived state ─────────────────────────────────────────────────────────
+  // ── Build category buckets ─────────────────────────────────────────────────
 
-  // Which categories actually have posts in this batch?
-  const availableCategories = useMemo(() => {
-    const catSet = new Set<string>();
-    for (const post of posts) {
-      const cats = post.categories ?? post.source?.categories ?? [];
-      for (const c of cats) catSet.add(c);
+  const tabs = useMemo(() => {
+    const categoryTabs: { id: string; label: string; posts: NetworkPost[]; color: string }[] = [];
+
+    for (const cat of CATEGORY_ORDER) {
+      const matching = posts.filter((p) => {
+        const cats = p.categories ?? p.source?.categories ?? [];
+        return cats.includes(cat.id);
+      });
+      if (matching.length > 0) {
+        categoryTabs.push({
+          ...cat,
+          posts: matching.slice(0, MAX_PER_TAB),
+          color: getCategoryColor([cat.id]),
+        });
+      }
     }
-    // "all" is always available; other tabs only if they have content
-    return FILTER_CATEGORIES.filter(
-      (cat) => cat.id === "all" || catSet.has(cat.id),
-    );
+
+    // Prepend "All" tab — 3 most recent regardless of category
+    const allTab = {
+      id: "all",
+      label: "Latest",
+      posts: posts.slice(0, MAX_PER_TAB),
+      color: "#00D4E8",
+    };
+
+    return [allTab, ...categoryTabs];
   }, [posts]);
 
-  const filteredPosts = useMemo(() => {
-    if (activeCategory === "all") return posts;
-    return posts.filter((p) => {
-      const cats = p.categories ?? p.source?.categories ?? [];
-      return cats.includes(activeCategory);
-    });
-  }, [posts, activeCategory]);
+  // Default to "all"
+  const effectiveTab = tabs.some((t) => t.id === activeTab) ? activeTab : "all";
 
-  const displayPosts = filteredPosts.slice(0, 3);
+  const activeGroup = tabs.find((t) => t.id === effectiveTab);
 
-  // ── Loading / empty guards ────────────────────────────────────────────────
+  // ── Guards ─────────────────────────────────────────────────────────────────
 
-  // While loading, return null — LazySection holds space with minHeight
   if (loading) return null;
-  if (posts.length === 0) return null;
+  if (tabs.length === 0) return null;
 
   return (
-    <div className="mt-4 feed-section-enter">
+    <div className="mt-6 feed-section-enter">
       {/* Section header */}
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-1.5">
@@ -195,59 +177,56 @@ export function TodayInAtlantaSection({ portalSlug }: TodayInAtlantaSectionProps
           href={`/${portalSlug}/network`}
           className="flex items-center gap-0.5 text-xs font-mono text-[var(--neon-cyan)] opacity-70 hover:opacity-100 transition-opacity"
         >
-          All local news
+          All news
           <ArrowRight weight="bold" className="w-2.5 h-2.5" />
         </Link>
       </div>
 
-      {/* Category filter pills — only render when there are enough tabs */}
-      {availableCategories.length > 1 && (
-        <div className="flex items-center gap-1.5 mb-3 overflow-x-auto scrollbar-none -mx-1 px-1">
-          {availableCategories.map((cat) => {
-            const isActive = activeCategory === cat.id;
-            const color =
-              cat.id === "all" ? "#00D4E8" : CATEGORY_COLORS[cat.id] || "#00D4E8";
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={[
-                  "shrink-0 px-2.5 py-1 rounded-full font-mono text-2xs font-medium tracking-wide transition-all whitespace-nowrap",
-                  isActive
-                    ? "border"
-                    : "text-[var(--muted)] hover:text-[var(--soft)] border border-transparent hover:border-[var(--twilight)]/40",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                style={
-                  isActive
-                    ? {
-                        color: color,
-                        backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
-                        borderColor: `color-mix(in srgb, ${color} 30%, transparent)`,
-                      }
-                    : undefined
-                }
+      {/* Category tabs */}
+      <div className="flex items-center gap-1.5 mb-3 overflow-x-auto scrollbar-none -mx-1 px-1">
+        {tabs.map((tab) => {
+          const isActive = tab.id === effectiveTab;
+          const CatIcon = tab.id === "all" ? Broadcast : (CATEGORY_ICONS[tab.id] || CATEGORY_ICONS.news);
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={[
+                "shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full font-mono text-2xs font-medium tracking-wide transition-all whitespace-nowrap",
+                isActive
+                  ? "border"
+                  : "text-[var(--muted)] hover:text-[var(--soft)] border border-transparent hover:border-[var(--twilight)]/40",
+              ].join(" ")}
+              style={
+                isActive
+                  ? {
+                      color: tab.color,
+                      backgroundColor: `color-mix(in srgb, ${tab.color} 12%, transparent)`,
+                      borderColor: `color-mix(in srgb, ${tab.color} 30%, transparent)`,
+                    }
+                  : undefined
+              }
+            >
+              <CatIcon weight="duotone" className="w-3 h-3" style={isActive ? { color: tab.color } : undefined} />
+              {tab.label}
+              <span
+                className="text-2xs opacity-60"
               >
-                {cat.label}
-              </button>
-            );
-          })}
+                {tab.posts.length}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active tab stories */}
+      {activeGroup && (
+        <div className="rounded-card bg-[var(--night)] border border-[var(--twilight)]/30 px-3 py-0.5">
+          {activeGroup.posts.map((post, i) => (
+            <NewsRow key={post.id} post={post} isLast={i === activeGroup.posts.length - 1} />
+          ))}
         </div>
       )}
-
-      {/* Posts list */}
-      <div className="rounded-card bg-[var(--night)] border border-[var(--twilight)]/30 px-3 py-1">
-        {displayPosts.length > 0 ? (
-          displayPosts.map((post, i) => (
-            <NewsRow key={post.id} post={post} isLast={i === displayPosts.length - 1} />
-          ))
-        ) : (
-          <p className="py-4 text-center text-sm text-[var(--muted)]">
-            No stories in this category
-          </p>
-        )}
-      </div>
     </div>
   );
 }

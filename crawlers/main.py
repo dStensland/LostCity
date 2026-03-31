@@ -85,6 +85,8 @@ CHAIN_CINEMA_TIMEOUT_SLUGS = {
     "ncg-cinemas-atlanta",
     "silverspot-cinema-atlanta",
     "studio-movie-grill-atlanta",
+    # ArtCallEntry fetches ~984 detail pages at 0.75s each — ~13 minutes per run
+    "open-calls-artcallentry",
 }
 
 # Permanently closed sources that should never run, even if re-activated in DB.

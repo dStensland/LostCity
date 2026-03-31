@@ -250,7 +250,7 @@ WEEKLY_SCHEDULE = [
 EVENT_TYPE_CONFIG = {
     "trivia": {
         "title": "OutSpoken Team Trivia",
-        "description_tpl": "Weekly OutSpoken Team Trivia at {venue}. Free to play — bring a team and compete for prizes.",
+        "description": "Free team trivia hosted by OutSpoken Entertainment. Bring a team and play for prizes.",
         "category": "nightlife",
         "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly", "outspoken"],
@@ -258,50 +258,13 @@ EVENT_TYPE_CONFIG = {
     },
     "music_bingo": {
         "title": "Music Bingo",
-        "description_tpl": "Weekly Music Bingo at {venue} by OutSpoken Entertainment. Listen for the songs, mark your card, win prizes.",
+        "description": "Music bingo hosted by OutSpoken Entertainment with song clues, prizes, and casual team play.",
         "category": "nightlife",
         "subcategory": "nightlife.bingo",
         "tags": ["music-bingo", "bingo", "nightlife", "weekly", "outspoken"],
         "genres": ["bingo"],
     },
 }
-
-
-def _format_time_label(time_24: str) -> str:
-    try:
-        return datetime.strptime(time_24, "%H:%M").strftime("%-I:%M %p")
-    except Exception:
-        return time_24
-
-
-def _build_description(
-    base_template: str,
-    *,
-    venue_name: str,
-    place_data: dict,
-    day_name: str,
-    start_time: str,
-    source_url: str,
-) -> str:
-    base = base_template.format(venue=venue_name).strip()
-    neighborhood = str(place_data.get("neighborhood") or "").strip()
-    city = str(place_data.get("city") or "Atlanta").strip()
-    state = str(place_data.get("state") or "GA").strip()
-    start_label = _format_time_label(start_time)
-
-    where = venue_name
-    if neighborhood:
-        where = f"{where} in {neighborhood}"
-    where = f"{where}, {city}, {state}"
-
-    parts = [
-        base,
-        f"Recurring weekly every {day_name} at {start_label}.",
-        f"Location: {where}.",
-        "Hosted by OutSpoken Entertainment. Free to play with team-based scoring and venue prizes.",
-        f"Confirm weekly details and specials on the venue listing or {source_url}.",
-    ]
-    return " ".join(parts)[:1200]
 
 
 def get_next_weekday(start_date: datetime, weekday: int) -> datetime:
@@ -344,14 +307,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         config = EVENT_TYPE_CONFIG.get(event_type, EVENT_TYPE_CONFIG["trivia"])
         title = config["title"]
         source_url = place_data.get("website", "https://outspokenentertainment.com")
-        description = _build_description(
-            config["description_tpl"],
-            venue_name=venue_name,
-            place_data=place_data,
-            day_name=day_name,
-            start_time=start_time,
-            source_url=source_url,
-        )
+        description = config["description"]
 
         next_date = get_next_weekday(today, day_int)
 

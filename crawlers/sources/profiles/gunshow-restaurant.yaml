@@ -1,0 +1,6 @@
+version: 1
+slug: gunshow-restaurant
+name: Gunshow
+data_goals:
+- images
+- venue_hours

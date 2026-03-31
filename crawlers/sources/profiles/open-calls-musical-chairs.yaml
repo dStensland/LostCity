@@ -1,0 +1,5 @@
+version: 1
+slug: open-calls-musical-chairs
+name: Musical Chairs (Composer Competitions)
+data_goals:
+- open_calls

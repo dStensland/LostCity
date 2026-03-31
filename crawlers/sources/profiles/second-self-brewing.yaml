@@ -13,8 +13,4 @@ discovery:
 detail:
   enabled: false
 data_goals:
-- events
 - images
-- specials
-- tickets
-- venue_hours

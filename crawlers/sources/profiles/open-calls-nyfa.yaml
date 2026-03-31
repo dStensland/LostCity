@@ -1,0 +1,5 @@
+version: 1
+slug: open-calls-nyfa
+name: NYFA Source (Open Calls)
+data_goals:
+- open_calls

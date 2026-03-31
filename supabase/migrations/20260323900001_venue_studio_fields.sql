@@ -12,7 +12,7 @@ ALTER TABLE venues
 
 -- Index for studios directory queries
 CREATE INDEX IF NOT EXISTS idx_venues_studio_type
-  ON venues(studio_type) WHERE studio_type IS NOT NULL AND is_active = true;
+  ON venues(studio_type) WHERE studio_type IS NOT NULL;
 
 COMMENT ON COLUMN venues.studio_type IS 'Set for venues that function as artist studios/workspaces. NULL for non-studios.';
 COMMENT ON COLUMN venues.availability_status IS 'Current availability for studio rentals/memberships.';

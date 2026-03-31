@@ -1,0 +1,7 @@
+version: 1
+slug: round-1-arcade-alpharetta
+name: Round 1 Arcade Alpharetta
+data_goals:
+- events
+- images
+- tickets

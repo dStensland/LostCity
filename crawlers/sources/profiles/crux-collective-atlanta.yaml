@@ -1,0 +1,7 @@
+version: 1
+slug: crux-collective-atlanta
+name: Crux Collective Atlanta
+data_goals:
+- events
+- images
+- tickets

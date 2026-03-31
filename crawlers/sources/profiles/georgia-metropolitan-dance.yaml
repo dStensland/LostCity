@@ -1,0 +1,8 @@
+version: 1
+slug: georgia-metropolitan-dance
+name: Georgia Metropolitan Dance Theatre
+data_goals:
+- events
+- images
+- showtimes
+- tickets

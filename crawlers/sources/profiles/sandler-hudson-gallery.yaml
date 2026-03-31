@@ -1,0 +1,6 @@
+version: 1
+slug: sandler-hudson-gallery
+name: Sandler Hudson Gallery
+data_goals:
+- exhibits
+- images

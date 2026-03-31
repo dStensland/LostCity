@@ -17,7 +17,7 @@ from db.client import _log_write_skip, get_client, writes_enabled
 logger = logging.getLogger(__name__)
 
 _VENUE_SELECT = (
-    "id,name,slug,website,venue_type,description,short_description,image_url,"
+    "id,name,slug,website,place_type,description,short_description,image_url,"
     "planning_notes,last_verified_at"
 )
 

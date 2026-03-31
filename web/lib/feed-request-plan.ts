@@ -45,6 +45,7 @@ export function buildFeedRequestPlan(
       !input.hasTags &&
       !input.hasNeighborhoods,
     shouldBuildSections:
-      !input.hasCursor && unfilteredPersonalizedBrowse,
+      !input.hasCursor &&
+      (unfilteredPersonalizedBrowse || !input.personalized),
   };
 }

@@ -1,0 +1,7 @@
+version: 1
+slug: lovett-summer-programs
+name: Lovett Summer Programs
+data_goals:
+- events
+- images
+- tickets

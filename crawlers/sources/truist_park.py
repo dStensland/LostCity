@@ -61,57 +61,6 @@ def parse_time(time_text: str) -> Optional[str]:
             hour = 0
         return f"{hour:02d}:{minute}"
     return None
-
-
-def format_time_label(time_24: Optional[str]) -> Optional[str]:
-    if not time_24:
-        return None
-    raw = str(time_24).strip()
-    if not raw:
-        return None
-    for fmt in ("%H:%M", "%H:%M:%S"):
-        try:
-            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
-        except ValueError:
-            continue
-    return raw
-
-
-def build_truist_description(
-    *,
-    title: str,
-    start_date: str,
-    start_time: Optional[str],
-    source_url: str,
-) -> str:
-    lowered = title.lower()
-    if any(k in lowered for k in ("braves", "baseball", "vs.", "vs ")):
-        lead = f"{title} at Truist Park."
-        context = "Live baseball experience at the Atlanta Braves' home stadium in The Battery."
-    elif any(k in lowered for k in ("tour", "tours")):
-        lead = f"{title} at Truist Park."
-        context = "Stadium tour experience with ballpark access details listed by the organizer."
-    elif any(k in lowered for k in ("concert", "show", "festival")):
-        lead = f"{title} at Truist Park."
-        context = "Live event in The Battery entertainment district at Truist Park."
-    else:
-        lead = f"{title} at Truist Park."
-        context = "Live event in The Battery entertainment district."
-
-    parts = [lead, context, "Location: Truist Park, The Battery, Atlanta, GA."]
-    time_label = format_time_label(start_time)
-    if start_date and time_label:
-        parts.append(f"Scheduled on {start_date} at {time_label}.")
-    elif start_date:
-        parts.append(f"Scheduled on {start_date}.")
-
-    if source_url:
-        parts.append(f"Check the official listing for latest entry rules, parking, and ticket availability ({source_url}).")
-    else:
-        parts.append("Check the official listing for latest entry rules, parking, and ticket availability.")
-    return " ".join(parts)[:1200]
-
-
 def _parse_game_datetime(game_date: str) -> tuple[str, Optional[str]]:
     """Parse MLB API gameDate into local Atlanta date/time."""
     dt_utc = datetime.fromisoformat(game_date.replace("Z", "+00:00"))
@@ -276,12 +225,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "source_id": source_id,
                 "place_id": venue_id,
                 "title": title,
-                "description": build_truist_description(
-                    title=title,
-                    start_date=start_date,
-                    start_time=start_time,
-                    source_url=event_url,
-                ),
+                "description": None,
                 "start_date": start_date,
                 "start_time": start_time,
                 "end_date": None,

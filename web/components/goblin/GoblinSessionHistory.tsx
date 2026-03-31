@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 
-type SessionStatus = "planning" | "live" | "ended";
+type SessionStatus = "planning" | "live" | "ended" | "canceled";
 
 interface SessionMember {
   user_id: string;
@@ -160,6 +160,13 @@ function StatusBadge({ status }: { status: SessionStatus }) {
       </span>
     );
   }
+  if (status === "canceled") {
+    return (
+      <span className="text-2xs font-bold tracking-[0.2em] uppercase border border-zinc-700 bg-zinc-900/30 text-zinc-500 px-1.5 py-0.5 line-through">
+        CANCELED
+      </span>
+    );
+  }
   return (
     <span className="text-2xs font-bold tracking-[0.2em] uppercase border border-zinc-800 bg-zinc-900/30 text-zinc-600 px-1.5 py-0.5">
       ENDED
@@ -175,7 +182,7 @@ function SessionDetailView({ detail }: { detail: SessionDetail }) {
   const canceledThemes = detail.themes.filter((t) => t.status === "canceled");
 
   return (
-    <div className="border-t-2 border-zinc-800 bg-black/60 px-4 py-4 space-y-4">
+    <div className="border-t-2 border-zinc-800 bg-black/60 px-3 sm:px-4 py-4 space-y-4">
       {/* Members */}
       {detail.members && detail.members.length > 0 && (
         <div>
@@ -358,7 +365,7 @@ export default function GoblinSessionHistory({
     [expandedId, detailCache]
   );
 
-  const pastSessions = sessions.filter((s) => s.status === "ended");
+  const pastSessions = sessions.filter((s) => s.status === "ended" || s.status === "canceled");
 
   return (
     <div className="space-y-8">
@@ -366,11 +373,11 @@ export default function GoblinSessionHistory({
       {loading ? (
         <SatanicSkullSpinner />
       ) : (
-        <div className="flex justify-center">
+        <div className="flex justify-center px-4">
           <button
             onClick={onStartSession}
             disabled={hasActiveSession}
-            className={`px-12 py-4 font-mono font-black text-lg tracking-[0.25em] uppercase border-2 transition-all ${
+            className={`w-full sm:w-auto px-8 sm:px-12 py-4 font-mono font-black text-base sm:text-lg tracking-[0.2em] sm:tracking-[0.25em] uppercase border-2 transition-all min-h-[52px] ${
               hasActiveSession
                 ? "border-zinc-700 bg-zinc-900 text-zinc-600 cursor-not-allowed"
                 : "border-red-600 bg-red-900/40 text-red-400 hover:bg-red-800/60 hover:text-red-300 hover:shadow-[0_0_30px_rgba(220,38,38,0.4)] hover:border-red-500 active:scale-95"
@@ -410,7 +417,7 @@ export default function GoblinSessionHistory({
                   {/* Summary row */}
                   <button
                     onClick={() => handleExpand(session.id)}
-                    className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-zinc-900/60 transition-colors group"
+                    className="w-full text-left px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-3 hover:bg-zinc-900/60 transition-colors group min-h-[52px]"
                   >
                     {/* Expand indicator */}
                     <span
@@ -421,15 +428,25 @@ export default function GoblinSessionHistory({
                       &#9654;
                     </span>
 
-                    {/* Date */}
-                    <span className="text-zinc-500 text-2xs tracking-wider tabular-nums shrink-0 w-32">
+                    {/* Date — hidden on mobile, shown on sm+ */}
+                    <span className="hidden sm:inline text-zinc-500 text-2xs tracking-wider tabular-nums shrink-0 w-32">
                       {formatDate(session.date)}
                     </span>
 
-                    {/* Name */}
-                    <span className="text-zinc-300 text-xs font-bold tracking-wider uppercase truncate flex-1 group-hover:text-red-400 transition-colors">
-                      {displayName}
-                    </span>
+                    {/* Name + mobile date */}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-zinc-300 text-xs font-bold tracking-wider uppercase truncate block group-hover:text-red-400 transition-colors">
+                        {displayName}
+                      </span>
+                      <span className="sm:hidden text-zinc-600 text-2xs tracking-wider tabular-nums">
+                        {formatDate(session.date)}
+                      </span>
+                    </div>
+
+                    {/* Status badge */}
+                    <div className="shrink-0">
+                      <StatusBadge status={session.status} />
+                    </div>
 
                     {/* Status badge */}
                     <div className="shrink-0">
@@ -439,7 +456,8 @@ export default function GoblinSessionHistory({
                     {/* Movie count */}
                     <span className="text-zinc-600 text-2xs tracking-wider shrink-0">
                       {session.movie_count}{" "}
-                      {session.movie_count === 1 ? "MOVIE" : "MOVIES"}
+                      <span className="hidden sm:inline">{session.movie_count === 1 ? "MOVIE" : "MOVIES"}</span>
+                      <span className="sm:hidden">{session.movie_count === 1 ? "M" : "M"}</span>
                     </span>
 
                     {/* Theme pills */}
@@ -476,13 +494,13 @@ export default function GoblinSessionHistory({
                         </div>
                       )}
                       {detail && <SessionDetailView detail={detail} />}
-                      <div className="border-t border-zinc-800 px-4 py-3 flex justify-end">
+                      <div className="border-t border-zinc-800 px-3 sm:px-4 py-3 flex justify-end">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             onDeleteSession(session.id);
                           }}
-                          className="text-2xs font-bold tracking-widest uppercase text-zinc-600 hover:text-red-500 transition-colors px-3 py-1.5 border border-zinc-800 hover:border-red-800 hover:bg-red-950/20"
+                          className="text-2xs font-bold tracking-widest uppercase text-zinc-600 hover:text-red-500 transition-colors px-3 py-2 sm:py-1.5 border border-zinc-800 hover:border-red-800 hover:bg-red-950/20 min-h-[40px]"
                         >
                           DELETE SESSION
                         </button>

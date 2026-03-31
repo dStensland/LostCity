@@ -1,0 +1,8 @@
+version: 1
+slug: blazesports
+name: BlazeSports America
+data_goals:
+- events
+- images
+- lineup
+- tickets

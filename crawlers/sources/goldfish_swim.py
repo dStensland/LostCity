@@ -40,6 +40,7 @@ import requests
 from db import (
     get_or_create_place,
     insert_event,
+    insert_program,
     find_event_by_hash,
     find_existing_event_for_insert,
     smart_update_existing_event,
@@ -472,6 +473,60 @@ def _build_swim_lessons_event_record(
     }
 
 
+def _build_swim_lessons_program_record(
+    loc: dict,
+    venue_id: int,
+    source_id: int,
+) -> dict:
+    location_short = loc["city"]
+    name = f"Swim Lessons for Kids at Goldfish Swim School ({location_short})"
+    return {
+        "source_id": source_id,
+        "place_id": venue_id,
+        "name": name,
+        "description": (
+            f"Goldfish Swim School {location_short} offers year-round indoor swim lessons "
+            f"for kids ages 4 months to 12 years. The heated 90° pool and low 4:1 "
+            f"student-to-teacher ratio make it ideal for beginners through advanced swimmers. "
+            f"Levels include Mini (baby/toddler), Junior (3–4 years), Glider and Pro "
+            f"(4–12 years), and competitive Swim Force. Flexible scheduling with perpetual "
+            f"enrollment through the official Goldfish Swim School portal."
+        ),
+        "program_type": "class",
+        "provider_name": loc["name"],
+        "age_min": 0,
+        "age_max": 12,
+        "season": "year_round",
+        "session_start": None,
+        "session_end": None,
+        "schedule_days": [6],
+        "schedule_start_time": "09:00",
+        "schedule_end_time": "12:00",
+        "cost_amount": 32.50,
+        "cost_period": "per_session",
+        "cost_notes": "Starting at $32.50/lesson. Packages available.",
+        "registration_status": "open",
+        "registration_url": loc["portal_url"],
+        "tags": BASE_TAGS
+        + [
+            "infant",
+            "toddler",
+            "preschool",
+            "elementary",
+            "weekly",
+            "year-round",
+            "water-sports",
+        ],
+        "status": "active",
+        "metadata": {
+            "content_hash": generate_content_hash(name, loc["name"], "year-round"),
+            "program_model": "recurring_swim_lessons",
+            "source_type": "goldfish_swim",
+        },
+        "_venue_name": loc["name"],
+    }
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """
     Crawl Goldfish Swim School Atlanta-area locations via iClassPro API.
@@ -519,6 +574,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
         except Exception as exc:
             logger.error(
                 f"[goldfish-swim] Error generating swim lessons for {loc['name']}: {exc}"
+            )
+
+        try:
+            insert_program(_build_swim_lessons_program_record(loc, venue_id, source_id))
+        except Exception as exc:
+            logger.error(
+                f"[goldfish-swim] Error dual-writing swim lessons program for {loc['name']}: {exc}"
             )
 
     logger.info(

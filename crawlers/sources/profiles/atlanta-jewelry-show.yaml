@@ -1,0 +1,7 @@
+version: 1
+slug: atlanta-jewelry-show
+name: Atlanta Jewelry Show
+data_goals:
+- events
+- images
+- tickets

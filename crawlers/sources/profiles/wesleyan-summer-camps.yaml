@@ -1,0 +1,7 @@
+version: 1
+slug: wesleyan-summer-camps
+name: Wesleyan Summer Camps
+data_goals:
+- events
+- images
+- tickets

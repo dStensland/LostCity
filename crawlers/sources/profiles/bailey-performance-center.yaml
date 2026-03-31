@@ -1,0 +1,7 @@
+version: 1
+slug: bailey-performance-center
+name: Bailey Performance Center at KSU
+data_goals:
+- events
+- images
+- tickets

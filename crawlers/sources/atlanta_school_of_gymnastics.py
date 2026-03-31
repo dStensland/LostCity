@@ -42,6 +42,12 @@ _CONFIG = JackRabbitConfig(
         "place_type": "fitness_center",
         "spot_type": "fitness",
         "website": "https://atlantaschoolofgymnastics.net",
+        "description": (
+            "Atlanta School of Gymnastics in Tucker offers parent-child classes, "
+            "preschool gymnastics, tumbling, boys and girls gymnastics, and team training "
+            "for metro Atlanta families."
+        ),
+        "image_url": "http://static1.squarespace.com/static/5c4e4ad19f8770f03ca05245/t/5c7d5492971a1836ab327ec1/1551717525143/ASG.png?format=1500w",
         "phone": "(770) 938-1212",
         "vibes": ["family-friendly", "kids", "gymnastics"],
     },

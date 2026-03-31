@@ -1,0 +1,7 @@
+version: 1
+slug: high-museum-summer-art-camp
+name: High Museum Summer Art Camp
+data_goals:
+- events
+- images
+- tickets

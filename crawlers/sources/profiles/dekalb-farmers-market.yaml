@@ -1,0 +1,7 @@
+version: 1
+slug: dekalb-farmers-market
+name: Your DeKalb Farmers Market
+data_goals:
+- events
+- images
+- tickets

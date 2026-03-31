@@ -57,6 +57,7 @@ PLACE_DATA = {
     "place_type": "institution",
     "spot_type": "education",
     "website": "https://www.wesleyanschool.org/",
+    "image_url": "https://resources.finalsite.net/images/f_auto,q_auto,t_image_size_1/v1713372573/wesleyanschoolorg/irjr5iexvmrrys1rklmu/LowerSchoolGirlsHoldHandsWave.jpg",
     "vibes": ["family-friendly", "educational"],
 }
 

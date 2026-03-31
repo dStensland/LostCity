@@ -1,4 +1,9 @@
-from sources.atlanta_botanical import _VENUE_MIDTOWN, _build_destination_envelope
+from sources.atlanta_botanical import (
+    _CAT_EXHIBITION,
+    _VENUE_MIDTOWN,
+    _build_destination_envelope,
+    _build_exhibition_record,
+)
 
 
 def test_build_destination_envelope_projects_family_garden_details() -> None:
@@ -18,3 +23,48 @@ def test_build_destination_envelope_projects_family_garden_details() -> None:
     assert {special["slug"] for special in envelope.venue_specials} == {
         "children-under-3-free-daytime-admission",
     }
+
+
+def test_build_exhibition_record_projects_multi_day_exhibit() -> None:
+    record = _build_exhibition_record(
+        title="Enchanted Trees by Poetic Kinetics",
+        tribe_cats=_CAT_EXHIBITION,
+        category="art",
+        subcategory="exhibition",
+        start_date="2026-05-10",
+        end_date="2026-09-15",
+        place_id=1602,
+        source_id=8,
+        venue_name="Atlanta Botanical Garden",
+        description="A seasonal outdoor exhibition.",
+        image_url="https://example.com/exhibit.jpg",
+        source_url="https://atlantabg.org/events/exhibit",
+        is_free=False,
+        tags=["garden", "seasonal"],
+    )
+
+    assert record is not None
+    assert record["place_id"] == 1602
+    assert record["opening_date"] == "2026-05-10"
+    assert record["closing_date"] == "2026-09-15"
+    assert record["admission_type"] == "ticketed"
+    assert "exhibition" in record["tags"]
+
+
+def test_build_exhibition_record_skips_single_day_event() -> None:
+    assert _build_exhibition_record(
+        title="Exhibition Opening Talk",
+        tribe_cats=_CAT_EXHIBITION,
+        category="art",
+        subcategory="exhibition",
+        start_date="2026-05-10",
+        end_date=None,
+        place_id=1602,
+        source_id=8,
+        venue_name="Atlanta Botanical Garden",
+        description="One-night opening talk.",
+        image_url=None,
+        source_url="https://atlantabg.org/events/opening-talk",
+        is_free=True,
+        tags=["garden"],
+    ) is None

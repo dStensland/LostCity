@@ -1,0 +1,6 @@
+version: 1
+slug: sos-tiki-bar
+name: The S.O.S. Tiki Bar
+data_goals:
+- images
+- venue_hours

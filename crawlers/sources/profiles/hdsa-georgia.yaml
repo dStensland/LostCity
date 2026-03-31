@@ -1,0 +1,7 @@
+version: 1
+slug: hdsa-georgia
+name: Huntingtons Disease Society Georgia
+data_goals:
+- events
+- images
+- tickets

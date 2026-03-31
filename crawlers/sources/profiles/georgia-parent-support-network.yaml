@@ -1,0 +1,7 @@
+version: 1
+slug: georgia-parent-support-network
+name: Georgia Parent Support Network
+data_goals:
+- events
+- images
+- tickets

@@ -1,0 +1,7 @@
+version: 1
+slug: dekalb-family-programs
+name: DeKalb Family Programs
+data_goals:
+- events
+- images
+- tickets

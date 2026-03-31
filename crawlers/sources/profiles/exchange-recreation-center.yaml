@@ -18,6 +18,7 @@ detail:
   enabled: true
   use_open_graph: true
 data_goals:
-- destinations
-- destination_details
-- venue_features
+- images
+- planning
+- accessibility
+- venue_hours

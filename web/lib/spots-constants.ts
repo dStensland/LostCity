@@ -68,6 +68,7 @@ export const VENUE_TYPES_MAP = {
   plaza: { label: "Plaza", icon: "🏛️" },
   zoo: { label: "Zoo", icon: "🦁" },
   aquarium: { label: "Aquarium", icon: "🐠" },
+  theme_park: { label: "Theme Park", icon: "🎢" },
 
   // Landmarks & Sightseeing
   landmark: { label: "Landmark", icon: "🏛️" },
@@ -327,11 +328,11 @@ export const THINGS_TO_DO_TILES: readonly ThingsToDoTile[] = [
   { key: "parks", label: "Parks & Gardens", venueTypes: ["park", "garden"], color: "#86EFAC", iconType: "park" },
   { key: "trails", label: "Trails & Nature", venueTypes: ["trail", "viewpoint"], color: "#4ADE80", iconType: "trail" },
   { key: "arts", label: "Arts & Theater", venueTypes: ["theater", "cinema", "amphitheater"], color: "#F472B6", iconType: "theater" },
-  { key: "entertainment-games", label: "Entertainment & Games", venueTypes: ["arcade", "recreation", "attraction", "eatertainment", "entertainment", "bowling", "pool_hall"], color: "#22D3EE", iconType: "gaming" },
+  { key: "entertainment-games", label: "Entertainment & Games", venueTypes: ["arcade", "recreation", "eatertainment", "entertainment", "bowling", "pool_hall"], color: "#22D3EE", iconType: "gaming" },
   { key: "escape-rooms", label: "Escape Rooms", venueTypes: ["escape_room"], color: "#E879F9", iconType: "lock" },
   { key: "historic", label: "Historic Sites", venueTypes: ["landmark", "historic_site", "skyscraper", "artifact", "public_art"], color: "#FBBF24", iconType: "landmark" },
   { key: "fitness", label: "Fitness & Wellness", venueTypes: ["fitness", "fitness_center", "stadium"], color: "#5EEAD4", iconType: "fitness" },
-  { key: "zoos", label: "Zoos & Aquariums", venueTypes: ["zoo", "aquarium"], color: "#FB923C", iconType: "outdoors" },
+  { key: "attractions", label: "Attractions", venueTypes: ["zoo", "aquarium", "attraction", "theme_park"], color: "#FB923C", iconType: "attractions" },
   { key: "markets", label: "Markets & Food Halls", venueTypes: ["farmers_market", "food_hall"], color: "#FCA5A5", iconType: "farmers_market" },
   { key: "libraries", label: "Libraries & Learning", venueTypes: ["bookstore", "library", "institution", "community_center"], color: "#60A5FA", iconType: "library" },
 ] as const;
@@ -343,7 +344,7 @@ const ACTIVITY_CHIPS: readonly ChipDefinition[] = [
   { key: "parks", label: "Parks", icon: "park", filterOverrides: { venueTypes: ["park", "garden"] }, color: "#86EFAC" },
   { key: "trails", label: "Trails", icon: "trail", filterOverrides: { venueTypes: ["trail", "viewpoint"] }, color: "#4ADE80" },
   { key: "arts", label: "Arts & Theater", icon: "theater", filterOverrides: { venueTypes: ["theater", "cinema", "amphitheater"] }, color: "#F472B6" },
-  { key: "entertainment-games", label: "Entertainment", icon: "games", filterOverrides: { venueTypes: ["arcade", "recreation", "attraction", "eatertainment", "entertainment", "bowling", "pool_hall"] }, color: "#22D3EE" },
+  { key: "entertainment-games", label: "Entertainment", icon: "games", filterOverrides: { venueTypes: ["arcade", "recreation", "eatertainment", "entertainment", "bowling", "pool_hall"] }, color: "#22D3EE" },
   { key: "escape-rooms", label: "Escape Rooms", icon: "lock", filterOverrides: { venueTypes: ["escape_room"] }, color: "#E879F9" },
   { key: "historic", label: "Historic Sites", icon: "landmark", filterOverrides: { venueTypes: ["landmark", "historic_site", "skyscraper", "artifact", "public_art"] }, color: "#FBBF24" },
   { key: "fitness", label: "Fitness", icon: "fitness", filterOverrides: { venueTypes: ["fitness", "fitness_center", "stadium"] }, color: "#5EEAD4" },
@@ -379,7 +380,7 @@ export const SPOTS_TABS: SpotsTabConfig[] = [
       "artifact", "public_art", "fitness", "fitness_center", "bookstore", "library", "stadium",
       "amphitheater", "community_center", "institution", "event_space",
       "convention_center", "festival", "coworking", "studio", "arena",
-      "zoo", "aquarium", "bowling", "pool_hall", "historic_site", "escape_room",
+      "zoo", "aquarium", "theme_park", "bowling", "pool_hall", "historic_site", "escape_room",
     ],
     chips: ACTIVITY_CHIPS,
   },
@@ -535,7 +536,7 @@ export function formatPriceLevel(level: number | null): string {
 
 export function getVenueTypeLabel(type: string | null): string {
   if (!type) return "";
-  return VENUE_TYPES_MAP[type as VenueType]?.label || type;
+  return VENUE_TYPES_MAP[type as VenueType]?.label || type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function getVenueTypeLabels(types: string[] | null): string {

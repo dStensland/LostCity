@@ -1,0 +1,7 @@
+version: 1
+slug: the-bakery-atlanta
+name: The Bakery Atlanta
+data_goals:
+- events
+- images
+- tickets

@@ -31,6 +31,33 @@ def test_infer_data_goals_for_museum():
     assert "images" in goals
 
 
+def test_infer_data_goals_for_open_calls_slug():
+    from source_goals import infer_data_goals
+
+    goals = infer_data_goals(
+        source_slug="open-calls-artconnect",
+        source_name="ArtConnect Open Calls",
+    )
+    assert goals == ["open_calls"]
+
+
+def test_profile_model_accepts_open_calls_goal():
+    from pipeline.models import SourceProfile
+
+    profile = SourceProfile(slug="open-calls-artconnect", name="ArtConnect", data_goals=["open_calls"])
+    assert profile.data_goals == ["open_calls"]
+
+
+def test_infer_data_goals_for_exhibitions_slug():
+    from source_goals import infer_data_goals
+
+    goals = infer_data_goals(
+        source_slug="exhibitions-moca-ga",
+        source_name="MOCA GA Exhibitions",
+    )
+    assert goals == ["exhibits", "images"]
+
+
 def test_resolve_source_data_goals_prefers_profile(monkeypatch):
     from source_goals import resolve_source_data_goals
 
@@ -42,6 +69,19 @@ def test_resolve_source_data_goals_prefers_profile(monkeypatch):
     goals, mode = resolve_source_data_goals("test-source", source_name="Test Source")
     assert mode == "profile"
     assert goals == ["events", "lineup", "tickets"]
+
+
+def test_resolve_source_data_goals_respects_explicit_empty_profile_goals(monkeypatch):
+    from source_goals import resolve_source_data_goals
+
+    monkeypatch.setattr(
+        "source_goals.load_profile",
+        lambda slug: SimpleNamespace(data_goals=[]),
+    )
+
+    goals, mode = resolve_source_data_goals("atlanta-movie-tours", source_name="Atlanta Movie Tours")
+    assert mode == "profile"
+    assert goals == []
 
 
 def test_resolve_source_data_goals_falls_back_to_inference(monkeypatch):

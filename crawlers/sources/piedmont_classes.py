@@ -20,10 +20,15 @@ from db import (
     find_event_by_hash,
     get_or_create_place,
     get_portal_id_by_slug,
+    infer_cost_period,
+    infer_program_type,
+    infer_season,
     insert_event,
+    insert_program,
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from entity_lanes import SourceEntityCapabilities
 
 # Portal ID for Piedmont-exclusive events
 PORTAL_SLUG = "piedmont"
@@ -74,6 +79,31 @@ CATEGORY_MAP = {
     "Diabetes Health": ("wellness", "health", ["diabetes", "health-education"]),
     "CPR and First Aid": ("learning", "safety", ["cpr", "first-aid", "certification"]),
     "Virtual Classes": ("learning", "online", ["virtual", "online", "health"]),
+}
+
+SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
+    events=True,
+    programs=True,
+)
+
+_WEEKDAY_MAP = {
+    "monday": 1,
+    "mon": 1,
+    "tuesday": 2,
+    "tue": 2,
+    "tues": 2,
+    "wednesday": 3,
+    "wed": 3,
+    "thursday": 4,
+    "thu": 4,
+    "thur": 4,
+    "thurs": 4,
+    "friday": 5,
+    "fri": 5,
+    "saturday": 6,
+    "sat": 6,
+    "sunday": 7,
+    "sun": 7,
 }
 
 
@@ -177,6 +207,50 @@ def _build_description(occurrence: dict) -> Optional[str]:
     return " ".join(parts)[:2000]
 
 
+def _parse_schedule_days(days_held: Optional[str], fallback_start_date: Optional[str]) -> list[int]:
+    days: list[int] = []
+    if days_held:
+        for token in re.split(r"[^A-Za-z]+", days_held):
+            normalized = token.strip().lower()
+            if not normalized:
+                continue
+            day_num = _WEEKDAY_MAP.get(normalized)
+            if day_num and day_num not in days:
+                days.append(day_num)
+    if days:
+        return days
+
+    if fallback_start_date:
+        try:
+            weekday = datetime.strptime(fallback_start_date, "%Y-%m-%d").date().isoweekday()
+            return [weekday]
+        except ValueError:
+            return []
+
+    return []
+
+
+def _parse_age_range(age_text: Optional[str]) -> tuple[Optional[int], Optional[int]]:
+    if not age_text:
+        return None, None
+    text = str(age_text)
+    matches = [int(value) for value in re.findall(r"\d+", text)]
+    if not matches:
+        return None, None
+    if "less than" in text.lower() and len(matches) >= 2:
+        return matches[0], max(matches[1] - 1, matches[0])
+    if len(matches) == 1:
+        return matches[0], None
+    return matches[0], matches[1]
+
+
+def _build_place_description(business_name: str) -> str:
+    return (
+        f"{business_name} hosts Piedmont Healthcare classes, support groups, maternity education, "
+        "and certification programming for patients, parents, and community members."
+    )
+
+
 def _get_or_create_class_venue(occurrence: dict) -> Optional[int]:
     business_name = occurrence.get("BusinessName")
     if not business_name:
@@ -197,8 +271,98 @@ def _get_or_create_class_venue(occurrence: dict) -> Optional[int]:
         "zip": occurrence.get("ZipCode") or "",
         "place_type": "hospital",
         "website": "https://www.piedmont.org",
+        "description": _build_place_description(str(business_name).strip()),
+        "image_url": occurrence.get("PhotoUrl"),
     }
     return get_or_create_place(place_data)
+
+
+def _build_program_record(
+    *,
+    occurrence: dict,
+    event_record: dict,
+    category_name: str,
+    venue_name: str,
+    portal_id: str,
+) -> dict:
+    age_min, age_max = _parse_age_range(occurrence.get("AgeDescription"))
+    session_start = event_record.get("start_date")
+    season = None
+    if session_start:
+        try:
+            season = infer_season(
+                event_record["title"],
+                datetime.strptime(session_start, "%Y-%m-%d").date(),
+            )
+        except ValueError:
+            season = infer_season(event_record["title"])
+    else:
+        season = infer_season(event_record["title"])
+
+    registration_opens, _ = _parse_occurrence_datetime(occurrence.get("StartRegistrationDateTime"))
+    registration_closes, _ = _parse_occurrence_datetime(occurrence.get("EndRegistrationDateTime"))
+
+    registration_status = "open" if occurrence.get("IsEnrollAllowed") else "closed"
+    total_seats = occurrence.get("TotalSeats")
+    filled_seats = occurrence.get("FilledSeats")
+    if (
+        isinstance(total_seats, int)
+        and isinstance(filled_seats, int)
+        and total_seats > 0
+        and filled_seats >= total_seats
+    ):
+        registration_status = "closed"
+
+    cost_notes = event_record.get("price_note")
+    cost_amount = event_record.get("price_min")
+    cost_period = None
+    if cost_amount is not None:
+        if event_record.get("start_date") == event_record.get("end_date"):
+            cost_period = "per_session"
+        else:
+            cost_period = infer_cost_period(cost_notes)
+
+    return {
+        "portal_id": portal_id,
+        "source_id": event_record["source_id"],
+        "place_id": event_record["place_id"],
+        "name": event_record["title"],
+        "description": event_record.get("description"),
+        "program_type": infer_program_type(event_record["title"], section_name=category_name),
+        "provider_name": "Piedmont Healthcare",
+        "age_min": age_min,
+        "age_max": age_max,
+        "season": season,
+        "session_start": event_record.get("start_date"),
+        "session_end": event_record.get("end_date") or event_record.get("start_date"),
+        "schedule_days": _parse_schedule_days(
+            occurrence.get("DaysHeld"),
+            event_record.get("start_date"),
+        ),
+        "schedule_start_time": event_record.get("start_time"),
+        "schedule_end_time": event_record.get("end_time"),
+        "cost_amount": cost_amount,
+        "cost_period": cost_period,
+        "cost_notes": cost_notes,
+        "registration_status": registration_status,
+        "registration_opens": registration_opens,
+        "registration_closes": registration_closes,
+        "registration_url": event_record.get("ticket_url") or event_record.get("source_url"),
+        "tags": event_record.get("tags") or [],
+        "metadata": {
+            "class_id": occurrence.get("ClassID"),
+            "occurrence_id": occurrence.get("OccurrenceID"),
+            "category_name": category_name,
+            "business_name": occurrence.get("BusinessName"),
+            "room_name": occurrence.get("RoomName"),
+            "days_held": occurrence.get("DaysHeld"),
+            "payment_method_names": occurrence.get("PaymentMethodNames"),
+            "is_wait_list": occurrence.get("IsWaitList"),
+            "is_virtual": occurrence.get("VirturalClassFlag"),
+            "virtual_class_url": occurrence.get("VirturalClassUrl"),
+        },
+        "_venue_name": venue_name,
+    }
 
 
 def crawl_category(
@@ -284,6 +448,18 @@ def crawl_category(
             "is_class": True,
             "class_category": subcategory,
         }
+
+        program_record = _build_program_record(
+            occurrence=occurrence,
+            event_record=event_record,
+            category_name=category_name,
+            venue_name=venue_name,
+            portal_id=portal_id,
+        )
+        try:
+            insert_program(program_record)
+        except Exception as exc:
+            logger.error("Failed to upsert Piedmont program %s: %s", title, exc)
 
         existing = find_event_by_hash(content_hash)
         if existing:

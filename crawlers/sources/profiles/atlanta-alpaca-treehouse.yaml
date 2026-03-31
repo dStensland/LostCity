@@ -1,0 +1,7 @@
+version: 1
+slug: atlanta-alpaca-treehouse
+name: Atlanta Alpaca Treehouse
+data_goals:
+- events
+- images
+- tickets

@@ -1,0 +1,7 @@
+version: 1
+slug: georgia-aquarium-camp-h2o
+name: Georgia Aquarium Camp H2O
+data_goals:
+- events
+- images
+- tickets

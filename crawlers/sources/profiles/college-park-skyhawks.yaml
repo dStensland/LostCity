@@ -5,7 +5,7 @@ integration_method: python
 defaults: {}
 discovery:
   enabled: false
-  type: curated
+  type: list
   urls:
     - https://cpskyhawks.gleague.nba.com/news/college-park-skyhawks-announce-2025-26-season-schedule
 detail:

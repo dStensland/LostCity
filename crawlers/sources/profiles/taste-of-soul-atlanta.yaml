@@ -1,0 +1,7 @@
+version: 1
+slug: taste-of-soul-atlanta
+name: Taste of Soul Atlanta
+data_goals:
+- events
+- images
+- tickets

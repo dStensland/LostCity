@@ -1,0 +1,6 @@
+version: 1
+slug: museum-of-illusions-atlanta
+name: Museum of Illusions Atlanta
+data_goals:
+- exhibits
+- images

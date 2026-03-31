@@ -83,53 +83,10 @@ def parse_price(price_text: str) -> tuple[Optional[float], Optional[float], Opti
     return None, None, None
 
 
-def format_time_label(time_24: Optional[str]) -> Optional[str]:
-    if not time_24:
-        return None
-    raw = str(time_24).strip()
-    if not raw:
-        return None
-    for fmt in ("%H:%M", "%H:%M:%S"):
-        try:
-            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
-        except ValueError:
-            continue
-    return raw
-
-
-def build_aisle5_description(
-    *,
-    title: str,
-    base_description: Optional[str],
-    start_date: str,
-    start_time: Optional[str],
-    source_url: str,
-    price_min: Optional[float],
-    price_max: Optional[float],
-) -> str:
-    desc = (base_description or "").strip()
-    parts: list[str] = []
-    if desc and len(desc) >= 140:
-        parts.append(desc if desc.endswith(".") else f"{desc}.")
-    elif desc:
-        parts.append(desc if desc.endswith(".") else f"{desc}.")
-        parts.append("Live music event at Aisle 5 in Little Five Points.")
-    else:
-        parts.append(f"{title} is a live music event at Aisle 5 in Little Five Points.")
-    parts.append("Location: Aisle 5, Little Five Points, Atlanta, GA.")
-    time_label = format_time_label(start_time)
-    if start_date and time_label:
-        parts.append(f"Scheduled on {start_date} at {time_label}.")
-    elif start_date:
-        parts.append(f"Scheduled on {start_date}.")
-    if price_min is not None and price_max is not None:
-        if price_min == price_max:
-            parts.append(f"Typical ticket price: ${price_min:.0f}.")
-        else:
-            parts.append(f"Typical ticket range: ${price_min:.0f}-${price_max:.0f}.")
-    if source_url:
-        parts.append(f"Check the official listing for lineup updates, age policy, and ticket availability ({source_url}).")
-    return " ".join(parts)[:1500]
+def _clean_text(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    return " ".join(str(value).split()).strip()
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -270,15 +227,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "place_id": venue_id,
                         "title": title,
-                        "description": build_aisle5_description(
-                            title=title,
-                            base_description=base_description,
-                            start_date=start_date,
-                            start_time=start_time,
-                            source_url=event_url,
-                            price_min=price_min,
-                            price_max=price_max,
-                        ),
+                        "description": _clean_text(base_description) or None,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
@@ -304,15 +253,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Only enrich from detail page — skip if URL fell back to listing page
                     if event_url and event_url != EVENTS_URL:
                         enrich_event_record(event_record, source_name="Aisle 5")
-                    event_record["description"] = build_aisle5_description(
-                        title=event_record["title"],
-                        base_description=event_record.get("description"),
-                        start_date=event_record["start_date"],
-                        start_time=event_record.get("start_time"),
-                        source_url=event_record.get("source_url") or BASE_URL,
-                        price_min=event_record.get("price_min"),
-                        price_max=event_record.get("price_max"),
-                    )
+                    event_record["description"] = _clean_text(event_record.get("description")) or None
 
                     # Determine is_free if still unknown after enrichment
                     if event_record.get("is_free") is None:

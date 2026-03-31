@@ -9,9 +9,12 @@ from __future__ import annotations
 
 import re
 import logging
+import json
 from datetime import datetime
 from typing import Optional
 
+import requests
+from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
@@ -92,52 +95,80 @@ def parse_class_title(line: str) -> Optional[dict]:
     }
 
 
-def format_time_label(time_24: Optional[str]) -> Optional[str]:
-    if not time_24:
-        return None
-    raw = str(time_24).strip()
-    if not raw:
-        return None
-    for fmt in ("%H:%M", "%H:%M:%S"):
-        try:
-            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
-        except ValueError:
+DETAIL_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+
+
+def _clean_text(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    return " ".join(str(value).split()).strip()
+
+
+def _extract_jsonld_description(html: str) -> Optional[str]:
+    soup = BeautifulSoup(html, "html.parser")
+    for script in soup.select('script[type="application/ld+json"]'):
+        raw = script.string or script.get_text()
+        if not raw:
             continue
-    return raw
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        items = data if isinstance(data, list) else [data]
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            description = _clean_text(item.get("description"))
+            if description:
+                return description
+    return None
 
 
-def build_class_description(
-    *,
-    title: str,
-    start_date: str,
-    start_time: Optional[str],
-    event_url: str,
-    price_min: Optional[float],
-    price_max: Optional[float],
-) -> str:
-    time_label = format_time_label(start_time)
-    parts = [
-        f"{title} is a cooking class at The Cook's Warehouse.",
-        "Location: The Cook's Warehouse, Midtown, Atlanta, GA.",
-    ]
-    if start_date and time_label:
-        parts.append(f"Scheduled on {start_date} at {time_label}.")
-    elif start_date:
-        parts.append(f"Scheduled on {start_date}.")
+def _sanitize_class_description(title: str, description: Optional[str]) -> Optional[str]:
+    text = _clean_text(description)
+    if not text:
+        return None
 
-    if price_min is not None and price_max is not None:
-        if price_min == price_max:
-            parts.append(f"Typical class price: ${price_min:.0f}.")
-        else:
-            parts.append(f"Typical class price range: ${price_min:.0f}-${price_max:.0f}.")
-    elif price_min is not None:
-        parts.append(f"Typical class price from ${price_min:.0f}.")
-    else:
-        parts.append("Class pricing varies by session and menu.")
+    cleaned = text
+    cleaned = re.sub(
+        r"^[A-Za-z]+,\s+[A-Za-z]+\s+\d{1,2}(?:st|nd|rd|th)?\s*-\s*\d{1,2}:\d{2}(?:am|pm)?(?:-\d{1,2}:\d{2}(?:am|pm)?)?\s*",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"^Prices are listed per person\.\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(rf"^{re.escape(title)}\s+with\s+", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(rf"^{re.escape(title)}\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.split(
+        r"\b(?:We do not allow groups larger than six|Cancellation Policy:|Age Policy:)\b",
+        cleaned,
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )[0]
 
-    if event_url:
-        parts.append(f"Check the official class listing for menu, skill level, and availability ({event_url}).")
-    return " ".join(parts)[:1400]
+    cleaned = _clean_text(cleaned)
+    return cleaned or None
+
+
+def fetch_class_description(event_url: str, title: str) -> Optional[str]:
+    if not event_url or event_url == EVENTS_URL:
+        return None
+    try:
+        response = requests.get(event_url, timeout=30, headers={"User-Agent": DETAIL_UA})
+        response.raise_for_status()
+    except Exception as e:
+        logger.debug(f"Failed to fetch Cook's Warehouse detail page {event_url}: {e}")
+        return None
+
+    html = response.text
+    description = _extract_jsonld_description(html)
+    if not description:
+        soup = BeautifulSoup(html, "html.parser")
+        desc_node = soup.select_one(".productView-description, .tabs-contents")
+        if desc_node:
+            description = desc_node.get_text("\n", strip=True)
+
+    return _sanitize_class_description(title, description)
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -232,14 +263,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
 
 
-                        description = build_class_description(
-                            title=title,
-                            start_date=start_date,
-                            start_time=start_time,
-                            event_url=event_url,
-                            price_min=price_min,
-                            price_max=price_max,
-                        )
+                        description = fetch_class_description(event_url, title)
                         image_url = image_map.get(title)
 
                         # Generate smart tags based on title

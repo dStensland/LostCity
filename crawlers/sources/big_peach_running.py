@@ -146,27 +146,6 @@ def build_event_title(location: str, weekday: int, start_time: str) -> str:
     if location == "Brookhaven":
         return f"Big Peach Social Group Run - {location} ({day_name})"
     return f"Big Peach Social Group Run - {location}"
-
-
-def build_description(location: str, day_name: str, start_time: str) -> str:
-    """Build a consistent public-facing description from the official schedule page."""
-    time_label = datetime.strptime(start_time, "%H:%M").strftime("%-I:%M %p")
-    location_url = VENUE_DATA_BY_LOCATION[location]["website"]
-    if location == "South Fulton":
-        activity = "group run/walk"
-    else:
-        activity = "social group run"
-
-    return (
-        f"Official Big Peach Running Co. {activity} at the {location} store. "
-        f"Big Peach says its social group runs welcome runners and walkers of all paces and abilities, "
-        f"with access to store amenities like water, restrooms, and changing space where available. "
-        f"Published schedule: {day_name}s at {time_label}. "
-        f"Check the official Big Peach group-runs page and store page for route details or weather updates "
-        f"({GROUP_RUNS_URL}; {location_url})."
-    )[:1400]
-
-
 def parse_group_runs_schedule(html: str) -> list[dict]:
     """Parse the official weekly schedule table from the group-runs page."""
     soup = BeautifulSoup(html, "html.parser")
@@ -229,7 +208,7 @@ def build_schedule_templates(entries: list[dict]) -> list[dict]:
                 "title": title,
                 "weekday": weekday,
                 "start_time": start_time,
-                "description": build_description(location, day_name, start_time),
+                "description": None,
                 "location": location,
                 "source_url": entry["source_url"],
                 "venue_data": VENUE_DATA_BY_LOCATION[location],

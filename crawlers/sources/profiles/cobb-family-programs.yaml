@@ -1,0 +1,7 @@
+version: 1
+slug: cobb-family-programs
+name: Cobb Family Programs
+data_goals:
+- events
+- images
+- tickets

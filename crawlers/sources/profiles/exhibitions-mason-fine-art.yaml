@@ -1,0 +1,6 @@
+version: 1
+slug: exhibitions-mason-fine-art
+name: Mason Fine Art (Exhibitions)
+data_goals:
+- exhibits
+- images

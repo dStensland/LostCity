@@ -56,7 +56,10 @@ from bs4 import BeautifulSoup
 from db import (
     find_event_by_hash,
     get_or_create_place,
+    infer_cost_period,
+    infer_season,
     insert_event,
+    insert_program,
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
@@ -520,6 +523,128 @@ def _build_event_record(
     return record, series_hint
 
 
+def _parse_schedule_days(days_str: str) -> list[int]:
+    """Parse JackRabbit day labels into ISO weekday numbers."""
+    normalized = (days_str or "").strip().lower()
+    if not normalized:
+        return []
+
+    values: list[int] = []
+    for token in re.split(r"[^a-z]+", normalized):
+        if not token:
+            continue
+        weekday = _DAY_ABBREV_TO_PYTHON.get(token)
+        if weekday is None:
+            continue
+        iso_weekday = weekday + 1
+        if iso_weekday not in values:
+            values.append(iso_weekday)
+    return values
+
+
+def _program_name(title: str, raw_name: str, days_str: str, times_str: str) -> str:
+    """Keep session identity distinct so multiple weekly slots don't collapse."""
+    candidate = title.strip() or raw_name.strip()
+    suffix = " ".join(part.strip() for part in (days_str, times_str) if part and part.strip())
+    if suffix:
+        return f"{candidate} - {suffix}"
+    return candidate
+
+
+def _registration_status(openings_raw: str) -> str:
+    value = (openings_raw or "").strip().lower()
+    if not value:
+        return "unknown"
+    if any(flag in value for flag in ("waitlist", "wait list")):
+        return "waitlist"
+    if any(flag in value for flag in ("full", "closed", "sold out")):
+        return "closed"
+    numbers = [int(match) for match in re.findall(r"\d+", value)]
+    if numbers:
+        return "open" if max(numbers) > 0 else "closed"
+    return "open"
+
+
+def _build_program_record(
+    cls: dict,
+    *,
+    source_id: int,
+    venue_id: int,
+    venue_name: str,
+    config: JackRabbitConfig,
+) -> Optional[dict]:
+    """Project one JackRabbit class row into the programs lane."""
+    raw_name = cls.get("name", "").strip()
+    if not raw_name:
+        return None
+
+    result = _build_event_record(
+        cls,
+        occurrence_date=_parse_date(cls.get("start_date", "")) or date.today(),
+        source_id=source_id,
+        venue_id=venue_id,
+        venue_name=venue_name,
+        config=config,
+    )
+    if result is None:
+        return None
+
+    event_record, _series_hint = result
+    start_date_str = cls.get("start_date", "").strip()
+    end_date_str = cls.get("end_date", "").strip()
+    session_start = _parse_date(start_date_str)
+    session_end = _parse_date(end_date_str)
+    season = infer_season(raw_name, session_start)
+    tuition_raw = cls.get("tuition", "").strip()
+    days_str = cls.get("days", "").strip()
+    times_str = cls.get("times", "").strip()
+    description = event_record.get("description")
+
+    return {
+        "source_id": source_id,
+        "place_id": venue_id,
+        "name": _program_name(
+            event_record["title"],
+            raw_name,
+            days_str,
+            times_str,
+        ),
+        "description": description,
+        "program_type": "class",
+        "provider_name": venue_name,
+        "age_min": event_record.get("age_min"),
+        "age_max": event_record.get("age_max"),
+        "season": season,
+        "session_start": session_start.isoformat() if session_start else None,
+        "session_end": (
+            session_end.isoformat()
+            if session_end
+            else (session_start.isoformat() if session_start else None)
+        ),
+        "schedule_days": _parse_schedule_days(days_str),
+        "schedule_start_time": event_record.get("start_time"),
+        "schedule_end_time": event_record.get("end_time"),
+        "cost_amount": event_record.get("price_min"),
+        "cost_period": infer_cost_period("monthly" if tuition_raw else None),
+        "cost_notes": f"Monthly tuition: ${tuition_raw}" if tuition_raw else None,
+        "registration_status": _registration_status(cls.get("openings", "")),
+        "registration_url": config.default_enrollment_url,
+        "tags": event_record.get("tags", []),
+        "metadata": {
+            "jackrabbit_org_id": config.org_id,
+            "raw_name": raw_name,
+            "days": days_str,
+            "times": times_str,
+            "ages": cls.get("ages", ""),
+            "tuition": tuition_raw,
+            "openings": cls.get("openings", ""),
+            "gender": cls.get("gender", ""),
+            "session": cls.get("session", ""),
+        },
+        "_venue_name": venue_name,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Main crawl entry point
 # ---------------------------------------------------------------------------
@@ -596,6 +721,24 @@ def crawl_jackrabbit(source: dict, config: JackRabbitConfig) -> tuple[int, int, 
                 raw_name,
             )
             continue
+
+        try:
+            program_record = _build_program_record(
+                cls,
+                source_id=source_id,
+                venue_id=venue_id,
+                venue_name=venue_name,
+                config=config,
+            )
+            if program_record:
+                insert_program(program_record)
+        except Exception as exc:
+            logger.error(
+                "[jackrabbit/%s] Failed to upsert program %r: %s",
+                config.org_id,
+                raw_name,
+                exc,
+            )
 
         for occurrence_date in occurrences:
             result = _build_event_record(

@@ -307,32 +307,6 @@ def _extract_genres(classifications: list[dict]) -> tuple[list[str], Optional[st
     return genres, primary
 
 
-def _format_time_label(time_value: Optional[str]) -> Optional[str]:
-    if not time_value:
-        return None
-    raw = str(time_value).strip()
-    if not raw:
-        return None
-    for fmt in ("%H:%M", "%H:%M:%S"):
-        try:
-            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
-        except ValueError:
-            continue
-    return raw
-
-
-def _format_price_note(price_min: Optional[float], price_max: Optional[float]) -> Optional[str]:
-    if price_min is None and price_max is None:
-        return None
-    if price_min is not None and price_max is not None:
-        if float(price_min) == float(price_max):
-            return f"Ticket price: ${float(price_min):.0f}."
-        return f"Ticket range: ${float(price_min):.0f}-${float(price_max):.0f}."
-    if price_min is not None:
-        return f"Tickets from ${float(price_min):.0f}."
-    return f"Tickets up to ${float(price_max):.0f}."
-
-
 def _is_low_quality_description(description: Optional[str]) -> bool:
     if not description:
         return True
@@ -349,59 +323,6 @@ def _is_low_quality_description(description: Optional[str]) -> bool:
             "other event at ",
         )
     )
-
-
-def _build_structured_description(
-    *,
-    title: str,
-    current_description: Optional[str],
-    category: str,
-    genre: Optional[str],
-    attractions: list[str],
-    place_data: Optional[dict],
-    start_date: str,
-    start_time: Optional[str],
-    price_min: Optional[float],
-    price_max: Optional[float],
-    source_url: str,
-) -> str:
-    parts: list[str] = []
-    base = _clean_text(current_description)
-    if base and not _is_low_quality_description(base):
-        parts.append(base if base.endswith(".") else f"{base}.")
-    else:
-        category_label = category.replace("_", " ").strip().title() if category else "Live"
-        descriptor = f"{category_label} event"
-        if genre:
-            descriptor = f"{genre} {category_label.lower()} event"
-        parts.append(f"{title} is a {descriptor}.")
-
-    if attractions:
-        parts.append(f"Lineup includes {', '.join(attractions[:3])}.")
-
-    if place_data:
-        venue_name = _clean_text(place_data.get("name"))
-        venue_city = _clean_text(place_data.get("city")) or ""
-        venue_state = _clean_text(place_data.get("state")) or "GA"
-        if venue_name:
-            parts.append(f"Location: {venue_name}, {venue_city}, {venue_state}.")
-
-    time_label = _format_time_label(start_time)
-    if start_date and time_label:
-        parts.append(f"Scheduled on {start_date} at {time_label}.")
-    elif start_date:
-        parts.append(f"Scheduled on {start_date}.")
-
-    price_note = _format_price_note(price_min, price_max)
-    if price_note:
-        parts.append(price_note)
-
-    if source_url:
-        parts.append(f"Check Ticketmaster for latest lineup updates and ticket availability ({source_url}).")
-    else:
-        parts.append("Check Ticketmaster for latest lineup updates and ticket availability.")
-
-    return " ".join(parts)[:1600]
 
 
 def _fetch_detail_enrichment(url: str) -> dict:

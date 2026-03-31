@@ -1,0 +1,7 @@
+version: 1
+slug: clermont-lounge
+name: Clermont Lounge
+data_goals:
+- events
+- images
+- tickets

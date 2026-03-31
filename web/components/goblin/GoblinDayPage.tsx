@@ -124,6 +124,9 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
   const [genreFilter, setGenreFilterState] = useState<GenreFilter>(searchParams.get("genre") || null);
   const [subgenreFilter, setSubgenreFilterState] = useState<SubgenreFilter>(searchParams.get("subgenre") || null);
   const [theaterFilter, setTheaterFilterState] = useState<TheaterFilter>(searchParams.get("theaters") === "1");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Wrapped setters that sync to URL
   const setActiveTab = useCallback((tab: Tab) => {
@@ -134,6 +137,8 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
     setSubgenreFilterState(null);
     setTheaterFilterState(false);
     setSortKeyState("critics");
+    setSearchQuery("");
+    setSearchOpen(false);
   }, []);
 
   const setSortKey = useCallback((key: SortKey) => {
@@ -278,6 +283,18 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
     fetchSessionsList();
   }, [activeSession, fetchSessionsList]);
 
+  const handleCancelSession = useCallback(async () => {
+    if (!activeSession) return;
+    await fetch(`/api/goblinday/sessions/${activeSession.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "canceled" }),
+    });
+    setActiveSession(null);
+    setSessionData(null);
+    fetchSessionsList();
+  }, [activeSession, fetchSessionsList]);
+
   const handleSessionRefresh = useCallback(() => {
     if (activeSession) fetchSession(activeSession.id);
   }, [activeSession, fetchSession]);
@@ -342,6 +359,12 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
             if (sg && !movieMatchesSubgenre(m, sg.match)) return false;
           }
           if (theaterFilter && !normalizeStreaming(m.streaming_info).theaters) return false;
+          if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            const titleMatch = m.title.toLowerCase().includes(q);
+            const directorMatch = m.director?.toLowerCase().includes(q) ?? false;
+            if (!titleMatch && !directorMatch) return false;
+          }
           return true;
         }
         case "upcoming":
@@ -385,11 +408,11 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
       key={`img-${i}`}
       src={img.src}
       alt={img.alt}
-      className="h-24 w-32 object-cover flex-shrink-0 grayscale contrast-125 mix-blend-luminosity"
+      className="h-14 w-20 sm:h-24 sm:w-32 object-cover flex-shrink-0 grayscale contrast-125 mix-blend-luminosity"
     />,
     <span
       key={`txt-${i}`}
-      className="flex-shrink-0 px-8 text-3xl sm:text-4xl font-black tracking-[0.2em] text-red-600 font-mono uppercase drop-shadow-[0_0_12px_rgba(220,38,38,0.6)]"
+      className="flex-shrink-0 px-4 sm:px-8 text-xl sm:text-4xl font-black tracking-[0.2em] text-red-600 font-mono uppercase drop-shadow-[0_0_12px_rgba(220,38,38,0.6)]"
     >
       {ZALGO_TEXT}
     </span>,
@@ -436,7 +459,8 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
     resize();
     window.addEventListener("resize", resize);
 
-    const fontSize = 14;
+    const isMobile = canvas.width < 640;
+    const fontSize = isMobile ? 18 : 14;
     const columns = Math.floor(canvas.width / fontSize);
     const drops: number[] = new Array(columns).fill(0).map(() => Math.random() * -100);
 
@@ -450,7 +474,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
       opacity: number;
     }
     const drips: Drip[] = [];
-    const MAX_DRIPS = 15;
+    const MAX_DRIPS = isMobile ? 5 : 15;
     const spawnDrip = () => {
       if (drips.length < MAX_DRIPS) {
         drips.push({
@@ -516,7 +540,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
       }
     };
 
-    const interval = setInterval(draw, 80);
+    const interval = setInterval(draw, isMobile ? 120 : 80);
     return () => {
       clearInterval(interval);
       window.removeEventListener("resize", resize);
@@ -553,7 +577,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            className={`flex-shrink-0 flex-1 sm:flex-none min-w-0 px-3 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-[0.1em] sm:tracking-[0.15em] uppercase border-b-3 transition-all duration-200 whitespace-nowrap ${
+            className={`flex-shrink-0 flex-1 sm:flex-none min-w-0 px-2 sm:px-8 py-3.5 sm:py-3 text-2xs sm:text-sm font-bold tracking-[0.05em] sm:tracking-[0.15em] uppercase border-b-3 transition-all duration-200 whitespace-nowrap min-h-[44px] ${
               activeTab === key
                 ? active
                 : "bg-black text-zinc-600 border-transparent hover:text-red-400/60 hover:bg-red-950/10 hover:border-red-900/30"
@@ -562,7 +586,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
             <span className="sm:hidden">{label}</span>
             <span className="hidden sm:inline">{labelLong}</span>
             {counts[key] > 0 && (
-              <span className="ml-1.5 sm:ml-2 text-xs opacity-60">[{counts[key]}]</span>
+              <span className="ml-1 sm:ml-2 text-2xs sm:text-xs opacity-60">[{counts[key]}]</span>
             )}
           </button>
         ))}
@@ -571,20 +595,65 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
       {/* Sort Bar (contenders only) */}
       {activeTab === "contenders" && (
         <>
-          <div className="flex justify-center gap-0 border-b border-zinc-800 relative z-10 bg-black/90">
-            {SORT_OPTIONS.map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setSortKey(key)}
-                className={`px-4 py-2 text-2xs font-bold tracking-[0.2em] uppercase transition-all ${
-                  sortKey === key
-                    ? "bg-red-950/30 text-red-500 border-b-2 border-red-500 shadow-[0_2px_8px_rgba(185,28,28,0.2)]"
-                    : "bg-black text-zinc-600 hover:text-red-400/50 hover:bg-red-950/10"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="flex items-center gap-0 border-b border-zinc-800 relative z-10 bg-black/90">
+            {searchOpen ? (
+              /* Expanded search input */
+              <div className="flex items-center flex-1 px-2 sm:px-4 gap-2 min-h-[44px]">
+                <span className="text-red-600 text-xs flex-shrink-0">&#9906;</span>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") { setSearchOpen(false); setSearchQuery(""); }
+                  }}
+                  placeholder="SEARCH TITLE OR DIRECTOR..."
+                  className="flex-1 bg-transparent text-white text-2xs font-mono font-bold tracking-[0.15em] uppercase placeholder:text-zinc-600 focus:outline-none min-w-0"
+                  autoFocus
+                />
+                {searchQuery && (
+                  <span className="text-zinc-500 text-2xs font-mono flex-shrink-0">
+                    {filteredMovies.length}
+                  </span>
+                )}
+                <button
+                  onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
+                  className="text-zinc-600 hover:text-white text-xs font-bold px-2 py-1 min-h-[36px] flex-shrink-0 transition-colors"
+                >
+                  &#10005;
+                </button>
+              </div>
+            ) : (
+              /* Sort buttons + search icon */
+              <>
+                <div className="flex justify-center flex-1">
+                  {SORT_OPTIONS.map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => setSortKey(key)}
+                      className={`px-3 sm:px-4 py-2.5 sm:py-2 text-2xs font-bold tracking-[0.15em] sm:tracking-[0.2em] uppercase transition-all min-h-[44px] ${
+                        sortKey === key
+                          ? "bg-red-950/30 text-red-500 border-b-2 border-red-500 shadow-[0_2px_8px_rgba(185,28,28,0.2)]"
+                          : "bg-black text-zinc-600 hover:text-red-400/50 hover:bg-red-950/10"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => {
+                    setSearchOpen(true);
+                    setTimeout(() => searchInputRef.current?.focus(), 50);
+                  }}
+                  className="px-3 sm:px-4 py-2.5 sm:py-2 text-zinc-600 hover:text-red-400 text-sm transition-colors min-h-[44px] flex-shrink-0"
+                  title="Search movies"
+                >
+                  &#9906;
+                </button>
+              </>
+            )}
           </div>
           {/* Filter chips — row 1: theaters + genres */}
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide px-3 pt-2 pb-1 relative z-10 bg-black/90">
@@ -592,7 +661,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
             {theatersCount > 0 && (
               <button
                 onClick={() => setTheaterFilter(!theaterFilter)}
-                className={`flex-shrink-0 px-2.5 py-1 text-2xs font-bold tracking-[0.15em] uppercase transition-all border ${
+                className={`flex-shrink-0 px-2.5 py-1.5 sm:py-1 text-2xs font-bold tracking-[0.15em] uppercase transition-all border min-h-[36px] ${
                   theaterFilter
                     ? "bg-red-900/60 text-red-300 border-red-600 shadow-[0_0_8px_rgba(185,28,28,0.3)]"
                     : "bg-zinc-950 text-zinc-500 border-zinc-800 hover:text-red-400/60 hover:border-red-900/40"
@@ -606,7 +675,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
               <button
                 key={genre}
                 onClick={() => setGenreFilter(genreFilter === genre ? null : genre)}
-                className={`flex-shrink-0 px-2.5 py-1 text-2xs font-bold tracking-[0.15em] uppercase transition-all border ${
+                className={`flex-shrink-0 px-2.5 py-1.5 sm:py-1 text-2xs font-bold tracking-[0.15em] uppercase transition-all border min-h-[36px] ${
                   genreFilter === genre
                     ? "bg-violet-900/50 text-violet-300 border-violet-600 shadow-[0_0_8px_rgba(139,92,246,0.2)]"
                     : "bg-zinc-950 text-zinc-500 border-zinc-800 hover:text-violet-400/60 hover:border-violet-900/40"
@@ -622,7 +691,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
               <button
                 key={label}
                 onClick={() => setSubgenreFilter(subgenreFilter === label ? null : label)}
-                className={`flex-shrink-0 px-2.5 py-1 text-2xs font-bold tracking-[0.15em] uppercase transition-all border ${
+                className={`flex-shrink-0 px-2.5 py-1.5 sm:py-1 text-2xs font-bold tracking-[0.15em] uppercase transition-all border min-h-[36px] ${
                   subgenreFilter === label
                     ? "bg-orange-900/50 text-orange-300 border-orange-600 shadow-[0_0_8px_rgba(234,88,12,0.2)]"
                     : "bg-zinc-950 text-zinc-600 border-zinc-800/60 hover:text-orange-400/60 hover:border-orange-900/40"
@@ -635,7 +704,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
             {(genreFilter || subgenreFilter || theaterFilter) && (
               <button
                 onClick={() => { setGenreFilter(null); setSubgenreFilter(null); setTheaterFilter(false); }}
-                className="flex-shrink-0 px-2.5 py-1 text-2xs font-bold tracking-[0.15em] uppercase text-zinc-600 hover:text-white transition-all"
+                className="flex-shrink-0 px-2.5 py-1.5 sm:py-1 text-2xs font-bold tracking-[0.15em] uppercase text-zinc-600 hover:text-white transition-all min-h-[36px]"
               >
                 CLEAR
               </button>
@@ -663,6 +732,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
                 isHost={true}
                 onPropose={handlePropose}
                 onStartLive={handleStartLive}
+                onCancel={handleCancelSession}
                 onRefresh={handleSessionRefresh}
               />
             ) : activeSession?.status === "live" && sessionData ? (
@@ -673,6 +743,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
                   .map((m) => ({ id: m.id, title: m.title, poster_path: m.poster_path }))}
                 onRefresh={handleSessionRefresh}
                 onEndSession={handleEndSession}
+                onCancelSession={handleCancelSession}
               />
             ) : (
               <GoblinSessionHistory

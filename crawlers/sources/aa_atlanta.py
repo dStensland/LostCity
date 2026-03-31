@@ -99,59 +99,28 @@ def determine_venue_type(location_name: str) -> str:
         return "community_center"
     else:
         return "community_center"  # Default
-
-
-def _format_time_label(time_str: Optional[str]) -> Optional[str]:
-    if not time_str:
-        return None
-    raw = str(time_str).strip()
-    if not raw:
-        return None
-    for fmt in ("%H:%M", "%H:%M:%S"):
-        try:
-            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
-        except ValueError:
-            continue
-    return raw
-
-
-def format_meeting_description(
+def build_compact_meeting_description(
     meeting: dict,
     *,
     location_name: str,
-    day_name: str,
-    start_time: Optional[str],
-    source_url: str,
 ) -> str:
-    """Generate a logistics-first description for AA meetings."""
+    """Generate compact factual copy for AA meetings."""
     types_list = meeting.get("types", [])
     type_names = [TYPE_CODES.get(t, t) for t in types_list if t in TYPE_CODES]
 
     attendance = meeting.get("attendance_option", "in_person")
-    attendance_str = "in-person" if attendance == "in_person" else "online"
-    time_label = _format_time_label(start_time)
-
+    attendance_str = "online" if attendance == "online" else "in-person"
     parts = [f"Alcoholics Anonymous peer-support meeting ({attendance_str})."]
 
     if type_names:
         parts.append(f"Format: {', '.join(type_names)}.")
 
-    if day_name and time_label:
-        parts.append(f"Recurring weekly on {day_name} at {time_label}.")
-    elif day_name:
-        parts.append(f"Recurring weekly on {day_name}.")
-
-    if location_name:
+    if location_name and attendance != "online":
         parts.append(f"Location: {location_name}.")
 
-    location_notes = meeting.get("location_notes", "")
+    location_notes = str(meeting.get("location_notes", "")).strip().rstrip(".")
     if location_notes:
         parts.append(f"Arrival notes: {location_notes}.")
-
-    if source_url:
-        parts.append(f"Check the Atlanta Intergroup listing for current format updates ({source_url}).")
-    else:
-        parts.append("Check the Atlanta Intergroup listing for current format updates.")
 
     return " ".join(parts)
 
@@ -273,12 +242,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 day_name = DAY_NAMES[python_weekday]
 
                 # Generate description
-                description = format_meeting_description(
+                description = build_compact_meeting_description(
                     meeting,
                     location_name=location_name,
-                    day_name=day_name,
-                    start_time=start_time,
-                    source_url=meeting_url,
                 )
 
                 # Find next occurrence of this day

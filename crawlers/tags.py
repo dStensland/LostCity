@@ -116,6 +116,7 @@ CONTENT_TAGS = {
     "dekalb",  # DeKalb County location
     "cobb",  # Cobb County location
     "live-music",  # Music performance (not a class)
+    "open-format",  # Music/social format without a booked headliner
     "class",  # Class/workshop/lesson
     "showtime",  # Regular cinema showtime (filtered from curated feeds)
     "friday-13",  # Friday the 13th themed/spooky

@@ -2,11 +2,13 @@
 
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import EventDetailView from "./EventDetailView";
-import PlaceDetailView from "./PlaceDetailView";
-import SeriesDetailView from "./SeriesDetailView";
-import OrgDetailView from "./OrgDetailView";
-import FestivalDetailView from "./FestivalDetailView";
+import dynamic from "next/dynamic";
+
+const EventDetailView = dynamic(() => import("./EventDetailView"));
+const PlaceDetailView = dynamic(() => import("./PlaceDetailView"));
+const SeriesDetailView = dynamic(() => import("./SeriesDetailView"));
+const OrgDetailView = dynamic(() => import("./OrgDetailView"));
+const FestivalDetailView = dynamic(() => import("./FestivalDetailView"));
 import { setFeedVisible } from "@/lib/feed-visibility";
 
 interface DetailViewRouterProps {

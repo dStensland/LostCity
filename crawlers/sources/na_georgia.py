@@ -126,32 +126,13 @@ def determine_venue_type(location_name: str, location_info: str = "") -> str:
         return "community_center"
     else:
         return "community_center"  # Default
-
-
-def _format_time_label(time_str: Optional[str]) -> Optional[str]:
-    if not time_str:
-        return None
-    raw = str(time_str).strip()
-    if not raw:
-        return None
-    for fmt in ("%H:%M", "%H:%M:%S"):
-        try:
-            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
-        except ValueError:
-            continue
-    return raw
-
-
-def format_meeting_description(
+def build_compact_meeting_description(
     meeting: dict,
     formats: list[str],
     *,
     location_name: str,
-    day_name: str,
-    start_time: Optional[str],
-    source_url: str,
 ) -> str:
-    """Generate a logistics-first description for NA meetings."""
+    """Generate compact factual copy for NA meetings."""
     parts = []
 
     # Check if virtual/hybrid
@@ -168,17 +149,11 @@ def format_meeting_description(
     if formats:
         parts.append(f"Format: {', '.join(formats)}.")
 
-    time_label = _format_time_label(start_time)
-    if day_name and time_label:
-        parts.append(f"Recurring weekly on {day_name} at {time_label}.")
-    elif day_name:
-        parts.append(f"Recurring weekly on {day_name}.")
-
-    if location_name:
+    if location_name and is_in_person:
         parts.append(f"Location: {location_name}.")
 
     # Add comments if available
-    comments = meeting.get("comments", "").strip()
+    comments = str(meeting.get("comments", "")).strip().rstrip(".")
     if comments:
         parts.append(f"Notes: {comments}.")
 
@@ -186,12 +161,7 @@ def format_meeting_description(
     if meeting.get("virtual_meeting_link"):
         parts.append("Virtual meeting link available.")
     if meeting.get("phone_meeting_number"):
-        parts.append(f"Dial-in: {meeting.get('phone_meeting_number')}.")
-
-    if source_url:
-        parts.append(f"Check the NA Metro Atlanta listing for latest format updates ({source_url}).")
-    else:
-        parts.append("Check the NA Metro Atlanta listing for latest format updates.")
+        parts.append("Dial-in available.")
 
     return " ".join(parts)
 
@@ -348,13 +318,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 day_name = DAY_NAMES[python_weekday]
 
                 # Generate description
-                description = format_meeting_description(
+                description = build_compact_meeting_description(
                     meeting,
                     formats,
                     location_name=location_name,
-                    day_name=day_name,
-                    start_time=start_time,
-                    source_url=meeting_url,
                 )
 
                 # Find next occurrence of this day

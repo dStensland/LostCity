@@ -15,7 +15,7 @@ from typing import Optional
 from bs4 import BeautifulSoup
 
 from utils import slugify
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -457,71 +457,6 @@ def strip_html(html: str) -> str:
     return text
 
 
-def format_time_label(value: Optional[str]) -> Optional[str]:
-    if not value:
-        return None
-    raw = str(value).strip()
-    if not raw:
-        return None
-    for fmt in ("%H:%M", "%H:%M:%S"):
-        try:
-            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
-        except ValueError:
-            continue
-    return raw
-
-
-def build_library_description(
-    *,
-    title: str,
-    base_description: str,
-    location_details: str,
-    start_date: Optional[str],
-    start_time: Optional[str],
-    end_time: Optional[str],
-    place_data: dict,
-    category: str,
-    is_registration_required: bool,
-    event_url: str,
-) -> str:
-    description = (base_description or "").strip()
-    venue_name = str(place_data.get("name") or "Fulton County Library System").strip()
-    city = str(place_data.get("city") or "Atlanta").strip()
-    state = str(place_data.get("state") or "GA").strip()
-    time_label = format_time_label(start_time)
-    end_label = format_time_label(end_time)
-
-    parts: list[str] = []
-    if description and len(description) >= 140:
-        parts.append(description if description.endswith(".") else f"{description}.")
-    elif description:
-        parts.append(description if description.endswith(".") else f"{description}.")
-        parts.append(f"Fulton County Library {category.replace('_', ' ')} program.")
-    else:
-        parts.append(f"Fulton County Library {category.replace('_', ' ')} program: {title}.")
-
-    if location_details:
-        parts.append(f"Location details: {location_details}.")
-    else:
-        parts.append(f"Location: {venue_name}, {city}, {state}.")
-
-    if start_date and time_label and end_label:
-        parts.append(f"Scheduled on {start_date} from {time_label} to {end_label}.")
-    elif start_date and time_label:
-        parts.append(f"Scheduled on {start_date} at {time_label}.")
-    elif start_date:
-        parts.append(f"Scheduled on {start_date}.")
-
-    if is_registration_required:
-        parts.append("Registration may be required; capacity and waitlists vary by branch.")
-    else:
-        parts.append("Open community program; check listing for current attendance details.")
-
-    if event_url:
-        parts.append(f"Confirm details and updates on the official library event listing ({event_url}).")
-    return " ".join(parts)[:5000]
-
-
 def fetch_locations() -> dict[str, dict]:
     """Fetch all library branch locations."""
     locations = {}
@@ -709,18 +644,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "place_id": venue_id,
                         "title": title,
-                        "description": build_library_description(
-                            title=title,
-                            base_description=description,
-                            location_details=location_details,
-                            start_date=start_date,
-                            start_time=start_time,
-                            end_time=end_time,
-                            place_data=place_data,
-                            category=category,
-                            is_registration_required=is_registration_required,
-                            event_url=event_url,
-                        ),
+                        "description": description or None,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": end_date,
@@ -744,14 +668,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     }
 
                     existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        continue
-
-                    # Insert event
                     insert_event(event_record)
-                    events_new += 1
+                    if existing:
+                        events_updated += 1
+                    else:
+                        events_new += 1
                     logger.info(f"Added: {title} on {start_date} at {place_data['name']}")
 
                 except Exception as e:

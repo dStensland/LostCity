@@ -19,6 +19,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db.programs import insert_program
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, parse_price, normalize_time_format
 
@@ -77,6 +78,52 @@ def categorize_class(title: str) -> dict:
     }
 
 
+def _build_program_record(
+    class_name: str,
+    class_data: dict,
+    *,
+    venue_id: int,
+    source_id: int,
+    description: str,
+    price_min: Optional[float],
+    start_time: str,
+    tags: list[str],
+) -> dict:
+    title_lower = class_name.lower()
+    program_type = "camp" if "camp" in title_lower else "class"
+    season = "year_round"
+    if "camp" in title_lower:
+        season = "summer"
+
+    return {
+        "source_id": source_id,
+        "place_id": venue_id,
+        "name": class_name,
+        "description": description[:500],
+        "program_type": program_type,
+        "provider_name": PLACE_DATA["name"],
+        "season": season,
+        "session_start": None,
+        "session_end": None,
+        "schedule_days": [6],
+        "schedule_start_time": start_time,
+        "schedule_end_time": None,
+        "cost_amount": price_min,
+        "cost_period": "per_session",
+        "cost_notes": class_data.get("price") or "See website for pricing",
+        "registration_status": "open",
+        "registration_url": SCHEDULING_URL,
+        "tags": tags,
+        "status": "active",
+        "metadata": {
+            "category": class_data.get("category"),
+            "duration_minutes": class_data.get("duration"),
+            "class_size": class_data.get("class_size"),
+        },
+        "_venue_name": PLACE_DATA["name"],
+    }
+
+
 def parse_time(time_text: str) -> Optional[str]:
     """Parse time to HH:MM format."""
     if not time_text:
@@ -128,7 +175,7 @@ def parse_acuity_scheduling_page(page, venue_id: int, source_id: int) -> list[di
                 price = cls.get('price', '')
                 duration = cls.get('duration', 0)
                 class_size = cls.get('classSize', 0)
-                is_active = cls.get('is_active', False)
+                is_active = cls.get('is_active', True)
 
                 if not is_active:
                     continue
@@ -229,6 +276,26 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     price_min = price_max = 65.0
 
                 # Generate 4 upcoming Saturday occurrences (typical for pottery classes)
+                if "date" in class_name.lower() or "evening" in class_name.lower():
+                    start_time = "19:00"  # 7pm for date nights
+                elif "101" in class_name or "beginner" in class_name.lower():
+                    start_time = "14:00"  # 2pm for beginner classes
+                else:
+                    start_time = "13:00"  # 1pm for other classes
+
+                insert_program(
+                    _build_program_record(
+                        class_name,
+                        class_data,
+                        venue_id=venue_id,
+                        source_id=source_id,
+                        description=full_description,
+                        price_min=price_min,
+                        start_time=start_time,
+                        tags=cat_info["tags"],
+                    )
+                )
+
                 for week_offset in range(4):
                     days_until_saturday = (5 - today.weekday()) % 7
                     if days_until_saturday == 0 and week_offset == 0:
@@ -236,14 +303,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     event_date = today + timedelta(days=days_until_saturday + (week_offset * 7))
                     start_date = event_date.strftime("%Y-%m-%d")
-
-                    # Vary start times based on class type
-                    if "date" in class_name.lower() or "evening" in class_name.lower():
-                        start_time = "19:00"  # 7pm for date nights
-                    elif "101" in class_name or "beginner" in class_name.lower():
-                        start_time = "14:00"  # 2pm for beginner classes
-                    else:
-                        start_time = "13:00"  # 1pm for other classes
 
                     events_found += 1
 

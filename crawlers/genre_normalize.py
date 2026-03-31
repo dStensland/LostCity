@@ -146,7 +146,7 @@ GAMING_GENRES = {
 GAMES_GENRES = {
     "trivia", "bingo", "board-games", "poker", "dnd", "warhammer",
     "bar-games", "escape-room", "esports", "card-games", "pub-quiz",
-    "game-night",
+    "game-night", "chess", "video-games",
 }
 
 WORKSHOPS_GENRES = {

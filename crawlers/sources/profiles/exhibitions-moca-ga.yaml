@@ -1,0 +1,5 @@
+version: 1
+slug: exhibitions-moca-ga
+name: MOCA GA (Exhibitions)
+data_goals:
+- exhibits

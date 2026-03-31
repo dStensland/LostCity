@@ -32,6 +32,7 @@ import type { FeedEventData } from "@/components/EventCard";
 interface RegularsViewProps {
   portalId: string;
   portalSlug: string;
+  initialData?: { events: FeedEventData[] } | null;
 }
 
 type RegularEvent = FeedEventData & {
@@ -49,13 +50,13 @@ const ACTIVITY_MAP = new Map(SCENE_ACTIVITY_TYPES.map((a) => [a.id, a]));
 // Component
 // ---------------------------------------------------------------------------
 
-export default function RegularsView({ portalId, portalSlug }: RegularsViewProps) {
+export default function RegularsView({ portalId, portalSlug, initialData }: RegularsViewProps) {
   const searchParams = useSearchParams();
 
   const [isPending, startTransition] = useTransition();
 
-  const [events, setEvents] = useState<RegularEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState<RegularEvent[]>(() => initialData?.events ?? []);
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
 
   // Rolling 7-day window in portal-local time (America/New_York)
@@ -78,7 +79,8 @@ export default function RegularsView({ portalId, portalSlug }: RegularsViewProps
     (activities: string[], weekdays: string[]) => {
       const params = new URLSearchParams();
       params.set("view", "find");
-      params.set("type", "regulars");
+      params.set("lane", "regulars");
+      params.set("content", "regulars");
       if (activities.length > 0) params.set("activity", activities.join(","));
       if (weekdays.length > 0) params.set("weekday", weekdays.join(","));
       const url = `/${portalSlug}?${params.toString()}`;
@@ -87,9 +89,12 @@ export default function RegularsView({ portalId, portalSlug }: RegularsViewProps
     [portalSlug],
   );
 
-  // Fetch all events for the week (filtering happens client-side)
+  // Fetch all events for the week (filtering happens client-side).
+  // Skipped when initialData was provided by the RSC — avoids SSR waterfall.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    if (initialData) return;
+
     const controller = new AbortController();
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);

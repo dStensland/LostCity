@@ -1,0 +1,7 @@
+version: 1
+slug: dave-and-busters-marietta
+name: Dave & Buster's Marietta
+data_goals:
+- events
+- images
+- tickets

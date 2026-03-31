@@ -1,0 +1,7 @@
+version: 1
+slug: sandy-springs-parks-rec
+name: Sandy Springs Recreation & Parks
+data_goals:
+- events
+- images
+- tickets

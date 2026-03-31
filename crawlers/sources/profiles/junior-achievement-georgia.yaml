@@ -1,0 +1,8 @@
+version: 1
+slug: junior-achievement-georgia
+name: "Junior Achievement of Georgia \u2014 Homeschool Days"
+data_goals:
+- classes
+- events
+- images
+- tickets

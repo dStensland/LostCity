@@ -1,0 +1,7 @@
+version: 1
+slug: cobb-parks-rec
+name: Cobb County Parks & Recreation
+data_goals:
+- events
+- images
+- tickets

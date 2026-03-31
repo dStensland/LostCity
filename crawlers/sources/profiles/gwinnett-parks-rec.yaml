@@ -1,0 +1,6 @@
+version: 1
+slug: gwinnett-parks-rec
+name: Gwinnett County Parks & Recreation
+data_goals:
+- exhibits
+- images

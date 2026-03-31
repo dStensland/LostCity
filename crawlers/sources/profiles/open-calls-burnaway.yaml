@@ -1,0 +1,5 @@
+version: 1
+slug: open-calls-burnaway
+name: Burnaway Open Calls
+data_goals:
+- open_calls

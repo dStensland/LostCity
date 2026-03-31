@@ -1,0 +1,8 @@
+version: 1
+slug: blue-ridge-trout-fest
+name: Blue Ridge Trout & Outdoor Adventures Festival
+data_goals:
+- events
+- images
+- lineup
+- tickets

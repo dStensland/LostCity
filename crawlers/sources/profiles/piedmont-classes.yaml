@@ -1,15 +1,18 @@
 version: 1
 slug: piedmont-classes
 name: Piedmont Classes
-integration_method: playwright
+integration_method: api
 defaults: {}
 discovery:
-  enabled: false
-  type: list
+  enabled: true
+  type: api
+  api:
+    adapter: custom
   urls:
   - https://classes.inquicker.com/?ClientID=12422
+  - https://classfindapi.beryl.net/api/v3/authenticate
   fetch:
-    render_js: true
+    render_js: false
 detail:
   enabled: false
 data_goals:

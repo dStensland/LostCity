@@ -1,0 +1,8 @@
+version: 1
+slug: esfna-atlanta
+name: ESFNA Ethiopian Sports & Cultural Festival
+data_goals:
+- events
+- images
+- lineup
+- tickets

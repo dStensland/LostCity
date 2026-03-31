@@ -1,0 +1,7 @@
+version: 1
+slug: dekalb-parks-rec
+name: DeKalb County Parks & Recreation
+data_goals:
+- events
+- images
+- tickets

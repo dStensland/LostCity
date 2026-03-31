@@ -122,6 +122,32 @@ def test_llm_enrichment_fields_populated(mock_gen):
     assert "sold out last year" in result.significance_signals
 
 
+@patch("classify.generate_text")
+def test_llm_null_string_enrichment_fields_are_dropped(mock_gen):
+    """String sentinels like 'null' should not be written into constrained DB columns."""
+    mock_gen.return_value = json.dumps({
+        "category": "workshops",
+        "genres": [],
+        "audience": "general",
+        "duration": "null",
+        "cost_tier": "null",
+        "skill_level": "null",
+        "booking_required": "null",
+        "indoor_outdoor": "null",
+        "significance": "null",
+        "significance_signals": ["null", ""],
+        "confidence": 0.82,
+    })
+    result = classify_llm(title="Adult Take Home Craft Kit", description="Library craft kit")
+    assert result.duration is None
+    assert result.cost_tier is None
+    assert result.skill_level is None
+    assert result.booking_required is None
+    assert result.indoor_outdoor is None
+    assert result.significance is None
+    assert result.significance_signals == []
+
+
 def test_prompt_version_exists():
     """TAXONOMY_PROMPT_VERSION constant is defined."""
     assert TAXONOMY_PROMPT_VERSION is not None

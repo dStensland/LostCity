@@ -35,19 +35,20 @@ PLACE_DATA = {
     "place_type": "bar",
     "spot_type": "bar",
     "website": BASE_URL,
+    "image_url": "https://images.squarespace-cdn.com/content/v1/5c4a69e37c9327f7a21fbed1/1584564799207-7FMDT9JRJTZHBPSHS0M8/Joystick-4.jpg",
     "description": (
         "Joystick Gamebar is a LGBTQ-inclusive retro arcade bar on Edgewood Ave, "
         "packed with classic arcade and pinball machines, craft drinks, and a weekly "
         "calendar of bingo nights, tournaments, and themed events."
     ),
     "hours": {
-        "monday": {"open": "17:00", "close": "02:00"},
-        "tuesday": {"open": "17:00", "close": "02:00"},
-        "wednesday": {"open": "17:00", "close": "02:00"},
-        "thursday": {"open": "17:00", "close": "02:00"},
-        "friday": {"open": "17:00", "close": "03:00"},
-        "saturday": {"open": "14:00", "close": "03:00"},
-        "sunday": {"open": "14:00", "close": "02:00"},
+        "monday": {"open": "16:00", "close": "02:30"},
+        "tuesday": {"open": "16:00", "close": "02:30"},
+        "wednesday": {"open": "16:00", "close": "02:30"},
+        "thursday": {"open": "16:00", "close": "02:30"},
+        "friday": {"open": "16:00", "close": "02:30"},
+        "saturday": {"open": "12:00", "close": "02:30"},
+        "sunday": {"open": "12:00", "close": "00:00"},
     },
     "vibes": ["lgbtq", "arcade", "games", "bar-games", "casual", "retro", "edgewood"],
 }

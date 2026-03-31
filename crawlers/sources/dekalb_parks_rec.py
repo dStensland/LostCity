@@ -92,6 +92,14 @@ GENERIC_VENUE = {
     "place_type": "organization",
     "spot_type": "organization",
     "website": f"{APM_BASE}/Home",
+    "description": (
+        "DeKalb County Recreation, Parks & Cultural Affairs runs recreation centers, parks, "
+        "athletics, arts programming, camps, and community events across DeKalb County."
+    ),
+    "image_url": (
+        "https://www.dekalbcountyga.gov/sites/default/files/inline-images/"
+        "48X24%20Front%20Banner%20Website%20%283%29.png"
+    ),
 }
 
 # ──────────────────────────────────────────────────────────────────────────────

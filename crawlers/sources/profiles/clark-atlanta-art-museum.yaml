@@ -1,0 +1,6 @@
+version: 1
+slug: clark-atlanta-art-museum
+name: Clark Atlanta University Art Museum
+data_goals:
+- exhibits
+- images

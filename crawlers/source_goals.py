@@ -14,6 +14,7 @@ from pipeline.loader import load_profile
 VALID_DATA_GOALS = {
     "events",
     "exhibits",
+    "open_calls",
     "specials",
     "classes",
     "showtimes",
@@ -30,6 +31,9 @@ GOAL_ALIASES = {
     "event": "events",
     "exhibit": "exhibits",
     "exhibitions": "exhibits",
+    "open_call": "open_calls",
+    "open-call": "open_calls",
+    "open calls": "open_calls",
     "special": "specials",
     "deals": "specials",
     "class": "classes",
@@ -99,6 +103,12 @@ def infer_data_goals(
     name = (source_name or "").lower()
     venue = (venue_type or spot_type or "").lower()
     combined = f"{slug} {name} {venue}"
+
+    if slug.startswith("open-calls-") or "open call" in combined:
+        return ["open_calls"]
+
+    if slug.startswith("exhibitions-"):
+        return ["exhibits", "images"]
 
     goals = {"events", "tickets", "images"}
 
@@ -198,9 +208,9 @@ def resolve_source_data_goals(
     """
     try:
         profile = load_profile(source_slug)
-        profile_goals = [normalize_goal(goal) for goal in (profile.data_goals or [])]
-        goals = sorted({goal for goal in profile_goals if goal})
-        if goals:
+        if profile.data_goals is not None:
+            profile_goals = [normalize_goal(goal) for goal in profile.data_goals]
+            goals = sorted({goal for goal in profile_goals if goal})
             return goals, "profile"
     except Exception:
         pass

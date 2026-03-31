@@ -89,19 +89,23 @@ python3 scripts/canonicalize_cross_source_duplicates.py --start-date $(date +%F)
 python3 scripts/launch_health_check.py --city Atlanta --portal atlanta
 ```
 
-### Enrich thin Eventbrite descriptions
+### Optional manual Eventbrite real-extraction pass
 
 ```bash
 cd /Users/coach/Projects/LostCity/crawlers
 
-# Preview candidate improvements
+# Preview candidate improvements from Eventbrite detail-page content
 python3 scripts/enrich_eventbrite_descriptions.py --portal atlanta --start-date $(date +%F) --limit 200
 
 # Apply updates
 python3 scripts/enrich_eventbrite_descriptions.py --portal atlanta --start-date $(date +%F) --limit 200 --apply
 ```
 
-### Enrich thin non-Eventbrite descriptions (Atlanta launch set)
+Notes:
+- This is a manual recovery tool, not part of the automated enrichment pipeline.
+- It uses real detail-page extraction rather than synthetic fallback prose.
+
+### Optional manual non-Eventbrite real-extraction pass (Atlanta launch set)
 
 Targets:
 - `ticketmaster`
@@ -126,18 +130,22 @@ Targets:
 ```bash
 cd /Users/coach/Projects/LostCity/crawlers
 
-# Preview candidate improvements
+# Preview candidate improvements from source-page JSON-LD/Open Graph extraction
 python3 scripts/enrich_non_eventbrite_descriptions.py --portal atlanta --start-date $(date +%F) --limit 5000 --page-size 1000
 
 # Apply updates
 python3 scripts/enrich_non_eventbrite_descriptions.py --portal atlanta --start-date $(date +%F) --limit 5000 --page-size 1000 --apply
 ```
 
+Notes:
+- This is a manual recovery tool, not part of the automated enrichment pipeline.
+- It only applies real source-page extraction and does not reintroduce synthetic builder text.
+
 For long-tail cleanup, target current short-description sources directly with `--source-slugs <comma-list>` and keep `--portal atlanta` enabled.
 
 For full zero-short sweeps, run iterative portal-scoped batches:
 1. Pull current source short-counts from Atlanta scope.
-2. Run `enrich_non_eventbrite_descriptions.py --portal atlanta --source-slugs <all-short-sources> --min-length 220 --min-delta 1 --apply`.
+2. Run `enrich_non_eventbrite_descriptions.py --portal atlanta --source-slugs <all-short-sources> --min-length 220 --min-delta 1 --apply` as a manual real-extraction pass.
 3. Recompute counts and repeat until no sources remain.
 
 If short rows include `source_id IS NULL`, run the source-less sweep:

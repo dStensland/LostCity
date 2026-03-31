@@ -13,8 +13,5 @@ detail:
   jsonld_only: true
   use_jsonld: true
 data_goals:
-- events
 - images
-- specials
-- tickets
 - venue_hours

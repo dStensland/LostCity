@@ -137,6 +137,24 @@ def determine_series_hint(board: str, meeting_type: str) -> Optional[dict]:
     return None
 
 
+def build_compact_meeting_description(board: str, meeting_type: str, location: str) -> Optional[str]:
+    board_clean = " ".join((board or "").split()).strip()
+    type_clean = " ".join((meeting_type or "").split()).strip()
+    location_clean = " ".join((location or "").split()).strip(" ,")
+
+    if not board_clean:
+        return None
+
+    parts = [f"Public {board_clean} {type_clean.lower()}".strip()]
+    if location_clean:
+        parts[0] = f"{parts[0]} at {location_clean}"
+
+    description = " ".join(parts).strip()
+    if not description:
+        return None
+    return description if description.endswith(".") else f"{description}."
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl City of Atlanta IQM2 calendar for upcoming government meetings."""
     source_id = source["id"]
@@ -266,12 +284,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 events_found += 1
 
-                # Build description
-                desc_parts = [f"{board} {meeting_type} of the City of Atlanta."]
-                if info["location"]:
-                    desc_parts.append(f"Location: {info['location']}.")
-                desc_parts.append("All meetings are open to the public.")
-                description = " ".join(desc_parts)
+                description = build_compact_meeting_description(
+                    board=board,
+                    meeting_type=meeting_type,
+                    location=info["location"],
+                )
 
                 # Series hint
                 series_hint = determine_series_hint(board, meeting_type)

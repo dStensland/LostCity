@@ -1,0 +1,7 @@
+version: 1
+slug: dave-and-busters-atlanta
+name: Dave & Busters Atlanta
+data_goals:
+- events
+- images
+- tickets

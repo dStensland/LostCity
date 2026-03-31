@@ -37,6 +37,15 @@ music, art, comedy, theater, film, sports, recreation, exercise, food_drink, nig
 Note: "fitness" is accepted but maps to "exercise". Prefer the canonical terms below.
 
 Category guidance:
+- music: Live performances with a named performer, band, or DJ playing a booked set.
+  Use for: concerts, shows, headlining acts, residencies, album release shows.
+  Do NOT use for: open mic, karaoke, drag shows, dance socials, murder mystery dinners,
+  or background music at restaurants.
+  Key question: Is there a specific named performer being promoted?
+- nightlife: Social entertainment formats at bars/clubs. No specific headliner required.
+  Use for: karaoke nights, drag shows, DJ dance nights without a named headliner, open mic,
+  dance socials, themed club nights, happy hour entertainment.
+  Key question: Is this a recurring social format rather than a specific booked act?
 - sports: spectator sports — watching games, attending matches, viewing events (baseball, basketball, football, soccer, hockey, MMA, racing, esports)
 - recreation: participation sports and recreational activities — leagues, pickup games, open play, fun runs, triathlons, pickleball, softball, cornhole, axe-throwing
 - exercise: structured movement/fitness — gym classes, yoga, tai chi, martial arts, aqua fitness, crossfit, pilates, running clubs (fitness-focused, not competitive)
@@ -46,6 +55,8 @@ Category guidance:
 - wellness: health fairs, meditation, therapy groups, hospital outreach, CPR classes
 - words: book clubs, poetry, author events, storytelling, literary events
 - unknown: Use this when the event doesn't clearly fit ANY category above. Better to mark unknown than guess wrong.
+- Venue type does not determine category. A welding class at a theater is learning, not theater.
+  A card game at a bar is gaming, not music.
 
 SUBCATEGORIES for nightlife (use when applicable):
 - nightlife.dj: DJ sets, dance nights

@@ -1,21 +1,21 @@
 version: 1
 slug: atlanta-botanical-garden
 name: Atlanta Botanical Garden
-integration_method: llm_crawler
+integration_method: api
 defaults: {}
 discovery:
   enabled: true
-  type: html
+  type: api
+  api:
+    adapter: custom
   urls:
-  - https://atlantabg.org/events
+  - https://atlantabg.org/wp-json/tribe/events/v1/events
   fetch:
-    render_js: true
+    render_js: false
     timeout_ms: 60000
     wait_until: load
 detail:
-  enabled: true
-  fetch:
-    render_js: true
+  enabled: false
 data_goals:
 - events
 - exhibits

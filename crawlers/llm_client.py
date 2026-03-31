@@ -58,6 +58,41 @@ def _resolve_provider(provider_override: Optional[str] = None) -> str:
     return _normalize_provider(cfg.llm.provider)
 
 
+def _provider_is_configured(provider: str) -> bool:
+    cfg = get_config()
+    if provider == "openai":
+        return bool(cfg.llm.openai_api_key)
+    if provider == "anthropic":
+        return bool(cfg.llm.anthropic_api_key)
+    return False
+
+
+def _alternate_provider(provider: str) -> Optional[str]:
+    if provider == "anthropic":
+        return "openai"
+    if provider == "openai":
+        return "anthropic"
+    return None
+
+
+def _should_fallback_to_alternate_provider(exc: Exception) -> bool:
+    text = str(exc).lower()
+    fallback_markers = (
+        "credit balance is too low",
+        "insufficient_quota",
+        "quota",
+        "rate limit",
+        "429",
+        "overloaded",
+        "temporarily unavailable",
+        "api key is not set",
+        "client not available",
+        "authentication",
+        "auth",
+    )
+    return any(marker in text for marker in fallback_markers)
+
+
 def _get_anthropic_client():
     global _anthropic_client
     if _anthropic_client is None:
@@ -94,18 +129,13 @@ def _get_openai_client():
     return _openai_client
 
 
-def generate_text(
+def _generate_with_provider(
+    provider: str,
     system_prompt: str,
     user_message: str,
-    provider_override: Optional[str] = None,
     model_override: Optional[str] = None,
 ) -> str:
-    """
-    Generate text from the configured LLM provider.
-    Returns raw text output.
-    """
     cfg = get_config()
-    provider = _resolve_provider(provider_override)
 
     if provider == "openai":
         client = _get_openai_client()
@@ -138,6 +168,46 @@ def generate_text(
         return ""
 
     raise RuntimeError(f"Unknown LLM provider: {provider}")
+
+
+def generate_text(
+    system_prompt: str,
+    user_message: str,
+    provider_override: Optional[str] = None,
+    model_override: Optional[str] = None,
+) -> str:
+    """
+    Generate text from the configured LLM provider.
+    Returns raw text output.
+    """
+    provider = _resolve_provider(provider_override)
+    try:
+        return _generate_with_provider(
+            provider,
+            system_prompt=system_prompt,
+            user_message=user_message,
+            model_override=model_override,
+        )
+    except Exception as exc:
+        alternate = _alternate_provider(provider)
+        if (
+            alternate
+            and _provider_is_configured(alternate)
+            and _should_fallback_to_alternate_provider(exc)
+        ):
+            logger.warning(
+                "LLM provider '%s' failed (%s); falling back to '%s'",
+                provider,
+                exc,
+                alternate,
+            )
+            return _generate_with_provider(
+                alternate,
+                system_prompt=system_prompt,
+                user_message=user_message,
+                model_override=None,
+            )
+        raise
 
 
 def generate_text_with_images(

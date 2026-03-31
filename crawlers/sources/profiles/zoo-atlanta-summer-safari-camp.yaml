@@ -1,0 +1,7 @@
+version: 1
+slug: zoo-atlanta-summer-safari-camp
+name: Zoo Atlanta Summer Safari Camp
+data_goals:
+- events
+- images
+- tickets

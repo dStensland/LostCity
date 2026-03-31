@@ -1,0 +1,7 @@
+version: 1
+slug: imperial-fez
+name: Imperial Fez
+data_goals:
+- events
+- images
+- tickets

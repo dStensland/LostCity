@@ -1,0 +1,8 @@
+version: 1
+slug: west-end-comedy-fest
+name: West End Comedy Fest
+data_goals:
+- events
+- images
+- lineup
+- tickets

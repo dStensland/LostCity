@@ -1,0 +1,8 @@
+version: 1
+slug: the-coder-school
+name: theCoderSchool Atlanta
+data_goals:
+- classes
+- events
+- images
+- tickets

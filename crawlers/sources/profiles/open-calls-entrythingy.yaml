@@ -1,0 +1,5 @@
+version: 1
+slug: open-calls-entrythingy
+name: EntryThingy (Open Calls)
+data_goals:
+- open_calls

@@ -1,0 +1,8 @@
+version: 1
+slug: all-fired-up
+name: All Fired Up Art Studio
+data_goals:
+- classes
+- events
+- images
+- tickets

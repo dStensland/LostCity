@@ -1,0 +1,5 @@
+version: 1
+slug: open-calls-showsubmit
+name: ShowSubmit (Juried Art Shows)
+data_goals:
+- open_calls

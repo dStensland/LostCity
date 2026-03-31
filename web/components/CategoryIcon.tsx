@@ -85,6 +85,7 @@ import {
   FirstAid,
   CirclesFour,
   Leaf,
+  Ticket,
 } from "@phosphor-icons/react/dist/ssr";
 
 // Unified category/type definitions with colors (same as original)
@@ -201,7 +202,8 @@ const ICON_MAP: Record<string, ComponentType<IconProps>> = {
   religious: Cross,
   church: Church,
   haunted: Ghost,
-  attraction: Ghost,
+  attraction: Ticket,
+  attractions: Ticket,
   healthcare: FirstAid,
   hospital: FirstAid,
 

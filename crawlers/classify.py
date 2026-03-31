@@ -38,6 +38,12 @@ logger = logging.getLogger(__name__)
 CONFIDENCE_THRESHOLD = 0.7
 TAXONOMY_PROMPT_VERSION = "v1.0-2026-03-27"
 
+_NULL_LIKE_STRINGS = frozenset({"", "null", "none", "n/a", "na", "unknown"})
+_VALID_COST_TIERS = frozenset({"free", "$", "$$", "$$$"})
+_VALID_SKILL_LEVELS = frozenset({"beginner", "intermediate", "advanced", "all-levels"})
+_VALID_INDOOR_OUTDOOR = frozenset({"indoor", "outdoor", "both"})
+_VALID_SIGNIFICANCE = frozenset({"low", "medium", "high"})
+
 
 # ---------------------------------------------------------------------------
 # Result dataclass
@@ -58,6 +64,62 @@ class ClassificationResult:
     indoor_outdoor: Optional[str] = None
     significance: Optional[str] = None
     significance_signals: list[str] = field(default_factory=list)
+
+
+def _normalize_nullable_text(value: object) -> Optional[str]:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        cleaned = value.strip()
+    else:
+        cleaned = str(value).strip()
+    if cleaned.lower() in _NULL_LIKE_STRINGS:
+        return None
+    return cleaned
+
+
+def _normalize_choice(value: object, allowed: frozenset[str]) -> Optional[str]:
+    cleaned = _normalize_nullable_text(value)
+    if not cleaned:
+        return None
+    normalized = cleaned.lower()
+    return normalized if normalized in allowed else None
+
+
+def _normalize_cost_tier(value: object) -> Optional[str]:
+    cleaned = _normalize_nullable_text(value)
+    if not cleaned:
+        return None
+    normalized = cleaned.lower()
+    return normalized if normalized in _VALID_COST_TIERS else None
+
+
+def _normalize_booking_required(value: object) -> Optional[bool]:
+    if isinstance(value, bool):
+        return value
+    cleaned = _normalize_nullable_text(value)
+    if not cleaned:
+        return None
+    normalized = cleaned.lower()
+    if normalized in {"true", "yes", "required"}:
+        return True
+    if normalized in {"false", "no", "optional"}:
+        return False
+    return None
+
+
+def _normalize_significance_signals(value: object) -> list[str]:
+    if not value:
+        return []
+    if isinstance(value, list):
+        normalized: list[str] = []
+        for item in value:
+            cleaned = _normalize_nullable_text(item)
+            if cleaned:
+                normalized.append(cleaned)
+        return normalized
+    cleaned = _normalize_nullable_text(value)
+    return [cleaned] if cleaned else []
 
 
 # ---------------------------------------------------------------------------
@@ -109,6 +171,14 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
     (["warhammer", "warhammer 40k", "age of sigmar"], "games", ["warhammer"], 0.9),
     (["magic: the gathering", "mtg tournament", "magic tournament",
       "magic the gathering"],                 "games",     ["card-games"],   0.9),
+    (["pauper league", "commander night", "commander league"],
+                                             "games",     ["card-games"],   0.88),
+    (["nintendo switch"],                     "games",     ["video-games"],  0.9),
+    (["virtual reality", "vr game"],         "games",     ["video-games"],  0.88),
+    (["pokemon club", "pokémon club"],       "games",     [],               0.88),
+    (["chess club", "chess night", "chess tournament", "chess"], 
+                                             "games",     ["chess"],        0.88),
+    (["mah jongg", "mahjong"],                "games",     ["board-games"], 0.88),
     (["d&d", "dungeons and dragons", "dungeons & dragons",
       "dnd campaign", "dnd night"],           "games",     ["dnd"],          0.9),
     (["escape room"],                         "games",     ["escape-room"],  0.9),
@@ -134,10 +204,13 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
 
     # --- Music (open mic is LOW — could be comedy or poetry) ---
     (["dj set", "dj night"],                  "music",     ["dj"],           0.88),
-    (["karaoke night", "karaoke"],            "music",     ["karaoke"],      0.88),
+    (["dueling pianos"],                      "music",     [],               0.88),
     (["live music"],                          "music",     [],               0.82),
     (["open mic"],                            "music",     ["open-mic"],     0.60),  # ambiguous
     (["concert", "live show", "live performance"], "music", [],              0.75),
+
+    # --- Nightlife / social formats ---
+    (["karaoke night", "karaoke"],            "nightlife", ["karaoke"],      0.88),
 
     # --- Dance (each style maps to its own specific genre) ---
     (["salsa night", "salsa dancing", "salsa class", "salsa lessons"],
@@ -146,6 +219,7 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
                                               "dance",     ["bachata"],      0.9),
     (["swing night", "swing dancing", "swing dance"],
                                               "dance",     ["swing"],        0.9),
+    (["lindy hop"],                           "dance",     ["swing"],        0.9),
     (["latin night", "latin dance night"],    "dance",     ["latin"],        0.85),
     (["line dancing", "line dance"],          "dance",     ["line-dancing"], 0.9),
     (["dance class", "dance lesson", "dance workshop"],
@@ -160,6 +234,7 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
     (["pilates"],                             "fitness",   ["pilates"],      0.9),
     (["spin class", "cycling class"],         "fitness",   ["cycling"],      0.88),
     (["barre class", "barre"],                "fitness",   ["barre"],        0.88),
+    (["qigong", "qi gong"],                   "fitness",   [],               0.88),
     (["bootcamp", "boot camp"],               "fitness",   ["hiit"],         0.8),
     (["swim lessons", "swimming lessons", "learn to swim"],
                                               "fitness",   ["swimming"],     0.9),
@@ -169,6 +244,20 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
     # --- Workshops ---
     (["paint and sip", "painting and sip", "sip and paint"],
                                               "workshops", ["painting"],     0.92),
+    (["sewing class", "sewing workshop", "kids sewing", "sewing"],
+                                              "workshops", [],               0.88),
+    (["origami", "papermaking", "soap making", "soapmaking"],
+                                              "workshops", ["crafts"],       0.88),
+    (["take & make", "take and make", "cricut creations"],
+                                              "workshops", ["crafts"],       0.88),
+    (["lego club", "middle makers", "adult craft", "embroidery"],
+                                              "workshops", ["crafts"],       0.88),
+    (["crafternoon"],                         "workshops", ["crafts"],       0.88),
+    (["creative writing workshop", "clothing repair clinic", "repair clinic",
+      "shell charm bracelet", "fearless art"],
+                                              "workshops", ["crafts"],       0.87),
+    (["podcast workshop", "podcast basics workshop", "craft and chat"],
+                                              "workshops", ["crafts"],       0.86),
     (["pottery class", "pottery workshop", "pottery"],
                                               "workshops", ["pottery"],      0.88),
     (["cooking class", "cooking workshop", "culinary class"],
@@ -181,13 +270,19 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
     (["printmaking", "screen printing"],      "workshops", ["printmaking"],  0.88),
 
     # --- Words / literary ---
+    (["baby time"],                          "words",     ["storytime"],    0.92),
+    (["toddler time"],                       "words",     ["storytime"],    0.9),
+    (["tummy time"],                         "family",    [],               0.9),
+    (["read to a pet", "pet partner"],       "words",     ["reading"],      0.88),
     (["book club"],                           "words",     ["book-club"],    0.92),
+    (["reading buddies"],                     "words",     ["reading"],      0.9),
+    (["storywalk"],                           "words",     ["reading"],      0.88),
     (["author signing", "author talk", "book signing", "book talk"],
                                               "words",     ["signing"],      0.88),
     (["poetry slam", "poetry open mic"],      "words",     ["poetry-slam"],  0.9),
     (["poetry reading", "poetry night", "poetry"],
                                               "words",     ["poetry"],       0.85),
-    (["storytime", "story time"],             "words",     ["storytime"],    0.9),
+    (["storytime", "story time", "storycraft"], "words",   ["storytime"],    0.9),
     (["spoken word"],                         "words",     ["spoken-word"],  0.88),
 
     # --- Art ---
@@ -208,6 +303,7 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
     # --- Volunteer ---
     (["food pantry", "food bank", "food drive"],
                                               "volunteer", ["food-bank"],    0.9),
+    (["blood drive"],                        "volunteer", [],               0.9),
     (["tree planting", "tree plant"],         "volunteer", ["tree-planting"], 0.9),
     (["meal delivery", "meal packing"],       "volunteer", ["meal-delivery"], 0.9),
     (["cleanup", "clean up", "park cleanup"], "volunteer", ["cleanup"],      0.85),
@@ -222,6 +318,8 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
     (["city council", "county commission"],   "civic",     ["commission"],   0.88),
 
     # --- Support ---
+    (["social work intern"],                  "support",   ["peer-support"], 0.86),
+    (["adults with disabilities"],            "support",   ["peer-support"], 0.88),
     (["aa meeting", "alcoholics anonymous"],  "support",   ["recovery"],     0.92),
     (["na meeting", "narcotics anonymous"],   "support",   ["recovery"],     0.92),
     (["grief support", "grief group"],        "support",   ["grief"],        0.9),
@@ -234,14 +332,38 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
     (["prayer meeting", "prayer service"],    "religious", ["prayer"],       0.88),
 
     # --- Education ---
+    (["language learning", "conversations in english"],
+                                              "education", ["language"],     0.9),
+    (["homework help", "tutoring"],          "education", [],               0.9),
+    (["book-a-librarian", "book a librarian", "1:1 tech help", "tech help", "computer basics", "internet basics"],
+                                              "education", ["technology"],   0.88),
+    (["english as a second language", "study cafe"],
+                                              "education", ["language"],     0.88),
+    (["ged study", "ged class"],             "education", [],               0.88),
+    (["code-blazers", "coding club", "coding class", "learn to code"],
+                                              "education", ["technology"],   0.88),
+    (["artificial intelligence", "ai basics", "intro to ai"],
+                                              "education", ["technology"],   0.88),
     (["seminar"],                             "education", ["seminar"],      0.82),
     (["esl class", "english class", "language class"],
                                               "education", ["language"],     0.85),
     (["lecture series", "public lecture"],    "education", ["lecture"],      0.82),
 
+    # --- Workshops / participatory music programs ---
+    (["ukulele series of classes", "ukulele class", "ukulele program", "ukulele group"],
+                                              "workshops", [],               0.86),
+
     # --- Conventions ---
     (["comic con", "comicon", "anime con", "anime convention"],
                                               "conventions", ["fan"],        0.9),
+
+    # --- Film ---
+    (["filmmakers club", "film club"],        "film",      [],               0.88),
+    (["movie night", "movie screening", "film screening", "friday movies"],
+                                              "film",      [],               0.88),
+
+    # --- Family ---
+    (["sensory play", "sensory playtime"],    "family",    [],               0.85),
     (["expo", "trade show", "trade expo"],    "conventions", ["trade"],      0.65),
     (["conference"],                          "conventions", [],             0.65),
     (["convention"],                          "conventions", ["convention"], 0.65),
@@ -263,11 +385,22 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
 # ---------------------------------------------------------------------------
 
 _DANCE_VENUE_TYPES = {"nightclub", "bar", "club", "sports_bar"}
+_OPEN_FORMAT_SOCIAL_VENUE_TYPES = {
+    "bar",
+    "nightclub",
+    "club",
+    "restaurant",
+    "brewery",
+    "food_hall",
+    "lounge",
+}
 _DANCE_STYLE_KEYWORDS = [
     "salsa", "bachata", "swing", "latin", "line dancing", "line dance",
     "waltz", "tango", "foxtrot", "ballroom", "flamenco", "tap",
     "contemporary", "ballet",
 ]
+_OPEN_MIC_WORDS_HINTS = ("poetry", "spoken word", "spoken-word")
+_OPEN_MIC_COMEDY_HINTS = ("comedy", "stand-up", "standup", "improv")
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +440,14 @@ def _has_dance_style_keyword(title: str) -> bool:
     """Return True if the title contains a specific dance style keyword."""
     for kw in _DANCE_STYLE_KEYWORDS:
         if _word_match(title, kw):
+            return True
+    return False
+
+
+def _description_has_any(description: str, phrases: tuple[str, ...]) -> bool:
+    """Return True if any phrase appears with word-boundary-aware matching."""
+    for phrase in phrases:
+        if _word_match(description, phrase):
             return True
     return False
 
@@ -445,6 +586,34 @@ def classify_rules(
         result.category = "music"
         result.genres = ["dj"]
         result.confidence = 0.7
+
+    # ------------------------------------------------------------------
+    # Step 2a: Open-format karaoke at bar/nightlife venues
+    # Preserve the social-format classification instead of force-promoting
+    # karaoke into "music" when the venue context is clearly bar/nightlife.
+    # ------------------------------------------------------------------
+    if (
+        result.category == "music"
+        and "karaoke" in result.genres
+        and venue_type in _OPEN_FORMAT_SOCIAL_VENUE_TYPES
+    ):
+        result.category = category_hint or "nightlife"
+        result.confidence = 0.85 if result.category == "nightlife" else 0.5
+
+    # ------------------------------------------------------------------
+    # Step 2aa: Ambiguous open mic with literary/comedy cues
+    # Generic "open mic" titles are intentionally low-confidence. When the
+    # description clearly says the format includes poetry/spoken word or
+    # comedy, keep that deterministic classification and avoid escalating an
+    # ambiguous recurring format into an overconfident LLM rewrite.
+    # ------------------------------------------------------------------
+    if result.category == "music" and "open-mic" in result.genres:
+        if _description_has_any(description, _OPEN_MIC_WORDS_HINTS):
+            result.category = "words"
+            result.confidence = 0.72
+        elif _description_has_any(description, _OPEN_MIC_COMEDY_HINTS):
+            result.category = "comedy"
+            result.confidence = 0.72
 
     # ------------------------------------------------------------------
     # Step 2b: Sports watch party at sports bar
@@ -609,8 +778,6 @@ def classify_llm(
         raw = generate_text(
             system_prompt=_SYSTEM_PROMPT,
             user_message=user_msg,
-            provider_override="anthropic",
-            model_override="claude-haiku-4-5-20251001",
         )
     except Exception as e:
         logger.error("LLM API call failed for '%s': %s", title[:60], e)
@@ -623,17 +790,23 @@ def classify_llm(
         logger.warning("LLM returned non-JSON for '%s': %.100s", title[:60], raw)
         return result
 
-    result.category = data.get("category")
+    result.category = _normalize_nullable_text(data.get("category"))
     result.genres = data.get("genres", [])
-    result.audience = data.get("audience", "general")
+    result.audience = _normalize_nullable_text(data.get("audience")) or "general"
     result.confidence = float(data.get("confidence", 0.5))
-    result.duration = data.get("duration")
-    result.cost_tier = data.get("cost_tier")
-    result.skill_level = data.get("skill_level")
-    result.booking_required = data.get("booking_required")
-    result.indoor_outdoor = data.get("indoor_outdoor")
-    result.significance = data.get("significance")
-    result.significance_signals = data.get("significance_signals", [])
+    result.duration = _normalize_nullable_text(data.get("duration"))
+    result.cost_tier = _normalize_cost_tier(data.get("cost_tier"))
+    result.skill_level = _normalize_choice(data.get("skill_level"), _VALID_SKILL_LEVELS)
+    result.booking_required = _normalize_booking_required(data.get("booking_required"))
+    result.indoor_outdoor = _normalize_choice(
+        data.get("indoor_outdoor"), _VALID_INDOOR_OUTDOOR
+    )
+    result.significance = _normalize_choice(
+        data.get("significance"), _VALID_SIGNIFICANCE
+    )
+    result.significance_signals = _normalize_significance_signals(
+        data.get("significance_signals", [])
+    )
 
     # Validate: strip genres that don't belong to the returned category
     if result.category and result.genres:

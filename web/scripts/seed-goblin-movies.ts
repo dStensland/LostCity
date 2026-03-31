@@ -361,7 +361,7 @@ async function seed() {
   }
 
   // Full seed: fetch from TMDB + scrape RT
-  for (const year of [2025, 2026]) {
+  for (const year of [2024, 2025, 2026]) {
     console.log(`--- ${year} ---`);
     const movies = await fetchHorrorMovies(year);
     console.log(`Found ${movies.length} horror movies from TMDB\n`);

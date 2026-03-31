@@ -3,6 +3,7 @@ Tests for database operations in db.py.
 Uses mocked Supabase client to avoid actual database calls.
 """
 
+import os
 from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
 from types import SimpleNamespace
@@ -1897,6 +1898,284 @@ class TestSmartUpdateExistingEvent:
         assert updates["category_id"] == "music"
         mock_parse_lineup.assert_called_once_with("Mumford & Sons")
         mock_upsert_artists.assert_called_once()
+
+    @patch("db.events.get_source_info", return_value=None)
+    @patch("db.events.events_support_film_identity_columns", return_value=False)
+    @patch("db.events.events_support_is_show_column", return_value=False)
+    @patch("db.events.events_support_content_kind_column", return_value=False)
+    @patch("db.events.events_support_is_active_column", return_value=False)
+    @patch("db.events.get_client")
+    def test_rewrites_existing_category_from_v2_when_flag_enabled(
+        self,
+        mock_get_client,
+        _mock_events_active,
+        _mock_content_kind,
+        _mock_is_show,
+        _mock_film_identity,
+        _mock_get_source_info,
+    ):
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.update.return_value = table
+        table.eq.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 1888}])
+
+        from db import smart_update_existing_event
+
+        existing = {
+            "id": 1888,
+            "title": "Live Band Karaoke at Metalsome Live Band Karaoke",
+            "category_id": "music",
+        }
+        incoming = {
+            "title": "Live Band Karaoke at Metalsome Live Band Karaoke",
+            "category_id": "nightlife",
+            "classification_prompt_version": "v1.0-2026-03-27",
+            "_classification_confidence": 0.88,
+        }
+
+        with patch.dict(os.environ, {"CLASSIFY_V2_REWRITE_CATEGORY": "1"}):
+            updated = smart_update_existing_event(existing, incoming)
+
+        assert updated is True
+        updates = table.update.call_args[0][0]
+        assert updates["category_id"] == "nightlife"
+
+    @patch("db.events.get_source_info", return_value=None)
+    @patch("db.events.events_support_film_identity_columns", return_value=False)
+    @patch("db.events.events_support_is_show_column", return_value=False)
+    @patch("db.events.events_support_content_kind_column", return_value=False)
+    @patch("db.events.events_support_is_active_column", return_value=False)
+    @patch("db.events.get_client")
+    def test_does_not_rewrite_existing_category_from_v2_without_flag(
+        self,
+        mock_get_client,
+        _mock_events_active,
+        _mock_content_kind,
+        _mock_is_show,
+        _mock_film_identity,
+        _mock_get_source_info,
+    ):
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.update.return_value = table
+        table.eq.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 1889}])
+
+        from db import smart_update_existing_event
+
+        existing = {
+            "id": 1889,
+            "title": "Live Band Karaoke at Metalsome Live Band Karaoke",
+            "category_id": "music",
+        }
+        incoming = {
+            "title": "Live Band Karaoke at Metalsome Live Band Karaoke",
+            "category_id": "nightlife",
+            "classification_prompt_version": "v1.0-2026-03-27",
+            "_classification_confidence": 0.88,
+        }
+
+        updated = smart_update_existing_event(existing, incoming)
+
+        if updated:
+            updates = table.update.call_args[0][0]
+            assert "category_id" not in updates
+        else:
+            table.update.assert_not_called()
+
+    @patch("db.events.find_existing_event_for_insert")
+    @patch("db.events.get_client")
+    def test_insert_event_preserves_classification_confidence_for_existing_update(
+        self,
+        mock_get_client,
+        mock_find_existing,
+    ):
+        client = MagicMock()
+        mock_get_client.return_value = client
+        mock_find_existing.return_value = {
+            "id": 1990,
+            "title": "Poetry in Motion for Kids!",
+            "category_id": "family",
+        }
+
+        from db.events import insert_event
+
+        incoming = {
+            "title": "Poetry in Motion for Kids!",
+            "place_id": 77,
+            "category_id": "words",
+            "classification_prompt_version": "v1.0-2026-03-27",
+            "_classification_confidence": 0.85,
+            "content_hash": "abc123",
+        }
+
+        with patch("db.events.INSERT_PIPELINE", [lambda data, ctx: data]), patch(
+            "db.events.smart_update_existing_event", return_value=True
+        ) as mock_smart_update:
+            result = insert_event(incoming)
+
+        assert result == 1990
+        forwarded = mock_smart_update.call_args[0][1]
+        assert forwarded["_classification_confidence"] == 0.85
+        assert forwarded["classification_prompt_version"] == "v1.0-2026-03-27"
+
+    @patch("db.events.get_source_info", return_value=None)
+    @patch("db.events.events_support_film_identity_columns", return_value=False)
+    @patch("db.events.events_support_is_show_column", return_value=False)
+    @patch("db.events.events_support_content_kind_column", return_value=False)
+    @patch("db.events.events_support_is_active_column", return_value=False)
+    @patch("db.events.get_client")
+    def test_rewrite_from_education_persists_v2_metadata_and_derived_fields(
+        self,
+        mock_get_client,
+        _mock_events_active,
+        _mock_content_kind,
+        _mock_is_show,
+        _mock_film_identity,
+        _mock_get_source_info,
+    ):
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.update.return_value = table
+        table.eq.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 1991}])
+
+        from db import smart_update_existing_event
+
+        existing = {
+            "id": 1991,
+            "title": "Baby Time",
+            "category_id": "education",
+            "classification_prompt_version": None,
+            "duration": None,
+            "audience_tags": None,
+        }
+        incoming = {
+            "title": "Baby Time",
+            "category_id": "words",
+            "classification_prompt_version": "v1.0-2026-03-27",
+            "_classification_confidence": 0.91,
+            "duration": "short",
+            "audience_tags": ["families"],
+        }
+
+        with patch.dict(os.environ, {"CLASSIFY_V2_REWRITE_CATEGORY": "1"}):
+            updated = smart_update_existing_event(existing, incoming)
+
+        assert updated is True
+        updates = table.update.call_args[0][0]
+        assert updates["category_id"] == "words"
+        assert updates["classification_prompt_version"] == "v1.0-2026-03-27"
+        assert updates["duration"] == "short"
+        assert updates["audience_tags"] == ["families"]
+
+    @patch("db.events.get_source_info", return_value=None)
+    @patch("db.events.events_support_film_identity_columns", return_value=False)
+    @patch("db.events.events_support_is_show_column", return_value=False)
+    @patch("db.events.events_support_content_kind_column", return_value=False)
+    @patch("db.events.events_support_is_active_column", return_value=False)
+    @patch("db.events.get_client")
+    def test_rewrite_from_art_persists_words_classification(
+        self,
+        mock_get_client,
+        _mock_events_active,
+        _mock_content_kind,
+        _mock_is_show,
+        _mock_film_identity,
+        _mock_get_source_info,
+    ):
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.update.return_value = table
+        table.eq.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 1992}])
+
+        from db import smart_update_existing_event
+
+        existing = {
+            "id": 1992,
+            "title": "Literacy | Reading Buddies",
+            "category_id": "art",
+            "classification_prompt_version": None,
+        }
+        incoming = {
+            "title": "Literacy | Reading Buddies",
+            "category_id": "words",
+            "classification_prompt_version": "v1.0-2026-03-27",
+            "_classification_confidence": 0.9,
+            "audience_tags": ["families"],
+        }
+
+        with patch.dict(os.environ, {"CLASSIFY_V2_REWRITE_CATEGORY": "1"}):
+            updated = smart_update_existing_event(existing, incoming)
+
+        assert updated is True
+        updates = table.update.call_args[0][0]
+        assert updates["category_id"] == "words"
+        assert updates["classification_prompt_version"] == "v1.0-2026-03-27"
+        assert updates["audience_tags"] == ["families"]
+
+    @patch("db.events.get_source_info", return_value=None)
+    @patch("db.events.events_support_film_identity_columns", return_value=False)
+    @patch("db.events.events_support_is_show_column", return_value=False)
+    @patch("db.events.events_support_content_kind_column", return_value=False)
+    @patch("db.events.events_support_is_active_column", return_value=False)
+    @patch("db.events.get_client")
+    def test_rewrite_from_words_persists_education_classification(
+        self,
+        mock_get_client,
+        _mock_events_active,
+        _mock_content_kind,
+        _mock_is_show,
+        _mock_film_identity,
+        _mock_get_source_info,
+    ):
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.update.return_value = table
+        table.eq.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 1993}])
+
+        from db import smart_update_existing_event
+
+        existing = {
+            "id": 1993,
+            "title": "Book-A-Librarian Tech Help",
+            "category_id": "words",
+            "classification_prompt_version": None,
+        }
+        incoming = {
+            "title": "Book-A-Librarian Tech Help",
+            "category_id": "education",
+            "classification_prompt_version": "v1.0-2026-03-27",
+            "_classification_confidence": 0.88,
+            "tags": ["library", "technology"],
+        }
+
+        with patch.dict(os.environ, {"CLASSIFY_V2_REWRITE_CATEGORY": "1"}):
+            updated = smart_update_existing_event(existing, incoming)
+
+        assert updated is True
+        updates = table.update.call_args[0][0]
+        assert updates["category_id"] == "education"
+        assert updates["classification_prompt_version"] == "v1.0-2026-03-27"
+        assert set(updates["tags"]) == {"library", "technology"}
 
     @patch("db.events.upsert_event_artists")
     @patch("db.events.parse_lineup_from_title")

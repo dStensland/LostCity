@@ -2,14 +2,16 @@ import { normalizeFinURLParams } from "../normalize-find-url";
 
 describe("normalizeFinURLParams", () => {
   // Legacy view aliases → find
-  it("redirects ?view=happening to ?view=find", () => {
+  // Note: "happening" and "places" are standalone backward-compat paths — they are NOT
+  // normalized to "find". Only truly dead aliases (events, spots) are redirected.
+  it("does not redirect ?view=happening (backward-compat path, not a dead alias)", () => {
     const result = normalizeFinURLParams(new URLSearchParams("view=happening"));
-    expect(result.get("view")).toBe("find");
+    expect(result.get("view")).toBe("happening");
   });
 
-  it("redirects ?view=places to ?view=find", () => {
+  it("does not redirect ?view=places (backward-compat path, not a dead alias)", () => {
     const result = normalizeFinURLParams(new URLSearchParams("view=places"));
-    expect(result.get("view")).toBe("find");
+    expect(result.get("view")).toBe("places");
   });
 
   it("redirects ?view=events to ?view=find", () => {
@@ -95,7 +97,7 @@ describe("normalizeFinURLParams", () => {
 
   // Filter preservation
   it("preserves filter params through redirects", () => {
-    const result = normalizeFinURLParams(new URLSearchParams("view=happening&venue_type=restaurant&neighborhoods=Midtown"));
+    const result = normalizeFinURLParams(new URLSearchParams("view=events&venue_type=restaurant&neighborhoods=Midtown"));
     expect(result.get("view")).toBe("find");
     expect(result.get("venue_type")).toBe("restaurant");
     expect(result.get("neighborhoods")).toBe("Midtown");

@@ -35,6 +35,21 @@ PLACE_DATA = {
     "place_type": "brewery",
     "spot_type": "brewery",
     "website": BASE_URL,
+    "description": (
+        "Scofflaw Brewing Co. is the original westside Atlanta taproom and production brewery, "
+        "known for hop-forward beers, food trucks, live sports, and a family-friendly neighborhood vibe."
+    ),
+    "image_url": "https://craftpeak-cooler-images.imgix.net/scofflaw-brewing/macarthur-taproom-1.jpg?auto=compress%2Cformat&ixlib=php-3.3.1&s=0dc11683e5c0fc29882b9ae44b13b40d",
+    "hours": {
+        "monday": {"open": "12:00", "close": "21:00"},
+        "tuesday": {"open": "12:00", "close": "21:00"},
+        "wednesday": {"open": "12:00", "close": "21:00"},
+        "thursday": {"open": "12:00", "close": "21:00"},
+        "friday": {"open": "12:00", "close": "00:00"},
+        "saturday": {"open": "12:00", "close": "00:00"},
+        "sunday": {"open": "12:00", "close": "21:00"},
+    },
+    "vibes": ["brewery", "craft-beer", "sports-bar", "food-trucks", "west-midtown"],
 }
 
 

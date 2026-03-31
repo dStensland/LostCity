@@ -1,0 +1,5 @@
+version: 1
+slug: open-calls-fulton-arts
+name: Fulton County Arts & Culture (Open Calls)
+data_goals:
+- open_calls

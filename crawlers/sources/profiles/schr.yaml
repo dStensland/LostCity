@@ -1,0 +1,7 @@
+version: 1
+slug: schr
+name: Southern Center for Human Rights
+data_goals:
+- events
+- images
+- tickets

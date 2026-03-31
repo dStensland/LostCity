@@ -5,10 +5,13 @@ These sources fill gaps in activism and civic engagement coverage:
 - League of Women Voters of Atlanta-Fulton County
 - Center for Civic Innovation
 - Georgia Equality
+
+All civic sources are owned by the HelpATL portal.
 """
 
 from supabase import create_client
 from config import config
+from db import get_portal_id_by_slug
 
 # Get Supabase credentials from config
 url = config.database.supabase_url
@@ -20,6 +23,11 @@ if not url or not key:
 
 supabase = create_client(url, key)
 
+helpatl_portal_id = get_portal_id_by_slug("helpatl")
+if not helpatl_portal_id:
+    print("Error: HelpATL portal not found")
+    exit(1)
+
 sources = [
     {
         "slug": "lwv-atlanta",
@@ -29,6 +37,7 @@ sources = [
         "crawl_frequency": "daily",
         "source_type": "civic_organization",
         "integration_method": "playwright",
+        "owner_portal_id": helpatl_portal_id,
     },
     {
         "slug": "civic-innovation-atl",
@@ -38,6 +47,7 @@ sources = [
         "crawl_frequency": "daily",
         "source_type": "civic_organization",
         "integration_method": "playwright",
+        "owner_portal_id": helpatl_portal_id,
     },
     {
         "slug": "georgia-equality",
@@ -47,6 +57,7 @@ sources = [
         "crawl_frequency": "daily",
         "source_type": "civic_organization",
         "integration_method": "ical",
+        "owner_portal_id": helpatl_portal_id,
     },
 ]
 

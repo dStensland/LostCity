@@ -113,6 +113,7 @@ CREATE TABLE events (
   end_date DATE,
   end_time TIME,
   is_all_day BOOLEAN DEFAULT false,
+  is_show BOOLEAN NOT NULL DEFAULT false,
   content_kind TEXT NOT NULL DEFAULT 'event' CHECK (content_kind IN ('event', 'exhibit', 'special')),
   category TEXT,
   subcategory TEXT,

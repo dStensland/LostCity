@@ -48,46 +48,49 @@ def _make_client(side_effects: list) -> MagicMock:
 class TestFindSeriesByTitleVenueScoping:
     def test_same_title_different_venue_ids_return_none(self):
         """
-        When venue_id is provided, queries include a .eq("place_id", ...) filter.
+        When venue_id is provided, queries include a venue-scope filter.
         A series stored under venue 1 must NOT be returned when searching
         for venue 2 — the mock will return empty for all queries.
         """
         client = _make_client([[], []])  # exact title miss, slug miss
 
-        result = find_series_by_title(
-            client,
-            "Yoga Basics",
-            "class_series",
-            venue_id=2,
-        )
+        with patch("series._detect_series_venue_column", return_value="venue_id"):
+            result = find_series_by_title(
+                client,
+                "Yoga Basics",
+                "class_series",
+                venue_id=2,
+            )
 
         assert result is None
 
     def test_exact_match_with_matching_venue_id(self):
         """When venue_id matches, the record is returned on first query."""
-        record = {"id": "abc", "title": "Yoga Basics", "place_id": 1}
+        record = {"id": "abc", "title": "Yoga Basics", "venue_id": 1}
         client = _make_client([[record]])
 
-        result = find_series_by_title(
-            client,
-            "Yoga Basics",
-            "class_series",
-            venue_id=1,
-        )
+        with patch("series._detect_series_venue_column", return_value="venue_id"):
+            result = find_series_by_title(
+                client,
+                "Yoga Basics",
+                "class_series",
+                venue_id=1,
+            )
 
         assert result == record
 
     def test_venue_filter_applied_to_recurring_show(self):
         """recurring_show also uses venue scoping."""
-        record = {"id": "xyz", "title": "Monday Night Trivia", "place_id": 42}
+        record = {"id": "xyz", "title": "Monday Night Trivia", "venue_id": 42}
         client = _make_client([[record]])
 
-        result = find_series_by_title(
-            client,
-            "Monday Night Trivia",
-            "recurring_show",
-            venue_id=42,
-        )
+        with patch("series._detect_series_venue_column", return_value="venue_id"):
+            result = find_series_by_title(
+                client,
+                "Monday Night Trivia",
+                "recurring_show",
+                venue_id=42,
+            )
 
         assert result == record
 
@@ -95,12 +98,13 @@ class TestFindSeriesByTitleVenueScoping:
         """Film series must never apply a venue_id filter — only 2 queries run."""
         client = _make_client([[], []])  # exactly 2 queries expected
 
-        result = find_series_by_title(
-            client,
-            "Casablanca",
-            "film",
-            venue_id=99,
-        )
+        with patch("series._detect_series_venue_column", return_value="venue_id"):
+            result = find_series_by_title(
+                client,
+                "Casablanca",
+                "film",
+                venue_id=99,
+            )
 
         assert result is None
         assert client.table().execute.call_count == 2
@@ -109,12 +113,13 @@ class TestFindSeriesByTitleVenueScoping:
         """When venue_id is None, no venue filter is applied for class_series."""
         client = _make_client([[], []])  # exactly 2 queries expected
 
-        result = find_series_by_title(
-            client,
-            "Yoga Basics",
-            "class_series",
-            venue_id=None,
-        )
+        with patch("series._detect_series_venue_column", return_value="venue_id"):
+            result = find_series_by_title(
+                client,
+                "Yoga Basics",
+                "class_series",
+                venue_id=None,
+            )
 
         assert result is None
         # eq should NOT have been called with "venue_id"
@@ -159,10 +164,12 @@ class TestGetOrCreateSeriesVenueScoping:
             [new_series_2],  # insert → returns record
         ])
 
-        hint_1 = {"series_type": "class_series", "series_title": "Yoga Basics", "place_id": 10}
-        hint_2 = {"series_type": "class_series", "series_title": "Yoga Basics", "place_id": 20}
+        hint_1 = {"series_type": "class_series", "series_title": "Yoga Basics", "venue_id": 10}
+        hint_2 = {"series_type": "class_series", "series_title": "Yoga Basics", "venue_id": 20}
 
-        with self._patch_resolve_festival():
+        with self._patch_resolve_festival(), patch(
+            "series._detect_series_venue_column", return_value="venue_id"
+        ):
             id_1 = get_or_create_series(client, hint_1)
             id_2 = get_or_create_series(client, hint_2)
 
@@ -188,10 +195,12 @@ class TestGetOrCreateSeriesVenueScoping:
         hint = {
             "series_type": "film",
             "series_title": "Casablanca",
-            "place_id": 99,
+            "venue_id": 99,
         }
 
-        with self._patch_resolve_festival():
+        with self._patch_resolve_festival(), patch(
+            "series._detect_series_venue_column", return_value="venue_id"
+        ):
             series_id = get_or_create_series(client, hint, venue_id=99)
 
         assert series_id == "film-1"
@@ -199,3 +208,46 @@ class TestGetOrCreateSeriesVenueScoping:
         # Confirm venue_id was never used as a filter: eq("venue_id", ...) not called
         eq_calls = [str(c) for c in client.table().eq.call_args_list]
         assert not any("venue_id" in c for c in eq_calls)
+
+    def test_legacy_place_id_column_is_still_supported(self):
+        new_series = {"id": "series-legacy", "title": "Yoga Basics", "slug": "yoga-basics"}
+
+        client = _make_client([
+            [],
+            [],
+            [],
+            [new_series],
+        ])
+
+        hint = {"series_type": "class_series", "series_title": "Yoga Basics", "venue_id": 10}
+
+        with self._patch_resolve_festival(), patch(
+            "series._detect_series_venue_column", return_value="place_id"
+        ):
+            series_id = get_or_create_series(client, hint)
+
+        assert series_id == "series-legacy"
+        insert_payload = client.table().insert.call_args.args[0]
+        assert insert_payload["place_id"] == 10
+
+    def test_missing_series_venue_column_skips_venue_scope_without_crashing(self):
+        new_series = {"id": "series-noscope", "title": "Yoga Basics", "slug": "yoga-basics"}
+
+        client = _make_client([
+            [],
+            [],
+            [],
+            [new_series],
+        ])
+
+        hint = {"series_type": "class_series", "series_title": "Yoga Basics", "venue_id": 10}
+
+        with self._patch_resolve_festival(), patch(
+            "series._detect_series_venue_column", return_value=None
+        ):
+            series_id = get_or_create_series(client, hint)
+
+        assert series_id == "series-noscope"
+        insert_payload = client.table().insert.call_args.args[0]
+        assert "venue_id" not in insert_payload
+        assert "place_id" not in insert_payload

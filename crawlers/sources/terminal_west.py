@@ -89,18 +89,6 @@ def _parse_event_datetime(value: Any) -> tuple[Optional[str], Optional[str]]:
     return None, None
 
 
-def _format_time_label(time_24: Optional[str]) -> Optional[str]:
-    if not time_24:
-        return None
-    raw = str(time_24).strip()
-    for fmt in ("%H:%M", "%H:%M:%S"):
-        try:
-            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
-        except ValueError:
-            continue
-    return raw
-
-
 def _extract_calendar_feed_url(page) -> str:
     feed_url = page.eval_on_selector(
         '[data-file*="events.json"]', 'el => el?.getAttribute("data-file") || ""'
@@ -424,58 +412,6 @@ def _find_title_conflict_in_slot(
     return None
 
 
-def build_terminal_west_description(
-    *,
-    title: str,
-    base_description: Optional[str],
-    start_date: str,
-    start_time: Optional[str],
-    source_url: str,
-    supporting_acts: list[str],
-    tour_name: Optional[str],
-    presented_by: Optional[str],
-    age_restriction: Optional[str],
-) -> str:
-    desc = _clean_text(base_description)
-    parts: list[str] = []
-
-    if desc and len(desc) >= 140:
-        parts.append(desc if desc.endswith(".") else f"{desc}.")
-    elif desc:
-        parts.append(desc if desc.endswith(".") else f"{desc}.")
-
-    if not parts:
-        parts.append(f"{title} is a live music performance at Terminal West.")
-
-    if tour_name:
-        parts.append(f"Tour: {tour_name}.")
-
-    if supporting_acts:
-        support_text = ", ".join(supporting_acts)
-        parts.append(f"Supporting acts: {support_text}.")
-
-    if presented_by:
-        parts.append(f"Presented by {presented_by}.")
-
-    parts.append("Location: Terminal West, West Midtown, Atlanta, GA.")
-
-    if age_restriction:
-        parts.append(f"Age policy: {age_restriction}.")
-
-    time_label = _format_time_label(start_time)
-    if start_date and time_label:
-        parts.append(f"Scheduled on {start_date} at {time_label}.")
-    elif start_date:
-        parts.append(f"Scheduled on {start_date}.")
-
-    if source_url:
-        parts.append(
-            f"Check the official listing for lineup updates, age policy, and ticket availability ({source_url})."
-        )
-
-    return " ".join(parts)[:1500]
-
-
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Terminal West events using the structured calendar JSON feed."""
     source_id = source["id"]
@@ -631,17 +567,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if did_enrich:
                         detail_fetches += 1
 
-                event_record["description"] = build_terminal_west_description(
-                    title=event_record["title"],
-                    base_description=event_record.get("description"),
-                    start_date=event_record["start_date"],
-                    start_time=event_record.get("start_time"),
-                    source_url=event_record.get("source_url") or BASE_URL,
-                    supporting_acts=supporting_acts,
-                    tour_name=tour_name,
-                    presented_by=presented_by,
-                    age_restriction=age_restriction,
-                )
+                event_record["description"] = _clean_text(event_record.get("description")) or None
 
                 events_found += 1
 

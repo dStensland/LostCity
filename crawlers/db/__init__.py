@@ -27,6 +27,7 @@ from db.client import (
     retry_on_network_error,
     get_client,
     events_support_show_signal_columns,
+    events_support_is_show_column,
     events_support_film_identity_columns,
     events_support_content_kind_column,
     venues_support_features_table,

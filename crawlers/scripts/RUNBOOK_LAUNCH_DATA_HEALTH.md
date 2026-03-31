@@ -63,7 +63,7 @@ Disable description sweep only when needed:
 python3 scripts/post_crawl_maintenance.py --city Atlanta --skip-short-description-sweep
 ```
 
-Optional same-day content-depth lift (after gate is stable):
+Optional same-day content-depth lift via manual real-extraction (after gate is stable):
 
 ```bash
 cd /Users/coach/Projects/LostCity/crawlers
@@ -71,6 +71,10 @@ python3 scripts/enrich_eventbrite_descriptions.py --portal atlanta --start-date 
 python3 scripts/enrich_non_eventbrite_descriptions.py --portal atlanta --start-date $(date +%F) --limit 5000 --page-size 1000 --apply
 python3 scripts/launch_health_check.py --city Atlanta --portal atlanta --gate-profile auto
 ```
+
+Notes:
+- These scripts are manual recovery tools and are no longer part of the automated enrichment pipeline.
+- They use real detail/source-page extraction only. Synthetic short-description enrichment remains disabled.
 
 Optional participant integrity lift (music lineup quality, Atlanta-scoped):
 
@@ -132,10 +136,10 @@ cd /Users/coach/Projects/LostCity/crawlers
 # 1) Pull full content health snapshot
 python3 scripts/content_health_audit.py --city Atlanta --portal atlanta --gate-profile auto
 
-# 2) Run portal-scoped enrichment on the current short-source set
+# 2) Run portal-scoped manual real-extraction on the current short-source set
 python3 scripts/enrich_non_eventbrite_descriptions.py --portal atlanta --source-slugs <comma-separated-short-slugs> --min-length 220 --min-delta 1 --limit 5000 --page-size 1000 --apply
 
-# 3) Re-run short sweep + source-less repair
+# 3) Re-run maintenance sweep (synthetic filler remains disabled)
 python3 scripts/post_crawl_maintenance.py --city Atlanta --short-description-threshold 220
 
 # 4) Re-run launch gate

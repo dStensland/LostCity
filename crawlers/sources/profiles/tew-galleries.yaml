@@ -1,0 +1,6 @@
+version: 1
+slug: tew-galleries
+name: Tew Galleries
+data_goals:
+- exhibits
+- images

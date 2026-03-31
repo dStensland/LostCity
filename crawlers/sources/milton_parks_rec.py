@@ -37,6 +37,13 @@ _DEFAULT_VENUE = VenueInfo(
     lat=34.1642,
     lng=-84.3266,
     venue_type="recreation",
+    website="https://secure.rec1.com/GA/city-of-milton/catalog",
+    description=(
+        "City of Milton Parks & Recreation manages Milton's official recreation "
+        "catalog for youth programs, preschool activities, outdoor recreation, and "
+        "seasonal camps."
+    ),
+    image_url="https://data.rec1.com/custincludes/1193/logo.png_599337e68cddb.png",
 )
 
 _CRAWL_TAB_IDS = [

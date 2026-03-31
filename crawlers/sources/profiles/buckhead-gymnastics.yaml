@@ -1,0 +1,7 @@
+version: 1
+slug: buckhead-gymnastics
+name: Buckhead Gymnastics Center
+data_goals:
+- events
+- images
+- tickets

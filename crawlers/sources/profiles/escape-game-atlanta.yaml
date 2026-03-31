@@ -1,0 +1,7 @@
+version: 1
+slug: escape-game-atlanta
+name: The Escape Game Atlanta
+data_goals:
+- events
+- images
+- tickets

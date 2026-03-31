@@ -1,0 +1,8 @@
+version: 1
+slug: kates-club
+name: Kates Club
+data_goals:
+- events
+- images
+- lineup
+- tickets

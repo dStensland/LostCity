@@ -1,0 +1,7 @@
+version: 1
+slug: metro-atl-aa
+name: Metro Atlanta AA
+data_goals:
+- events
+- images
+- tickets

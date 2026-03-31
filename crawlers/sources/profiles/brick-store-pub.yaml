@@ -1,22 +1,17 @@
 version: 1
 slug: brick-store-pub
 name: Brick Store Pub
-integration_method: llm_crawler
+integration_method: playwright
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false
   type: html
   urls:
   - https://www.brickstorepub.com
   fetch:
     render_js: true
 detail:
-  enabled: true
-  fetch:
-    render_js: true
+  enabled: false
 data_goals:
-- events
 - images
-- specials
-- tickets
 - venue_hours

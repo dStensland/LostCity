@@ -833,3 +833,50 @@ import heroImg from "@/public/hero.jpg";
      setCurrentState(previousState); // Rollback
    }
    ```
+
+---
+
+## Known Gotchas (Agent-Critical)
+
+These are bugs that have bitten agents multiple times. They live here (not in MEMORY.md) so agents editing web/ files see them automatically.
+
+### CSP + Next.js 16 Streaming
+
+Next.js 16 streaming scripts (`$RC`, `$RS`, `__next_f.push`) have NO nonce attribute. If CSP `script-src` uses a nonce, these inline scripts are blocked, causing the **entire site to render blank** — only `<template>` elements visible, all Suspense boundaries stuck.
+
+- **Fix:** Use `'unsafe-inline'` instead of nonce for `script-src`. Keep nonces for `style-src` (Next.js does add nonces to `<style>` tags).
+- **Symptom:** Page loads 200 with full HTML, but `animate-page-enter` div has height 0. All `<template id="B:N">` elements have hidden `<div id="S:N">` content never swapped in.
+- **File:** `web/lib/csp.ts` — `script-src` line must NOT include `'nonce-...'`.
+
+### TypeScript / Next.js 16 Build Gotchas
+
+In addition to the `as never` pattern in Common Gotchas above:
+
+- **Supabase `.maybeSingle()` returns `never`:** After null checks on `.maybeSingle()` or `.select()` results, TypeScript infers the type as `never`. Fix: cast with `as { field: type }` after the guard.
+- **SupabaseClient double-cast:** `supabase as SupabaseClient<Schema>` fails. Need: `as unknown as SupabaseClient<Schema>`.
+- **PostgrestError is not LogContext:** `logger.warn()` accepts `LogContext`, not `PostgrestError`. Wrap: `{ error: pgError.message }`.
+- **`headers()` is async:** Next.js 16 `headers()` returns `Promise<ReadonlyHeaders>` — must be awaited.
+- **`RemotePattern.protocol`:** Needs `as const` literal type assertion.
+- **`AnimationEffect.setKeyframes`:** Must cast to `KeyframeEffect` first.
+- **Re-exports aren't local:** `export { X } from "./mod"` does NOT make `X` available in the current file. Must also `import { X }` separately.
+- **Always run `npx tsc --noEmit`** before pushing to catch ALL errors at once, not just the first one Vercel reports.
+
+### Client-Side Filter Patterns
+
+- **Never use `router.push()` for filter state.** It triggers a full Next.js navigation cycle through Suspense. Use `useState` + `window.history.replaceState()` for instant filter toggling.
+- **`days_of_week` ISO convention:** DB stores ISO 8601 (1=Mon, 7=Sun). JavaScript `getDay()` returns 0=Sun, 6=Sat. Always convert with `jsToIsoDay()`.
+- Day badge counts must reflect the active activity filter.
+- Active filter chips must remain visible even at 0 count (so users can clear them).
+
+### Pencil MCP Property Names
+
+When using Pencil MCP tools (`batch_design`), these property names are NOT what you'd guess:
+
+| What you want | Correct property | Wrong (will silently fail) |
+|---|---|---|
+| Text color | `fill` (string) | `fills` (array) |
+| Frame background | `fill` (string) | `fills` (array) |
+| Stroke | `{fill, thickness}` | `{color, width}` |
+| Layout direction | `layout: "vertical"` | `layoutMode` |
+| Padding | `[top, right, bottom, left]` or `[v, h]` or number | Object `{top, right, ...}` |
+| Clip content | `clip: true` | `clipsContent` |

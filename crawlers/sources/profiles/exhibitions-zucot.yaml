@@ -1,0 +1,6 @@
+version: 1
+slug: exhibitions-zucot
+name: ZuCot Gallery (Exhibitions)
+data_goals:
+- exhibits
+- images

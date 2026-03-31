@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import Skeleton from "@/components/Skeleton";
 import ScopedStyles from "@/components/ScopedStyles";
@@ -28,6 +28,7 @@ import { ExperienceTagStrip } from "@/components/detail/ExperienceTagStrip";
 import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
 import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
 import { decodeHtmlEntities, formatTimeSplit } from "@/lib/formats";
+import { useState } from "react";
 
 // ── Types ────────────────────────────────────────────────────────────────
 

@@ -1,0 +1,7 @@
+version: 1
+slug: georgia-elections-calendar
+name: Georgia Elections Calendar
+data_goals:
+- events
+- images
+- tickets

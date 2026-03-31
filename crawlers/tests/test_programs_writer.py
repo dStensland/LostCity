@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 from db.programs import (
     _generate_disambiguated_program_slug,
+    find_program_by_hash,
     insert_program,
     reset_program_identity_cache,
     update_program,
@@ -17,6 +18,82 @@ def test_generate_disambiguated_program_slug_stays_within_length_limit() -> None
 
     assert len(slug) <= 80
     assert slug.endswith("-6c1d3459")
+
+
+def test_find_program_by_hash_queries_place_id_column(monkeypatch) -> None:
+    executed: dict[str, object] = {}
+
+    class FakeQuery:
+        def select(self, columns):
+            executed["columns"] = columns
+            return self
+
+        def eq(self, column, value):
+            executed["eq"] = (column, value)
+            return self
+
+        def limit(self, value):
+            executed["limit"] = value
+            return self
+
+        def execute(self):
+            return SimpleNamespace(data=[])
+
+    class FakeClient:
+        def table(self, name):
+            executed["table"] = name
+            return FakeQuery()
+
+    monkeypatch.setattr("db.programs.get_client", lambda: FakeClient())
+
+    assert find_program_by_hash("hash-123") is None
+    assert executed["table"] == "programs"
+    assert executed["columns"] == "id, name, place_id, session_start, updated_at"
+
+
+def test_find_program_by_identity_uses_is_null_for_null_session_start(monkeypatch) -> None:
+    executed: dict[str, object] = {}
+
+    class FakeQuery:
+        def select(self, columns):
+            executed["columns"] = columns
+            return self
+
+        def eq(self, column, value):
+            executed.setdefault("eq", []).append((column, value))
+            return self
+
+        def is_(self, column, value):
+            executed["is"] = (column, value)
+            return self
+
+        def limit(self, value):
+            executed["limit"] = value
+            return self
+
+        def execute(self):
+            return SimpleNamespace(data=[])
+
+    class FakeClient:
+        def table(self, name):
+            executed["table"] = name
+            return FakeQuery()
+
+    monkeypatch.setattr("db.programs.get_client", lambda: FakeClient())
+
+    from db.programs import find_program_by_identity
+
+    assert (
+        find_program_by_identity(
+            name="Evergreen Swim Lessons",
+            venue_id=5488,
+            session_start=None,
+            source_id=1315,
+        )
+        is None
+    )
+    assert executed["table"] == "programs"
+    assert executed["is"] == ("session_start", "null")
 
 
 def test_insert_program_retries_slug_collisions(monkeypatch) -> None:

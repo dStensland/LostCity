@@ -1,0 +1,5 @@
+version: 1
+slug: open-calls-festhome
+name: FestHome (Film Festivals)
+data_goals:
+- open_calls

@@ -1,0 +1,7 @@
+version: 1
+slug: main-event-atlanta
+name: Main Event Atlanta
+data_goals:
+- events
+- images
+- tickets

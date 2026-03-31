@@ -1,0 +1,5 @@
+version: 1
+slug: open-calls-artconnect
+name: ArtConnect (Open Calls)
+data_goals:
+- open_calls

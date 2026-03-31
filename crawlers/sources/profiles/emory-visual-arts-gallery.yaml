@@ -1,0 +1,6 @@
+version: 1
+slug: emory-visual-arts-gallery
+name: Emory Visual Arts Gallery
+data_goals:
+- exhibits
+- images

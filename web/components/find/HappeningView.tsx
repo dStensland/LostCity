@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useMemo, useCallback, useTransition, type MouseEvent } from "react";
+import type { FeedEventData } from "@/components/EventCard";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import AddNewChooser from "@/components/find/AddNewChooser";
@@ -40,6 +41,7 @@ interface HappeningViewProps {
   hasActiveFilters: boolean;
   vertical?: string | null;
   contentType: HappeningContent;
+  initialRegularsData?: { events: FeedEventData[] } | null;
 }
 
 // ─── Display Config ──────────────────────────────────────────────────────────
@@ -117,6 +119,7 @@ function HappeningViewInner({
   hasActiveFilters,
   vertical,
   contentType,
+  initialRegularsData,
 }: HappeningViewProps) {
   const isCommunity = vertical === "community";
   const visibleContent = isCommunity
@@ -137,7 +140,6 @@ function HappeningViewInner({
 
   const handleContentChange = useCallback((content: HappeningContent) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
-    // Reset filters when switching content type
     for (const key of FIND_FILTER_RESET_KEYS) {
       params.delete(key);
     }
@@ -147,7 +149,6 @@ function HappeningViewInner({
     } else {
       params.set("content", content);
     }
-    // Clear display mode when switching content types
     params.delete("display");
     startTransition(() => {
       router.push(`/${portalSlug}?${params.toString()}`);
@@ -398,6 +399,7 @@ function HappeningViewInner({
           <RegularsView
             portalId={portalId}
             portalSlug={portalSlug}
+            initialData={initialRegularsData}
           />
         )}
 

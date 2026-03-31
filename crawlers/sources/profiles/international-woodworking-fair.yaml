@@ -1,0 +1,7 @@
+version: 1
+slug: international-woodworking-fair
+name: International Woodworking Fair
+data_goals:
+- events
+- images
+- tickets

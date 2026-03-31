@@ -74,6 +74,16 @@ _DEFAULT_VENUE = VenueInfo(
     lat=33.9304,
     lng=-84.5718,
     venue_type="organization",
+    website="https://www.cobbcounty.gov/parks",
+    description=(
+        "Cobb County PARKS connects residents and visitors to parks, trails, recreation and "
+        "community centers, aquatic and tennis facilities, art centers, event venues, and "
+        "countywide programs for wellness, enrichment, sports, and family fun."
+    ),
+    image_url=(
+        "https://assets.cobbcounty.gov/files/2026-03/"
+        "Parks%20hero%201512%20x%20500%20px%20%281%29.png"
+    ),
 )
 
 # ---------------------------------------------------------------------------

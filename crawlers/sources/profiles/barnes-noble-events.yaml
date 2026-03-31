@@ -1,0 +1,7 @@
+version: 1
+slug: barnes-noble-events
+name: Barnes & Noble Events (Atlanta)
+data_goals:
+- events
+- images
+- tickets

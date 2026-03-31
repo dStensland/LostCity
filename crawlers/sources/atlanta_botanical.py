@@ -33,6 +33,7 @@ from db import (
     get_client,
     get_or_create_place,
     insert_event,
+    insert_exhibition,
     find_event_by_hash,
     smart_update_existing_event,
 )
@@ -44,6 +45,7 @@ logger = logging.getLogger(__name__)
 
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     events=True,
+    exhibitions=True,
     destinations=True,
     destination_details=True,
     venue_features=True,
@@ -480,6 +482,50 @@ def _get_series_hint(title: str, tribe_cats: set[str]) -> Optional[dict]:
     return None
 
 
+def _build_exhibition_record(
+    *,
+    title: str,
+    tribe_cats: set[str],
+    category: str,
+    subcategory: Optional[str],
+    start_date: str,
+    end_date: Optional[str],
+    place_id: int,
+    source_id: int,
+    venue_name: str,
+    description: Optional[str],
+    image_url: Optional[str],
+    source_url: str,
+    is_free: bool,
+    tags: list[str],
+) -> Optional[dict]:
+    """Project multi-day exhibition rows into the exhibitions lane."""
+    is_exhibition = bool(tribe_cats & _CAT_EXHIBITION) or (
+        category == "art" and subcategory == "exhibition"
+    )
+    if not is_exhibition or not end_date or end_date <= start_date:
+        return None
+
+    return {
+        "title": title,
+        "place_id": place_id,
+        "source_id": source_id,
+        "_venue_name": venue_name,
+        "opening_date": start_date,
+        "closing_date": end_date,
+        "description": description,
+        "image_url": image_url,
+        "source_url": source_url,
+        "admission_type": "free" if is_free else "ticketed",
+        "tags": sorted(set(tags + ["exhibition", "garden"])),
+        "is_active": True,
+        "metadata": {
+            "source_type": "tribe_events_api",
+            "venue_name": venue_name,
+        },
+    }
+
+
 def _fetch_events_page(
     session: requests.Session,
     page: int,
@@ -670,6 +716,30 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     content_hash = generate_content_hash(title, venue_name, start_date)
 
                     events_found += 1
+
+                    exhibition_record = _build_exhibition_record(
+                        title=title,
+                        tribe_cats=tribe_cats,
+                        category=category,
+                        subcategory=subcategory,
+                        start_date=start_date,
+                        end_date=end_date,
+                        place_id=venue_id,
+                        source_id=source_id,
+                        venue_name=venue_name,
+                        description=description,
+                        image_url=image_url,
+                        source_url=source_url,
+                        is_free=is_free,
+                        tags=tags,
+                    )
+                    if exhibition_record:
+                        try:
+                            insert_exhibition(exhibition_record)
+                        except Exception as exc:
+                            logger.warning(
+                                "ABG exhibition upsert failed for %r: %s", title, exc
+                            )
 
                     # Series grouping for recurring programs
                     series_hint = _get_series_hint(title, tribe_cats)

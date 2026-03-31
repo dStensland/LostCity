@@ -1,0 +1,5 @@
+version: 1
+slug: open-calls-contest-watchers
+name: Contest Watchers (Creative Competitions)
+data_goals:
+- open_calls

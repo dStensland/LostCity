@@ -161,49 +161,6 @@ def _clean_text(value: Optional[str]) -> str:
     return " ".join(str(value).split()).strip()
 
 
-def _format_time_label(time_24: Optional[str]) -> Optional[str]:
-    if not time_24:
-        return None
-    try:
-        return datetime.strptime(time_24, "%H:%M").strftime("%-I:%M %p")
-    except Exception:
-        return time_24
-
-
-def _build_meetup_description(
-    *,
-    title: str,
-    description: Optional[str],
-    group_name: Optional[str],
-    location_text: Optional[str],
-    is_online: bool,
-    topics: list[str],
-    start_date: str,
-    start_time: Optional[str],
-) -> str:
-    base = _clean_text(description)
-    parts: list[str] = []
-
-    # Use the real description if available; skip if it's just Meetup boilerplate
-    if base and not re.search(
-        r"Details visible to members|This content is available only to members",
-        base,
-        re.IGNORECASE,
-    ):
-        parts.append(base if base.endswith(".") else f"{base}.")
-
-    if group_name and parts:
-        parts.append(f"Hosted by {group_name}.")
-    elif group_name:
-        parts.append(f"{group_name} event.")
-
-    topic_list = [_clean_text(topic) for topic in topics if _clean_text(topic)]
-    if topic_list:
-        parts.append(f"Topics: {', '.join(topic_list[:5])}.")
-
-    return " ".join(parts)[:1800] if parts else ""
-
-
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Meetup.com for Atlanta events using Playwright."""
     source_id = source["id"]
@@ -368,16 +325,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         topics.append(url_match.group(1))
 
                     subcategory = map_topic_to_subcategory(topics)
-                    description = _build_meetup_description(
-                        title=title,
-                        description=description,
-                        group_name=group_name,
-                        location_text=location_text,
-                        is_online=is_online,
-                        topics=topics,
-                        start_date=start_date,
-                        start_time=start_time,
-                    )
+                    description = _clean_text(description) or None
+                    if description and re.search(
+                        r"Details visible to members|This content is available only to members",
+                        description,
+                        re.IGNORECASE,
+                    ):
+                        description = None
 
                     events_found += 1
 

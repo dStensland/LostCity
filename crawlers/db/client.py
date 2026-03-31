@@ -168,6 +168,7 @@ _SOURCE_CACHE: dict[int, dict] = {}
 _VENUE_CACHE: dict[int, dict] = {}
 _BLURHASH_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="blurhash")
 _EVENTS_HAS_SHOW_SIGNAL_COLUMNS: Optional[bool] = None
+_EVENTS_HAS_IS_SHOW_COLUMN: Optional[bool] = None
 _EVENTS_HAS_FILM_IDENTITY_COLUMNS: Optional[bool] = None
 _EVENTS_HAS_CONTENT_KIND_COLUMN: Optional[bool] = None
 _EVENTS_HAS_FIELD_METADATA_COLUMNS: Optional[bool] = None
@@ -211,12 +212,13 @@ def _log_write_skip(operation: str) -> None:
 
 def reset_client() -> None:
     """Reset cached DB client and per-process caches."""
-    global _client, _EVENTS_HAS_SHOW_SIGNAL_COLUMNS, _EVENTS_HAS_FILM_IDENTITY_COLUMNS
+    global _client, _EVENTS_HAS_SHOW_SIGNAL_COLUMNS, _EVENTS_HAS_IS_SHOW_COLUMN, _EVENTS_HAS_FILM_IDENTITY_COLUMNS
     global _EVENTS_HAS_CONTENT_KIND_COLUMN, _EVENTS_HAS_FIELD_METADATA_COLUMNS
     global _EVENTS_HAS_IS_ACTIVE_COLUMN, _VENUES_HAS_FEATURES_TABLE
     global _VENUES_HAS_DESTINATION_DETAILS_TABLE
     _client = None
     _EVENTS_HAS_SHOW_SIGNAL_COLUMNS = None
+    _EVENTS_HAS_IS_SHOW_COLUMN = None
     _EVENTS_HAS_FILM_IDENTITY_COLUMNS = None
     _EVENTS_HAS_CONTENT_KIND_COLUMN = None
     _EVENTS_HAS_FIELD_METADATA_COLUMNS = None
@@ -324,6 +326,29 @@ def events_support_show_signal_columns() -> bool:
             raise
 
     return bool(_EVENTS_HAS_SHOW_SIGNAL_COLUMNS)
+
+
+def events_support_is_show_column() -> bool:
+    """Detect whether events.is_show exists."""
+    global _EVENTS_HAS_IS_SHOW_COLUMN
+    if _EVENTS_HAS_IS_SHOW_COLUMN is not None:
+        return _EVENTS_HAS_IS_SHOW_COLUMN
+
+    client = get_client()
+    try:
+        client.table("events").select("is_show").limit(1).execute()
+        _EVENTS_HAS_IS_SHOW_COLUMN = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str and "is_show" in error_str:
+            _EVENTS_HAS_IS_SHOW_COLUMN = False
+            logger.warning(
+                "events.is_show missing; run migration 20260330010001_event_is_show.sql"
+            )
+        else:
+            raise
+
+    return bool(_EVENTS_HAS_IS_SHOW_COLUMN)
 
 
 def events_support_film_identity_columns() -> bool:

@@ -1,0 +1,7 @@
+version: 1
+slug: bowlero-atlanta
+name: Bowlero Atlanta
+data_goals:
+- events
+- images
+- tickets

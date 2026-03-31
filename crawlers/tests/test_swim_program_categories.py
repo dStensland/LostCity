@@ -1,6 +1,7 @@
 from sources.goldfish_swim import (
     LOCATIONS as GOLDFISH_LOCATIONS,
     _build_jump_start_event_record,
+    _build_swim_lessons_program_record,
     _build_swim_lessons_event_record,
 )
 from sources.swim_atlanta import LOCATIONS as SWIM_ATLANTA_LOCATIONS, _build_lessons_event_record
@@ -51,3 +52,19 @@ def test_goldfish_lessons_use_fitness_class_category():
     assert event["is_class"] is True
     assert event["class_category"] == "fitness"
     assert event["price_min"] == 32.50
+
+
+def test_goldfish_lessons_dual_write_program_uses_class_lane():
+    program = _build_swim_lessons_program_record(
+        GOLDFISH_LOCATIONS[0],
+        venue_id=1,
+        source_id=2,
+    )
+
+    assert program["program_type"] == "class"
+    assert program["provider_name"] == GOLDFISH_LOCATIONS[0]["name"]
+    assert program["registration_status"] == "open"
+    assert program["registration_url"] == GOLDFISH_LOCATIONS[0]["portal_url"]
+    assert program["cost_period"] == "per_session"
+    assert program["status"] == "active"
+    assert program["schedule_days"] == [6]

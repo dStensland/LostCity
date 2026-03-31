@@ -12,18 +12,16 @@
  *  scroll  LazySection triggers → self-fetching sections load on demand.
  *
  * Feed blocks (top → bottom):
- *  1. GreetingBar — photo hero + headline + pulse text
- *  2. CTA banner (optional, from CMS header override)
- *  3. InterestChannelsSection — join/follow groups for civic/topic routing
- *  4. LineupSection — tabbed timeline: Today / This Week / Coming Up
- *  5. TheSceneSection (Regular Hangs) — self-fetching, lazy-loaded
- *  6. FestivalsSection — self-fetching, lazy-loaded
- *  7. NetworkFeedSection — self-fetching, lazy-loaded
- *  8. SeeShowsSection — Film/Music/Stage tabs, self-fetching, lazy-loaded
- *  9. Browse by Category — orderedSections (user-customizable order)
+ *  1. CityBriefing — hero photo + weather + quick links
+ *  2. TodayInAtlantaSection — tabbed local news
+ *  3. LineupSection — tabbed timeline: Today / This Week / Coming Up (events only)
+ *  4. RegularHangsSection — recurring weekly events (trivia, run clubs, etc.)
+ *  5. Destinations + Neighborhoods
+ *  6. VenuesSection — Film/Music/Comedy/Theater/Nightlife/Arts/Attractions
+ *  7. PlanningHorizonSection — big future events
+ *  8. Browse by Category
  *
  * Section visibility and order are controlled by FeedLayout preferences.
- * The FeedPageIndex TOC doubles as the customizer (auth-gated edit mode).
  *
  * Admin-only:
  *  - FeedTimeMachine (?admin flag) — day/time slot override for testing
@@ -42,7 +40,6 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import CityBriefing from "./CityBriefing";
 import GreetingBar from "./GreetingBar";
-import { BriefingSection } from "./BriefingSection";
 import LineupSection from "./LineupSection";
 import CityPulseSection from "./CityPulseSection";
 import LazySection from "./LazySection";
@@ -54,8 +51,9 @@ const HangFeedSection = dynamic(
 import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 import { ContentSwap } from "@/components/ui/ContentSwap";
 import ActiveContestSection from "./sections/ActiveContestSection";
+import { TodayInAtlantaSection } from "./sections/TodayInAtlantaSection";
+import RegularHangsSection from "./sections/RegularHangsSection";
 import HolidayHero from "./HolidayHero";
-import FeedPageIndex from "./FeedPageIndex";
 import type {
   FeedBlockId,
   CityPulseSectionType,
@@ -75,26 +73,19 @@ import { getContextualQuickLinks } from "@/lib/city-pulse/quick-links";
 
 // Below-fold sections: dynamically imported so their JS is in separate chunks
 // loaded on demand when LazySection triggers (not bundled in the main feed chunk).
-const TheSceneSection = dynamic(() => import("./sections/TheSceneSection"), { ssr: false });
-const SeeShowsSection = dynamic(() => import("./sections/SeeShowsSection"), { ssr: false });
+const VenuesSection = dynamic(() => import("./sections/VenuesSection"), { ssr: false });
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const GameDaySection = dynamic<{ portalSlug: string }>(() => import("./sections/GameDaySection") as any, { ssr: false });
 const PlanningHorizonSection = dynamic(() => import("./sections/PlanningHorizonSection"), { ssr: false });
-const PortalTeasersSection = dynamic(
-  () => import("./sections/PortalTeasersSection").then((m) => ({ default: m.PortalTeasersSection })),
-  { ssr: false }
-);
 const FeedTimeMachine = dynamic(() => import("./FeedTimeMachine"), { ssr: false });
 const YonderRegionalEscapesSection = dynamic(() => import("./sections/YonderRegionalEscapesSection"), { ssr: false });
 const YonderDestinationNodeQuestsSection = dynamic(
   () => import("./sections/YonderDestinationNodeQuestsSection"),
   { ssr: false }
 );
-const DestinationsSectionV2 = dynamic(
-  () => import("./sections/DestinationsSectionV2").then(m => ({ default: m.DestinationsSectionV2 })),
-  { ssr: false }
-);
-const NeighborhoodPulseSection = dynamic(
-  () => import("./sections/NeighborhoodPulseSection").then(m => ({ default: m.NeighborhoodPulseSection })),
-  { ssr: false }
+const PlacesToGoSection = dynamic<{ portalSlug: string }>(
+  () => import("./sections/PlacesToGoSection").then((m) => ({ default: m.PlacesToGoSection })),
+  { ssr: false },
 );
 
 /** Section types that LineupSection absorbs */
@@ -272,7 +263,7 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
   }, []);
 
   // Pre-fetch regulars in the background after lineup loads.
-  // Warms the ["regulars", portalSlug] cache so LineupSection gets a cache hit.
+  // Warms the ["regulars", portalSlug] cache so RegularHangsSection gets a cache hit.
   useEffect(() => {
     if (!ENABLE_LINEUP_RECURRING || isLoading || !data) return;
     queryClient.prefetchQuery({
@@ -378,7 +369,7 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         ) : null;
 
       case "recurring":
-        // Regular Hangs absorbed into RecurringStrip inside the Lineup
+        // Regular Hangs rendered as standalone RegularHangsSection above
         return null;
 
       case "cinema":
@@ -387,14 +378,33 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
             key="city-pulse-cinema"
             id="city-pulse-cinema"
             data-feed-anchor="true"
-            data-index-label="See Shows"
+            data-index-label="Venues"
             data-block-id="cinema"
             className="mt-8 scroll-mt-28"
           >
             <div className="h-px bg-[var(--twilight)]" />
             <div className="pt-6">
               <LazySection minHeight={300}>
-                <SeeShowsSection portalSlug={portalSlug} />
+                <VenuesSection portalSlug={portalSlug} />
+              </LazySection>
+            </div>
+          </div>
+        );
+
+      case "sports":
+        return (
+          <div
+            key="city-pulse-sports"
+            id="city-pulse-sports"
+            data-feed-anchor="true"
+            data-index-label="Game Day"
+            data-block-id="sports"
+            className="mt-8 scroll-mt-28"
+          >
+            <div className="h-px bg-[var(--twilight)]" />
+            <div className="pt-6">
+              <LazySection minHeight={200}>
+                <GameDaySection portalSlug={portalSlug} />
               </LazySection>
             </div>
           </div>
@@ -472,8 +482,8 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
            No wrapper margin — HolidayHero manages its own spacing when active. */}
       <HolidayHero portalSlug={portalSlug} />
 
-      {/* 3b. BriefingSection — editorial briefing from the pipeline */}
-      <BriefingSection briefing={header?.briefing} eventCount={data?.events_pulse?.total_active} />
+      {/* Today in Atlanta — tabbed category news */}
+      <TodayInAtlantaSection portalSlug={portalSlug} />
 
       {/* 4. LineupSection — crossfade skeleton → content */}
       <div
@@ -507,34 +517,9 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         </ContentSwap>
       </div>
 
-      {/* Destinations (Worth Checking Out) — contextual venues from the city.
-           No outer divider — the section renders its own divider when it has content.
-           minHeight=0 so a null-returning section doesn't leave a visible gap. */}
-      <div
-        id="city-pulse-destinations"
-        data-feed-anchor="true"
-        data-index-label="Destinations"
-        data-block-id="destinations"
-        className="scroll-mt-28"
-      >
-        <LazySection minHeight={0}>
-          <DestinationsSectionV2 portalSlug={portalSlug} />
-        </LazySection>
-      </div>
+      {/* Regular Hangs — recurring weekly events (trivia, run clubs, karaoke, etc.) */}
+      <RegularHangsSection portalSlug={portalSlug} />
 
-      {/* Neighborhoods — contextual neighborhood insights.
-           Same pattern: no outer divider, section self-manages. */}
-      <div
-        id="city-pulse-neighborhoods"
-        data-feed-anchor="true"
-        data-index-label="Neighborhoods"
-        data-block-id="neighborhoods"
-        className="scroll-mt-28"
-      >
-        <LazySection minHeight={0}>
-          <NeighborhoodPulseSection portalSlug={portalSlug} />
-        </LazySection>
-      </div>
 
       {/* 6. Interest Channels — only on civic portals where groups are meaningful */}
       {portal?.settings?.vertical === "community" && (
@@ -583,31 +568,15 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         </div>
       )}
 
-      {/* Browse — Places to Go + Things to Do (always last) */}
-      {!hiddenBlockSet.has("browse") && (
-        <div
-          id="city-pulse-browse"
-          data-feed-anchor="true"
-          data-index-label="Browse"
-          data-block-id="browse"
-          className="scroll-mt-28"
-        >
-          {orderedSections.map((section) => (
-            <div key={section.id} className="mt-8">
-              <div className="h-px bg-[var(--twilight)]" />
-              <div className="pt-6">
-                <LazySection minHeight={SECTION_HEIGHT_ESTIMATES[section.type] || 200}>
-                  <CityPulseSection
-                    section={section}
-                    portalSlug={portalSlug}
-                    personalization={personalization}
-                  />
-                </LazySection>
-              </div>
-            </div>
-          ))}
+      {/* Places to Go (always last) */}
+      <div id="city-pulse-places-to-go" className="scroll-mt-28 mt-8">
+        <div className="h-px bg-[var(--twilight)]" />
+        <div className="pt-6">
+          <LazySection minHeight={400}>
+            <PlacesToGoSection portalSlug={portalSlug} />
+          </LazySection>
         </div>
-      )}
+      </div>
 
       {/* Admin: Feed Time Machine */}
       {showTimeMachine && (
@@ -618,13 +587,6 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         />
       )}
 
-      <FeedPageIndex
-        portalSlug={portalSlug}
-        loading={isLoading}
-        isAuthenticated={isAuthenticated}
-        feedLayout={feedLayout}
-        onSaveLayout={handleSaveLayout}
-      />
     </div>
   );
 }

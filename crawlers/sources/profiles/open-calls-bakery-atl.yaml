@@ -1,0 +1,5 @@
+version: 1
+slug: open-calls-bakery-atl
+name: The Bakery ATL (Open Calls)
+data_goals:
+- open_calls

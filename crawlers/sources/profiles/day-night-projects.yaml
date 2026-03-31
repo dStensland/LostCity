@@ -1,0 +1,7 @@
+version: 1
+slug: day-night-projects
+name: Day & Night Projects
+data_goals:
+- events
+- images
+- tickets

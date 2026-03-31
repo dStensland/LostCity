@@ -1,0 +1,7 @@
+version: 1
+slug: full-radius-dance
+name: Full Radius Dance
+data_goals:
+- events
+- images
+- tickets

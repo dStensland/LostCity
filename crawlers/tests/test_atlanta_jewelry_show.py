@@ -29,3 +29,22 @@ def test_parse_show_window_rejects_past_only_season() -> None:
         assert "past-dated season" in str(exc)
     else:
         raise AssertionError("Expected past-only season to be rejected")
+
+
+def test_parse_show_window_handles_marketing_copy_between_title_and_dates() -> None:
+    text = """
+    AJS Fall 2026
+    Where buyers and exhibitors connect through education, networking, and sourcing.
+    August 22-23, 2026
+    Cobb Convention Center, Atlanta
+    """
+
+    show = parse_show_window(text, today=date(2026, 3, 31))
+
+    assert show == {
+        "title": "AJS Fall 2026",
+        "season": "fall",
+        "year": 2026,
+        "start_date": "2026-08-22",
+        "end_date": "2026-08-23",
+    }

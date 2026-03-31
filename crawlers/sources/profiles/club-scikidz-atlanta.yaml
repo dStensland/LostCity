@@ -1,0 +1,8 @@
+version: 1
+slug: club-scikidz-atlanta
+name: Club SciKidz Atlanta
+data_goals:
+- events
+- images
+- lineup
+- tickets

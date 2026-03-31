@@ -116,6 +116,35 @@ class TestInferTags:
         tags = infer_tags(event)
         assert "high-energy" in tags
 
+    def test_live_music_requires_show_signal_for_recurring_music(self):
+        event = {
+            "title": "Weekly Jazz Jam",
+            "description": "",
+            "category": "music",
+            "is_recurring": True,
+            "is_class": False,
+            "price_min": None,
+            "price_max": None,
+            "ticket_url": None,
+        }
+        tags = infer_tags(event)
+        assert "live-music" not in tags
+        assert "open-format" in tags
+
+    def test_live_music_kept_for_ticketed_music_show(self):
+        event = {
+            "title": "Indie Rock Show",
+            "description": "",
+            "category": "music",
+            "is_recurring": True,
+            "is_class": False,
+            "price_min": 20.0,
+            "ticket_url": "https://tickets.example.com/show",
+        }
+        tags = infer_tags(event)
+        assert "live-music" in tags
+        assert "open-format" not in tags
+
     def test_chill_tag(self):
         event = {"title": "Acoustic Night", "description": "Singer-songwriter showcase"}
         tags = infer_tags(event)

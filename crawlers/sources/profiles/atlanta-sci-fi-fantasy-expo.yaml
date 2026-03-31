@@ -1,0 +1,7 @@
+version: 1
+slug: atlanta-sci-fi-fantasy-expo
+name: Atlanta Sci-Fi & Fantasy Expo
+data_goals:
+- events
+- images
+- tickets

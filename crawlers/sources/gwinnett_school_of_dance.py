@@ -43,6 +43,11 @@ _CONFIG = JackRabbitConfig(
         "place_type": "fitness_center",
         "spot_type": "fitness",
         "website": "https://www.gwinnettschoolofdance.com",
+        "description": (
+            "Gwinnett School of Dance in Grayson offers ballet, tap, tumbling, jazz, "
+            "hip hop, lyrical, and contemporary classes for kids, teens, and adults."
+        ),
+        "image_url": "http://static1.squarespace.com/static/68dca836e2574146823a2c03/t/68dcb20be0d53a7931085256/1759293963664/GSD_logo_white.png?format=1500w",
         "phone": "(770) 962-8078",
         "vibes": ["family-friendly", "kids", "dance"],
     },

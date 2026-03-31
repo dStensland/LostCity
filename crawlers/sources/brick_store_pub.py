@@ -35,6 +35,22 @@ PLACE_DATA = {
     "lng": -84.2958,
     "place_type": "bar",
     "website": BASE_URL,
+    "description": (
+        "Brick Store Pub is a celebrated Decatur beer bar and neighborhood pub known for "
+        "expertly served pints, deep Belgian and craft beer lists, made-from-scratch pub food, "
+        "and a historic town-square setting."
+    ),
+    "image_url": "https://popmenucloud.com/cdn-cgi/image/width=300,height=300,format=auto,fit=pad,background=transparent/btfxdcpz/2b6dbcb2-ee93-43f6-b903-f35c07215764.png",
+    "hours": {
+        "monday": {"open": "16:30", "close": "23:30"},
+        "tuesday": {"open": "11:30", "close": "23:30"},
+        "wednesday": {"open": "11:30", "close": "23:30"},
+        "thursday": {"open": "11:30", "close": "23:30"},
+        "friday": {"open": "11:30", "close": "00:30"},
+        "saturday": {"open": "11:30", "close": "00:30"},
+        "sunday": {"open": "11:30", "close": "23:30"},
+    },
+    "vibes": ["beer-bar", "craft-beer", "gastropub", "historic", "decatur-square"],
 }
 
 

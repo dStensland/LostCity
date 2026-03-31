@@ -1,0 +1,5 @@
+version: 1
+slug: open-calls-springboard
+name: Springboard for the Arts (Open Calls)
+data_goals:
+- open_calls

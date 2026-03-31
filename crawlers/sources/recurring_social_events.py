@@ -3598,55 +3598,13 @@ def _build_display_title(raw_title: str, venue_name: str) -> str:
             return f"{normalized_title[: -len(alias)].rstrip()} {normalized_venue}".strip()
 
     return f"{normalized_title} at {normalized_venue}"
-
-
-def _format_time_label(time_24: str) -> str:
-    try:
-        return datetime.strptime(time_24, "%H:%M").strftime("%-I:%M %p")
-    except Exception:
-        return time_24
-
-
-def _build_recurring_description(event_template: dict, place_data: dict, source_url: str) -> str:
-    base = " ".join(str(event_template.get("description") or "").split()).strip()
-    day_name = DAY_NAMES[int(event_template["day"])]
-    time_label = _format_time_label(str(event_template.get("start_time") or ""))
-    venue_name = str(place_data.get("name") or "").strip()
-    neighborhood = str(place_data.get("neighborhood") or "").strip()
-    city = str(place_data.get("city") or "Atlanta").strip()
-    state = str(place_data.get("state") or "GA").strip()
-    category = str(event_template.get("category") or "event").replace("_", " ")
-
-    location = venue_name
-    if neighborhood:
-        location = f"{location} in {neighborhood}"
-    location = f"{location}, {city}, {state}"
-
-    parts = []
-    if base:
-        parts.append(base if base.endswith(".") else f"{base}.")
-    parts.append(
-        f"Recurring weekly {category} event every {day_name} at {time_label}."
-    )
-    parts.append(f"Location: {location}.")
-
-    price_min = event_template.get("price_min")
-    price_max = event_template.get("price_max")
-    if event_template.get("is_free") is True:
-        parts.append("Typically free to attend.")
-    elif price_min is not None and price_max is not None and price_min == price_max:
-        parts.append(f"Typical cost: ${price_min}.")
-    elif price_min is not None or price_max is not None:
-        low = "?" if price_min is None else str(price_min)
-        high = "?" if price_max is None else str(price_max)
-        parts.append(f"Typical cost range: ${low}-${high}.")
-    else:
-        parts.append("Cover charge and specials may vary by week.")
-
-    parts.append(
-        f"Check venue channels for current lineup, hosts, and any weekly schedule changes ({source_url})."
-    )
-    return " ".join(parts)[:1400]
+def _clean_description(text: Optional[str]) -> Optional[str]:
+    desc = " ".join(str(text or "").split()).strip()
+    if not desc:
+        return None
+    if desc.endswith((".", "!", "?")):
+        return desc
+    return f"{desc}."
 
 
 _GENERIC_DOMAINS = frozenset({
@@ -3896,11 +3854,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         # Pre-compute template-level fields (same across all dates)
         source_url = place_data["website"]  # guaranteed by skip-check above
-        description = _build_recurring_description(
-            event_template,
-            place_data=place_data,
-            source_url=source_url,
-        )
+        description = _clean_description(event_template.get("description"))
 
         # Derive genres from subcategory (e.g. "nightlife.karaoke" → ["karaoke"])
         subcategory = event_template.get("subcategory") or ""

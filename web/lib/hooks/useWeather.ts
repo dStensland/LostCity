@@ -24,11 +24,23 @@ export interface WeatherData {
  * four fields the proxy fetches). This field remains in WeatherData for API compat
  * but will always be 0.
  */
+// Module-level cache — survives component remounts, prevents weather twitch
+let weatherCache: { data: Omit<WeatherData, "loading">; fetchedAt: number } | null = null;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export function useWeather(): WeatherData {
-  const [data, setData] = useState<Omit<WeatherData, "loading"> | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cached = weatherCache && (Date.now() - weatherCache.fetchedAt < CACHE_TTL) ? weatherCache.data : null;
+  const [data, setData] = useState<Omit<WeatherData, "loading"> | null>(cached);
+  const [loading, setLoading] = useState(!cached);
 
   useEffect(() => {
+    // If we have a fresh cache hit, skip the fetch
+    if (weatherCache && (Date.now() - weatherCache.fetchedAt < CACHE_TTL)) {
+      setData(weatherCache.data);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function fetchWeather() {
@@ -43,19 +55,23 @@ export function useWeather(): WeatherData {
           windSpeed: number;
         };
 
+        const weatherData = {
+          temp: json.temperature,
+          condition: json.condition,
+          emoji: json.emoji,
+          windSpeed: json.windSpeed,
+          humidity: json.humidity,
+          uvIndex: 0,
+        };
+
+        // Update module-level cache
+        weatherCache = { data: weatherData, fetchedAt: Date.now() };
+
         if (!cancelled) {
-          setData({
-            temp: json.temperature,
-            condition: json.condition,
-            emoji: json.emoji,
-            windSpeed: json.windSpeed,
-            humidity: json.humidity,
-            uvIndex: 0,
-          });
+          setData(weatherData);
           setLoading(false);
         }
       } catch {
-        // Silently fail — callers hide the pill on error
         if (!cancelled) {
           setLoading(false);
         }

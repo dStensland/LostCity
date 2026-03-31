@@ -1,0 +1,6 @@
+version: 1
+slug: dekalb-history-center
+name: DeKalb History Center
+data_goals:
+- exhibits
+- images

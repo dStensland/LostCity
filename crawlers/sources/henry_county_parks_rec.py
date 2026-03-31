@@ -67,6 +67,9 @@ _DEFAULT_VENUE = VenueInfo(
     lat=33.4268,
     lng=-84.1305,
     venue_type="recreation",
+    website="https://www.henrycountyga.gov/309/Parks-Recreation",
+    description="Discover information about the Parks and Recreation Department events, classes, facilities, and more.",
+    image_url="https://cpnotify.blob.core.windows.net/31a1e19a-87c1-455c-a140-273625756d23/GA Henry County home page_d5941ebb-1ae2-4059-9d72-e7beffe55f44.png",
 )
 
 _KNOWN_VENUES: dict[str, VenueInfo] = {

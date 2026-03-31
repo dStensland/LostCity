@@ -42,11 +42,17 @@ PLACE_DATA = {
 
 
 def clean_text(text: str) -> str:
-    """Decode HTML entities and clean text."""
+    """Decode HTML entities, strip HTML tags, and clean text."""
     if not text:
         return ""
+    # Strip HTML tags (WordPress <p>, <br>, etc.)
+    text = re.sub(r'<[^>]+>', '', text)
     # Decode HTML entities like &#038; -> &
     text = html.unescape(text)
+    # Remove WordPress boilerplate "Event name X Description"
+    text = re.sub(r'^Event name .+? Description ', '', text)
+    # Remove truncation markers
+    text = re.sub(r'\s*\[…\]\s*$', '', text)
     # Remove extra whitespace
     text = re.sub(r'\s+', ' ', text).strip()
     return text
@@ -313,6 +319,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "end_date": end_date,
                         "end_time": end_time,
                         "is_all_day": False,  # Bar/nightlife events are never all-day
+                        "is_adult": True,  # Atlanta Eagle is an adult venue
                         "category": "nightlife",
                         "subcategory": "club",
                         "tags": [
@@ -321,7 +328,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "leather",
                             "gay-bar",
                             "midtown",
-                            "ansley-square",
                         ],
                         "price_min": None,
                         "price_max": None,
@@ -402,6 +408,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "end_date": None,
                             "end_time": end_time,
                             "is_all_day": False,
+                            "is_adult": True,  # Atlanta Eagle is an adult venue
                             "category": "nightlife",
                             "subcategory": "club",
                             "tags": [
@@ -410,7 +417,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "leather",
                                 "gay-bar",
                                 "midtown",
-                                "ansley-square",
                             ],
                             "price_min": None,
                             "price_max": None,
@@ -546,6 +552,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
                 "end_date": None,
                 "end_time": None,
                 "is_all_day": False,
+                "is_adult": True,  # Atlanta Eagle is an adult venue
                 "category": template["category"],
                 "subcategory": template.get("subcategory"),
                 "tags": template["tags"],

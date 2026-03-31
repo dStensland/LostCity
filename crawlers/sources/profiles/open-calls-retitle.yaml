@@ -1,0 +1,5 @@
+version: 1
+slug: open-calls-retitle
+name: Re-Title (International Open Calls)
+data_goals:
+- open_calls

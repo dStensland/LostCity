@@ -1,0 +1,6 @@
+version: 1
+slug: aa-atlanta
+name: Alcoholics Anonymous - Atlanta
+data_goals:
+- events
+- tickets

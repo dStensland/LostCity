@@ -76,6 +76,7 @@ class SourceProfile(BaseModel):
         Literal[
             "events",
             "exhibits",
+            "open_calls",
             "specials",
             "classes",
             "showtimes",

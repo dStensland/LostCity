@@ -9,9 +9,9 @@ from db import get_client, get_portal_id_by_slug
 def register_mobilize_api_source():
     """Register mobilize-api source in the sources table."""
     client = get_client()
-    atlanta_portal_id = get_portal_id_by_slug("atlanta")
-    if not atlanta_portal_id:
-        raise RuntimeError("Atlanta portal not found; cannot set owner_portal_id for mobilize-api")
+    helpatl_portal_id = get_portal_id_by_slug("helpatl")
+    if not helpatl_portal_id:
+        raise RuntimeError("HelpATL portal not found; cannot set owner_portal_id for mobilize-api")
 
     # Check if source already exists
     existing = client.table("sources").select("*").eq("slug", "mobilize-api").execute()
@@ -25,7 +25,7 @@ def register_mobilize_api_source():
             "source_type": "aggregator",
             "integration_method": "api",
             "crawl_frequency": "daily",
-            "owner_portal_id": atlanta_portal_id,
+            "owner_portal_id": helpatl_portal_id,
         }).eq("slug", "mobilize-api").execute()
         print("✓ Updated mobilize-api source")
     else:
@@ -38,7 +38,7 @@ def register_mobilize_api_source():
             "integration_method": "api",
             "crawl_frequency": "daily",
             "is_active": True,
-            "owner_portal_id": atlanta_portal_id,
+            "owner_portal_id": helpatl_portal_id,
         }).execute()
 
         print(f"✓ Registered new source 'mobilize-api' (ID: {result.data[0]['id']})")

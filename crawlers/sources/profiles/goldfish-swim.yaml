@@ -1,0 +1,8 @@
+version: 1
+slug: goldfish-swim
+name: Goldfish Swim School Atlanta
+data_goals:
+- classes
+- events
+- images
+- tickets

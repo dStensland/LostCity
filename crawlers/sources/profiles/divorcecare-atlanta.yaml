@@ -1,0 +1,7 @@
+version: 1
+slug: divorcecare-atlanta
+name: DivorceCare Atlanta
+data_goals:
+- events
+- images
+- tickets

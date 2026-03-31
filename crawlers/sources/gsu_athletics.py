@@ -113,46 +113,6 @@ def _clean_text(value: Optional[str]) -> str:
     return " ".join(str(value).split()).strip()
 
 
-def _extract_team_name(team_obj: Optional[dict]) -> str:
-    if not isinstance(team_obj, dict):
-        return ""
-    return _clean_text(team_obj.get("name"))
-
-
-def _build_event_description(
-    event_data: dict,
-    sport_name: str,
-    location_name: str,
-    is_home: bool,
-) -> str:
-    base_description = _clean_text(event_data.get("description"))
-    away_team = _extract_team_name(event_data.get("awayTeam"))
-    home_team = _extract_team_name(event_data.get("homeTeam"))
-    sport_label = sport_name.replace("-", " ").title()
-
-    parts: list[str] = []
-    if away_team and home_team:
-        parts.append(f"Georgia State Panthers {sport_label} matchup: {home_team} vs {away_team}.")
-    elif away_team:
-        parts.append(f"Georgia State Panthers {sport_label} game against {away_team}.")
-    else:
-        parts.append(f"Georgia State Panthers {sport_label} game.")
-
-    parts.append("Home game." if is_home else "Away or neutral-site game.")
-
-    if location_name:
-        parts.append(f"Location: {location_name}.")
-
-    if base_description:
-        lowered_parts = " ".join(parts).lower()
-        if base_description.lower() not in lowered_parts:
-            parts.append(base_description if base_description.endswith(".") else f"{base_description}.")
-
-    parts.append("Confirm final game time, broadcast, and ticket details on GeorgiaStateSports.com.")
-
-    return " ".join(parts)
-
-
 def parse_jsonld_events(soup: BeautifulSoup) -> list[dict]:
     """Extract SportsEvent data from JSON-LD scripts."""
     events = []
@@ -252,12 +212,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 )
 
 
-                description = _build_event_description(
-                    event_data=event_data,
-                    sport_name=sport_name,
-                    location_name=location_name,
-                    is_home=is_home,
-                )
+                description = _clean_text(event_data.get("description")) or None
                 source_url = _clean_text(event_data.get("url")) or url
 
                 event_record = {

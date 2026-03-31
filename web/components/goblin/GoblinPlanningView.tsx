@@ -38,6 +38,7 @@ interface PlanningViewProps {
   isHost: boolean;
   onPropose: (movieId: number) => void;
   onStartLive: () => void;
+  onCancel: () => void;
   onRefresh: () => void;
 }
 
@@ -64,6 +65,7 @@ export function GoblinPlanningView({
   isHost,
   onPropose,
   onStartLive,
+  onCancel,
   onRefresh,
 }: PlanningViewProps) {
   const [showPicker, setShowPicker] = useState(false);
@@ -114,8 +116,8 @@ export function GoblinPlanningView({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="border-2 border-zinc-800 bg-black p-4">
-        <div className="flex items-start justify-between gap-4">
+      <div className="border-2 border-zinc-800 bg-black p-3 sm:p-4">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-amber-500 text-2xs font-bold tracking-[0.25em] uppercase border border-amber-800/60 bg-amber-950/30 px-1.5 py-0.5">
@@ -129,16 +131,43 @@ export function GoblinPlanningView({
               {formatDate(sessionDate)}
             </p>
           </div>
+          {/* Desktop: side buttons */}
           {isHost && (
+            <div className="hidden sm:flex flex-col gap-2 flex-shrink-0">
+              <button
+                onClick={handleStartLive}
+                disabled={startingLive}
+                className="px-4 py-2 bg-red-900 hover:bg-red-800 text-red-100 font-black text-xs tracking-[0.2em] uppercase border-2 border-red-700 hover:border-red-600 transition-colors shadow-[0_0_20px_rgba(185,28,28,0.3)] hover:shadow-[0_0_30px_rgba(185,28,28,0.5)] disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {startingLive ? "STARTING..." : "START GOBLIN DAY"}
+              </button>
+              <button
+                onClick={onCancel}
+                className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 font-bold text-2xs tracking-[0.2em] uppercase border border-zinc-700 hover:border-zinc-600 transition-colors"
+              >
+                CANCEL
+              </button>
+            </div>
+          )}
+        </div>
+        {/* Mobile: full-width buttons below header */}
+        {isHost && (
+          <div className="flex sm:hidden gap-2 mt-3">
             <button
               onClick={handleStartLive}
               disabled={startingLive}
-              className="flex-shrink-0 px-4 py-2 bg-red-900 hover:bg-red-800 text-red-100 font-black text-xs tracking-[0.2em] uppercase border-2 border-red-700 hover:border-red-600 transition-colors shadow-[0_0_20px_rgba(185,28,28,0.3)] hover:shadow-[0_0_30px_rgba(185,28,28,0.5)] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex-1 px-3 py-2.5 bg-red-900 text-red-100 font-black text-xs tracking-[0.15em] uppercase border-2 border-red-700 transition-colors shadow-[0_0_20px_rgba(185,28,28,0.3)] disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
             >
               {startingLive ? "STARTING..." : "START GOBLIN DAY"}
             </button>
-          )}
-        </div>
+            <button
+              onClick={onCancel}
+              className="px-3 py-2.5 bg-zinc-900 text-zinc-500 font-bold text-2xs tracking-[0.15em] uppercase border border-zinc-700 transition-colors min-h-[44px]"
+            >
+              CANCEL
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Invite Link */}
@@ -147,12 +176,12 @@ export function GoblinPlanningView({
           INVITE LINK
         </h3>
         <div className="flex items-center gap-2 border border-zinc-800 bg-zinc-950 p-2">
-          <code className="text-zinc-400 text-2xs tracking-wider flex-1 min-w-0 truncate font-mono">
+          <code className="text-zinc-400 text-2xs tracking-wider flex-1 min-w-0 truncate font-mono overflow-hidden">
             {inviteUrl}
           </code>
           <button
             onClick={handleCopyInvite}
-            className={`flex-shrink-0 px-3 py-1.5 text-2xs font-black tracking-[0.2em] uppercase border transition-colors ${
+            className={`flex-shrink-0 px-3 py-2 sm:py-1.5 text-2xs font-black tracking-[0.2em] uppercase border transition-colors min-h-[36px] ${
               copied
                 ? "bg-emerald-900/40 text-emerald-400 border-emerald-700"
                 : "bg-zinc-900 text-zinc-400 border-zinc-700 hover:text-white hover:border-zinc-500"
@@ -273,7 +302,7 @@ export function GoblinPlanningView({
         {!showPicker ? (
           <button
             onClick={() => setShowPicker(true)}
-            className="w-full px-4 py-2.5 border-2 border-dashed border-zinc-700 hover:border-red-800 text-zinc-500 hover:text-red-400 text-xs font-bold tracking-[0.2em] uppercase transition-colors"
+            className="w-full px-4 py-3 sm:py-2.5 border-2 border-dashed border-zinc-700 hover:border-red-800 text-zinc-500 hover:text-red-400 text-xs font-bold tracking-[0.2em] uppercase transition-colors min-h-[44px]"
           >
             + PROPOSE MOVIE
           </button>
@@ -295,11 +324,11 @@ export function GoblinPlanningView({
                 // ALL MOVIES ALREADY PROPOSED
               </p>
             ) : (
-              <div className="max-h-64 overflow-y-auto divide-y divide-zinc-800/60">
+              <div className="max-h-72 sm:max-h-64 overflow-y-auto divide-y divide-zinc-800/60">
                 {availableToPropose.map((movie) => (
                   <div
                     key={movie.id}
-                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-900/50 transition-colors"
+                    className="flex items-center gap-3 px-3 sm:px-4 py-2.5 hover:bg-zinc-900/50 transition-colors"
                   >
                     <div className="w-7 h-10 flex-shrink-0 bg-zinc-900 overflow-hidden relative">
                       {movie.poster_path ? (
@@ -321,7 +350,7 @@ export function GoblinPlanningView({
                     <button
                       onClick={() => handlePropose(movie.id)}
                       disabled={proposingId === movie.id}
-                      className="flex-shrink-0 px-3 py-1 bg-red-900/60 hover:bg-red-800 text-red-300 hover:text-white text-xs font-black tracking-[0.15em] uppercase border border-red-800 hover:border-red-600 transition-colors disabled:opacity-40"
+                      className="flex-shrink-0 px-3 py-2 sm:py-1 bg-red-900/60 hover:bg-red-800 text-red-300 hover:text-white text-xs font-black tracking-[0.15em] uppercase border border-red-800 hover:border-red-600 transition-colors disabled:opacity-40 min-h-[36px]"
                     >
                       {proposingId === movie.id ? "..." : "PROPOSE"}
                     </button>

@@ -1,0 +1,8 @@
+version: 1
+slug: gateway-center-arena
+name: Gateway Center Arena
+data_goals:
+- events
+- images
+- lineup
+- tickets

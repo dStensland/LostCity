@@ -1,7 +1,7 @@
 version: 1
 slug: church-bar
 name: Church Bar
-integration_method: playwright
+integration_method: html
 defaults: {}
 discovery:
   enabled: false
@@ -9,12 +9,7 @@ discovery:
   urls:
   - https://www.churchedgewood.com
 detail:
-  enabled: true
-  fetch:
-    render_js: true
+  enabled: false
 data_goals:
-- events
 - images
-- specials
-- tickets
 - venue_hours

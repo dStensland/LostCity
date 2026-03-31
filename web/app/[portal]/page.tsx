@@ -3,15 +3,19 @@ import { headers } from "next/headers";
 import { getCityPhoto } from "@/lib/city-pulse/header-defaults";
 import { getTimeSlot, getDayOfWeek } from "@/lib/city-pulse/time-slots";
 import { getServerFeedData } from "@/lib/city-pulse/server-feed";
+import { getServerFindData } from "@/lib/find-data";
+import { getServerRegularsData } from "@/lib/server-regulars";
 import { AmbientBackground } from "@/components/ambient";
 import HappeningView from "@/components/find/HappeningView";
 import type { HappeningContent } from "@/components/find/HappeningView";
 import dynamic from "next/dynamic";
-import FindView from "@/components/find/FindView";
-import { getServerFindData, type ServerFindData } from "@/lib/find-data";
+import FindShellClient from "@/components/find/FindShellClient";
 
 const SpotsFinder = dynamic(() => import("@/components/find/SpotsFinder"), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading places...</div>,
+});
+const FindView = dynamic(() => import("@/components/find/FindView"), {
+  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading...</div>,
 });
 import CommunityHub from "@/components/community/CommunityHub";
 import DetailViewRouter from "@/components/views/DetailViewRouter";
@@ -98,44 +102,71 @@ async function DefaultCityTemplate({
 }
 
 /**
- * Async RSC wrapper for the unified Find tab.
- * Fetches all Find data server-side and passes it to FindView as props,
- * eliminating the parallel client-side fetches that were firing on every load.
+ * Async RSC wrapper for the Find/Explore shell.
+ * Fetches find-data server-side so the launchpad renders with real data on
+ * first load — eliminating the client-side fetch waterfall.
  */
-async function ServerFindView({
-  portal,
+async function FindShellWithData({
   portalSlug,
+  portalId,
+  portalExclusive,
 }: {
-  portal: { settings: unknown };
   portalSlug: string;
+  portalId: string;
+  portalExclusive: boolean;
 }) {
   const findData = await getServerFindData(portalSlug);
   return (
-    <FindView
+    <FindShellClient
       portalSlug={portalSlug}
-      portalSettings={portal.settings as Record<string, unknown>}
+      portalId={portalId}
+      portalExclusive={portalExclusive}
       serverFindData={findData}
     />
   );
 }
 
-function FindSkeleton() {
+// ExploreShell removed — replaced by FindShellClient (client component)
+// for instant lane switching without server round-trips.
+
+type HappeningViewWithDataProps = {
+  portal: { id: string; slug: string; portal_type: string; parent_portal_id?: string | null };
+  isExclusive: boolean;
+  displayMode: "list" | "map" | "calendar";
+  hasActiveFilters: boolean;
+  vertical: string | null | undefined;
+  happeningContent: HappeningContent;
+};
+
+async function HappeningViewWithData({
+  portal,
+  isExclusive,
+  displayMode,
+  hasActiveFilters,
+  vertical,
+  happeningContent,
+}: HappeningViewWithDataProps) {
+  // Only pre-fetch when the RSC knows we're landing on the regulars sub-view.
+  // All other content types (all, showtimes) keep their existing client-fetch paths.
+  const initialRegularsData =
+    happeningContent === "regulars"
+      ? await getServerRegularsData(portal.slug)
+      : null;
+
   return (
-    <div className="space-y-4 py-4">
-      <div className="h-10 rounded-lg skeleton-shimmer mx-4" />
-      <div className="flex gap-2 px-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-9 w-24 rounded-full skeleton-shimmer" style={{ animationDelay: `${i * 40}ms` }} />
-        ))}
-      </div>
-      <div className="space-y-3 px-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-20 rounded-xl skeleton-shimmer" style={{ animationDelay: `${i * 60}ms` }} />
-        ))}
-      </div>
-    </div>
+    <HappeningView
+      portalId={portal.id}
+      portalSlug={portal.slug}
+      portalExclusive={isExclusive}
+      displayMode={displayMode}
+      hasActiveFilters={hasActiveFilters}
+      vertical={vertical}
+      contentType={happeningContent}
+      initialRegularsData={initialRegularsData}
+    />
   );
 }
+
 
 export async function generateMetadata({
   params,
@@ -227,6 +258,8 @@ type PortalSearchParams = {
   pillar?: string;
   // Navigation context
   from?: string;
+  // Explore lane
+  lane?: string;
 };
 
 type Props = {
@@ -469,6 +502,10 @@ export default async function PortalPage({ params, searchParams }: Props) {
   };
 
   const mainClassName = (() => {
+    // Find view has its own internal padding — don't add outer pb-20
+    if (viewMode === "find") {
+      return "mx-auto max-w-[1600px]";
+    }
     const base = "mx-auto px-4 sm:px-6 lg:px-8 pb-20";
     if (viewMode === "feed") {
       return isFilm
@@ -532,8 +569,12 @@ export default async function PortalPage({ params, searchParams }: Props) {
                   )}
 
                   {viewMode === "find" && (
-                    <Suspense fallback={<FindSkeleton />}>
-                      <ServerFindView portal={portal} portalSlug={portal.slug} />
+                    <Suspense fallback={<div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading...</div>}>
+                      <FindShellWithData
+                        portalSlug={portal.slug}
+                        portalId={portal.id}
+                        portalExclusive={isExclusive}
+                      />
                     </Suspense>
                   )}
 
@@ -543,19 +584,33 @@ export default async function PortalPage({ params, searchParams }: Props) {
                         <div className="px-4 pt-3 pb-1">
                           <a href={`/${portal.slug}?view=find`} className="inline-flex items-center gap-1.5 text-sm text-[var(--soft)] hover:text-[var(--cream)] transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"/></svg>
-                            Find
+                            Explore
                           </a>
                         </div>
                       )}
-                      <HappeningView
-                        portalId={portal.id}
-                        portalSlug={portal.slug}
-                        portalExclusive={isExclusive}
-                        displayMode={findDisplay}
-                        hasActiveFilters={hasActiveFilters}
-                        vertical={vertical}
-                        contentType={happeningContent}
-                      />
+                      <Suspense fallback={
+                        <div className="py-3 space-y-3">
+                          <div className="flex gap-2">
+                            {[1, 2, 3].map((i) => (
+                              <div key={i} className="h-8 w-20 skeleton-shimmer rounded-full" />
+                            ))}
+                          </div>
+                          <div className="space-y-3">
+                            {[1, 2, 3, 4, 5].map((i) => (
+                              <div key={i} className="h-24 skeleton-shimmer rounded-xl" />
+                            ))}
+                          </div>
+                        </div>
+                      }>
+                        <HappeningViewWithData
+                          portal={portal}
+                          isExclusive={isExclusive}
+                          displayMode={findDisplay}
+                          hasActiveFilters={hasActiveFilters}
+                          vertical={vertical}
+                          happeningContent={happeningContent}
+                        />
+                      </Suspense>
                     </div>
                   )}
 
@@ -565,7 +620,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
                         <div className="px-4 pt-3 pb-1">
                           <a href={`/${portal.slug}?view=find`} className="inline-flex items-center gap-1.5 text-sm text-[var(--soft)] hover:text-[var(--cream)] transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"/></svg>
-                            Find
+                            Explore
                           </a>
                         </div>
                       )}

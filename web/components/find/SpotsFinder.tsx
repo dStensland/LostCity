@@ -53,7 +53,12 @@ function DestinationsMapFilterBar({ portalSlug }: { portalSlug: string }) {
         else params.set(key, value);
       });
 
-      params.set("view", "places");
+      // Preserve Explore shell context if embedded
+      if (params.get("view") === "find" && params.get("lane")) {
+        // Stay in the shell — keep view=find and lane
+      } else {
+        params.set("view", "places");
+      }
       params.delete("type");
       params.set("display", "map");
 

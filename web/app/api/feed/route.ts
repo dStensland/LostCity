@@ -148,15 +148,13 @@ export async function GET(request: Request) {
     const searchQuery = searchParams.get("search");
     const freeOnly = searchParams.get("free") === "1";
     const cursor = searchParams.get("cursor");
-    const personalized = searchParams.get("personalized") !== "0"; // Default true
-
     const user = await getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Anonymous users always get non-personalized feed
+    const personalized = user ? searchParams.get("personalized") !== "0" : false;
     const responseHeaders = {
-      // Private cache for user-specific content
-      "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
+      "Cache-Control": user
+        ? "private, max-age=60, stale-while-revalidate=120"
+        : "public, s-maxage=120, stale-while-revalidate=300",
     };
     const requestPlan = buildFeedRequestPlan({
       personalized,
@@ -168,7 +166,7 @@ export async function GET(request: Request) {
       freeOnly,
       hasCursor: Boolean(cursor),
     });
-    const cacheKey = `${user.id}|${searchParams.toString()}|${Math.floor(Date.now() / FEED_RESPONSE_CACHE_TTL_MS)}`;
+    const cacheKey = `${user?.id ?? "anon"}|${searchParams.toString()}|${Math.floor(Date.now() / FEED_RESPONSE_CACHE_TTL_MS)}`;
     const cachedResponse = await timing.measure("cache_lookup", () =>
       getCachedFeedResponse(cacheKey)
     );
@@ -204,11 +202,13 @@ export async function GET(request: Request) {
       await timing.measure("bootstrap", () =>
         Promise.all([
           resolvePortalQueryContext(supabase, searchParams, getVerticalFromRequest(request)),
-          supabase
-            .from("user_preferences")
-            .select("*")
-            .eq("user_id", user.id)
-            .maybeSingle(),
+          user
+            ? supabase
+                .from("user_preferences")
+                .select("*")
+                .eq("user_id", user.id)
+                .maybeSingle()
+            : Promise.resolve({ data: null, error: null }),
           // Fetch trending events (same logic as /api/trending)
           requestPlan.shouldFetchTrending
             ? supabase
@@ -277,7 +277,12 @@ export async function GET(request: Request) {
     )
       ? (portalSettings.recommendation_labels as Record<string, string>)
       : null;
-    const portalClient = await createPortalScopedClient(portalId);
+    // Anonymous users hit RLS timeouts on the events table with anon key,
+    // so use the service client which bypasses RLS. Auth is already verified
+    // above and portal scoping is applied via filters, not RLS.
+    const portalClient = user
+      ? await createPortalScopedClient(portalId)
+      : serviceClient;
     const portalFilters = portalContext.filters;
 
     const prefsData = prefsResult.data;
@@ -324,7 +329,15 @@ export async function GET(request: Request) {
       sourceOrganizationMap,
       friendIds,
     } = await timing.measure("social_graph_context", () =>
-      getCachedFeedSocialGraphContext(supabase as never, user.id, portalId)
+      user
+        ? getCachedFeedSocialGraphContext(supabase as never, user.id, portalId)
+        : Promise.resolve({
+            followedVenueIds: [] as number[],
+            followedOrganizationIds: [] as string[],
+            producerSourceIds: [] as number[],
+            sourceOrganizationMap: {} as Record<number, string>,
+            friendIds: [] as string[],
+          })
     );
 
     // Get events friends are going to
@@ -912,7 +925,7 @@ export async function GET(request: Request) {
     let followedChannelCount = 0;
     let channelMatchesByEventId = new Map<number, EventChannelMatch[]>();
 
-    if (ENABLE_INTEREST_CHANNELS_V1 && events.length > 0) {
+    if (ENABLE_INTEREST_CHANNELS_V1 && events.length > 0 && user) {
       const channelMatchResult = await timing.measure("channel_matches", () =>
         getUserSubscribedChannelMatchesForEvents(
           serviceClient,

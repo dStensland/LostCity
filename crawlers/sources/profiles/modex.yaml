@@ -1,0 +1,7 @@
+version: 1
+slug: modex
+name: MODEX
+data_goals:
+- events
+- images
+- tickets

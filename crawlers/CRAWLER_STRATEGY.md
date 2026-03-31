@@ -9,8 +9,9 @@ A systematic approach to building comprehensive event coverage for any city.
 2. [Technical Approach Decision Tree](#technical-approach-decision-tree)
 3. [Category Coverage Matrix](#category-coverage-matrix)
 4. [City Launch Playbook](#city-launch-playbook)
-5. [Quality Scoring Framework](#quality-scoring-framework)
-6. [Crawler Templates](#crawler-templates)
+5. [Operating Model](#operating-model)
+6. [Quality Scoring Framework](#quality-scoring-framework)
+7. [Crawler Templates](#crawler-templates)
 
 ---
 
@@ -57,16 +58,63 @@ festival source container row even when there is no standalone crawler module.
 
 ### Strategy Priority Order (Per Source)
 1. First-party org/venue API.
-2. Aggregator APIs (Ticketmaster/Eventbrite) when the venue has no API or the aggregator data is materially better.
-3. Structured feeds (ICS/RSS/ical).
-4. Schema.org-only ingestion (JSON-LD Event required; skip pages without it).
-5. Deterministic HTML crawlers (selectors + JSON-LD + microdata).
-6. LLM-powered crawler (LLM drives discovery + extraction) for sources that cannot be parsed deterministically.
-7. LLM extraction (HTML -> structured) as fallback inside deterministic crawlers.
-8. Browser automation (Playwright) when content requires JS or interaction.
-9. User submissions.
+2. Hidden structured data on the first-party surface (hydration JSON, intercepted XHR/fetch, replayed GraphQL, embedded state blobs).
+3. Aggregator APIs (Ticketmaster/Eventbrite) when the venue has no direct API or the aggregator data is materially better.
+4. Structured feeds (ICS/RSS/ical).
+5. Schema.org-only ingestion (JSON-LD Event required; skip pages without it).
+6. Deterministic HTML crawlers (selectors + JSON-LD + microdata).
+7. Browser automation (Playwright) to unlock JS-rendered content or capture hidden structured data, not as the default extraction layer.
+8. LLM extraction (HTML -> structured) as a fallback inside deterministic or browser-driven crawlers.
+9. LLM-powered crawler (LLM drives discovery + extraction) only as a temporary bridge for sources we cannot yet parse deterministically.
+10. User submissions.
 
 Schema.org-only is enforced via `detail.jsonld_only: true` in the source profile.
+
+### Hidden Structured Data Rule
+
+Modern sites often expose the best data through first-party payloads even when no
+public API is documented. Before writing HTML selectors or reaching for an LLM,
+check for:
+
+- `__NEXT_DATA__`, Apollo cache, Nuxt state, or other hydration blobs in HTML
+- XHR/fetch responses captured through Playwright `page.on("response")`
+- GraphQL requests that can be replayed after the page establishes cookies or headers
+- Inline JSON assigned to `window.__*` variables
+
+If a source's front-end is just a wrapper around structured payloads, the
+payload is canonical and the DOM is an implementation detail.
+
+### Connector-First Rule
+
+Do not keep solving the same platform family source-by-source.
+
+When a platform pattern appears repeatedly (Rec1, iClassPro, Tribe Events,
+Localist, Wix Bookings, theater GraphQL apps, etc.), invest in a shared
+connector before adding more bespoke source modules.
+
+Promotion threshold:
+- 3+ live or queued sources on the same platform, or
+- 2+ sources with the same failure mode / payload shape, or
+- any platform that is strategically central to a content pillar (family,
+  outdoors, arts, sports, civic)
+
+Shared connectors should own discovery, normalization, and first-pass
+completeness for that platform family.
+
+### LLM Role Rule
+
+LLMs are a bridge, not the end state.
+
+Use LLMs for:
+- extracting irregular detail pages after structured methods fail
+- bootstrapping coverage for a source that must ship before a deterministic
+  parser exists
+- OCR/vision extraction for flyers, scanned PDFs, and social content where text
+  is not otherwise accessible
+
+Do not accept `llm_crawler` as the steady-state integration method for any
+high-yield or platform-repeated source. Those should graduate to connectors or
+deterministic crawlers.
 
 ### Current Data Model Contract (Required)
 
@@ -190,6 +238,9 @@ Before activation, every new or rehabbed source should be checked for:
 10. **Venue specials** captured to `venue_specials` when the page shows happy hours, daily deals, or recurring food/drink offers
 11. **Hours of operation** captured when visible on the page
 12. **Venue description and hero image** filled from the source page (og:image, about section)
+13. If the site exposes hidden structured payloads, the crawler uses them instead of brittle DOM-only extraction
+14. If the source belongs to an existing platform family, it uses the shared connector unless there is a documented exception
+15. If `llm_crawler` is used, an exit path to deterministic extraction is recorded at activation time
 
 If multiple sources show the same defect class, fix the shared enrichment path
 before adding more source-local cleanup.
@@ -210,15 +261,14 @@ Do not leave these fields as raw text if the shared enrichment pipeline already
 has normalizers for them.
 
 ### Tier 1: High-Volume Aggregators (Priority: First)
-**Goal:** Establish baseline coverage quickly
+**Goal:** Establish fast baseline coverage without violating source quality rules
 
 | Source Type | Example | Expected Events | Confidence | Notes |
 |-------------|---------|-----------------|------------|-------|
 | Ticketing APIs | Ticketmaster, AXS | 500-1000+ | 0.95 | Best structured data, covers major venues |
 | Event Aggregators | Eventbrite | 100-500 | 0.85 | Community events, varied quality |
-| Meetup API | Meetup.com | 50-100 | 0.80 | Community/tech/hobby events |
 
-**Why First:** These provide immediate broad coverage while you build venue-specific crawlers.
+**Why First:** These provide immediate broad coverage while you build direct-source crawlers and shared connectors.
 
 ### Tier 2: Major Venues (Priority: Second)
 **Goal:** High-quality data for anchor venues
@@ -274,6 +324,14 @@ START: Analyzing a new source
 │   │
 │   └─► NO → Continue...
 │
+├─► Does the page/app expose hidden structured data?
+│   ├─► YES → Use hydration/XHR/GraphQL extraction
+│   │         • Parse `__NEXT_DATA__`, window state, or intercepted responses
+│   │         • Replay first-party requests when possible
+│   │         • Confidence: 0.85-0.95
+│   │
+│   └─► NO → Continue...
+│
 ├─► Is it covered by Ticketmaster/Eventbrite?
 │   ├─► YES → Use aggregator API
 │   │         • Confidence: 0.85-0.95
@@ -303,23 +361,26 @@ START: Analyzing a new source
 │   └─► NO → Continue...
 │
 ├─► Is the content JS-driven or requires interaction?
-│   ├─► YES → Use Playwright
+│   ├─► YES → Use Playwright to reveal the structured source first
 │   │         • Wait for content to load
 │   │         • Handle infinite scroll
 │   │         • Click through date pickers
+│   │         • Capture network payloads before parsing DOM
 │   │         • Confidence: 0.80-0.90
 │   │
 │   └─► NO → Continue...
 │
 └─► SPECIAL CASES:
-    • Use LLM-powered crawler for sources that cannot be parsed deterministically
     • Use LLM extraction as fallback for missing fields or non-standard pages
+    • Use LLM-powered crawler only as a temporary bridge
     • Theaters/Cinemas: Always use Playwright for date navigation
     • Calendars with filters: Playwright to interact with dropdowns
     • Infinite scroll: Playwright with scroll handling
 ```
 
-Note: if static HTML is available, prefer LLM extraction over Playwright. Use Playwright only when content is JS-only or requires interaction to render events.
+Note: if Playwright is needed, prefer capturing the site's structured payloads over
+screen-scraping rendered DOM. If static HTML is available and deterministic
+parsing is plausible, prefer that over LLM extraction.
 
 ### iCal Feed Discovery
 
@@ -391,12 +452,18 @@ Fall back to API or Playwright when:
 
 ### When to Use Each Approach
 
+**Hidden Structured Data:**
+- Next.js/Nuxt/React apps with embedded hydration state
+- Sites that fetch JSON after load via XHR/fetch/GraphQL
+- Cases where Playwright is only needed to establish headers/cookies
+- Best option when available because it preserves structured first-party data
+
 **Playwright (34 crawlers currently):**
 - Modern React/Vue/Angular sites
 - Sites with date pickers or filters
 - Theaters with showtime calendars
 - Any site where content loads after page load
-- Higher resource cost, but necessary for JS sites
+- Higher resource cost, so prefer it as an unlock step for hidden structured data
 
 **BeautifulSoup (157 crawlers currently):**
 - Traditional HTML sites
@@ -413,10 +480,16 @@ Fall back to API or Playwright when:
 - Use `icalendar` library for parsing
 
 **API-based:**
-- Ticketmaster, Eventbrite, Meetup
+- Ticketmaster, Eventbrite
 - Venues using known ticketing platforms
 - Any site exposing a REST/GraphQL API
 - Best structured data, most reliable
+
+**LLM-assisted extraction:**
+- Irregular detail pages after deterministic methods fail
+- OCR/vision-heavy sources like flyers, scanned PDFs, and social posts
+- Temporary bridge for a source that must launch before a deterministic path is built
+- Should shrink over time as connector coverage improves
 
 ---
 
@@ -469,7 +542,7 @@ For comprehensive city coverage, ensure sources in each category:
 ## City Launch Playbook
 
 ### Phase 1: Foundation (Week 1)
-**Goal:** 500+ events from aggregators
+**Goal:** Baseline coverage plus the first reusable connectors
 
 1. **Set up Ticketmaster API** for the metro area
    - Configure geo search for city center + 50 mile radius
@@ -479,14 +552,13 @@ For comprehensive city coverage, ensure sources in each category:
    - Search by city/metro
    - Expected: 100-300 events
 
-3. **Identify local event calendar**
-   - Every city has one (Creative Loafing, Do512, etc.)
-   - Build Playwright crawler
-   - Expected: 50-150 events
+3. **Identify the first 2-3 platform families in the market**
+   - Examples: Tribe Events, Localist, Rec1, iClassPro, theater/cinema GraphQL apps
+   - Build or extend shared connectors before writing bespoke crawlers
 
-4. **Set up Meetup API**
-   - Filter by metro area
-   - Expected: 50-100 events
+4. **Use curator calendars only for gap discovery**
+   - Alternative weeklies, tourism guides, and community calendars are research inputs
+   - Every gap discovered there should resolve to a direct organizer, venue, ticketing, or festival source
 
 ### Phase 2: Major Venues (Week 2)
 **Goal:** High-quality coverage of anchor venues
@@ -499,7 +571,8 @@ For comprehensive city coverage, ensure sources in each category:
    - 2-3 iconic music clubs
    - Primary comedy club
 
-2. **Build crawlers for each** using appropriate technical approach
+2. **Build crawlers for each** using the method hierarchy
+   - Prefer direct API / hidden structured data / connector reuse before HTML or LLM
 
 3. **Validate against Ticketmaster** - you should see overlap
 
@@ -650,7 +723,7 @@ See: `salsa_atlanta.py`, `pasofino_dance.py`
 Before building crawlers, research:
 
 ### Discovery Phase
-- [ ] What's the local alternative weekly? (Creative Loafing equivalent)
+- [ ] What's the local alternative weekly? (discovery-only research input, never a canonical source)
 - [ ] What are the "must-see" venues locals recommend?
 - [ ] What's the primary arena/stadium complex?
 - [ ] What convention center hosts events?
@@ -685,6 +758,12 @@ Before building crawlers, research:
 - Days ahead with events (target: 30+ days)
 - Unique venues in system
 
+### Architecture Metrics
+- Share of active sources running on shared connectors
+- Share of active sources still using `llm_crawler`
+- Count of sources upgraded from browser/LLM extraction to deterministic methods
+- Count of repeated platform families without a shared connector
+
 ### Quality Metrics
 - Average data completeness score
 - Duplicate rate
@@ -695,6 +774,85 @@ Before building crawlers, research:
 - Time since last crawl per source
 - New events per day
 - Event update frequency
+
+---
+
+## Operating Model
+
+### Intake Workflow
+
+Every new source should move through the same pipeline:
+
+1. Candidate source created inactive
+2. Run `source_audit.py` and identify the likely platform family
+3. Check for hidden structured data before writing selectors
+4. Decide: reuse connector, extend connector, or create bespoke crawler
+5. Dry-run validation against the activation gate
+6. Activate only after the source clears quality and first-pass completeness checks
+
+This keeps intake continuous without letting the source registry turn into
+uncurated debt.
+
+### Activation Gate
+
+A source may be activated only when all of the following are true:
+
+- Dry-run returns non-zero signal or a justified destination-only outcome
+- Detail URLs, ticket URLs, and imagery are correctly separated
+- Recurring programming, specials, hours, and venue metadata are captured when visible
+- The crawler uses the highest available method in the hierarchy
+- The source does not duplicate an existing connector or first-party source lane
+- Any temporary `llm_crawler` usage has an explicit follow-up owner and migration note
+
+### Connector Promotion Cadence
+
+Review platform families weekly.
+
+If the same platform appears in multiple queued or fragile sources, stop adding
+bespoke crawlers and promote it into a connector. Connector work should be
+prioritized ahead of new source count because it raises throughput and reduces
+maintenance at the same time.
+
+Recommended weekly questions:
+- Which platforms showed up 3+ times in the backlog?
+- Which bug classes repeated across multiple sources?
+- Which source families are still using Playwright only to capture an API payload?
+- Which `llm_crawler` sources are now common enough to justify deterministic extraction?
+
+### LLM Reduction Program
+
+Track `llm_crawler` as transition debt, not success.
+
+Operating targets:
+- New high-yield sources should not launch on `llm_crawler` if a connector path is plausible
+- Existing `llm_crawler` sources should be reviewed monthly for graduation
+- Prioritize graduation for sources with high event yield, repeated platform usage, or persistent breakage
+
+### Curator QA Loop
+
+Curators remain useful, but only in a narrow role:
+
+- Find gaps
+- Verify that direct-source crawlers are capturing important events
+- Discover new organizers, venues, and districts worth crawling
+
+They should not become canonical source rows or foundation coverage layers.
+
+### Recommended Cadence
+
+Daily:
+- Triage broken high-yield sources and failed crawls
+- Review curator-discovered gaps and route them to direct-source intake
+
+Weekly:
+- Review connector promotion candidates
+- Review newly added sources against the activation gate
+- Audit sources still relying on Playwright-only DOM scraping or `llm_crawler`
+
+Monthly:
+- Review `llm_crawler` graduation candidates
+- Review architecture metrics for connector coverage and repeated platform debt
+- Retire or merge low-value duplicate source lanes
 
 ---
 
@@ -1146,8 +1304,8 @@ Applying this framework to Nashville:
 ### Phase 1 Sources
 1. Ticketmaster API (Bridgestone Arena, Ryman, Ascend)
 2. Eventbrite API
-3. Nashville Scene (local alternative weekly)
-4. Meetup API
+3. Connector reconnaissance for theater/music platform families
+4. Nashville Scene used only for gap discovery and QA
 
 ### Phase 2 Major Venues
 1. Bridgestone Arena

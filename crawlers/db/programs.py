@@ -237,7 +237,7 @@ def find_program_by_hash(content_hash: str) -> Optional[dict]:
     client = get_client()
     result = (
         client.table("programs")
-        .select("id, name, venue_id, session_start, updated_at")
+        .select("id, name, place_id, session_start, updated_at")
         .eq("metadata->>content_hash", content_hash)
         .limit(1)
         .execute()
@@ -261,9 +261,12 @@ def find_program_by_identity(
         .select("id, name, place_id, session_start, updated_at")
         .eq("name", name)
         .eq("place_id", venue_id)
-        .eq("session_start", session_start)
         .limit(1)
     )
+    if session_start is None:
+        query = query.is_("session_start", "null")
+    else:
+        query = query.eq("session_start", session_start)
     if source_id is not None:
         query = query.eq("source_id", source_id)
     result = query.execute()

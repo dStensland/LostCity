@@ -1,0 +1,7 @@
+version: 1
+slug: atlanta-toolbank
+name: Atlanta Community ToolBank
+data_goals:
+- events
+- images
+- tickets

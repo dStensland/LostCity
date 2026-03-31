@@ -1,0 +1,6 @@
+version: 1
+slug: exhibitions-hathaway
+name: Hathaway Contemporary Gallery (Exhibitions)
+data_goals:
+- exhibits
+- images

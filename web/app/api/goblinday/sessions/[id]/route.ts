@@ -132,8 +132,8 @@ export const PATCH = withAuthAndParams<{ id: string }>(
     const newStatus = body.status;
 
     const validTransitions: Record<string, string[]> = {
-      planning: ["live"],
-      live: ["ended"],
+      planning: ["live", "canceled"],
+      live: ["ended", "canceled"],
     };
 
     if (!newStatus || !validTransitions[currentStatus]?.includes(newStatus)) {

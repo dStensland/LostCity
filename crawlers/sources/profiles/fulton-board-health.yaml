@@ -1,0 +1,7 @@
+version: 1
+slug: fulton-board-health
+name: Fulton County Board of Health
+data_goals:
+- events
+- images
+- tickets

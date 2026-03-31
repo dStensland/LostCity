@@ -25,9 +25,18 @@ const VERTICALS: { key: WhatsOnVertical; label: string; icon: ReactNode }[] = [
 export default function WhatsOnView({ portalId, portalSlug }: WhatsOnViewProps) {
   const searchParams = useSearchParams();
   const rawVertical = searchParams?.get("vertical");
+  const laneHint = searchParams?.get("lane");
+  // Infer vertical from lane param when vertical is missing (e.g. bookmarked ?lane=live-music)
+  const inferredVertical = rawVertical
+    ?? (laneHint === "live-music" ? "music" : laneHint === "stage" ? "stage" : null);
   const initialVertical: WhatsOnVertical =
-    rawVertical === "music" ? "music" : rawVertical === "stage" ? "stage" : "film";
+    inferredVertical === "music" ? "music" : inferredVertical === "stage" ? "stage" : "film";
   const [activeVertical, setActiveVertical] = useState<WhatsOnVertical>(initialVertical);
+
+  // Detect single-vertical mode — when the shell pre-selects the vertical,
+  // suppress the Film/Music/Stage tab bar to avoid duplicating sidebar nav.
+  const laneParam = searchParams?.get("lane");
+  const isSingleVertical = Boolean(laneParam && ["now-showing", "live-music", "stage"].includes(laneParam));
 
   const handleVerticalChange = useCallback((vertical: WhatsOnVertical) => {
     setActiveVertical(vertical);
@@ -38,30 +47,32 @@ export default function WhatsOnView({ portalId, portalSlug }: WhatsOnViewProps) 
 
   return (
     <div>
-      {/* Vertical tab bar */}
-      <div role="tablist" className="flex items-center gap-1.5 px-3 sm:px-0 pt-3 pb-3">
-        {VERTICALS.map(({ key, label, icon }) => {
-          const isActive = activeVertical === key;
-          return (
-            <button
-              key={key}
-              id={`tab-${key}`}
-              role="tab"
-              onClick={() => handleVerticalChange(key)}
-              aria-selected={isActive}
-              aria-controls={`panel-${key}`}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-mono text-xs font-medium border transition-all ${
-                isActive
-                  ? "bg-[var(--neon-magenta)]/15 text-[var(--neon-magenta)] border-[var(--neon-magenta)]/30"
-                  : "text-[var(--muted)] hover:text-[var(--soft)] hover:bg-[var(--twilight)]/40 border border-transparent"
-              }`}
-            >
-              {icon}
-              {label}
-            </button>
-          );
-        })}
-      </div>
+      {/* Vertical tab bar — hidden when shell pre-selects a vertical via lane param */}
+      {!isSingleVertical && (
+        <div role="tablist" className="flex items-center gap-1.5 px-3 sm:px-0 pt-3 pb-3">
+          {VERTICALS.map(({ key, label, icon }) => {
+            const isActive = activeVertical === key;
+            return (
+              <button
+                key={key}
+                id={`tab-${key}`}
+                role="tab"
+                onClick={() => handleVerticalChange(key)}
+                aria-selected={isActive}
+                aria-controls={`panel-${key}`}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-mono text-xs font-medium border transition-all ${
+                  isActive
+                    ? "bg-[var(--neon-magenta)]/15 text-[var(--neon-magenta)] border-[var(--neon-magenta)]/30"
+                    : "text-[var(--muted)] hover:text-[var(--soft)] hover:bg-[var(--twilight)]/40 border border-transparent"
+                }`}
+              >
+                {icon}
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Tab content */}
       {activeVertical === "film" && (

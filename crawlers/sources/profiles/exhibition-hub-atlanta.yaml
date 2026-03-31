@@ -1,0 +1,6 @@
+version: 1
+slug: exhibition-hub-atlanta
+name: Exhibition Hub Atlanta
+data_goals:
+- exhibits
+- images

@@ -1,0 +1,8 @@
+version: 1
+slug: atlanta-workshop-players
+name: Atlanta Workshop Players
+data_goals:
+- classes
+- events
+- images
+- tickets

@@ -17,6 +17,6 @@ discovery:
 detail:
   enabled: true
 data_goals:
-- destinations
-- destination_details
-- venue_features
+- images
+- planning
+- accessibility

@@ -1,0 +1,8 @@
+version: 1
+slug: vinings-school-of-art-summer-camps
+name: Vinings School of Art Summer Camps
+data_goals:
+- classes
+- events
+- images
+- tickets

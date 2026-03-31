@@ -13,6 +13,46 @@ from tags import VALID_CATEGORIES, VALID_FESTIVAL_TYPES
 
 logger = logging.getLogger(__name__)
 
+_SERIES_VENUE_SCOPE_COLUMN: Optional[str] = None
+
+
+def _series_venue_column() -> Optional[str]:
+    """Return the active series venue foreign-key column, if supported."""
+    global _SERIES_VENUE_SCOPE_COLUMN
+    if _SERIES_VENUE_SCOPE_COLUMN is not None:
+        return _SERIES_VENUE_SCOPE_COLUMN or None
+    return None
+
+
+def _detect_series_venue_column(client: Client) -> Optional[str]:
+    """Detect whether series rows are venue-scoped by venue_id or legacy place_id."""
+    global _SERIES_VENUE_SCOPE_COLUMN
+    if _SERIES_VENUE_SCOPE_COLUMN is not None:
+        return _SERIES_VENUE_SCOPE_COLUMN or None
+
+    try:
+        client.table("series").select("venue_id").limit(1).execute()
+        _SERIES_VENUE_SCOPE_COLUMN = "venue_id"
+        return _SERIES_VENUE_SCOPE_COLUMN
+    except Exception as exc:
+        error_str = str(exc).lower()
+        if "does not exist" not in error_str or "venue_id" not in error_str:
+            raise
+
+    try:
+        client.table("series").select("place_id").limit(1).execute()
+        _SERIES_VENUE_SCOPE_COLUMN = "place_id"
+        return _SERIES_VENUE_SCOPE_COLUMN
+    except Exception as exc:
+        error_str = str(exc).lower()
+        if "does not exist" in error_str and "place_id" in error_str:
+            _SERIES_VENUE_SCOPE_COLUMN = ""
+            logger.warning(
+                "series table missing venue scope column; recurring series matching will not be venue-scoped"
+            )
+            return None
+        raise
+
 
 def slugify(text: str) -> str:
     """Generate a URL-friendly slug from text."""
@@ -211,6 +251,7 @@ def find_series_by_title(
         venue_id is not None
         and series_type in ("recurring_show", "class_series")
     )
+    venue_column = _detect_series_venue_column(client) if use_venue else None
 
     def _build_query():
         q = client.table("series").select("*").eq("series_type", series_type)
@@ -218,8 +259,8 @@ def find_series_by_title(
             q = q.eq("festival_id", festival_id)
         if use_day:
             q = q.eq("day_of_week", day_of_week.strip().lower())
-        if use_venue:
-            q = q.eq("place_id", venue_id)
+        if venue_column:
+            q = q.eq(venue_column, venue_id)
         return q
 
     # Try exact match first
@@ -240,8 +281,8 @@ def find_series_by_title(
         q = client.table("series").select("*").eq("series_type", series_type)
         if series_type == "festival_program" and festival_id:
             q = q.eq("festival_id", festival_id)
-        if use_venue:
-            q = q.eq("place_id", venue_id)
+        if venue_column:
+            q = q.eq(venue_column, venue_id)
         q = q.is_("day_of_week", "null")
         result = q.eq("title", title).execute()
         if result.data:
@@ -369,9 +410,9 @@ def get_or_create_series(
     if festival_id:
         series_data["festival_id"] = festival_id
 
-    # Persist place_id on new class_series / recurring_show records
-    if hint_venue_id and series_type in ("class_series", "recurring_show"):
-        series_data["place_id"] = hint_venue_id
+    venue_column = _detect_series_venue_column(client)
+    if hint_venue_id and venue_column and series_type in ("class_series", "recurring_show"):
+        series_data[venue_column] = hint_venue_id
 
     # Add film-specific fields
     if series_type == "film":

@@ -1,0 +1,7 @@
+version: 1
+slug: centennial-olympic-park
+name: Centennial Olympic Park
+data_goals:
+- events
+- images
+- tickets

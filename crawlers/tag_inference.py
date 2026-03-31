@@ -136,9 +136,19 @@ def infer_tags(
     if category == "learning":
         tags.add("educational")
 
-    # Live music tag (music events that aren't classes)
+    # Live music tag only for actual show signals; recurring/open-format music
+    # should not inflate the live-music surface.
     if category == "music" and not event.get("is_class"):
-        tags.add("live-music")
+        has_show_signal = (
+            (event.get("price_min") or 0) > 0
+            or (event.get("price_max") or 0) > 0
+            or bool(event.get("ticket_url"))
+            or not event.get("is_recurring", False)
+        )
+        if has_show_signal:
+            tags.add("live-music")
+        else:
+            tags.add("open-format")
 
     # Class tag
     if event.get("is_class"):
@@ -1529,7 +1539,7 @@ def infer_genres(
             (["braves", "baseball", "mlb", "softball", "batting"], "baseball"),
             (["hawks", "basketball", "nba", "ncaa basketball", "hoops", "pickup basketball", "pick-up basketball"], "basketball"),
             (["falcons", "football", "nfl", "sec ", "touchdown", "flag football", "pickup football", "pick-up football"], "football"),
-            (["united", "soccer", "mls", "nwsl", "fc ", "futbol", "pickup soccer", "pick-up soccer", "futsal"], "soccer"),
+            (["atlanta united", "atlutd", "soccer", "mls", "nwsl", "fc ", "futbol", "pickup soccer", "pick-up soccer", "futsal"], "soccer"),
             (["hockey", "nhl", "gladiators", "puck"], "hockey"),
             (["ufc", "mma", "boxing", "fight night", "bout", "knockout"], "mma"),
             (["nascar", "racing", "motorsport", "grand prix", "derby"], "racing"),

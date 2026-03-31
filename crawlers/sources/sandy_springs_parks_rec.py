@@ -70,6 +70,13 @@ _DEFAULT_VENUE = VenueInfo(
     lat=33.9248,
     lng=-84.3768,
     venue_type="recreation",
+    website="https://www.sandyspringsga.gov/recreation-programs/",
+    description=(
+        "Sandy Springs Recreation and Parks runs the city's recreation "
+        "programming, arts classes, youth athletics, camps, and seasonal family "
+        "activities, with registration handled through the official CivicRec catalog."
+    ),
+    image_url="https://data.rec1.com/custincludes/1898/2019/images/cropped-logo.svg",
 )
 
 _KNOWN_VENUES: dict[str, VenueInfo] = {

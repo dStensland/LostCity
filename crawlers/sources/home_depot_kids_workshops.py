@@ -23,7 +23,13 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from typing import Optional
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_event_by_hash,
+    get_or_create_place,
+    insert_event,
+    smart_update_existing_event,
+)
+from db.programs import insert_program
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -41,6 +47,7 @@ ATLANTA_HOME_DEPOT_LOCATIONS = [
         "zip": "30308",
         "place_type": "retail",
         "website": "https://www.homedepot.com",
+        "description": "Home improvement store offering free monthly kids building workshops for ages 5-12.",
     },
     {
         "name": "Home Depot - Howell Mill",
@@ -52,6 +59,7 @@ ATLANTA_HOME_DEPOT_LOCATIONS = [
         "zip": "30318",
         "place_type": "retail",
         "website": "https://www.homedepot.com",
+        "description": "Home improvement store offering free monthly kids building workshops for ages 5-12.",
     },
     {
         "name": "Home Depot - Atlantic Station",
@@ -63,6 +71,7 @@ ATLANTA_HOME_DEPOT_LOCATIONS = [
         "zip": "30363",
         "place_type": "retail",
         "website": "https://www.homedepot.com",
+        "description": "Home improvement store offering free monthly kids building workshops for ages 5-12.",
     },
     {
         "name": "Home Depot - Buckhead",
@@ -74,6 +83,7 @@ ATLANTA_HOME_DEPOT_LOCATIONS = [
         "zip": "30305",
         "place_type": "retail",
         "website": "https://www.homedepot.com",
+        "description": "Home improvement store offering free monthly kids building workshops for ages 5-12.",
     },
     {
         "name": "Home Depot - Decatur",
@@ -85,6 +95,7 @@ ATLANTA_HOME_DEPOT_LOCATIONS = [
         "zip": "30032",
         "place_type": "retail",
         "website": "https://www.homedepot.com",
+        "description": "Home improvement store offering free monthly kids building workshops for ages 5-12.",
     },
     {
         "name": "Home Depot - Lindbergh",
@@ -96,6 +107,7 @@ ATLANTA_HOME_DEPOT_LOCATIONS = [
         "zip": "30324",
         "place_type": "retail",
         "website": "https://www.homedepot.com",
+        "description": "Home improvement store offering free monthly kids building workshops for ages 5-12.",
     },
 ]
 
@@ -128,6 +140,52 @@ def generate_workshop_description(month_name: str) -> str:
         "This is a great hands-on learning experience that teaches kids basic building skills, "
         "tool safety, and the pride of creating something with their own hands."
     )
+
+
+def build_workshop_program_record(location: dict, venue_id: int, source_id: int) -> dict:
+    """Project the recurring free workshop into the programs lane."""
+    return {
+        "source_id": source_id,
+        "place_id": venue_id,
+        "name": f"Kids Workshops at {location['name']}",
+        "description": (
+            "Free monthly Home Depot kids workshops for ages 5-12. Children build a take-home "
+            "wooden project on the first Saturday of each month and receive an apron, pin, and "
+            "certificate of completion."
+        ),
+        "program_type": "class",
+        "provider_name": location["name"],
+        "age_min": 5,
+        "age_max": 12,
+        "season": "year_round",
+        "session_start": None,
+        "session_end": None,
+        "schedule_days": [6],
+        "schedule_start_time": "09:00",
+        "schedule_end_time": "12:00",
+        "cost_amount": 0,
+        "cost_period": "per_session",
+        "cost_notes": "Free monthly workshop; no registration required.",
+        "registration_status": "open",
+        "registration_url": "https://www.homedepot.com/workshops/",
+        "tags": [
+            "free",
+            "family-friendly",
+            "kids",
+            "educational",
+            "workshop",
+            "hands-on",
+            "building",
+            "crafts",
+            "woodworking",
+        ],
+        "status": "active",
+        "metadata": {
+            "schedule_frequency": "monthly",
+            "recurrence_rule": "First Saturday of each month",
+        },
+        "_venue_name": location["name"],
+    }
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -163,6 +221,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # Get or create venue
                 venue_id = get_or_create_place(location)
+                insert_program(build_workshop_program_record(location, venue_id, source_id))
 
                 title = f"Kids Workshop - Build & Take Home"
                 description = generate_workshop_description(month_name)

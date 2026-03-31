@@ -2,10 +2,91 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import type { RightNowItem } from "@/lib/find-data";
+import {
+  FilmSlate,
+  MusicNotes,
+  MaskHappy,
+  Ticket,
+  ArrowsClockwise,
+} from "@phosphor-icons/react";
+import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
+import type { CategoryPulse } from "@/lib/find-data";
 
 // -------------------------------------------------------------------------
-// Helpers
+// Contextual lane teaser definitions
+// -------------------------------------------------------------------------
+
+interface LaneTeaser {
+  id: string;
+  label: string;
+  icon: PhosphorIcon;
+  accent: string;
+  href: string;
+  /** Returns a contextual subtitle given the current hour (Eastern) */
+  getSubtitle: (hourEt: number) => string;
+}
+
+const LANE_TEASERS: LaneTeaser[] = [
+  {
+    id: "now-showing",
+    label: "Now Showing",
+    icon: FilmSlate,
+    accent: "#FF6B7A",
+    href: "?view=find&lane=now-showing&vertical=film",
+    getSubtitle: () => "Movies playing in theaters",
+  },
+  {
+    id: "live-music",
+    label: "Live Music",
+    icon: MusicNotes,
+    accent: "#A78BFA",
+    href: "?view=find&lane=live-music&vertical=music",
+    getSubtitle: (h) => (h >= 17 ? "Shows tonight" : "Upcoming shows"),
+  },
+  {
+    id: "stage",
+    label: "Stage & Comedy",
+    icon: MaskHappy,
+    accent: "#E855A0",
+    href: "?view=find&lane=stage&vertical=stage",
+    getSubtitle: (h) => (h >= 17 ? "Live tonight" : "Performances this week"),
+  },
+  {
+    id: "events",
+    label: "All Events",
+    icon: Ticket,
+    accent: "#FF6B7A",
+    href: "?view=find&lane=events",
+    getSubtitle: (h) => (h >= 17 ? "Happening tonight" : "Happening today"),
+  },
+  {
+    id: "regulars",
+    label: "Regulars",
+    icon: ArrowsClockwise,
+    accent: "#FFD93D",
+    href: "?view=find&lane=regulars",
+    getSubtitle: () => "Weekly recurring hangs",
+  },
+];
+
+// -------------------------------------------------------------------------
+// Badge count helper
+// -------------------------------------------------------------------------
+
+const TEASER_PULSE_MAPPING: Record<string, string> = {
+  "live-music": "music",
+  "now-showing": "entertainment",
+};
+
+function getBadgeCount(teaserId: string, pulse?: CategoryPulse[]): number {
+  if (!pulse) return 0;
+  const category = TEASER_PULSE_MAPPING[teaserId];
+  if (!category) return 0;
+  return pulse.find((p) => p.category === category)?.count ?? 0;
+}
+
+// -------------------------------------------------------------------------
+// Header label — contextual based on time of day
 // -------------------------------------------------------------------------
 
 function getRightNowLabel(): string {
@@ -13,88 +94,75 @@ function getRightNowLabel(): string {
   const hour = now.getHours();
   const dayName = now.toLocaleDateString("en-US", { weekday: "long" });
 
-  // Night mode: after 10pm or before 5am
-  if (hour >= 22 || hour < 5) {
-    return "Open Now";
-  }
+  if (hour >= 22 || hour < 5) return "Open Now";
 
-  // Format hour as "11am" / "2pm"
   const period = hour >= 12 ? "pm" : "am";
   const h = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-  const timeStr = `${h}${period}`;
-
-  return `Right Now · ${dayName} ${timeStr}`;
-}
-
-function formatTime(time: string): string {
-  const [h, m] = time.split(":").map(Number);
-  const period = h >= 12 ? "pm" : "am";
-  const hour = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return m === 0 ? `${hour}${period}` : `${hour}:${String(m).padStart(2, "0")}${period}`;
+  return `Right Now · ${dayName} ${h}${period}`;
 }
 
 // -------------------------------------------------------------------------
-// RightNowSection
+// RightNowSection — contextual lane teasers
 // -------------------------------------------------------------------------
 
 interface RightNowSectionProps {
-  items: RightNowItem[];
   portalSlug: string;
+  pulse?: CategoryPulse[];
 }
 
 export const RightNowSection = memo(function RightNowSection({
-  items,
   portalSlug,
+  pulse,
 }: RightNowSectionProps) {
-  if (items.length === 0) return null;
-
-  const seeAllHref = `/${portalSlug}?view=find&display=list`;
   const label = getRightNowLabel();
-  const displayItems = items.slice(0, 4);
+
+  const nowEt = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/New_York" })
+  );
+  const hourEt = nowEt.getHours();
 
   return (
     <section>
       {/* Section header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="mb-3">
         <span className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--coral)]">
           {label}
         </span>
-        <Link
-          href={seeAllHref}
-          className="text-xs flex items-center gap-1 text-[var(--coral)] hover:opacity-80 transition-opacity"
-        >
-          See all →
-        </Link>
       </div>
 
-      {/* Compact rows */}
-      <div className="space-y-0.5">
-        {displayItems.map((item) => (
-          <Link
-            key={`${item.entity_type}-${item.id}`}
-            href={`/${portalSlug}?${item.entity_type === "place" ? "spot" : "event"}=${item.entity_type === "place" ? item.slug : item.id}`}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--dusk)] transition-colors group"
-          >
-            {/* Time or status */}
-            <span className="font-mono text-xs font-bold tabular-nums text-[var(--gold)] w-12 shrink-0 text-right">
-              {item.entity_type === "event" && item.start_time
-                ? formatTime(item.start_time)
-                : item.is_open
-                  ? "Open"
-                  : ""}
-            </span>
-            {/* Name + venue */}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-[var(--cream)] truncate group-hover:text-[var(--coral)] transition-colors">
-                {item.name}
+      {/* Lane teaser grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+        {LANE_TEASERS.map((teaser) => {
+          const TeaserIcon = teaser.icon;
+          const count = getBadgeCount(teaser.id, pulse);
+          const subtitle = teaser.getSubtitle(hourEt);
+
+          return (
+            <Link
+              key={teaser.id}
+              href={`/${portalSlug}${teaser.href}`}
+              className="group flex flex-col gap-2 p-3.5 rounded-xl border border-[var(--twilight)]/60 bg-[var(--night)] hover:bg-[var(--dusk)] transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <TeaserIcon
+                  size={18}
+                  color={teaser.accent}
+                  weight="duotone"
+                  className="flex-shrink-0"
+                />
+                <span
+                  className="text-sm font-semibold group-hover:brightness-125 transition-all"
+                  style={{ color: teaser.accent }}
+                >
+                  {teaser.label}
+                </span>
+              </div>
+              <p className="text-xs text-[var(--muted)] leading-snug">
+                {count > 0 ? `${count} venues · ${subtitle.toLowerCase()}` : subtitle}
               </p>
-              <p className="text-xs text-[var(--muted)] truncate">
-                {item.venue_name ?? item.place_type}
-                {item.neighborhood ? ` · ${item.neighborhood}` : ""}
-              </p>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
