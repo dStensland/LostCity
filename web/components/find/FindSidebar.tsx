@@ -1,31 +1,115 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState, useTransition, useCallback } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { Ticket } from "@phosphor-icons/react";
-import type { VerticalLane } from "@/lib/types/discovery";
-import { LANE_CONFIG, LANE_ICONS } from "@/lib/types/discovery";
-import { buildLaneOrder } from "@/components/find/FindView";
+import { useRouter } from "next/navigation";
+import {
+  FilmSlate,
+  MusicNotes,
+  MaskHappy,
+  Ticket,
+  ArrowsClockwise,
+  CalendarBlank,
+  MapTrifold,
+  MapPin,
+  ArrowLeft,
+} from "@phosphor-icons/react";
+import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { useWeather } from "@/lib/hooks/useWeather";
-import FindSearchInput from "@/components/find/FindSearchInput";
-import type { FindSpotlight } from "@/lib/find-data";
+import type { CategoryPulse } from "@/lib/find-data";
 
 // -------------------------------------------------------------------------
-// Lane → "See all" URL map (mirrors FindStream lane headers)
+// Lane definitions
 // -------------------------------------------------------------------------
 
-const LANE_SEE_ALL_URLS: Record<string, string> = {
-  arts: "?view=places&tab=things-to-do&venue_type=museum,gallery,arts_center,theater&from=find",
-  dining: "?view=places&tab=eat-drink&from=find",
-  nightlife: "?view=places&tab=nightlife&from=find",
-  outdoors: "?view=places&tab=things-to-do&venue_type=park,trail,recreation,viewpoint,landmark&from=find",
-  music: "?view=happening&content=showtimes&vertical=music&from=find",
-  entertainment: "?view=places&tab=things-to-do&venue_type=arcade,attraction,entertainment,escape_room,bowling,zoo,aquarium,cinema&from=find",
+interface Lane {
+  id: string;
+  label: string;
+  icon: PhosphorIcon;
+  accent: string;
+  href: string;
+}
+
+const BROWSE_LANES: Lane[] = [
+  {
+    id: "events",
+    label: "Events",
+    icon: Ticket,
+    accent: "#FF6B7A",
+    href: "?view=find&lane=events",
+  },
+  {
+    id: "now-showing",
+    label: "Now Showing",
+    icon: FilmSlate,
+    accent: "#FF6B7A",
+    href: "?view=find&lane=now-showing&vertical=film",
+  },
+  {
+    id: "live-music",
+    label: "Live Music",
+    icon: MusicNotes,
+    accent: "#A78BFA",
+    href: "?view=find&lane=live-music&vertical=music",
+  },
+  {
+    id: "stage",
+    label: "Stage & Comedy",
+    icon: MaskHappy,
+    accent: "#E855A0",
+    href: "?view=find&lane=stage&vertical=stage",
+  },
+  {
+    id: "regulars",
+    label: "Regulars",
+    icon: ArrowsClockwise,
+    accent: "#FFD93D",
+    href: "?view=find&lane=regulars",
+  },
+  {
+    id: "places",
+    label: "Places",
+    icon: MapPin,
+    accent: "#00D9A0",
+    href: "?view=find&lane=places",
+  },
+];
+
+const VIEW_LANES: Lane[] = [
+  {
+    id: "calendar",
+    label: "Calendar",
+    icon: CalendarBlank,
+    accent: "#00D9A0",
+    href: "?view=find&lane=calendar",
+  },
+  {
+    id: "map",
+    label: "Map",
+    icon: MapTrifold,
+    accent: "#00D4E8",
+    href: "?view=find&lane=map",
+  },
+];
+
+// -------------------------------------------------------------------------
+// Badge count helper
+// -------------------------------------------------------------------------
+
+const LANE_PULSE_MAPPING: Record<string, string> = {
+  "live-music": "music",
+  "now-showing": "entertainment",
 };
 
+function getBadgeCount(laneId: string, pulse?: CategoryPulse[]): number {
+  if (!pulse) return 0;
+  const category = LANE_PULSE_MAPPING[laneId];
+  if (!category) return 0;
+  return pulse.find((p) => p.category === category)?.count ?? 0;
+}
+
 // -------------------------------------------------------------------------
-// Context block — date + weather placeholder
+// Context block — date + weather
 // -------------------------------------------------------------------------
 
 function ContextBlock() {
@@ -55,107 +139,122 @@ function ContextBlock() {
 
 interface FindSidebarProps {
   portalSlug: string;
-  portalSettings: Record<string, unknown>;
-  activeLane: string | null;
-  spotlights?: FindSpotlight[];
+  activeLane?: string | null;
+  pulse?: CategoryPulse[];
 }
 
 export const FindSidebar = memo(function FindSidebar({
   portalSlug,
-  portalSettings,
   activeLane,
-  spotlights,
+  pulse,
 }: FindSidebarProps) {
-  const searchParams = useSearchParams();
-  const laneOrder = buildLaneOrder(portalSettings);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [pendingLane, setPendingLane] = useState<string | null>(null);
 
-  // Map spotlight data to lane names for count display
-  const spotlightCounts = new Map(
-    spotlights?.map((s) => [s.category, s.items.length]) ?? []
+  // The visually active lane: show the pending lane immediately on click,
+  // fall back to the server-confirmed activeLane
+  const visualActiveLane = isPending && pendingLane ? pendingLane : activeLane;
+
+  const handleLaneClick = useCallback(
+    (lane: Lane, e: React.MouseEvent) => {
+      e.preventDefault();
+      setPendingLane(lane.id);
+      startTransition(() => {
+        router.push(`/${portalSlug}${lane.href}`);
+      });
+    },
+    [portalSlug, router, startTransition]
   );
 
-  // Build lane hrefs — use LANE_SEE_ALL_URLS when available, falling back to
-  // the stream lane filter. Clicking the active lane deselects (returns to stream).
-  function laneHref(lane: VerticalLane): string {
-    const seeAllUrl = LANE_SEE_ALL_URLS[lane];
-    if (seeAllUrl && activeLane !== lane) {
-      return `/${portalSlug}${seeAllUrl}`;
-    }
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("view", "find");
-    if (activeLane === lane) {
-      params.delete("lane");
-    } else {
-      params.set("lane", lane);
-    }
-    return `/${portalSlug}?${params.toString()}`;
+  const handleExploreClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setPendingLane(null);
+      startTransition(() => {
+        router.push(`/${portalSlug}?view=find`);
+      });
+    },
+    [portalSlug, router, startTransition]
+  );
+
+  function renderLane(lane: Lane) {
+    const LaneIcon = lane.icon;
+    const badge = getBadgeCount(lane.id, pulse);
+    const isActive = visualActiveLane === lane.id;
+
+    return (
+      <li key={lane.id}>
+        <a
+          href={`/${portalSlug}${lane.href}`}
+          onClick={(e) => handleLaneClick(lane, e)}
+          className={[
+            "flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors cursor-pointer",
+            isActive
+              ? "font-semibold"
+              : "text-[var(--soft)] hover:bg-[var(--dusk)]",
+          ].join(" ")}
+          style={
+            isActive
+              ? { backgroundColor: `${lane.accent}14`, color: lane.accent }
+              : undefined
+          }
+        >
+          <LaneIcon
+            size={16}
+            color={isActive ? lane.accent : "var(--soft)"}
+            weight="duotone"
+            className="flex-shrink-0"
+          />
+          <span className="flex-1 text-sm">{lane.label}</span>
+          {badge > 0 && (
+            <span
+              className="text-2xs font-mono font-bold tabular-nums px-1.5 py-0.5 rounded-full"
+              style={{
+                backgroundColor: `color-mix(in srgb, ${lane.accent} 20%, transparent)`,
+                color: lane.accent,
+              }}
+            >
+              {badge}
+            </span>
+          )}
+        </a>
+      </li>
+    );
   }
 
   return (
     <aside
-      className="w-[240px] h-full bg-[var(--night)] border-r border-[var(--twilight)] p-6 flex flex-col gap-6 overflow-y-auto"
-      aria-label="Find navigation"
+      className="w-[240px] h-full bg-[var(--night)] border-r border-[var(--twilight)] p-6 flex flex-col gap-6"
+      aria-label="Explore navigation"
     >
-      {/* Title */}
-      <h2 className="text-2xl font-bold text-[var(--cream)] leading-none">Find</h2>
+      {/* Title — links back to launchpad; shows back arrow when a lane is active */}
+      <a
+        href={`/${portalSlug}?view=find`}
+        onClick={handleExploreClick}
+        className="flex items-center gap-1.5 text-2xl font-bold text-[var(--cream)] leading-none hover:text-[var(--coral)] transition-colors cursor-pointer"
+      >
+        {visualActiveLane && (
+          <ArrowLeft size={18} weight="duotone" className="flex-shrink-0" />
+        )}
+        Explore
+      </a>
 
-      {/* Search bar */}
-      <FindSearchInput portalSlug={portalSlug} placeholder="Search..." />
-
-      {/* Lane navigation */}
+      {/* Browse group */}
       <nav className="flex-1">
         <p className="font-mono text-2xs font-bold tracking-[0.14em] uppercase text-[var(--muted)] mb-2">
-          Lanes
+          Browse
         </p>
         <ul className="space-y-0.5">
-          {laneOrder.map((lane) => {
-            const config = LANE_CONFIG[lane];
-            const LaneIcon = LANE_ICONS[config.icon] ?? Ticket;
-            const isActive = activeLane === lane;
+          {BROWSE_LANES.map(renderLane)}
+        </ul>
 
-            return (
-              <li key={lane}>
-                <Link
-                  href={laneHref(lane)}
-                  className={[
-                    "flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors",
-                    isActive
-                      ? "font-semibold"
-                      : "text-[var(--soft)] hover:bg-[var(--dusk)]",
-                  ].join(" ")}
-                  style={
-                    isActive
-                      ? { backgroundColor: `${config.color}14` }
-                      : undefined
-                  }
-                >
-                  <LaneIcon
-                    size={16}
-                    color={isActive ? config.color : "var(--soft)"}
-                    weight="duotone"
-                    className="flex-shrink-0"
-                  />
-                  <span
-                    className="flex-1 text-sm"
-                    style={isActive ? { color: config.color } : undefined}
-                  >
-                    {config.label}
-                  </span>
-                  {spotlightCounts.has(lane) && (
-                    <span
-                      className="text-2xs font-mono font-bold tabular-nums px-1.5 py-0.5 rounded-full"
-                      style={{
-                        backgroundColor: `${config.color}20`,
-                        color: config.color,
-                      }}
-                    >
-                      {spotlightCounts.get(lane)}
-                    </span>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
+        {/* Views group */}
+        <p className="font-mono text-2xs font-bold tracking-[0.14em] uppercase text-[var(--muted)] mt-5 mb-2">
+          Views
+        </p>
+        <ul className="space-y-0.5">
+          {VIEW_LANES.map(renderLane)}
         </ul>
       </nav>
 

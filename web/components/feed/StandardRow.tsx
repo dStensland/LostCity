@@ -5,7 +5,8 @@ import Link from "next/link";
 import Dot from "@/components/ui/Dot";
 import { FreeBadge } from "@/components/Badge";
 import type { FeedEventData } from "@/components/EventCard";
-import { getCategoryColor } from "@/components/CategoryIcon";
+import CategoryIcon, { getCategoryColor, getCategoryLabel } from "@/components/CategoryIcon";
+import SmartImage from "@/components/SmartImage";
 import { formatTime, formatSmartDate } from "@/lib/formats";
 
 // ---------------------------------------------------------------------------
@@ -28,68 +29,97 @@ export const StandardRow = memo(function StandardRow({
   index: _index,
 }: StandardRowProps) {
   const catColor = getCategoryColor(event.category);
+  const catLabel = getCategoryLabel(event.category as string);
+  const imageUrl = event.image_url || event.series?.image_url;
 
   const { label: dateLabel } = formatSmartDate(event.start_date);
+  const isToday = dateLabel === "Today";
   const timeStr = event.is_all_day
     ? "All Day"
     : event.start_time
       ? formatTime(event.start_time)
       : null;
 
-  const venueParts: string[] = [];
-  if (event.venue?.name) venueParts.push(event.venue.name);
-  if (timeStr) venueParts.push(timeStr);
-  else venueParts.push(dateLabel);
+  // Today: just show time. Future dates: show date + time.
+  const whenLabel = isToday
+    ? (timeStr || dateLabel)
+    : timeStr
+      ? `${dateLabel} · ${timeStr}`
+      : dateLabel;
 
   return (
     <Link
       href={`/${portalSlug}/events/${event.id}`}
       prefetch={false}
-      className="block w-full rounded-lg bg-[var(--night)] border border-[var(--twilight)]/40 overflow-hidden hover:bg-[var(--dusk)] transition-colors"
+      className="group block w-full rounded-xl overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/30 hover:bg-[var(--dusk)]/50 hover:border-[var(--twilight)]/50 transition-colors"
       aria-label={event.title}
     >
-      <div className="flex items-center justify-between gap-3 px-3 py-2">
-        {/* Left: 2px category accent + text */}
-        <div className="flex items-stretch gap-3 min-w-0 flex-1">
-          {/* Accent bar */}
-          <div
-            className="w-0.5 flex-shrink-0 rounded-full self-stretch"
-            style={{ backgroundColor: catColor }}
-          />
+      <div className="flex items-center gap-3 px-2 py-2.5">
+        {/* Thumbnail or category icon fallback */}
+        <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-[var(--twilight)]/40">
+          {imageUrl ? (
+            <SmartImage
+              src={imageUrl}
+              alt=""
+              fill
+              sizes="48px"
+              className="object-cover"
+              fallback={
+                <div
+                  className="w-full h-full flex items-center justify-center"
+                  style={{ backgroundColor: `color-mix(in srgb, ${catColor} 15%, var(--night))` }}
+                >
+                  <CategoryIcon type={event.category || "other"} size={20} glow="none" weight="bold" className="opacity-70" />
+                </div>
+              }
+            />
+          ) : (
+            <div
+              className="w-full h-full flex items-center justify-center"
+              style={{ backgroundColor: `color-mix(in srgb, ${catColor} 15%, var(--night))` }}
+            >
+              <CategoryIcon type={event.category || "other"} size={20} glow="none" weight="bold" className="opacity-70" />
+            </div>
+          )}
+        </div>
 
-          {/* Title + meta */}
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-[var(--cream)] truncate leading-snug">
-              {event.title}
-            </p>
-            {venueParts.length > 0 && (
-              <p className="text-xs text-[var(--muted)] truncate leading-snug flex items-center gap-1">
-                {venueParts.map((part, idx) => (
-                  <span key={idx} className="inline-flex items-center gap-1">
-                    {idx > 0 && <Dot />}
-                    {part}
-                  </span>
-                ))}
-                {event.venue?.google_rating != null && (
-                  <>
-                    <Dot />
-                    <span className="text-xs text-[var(--gold)]">
-                      {event.venue.google_rating.toFixed(1)} ★
-                    </span>
-                  </>
-                )}
-              </p>
-            )}
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {/* Category + time */}
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span
+              className="font-mono text-2xs font-bold uppercase tracking-wider"
+              style={{ color: catColor }}
+            >
+              {catLabel}
+            </span>
+            <Dot className="text-[var(--twilight)]" />
+            <span className="text-2xs text-[var(--muted)]">
+              {whenLabel}
+            </span>
           </div>
+
+          {/* Title */}
+          <p className="text-sm font-medium text-[var(--cream)] truncate leading-snug group-hover:text-white transition-colors">
+            {event.title}
+          </p>
+
+          {/* Venue */}
+          {event.venue?.name && (
+            <p className="text-xs text-[var(--muted)] truncate leading-snug mt-0.5">
+              {event.venue.name}
+              {event.venue.neighborhood && (
+                <>
+                  <span className="mx-1 opacity-40">·</span>
+                  {event.venue.neighborhood}
+                </>
+              )}
+            </p>
+          )}
         </div>
 
         {/* Right: badges */}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {(event.going_count ?? 0) > 0 && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-2xs font-medium text-[var(--coral)]">
-              {event.going_count} going
-            </span>
-          )}
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
           {event.is_free ? (
             <FreeBadge />
           ) : event.price_min !== null && event.price_min !== undefined ? (
@@ -97,6 +127,11 @@ export const StandardRow = memo(function StandardRow({
               ${event.price_min}
             </span>
           ) : null}
+          {(event.going_count ?? 0) > 0 && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-2xs font-medium text-[var(--coral)]">
+              {event.going_count}
+            </span>
+          )}
         </div>
       </div>
     </Link>

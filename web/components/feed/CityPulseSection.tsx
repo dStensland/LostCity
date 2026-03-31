@@ -4,8 +4,9 @@
  * CityPulseSection — section router that delegates rendering
  * to section-specific components.
  *
- * Dispatches: trending, coming_up, weather_discovery, browse.
+ * Dispatches: trending, coming_up, weather_discovery.
  * Time-based sections are absorbed into LineupSection.
+ * Browse/places-to-go is rendered directly in CityPulseShell via PlacesToGoSection.
  */
 
 import type {
@@ -16,7 +17,6 @@ import WeatherDiscoverySection from "./sections/WeatherDiscoverySection";
 import TrendingSection from "./sections/TrendingSection";
 import ComingUpSection from "./sections/ComingUpSection";
 import PlanningHorizonSection from "./sections/PlanningHorizonSection";
-import BrowseSection from "./sections/BrowseSection";
 import ConversionCard from "./ConversionCard";
 
 interface CityPulseSectionProps {
@@ -29,7 +29,7 @@ export default function CityPulseSection({
   section,
   portalSlug,
 }: CityPulseSectionProps) {
-  if (section.items.length === 0 && section.type !== "browse") {
+  if (section.items.length === 0) {
     return null;
   }
 
@@ -47,11 +47,6 @@ export default function CityPulseSection({
       case "tonights_regulars":
         // Self-fetching — rendered directly in CityPulseShell, not through this generic renderer
         return null;
-      case "experiences":
-        // Self-fetching — rendered directly in CityPulseShell, not through this generic renderer
-        return null;
-      case "browse":
-        return <BrowseSection section={section} portalSlug={portalSlug} />;
       default:
         return null;
     }

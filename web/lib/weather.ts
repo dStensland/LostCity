@@ -54,7 +54,8 @@ export async function getPortalWeather(
   const apiKey = process.env.OPENWEATHER_API_KEY;
   if (!apiKey) {
     console.warn("OPENWEATHER_API_KEY not set, skipping weather fetch");
-    return cachedData || null;
+    // Don't serve stale cache — month-old weather is worse than no weather
+    return null;
   }
 
   try {

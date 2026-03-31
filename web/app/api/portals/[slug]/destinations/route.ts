@@ -56,7 +56,7 @@ export interface DestinationsV2Response {
 type PlaceProfileJoin = {
   hero_image_url: string | null;
   short_description: string | null;
-  wheelchair_accessible: boolean | null;
+  wheelchair: boolean | null;
   family_suitability: string | null;
 };
 
@@ -77,8 +77,9 @@ type PlaceRow = {
   hours: HoursData | null;
   indoor_outdoor: string | null;
   created_at: string;
-  place_profile: PlaceProfileJoin[] | null;
-  place_vertical_details: PlaceVerticalDetailsJoin[] | null;
+  // Supabase returns a single object (not array) for one-to-one FK joins
+  place_profile: PlaceProfileJoin | null;
+  place_vertical_details: PlaceVerticalDetailsJoin | null;
 };
 
 type ExhibitionRow = {
@@ -94,8 +95,8 @@ type ExhibitionRow = {
 
 function scorePlace(place: PlaceRow): number {
   let score = 0;
-  const profile = place.place_profile?.[0] ?? null;
-  const vertDetails = place.place_vertical_details?.[0] ?? null;
+  const profile = place.place_profile ?? null;
+  const vertDetails = place.place_vertical_details ?? null;
 
   const hasImage = !!(place.image_url || profile?.hero_image_url);
   const hasRating = !!(vertDetails?.google?.rating);
@@ -209,11 +210,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .from("places")
       .select(
         `id, name, slug, neighborhood, place_type, image_url, hours, indoor_outdoor, created_at,
-         place_profile(hero_image_url, short_description, wheelchair_accessible, family_suitability),
+         place_profile(hero_image_url, short_description, wheelchair, family_suitability),
          place_vertical_details(google)`,
       )
       .eq("is_active", true)
       .eq("city", portalCity)
+      .not("place_type", "in", "(church,religious,organization,convention_center,event_space,institution,community_center,pet_store,hotel)")
       .limit(30) as unknown as Promise<{
         data: PlaceRow[] | null;
         error: { message: string } | null;
@@ -250,8 +252,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
   // ---------------------------------------------------------------------------
 
   const processed: Array<DestinationV2Item & { _score: number }> = places.map((place) => {
-    const profile = place.place_profile?.[0] ?? null;
-    const vertDetails = place.place_vertical_details?.[0] ?? null;
+    const profile = place.place_profile ?? null;
+    const vertDetails = place.place_vertical_details ?? null;
 
     const googleRating = vertDetails?.google?.rating ?? null;
     const googleRatingCount = vertDetails?.google?.rating_count ?? null;
@@ -291,7 +293,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       is_open: isOpen,
       created_at: place.created_at,
       indoor_outdoor: place.indoor_outdoor,
-      wheelchair: profile?.wheelchair_accessible ?? null,
+      wheelchair: profile?.wheelchair ?? null,
       family_suitability: profile?.family_suitability ?? null,
       short_description: profile?.short_description ?? null,
       closing_exhibition: closingExhibition,

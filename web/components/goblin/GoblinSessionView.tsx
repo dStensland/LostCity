@@ -44,7 +44,7 @@ export interface SessionData {
   id: number;
   name: string | null;
   date: string;
-  status: "planning" | "live" | "ended";
+  status: "planning" | "live" | "ended" | "canceled";
   invite_code?: string | null;
   members?: SessionMember[];
   movies: SessionMovie[];
@@ -63,6 +63,7 @@ interface Props {
   proposedMovies: ProposedMovie[];
   onRefresh: () => void;
   onEndSession: () => void;
+  onCancelSession: () => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -95,6 +96,7 @@ export default function GoblinSessionView({
   proposedMovies,
   onRefresh,
   onEndSession,
+  onCancelSession,
 }: Props) {
   const [addingMovieId, setAddingMovieId] = useState<number | null>(null);
   const [cancelingThemeId, setCancelingThemeId] = useState<number | null>(null);
@@ -306,47 +308,73 @@ export default function GoblinSessionView({
     <div className="min-h-screen bg-zinc-950 text-zinc-400 font-mono">
       {/* ---- HEADER BAR ---- */}
       <div className="border-b-2 border-zinc-800 bg-black">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="flex items-center gap-1 text-2xs font-bold tracking-[0.2em] uppercase border border-red-700 bg-red-950/40 text-red-400 px-1.5 py-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" />
-                LIVE
-              </span>
-            </div>
-            <h1 className="text-white font-black text-lg sm:text-xl tracking-[0.15em] uppercase truncate">
-              {session.name ?? "GOBLIN DAY"}
-            </h1>
-            <p className="text-zinc-600 text-xs tracking-[0.2em] uppercase mt-0.5">
-              {displayDate}
-            </p>
-            {/* Members strip */}
-            {session.members && session.members.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {session.members.map((m) => (
-                  <span
-                    key={m.user_id}
-                    className="text-2xs px-1.5 py-0.5 border border-zinc-800 text-zinc-500 tracking-wider uppercase"
-                  >
-                    {m.display_name}
-                    {m.role === "host" && (
-                      <span className="text-red-700 ml-1">[H]</span>
-                    )}
-                  </span>
-                ))}
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4">
+          <div className="flex items-start justify-between gap-3 sm:gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="flex items-center gap-1 text-2xs font-bold tracking-[0.2em] uppercase border border-red-700 bg-red-950/40 text-red-400 px-1.5 py-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" />
+                  LIVE
+                </span>
               </div>
-            )}
+              <h1 className="text-white font-black text-lg sm:text-xl tracking-[0.15em] uppercase truncate">
+                {session.name ?? "GOBLIN DAY"}
+              </h1>
+              <p className="text-zinc-600 text-xs tracking-[0.2em] uppercase mt-0.5">
+                {displayDate}
+              </p>
+              {/* Members strip */}
+              {session.members && session.members.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {session.members.map((m) => (
+                    <span
+                      key={m.user_id}
+                      className="text-2xs px-1.5 py-0.5 border border-zinc-800 text-zinc-500 tracking-wider uppercase"
+                    >
+                      {m.display_name}
+                      {m.role === "host" && (
+                        <span className="text-red-700 ml-1">[H]</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Desktop: side buttons */}
+            <div className="hidden sm:flex flex-col gap-2 flex-shrink-0">
+              <button
+                onClick={onEndSession}
+                className="px-4 py-2 bg-red-900 hover:bg-red-800 text-red-100 font-black text-xs tracking-[0.2em] uppercase border-2 border-red-700 hover:border-red-600 transition-colors shadow-[0_0_20px_rgba(185,28,28,0.3)] hover:shadow-[0_0_30px_rgba(185,28,28,0.5)]"
+              >
+                END GOBLIN DAY
+              </button>
+              <button
+                onClick={onCancelSession}
+                className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 font-bold text-2xs tracking-[0.2em] uppercase border border-zinc-700 hover:border-zinc-600 transition-colors"
+              >
+                CANCEL SESSION
+              </button>
+            </div>
           </div>
-          <button
-            onClick={onEndSession}
-            className="flex-shrink-0 px-4 py-2 bg-red-900 hover:bg-red-800 text-red-100 font-black text-xs tracking-[0.2em] uppercase border-2 border-red-700 hover:border-red-600 transition-colors shadow-[0_0_20px_rgba(185,28,28,0.3)] hover:shadow-[0_0_30px_rgba(185,28,28,0.5)]"
-          >
-            END GOBLIN DAY
-          </button>
+          {/* Mobile: full-width buttons below header */}
+          <div className="flex sm:hidden gap-2 mt-3">
+            <button
+              onClick={onEndSession}
+              className="flex-1 px-3 py-2.5 bg-red-900 hover:bg-red-800 text-red-100 font-black text-xs tracking-[0.15em] uppercase border-2 border-red-700 transition-colors shadow-[0_0_20px_rgba(185,28,28,0.3)] min-h-[44px]"
+            >
+              END GOBLIN DAY
+            </button>
+            <button
+              onClick={onCancelSession}
+              className="px-3 py-2.5 bg-zinc-900 text-zinc-500 font-bold text-2xs tracking-[0.15em] uppercase border border-zinc-700 transition-colors min-h-[44px]"
+            >
+              CANCEL
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-8">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-6 sm:space-y-8">
         {/* ---- ADD MOVIE SECTION ---- */}
         {availableProposed.length > 0 && (
           <section>
@@ -379,7 +407,7 @@ export default function GoblinSessionView({
                   <button
                     onClick={() => handleAddMovie(movie.id)}
                     disabled={addingMovieId === movie.id}
-                    className="flex-shrink-0 px-3 py-1.5 bg-red-900/60 hover:bg-red-800 text-red-300 hover:text-white text-xs font-black tracking-[0.15em] uppercase border border-red-800 hover:border-red-600 transition-colors disabled:opacity-40"
+                    className="flex-shrink-0 px-3 py-2 sm:py-1.5 bg-red-900/60 hover:bg-red-800 text-red-300 hover:text-white text-xs font-black tracking-[0.15em] uppercase border border-red-800 hover:border-red-600 transition-colors disabled:opacity-40 min-h-[40px]"
                   >
                     {addingMovieId === movie.id ? "..." : "ADD"}
                   </button>
@@ -491,7 +519,7 @@ export default function GoblinSessionView({
           {!showThemeForm ? (
             <button
               onClick={() => setShowThemeForm(true)}
-              className="px-4 py-2 border-2 border-dashed border-zinc-700 hover:border-red-800 text-zinc-600 hover:text-red-400 text-xs font-bold tracking-[0.2em] uppercase transition-colors w-full"
+              className="px-4 py-3 sm:py-2 border-2 border-dashed border-zinc-700 hover:border-red-800 text-zinc-600 hover:text-red-400 text-xs font-bold tracking-[0.2em] uppercase transition-colors w-full min-h-[44px]"
             >
               + ADD THEME
             </button>

@@ -32,11 +32,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   const { slug } = await context.params;
   const searchParams = request.nextUrl.searchParams;
-  const categoriesParam = searchParams.get("categories") ?? "music";
+  const categoriesParam = searchParams.get("categories") ?? "";
   const categories = categoriesParam
     .split(",")
     .map((c) => c.trim())
     .filter(Boolean);
+
+  const venueTypesParam = searchParams.get("venue_types") ?? null;
+  const venueTypes = venueTypesParam
+    ? venueTypesParam.split(",").map((t) => t.trim()).filter(Boolean)
+    : null;
 
   const today = getLocalDateString(new Date());
 
@@ -61,14 +66,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
       sourceIds: sourceAccess.sourceIds,
     });
 
-    // Venue types that host live performances (music, comedy, theater)
-    const PERFORMANCE_VENUE_TYPES = [
-      "music_venue", "concert_hall", "bar_live_music", "theater",
-      "comedy_club", "performing_arts_center", "arena", "amphitheater",
-      "nightclub", "bar", "lounge", "restaurant_live_music",
-      "art_gallery", "community_arts_center", "event_space",
-    ];
-
     // Fetch today's shows for display + this week's count for the "N more this week" note
     const weekEnd = new Date();
     weekEnd.setDate(weekEnd.getDate() + 7);
@@ -88,7 +85,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
         is_free,
         venue:places!inner(id, name, slug, neighborhood, image_url, place_type)
       `)
-      .in("category_id", categories)
       .gte("start_date", today)
       .lte("start_date", weekEndStr)
       .eq("is_active", true)
@@ -96,6 +92,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .or("is_class.eq.false,is_class.is.null")
       .order("start_date", { ascending: true })
       .order("start_time", { ascending: true });
+
+    if (categories.length > 0) {
+      query = query.in("category_id", categories);
+    }
+
+    if (venueTypes && venueTypes.length > 0) {
+      query = query.in("places.place_type", venueTypes);
+    }
 
     query = applyFeedGate(query);
     query = applyManifestFederatedScopeToQuery(query, manifest, {
@@ -121,11 +125,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       !isNoiseEvent(event.title, event.venue?.place_type ?? null)
     );
 
-    // Split into today vs rest of week
+    // Split into today vs rest of week for counting
     const todayEvents = filteredEvents.filter(e => e.start_date === today);
-    const weekEvents = filteredEvents;
 
-    // Group today's events by venue
+    // Group ALL week's events by venue (not just today)
+    // This ensures venues with shows later this week still appear
     type VenueRow = {
       id: number;
       name: string;
@@ -137,6 +141,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     type ShowRow = {
       id: number;
       title: string;
+      start_date: string;
       start_time: string | null;
       price_min: number | null;
       image_url: string | null;
@@ -145,7 +150,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const venueMap = new Map<number, { venue: VenueRow; shows: ShowRow[] }>();
 
-    for (const event of todayEvents) {
+    for (const event of filteredEvents) {
       const venue = event.venue as VenueRow | null;
       if (!venue?.id) continue;
 
@@ -156,6 +161,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       venueMap.get(venue.id)!.shows.push({
         id: event.id,
         title: event.title,
+        start_date: event.start_date,
         start_time: event.start_time,
         price_min: event.price_min,
         image_url: event.image_url,
@@ -163,13 +169,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       });
     }
 
-    // Sort venues by show count (most shows first)
-    const venues = Array.from(venueMap.values()).sort(
-      (a, b) => b.shows.length - a.shows.length,
-    );
+    // Sort venues: those with today's shows first, then by total show count
+    const venues = Array.from(venueMap.values()).sort((a, b) => {
+      const aHasToday = a.shows.some(s => s.start_date === today) ? 1 : 0;
+      const bHasToday = b.shows.some(s => s.start_date === today) ? 1 : 0;
+      if (bHasToday !== aHasToday) return bHasToday - aHasToday;
+      return b.shows.length - a.shows.length;
+    });
 
     // Count unique shows this week (dedup by title to avoid recurrence inflation)
-    const weekTitles = new Set(weekEvents.map(e => e.title));
+    const weekTitles = new Set(filteredEvents.map((e: { title: string }) => e.title));
     const thisWeekCount = weekTitles.size;
     const todayCount = new Set(todayEvents.map(e => e.title)).size;
 

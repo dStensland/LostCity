@@ -78,7 +78,8 @@ export default function RegularsView({ portalId, portalSlug }: RegularsViewProps
     (activities: string[], weekdays: string[]) => {
       const params = new URLSearchParams();
       params.set("view", "find");
-      params.set("type", "regulars");
+      params.set("lane", "regulars");
+      params.set("content", "regulars");
       if (activities.length > 0) params.set("activity", activities.join(","));
       if (weekdays.length > 0) params.set("weekday", weekdays.join(","));
       const url = `/${portalSlug}?${params.toString()}`;

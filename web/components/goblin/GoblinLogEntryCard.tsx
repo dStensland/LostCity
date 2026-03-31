@@ -79,8 +79,8 @@ export default function GoblinLogEntryCard({
         ${isHero ? "w-14 sm:w-16" : "w-11 sm:w-14"}`}>
         {!readOnly && onMoveUp && !isFirst && (
           <button onClick={onMoveUp}
-            className="text-zinc-700 hover:text-cyan-400 text-2xs transition-colors
-              sm:opacity-0 sm:group-hover:opacity-100 absolute top-1">
+            className="text-zinc-700 hover:text-cyan-400 text-xs sm:text-2xs transition-colors
+              sm:opacity-0 sm:group-hover:opacity-100 absolute top-0 w-full py-1">
             &#x25B2;
           </button>
         )}
@@ -112,8 +112,8 @@ export default function GoblinLogEntryCard({
         )}
         {!readOnly && onMoveDown && !isLast && (
           <button onClick={onMoveDown}
-            className="text-zinc-700 hover:text-cyan-400 text-2xs transition-colors
-              sm:opacity-0 sm:group-hover:opacity-100 absolute bottom-1">
+            className="text-zinc-700 hover:text-cyan-400 text-xs sm:text-2xs transition-colors
+              sm:opacity-0 sm:group-hover:opacity-100 absolute bottom-0 w-full py-1">
             &#x25BC;
           </button>
         )}
@@ -246,25 +246,25 @@ export default function GoblinLogEntryCard({
           )}
         </div>
 
-        {/* Action bar */}
-        <div className="flex items-center gap-3 px-3 sm:px-3.5 pb-2.5 pt-0
-          text-2xs font-mono text-zinc-700
+        {/* Action bar — always visible on mobile for touch access */}
+        <div className="flex items-center gap-4 sm:gap-3 px-3 sm:px-3.5 pb-2.5 pt-0
+          text-xs sm:text-2xs font-mono text-zinc-600 sm:text-zinc-700
           sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
           <button onClick={() => setShowInfo(!showInfo)}
-            className={`transition-colors ${showInfo ? "text-cyan-400" : "hover:text-cyan-500"}`}>
+            className={`py-1 transition-colors ${showInfo ? "text-cyan-400" : "hover:text-cyan-500"}`}>
             [{showInfo ? "−" : "i"}]
           </button>
           <a href={trailerUrl} target="_blank" rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="hover:text-fuchsia-400 transition-colors">[▶]</a>
+            className="py-1 hover:text-fuchsia-400 transition-colors">[▶]</a>
           {imdbUrl && (
             <a href={imdbUrl} target="_blank" rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="hover:text-amber-400 transition-colors">[imdb]</a>
+              className="py-1 hover:text-amber-400 transition-colors">[imdb]</a>
           )}
           <a href={letterboxdUrl} target="_blank" rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="hover:text-emerald-400 transition-colors">[lb]</a>
+            className="py-1 hover:text-emerald-400 transition-colors">[lb]</a>
         </div>
 
         {/* Synopsis */}

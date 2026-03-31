@@ -57,7 +57,6 @@ import { formatTemperature, getWeatherIconName, type ForecastDay, type WeatherDa
 import { useFeedVisible } from "@/lib/feed-visibility";
 import { SignalStrip } from "./SignalStrip";
 import { SummaryLine } from "./SummaryLine";
-import { NewsDigest } from "./NewsDigest";
 
 // ── Icon map for quick link pills ────────────────────────────────────────────
 
@@ -363,7 +362,7 @@ function WeatherPill({
     <div
       ref={ref}
       className={`${posClass} animate-fade-in hero-stagger-1`}
-      style={{ transform: "translateY(var(--parallax-weather, 0px))" }}
+
     >
       <button
         onClick={() => setOpen(!open)}
@@ -499,7 +498,7 @@ function CenteredLayout({
       <div className={`mt-auto mb-1 ${treatment.contentClass || ""}`} style={treatment.contentStyle}>
         <div
           className="animate-fade-in hero-stagger-2"
-          style={{ transform: "translateY(var(--parallax-masthead, 0px))" }}
+    
         >
           <div className="flex justify-center mb-2">
             <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
@@ -528,7 +527,7 @@ function CenteredLayout({
 
         <div
           className="animate-fade-in hero-stagger-3 flex justify-center"
-          style={{ transform: "translateY(var(--parallax-meta, 0px))" }}
+    
         >
           <HeroQuickLinks links={quickLinks} categoryCounts={categoryCounts?.today} />
         </div>
@@ -550,7 +549,7 @@ function BottomLeftLayout({
       <div className={`mt-auto ${treatment.contentClass || ""}`} style={treatment.contentStyle}>
         <div
           className="animate-fade-in hero-stagger-2"
-          style={{ transform: "translateY(var(--parallax-masthead, 0px))" }}
+    
         >
           <div className="mb-2">
             <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
@@ -579,7 +578,7 @@ function BottomLeftLayout({
 
         <div
           className="animate-fade-in hero-stagger-3 mt-3"
-          style={{ transform: "translateY(var(--parallax-meta, 0px))" }}
+    
         >
           <HeroQuickLinks links={quickLinks} categoryCounts={categoryCounts?.today} />
         </div>
@@ -601,7 +600,7 @@ function SplitLayout({
       <div className="flex items-start justify-between pr-14">
         <div
           className="animate-fade-in hero-stagger-2"
-          style={{ transform: "translateY(var(--parallax-masthead, 0px))" }}
+    
         >
           <div className="mb-2">
             <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
@@ -633,7 +632,7 @@ function SplitLayout({
       <div className={treatment.contentClass || ""} style={treatment.contentStyle}>
         <div
           className="animate-fade-in hero-stagger-3"
-          style={{ transform: "translateY(var(--parallax-meta, 0px))" }}
+    
         >
           <HeadlineSubtitle headline={headline} bodyShadow={treatment.bodyShadow} />
           <SummaryLine tabCounts={tabCounts} categoryCounts={categoryCounts} weather={context.weather} />
@@ -660,7 +659,7 @@ function EditorialLayout({
       <div className={`text-right ${treatment.contentClass || ""}`} style={treatment.contentStyle}>
         <div
           className="animate-fade-in hero-stagger-2"
-          style={{ transform: "translateY(var(--parallax-masthead, 0px))" }}
+    
         >
           <div className="flex justify-end mb-2">
             <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
@@ -688,7 +687,7 @@ function EditorialLayout({
 
       <div
         className="animate-fade-in hero-stagger-3 mt-3"
-        style={{ transform: "translateY(var(--parallax-meta, 0px))" }}
+  
       >
         <HeadlineSubtitle headline={headline} bodyShadow={treatment.bodyShadow} />
         <SummaryLine tabCounts={tabCounts} categoryCounts={categoryCounts} weather={context.weather} />
@@ -731,7 +730,7 @@ function FlagshipHeroContent({
       <div className="mt-auto">
         <div
           className="animate-fade-in hero-stagger-2"
-          style={{ transform: "translateY(var(--parallax-masthead, 0px))" }}
+    
         >
           <div className="mb-2">
             <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
@@ -794,7 +793,7 @@ function FlagshipHeroContent({
 
         <div
           className="animate-fade-in hero-stagger-3 mt-3"
-          style={{ transform: "translateY(var(--parallax-meta, 0px))" }}
+    
         >
           <HeroQuickLinks links={quickLinks} categoryCounts={categoryCounts?.today} />
         </div>
@@ -847,8 +846,9 @@ export default function CityBriefing({
 
   const masthead = useMemo(() => getMastheadText(context), [context]);
 
-  // ── Parallax scroll ──────────────────────────────────────────────────────
+  // ── Parallax scroll — background image only ─────────────────────────────
   const heroRef = useRef<HTMLDivElement>(null);
+  const bgRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!feedVisible) return;
 
@@ -860,15 +860,13 @@ export default function CityBriefing({
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(() => {
-        const el = heroRef.current;
-        if (!el) { ticking = false; return; }
-        const rect = el.getBoundingClientRect();
+        const hero = heroRef.current;
+        const bg = bgRef.current;
+        if (!hero || !bg) { ticking = false; return; }
+        const rect = hero.getBoundingClientRect();
         if (rect.bottom > 0) {
           const offset = -rect.top;
-          el.style.setProperty("--parallax-bg", `${offset * 0.4}px`);
-          el.style.setProperty("--parallax-weather", `${offset * 0.15}px`);
-          el.style.setProperty("--parallax-masthead", `${offset * 0.08}px`);
-          el.style.setProperty("--parallax-meta", `${offset * 0.04}px`);
+          bg.style.transform = `translateY(${offset * 0.15}px)`;
         }
         ticking = false;
       });
@@ -924,14 +922,14 @@ export default function CityBriefing({
           ref={heroRef}
           className="relative overflow-hidden"
         >
-          {/* Skeleton background */}
-          <div className="absolute inset-0 bg-[var(--night)]" />
+          {/* Skeleton background — atmospheric gradient while hero image loads */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[var(--night)] via-[var(--dusk)] to-[var(--night)]" />
 
           {/* Background photo — Ken Burns + parallax */}
           <div
+            ref={bgRef}
             className="absolute inset-0 will-change-transform"
             style={{
-              transform: "translateY(var(--parallax-bg, 0px))",
               top: "-15%",
               bottom: "-15%",
             }}
@@ -995,7 +993,7 @@ export default function CityBriefing({
         {/* Festival alert ribbon */}
         {hasFestival && !hasHoliday && (
           <Link
-            href={`/${portalSlug}?view=happening&series=${context.active_festivals[0].slug}`}
+            href={`/${portalSlug}?festival=${context.active_festivals[0].slug}`}
             className="w-full flex items-center px-4 py-2.5 border text-left transition-colors hover:bg-[var(--dusk)] mt-2 animate-fade-in"
             style={{
               borderColor: `color-mix(in srgb, ${header.accent_color} 30%, var(--twilight))`,
@@ -1014,9 +1012,6 @@ export default function CityBriefing({
           </Link>
         )}
       </div>
-
-      {/* ── Zone 2: News Digest ───────────────────────────────────────────── */}
-      <NewsDigest portalSlug={portalSlug} />
 
     </section>
   );

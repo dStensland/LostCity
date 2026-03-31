@@ -1529,7 +1529,7 @@ def infer_genres(
             (["braves", "baseball", "mlb", "softball", "batting"], "baseball"),
             (["hawks", "basketball", "nba", "ncaa basketball", "hoops", "pickup basketball", "pick-up basketball"], "basketball"),
             (["falcons", "football", "nfl", "sec ", "touchdown", "flag football", "pickup football", "pick-up football"], "football"),
-            (["united", "soccer", "mls", "nwsl", "fc ", "futbol", "pickup soccer", "pick-up soccer", "futsal"], "soccer"),
+            (["atlanta united", "atlutd", "soccer", "mls", "nwsl", "fc ", "futbol", "pickup soccer", "pick-up soccer", "futsal"], "soccer"),
             (["hockey", "nhl", "gladiators", "puck"], "hockey"),
             (["ufc", "mma", "boxing", "fight night", "bout", "knockout"], "mma"),
             (["nascar", "racing", "motorsport", "grand prix", "derby"], "racing"),

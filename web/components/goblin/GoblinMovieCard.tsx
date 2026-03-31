@@ -158,11 +158,11 @@ export default function GoblinMovieCard({ movie, isBookmarked, isWatched, onTogg
           </div>
         )}
         {/* Flip buttons — top right corner */}
-        <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 z-10">
+        <div className="absolute top-1.5 right-1.5 flex flex-col gap-1.5 z-10">
           {(movie.director || (movie.keywords && movie.keywords.length > 0) || movie.synopsis || movie.imdb_id) && (
             <button
               onClick={() => setFlipMode(flipMode === "info" ? null : "info")}
-              className="w-6 h-6 bg-black/70 hover:bg-red-900/80 border border-zinc-600/50 hover:border-red-600/50 text-zinc-400 hover:text-white text-xs font-bold flex items-center justify-center transition-all"
+              className="w-8 h-8 sm:w-6 sm:h-6 bg-black/70 hover:bg-red-900/80 border border-zinc-600/50 hover:border-red-600/50 text-zinc-400 hover:text-white text-sm sm:text-xs font-bold flex items-center justify-center transition-all"
             >
               i
             </button>
@@ -170,7 +170,7 @@ export default function GoblinMovieCard({ movie, isBookmarked, isWatched, onTogg
           {hasWatchOptions && (
             <button
               onClick={() => setFlipMode(flipMode === "watch" ? null : "watch")}
-              className="w-6 h-6 bg-black/70 hover:bg-emerald-900/80 border border-zinc-600/50 hover:border-emerald-600/50 text-zinc-400 hover:text-emerald-300 text-xs font-bold flex items-center justify-center transition-all"
+              className="w-8 h-8 sm:w-6 sm:h-6 bg-black/70 hover:bg-emerald-900/80 border border-zinc-600/50 hover:border-emerald-600/50 text-zinc-400 hover:text-emerald-300 text-sm sm:text-xs font-bold flex items-center justify-center transition-all"
             >
               &#9654;
             </button>
@@ -269,7 +269,7 @@ export default function GoblinMovieCard({ movie, isBookmarked, isWatched, onTogg
             href={trailerUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="block w-full text-center bg-red-900/40 hover:bg-red-800/60 text-red-400 hover:text-red-300 text-2xs font-bold tracking-widest uppercase py-1.5 transition-all hover:shadow-[0_0_10px_rgba(220,38,38,0.3)] border border-red-800/40"
+            className="block w-full text-center bg-red-900/40 hover:bg-red-800/60 text-red-400 hover:text-red-300 text-2xs font-bold tracking-widest uppercase py-2.5 sm:py-1.5 transition-all hover:shadow-[0_0_10px_rgba(220,38,38,0.3)] border border-red-800/40 min-h-[36px] flex items-center justify-center"
           >
             &#9654; TRAILER
           </a>
@@ -278,7 +278,7 @@ export default function GoblinMovieCard({ movie, isBookmarked, isWatched, onTogg
           <button
             onClick={() => !isProposed && onPropose(movie.id)}
             disabled={isProposed}
-            className={`w-full text-2xs py-2 font-bold tracking-wider uppercase transition-all ${
+            className={`w-full text-2xs py-2.5 sm:py-2 font-bold tracking-wider uppercase transition-all min-h-[40px] ${
               isProposed
                 ? "bg-amber-900/60 text-amber-300 cursor-default"
                 : "bg-amber-800 text-amber-100 hover:bg-amber-700 hover:shadow-[0_0_12px_rgba(180,120,0,0.3)] active:scale-95"
@@ -290,7 +290,7 @@ export default function GoblinMovieCard({ movie, isBookmarked, isWatched, onTogg
         <div className="flex gap-1">
           <button
             onClick={() => onToggleBookmark(movie.id)}
-            className={`flex-1 text-2xs py-2 font-bold tracking-wider uppercase transition-all ${
+            className={`flex-1 text-2xs py-2.5 sm:py-2 font-bold tracking-wider uppercase transition-all min-h-[40px] ${
               isBookmarked
                 ? "bg-red-800 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.3)] hover:bg-red-700"
                 : "bg-zinc-900 text-zinc-500 border border-zinc-800 hover:text-red-400 hover:border-red-900/50 hover:bg-red-950/20 hover:shadow-[0_0_8px_rgba(120,10,10,0.2)]"
@@ -300,7 +300,7 @@ export default function GoblinMovieCard({ movie, isBookmarked, isWatched, onTogg
           </button>
           <button
             onClick={() => onToggleWatched(movie.id)}
-            className={`flex-1 text-2xs py-2 font-bold tracking-wider uppercase transition-all ${
+            className={`flex-1 text-2xs py-2.5 sm:py-2 font-bold tracking-wider uppercase transition-all min-h-[40px] ${
               isWatched
                 ? "bg-emerald-800 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.3)] hover:bg-emerald-700"
                 : "bg-zinc-900 text-zinc-500 border border-zinc-800 hover:text-emerald-400 hover:border-emerald-900/50 hover:bg-emerald-950/20 hover:shadow-[0_0_8px_rgba(10,80,40,0.2)]"

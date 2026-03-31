@@ -161,43 +161,12 @@ def main() -> int:
         })
 
     # ── Phase 1: Event description enrichment ──────────────────────────
-    if args.skip_event_descriptions:
-        print("\n[SKIP] Phase 1: Event description enrichment")
-        record_phase("event_descriptions", 0, skipped=True)
-    else:
-        # 1a. Eventbrite descriptions
-        eb_cmd = [
-            py, str(SCRIPTS / "enrich_eventbrite_descriptions.py"),
-            "--start-date", start_date,
-            "--limit", str(args.event_desc_limit),
-        ]
-        if portal_slug:
-            eb_cmd.extend(["--portal", portal_slug])
-        if args.apply:
-            eb_cmd.append("--apply")
-
-        rc1a = run_step("Phase 1a: Enrich Eventbrite descriptions", eb_cmd)
-
-        # 1b. Non-Eventbrite descriptions
-        non_eb_cmd = [
-            py, str(SCRIPTS / "enrich_non_eventbrite_descriptions.py"),
-            "--start-date", start_date,
-            "--limit", str(args.event_desc_limit),
-            "--all-sources",
-            "--exclude-source-slugs", "eventbrite",
-        ]
-        if portal_slug:
-            non_eb_cmd.extend(["--portal", portal_slug])
-        if args.apply:
-            non_eb_cmd.append("--apply")
-
-        rc1b = run_step("Phase 1b: Enrich non-Eventbrite descriptions", non_eb_cmd)
-
-        rc1 = max(rc1a, rc1b)
-        record_phase("event_descriptions", rc1)
-        if rc1 != 0 and not args.continue_on_error:
-            print("[STOP] Phase 1 failed. Use --continue-on-error to proceed.")
-            return _write_summary(phase_results, started_at, portal_slug, 1)
+    # Disabled: synthetic description enrichment removed (2026-03-30).
+    # Previously called enrich_eventbrite_descriptions.py and
+    # enrich_non_eventbrite_descriptions.py which assembled metadata into
+    # prose descriptions. Future: re-enable with real extraction.
+    print("\n[SKIP] Phase 1: Event description enrichment (synthetic pipeline disabled)")
+    record_phase("event_descriptions", 0, skipped=True)
 
     # ── Phase 2: Venue website enrichment ──────────────────────────────
     if args.skip_venue_enrichment:

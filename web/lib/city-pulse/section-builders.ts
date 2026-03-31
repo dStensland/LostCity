@@ -25,7 +25,6 @@ import { getCardTier } from "./tier-assignment";
 export type EditorialMap = Record<number, EditorialMention[]>;
 import type { FeedEventData } from "@/components/EventCard";
 import type { Spot } from "@/lib/spots-constants";
-import { THINGS_TO_DO_TILES } from "@/lib/spots-constants";
 import { getTimeSlotLabel, isNightlifeTime } from "./time-slots";
 import { scoreEvent, scoreDestination, applyWildCardSorting } from "./scoring";
 import { getWeatherContextLabel } from "./weather-mapping";
@@ -1036,83 +1035,6 @@ export function buildTheSceneSection(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Experiences section (always-on venue destinations)
-// ---------------------------------------------------------------------------
-
-/** Category mapping derived from THINGS_TO_DO_TILES (single source of truth) */
-const EXPERIENCE_CATEGORIES: Record<string, string[]> = {};
-for (const tile of THINGS_TO_DO_TILES) {
-  EXPERIENCE_CATEGORIES[tile.key] = [...tile.venueTypes];
-}
-// Extra venue types that qualify but aren't in tiles
-EXPERIENCE_CATEGORIES["parks"]?.push("outdoor_venue");
-EXPERIENCE_CATEGORIES["entertainment-games"]?.push("entertainment");
-EXPERIENCE_CATEGORIES["markets"]?.push("market");
-EXPERIENCE_CATEGORIES["fitness"]?.push("fitness_center");
-
-function categorizeVenueType(venueType: string | null): string {
-  if (!venueType) return "museums";
-  for (const [cat, types] of Object.entries(EXPERIENCE_CATEGORIES)) {
-    if (types.includes(venueType)) return cat;
-  }
-  return "museums";
-}
-
-/**
- * Build experiences section from real venue data.
- * Returns null when no qualifying venues exist (graceful degradation).
- */
-export function buildExperiencesSection(
-  venues: Spot[],
-  eventCountMap: Map<number, number>,
-): CityPulseSection | null {
-  if (venues.length === 0) return null;
-
-  // Deduplicate by venue ID (data can have dupes from slug conflicts)
-  const seen = new Set<number>();
-  const unique = venues.filter((v) => {
-    if (seen.has(v.id)) return false;
-    seen.add(v.id);
-    return true;
-  });
-
-  // Sort: venues with events first (by count desc), then alphabetical
-  const sorted = [...unique].sort((a, b) => {
-    const aCount = eventCountMap.get(a.id) ?? 0;
-    const bCount = eventCountMap.get(b.id) ?? 0;
-    if (bCount !== aCount) return bCount - aCount;
-    return a.name.localeCompare(b.name);
-  });
-
-  const items: CityPulseItem[] = sorted.map((venue) =>
-    makeDestinationItem(venue, {
-      contextual_label: categorizeVenueType(venue.place_type),
-    }),
-  );
-
-  // Attach per-category counts + per-venue event counts as meta
-  // so the client can filter without refetching
-  const categoryCounts: Record<string, number> = {};
-  const venueEventCounts: Record<number, number> = {};
-  for (const venue of unique) {
-    const cat = categorizeVenueType(venue.place_type);
-    categoryCounts[cat] = (categoryCounts[cat] ?? 0) + 1;
-    const evCount = eventCountMap.get(venue.id) ?? 0;
-    if (evCount > 0) venueEventCounts[venue.id] = evCount;
-  }
-
-  return {
-    id: "experiences",
-    type: "experiences",
-    title: "Things to Do",
-    subtitle: "Parks, museums, galleries, trails & more",
-    priority: "tertiary",
-    accent_color: "var(--neon-green)",
-    items,
-    meta: { category_counts: categoryCounts, venue_event_counts: venueEventCounts },
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Planning Horizon section (7+ days out, tentpoles / festivals / multi-day events only)

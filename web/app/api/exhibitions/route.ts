@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         `
         id,
         slug,
-        venue_id,
+        place_id,
         source_id,
         portal_id,
         title,

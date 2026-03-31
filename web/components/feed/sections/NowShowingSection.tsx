@@ -99,9 +99,11 @@ function extractTime(entry: ShowtimeEntry): string {
 
 interface NowShowingSectionProps {
   portalSlug: string;
+  /** When true, suppresses the section header and wrapper — for embedding inside a parent tab shell */
+  embedded?: boolean;
 }
 
-export default function NowShowingSection({ portalSlug }: NowShowingSectionProps) {
+export default function NowShowingSection({ portalSlug, embedded = false }: NowShowingSectionProps) {
   const { user } = useAuth();
   const [allTheaters, setAllTheaters] = useState<TheaterItem[]>([]);
   const [myTheaterSlugs, setMyTheaterSlugs] = useState<string[]>([]);
@@ -262,14 +264,16 @@ export default function NowShowingSection({ portalSlug }: NowShowingSectionProps
 
   if (loading) {
     return (
-      <section className="pb-2">
-        <FeedSectionHeader
-          title="Now Showing"
-          priority="secondary"
-          accentColor="var(--vibe)"
-          icon={<FilmSlate weight="duotone" className="w-5 h-5" />}
-          seeAllHref={`/${portalSlug}?view=happening&content=showtimes`}
-        />
+      <div className={embedded ? "" : "pb-2"}>
+        {!embedded && (
+          <FeedSectionHeader
+            title="Now Showing"
+            priority="secondary"
+            accentColor="var(--vibe)"
+            icon={<FilmSlate weight="duotone" className="w-5 h-5" />}
+            seeAllHref={`/${portalSlug}?view=happening&content=showtimes`}
+          />
+        )}
         <div className="flex gap-3 overflow-hidden">
           {[0, 1, 2].map((i) => (
             <div
@@ -288,10 +292,14 @@ export default function NowShowingSection({ portalSlug }: NowShowingSectionProps
             </div>
           ))}
         </div>
-      </section>
+      </div>
     );
   }
-  if (failed) return null;
+  if (failed) {
+    return embedded
+      ? <p className="py-6 text-center text-sm text-[var(--muted)]">No film today</p>
+      : null;
+  }
 
   // Hide if no indie theaters have showtimes (and user hasn't added any chains)
   const hasIndieShowtimes = allTheaters.some(
@@ -299,22 +307,30 @@ export default function NowShowingSection({ portalSlug }: NowShowingSectionProps
       isIndieCinemaVenue({ name: t.venue_name, slug: t.venue_slug }) &&
       t.films.length > 0
   );
-  if (!hasIndieShowtimes && myTheaterSlugs.length === 0) return null;
+  if (!hasIndieShowtimes && myTheaterSlugs.length === 0) {
+    return embedded
+      ? <p className="py-6 text-center text-sm text-[var(--muted)]">No film today</p>
+      : null;
+  }
+
+  const Wrapper = embedded ? "div" : "section";
 
   return (
-    <section className="pb-2 feed-section-enter">
-      {/* Section header */}
-      <FeedSectionHeader
-        title="Now Showing"
-        priority="secondary"
-        accentColor="var(--vibe)"
-        icon={<FilmSlate weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=happening&content=showtimes`}
-        actionIcon={user ? <GearSix weight="bold" className="w-3.5 h-3.5" /> : undefined}
-        onAction={user ? () => setCustomizerOpen((v) => !v) : undefined}
-        actionActive={customizerOpen}
-        actionLabel="Customize theaters"
-      />
+    <Wrapper className={embedded ? "" : "pb-2 feed-section-enter"}>
+      {/* Section header — hidden when embedded inside VenuesSection tab */}
+      {!embedded && (
+        <FeedSectionHeader
+          title="Now Showing"
+          priority="secondary"
+          accentColor="var(--vibe)"
+          icon={<FilmSlate weight="duotone" className="w-5 h-5" />}
+          seeAllHref={`/${portalSlug}?view=happening&content=showtimes`}
+          actionIcon={user ? <GearSix weight="bold" className="w-3.5 h-3.5" /> : undefined}
+          onAction={user ? () => setCustomizerOpen((v) => !v) : undefined}
+          actionActive={customizerOpen}
+          actionLabel="Customize theaters"
+        />
+      )}
 
       {/* Carousel */}
       <div className="relative">
@@ -378,7 +394,7 @@ export default function NowShowingSection({ portalSlug }: NowShowingSectionProps
           }}
         />
       )}
-    </section>
+    </Wrapper>
   );
 }
 
@@ -414,6 +430,7 @@ function TheaterCard({
                 src={url}
                 alt=""
                 fill
+                sizes="(max-width: 640px) 50vw, 200px"
                 className="object-cover"
                 fallback={
                   <div className="absolute inset-0 bg-[var(--dusk)]" />
@@ -489,25 +506,12 @@ function FilmRow({
     : undefined;
 
   // ── Urgency badge logic ──────────────────────────────────────────
-  const today = getLocalDateString();
   const isLastShowing =
     film.remaining_count != null && film.remaining_count <= 2;
-  // OPENING NIGHT: `first_date` is the earliest *remaining* showtime date
-  // (past dates are excluded by the API query). On Sunday a film that opened
-  // Friday still has first_date === today because Fri/Sat events already
-  // passed. Guard against overuse: require a healthy remaining_count (>=5)
-  // which indicates the film truly just arrived at the theater.
-  const isOpeningNight =
-    film.first_date != null &&
-    film.first_date === today &&
-    film.remaining_count != null &&
-    film.remaining_count >= 5;
-  // Show only one urgency badge: LAST SHOWING takes priority
-  const urgencyBadge: "last" | "opening" | null = isLastShowing
-    ? "last"
-    : isOpeningNight
-    ? "opening"
-    : null;
+  // "Opening Night" removed — first_date is MIN(remaining start_date), not
+  // the film's actual premiere. A film showing for 3 weeks gets first_date
+  // === today once prior dates expire, producing false "OPENING NIGHT" labels.
+  const urgencyBadge: "last" | null = isLastShowing ? "last" : null;
 
   // ── Metadata row ─────────────────────────────────────────────────
   const metaParts: string[] = [];
@@ -530,11 +534,6 @@ function FilmRow({
         {urgencyBadge === "last" && (
           <span className="shrink-0 text-2xs font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--neon-red)]/15 text-[var(--neon-red)]">
             Last Showing
-          </span>
-        )}
-        {urgencyBadge === "opening" && (
-          <span className="shrink-0 text-2xs font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--gold)]/15 text-[var(--gold)]">
-            Opening Night
           </span>
         )}
       </div>
