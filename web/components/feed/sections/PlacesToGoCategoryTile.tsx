@@ -2,37 +2,22 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import {
-  Tree,
-  Mountains,
-  Bank,
-  PaintBrush,
-  MaskHappy,
-  MusicNotes,
-  ForkKnife,
-  Martini,
-  Storefront,
-  Books,
-  GameController,
-  Compass,
-} from "@phosphor-icons/react";
+import { getZineIcon } from "./PlacesToGoIcons";
 import { PlacesToGoCard } from "./PlacesToGoCard";
 import type { PlacesToGoCategory } from "@/lib/places-to-go/types";
 
-const CATEGORY_ICONS: Record<string, React.ElementType> = {
-  parks_gardens: Tree,
-  trails_nature: Mountains,
-  museums: Bank,
-  galleries_studios: PaintBrush,
-  theaters_stage: MaskHappy,
-  music_venues: MusicNotes,
-  restaurants: ForkKnife,
-  bars_nightlife: Martini,
-  markets_local: Storefront,
-  libraries_learning: Books,
-  fun_games: GameController,
-  historic_sites: Compass,
-};
+// Alternate rotation directions based on a stable hash of the category key.
+// This gives a "hand-placed" feel without layout-breaking transforms on the tile itself.
+function keyRotationIndex(key: string): number {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  }
+  return hash % 3; // 0, 1, or 2
+}
+
+const ICON_ROW_ROTATIONS = ["-1.5deg", "1deg", "-0.8deg"] as const;
+const COUNT_ROTATIONS = ["1.2deg", "-0.9deg", "0.7deg"] as const;
 
 interface PlacesToGoCategoryTileProps {
   category: PlacesToGoCategory;
@@ -46,7 +31,10 @@ export const PlacesToGoCategoryTile = memo(function PlacesToGoCategoryTile({
   onToggle,
 }: PlacesToGoCategoryTileProps) {
   const accent = category.accent_color;
-  const IconComponent = CATEGORY_ICONS[category.key] ?? Compass;
+  const ZineIcon = getZineIcon(category.key);
+  const rotIndex = keyRotationIndex(category.key);
+  const iconRowRotate = ICON_ROW_ROTATIONS[rotIndex];
+  const countRotate = COUNT_ROTATIONS[rotIndex];
 
   return (
     <div
@@ -67,23 +55,36 @@ export const PlacesToGoCategoryTile = memo(function PlacesToGoCategoryTile({
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <IconComponent
-                weight="duotone"
-                className="w-4 h-4 flex-shrink-0"
+            {/* Icon + title row — slightly rotated, hand-placed feel */}
+            <div
+              className="flex items-center gap-1.5"
+              style={{ transform: `rotate(${iconRowRotate})`, transformOrigin: "left center" }}
+            >
+              <ZineIcon
+                className="w-5 h-5 flex-shrink-0"
                 style={{ color: accent }}
               />
-              <span className="text-sm font-semibold leading-tight" style={{ color: accent }}>
+              <span
+                className="text-xs font-bold uppercase tracking-wider leading-tight"
+                style={{ color: accent }}
+              >
                 {category.label}
               </span>
             </div>
-            <p className="text-xs text-[var(--soft)] mt-0.5 line-clamp-2">
+            {/* Summary — italic, like a handwritten annotation */}
+            <p className="text-xs text-[var(--soft)] mt-0.5 line-clamp-2 italic">
               {category.summary}
             </p>
           </div>
+          {/* Count — bigger, bolder, slightly counter-rotated from the title */}
           <span
-            className="text-xl font-bold tabular-nums flex-shrink-0"
-            style={{ color: accent }}
+            className="text-2xl font-bold tabular-nums flex-shrink-0 leading-none"
+            style={{
+              color: accent,
+              transform: `rotate(${countRotate})`,
+              transformOrigin: "center center",
+              display: "inline-block",
+            }}
           >
             {category.count}
           </span>
