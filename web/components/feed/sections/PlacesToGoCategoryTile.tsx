@@ -55,50 +55,50 @@ export const PlacesToGoCategoryTile = memo(function PlacesToGoCategoryTile({
 
   return (
     <div
-      className={`rounded-lg border-2 transition-all ${
+      className={`rounded-[10px] border transition-all ${
         isExpanded ? "col-span-2 sm:col-span-3 lg:col-span-4" : ""
       }`}
       style={{
         backgroundColor: `color-mix(in srgb, ${accent} 15%, transparent)`,
-        borderColor: `color-mix(in srgb, ${accent} 25%, transparent)`,
+        borderColor: `color-mix(in srgb, ${accent} 19%, transparent)`,
       }}
     >
       {/* Header — always visible, click to toggle */}
       <button
         type="button"
-        className="w-full text-left p-3 cursor-pointer"
+        className="w-full text-left p-3.5 pb-3 cursor-pointer"
         onClick={onToggle}
         aria-expanded={isExpanded}
       >
         {/* Icon + title + count — all on one line */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Icon
-            className="w-7 h-7 flex-shrink-0"
+            className="w-[18px] h-[18px] flex-shrink-0"
             style={{ color: accent }}
-            weight="bold"
+            weight="light"
           />
           <span
-            className="flex-1 min-w-0 text-base font-black uppercase tracking-wide leading-tight truncate"
+            className="flex-1 min-w-0 text-sm font-semibold leading-tight truncate"
             style={{ color: accent }}
           >
             {category.label}
           </span>
           <span
-            className="text-3xl font-black tabular-nums flex-shrink-0 leading-none"
+            className="font-mono text-xs font-semibold tabular-nums flex-shrink-0 leading-none"
             style={{ color: accent }}
           >
             {category.count}
           </span>
         </div>
         {/* Summary below */}
-        <p className="text-xs text-[var(--soft)] mt-1 line-clamp-1">
+        <p className="text-xs text-[var(--soft)] mt-1.5 line-clamp-1">
           {category.summary}
         </p>
       </button>
 
       {/* Expanded content */}
       {isExpanded && (
-        <div className="px-3 pb-3 pt-1 space-y-2 animate-[fadeIn_150ms_ease-out]">
+        <div className="px-3.5 pb-3.5 pt-0 flex flex-col gap-2.5 animate-[fadeIn_150ms_ease-out]">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {category.places.map((place) => (
               <PlacesToGoCard
@@ -108,7 +108,7 @@ export const PlacesToGoCategoryTile = memo(function PlacesToGoCategoryTile({
               />
             ))}
           </div>
-          <div className="pt-1">
+          <div>
             <Link
               href={category.see_all_href}
               className="text-xs font-mono transition-opacity hover:opacity-80"
