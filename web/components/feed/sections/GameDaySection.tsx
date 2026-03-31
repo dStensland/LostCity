@@ -424,18 +424,18 @@ function TeamCard({
           {sportLabel}
         </span>
 
-        {/* Team logo — large, no container, drop shadow for legibility */}
-        <div className="absolute bottom-2 left-3 z-10 w-16 h-16 flex items-center justify-center" style={{ filter: `drop-shadow(0 2px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 20px ${team.accentColor}40)` }}>
+        {/* Team logo — oversized, breaking photo boundary */}
+        <div className="absolute -bottom-8 left-3 z-10 w-24 h-24 flex items-center justify-center" style={{ filter: `drop-shadow(0 4px 12px rgba(0,0,0,0.7)) drop-shadow(0 0 24px ${team.accentColor}50)` }}>
           <SmartImage
             src={team.logoUrl}
             alt={team.shortName}
-            width={64}
-            height={64}
-            className="object-contain max-h-16 max-w-16"
+            width={96}
+            height={96}
+            className="object-contain max-h-24 max-w-24"
             fallback={
               <span
-                className="text-3xl font-black"
-                style={{ color: team.accentColor, textShadow: `0 2px 12px ${team.accentColor}60` }}
+                className="text-5xl font-black"
+                style={{ color: team.accentColor, textShadow: `0 2px 16px ${team.accentColor}60` }}
               >
                 {team.shortName.charAt(0)}
               </span>
@@ -444,8 +444,9 @@ function TeamCard({
         </div>
       </div>
 
-      {/* Card header */}
-      <div className="px-3 pt-2">
+      {/* Card header — spacer for overlapping logo */}
+      <div className="px-3 pt-1">
+        <div className="h-8" />
         <div className="flex items-center gap-2">
           <span className="text-base font-semibold text-[var(--cream)] truncate flex-1 min-w-0">
             {team.shortName}
