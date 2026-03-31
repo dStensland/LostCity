@@ -215,17 +215,19 @@ Single request, server-side computation. No per-category client fetches.
 **Data fetching pattern:** Self-fetching via `useQuery` on the client (matching ExperiencesSection pattern). This section is below the fold — do NOT include in the main feed API response to avoid bloating it.
 
 **Query strategy (1+3 pattern):**
-1. **Main query:** All active places matching any of the 12 categories' place_types, with FK joins to `place_profile` and `place_vertical_details`. Limit 500. Bucket into categories in JS.
+1. **Main query:** All active places matching any of the 12 categories' place_types, with FK joins to `place_profile` and `place_vertical_details`. Exclude `location_designator = 'recovery_meeting'`. Limit 500. Bucket into categories in JS.
 2. **Parallel secondary queries (Promise.all):**
-   - Event counts per place_id via RPC with `GROUP BY place_id` (not raw row fetching)
+   - Event counts per place_id — single query: `.select("place_id").in("place_id", allIds).gte("start_date", today).lte("start_date", weekAhead)`, count in JS via `Map`. Apply `applyFeedGate` to exclude recreation/unknown/YMCA sources. (No RPC needed — the place set is bounded at 500.)
    - Active specials (`place_specials` with time/day filters)
    - Place occasions (`place_occasions` — fetch all, build `Map<number, string[]>`)
+
+**Response filtering:** Categories with 0 places are omitted from the response. If fewer than 3 categories survive, hide the entire section (a grid with 1-2 tiles looks broken).
 
 Scoring, summary computation, and card selection all run in-memory against the fetched data pool. No per-category queries.
 
 **Weather injection:** Fetch from `/api/weather/current` at route handler level. Pass `{ temperature, isRainy, condition }` into the scoring function. If weather fetch fails, skip weather-dependent scoring and summaries gracefully (fall through to activity/static).
 
-**Portal scoping:** Apply `applyManifestFederatedScopeToQuery` on the events query (copy from experiences endpoint). Filter chain venues (AMC, Regal, Planet Fitness) from results.
+**Portal scoping:** Apply `applyManifestFederatedScopeToQuery` on the events query (copy from experiences endpoint). Filter chain venues via `CHAIN_VENUE_PREFIXES` from experiences route. Use `resolvePortalSlugAlias(normalizePortalSlug(slug))` for portal resolution. Apply `applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request))` at route entry.
 
 **Cache strategy:**
 - Key: `${portalSlug}|${timeSlot}|${today}` where timeSlot = morning/afternoon/evening/late_night
@@ -284,7 +286,7 @@ Note: `auto_expand` removed from response — all tiles start collapsed. `rating
 - **BrowseSection.tsx** — replaced entirely by PlacesToGoSection
 - **BrowseGridTile.tsx** — replaced by PlacesToGoCategoryTile
 - **"Things to Do" event category grid** — redundant with Lineup, See Shows, Regular Hangs
-- **ExperiencesSection.tsx** — absorbed into Places to Go (same data, better presentation)
+- **ExperiencesSection.tsx** — already dead code (rendered nowhere in CityPulseShell), just delete
 - **`browse` section type** in `portal_sections` — replaced by new `places_to_go` type
 - **`experiences` section type** — removed
 - **CityPulseShell references** to BrowseSection and ExperiencesSection rendering — update to render PlacesToGoSection
@@ -299,7 +301,47 @@ Note: `auto_expand` removed from response — all tiles start collapsed. `rating
 
 ### New Constants
 
-Create `PLACES_TO_GO_CATEGORIES` in a new constants file (or extend `spots-constants.ts`) to replace `THINGS_TO_DO_TILES`. The two constants must not coexist — remove the old one and update any remaining references.
+Create `PLACES_TO_GO_CATEGORIES` in `web/lib/places-to-go/constants.ts`. Keep `THINGS_TO_DO_TILES` in `spots-constants.ts` for now — it's still imported by `CategoryTileGrid.tsx` in the Find tab (out of scope for this work). Migrate the Find tab to use `PLACES_TO_GO_CATEGORIES` separately.
+
+### File Structure
+
+```
+web/lib/places-to-go/
+  constants.ts      — PLACES_TO_GO_CATEGORIES (display: keys, labels, colors, icons, place_types, routing)
+  scoring.ts        — scorePlaceForCategory() pure function, SCORE_WEIGHTS
+  callouts.ts       — CALLOUT_CONFIG (data-driven per-category), buildCallouts(), buildSummary()
+web/app/api/portals/[slug]/city-pulse/places-to-go/route.ts  — orchestrator only
+```
+
+Callout builder uses a **data-driven config**, not 12 strategy functions. One `CALLOUT_CONFIG` map keyed by category with `{ timeSensitive, activity, static }` rule arrays. One `buildCallouts()` function walks the cascade. New categories = config additions, not code additions.
+
+### Render Chain Updates
+
+BrowseSection renders through `CityPulseSection.tsx` (switch case on section type), not directly from CityPulseShell. Three files need updating:
+1. `CityPulseShell.tsx` — add `PlacesToGoSection` as direct render (self-fetching, like RegularHangsSection)
+2. `CityPulseSection.tsx` — remove `case "browse"` and dead `case "experiences"`
+3. `section-builders.ts` — remove experiences section builder
+
+### Testing Strategy
+
+Test pure functions only. No route-level integration tests.
+- `scoring.test.ts` — 8-10 cases: weather match scoring, event caps, quality gate, recency math
+- `callouts.test.ts` — cascade correctness, per-category static fallback coverage, max 2 callouts
+- Category coverage snapshot: every `place_type` maps to exactly one category
+
+### Migration Order (clean swap, no feature flag)
+
+1. Build `lib/places-to-go/` modules + API route (backend only, no UI change)
+2. Build `PlacesToGoSection` + wire into CityPulseShell as direct render
+3. Remove `browse` case from CityPulseSection, remove old rendering
+4. Delete BrowseSection.tsx, BrowseGridTile.tsx, ExperiencesSection.tsx, experiences route
+5. DB cleanup last: remove browse/experiences rows from `portal_sections`
+
+### Error Handling
+
+- API failure: hide section entirely (`return null`). Below-fold enhancement, absence not noticeable.
+- Loading: show `PlacesToGoSkeleton` (themed, matches other feed skeletons)
+- useQuery config: `staleTime: 5min, gcTime: 10min, refetchOnWindowFocus: true, retry: 1`
 
 ## Data Coverage Reality (as of 2026-03-30)
 
