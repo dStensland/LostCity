@@ -137,7 +137,6 @@ function HappeningViewInner({
 
   const handleContentChange = useCallback((content: HappeningContent) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
-    // Reset filters when switching content type
     for (const key of FIND_FILTER_RESET_KEYS) {
       params.delete(key);
     }
@@ -147,7 +146,6 @@ function HappeningViewInner({
     } else {
       params.set("content", content);
     }
-    // Clear display mode when switching content types
     params.delete("display");
     startTransition(() => {
       router.push(`/${portalSlug}?${params.toString()}`);
