@@ -240,6 +240,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         league: team.league,
         accentColor: team.accentColor,
         logoUrl: team.logoUrl,
+        heroUrl: team.heroUrl,
         nextGame,
         upcoming,
         totalUpcoming: Math.max(0, eventsForTeam.length - 1),

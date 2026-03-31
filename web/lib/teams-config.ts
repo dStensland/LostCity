@@ -17,6 +17,7 @@ export type TeamConfig = {
   city: string;
   accentColor: string;
   logoUrl: string;
+  heroUrl?: string;
   sourceSlugs: string[];
   tags: string[];
   venueSlug?: string;
@@ -45,6 +46,7 @@ export type TeamSchedule = {
   league: string;
   accentColor: string;
   logoUrl: string;
+  heroUrl?: string;
   nextGame: GameEvent | null;
   upcoming: GameEvent[];
   totalUpcoming: number;
@@ -74,6 +76,7 @@ export const TEAMS: TeamConfig[] = [
     city: "atlanta",
     accentColor: "#E03A3E",
     logoUrl: "/teams/hawks.png",
+    heroUrl: "/teams/hero/hawks-hero.jpg",
     sourceSlugs: ["atlanta-hawks"],
     tags: ["hawks", "atlanta-hawks"],
     venueSlug: "state-farm-arena",
@@ -90,6 +93,7 @@ export const TEAMS: TeamConfig[] = [
     city: "atlanta",
     accentColor: "#80000B",
     logoUrl: "/teams/atlanta-united.png",
+    heroUrl: "/teams/hero/united-hero.jpg",
     sourceSlugs: ["atlanta-united-fc"],
     tags: ["atlanta-united", "atlutd"],
     venueSlug: "mercedes-benz-stadium",
@@ -106,6 +110,7 @@ export const TEAMS: TeamConfig[] = [
     city: "atlanta",
     accentColor: "#CE1141",
     logoUrl: "/teams/braves.png",
+    heroUrl: "/teams/hero/braves-hero.jpg",
     sourceSlugs: ["truist-park"],
     tags: ["braves", "atlanta-braves"],
     venueSlug: "truist-park",
@@ -154,6 +159,7 @@ export const TEAMS: TeamConfig[] = [
     city: "atlanta",
     accentColor: "#FF6B35",
     logoUrl: "/teams/vibe.png",
+    heroUrl: "/teams/hero/vibe-hero.jpg",
     sourceSlugs: ["atlanta-vibe"],
     tags: ["atlanta-vibe", "volleyball"],
     defaultEnabled: true,
@@ -170,6 +176,7 @@ export const TEAMS: TeamConfig[] = [
     city: "atlanta",
     accentColor: "#003DA5",
     logoUrl: "/teams/gladiators.png",
+    heroUrl: "/teams/hero/gladiators-hero.jpg",
     sourceSlugs: ["atlanta-gladiators"],
     tags: ["gladiators", "atlanta-gladiators"],
     venueSlug: "gas-south-arena",
@@ -186,6 +193,7 @@ export const TEAMS: TeamConfig[] = [
     city: "atlanta",
     accentColor: "#F37021",
     logoUrl: "/teams/stripers.png",
+    heroUrl: "/teams/hero/stripers-hero.jpg",
     sourceSlugs: ["gwinnett-stripers"],
     tags: ["stripers", "gwinnett-stripers"],
     venueSlug: "coolray-field",
@@ -232,6 +240,7 @@ export const TEAMS: TeamConfig[] = [
     city: "atlanta",
     accentColor: "#F9A825",
     logoUrl: "/teams/swarm.png",
+    heroUrl: "/teams/hero/swarm-hero.jpg",
     sourceSlugs: ["georgia-swarm"],
     tags: ["swarm", "georgia-swarm"],
     defaultEnabled: true,
@@ -248,6 +257,7 @@ export const TEAMS: TeamConfig[] = [
     city: "atlanta",
     accentColor: "#B3A369",
     logoUrl: "/teams/georgia-tech.png",
+    heroUrl: "/teams/hero/georgia-tech-hero.jpg",
     sourceSlugs: ["georgia-tech-athletics"],
     tags: ["georgia-tech", "yellow-jackets"],
     defaultEnabled: true,
@@ -263,6 +273,7 @@ export const TEAMS: TeamConfig[] = [
     city: "atlanta",
     accentColor: "#0039A6",
     logoUrl: "/teams/georgia-state.png",
+    heroUrl: "/teams/hero/georgia-state-hero.jpg",
     sourceSlugs: ["gsu-athletics"],
     tags: ["georgia-state", "panthers"],
     defaultEnabled: true,

@@ -384,7 +384,7 @@ function TeamCard({
   portalSlug: string;
   isDefault: boolean;
 }) {
-  const sportPhoto = SPORT_PHOTOS[team.sport] ?? null;
+  const sportPhoto = team.heroUrl ?? SPORT_PHOTOS[team.sport] ?? null;
   const today = getLocalDateString(new Date());
   const isTonight = team.nextGame?.startDate === today;
   const upcoming = team.upcoming.slice(0, MAX_UPCOMING);
