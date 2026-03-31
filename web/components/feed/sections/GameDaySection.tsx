@@ -381,7 +381,7 @@ function TeamCard({
 
   return (
     <div
-      className="flex-shrink-0 w-72 snap-start rounded-card overflow-hidden bg-[var(--night)] hover-lift min-h-[380px]"
+      className="flex-shrink-0 w-72 snap-start rounded-card overflow-hidden bg-[var(--night)] hover-lift"
       style={{
         border: `2px solid ${isTonight ? `${team.accentColor}70` : `${team.accentColor}40`}`,
         boxShadow: isTonight
@@ -409,20 +409,20 @@ function TeamCard({
           )}
 
           {/* Gradient fade into card body */}
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[var(--night)] via-[var(--night)]/30 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[var(--night)] via-[var(--night)]/20 to-transparent pointer-events-none" />
         </div>
 
         {/* Team logo — outside photo overflow-hidden, overlaps into card body */}
-        <div className="absolute -bottom-10 left-3 z-20 w-20 h-20 flex items-center justify-center pointer-events-none" style={{ filter: `drop-shadow(0 2px 10px rgba(0,0,0,0.8))` }}>
+        <div className="absolute -bottom-8 left-3 z-20 w-16 h-16 flex items-center justify-center pointer-events-none" style={{ filter: `drop-shadow(0 2px 10px rgba(0,0,0,0.8))` }}>
           <SmartImage
             src={team.logoUrl}
             alt={team.shortName}
-            width={80}
-            height={80}
-            className="object-contain max-h-20 max-w-20"
+            width={64}
+            height={64}
+            className="object-contain max-h-16 max-w-16"
             fallback={
               <span
-                className="text-4xl font-black"
+                className="text-3xl font-black"
                 style={{ color: team.accentColor, textShadow: `0 2px 12px ${team.accentColor}60` }}
               >
                 {team.shortName.charAt(0)}
@@ -433,10 +433,10 @@ function TeamCard({
       </div>
 
       {/* Card header */}
-      <div className="px-3 pt-12">
+      <div className="px-3 pt-10">
         <div className="flex items-center gap-2">
           <span
-            className="text-xl font-black uppercase tracking-wide truncate flex-1 min-w-0"
+            className="text-xl font-black uppercase tracking-[0.08em] truncate flex-1 min-w-0"
             style={{ color: team.accentColor, textShadow: `0 0 20px ${team.accentColor}40` }}
           >
             {team.shortName}
@@ -501,7 +501,7 @@ function TeamCard({
 
       {/* Divider — only when upcoming list is non-empty */}
       {upcoming.length > 0 && (
-        <div className="mx-3 border-t border-[var(--twilight)]/60" />
+        <div className="mx-3 my-1 border-t border-[var(--twilight)]/60" />
       )}
 
       {/* Upcoming rows */}
