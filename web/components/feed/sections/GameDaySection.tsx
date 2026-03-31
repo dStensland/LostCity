@@ -381,14 +381,12 @@ function TeamCard({
 
   return (
     <div
-      className={`flex-shrink-0 w-72 snap-start rounded-card overflow-hidden bg-[var(--night)] shadow-card-sm hover-lift min-h-[380px] border ${
-        isTonight ? "border-[var(--neon-red)]/40" : ""
-      }`}
+      className="flex-shrink-0 w-72 snap-start rounded-card overflow-hidden bg-[var(--night)] hover-lift min-h-[380px]"
       style={{
-        borderColor: isTonight ? undefined : `${team.accentColor}35`,
+        border: `2px solid ${isTonight ? `${team.accentColor}70` : `${team.accentColor}40`}`,
         boxShadow: isTonight
-          ? `0 0 0 1px ${team.accentColor}40, 0 4px 24px ${team.accentColor}20, inset 0 0 30px ${team.accentColor}08`
-          : `0 4px 16px ${team.accentColor}10, inset 0 0 30px ${team.accentColor}06`,
+          ? `0 0 0 1px ${team.accentColor}50, 0 4px 28px ${team.accentColor}25, inset 0 0 40px ${team.accentColor}15`
+          : `0 4px 20px ${team.accentColor}15, inset 0 0 40px ${team.accentColor}10`,
       }}
     >
       {/* Photo strip + logo wrapper */}
@@ -438,8 +436,8 @@ function TeamCard({
       <div className="px-3 pt-10">
         <div className="flex items-center gap-2">
           <span
-            className="text-lg font-bold truncate flex-1 min-w-0"
-            style={{ color: team.accentColor }}
+            className="text-xl font-black uppercase tracking-wide truncate flex-1 min-w-0"
+            style={{ color: team.accentColor, textShadow: `0 0 20px ${team.accentColor}40` }}
           >
             {team.shortName}
           </span>
