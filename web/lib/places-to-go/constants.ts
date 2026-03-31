@@ -132,7 +132,9 @@ export function getCategoryKeyForPlaceType(placeType: string): string | null {
 /**
  * Builds the "see all" URL for a category.
  * If seeAllTab is set, routes to the tab on the Find view.
- * Otherwise, routes to the Find view filtered by the category's first place type.
+ * Otherwise, routes to the Find view with all of the category's place types as
+ * a comma-separated venue_type param. The Find view's parseDestinationsQueryState
+ * will auto-infer the correct tab from the venue types.
  */
 export function buildSeeAllHref(
   portalSlug: string,
@@ -141,7 +143,7 @@ export function buildSeeAllHref(
   if (category.seeAllTab) {
     return `/${portalSlug}?view=places&tab=${category.seeAllTab}`;
   }
-  return `/${portalSlug}?view=places&venue_type=${category.placeTypes[0]}`;
+  return `/${portalSlug}?view=places&venue_type=${category.placeTypes.join(",")}`;
 }
 
 /**

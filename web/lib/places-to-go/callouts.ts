@@ -13,6 +13,10 @@ function capitalize(s: string): string {
     .join("-");
 }
 
+function pluralize(n: number, singular: string, plural?: string): string {
+  return n === 1 ? singular : (plural ?? singular + "s");
+}
+
 function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) : s;
 }
@@ -55,7 +59,7 @@ const CALLOUT_CONFIG: Record<string, CategoryCalloutConfig> = {
     activity: [
       {
         check: (ctx) => ctx.eventsThisWeek > 0,
-        emit: (ctx) => `${ctx.eventsThisWeek} events this week`,
+        emit: (ctx) => `${ctx.eventsThisWeek} ${pluralize(ctx.eventsThisWeek, "event")} this week`,
       },
     ],
     static: [
@@ -102,7 +106,7 @@ const CALLOUT_CONFIG: Record<string, CategoryCalloutConfig> = {
     activity: [
       {
         check: (ctx) => ctx.eventsThisWeek > 0,
-        emit: (ctx) => `${ctx.eventsThisWeek} exhibitions now`,
+        emit: (ctx) => `${ctx.eventsThisWeek} ${pluralize(ctx.eventsThisWeek, "exhibition")} now`,
       },
     ],
     static: [
@@ -127,7 +131,7 @@ const CALLOUT_CONFIG: Record<string, CategoryCalloutConfig> = {
     activity: [
       {
         check: (ctx) => ctx.eventsThisWeek > 0,
-        emit: (ctx) => `${ctx.eventsThisWeek} shows current`,
+        emit: (ctx) => `${ctx.eventsThisWeek} ${pluralize(ctx.eventsThisWeek, "show")} current`,
       },
     ],
     static: [
@@ -152,7 +156,7 @@ const CALLOUT_CONFIG: Record<string, CategoryCalloutConfig> = {
     activity: [
       {
         check: (ctx) => ctx.eventsThisWeek > 0,
-        emit: (ctx) => `${ctx.eventsThisWeek} shows this week`,
+        emit: (ctx) => `${ctx.eventsThisWeek} ${pluralize(ctx.eventsThisWeek, "show")} this week`,
       },
     ],
     static: [],
@@ -168,7 +172,7 @@ const CALLOUT_CONFIG: Record<string, CategoryCalloutConfig> = {
     activity: [
       {
         check: (ctx) => ctx.eventsThisWeek > 0,
-        emit: (ctx) => `${ctx.eventsThisWeek} acts this week`,
+        emit: (ctx) => `${ctx.eventsThisWeek} ${pluralize(ctx.eventsThisWeek, "act")} this week`,
       },
     ],
     static: [
@@ -241,7 +245,7 @@ const CALLOUT_CONFIG: Record<string, CategoryCalloutConfig> = {
     activity: [
       {
         check: (ctx) => ctx.eventsToday > 0,
-        emit: (ctx) => `${ctx.eventsToday} events tonight`,
+        emit: (ctx) => `${ctx.eventsToday} ${pluralize(ctx.eventsToday, "event")} tonight`,
       },
     ],
     static: [
@@ -267,7 +271,12 @@ const CALLOUT_CONFIG: Record<string, CategoryCalloutConfig> = {
         emit: () => "Market today",
       },
     ],
-    activity: [],
+    activity: [
+      {
+        check: (ctx) => ctx.eventsThisWeek > 0,
+        emit: (ctx) => `${ctx.eventsThisWeek} ${pluralize(ctx.eventsThisWeek, "event")} this week`,
+      },
+    ],
     static: [
       {
         check: (ctx) => !!ctx.indoorOutdoor,
@@ -281,7 +290,7 @@ const CALLOUT_CONFIG: Record<string, CategoryCalloutConfig> = {
     activity: [
       {
         check: (ctx) => ctx.eventsThisWeek > 0,
-        emit: (ctx) => `${ctx.eventsThisWeek} programs this week`,
+        emit: (ctx) => `${ctx.eventsThisWeek} ${pluralize(ctx.eventsThisWeek, "program")} this week`,
       },
     ],
     static: [
@@ -301,7 +310,7 @@ const CALLOUT_CONFIG: Record<string, CategoryCalloutConfig> = {
     activity: [
       {
         check: (ctx) => ctx.eventsThisWeek > 0,
-        emit: (ctx) => `${ctx.eventsThisWeek} events this week`,
+        emit: (ctx) => `${ctx.eventsThisWeek} ${pluralize(ctx.eventsThisWeek, "event")} this week`,
       },
     ],
     static: [
@@ -321,7 +330,7 @@ const CALLOUT_CONFIG: Record<string, CategoryCalloutConfig> = {
     activity: [
       {
         check: (ctx) => ctx.eventsThisWeek > 0,
-        emit: (ctx) => `${ctx.eventsThisWeek} tours this week`,
+        emit: (ctx) => `${ctx.eventsThisWeek} ${pluralize(ctx.eventsThisWeek, "tour")} this week`,
       },
     ],
     static: [
@@ -413,7 +422,7 @@ const SUMMARY_CONFIG: Record<string, SummaryRule[]> = {
   museums: [
     {
       check: (s) => Number(s.exhibitionsCount) > 0,
-      emit: (s) => `${s.exhibitionsCount} exhibitions showing`,
+      emit: (s) => `${s.exhibitionsCount} ${pluralize(Number(s.exhibitionsCount), "exhibition")} showing`,
     },
     {
       check: () => true,
@@ -424,11 +433,11 @@ const SUMMARY_CONFIG: Record<string, SummaryRule[]> = {
   galleries_studios: [
     {
       check: (s) => Number(s.openingsThisWeek) > 0,
-      emit: (s) => `${s.openingsThisWeek} opening receptions this week`,
+      emit: (s) => `${s.openingsThisWeek} opening ${pluralize(Number(s.openingsThisWeek), "reception")} this week`,
     },
     {
       check: (s) => Number(s.showsCurrent) > 0,
-      emit: (s) => `${s.showsCurrent} shows current`,
+      emit: (s) => `${s.showsCurrent} ${pluralize(Number(s.showsCurrent), "show")} current`,
     },
     {
       check: () => true,
@@ -439,11 +448,11 @@ const SUMMARY_CONFIG: Record<string, SummaryRule[]> = {
   theaters_stage: [
     {
       check: (s) => Number(s.showsTonight) > 0,
-      emit: (s) => `${s.showsTonight} shows tonight`,
+      emit: (s) => `${s.showsTonight} ${pluralize(Number(s.showsTonight), "show")} tonight`,
     },
     {
       check: (s) => Number(s.showsThisWeek) > 0,
-      emit: (s) => `${s.showsThisWeek} shows this week`,
+      emit: (s) => `${s.showsThisWeek} ${pluralize(Number(s.showsThisWeek), "show")} this week`,
     },
     {
       check: () => true,
@@ -454,11 +463,11 @@ const SUMMARY_CONFIG: Record<string, SummaryRule[]> = {
   music_venues: [
     {
       check: (s) => Number(s.actsTonight) > 0,
-      emit: (s) => `${s.actsTonight} acts tonight`,
+      emit: (s) => `${s.actsTonight} ${pluralize(Number(s.actsTonight), "act")} tonight`,
     },
     {
       check: (s) => Number(s.actsThisWeek) > 0,
-      emit: (s) => `${s.actsThisWeek} acts this week`,
+      emit: (s) => `${s.actsThisWeek} ${pluralize(Number(s.actsThisWeek), "act")} this week`,
     },
     {
       check: () => true,
@@ -484,11 +493,11 @@ const SUMMARY_CONFIG: Record<string, SummaryRule[]> = {
   bars_nightlife: [
     {
       check: (s) => Number(s.happyHourNow) > 0,
-      emit: (s) => `${s.happyHourNow} happy hours active now`,
+      emit: (s) => `${s.happyHourNow} ${pluralize(Number(s.happyHourNow), "happy hour")} active now`,
     },
     {
       check: (s) => Number(s.eventsTonight) > 0,
-      emit: (s) => `${s.eventsTonight} events tonight`,
+      emit: (s) => `${s.eventsTonight} ${pluralize(Number(s.eventsTonight), "event")} tonight`,
     },
     {
       check: () => true,
@@ -499,7 +508,7 @@ const SUMMARY_CONFIG: Record<string, SummaryRule[]> = {
   markets_local: [
     {
       check: (s) => Number(s.marketsThisWeekend) > 0,
-      emit: (s) => `${s.marketsThisWeekend} markets this weekend`,
+      emit: (s) => `${s.marketsThisWeekend} ${pluralize(Number(s.marketsThisWeekend), "market")} this weekend`,
     },
     {
       check: () => true,
@@ -510,7 +519,7 @@ const SUMMARY_CONFIG: Record<string, SummaryRule[]> = {
   libraries_learning: [
     {
       check: (s) => Number(s.programsThisWeek) > 0,
-      emit: (s) => `${s.programsThisWeek} free programs this week`,
+      emit: (s) => `${s.programsThisWeek} free ${pluralize(Number(s.programsThisWeek), "program")} this week`,
     },
     {
       check: () => true,
@@ -521,7 +530,7 @@ const SUMMARY_CONFIG: Record<string, SummaryRule[]> = {
   fun_games: [
     {
       check: (s) => Number(s.eventsThisWeek) > 0,
-      emit: (s) => `${s.eventsThisWeek} events this week`,
+      emit: (s) => `${s.eventsThisWeek} ${pluralize(Number(s.eventsThisWeek), "event")} this week`,
     },
     {
       check: () => true,
@@ -532,7 +541,7 @@ const SUMMARY_CONFIG: Record<string, SummaryRule[]> = {
   historic_sites: [
     {
       check: (s) => Number(s.toursThisWeek) > 0,
-      emit: (s) => `${s.toursThisWeek} tours this week`,
+      emit: (s) => `${s.toursThisWeek} ${pluralize(Number(s.toursThisWeek), "tour")} this week`,
     },
     {
       check: () => true,
