@@ -63,6 +63,19 @@ function formatShortDate(dateStr: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+/** "2026-04-01" → "Today" / "Tomorrow" / "Wed" / "Apr 15" */
+function formatRelativeDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const gameDate = new Date(year, month - 1, day);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.round((gameDate.getTime() - today.getTime()) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  if (diff > 0 && diff <= 6) return gameDate.toLocaleDateString("en-US", { weekday: "short" });
+  return formatShortDate(dateStr);
+}
+
 /** Extract opponent name from full game title. "Atlanta Braves vs. Athletics at Truist Park" → "vs. Athletics" */
 function formatOpponent(title: string, shortName: string): string {
   const vsMatch = title.match(/\s+vs\.?\s+/i);
@@ -471,28 +484,33 @@ function TeamCard({
             <p className="text-sm font-semibold text-[var(--cream)] truncate">
               {formatOpponent(team.nextGame.title, team.shortName)}
             </p>
-            {/* Time chips */}
-            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-              {isTonight && (
-                <span className="px-1.5 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--neon-red)]/15 text-[var(--neon-red)]">
-                  Tonight
-                </span>
-              )}
+            {/* Time — dominant element */}
+            <div className="flex items-baseline gap-2 mt-1">
               {team.nextGame.startTime && (
-                <span className="px-1.5 py-0.5 rounded bg-[var(--gold)]/10 text-2xs font-mono tabular-nums text-[var(--gold)]/80">
+                <span
+                  className="text-lg font-black tabular-nums leading-none font-mono"
+                  style={{ color: isTonight ? 'var(--gold)' : 'var(--soft)' }}
+                >
                   {formatTime(team.nextGame.startTime)}
                 </span>
               )}
-              {!isTonight && team.nextGame.startDate && (
-                <span className="px-1.5 py-0.5 rounded bg-[var(--gold)]/10 text-2xs font-mono tabular-nums text-[var(--gold)]/80">
-                  {formatShortDate(team.nextGame.startDate)}
-                </span>
-              )}
-              {team.nextGame.isFree && (
-                <span className="px-1.5 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--neon-cyan)]/15 text-[var(--neon-cyan)]">
-                  Free
-                </span>
-              )}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {isTonight && (
+                  <span className="px-1.5 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--neon-red)]/15 text-[var(--neon-red)]">
+                    Tonight
+                  </span>
+                )}
+                {!isTonight && team.nextGame.startDate && (
+                  <span className="text-xs text-[var(--muted)] font-mono tabular-nums">
+                    {formatRelativeDate(team.nextGame.startDate)}
+                  </span>
+                )}
+                {team.nextGame.isFree && (
+                  <span className="px-1.5 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--neon-cyan)]/15 text-[var(--neon-cyan)]">
+                    Free
+                  </span>
+                )}
+              </div>
             </div>
             {/* Venue */}
             {team.nextGame.venueName && (
@@ -523,8 +541,8 @@ function TeamCard({
                 {formatOpponent(game.title, team.shortName)}
               </span>
               <span className="text-xs text-[var(--muted)] shrink-0 font-mono tabular-nums">
-                {formatShortDate(game.startDate)}
-                {game.startTime && ` ${formatTime(game.startTime)}`}
+                {formatRelativeDate(game.startDate)}
+                {game.startTime && ` · ${formatTime(game.startTime)}`}
               </span>
             </Link>
           ))}
