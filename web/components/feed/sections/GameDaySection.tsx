@@ -381,12 +381,14 @@ function TeamCard({
 
   return (
     <div
-      className="flex-shrink-0 w-72 snap-start rounded-card overflow-hidden bg-[var(--night)] hover-lift"
+      className="flex-shrink-0 w-72 snap-start rounded-card overflow-hidden hover-lift"
       style={{
+        background: `linear-gradient(145deg, ${team.accentColor}12 0%, var(--night) 40%, ${team.accentColor}08 100%)`,
         border: `3px solid ${isTonight ? `${team.accentColor}80` : `${team.accentColor}50`}`,
         boxShadow: isTonight
-          ? `0 0 0 1px ${team.accentColor}60, 0 4px 32px ${team.accentColor}30, inset 0 0 50px ${team.accentColor}20`
-          : `0 4px 24px ${team.accentColor}20, inset 0 0 50px ${team.accentColor}15`,
+          ? `0 0 0 1px ${team.accentColor}60, 0 8px 32px ${team.accentColor}30, 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 ${team.accentColor}20, inset 0 0 60px ${team.accentColor}18`
+          : `0 8px 28px ${team.accentColor}18, 0 2px 4px rgba(0,0,0,0.3), inset 0 1px 0 ${team.accentColor}15, inset 0 0 60px ${team.accentColor}12`,
+        backdropFilter: 'blur(8px)',
       }}
     >
       {/* Photo strip + logo wrapper */}
@@ -408,8 +410,11 @@ function TeamCard({
             <div className="absolute inset-0" style={{ background: accentGradient }} />
           )}
 
+          {/* Glass highlight — top edge shine */}
+          <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-white/[0.08] to-transparent pointer-events-none" />
+
           {/* Gradient fade into card body */}
-          <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[var(--night)] via-[var(--night)]/20 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 h-12 pointer-events-none" style={{ background: `linear-gradient(to top, var(--night) 0%, ${team.accentColor}10 60%, transparent 100%)` }} />
         </div>
 
         {/* Team logo — outside photo overflow-hidden, overlaps into card body */}
