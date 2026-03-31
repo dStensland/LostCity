@@ -388,27 +388,30 @@ function TeamCard({
       }`}
       style={isTonight ? { boxShadow: `0 0 0 1px ${team.accentColor}40, 0 4px 20px ${team.accentColor}15` } : undefined}
     >
-      {/* Photo strip */}
-      <div className="relative h-36 overflow-hidden">
-        {sportPhoto ? (
-          <SmartImage
-            src={sportPhoto}
-            alt=""
-            fill
-            sizes="288px"
-            className="object-cover"
-            fallback={
-              <div className="absolute inset-0" style={{ background: accentGradient }} />
-            }
-          />
-        ) : (
-          <div className="absolute inset-0" style={{ background: accentGradient }} />
-        )}
+      {/* Photo strip + logo wrapper */}
+      <div className="relative">
+        {/* Photo — clipped */}
+        <div className="relative h-36 overflow-hidden">
+          {sportPhoto ? (
+            <SmartImage
+              src={sportPhoto}
+              alt=""
+              fill
+              sizes="288px"
+              className="object-cover"
+              fallback={
+                <div className="absolute inset-0" style={{ background: accentGradient }} />
+              }
+            />
+          ) : (
+            <div className="absolute inset-0" style={{ background: accentGradient }} />
+          )}
 
-        {/* Gradient fade into card body */}
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[var(--night)] via-[var(--night)]/30 to-transparent pointer-events-none" />
+          {/* Gradient fade into card body */}
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[var(--night)] via-[var(--night)]/30 to-transparent pointer-events-none" />
+        </div>
 
-        {/* Team logo — anchored at bottom of photo, translate-y-1/2 to break boundary */}
+        {/* Team logo — outside overflow-hidden, translate-y-1/2 breaks boundary */}
         <div className="absolute bottom-0 left-3 z-20 w-16 h-16 translate-y-1/2 flex items-center justify-center pointer-events-none" style={{ filter: `drop-shadow(0 2px 8px rgba(0,0,0,0.8))` }}>
           <SmartImage
             src={team.logoUrl}
