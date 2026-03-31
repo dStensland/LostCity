@@ -151,8 +151,10 @@ export function buildSeeAllHref(
  * Lowercased for case-insensitive prefix matching.
  */
 export const CHAIN_VENUE_PREFIXES: readonly string[] = [
+  // Cinema chains
   "amc ",
   "regal ",
+  // Fitness chains
   "planet fitness",
   "la fitness",
   "orangetheory",
@@ -160,4 +162,14 @@ export const CHAIN_VENUE_PREFIXES: readonly string[] = [
   "equinox ",
   "crunch ",
   "anytime fitness",
+  // Paint-and-sip franchise chains — high event volume floods gallery rankings
+  "painting with a twist",
+  "paint nite",
+  "muse paintbar",
+  "pinot's palette",
+  "board & brush",
+  "wine & design",
+  "upaint",
+  "painting it forward",
+  "sip and stroke",
 ];
