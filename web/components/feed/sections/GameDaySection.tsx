@@ -431,13 +431,13 @@ function TeamCard({
         </div>
 
         {/* Team logo — outside photo overflow-hidden, overlaps into card body */}
-        <div className="absolute -bottom-10 left-3 z-20 w-24 h-24 flex items-center justify-start pointer-events-none" style={{ filter: `drop-shadow(0 3px 12px rgba(0,0,0,0.9)) drop-shadow(0 0 20px ${team.accentColor}40)` }}>
+        <div className="absolute -bottom-10 left-3 z-20 w-32 h-24 flex items-center justify-start pointer-events-none" style={{ filter: `drop-shadow(0 3px 12px rgba(0,0,0,0.9)) drop-shadow(0 0 20px ${team.accentColor}40)` }}>
           <SmartImage
             src={team.logoUrl}
             alt={team.shortName}
             width={96}
             height={96}
-            className="object-contain max-h-24 max-w-24"
+            className="object-contain max-h-24 max-w-32"
             fallback={
               <span
                 className="text-5xl font-black"
