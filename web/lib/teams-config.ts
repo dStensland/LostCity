@@ -421,8 +421,8 @@ export const SPORT_PHOTOS: Record<string, string> = {
   hockey: "/sports/hockey.jpg",
   volleyball: "/sports/volleyball.jpg",
   lacrosse: "/sports/lacrosse.jpg",
-  multi: "/sports/multi.jpg",
-  ultimate: "/sports/multi.jpg",
+  multi: "/sports/stadium.jpg",
+  ultimate: "/sports/stadium.jpg",
 };
 
 /** Readable sport labels for display */
