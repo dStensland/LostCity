@@ -53,6 +53,11 @@ export interface PlaceContext {
   weatherMatchIndoor: boolean;
   weatherMatchOutdoor: boolean;
 
+  // Contextual fit flags (used by scoring)
+  weatherMatch: boolean;
+  timeOfDayMatch: boolean;
+  seasonMatch: boolean;
+
   // Activity counts
   eventsToday: number;
   eventsThisWeek: number;
@@ -75,6 +80,7 @@ export interface PlaceContext {
   shortDescription: string | null;
   libraryPass: boolean | null;
   isNew: boolean;
+  hasActiveSpecial: boolean;
   specialTitle: string | null;
   specialTimeEnd: string | null;
   indoorOutdoor: "indoor" | "outdoor" | "both" | null;
