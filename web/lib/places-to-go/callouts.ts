@@ -17,9 +17,10 @@ function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) : s;
 }
 
-/** Split a comma-separated cuisine string and return the first item. */
-function firstCuisine(cuisine: string | null): string | null {
+/** Return the first cuisine from an array or comma-separated string. */
+function firstCuisine(cuisine: string[] | string | null): string | null {
   if (!cuisine) return null;
+  if (Array.isArray(cuisine)) return cuisine[0] ?? null;
   const parts = cuisine.split(",").map((s) => s.trim()).filter(Boolean);
   return parts[0] ?? null;
 }
