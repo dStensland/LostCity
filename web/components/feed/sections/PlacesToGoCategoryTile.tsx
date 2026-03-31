@@ -2,8 +2,37 @@
 
 import { memo } from "react";
 import Link from "next/link";
+import {
+  Tree,
+  Mountains,
+  Bank,
+  PaintBrush,
+  MaskHappy,
+  MusicNotes,
+  ForkKnife,
+  Martini,
+  Storefront,
+  Books,
+  GameController,
+  Compass,
+} from "@phosphor-icons/react";
 import { PlacesToGoCard } from "./PlacesToGoCard";
 import type { PlacesToGoCategory } from "@/lib/places-to-go/types";
+
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  parks_gardens: Tree,
+  trails_nature: Mountains,
+  museums: Bank,
+  galleries_studios: PaintBrush,
+  theaters_stage: MaskHappy,
+  music_venues: MusicNotes,
+  restaurants: ForkKnife,
+  bars_nightlife: Martini,
+  markets_local: Storefront,
+  libraries_learning: Books,
+  fun_games: GameController,
+  historic_sites: Compass,
+};
 
 interface PlacesToGoCategoryTileProps {
   category: PlacesToGoCategory;
@@ -17,6 +46,7 @@ export const PlacesToGoCategoryTile = memo(function PlacesToGoCategoryTile({
   onToggle,
 }: PlacesToGoCategoryTileProps) {
   const accent = category.accent_color;
+  const IconComponent = CATEGORY_ICONS[category.key] ?? Compass;
 
   return (
     <div
@@ -37,13 +67,15 @@ export const PlacesToGoCategoryTile = memo(function PlacesToGoCategoryTile({
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-[var(--cream)]">
+            <div className="flex items-center gap-1.5">
+              <IconComponent
+                weight="duotone"
+                className="w-4 h-4 flex-shrink-0"
+                style={{ color: accent }}
+              />
+              <span className="text-sm font-semibold leading-tight" style={{ color: accent }}>
                 {category.label}
               </span>
-              {category.has_activity_today && (
-                <span className="w-2 h-2 rounded-full bg-[var(--neon-green)] animate-pulse flex-shrink-0" />
-              )}
             </div>
             <p className="text-xs text-[var(--soft)] mt-0.5 line-clamp-2">
               {category.summary}
