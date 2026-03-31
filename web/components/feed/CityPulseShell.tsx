@@ -83,6 +83,10 @@ const YonderDestinationNodeQuestsSection = dynamic(
   () => import("./sections/YonderDestinationNodeQuestsSection"),
   { ssr: false }
 );
+const PlacesToGoSection = dynamic<{ portalSlug: string }>(
+  () => import("./sections/PlacesToGoSection").then((m) => ({ default: m.PlacesToGoSection })),
+  { ssr: false },
+);
 
 /** Section types that LineupSection absorbs */
 const TIMELINE_SECTION_TYPES = new Set<CityPulseSectionType>([
@@ -564,31 +568,15 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         </div>
       )}
 
-      {/* Browse — Places to Go + Things to Do (always last) */}
-      {!hiddenBlockSet.has("browse") && (
-        <div
-          id="city-pulse-browse"
-          data-feed-anchor="true"
-          data-index-label="Browse"
-          data-block-id="browse"
-          className="scroll-mt-28"
-        >
-          {orderedSections.map((section) => (
-            <div key={section.id} className="mt-8">
-              <div className="h-px bg-[var(--twilight)]" />
-              <div className="pt-6">
-                <LazySection minHeight={SECTION_HEIGHT_ESTIMATES[section.type] || 200}>
-                  <CityPulseSection
-                    section={section}
-                    portalSlug={portalSlug}
-                    personalization={personalization}
-                  />
-                </LazySection>
-              </div>
-            </div>
-          ))}
+      {/* Places to Go (always last) */}
+      <div id="city-pulse-places-to-go" className="scroll-mt-28 mt-8">
+        <div className="h-px bg-[var(--twilight)]" />
+        <div className="pt-6">
+          <LazySection minHeight={400}>
+            <PlacesToGoSection portalSlug={portalSlug} />
+          </LazySection>
         </div>
-      )}
+      </div>
 
       {/* Admin: Feed Time Machine */}
       {showTimeMachine && (
