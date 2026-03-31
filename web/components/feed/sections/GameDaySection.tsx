@@ -413,16 +413,16 @@ function TeamCard({
         </div>
 
         {/* Team logo — outside photo overflow-hidden, overlaps into card body */}
-        <div className="absolute -bottom-8 left-3 z-20 w-16 h-16 flex items-center justify-center pointer-events-none" style={{ filter: `drop-shadow(0 2px 8px rgba(0,0,0,0.8))` }}>
+        <div className="absolute -bottom-10 left-3 z-20 w-20 h-20 flex items-center justify-center pointer-events-none" style={{ filter: `drop-shadow(0 2px 10px rgba(0,0,0,0.8))` }}>
           <SmartImage
             src={team.logoUrl}
             alt={team.shortName}
-            width={64}
-            height={64}
-            className="object-contain max-h-16 max-w-16"
+            width={80}
+            height={80}
+            className="object-contain max-h-20 max-w-20"
             fallback={
               <span
-                className="text-3xl font-black"
+                className="text-4xl font-black"
                 style={{ color: team.accentColor, textShadow: `0 2px 12px ${team.accentColor}60` }}
               >
                 {team.shortName.charAt(0)}
@@ -432,8 +432,8 @@ function TeamCard({
         </div>
       </div>
 
-      {/* Card header — pt-10 accommodates logo overlap */}
-      <div className="px-3 pt-10">
+      {/* Card header */}
+      <div className="px-3 pt-12">
         <div className="flex items-center gap-2">
           <span
             className="text-xl font-black uppercase tracking-wide truncate flex-1 min-w-0"
@@ -457,7 +457,7 @@ function TeamCard({
 
       {/* Next game */}
       {team.nextGame && (
-        <div className="px-3 pb-2 pt-1.5">
+        <div className="px-3 pb-2 pt-1">
           <Link
             href={`/${portalSlug}/events/${team.nextGame.id}`}
             prefetch={false}
