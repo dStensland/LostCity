@@ -413,13 +413,13 @@ function TeamCard({
         </div>
 
         {/* Team logo — outside photo overflow-hidden, overlaps into card body */}
-        <div className="absolute -bottom-12 left-3 z-20 w-24 h-24 flex items-center justify-center pointer-events-none" style={{ filter: `drop-shadow(0 3px 12px rgba(0,0,0,0.9)) drop-shadow(0 0 20px ${team.accentColor}40)` }}>
+        <div className="absolute -bottom-10 left-2 z-20 w-36 h-20 flex items-end justify-start pointer-events-none" style={{ filter: `drop-shadow(0 3px 12px rgba(0,0,0,0.9)) drop-shadow(0 0 20px ${team.accentColor}40)` }}>
           <SmartImage
             src={team.logoUrl}
             alt={team.shortName}
-            width={96}
-            height={96}
-            className="object-contain max-h-24 max-w-24"
+            width={128}
+            height={80}
+            className="object-contain max-h-20 max-w-36"
             fallback={
               <span
                 className="text-5xl font-black"
@@ -433,7 +433,7 @@ function TeamCard({
       </div>
 
       {/* Card header */}
-      <div className="px-3 pt-14">
+      <div className="px-3 pt-12">
         <div className="flex items-center gap-2">
           <span
             className="text-xl font-black uppercase tracking-[0.08em] truncate flex-1 min-w-0"
