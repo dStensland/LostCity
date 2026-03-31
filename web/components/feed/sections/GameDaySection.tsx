@@ -387,45 +387,48 @@ function TeamCard({
       }`}
       style={isTonight ? { boxShadow: `0 0 0 1px ${team.accentColor}40, 0 4px 20px ${team.accentColor}15` } : undefined}
     >
-      {/* Photo strip */}
-      <div className="relative h-36 overflow-hidden">
-        {sportPhoto ? (
-          <SmartImage
-            src={sportPhoto}
-            alt=""
-            fill
-            sizes="288px"
-            className="object-cover"
-            fallback={
-              <div className="absolute inset-0" style={{ background: accentGradient }} />
-            }
-          />
-        ) : (
-          <div className="absolute inset-0" style={{ background: accentGradient }} />
-        )}
+      {/* Photo strip + logo wrapper — relative so logo can overflow the photo */}
+      <div className="relative">
+        {/* Photo — clipped to strip height */}
+        <div className="relative h-36 overflow-hidden">
+          {sportPhoto ? (
+            <SmartImage
+              src={sportPhoto}
+              alt=""
+              fill
+              sizes="288px"
+              className="object-cover"
+              fallback={
+                <div className="absolute inset-0" style={{ background: accentGradient }} />
+              }
+            />
+          ) : (
+            <div className="absolute inset-0" style={{ background: accentGradient }} />
+          )}
 
-        {/* Tonight atmospheric wash */}
-        {isTonight && (
-          <div className="absolute inset-0 bg-gradient-to-b from-[var(--neon-red)]/[0.06] to-transparent pointer-events-none z-[1]" />
-        )}
+          {/* Tonight atmospheric wash */}
+          {isTonight && (
+            <div className="absolute inset-0 bg-gradient-to-b from-[var(--neon-red)]/[0.06] to-transparent pointer-events-none z-[1]" />
+          )}
 
-        {/* Gradient fade into card body */}
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[var(--night)] via-[var(--night)]/50 to-transparent pointer-events-none" />
+          {/* Gradient fade into card body */}
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[var(--night)] via-[var(--night)]/50 to-transparent pointer-events-none" />
 
-        {/* Sport pill — accent colored */}
-        <span
-          className="absolute bottom-2 right-2 z-10 px-2 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider backdrop-blur-sm"
-          style={{
-            backgroundColor: `${team.accentColor}20`,
-            color: team.accentColor,
-            border: `1px solid ${team.accentColor}40`,
-          }}
-        >
-          {sportLabel}
-        </span>
+          {/* Sport pill — accent colored */}
+          <span
+            className="absolute bottom-2 right-2 z-10 px-2 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider backdrop-blur-sm"
+            style={{
+              backgroundColor: `${team.accentColor}20`,
+              color: team.accentColor,
+              border: `1px solid ${team.accentColor}40`,
+            }}
+          >
+            {sportLabel}
+          </span>
+        </div>
 
-        {/* Team logo — oversized, breaking photo boundary */}
-        <div className="absolute -bottom-8 left-3 z-10 w-24 h-24 flex items-center justify-center" style={{ filter: `drop-shadow(0 4px 12px rgba(0,0,0,0.7)) drop-shadow(0 0 24px ${team.accentColor}50)` }}>
+        {/* Team logo — sits outside overflow-hidden, breaks into card body */}
+        <div className="absolute -bottom-8 left-3 z-20 w-24 h-24 flex items-center justify-center pointer-events-none" style={{ filter: `drop-shadow(0 4px 12px rgba(0,0,0,0.7)) drop-shadow(0 0 24px ${team.accentColor}50)` }}>
           <SmartImage
             src={team.logoUrl}
             alt={team.shortName}
