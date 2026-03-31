@@ -411,8 +411,8 @@ function TeamCard({
           <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[var(--night)] via-[var(--night)]/30 to-transparent pointer-events-none" />
         </div>
 
-        {/* Team logo — outside overflow-hidden, translate-y-1/2 breaks boundary */}
-        <div className="absolute bottom-0 left-3 z-20 w-16 h-16 translate-y-1/2 flex items-center justify-center pointer-events-none" style={{ filter: `drop-shadow(0 2px 8px rgba(0,0,0,0.8))` }}>
+        {/* Team logo — outside photo overflow-hidden, overlaps into card body */}
+        <div className="absolute -bottom-8 left-3 z-20 w-16 h-16 flex items-center justify-center pointer-events-none" style={{ filter: `drop-shadow(0 2px 8px rgba(0,0,0,0.8))` }}>
           <SmartImage
             src={team.logoUrl}
             alt={team.shortName}
