@@ -2,22 +2,42 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import { getZineIcon } from "./PlacesToGoIcons";
+import {
+  Tree,
+  Mountains,
+  Bank,
+  PaintBrush,
+  MaskHappy,
+  MusicNotes,
+  ForkKnife,
+  Martini,
+  Storefront,
+  Books,
+  GameController,
+  Compass,
+} from "@phosphor-icons/react";
+import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { PlacesToGoCard } from "./PlacesToGoCard";
 import type { PlacesToGoCategory } from "@/lib/places-to-go/types";
 
-// Alternate rotation directions based on a stable hash of the category key.
-// This gives a "hand-placed" feel without layout-breaking transforms on the tile itself.
-function keyRotationIndex(key: string): number {
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
-  }
-  return hash % 3; // 0, 1, or 2
-}
+const CATEGORY_ICONS: Record<string, PhosphorIcon> = {
+  parks_gardens: Tree,
+  trails_nature: Mountains,
+  museums: Bank,
+  galleries_studios: PaintBrush,
+  theaters_stage: MaskHappy,
+  music_venues: MusicNotes,
+  restaurants: ForkKnife,
+  bars_nightlife: Martini,
+  markets_local: Storefront,
+  libraries_learning: Books,
+  fun_games: GameController,
+  historic_sites: Compass,
+};
 
-const ICON_ROW_ROTATIONS = ["-1.5deg", "1deg", "-0.8deg"] as const;
-const COUNT_ROTATIONS = ["1.2deg", "-0.9deg", "0.7deg"] as const;
+function getCategoryIcon(key: string): PhosphorIcon {
+  return CATEGORY_ICONS[key] ?? Compass;
+}
 
 interface PlacesToGoCategoryTileProps {
   category: PlacesToGoCategory;
@@ -31,19 +51,16 @@ export const PlacesToGoCategoryTile = memo(function PlacesToGoCategoryTile({
   onToggle,
 }: PlacesToGoCategoryTileProps) {
   const accent = category.accent_color;
-  const ZineIcon = getZineIcon(category.key);
-  const rotIndex = keyRotationIndex(category.key);
-  const iconRowRotate = ICON_ROW_ROTATIONS[rotIndex];
-  const countRotate = COUNT_ROTATIONS[rotIndex];
+  const Icon = getCategoryIcon(category.key);
 
   return (
     <div
-      className={`rounded-lg border transition-all ${
+      className={`rounded-lg border-2 transition-all ${
         isExpanded ? "col-span-2 sm:col-span-3 lg:col-span-4" : ""
       }`}
       style={{
         backgroundColor: `color-mix(in srgb, ${accent} 15%, transparent)`,
-        borderColor: `color-mix(in srgb, ${accent} 20%, transparent)`,
+        borderColor: `color-mix(in srgb, ${accent} 25%, transparent)`,
       }}
     >
       {/* Header — always visible, click to toggle */}
@@ -53,42 +70,30 @@ export const PlacesToGoCategoryTile = memo(function PlacesToGoCategoryTile({
         onClick={onToggle}
         aria-expanded={isExpanded}
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            {/* Icon + title row — slightly rotated, hand-placed feel */}
-            <div
-              className="flex items-center gap-1.5"
-              style={{ transform: `rotate(${iconRowRotate})`, transformOrigin: "left center" }}
-            >
-              <ZineIcon
-                className="w-5 h-5 flex-shrink-0"
-                style={{ color: accent }}
-              />
-              <span
-                className="text-xs font-bold uppercase tracking-wider leading-tight"
-                style={{ color: accent }}
-              >
-                {category.label}
-              </span>
-            </div>
-            {/* Summary — italic, like a handwritten annotation */}
-            <p className="text-xs text-[var(--soft)] mt-0.5 line-clamp-2 italic">
-              {category.summary}
-            </p>
-          </div>
-          {/* Count — bigger, bolder, slightly counter-rotated from the title */}
+        {/* Icon + title + count — all on one line */}
+        <div className="flex items-center gap-2">
+          <Icon
+            className="w-7 h-7 flex-shrink-0"
+            style={{ color: accent }}
+            weight="bold"
+          />
           <span
-            className="text-2xl font-bold tabular-nums flex-shrink-0 leading-none"
-            style={{
-              color: accent,
-              transform: `rotate(${countRotate})`,
-              transformOrigin: "center center",
-              display: "inline-block",
-            }}
+            className="flex-1 min-w-0 text-base font-black uppercase tracking-wide leading-tight truncate"
+            style={{ color: accent }}
+          >
+            {category.label}
+          </span>
+          <span
+            className="text-3xl font-black tabular-nums flex-shrink-0 leading-none"
+            style={{ color: accent }}
           >
             {category.count}
           </span>
         </div>
+        {/* Summary below */}
+        <p className="text-xs text-[var(--soft)] mt-1 line-clamp-1">
+          {category.summary}
+        </p>
       </button>
 
       {/* Expanded content */}
