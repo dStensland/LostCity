@@ -43,7 +43,6 @@ import {
   TEAMS,
   GROUP_LABELS,
   SPORT_PHOTOS,
-  SPORT_LABELS,
   type TeamConfig,
   type TeamSchedule,
   type GameDayResponse,
@@ -64,7 +63,7 @@ function formatShortDate(dateStr: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-/** Extract opponent name from full game title. "Atlanta Braves vs. Athletics" → "vs. Athletics" */
+/** Extract opponent name from full game title. "Atlanta Braves vs. Athletics at Truist Park" → "vs. Athletics" */
 function formatOpponent(title: string, shortName: string): string {
   const vsMatch = title.match(/\s+vs\.?\s+/i);
   if (!vsMatch || vsMatch.index === undefined) return title;
@@ -72,7 +71,10 @@ function formatOpponent(title: string, shortName: string): string {
   const after = title.substring(vsMatch.index + vsMatch[0].length).trim();
   const isHomeFirst = before.toLowerCase().includes(shortName.toLowerCase());
   const opponent = isHomeFirst ? after : before;
-  return `vs. ${opponent}`;
+  // Strip venue suffix: "Orlando Magic at Tony's Sports Grill" → "Orlando Magic"
+  const atIdx = opponent.lastIndexOf(" at ");
+  const clean = atIdx > 0 ? opponent.substring(0, atIdx) : opponent;
+  return `vs. ${clean}`;
 }
 
 // ── Component ────────────────────────────────────────────────────────
@@ -370,7 +372,6 @@ function TeamCard({
   isDefault: boolean;
 }) {
   const sportPhoto = SPORT_PHOTOS[team.sport] ?? null;
-  const sportLabel = SPORT_LABELS[team.sport] ?? team.sport;
   const today = getLocalDateString(new Date());
   const isTonight = team.nextGame?.startDate === today;
   const upcoming = team.upcoming.slice(0, MAX_UPCOMING);
@@ -380,65 +381,45 @@ function TeamCard({
 
   return (
     <div
-      className={`flex-shrink-0 w-72 snap-start rounded-card overflow-hidden bg-[var(--night)] shadow-card-sm hover-lift ${
+      className={`flex-shrink-0 w-72 snap-start rounded-card overflow-hidden bg-[var(--night)] shadow-card-sm hover-lift min-h-[380px] ${
         isTonight
           ? "border border-[var(--neon-red)]/30"
           : "border border-[var(--twilight)]/40"
       }`}
       style={isTonight ? { boxShadow: `0 0 0 1px ${team.accentColor}40, 0 4px 20px ${team.accentColor}15` } : undefined}
     >
-      {/* Photo strip + logo wrapper — relative so logo can overflow the photo */}
-      <div className="relative">
-        {/* Photo — clipped to strip height */}
-        <div className="relative h-36 overflow-hidden">
-          {sportPhoto ? (
-            <SmartImage
-              src={sportPhoto}
-              alt=""
-              fill
-              sizes="288px"
-              className="object-cover"
-              fallback={
-                <div className="absolute inset-0" style={{ background: accentGradient }} />
-              }
-            />
-          ) : (
-            <div className="absolute inset-0" style={{ background: accentGradient }} />
-          )}
+      {/* Photo strip */}
+      <div className="relative h-36 overflow-hidden">
+        {sportPhoto ? (
+          <SmartImage
+            src={sportPhoto}
+            alt=""
+            fill
+            sizes="288px"
+            className="object-cover"
+            fallback={
+              <div className="absolute inset-0" style={{ background: accentGradient }} />
+            }
+          />
+        ) : (
+          <div className="absolute inset-0" style={{ background: accentGradient }} />
+        )}
 
-          {/* Tonight atmospheric wash */}
-          {isTonight && (
-            <div className="absolute inset-0 bg-gradient-to-b from-[var(--neon-red)]/[0.06] to-transparent pointer-events-none z-[1]" />
-          )}
+        {/* Gradient fade into card body */}
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[var(--night)] via-[var(--night)]/30 to-transparent pointer-events-none" />
 
-          {/* Gradient fade into card body */}
-          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[var(--night)] via-[var(--night)]/50 to-transparent pointer-events-none" />
-
-          {/* Sport pill — accent colored */}
-          <span
-            className="absolute bottom-2 right-2 z-10 px-2 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wider backdrop-blur-sm"
-            style={{
-              backgroundColor: `${team.accentColor}20`,
-              color: team.accentColor,
-              border: `1px solid ${team.accentColor}40`,
-            }}
-          >
-            {sportLabel}
-          </span>
-        </div>
-
-        {/* Team logo — sits outside overflow-hidden, breaks into card body */}
-        <div className="absolute -bottom-8 left-3 z-20 w-24 h-24 flex items-center justify-center pointer-events-none" style={{ filter: `drop-shadow(0 4px 12px rgba(0,0,0,0.7)) drop-shadow(0 0 24px ${team.accentColor}50)` }}>
+        {/* Team logo — anchored at bottom of photo, translate-y-1/2 to break boundary */}
+        <div className="absolute bottom-0 left-3 z-20 w-16 h-16 translate-y-1/2 flex items-center justify-center pointer-events-none" style={{ filter: `drop-shadow(0 2px 8px rgba(0,0,0,0.8))` }}>
           <SmartImage
             src={team.logoUrl}
             alt={team.shortName}
-            width={96}
-            height={96}
-            className="object-contain max-h-24 max-w-24"
+            width={64}
+            height={64}
+            className="object-contain max-h-16 max-w-16"
             fallback={
               <span
-                className="text-5xl font-black"
-                style={{ color: team.accentColor, textShadow: `0 2px 16px ${team.accentColor}60` }}
+                className="text-3xl font-black"
+                style={{ color: team.accentColor, textShadow: `0 2px 12px ${team.accentColor}60` }}
               >
                 {team.shortName.charAt(0)}
               </span>
@@ -447,9 +428,8 @@ function TeamCard({
         </div>
       </div>
 
-      {/* Card header — spacer for overlapping logo */}
-      <div className="px-3 pt-1">
-        <div className="h-8" />
+      {/* Card header — pt-10 accommodates logo overlap */}
+      <div className="px-3 pt-10">
         <div className="flex items-center gap-2">
           <span className="text-base font-semibold text-[var(--cream)] truncate flex-1 min-w-0">
             {team.shortName}
@@ -541,7 +521,7 @@ function TeamCard({
           {overflowCount > 0 && (
             <Link
               href={`/${portalSlug}?view=happening&category=sports&q=${encodeURIComponent(team.shortName)}`}
-              className="block px-3 py-1 text-xs text-[var(--neon-cyan)]/70 hover:text-[var(--neon-cyan)] transition-colors"
+              className="block px-3 py-1 font-mono text-xs font-medium text-[var(--neon-cyan)] hover:opacity-80 transition-colors"
             >
               +{overflowCount} more →
             </Link>
