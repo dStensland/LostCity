@@ -383,10 +383,10 @@ function TeamCard({
     <div
       className="flex-shrink-0 w-72 snap-start rounded-card overflow-hidden bg-[var(--night)] hover-lift"
       style={{
-        border: `2px solid ${isTonight ? `${team.accentColor}70` : `${team.accentColor}40`}`,
+        border: `3px solid ${isTonight ? `${team.accentColor}80` : `${team.accentColor}50`}`,
         boxShadow: isTonight
-          ? `0 0 0 1px ${team.accentColor}50, 0 4px 28px ${team.accentColor}25, inset 0 0 40px ${team.accentColor}15`
-          : `0 4px 20px ${team.accentColor}15, inset 0 0 40px ${team.accentColor}10`,
+          ? `0 0 0 1px ${team.accentColor}60, 0 4px 32px ${team.accentColor}30, inset 0 0 50px ${team.accentColor}20`
+          : `0 4px 24px ${team.accentColor}20, inset 0 0 50px ${team.accentColor}15`,
       }}
     >
       {/* Photo strip + logo wrapper */}
@@ -413,17 +413,17 @@ function TeamCard({
         </div>
 
         {/* Team logo — outside photo overflow-hidden, overlaps into card body */}
-        <div className="absolute -bottom-8 left-3 z-20 w-16 h-16 flex items-center justify-center pointer-events-none" style={{ filter: `drop-shadow(0 2px 10px rgba(0,0,0,0.8))` }}>
+        <div className="absolute -bottom-12 left-3 z-20 w-24 h-24 flex items-center justify-center pointer-events-none" style={{ filter: `drop-shadow(0 3px 12px rgba(0,0,0,0.9)) drop-shadow(0 0 20px ${team.accentColor}40)` }}>
           <SmartImage
             src={team.logoUrl}
             alt={team.shortName}
-            width={64}
-            height={64}
-            className="object-contain max-h-16 max-w-16"
+            width={96}
+            height={96}
+            className="object-contain max-h-24 max-w-24"
             fallback={
               <span
-                className="text-3xl font-black"
-                style={{ color: team.accentColor, textShadow: `0 2px 12px ${team.accentColor}60` }}
+                className="text-5xl font-black"
+                style={{ color: team.accentColor, textShadow: `0 2px 16px ${team.accentColor}60` }}
               >
                 {team.shortName.charAt(0)}
               </span>
@@ -433,11 +433,11 @@ function TeamCard({
       </div>
 
       {/* Card header */}
-      <div className="px-3 pt-10">
+      <div className="px-3 pt-14">
         <div className="flex items-center gap-2">
           <span
             className="text-xl font-black uppercase tracking-[0.08em] truncate flex-1 min-w-0"
-            style={{ color: team.accentColor, textShadow: `0 0 20px ${team.accentColor}40` }}
+            style={{ color: team.accentColor, textShadow: `0 0 24px ${team.accentColor}60, 0 0 8px ${team.accentColor}30` }}
           >
             {team.shortName}
           </span>
