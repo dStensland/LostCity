@@ -94,7 +94,14 @@ function computeLaneState(
   weekendCount: number | null,
   timeSlotBoost: number,
 ): LaneState {
-  if (totalCount === 0) return "zero";
+  // Only declare "zero" when ALL counts are empty. If totalCount is 0 but
+  // today/weekend have items, the total count query likely failed — the lane
+  // clearly isn't empty.
+  const effectiveToday = todayCount ?? 0;
+  const effectiveWeekend = weekendCount ?? 0;
+  if (totalCount === 0 && effectiveToday === 0 && effectiveWeekend === 0) {
+    return "zero";
+  }
 
   // Non-temporal lanes: alive when count >= threshold
   if (todayCount === null && weekendCount === null) {
@@ -102,8 +109,8 @@ function computeLaneState(
   }
 
   let score = 0;
-  if ((todayCount ?? 0) > 0) score += 3;
-  if ((weekendCount ?? 0) > 0) score += 2;
+  if (effectiveToday > 0) score += 3;
+  if (effectiveWeekend > 0) score += 2;
   if (totalCount >= 5) score += 1;
   score += timeSlotBoost;
 
@@ -740,13 +747,29 @@ export async function getExploreHomeData(
       previewResult: { data: unknown[] | null; error: unknown } | null,
       mapItems: (rows: unknown[]) => PreviewItem[],
     ): LanePreview {
-      const total = countResult.count ?? 0;
+      const rawTotal = countResult.count ?? 0;
       const todayN = todayResult !== null ? (todayResult.count ?? 0) : null;
       const weekendN = weekendResult !== null ? (weekendResult.count ?? 0) : null;
+
+      // If the total count query failed (returned 0/null) but today or weekend
+      // succeeded, use the best available sub-count as the display total so
+      // copy doesn't say "0 regulars".
+      const total =
+        rawTotal > 0
+          ? rawTotal
+          : Math.max(todayN ?? 0, weekendN ?? 0, rawTotal);
+
       const boost = getTimeBoostForLane(lane, currentHour);
       const state = computeLaneState(total, todayN, weekendN, boost);
       const copy = generateLaneCopy(lane, state, total, todayN, weekendN);
       const items = previewResult?.data ? mapItems(previewResult.data) : [];
+
+      // Log when total count appears degraded but sub-counts have data
+      if (rawTotal === 0 && total > 0) {
+        console.warn(
+          `[explore-home-data] Lane "${lane}" total count is 0 but sub-counts have data (today=${todayN}, weekend=${weekendN}). Total count query may have failed.`,
+        );
+      }
 
       return {
         state,

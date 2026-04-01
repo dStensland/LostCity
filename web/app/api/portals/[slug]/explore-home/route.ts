@@ -56,10 +56,27 @@ export async function GET(
     );
   }
 
-  // Write cache
-  await setSharedCacheJson(CACHE_NAMESPACE, cacheKey, data, CACHE_TTL_MS, {
-    maxEntries: CACHE_MAX_ENTRIES,
-  });
+  // Write cache — but don't cache badly degraded responses. If transient
+  // query failures pushed many lanes to "zero" state, caching that response
+  // means all users see degraded data for the full TTL. Heuristic: classes
+  // is always zero (expected), so we count zero-state lanes excluding it.
+  // If more than half of the remaining lanes are zero, something went wrong.
+  const laneEntries = Object.entries(data.lanes);
+  const nonClassesLanes = laneEntries.filter(([key]) => key !== "classes");
+  const zeroCount = nonClassesLanes.filter(
+    ([, lane]) => lane.state === "zero",
+  ).length;
+  const shouldCache = zeroCount <= Math.floor(nonClassesLanes.length / 2);
+
+  if (shouldCache) {
+    await setSharedCacheJson(CACHE_NAMESPACE, cacheKey, data, CACHE_TTL_MS, {
+      maxEntries: CACHE_MAX_ENTRIES,
+    });
+  } else {
+    console.warn(
+      `[explore-home] Skipping cache write for "${slug}": ${zeroCount}/${nonClassesLanes.length} non-classes lanes are zero (likely degraded response)`,
+    );
+  }
 
   return NextResponse.json(data, {
     headers: {
