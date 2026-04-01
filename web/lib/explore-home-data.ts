@@ -84,18 +84,26 @@ function getWeekendRange(today: Date): { start: string; end: string } {
  *   - Time-of-day boost:         +0–2
  *
  * Score >= 3 → alive, score > 0 → quiet, 0 items → zero.
+ *
+ * Non-temporal lanes (todayCount === null && weekendCount === null):
+ *   today/weekend are not applicable — alive when totalCount >= 3.
  */
 function computeLaneState(
   totalCount: number,
-  todayCount: number,
-  weekendCount: number,
+  todayCount: number | null,
+  weekendCount: number | null,
   timeSlotBoost: number,
 ): LaneState {
   if (totalCount === 0) return "zero";
 
+  // Non-temporal lanes: alive when count >= threshold
+  if (todayCount === null && weekendCount === null) {
+    return totalCount >= 3 ? "alive" : "quiet";
+  }
+
   let score = 0;
-  if (todayCount > 0) score += 3;
-  if (weekendCount > 0) score += 2;
+  if ((todayCount ?? 0) > 0) score += 3;
+  if ((weekendCount ?? 0) > 0) score += 2;
   if (totalCount >= 5) score += 1;
   score += timeSlotBoost;
 
@@ -141,8 +149,8 @@ function generateLaneCopy(
   lane: LaneSlug,
   state: LaneState,
   totalCount: number,
-  todayCount: number,
-  weekendCount: number,
+  todayCount: number | null,
+  weekendCount: number | null,
 ): string {
   if (state === "zero") {
     switch (lane) {
@@ -168,7 +176,7 @@ function generateLaneCopy(
   }
 
   if (state === "alive") {
-    if (todayCount > 0) {
+    if ((todayCount ?? 0) > 0) {
       switch (lane) {
         case "events":
           return `${todayCount} event${todayCount === 1 ? "" : "s"} happening today`;
@@ -191,7 +199,7 @@ function generateLaneCopy(
       }
     }
     // Alive but nothing specifically today — use weekend or total
-    if (weekendCount > 0) {
+    if ((weekendCount ?? 0) > 0) {
       return `${weekendCount} this weekend`;
     }
     return `${totalCount} upcoming`;
@@ -459,6 +467,7 @@ export async function getExploreHomeData(
         .order("start_date", { ascending: true })
         .order("start_time", { ascending: true, nullsFirst: false })
         .order("data_quality", { ascending: false, nullsFirst: false })
+        .order("image_url", { ascending: false, nullsFirst: false })
         .limit(PREVIEW_LIMIT),
 
       // ----- Now Showing (film) lane -----
@@ -496,6 +505,7 @@ export async function getExploreHomeData(
         .order("start_date", { ascending: true })
         .order("start_time", { ascending: true, nullsFirst: false })
         .order("data_quality", { ascending: false, nullsFirst: false })
+        .order("image_url", { ascending: false, nullsFirst: false })
         .limit(PREVIEW_LIMIT),
 
       // ----- Live Music lane -----
@@ -533,6 +543,7 @@ export async function getExploreHomeData(
         .order("start_date", { ascending: true })
         .order("start_time", { ascending: true, nullsFirst: false })
         .order("data_quality", { ascending: false, nullsFirst: false })
+        .order("image_url", { ascending: false, nullsFirst: false })
         .limit(PREVIEW_LIMIT),
 
       // ----- Stage lane (theater, comedy, dance) -----
@@ -570,6 +581,7 @@ export async function getExploreHomeData(
         .order("start_date", { ascending: true })
         .order("start_time", { ascending: true, nullsFirst: false })
         .order("data_quality", { ascending: false, nullsFirst: false })
+        .order("image_url", { ascending: false, nullsFirst: false })
         .limit(PREVIEW_LIMIT),
 
       // ----- Regulars lane (recurring events with series) -----
@@ -627,6 +639,7 @@ export async function getExploreHomeData(
           .or(upcomingOrFilter)
           .order("start_date", { ascending: true })
           .order("start_time", { ascending: true, nullsFirst: false })
+          .order("image_url", { ascending: false, nullsFirst: false })
           .limit(PREVIEW_LIMIT),
         manifest,
         { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
@@ -728,8 +741,8 @@ export async function getExploreHomeData(
       mapItems: (rows: unknown[]) => PreviewItem[],
     ): LanePreview {
       const total = countResult.count ?? 0;
-      const todayN = todayResult?.count ?? 0;
-      const weekendN = weekendResult?.count ?? 0;
+      const todayN = todayResult !== null ? (todayResult.count ?? 0) : null;
+      const weekendN = weekendResult !== null ? (weekendResult.count ?? 0) : null;
       const boost = getTimeBoostForLane(lane, currentHour);
       const state = computeLaneState(total, todayN, weekendN, boost);
       const copy = generateLaneCopy(lane, state, total, todayN, weekendN);
