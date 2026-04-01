@@ -31,7 +31,7 @@
 | `web/components/your-people/FindFriendsSection.tsx` | Search/contacts/invite action cards |
 | `web/lib/hooks/useCrewBoard.ts` | TanStack Query hook for crew-board API |
 | `web/lib/hooks/useFriendSignalEvents.ts` | TanStack Query hook for friend-signal-events API |
-| `database/migrations/NNN_friend_joining_notification.sql` | Add `friend_joining` to notification type CHECK |
+| `database/migrations/NNN_friend_joining_notification.sql` | Add `friend_joining` to notification type CHECK + performance indexes |
 
 ### Modified files
 | File | Change |
@@ -61,10 +61,13 @@ ls database/migrations/ | tail -1
 Create the migration file (replace NNN with next number):
 
 ```sql
--- Migration NNN: Add friend_joining notification type for "I'm in" feature
--- When a user taps "I'm in" on a crew board event, attending friends
--- receive a friend_joining notification.
+-- Migration NNN: Your People — notification type + performance indexes
+-- 1. Add friend_joining notification type for "I'm in" feature
+-- 2. Composite index on event_rsvps for friend-signal query
+-- 3. Index on saved_items(event_id) — currently missing, causes table scan
+-- 4. Partial index on notifications for throttle lookups
 
+-- 1. Notification type
 ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
 ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (type IN (
   'new_follower', 'friend_rsvp', 'recommendation', 'event_reminder',
@@ -75,6 +78,19 @@ ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (type IN
   -- Your People: "I'm in" notification
   'friend_joining'
 ));
+
+-- 2. Composite index: friend-signal query scans rsvps by user+status
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_event_rsvps_user_status_event
+  ON event_rsvps(user_id, status, event_id);
+
+-- 3. saved_items event_id index (currently only has user_id index)
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_saved_items_event_id
+  ON saved_items(event_id) WHERE event_id IS NOT NULL;
+
+-- 4. Notification throttle: quick "was this person notified in last 24h?"
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_notifications_friend_joining_throttle
+  ON notifications(event_id, user_id, created_at DESC)
+  WHERE type = 'friend_joining';
 ```
 
 - [ ] **Step 2: Apply migration locally**
@@ -526,19 +542,22 @@ git commit -m "feat(your-people): add friend-signal-events API endpoint and hook
 
 In `web/app/api/rsvp/route.ts`, after the upsert succeeds (line 86: `return NextResponse.json({ success: true, rsvp: data })`), add the notification fan-out. The notification must be **async** — do not await it before returning the response.
 
-Add this import at the top of the file:
+Add these imports at the top of the file:
 ```typescript
+import { after } from "next/server";
 import { sendPushToUser } from "@/lib/push-notifications";
 ```
 
 Replace the success return block (around lines 84-86) with:
 ```typescript
-    // Fire-and-forget: notify friends if requested
+    // Schedule async notification fan-out AFTER the response is sent.
+    // next/server after() ensures the work completes even on Vercel serverless.
     if (body.notify_friends && status === "going") {
-      // Don't await — notification is async, don't block RSVP response
-      notifyFriendsOfJoining(user.id, event_id, serviceClient).catch((err) => {
-        logger.error("Friend notification failed", err, { userId: user.id, eventId: event_id, component: "rsvp" });
-      });
+      after(() =>
+        notifyFriendsOfJoining(user.id, event_id, serviceClient).catch((err) => {
+          logger.error("Friend notification failed", err, { userId: user.id, eventId: event_id, component: "rsvp" });
+        })
+      );
     }
 
     return NextResponse.json({ success: true, rsvp: data });
