@@ -12,10 +12,13 @@
  * Called by the API route (Task 3) which adds HTTP caching on top.
  */
 
-import { createServiceClient } from "@/lib/supabase/service";
+import { createPortalScopedClient } from "@/lib/supabase/server";
 import { getPortalBySlug } from "@/lib/portal";
 import { getTimeSlot, isWeekend } from "@/lib/city-pulse/time-slots";
 import { getLocalDateString, getLocalDateStringOffset } from "@/lib/formats";
+import { getPortalSourceAccess } from "@/lib/federation";
+import { buildPortalManifest } from "@/lib/portal-manifest";
+import { applyManifestFederatedScopeToQuery } from "@/lib/portal-scope";
 import type {
   ExploreHomeResponse,
   LanePreview,
@@ -295,14 +298,25 @@ export async function getExploreHomeData(
   portalSlug: string,
 ): Promise<ExploreHomeResponse | null> {
   try {
-    // 1. Resolve portal
+    // 1. Resolve portal + source access
     const portal = await getPortalBySlug(portalSlug);
     if (!portal) return null;
 
     const city =
       (portal.filters as { city?: string } | null)?.city || "Atlanta";
 
-    const supabase = createServiceClient();
+    const sourceAccess = await getPortalSourceAccess(portal.id);
+    const manifest = buildPortalManifest({
+      portalId: portal.id,
+      slug: portal.slug,
+      portalType: portal.portal_type,
+      parentPortalId: portal.parent_portal_id,
+      settings: portal.settings,
+      filters: portal.filters as { city?: string; cities?: string[] } | null,
+      sourceIds: sourceAccess.sourceIds,
+    });
+
+    const supabase = await createPortalScopedClient(portal.id);
 
     // Date boundaries
     const now = new Date();
@@ -328,15 +342,20 @@ export async function getExploreHomeData(
       venue:places(name, neighborhood)
     `;
 
-    // Base filters applied to all event queries
+    // Base filters applied to all event queries (includes portal scoping)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function baseEventQuery(q: any) {
-      return q
+      const filtered = q
         .eq("is_active", true)
         .or("is_feed_ready.eq.true,is_feed_ready.is.null")
         .is("canonical_event_id", null)
         .gte("start_date", today)
         .lte("start_date", weekEnd);
+      return applyManifestFederatedScopeToQuery(filtered, manifest, {
+        publicOnlyWhenNoPortal: true,
+        sourceIds: sourceAccess.sourceIds,
+        sourceColumn: "source_id",
+      });
     }
 
     // City filter for places
@@ -541,48 +560,64 @@ export async function getExploreHomeData(
         .limit(PREVIEW_LIMIT),
 
       // ----- Regulars lane (recurring events with series) -----
-      supabase
-        .from("events")
-        .select("id", { count: "exact", head: true })
-        .eq("is_active", true)
-        .or("is_feed_ready.eq.true,is_feed_ready.is.null,is_regular_ready.eq.true")
-        .not("series_id", "is", null)
-        .is("canonical_event_id", null)
-        .gte("start_date", today)
-        .lte("start_date", weekEnd),
+      applyManifestFederatedScopeToQuery(
+        supabase
+          .from("events")
+          .select("id", { count: "exact", head: true })
+          .eq("is_active", true)
+          .or("is_feed_ready.eq.true,is_feed_ready.is.null,is_regular_ready.eq.true")
+          .not("series_id", "is", null)
+          .is("canonical_event_id", null)
+          .gte("start_date", today)
+          .lte("start_date", weekEnd),
+        manifest,
+        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
+      ),
 
-      supabase
-        .from("events")
-        .select("id", { count: "exact", head: true })
-        .eq("is_active", true)
-        .or("is_feed_ready.eq.true,is_feed_ready.is.null,is_regular_ready.eq.true")
-        .not("series_id", "is", null)
-        .is("canonical_event_id", null)
-        .eq("start_date", today),
+      applyManifestFederatedScopeToQuery(
+        supabase
+          .from("events")
+          .select("id", { count: "exact", head: true })
+          .eq("is_active", true)
+          .or("is_feed_ready.eq.true,is_feed_ready.is.null,is_regular_ready.eq.true")
+          .not("series_id", "is", null)
+          .is("canonical_event_id", null)
+          .eq("start_date", today),
+        manifest,
+        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
+      ),
 
-      supabase
-        .from("events")
-        .select("id", { count: "exact", head: true })
-        .eq("is_active", true)
-        .or("is_feed_ready.eq.true,is_feed_ready.is.null,is_regular_ready.eq.true")
-        .not("series_id", "is", null)
-        .is("canonical_event_id", null)
-        .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
-        .lte("start_date", weekend.end),
+      applyManifestFederatedScopeToQuery(
+        supabase
+          .from("events")
+          .select("id", { count: "exact", head: true })
+          .eq("is_active", true)
+          .or("is_feed_ready.eq.true,is_feed_ready.is.null,is_regular_ready.eq.true")
+          .not("series_id", "is", null)
+          .is("canonical_event_id", null)
+          .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
+          .lte("start_date", weekend.end),
+        manifest,
+        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
+      ),
 
-      supabase
-        .from("events")
-        .select(eventPreviewSelect)
-        .eq("is_active", true)
-        .or("is_feed_ready.eq.true,is_feed_ready.is.null,is_regular_ready.eq.true")
-        .not("series_id", "is", null)
-        .is("canonical_event_id", null)
-        .gte("start_date", today)
-        .lte("start_date", weekEnd)
-        .or(upcomingOrFilter)
-        .order("start_date", { ascending: true })
-        .order("start_time", { ascending: true, nullsFirst: false })
-        .limit(PREVIEW_LIMIT),
+      applyManifestFederatedScopeToQuery(
+        supabase
+          .from("events")
+          .select(eventPreviewSelect)
+          .eq("is_active", true)
+          .or("is_feed_ready.eq.true,is_feed_ready.is.null,is_regular_ready.eq.true")
+          .not("series_id", "is", null)
+          .is("canonical_event_id", null)
+          .gte("start_date", today)
+          .lte("start_date", weekEnd)
+          .or(upcomingOrFilter)
+          .order("start_date", { ascending: true })
+          .order("start_time", { ascending: true, nullsFirst: false })
+          .limit(PREVIEW_LIMIT),
+        manifest,
+        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
+      ),
 
       // ----- Places lane (count + preview) -----
       supabase

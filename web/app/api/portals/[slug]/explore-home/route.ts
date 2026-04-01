@@ -7,15 +7,19 @@ import {
   setSharedCacheJson,
 } from "@/lib/shared-cache";
 import { getTimeSlot } from "@/lib/city-pulse/time-slots";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 const CACHE_NAMESPACE = "api:explore-home";
 const CACHE_TTL_MS = 2 * 60 * 1000; // 2 min
 const CACHE_MAX_ENTRIES = 50;
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ slug: string }> },
 ) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
   const { slug } = await params;
 
   // Time-slot cache key
