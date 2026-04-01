@@ -84,6 +84,7 @@ ORG_VENUE_DATA = {
     "place_type": "organization",
     "spot_type": "nonprofit",
     "website": BASE_URL,
+    "is_active": True,
 }
 
 # Encyclomedia - where they typically host screenings
@@ -112,7 +113,8 @@ def parse_linktree_date(text: str) -> tuple[Optional[str], Optional[str]]:
     - "1/31 Movie Title" -> date is 1/31
     - "Jan 31 Movie Title" -> date is Jan 31
     """
-    current_year = datetime.now().year
+    today = datetime.now().date()
+    current_year = today.year
 
     # Pattern: MM/DD at start of string
     match = re.match(r'^(\d{1,2})/(\d{1,2})\s+', text)
@@ -120,9 +122,11 @@ def parse_linktree_date(text: str) -> tuple[Optional[str], Optional[str]]:
         month = int(match.group(1))
         day = int(match.group(2))
         try:
-            # Assume current year, but if date is in the past, use next year
             dt = datetime(current_year, month, day)
-            if dt.date() < datetime.now().date():
+            # Only roll to next year when the parsed date is far in the past,
+            # which catches December -> January turnover without turning
+            # recently stale links into fake future events.
+            if (today - dt.date()).days > 180:
                 dt = datetime(current_year + 1, month, day)
             return dt.strftime("%Y-%m-%d"), match.group(0).strip()
         except ValueError:
@@ -135,7 +139,7 @@ def parse_linktree_date(text: str) -> tuple[Optional[str], Optional[str]]:
         day = int(match.group(2))
         try:
             dt = datetime.strptime(f"{month_str} {day} {current_year}", "%b %d %Y")
-            if dt.date() < datetime.now().date():
+            if (today - dt.date()).days > 180:
                 dt = dt.replace(year=current_year + 1)
             return dt.strftime("%Y-%m-%d"), match.group(0).strip()
         except ValueError:
@@ -262,7 +266,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Use Encyclomedia as the screening venue
                     # Get specific event URL
 
-                    event_url = find_event_url(title, [(text, href)], BASE_URL) or href or BASE_URL
+                    event_url = find_event_url(title, {text: href}, BASE_URL) or href or BASE_URL
 
 
                     event_record = {

@@ -3,7 +3,7 @@ slug: le-jardin-francais
 name: "Le Jardin Fran\u00e7ais"
 integration_method: llm_crawler
 data_goals:
-  - events
+  - images
 discovery:
   enabled: true
   type: html

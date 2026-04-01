@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 
 from sources.vinings_school_of_art_summer_camps import (
     _build_event_record,
+    _build_program_record,
     _parse_sections,
 )
 
@@ -127,3 +128,17 @@ def test_build_event_record_shapes_vinings_camp() -> None:
     assert record["end_time"] == "14:30"
     assert record["price_min"] == 390.0
     assert record["ticket_url"] == "https://viningsschoolofart.com/summer-camps.html"
+
+
+def test_build_program_record_shapes_vinings_camp() -> None:
+    row = _parse_sections(BeautifulSoup(VININGS_HTML, "html.parser"))[0]
+    record = _build_program_record(12, 21, row)
+
+    assert record["program_type"] == "camp"
+    assert record["session_start"] == "2026-06-01"
+    assert record["session_end"] == "2026-06-05"
+    assert record["schedule_start_time"] == "09:15"
+    assert record["schedule_end_time"] == "14:30"
+    assert record["cost_amount"] == 390.0
+    assert record["cost_period"] == "per_session"
+    assert record["registration_url"] == "https://viningsschoolofart.com/summer-camps.html"

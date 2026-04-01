@@ -23,7 +23,4 @@ detail:
     wait_until: load
     timeout_ms: 20000
 data_goals:
-  - events
-  - lineup
   - images
-  - tickets

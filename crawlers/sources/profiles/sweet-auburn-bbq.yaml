@@ -21,7 +21,4 @@ detail:
     render_js: true
     wait_until: domcontentloaded
 data_goals:
-  - events
-  - lineup
   - images
-  - tickets

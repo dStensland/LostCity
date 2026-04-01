@@ -2,6 +2,4 @@ version: 1
 slug: skyview-atlanta
 name: SkyView Atlanta
 data_goals:
-- events
 - images
-- tickets

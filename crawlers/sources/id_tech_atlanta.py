@@ -364,7 +364,7 @@ def _parse_location_page(
         "lat": location_cfg["lat"],
         "lng": location_cfg["lng"],
         "neighborhood": location_cfg["neighborhood"],
-        "place_type": location_cfg["venue_type"],
+        "place_type": location_cfg["place_type"],
         "spot_type": location_cfg["spot_type"],
         "website": location_cfg["website"],
         "vibes": location_cfg["vibes"],
@@ -375,6 +375,9 @@ def _parse_location_page(
         f"for ages 7-17. Courses include coding, game design, robotics, AI, app "
         f"development, and more. Day and overnight options available."
     )
+    place_data["description"] = camp_description
+    if image_url:
+        place_data["image_url"] = image_url
 
     return {
         "title": f"iD Tech Summer Camp at {location_cfg['venue_name']}",

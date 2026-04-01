@@ -3,7 +3,7 @@ slug: jessas-tea-parlor
 name: "Jessa's Tea Parlor"
 integration_method: crawler
 data_goals:
-  - events
+  - images
 discovery:
   enabled: true
   type: html

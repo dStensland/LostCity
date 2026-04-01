@@ -205,15 +205,23 @@ DEFAULT_VENUE = {
 
 def map_venue_name_to_venue_data(venue_name: str, lat: Optional[float] = None, lng: Optional[float] = None) -> dict:
     """Map Blackthorn venueName to actual Emory hospital venue data."""
+    def with_description(place_data: dict) -> dict:
+        result = place_data.copy()
+        result.setdefault(
+            "description",
+            f"{result['name']} is an Emory Healthcare hospital offering care, wellness resources, and community programs.",
+        )
+        return result
+
     if not venue_name:
-        return DEFAULT_VENUE.copy()
+        return with_description(DEFAULT_VENUE)
 
     venue_lower = venue_name.lower()
 
     # Try exact matching first
     for key, place_data in EMORY_VENUES.items():
         if key in venue_lower:
-            result = place_data.copy()
+            result = with_description(place_data)
             # Override with API coordinates if available
             if lat and lng:
                 result["lat"] = lat
@@ -222,42 +230,42 @@ def map_venue_name_to_venue_data(venue_name: str, lat: Optional[float] = None, l
 
     # Partial matches
     if "decatur" in venue_lower:
-        result = EMORY_VENUES["emory decatur"].copy()
+        result = with_description(EMORY_VENUES["emory decatur"])
         if lat and lng:
             result["lat"] = lat
             result["lng"] = lng
         return result
 
     if "hillandale" in venue_lower:
-        result = EMORY_VENUES["emory hillandale"].copy()
+        result = with_description(EMORY_VENUES["emory hillandale"])
         if lat and lng:
             result["lat"] = lat
             result["lng"] = lng
         return result
 
     if "midtown" in venue_lower:
-        result = EMORY_VENUES["emory midtown"].copy()
+        result = with_description(EMORY_VENUES["emory midtown"])
         if lat and lng:
             result["lat"] = lat
             result["lng"] = lng
         return result
 
     if "johns creek" in venue_lower:
-        result = EMORY_VENUES["emory johns creek"].copy()
+        result = with_description(EMORY_VENUES["emory johns creek"])
         if lat and lng:
             result["lat"] = lat
             result["lng"] = lng
         return result
 
     if "saint joseph" in venue_lower or "st joseph" in venue_lower:
-        result = EMORY_VENUES["emory saint josephs"].copy()
+        result = with_description(EMORY_VENUES["emory saint josephs"])
         if lat and lng:
             result["lat"] = lat
             result["lng"] = lng
         return result
 
     if "university hospital" in venue_lower or "clifton" in venue_lower:
-        result = EMORY_VENUES["emory university hospital"].copy()
+        result = with_description(EMORY_VENUES["emory university hospital"])
         if lat and lng:
             result["lat"] = lat
             result["lng"] = lng
@@ -265,10 +273,10 @@ def map_venue_name_to_venue_data(venue_name: str, lat: Optional[float] = None, l
 
     # Online events - use org venue
     if "online" in venue_lower or "virtual" in venue_lower or "zoom" in venue_lower:
-        return DEFAULT_VENUE.copy()
+        return with_description(DEFAULT_VENUE)
 
     # Unknown venue - use default but with API coordinates if available
-    result = DEFAULT_VENUE.copy()
+    result = with_description(DEFAULT_VENUE)
     if lat and lng:
         result["lat"] = lat
         result["lng"] = lng

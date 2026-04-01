@@ -3,7 +3,7 @@ slug: lot-23-chandler-co
 name: "Lot 23 Chandler Co."
 integration_method: llm_crawler
 data_goals:
-  - events
+  - images
 discovery:
   enabled: true
   type: html

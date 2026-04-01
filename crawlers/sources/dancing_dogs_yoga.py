@@ -25,6 +25,7 @@ from db import (
     remove_stale_source_events,
     smart_update_existing_event,
 )
+from db.programs import infer_season, insert_program
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -170,6 +171,37 @@ def parse_event_detail_html(html: str, event_url: str) -> Optional[dict]:
     }
 
 
+def _build_program_record(
+    *,
+    source_id: int,
+    venue_id: int,
+    parsed: dict,
+) -> dict:
+    session_start = datetime.strptime(parsed["start_date"], "%Y-%m-%d").date()
+    tags = ["dancing-dogs", "yoga", "decatur", "workshop", "wellness"]
+    return {
+        "source_id": source_id,
+        "place_id": venue_id,
+        "name": parsed["title"],
+        "description": parsed["description"],
+        "program_type": "class",
+        "provider_name": PLACE_DATA["name"],
+        "age_min": None,
+        "age_max": None,
+        "season": infer_season(parsed["title"], session_start),
+        "session_start": parsed["start_date"],
+        "session_end": parsed["start_date"],
+        "schedule_start_time": parsed["start_time"],
+        "schedule_end_time": parsed["end_time"],
+        "cost_amount": parsed["price_min"],
+        "cost_period": "per_session" if parsed["price_min"] is not None else None,
+        "registration_status": "open",
+        "registration_url": parsed["ticket_url"],
+        "tags": tags,
+        "metadata": {"source_url": parsed["source_url"]},
+    }
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Dancing Dogs Yoga workshops using calendar event detail pages."""
     source_id = source["id"]
@@ -212,6 +244,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 parsed["title"], PLACE_DATA["name"], parsed["start_date"]
             )
             current_hashes.add(content_hash)
+
+            try:
+                insert_program(
+                    _build_program_record(
+                        source_id=source_id,
+                        venue_id=venue_id,
+                        parsed=parsed,
+                    )
+                )
+            except Exception as exc:
+                logger.error(
+                    "[dancing-dogs-yoga] Failed to upsert program '%s': %s",
+                    parsed["title"],
+                    exc,
+                )
 
             event_record = {
                 "source_id": source_id,

@@ -12,6 +12,5 @@ detail:
   enabled: true
 data_goals:
 - events
-- exhibits
 - images
 - tickets

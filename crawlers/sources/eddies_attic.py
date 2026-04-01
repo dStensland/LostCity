@@ -15,7 +15,8 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from classify import classify_rules
+from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, normalize_time_format
 
@@ -43,6 +44,19 @@ PLACE_DATA = {
     "place_type": "music_venue",
     "website": BASE_URL,
 }
+
+
+def determine_category(title: str, description: Optional[str]) -> tuple[str, Optional[str], list[str]]:
+    """Use shared rules for obvious non-music outliers while defaulting Eddie's to music."""
+    result = classify_rules(
+        title=title,
+        description=description or "",
+        venue_type="music_venue",
+        category_hint="music",
+    )
+    if result.category == "comedy" and result.confidence >= 0.8:
+        return "comedy", "standup", ["comedy", "decatur"]
+    return "music", "concert", ["acoustic", "singer-songwriter", "live-music", "decatur"]
 
 
 def clean_event_title(title: str) -> str:
@@ -332,6 +346,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if not image_url and title in image_map:
                             image_url = image_map[title]
 
+                        category, subcategory, tags = determine_category(title, description)
+
                         event_record = {
                             "source_id": source_id,
                             "place_id": venue_id,
@@ -342,9 +358,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "end_date": None,
                             "end_time": None,
                             "is_all_day": False,
-                            "category": "music",
-                            "subcategory": "concert",
-                            "tags": ["acoustic", "singer-songwriter", "live-music", "decatur"],
+                            "category": category,
+                            "subcategory": subcategory,
+                            "tags": tags,
                             "price_min": price_min,
                             "price_max": price_max,
                             "price_note": price_note,
@@ -360,14 +376,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         }
 
                         existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
-
                         try:
                             insert_event(event_record)
-                            events_new += 1
+                            if existing:
+                                events_updated += 1
+                            else:
+                                events_new += 1
                             logger.info(f"Added: {title} on {start_date}")
                         except Exception as e:
                             logger.error(f"Failed to insert: {title}: {e}")

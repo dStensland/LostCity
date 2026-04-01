@@ -2,6 +2,4 @@ version: 1
 slug: windmill-arts
 name: Windmill Arts
 data_goals:
-- events
 - images
-- tickets

@@ -36,6 +36,7 @@ This roadmap exists to fix that in the right order:
 
 ## Canonical Execution Docs
 
+- Program board: `docs/superpowers/plans/2026-04-01-rich-data-program-board.md`
 - Phase 1 workstream: `docs/superpowers/plans/2026-03-30-phase1-description-pipeline-workstream.md`
 - Phase 2 workstream: `docs/superpowers/plans/2026-03-30-phase2-crawler-remediation-workstream.md`
 - Remaining roadmap execution workstream: `docs/superpowers/plans/2026-03-31-rich-data-roadmap-continuation-workstream.md`
@@ -195,6 +196,14 @@ The current crawler fix plan is directionally right but not fully aligned to liv
 - [ ] Spot-check descriptions for synthetic markers and junk
 - [ ] Spot-check category correctness on high-noise surfaces such as Music and Nightlife
 - [ ] `python3 -m pytest`
+- progress update:
+  - the library/community tranche has moved into true closeout mode
+  - `cobb-library` corrected rerun completed `901 found / 1 new / 897 updated`
+  - `gwinnett-library` corrected rerun completed `1010 found / 0 new / 1010 updated`
+  - a final Gwinnett cleanup pass is active on the corrected rewrite gate after the last known stale `Google Suite Boot Camp` bucket exposed a missing `fitness -> education` rewrite path
+  - that final Gwinnett pass is now a quantified tail cleanup, not a broad unknown backlog: only `8` future rows still lack `classification_prompt_version`, and the main stale tech-help bucket is already fixed live
+  - the next Phase 2 tranche is now sized well enough to run immediately after library closeout: `hotel-clermont`, `boggs-social`, `believe-music-hall`, `eddies-attic`, then `commune`; `smiths-olde-bar` currently looks like monitor-only
+  - the first upstream prep batch for that next tranche is already landed in code, with shared classifier rules and source-side `insert_event()` fixes in place before the production reruns begin
 
 ## Phase 3: Bounded LLM Enrichment
 

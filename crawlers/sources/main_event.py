@@ -1,5 +1,5 @@
 """
-Destination-first crawler for Main Event Alpharetta.
+Destination-first crawler for Main Event Atlanta.
 
 Entertainment center with bowling, laser tag, arcade, and dining.
 No event calendar — the enriched venue record is the deliverable.
@@ -21,19 +21,19 @@ from entity_persistence import persist_typed_entity_envelope
 
 logger = logging.getLogger(__name__)
 
-HOMEPAGE = "https://www.mainevent.com/location/alpharetta"
+HOMEPAGE = "https://www.mainevent.com/locations/georgia/atlanta"
 
 PLACE_DATA = {
-    "name": "Main Event Alpharetta",
-    "slug": "main-event-alpharetta",
-    "address": "2105 N Point Pkwy",
-    "neighborhood": "Alpharetta",
-    "city": "Alpharetta",
+    "name": "Main Event Atlanta",
+    "slug": "main-event-atlanta",
+    "address": "3101 Cobb Pkwy SE Suite 104",
+    "neighborhood": "Cumberland",
+    "city": "Atlanta",
     "state": "GA",
-    "zip": "30009",
-    "lat": 34.0655,
-    "lng": -84.2742,
-    "place_type": "entertainment",
+    "zip": "30339",
+    "lat": 33.8792481,
+    "lng": -84.4561691,
+    "place_type": "restaurant",
     "spot_type": "entertainment",
     "website": HOMEPAGE,
     # Hours verified 2026-03-22 against mainevent.com
@@ -164,7 +164,7 @@ def _extract_og_meta(html: str) -> tuple[Optional[str], Optional[str]]:
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Ensure Main Event Alpharetta has a fully enriched venue record.
+    """Ensure Main Event Atlanta has a fully enriched venue record.
 
     No events are crawled — the venue is open daily with no separate event
     calendar. The crawler's sole job is to upsert the venue and refresh
@@ -186,7 +186,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         if og_desc:
             place_data["description"] = og_desc
     except Exception as exc:
-        logger.warning("Main Event Alpharetta: og: enrichment failed: %s", exc)
+        logger.warning("Main Event Atlanta: og: enrichment failed: %s", exc)
 
     venue_id = get_or_create_place(place_data)
     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
@@ -201,9 +201,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
         try:
             get_client().table("places").update(update).eq("id", venue_id).execute()
         except Exception as exc:
-            logger.warning("Main Event Alpharetta: venue update failed: %s", exc)
+            logger.warning("Main Event Atlanta: venue update failed: %s", exc)
 
     logger.info(
-        "Main Event Alpharetta: venue record enriched (destination-first, no events)"
+        "Main Event Atlanta: venue record enriched (destination-first, no events)"
     )
     return 0, 0, 0

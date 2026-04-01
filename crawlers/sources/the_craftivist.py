@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import re
 import logging
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 from urllib.parse import urljoin
 
@@ -43,6 +43,16 @@ PLACE_DATA = {
     "place_type": "venue",
     "spot_type": "shop",
     "website": BASE_URL,
+}
+
+WEEKDAY_CODES = {
+    0: "MO",
+    1: "TU",
+    2: "WE",
+    3: "TH",
+    4: "FR",
+    5: "SA",
+    6: "SU",
 }
 
 
@@ -89,6 +99,157 @@ def parse_class_dates(title: str) -> Optional[str]:
             except ValueError:
                 pass
     return None
+
+
+def _next_weekday_date(
+    weekday: int,
+    *,
+    hour: int = 0,
+    minute: int = 0,
+    now: datetime | None = None,
+) -> date:
+    current = now or datetime.now()
+    today = current.date()
+    days_ahead = (weekday - today.weekday()) % 7
+    if days_ahead == 0 and (current.hour > hour or (current.hour == hour and current.minute >= minute)):
+        days_ahead = 7
+    return today + timedelta(days=days_ahead)
+
+
+def _third_friday_date(now: datetime | None = None) -> date:
+    current = now or datetime.now()
+    year = current.year
+    month = current.month
+
+    while True:
+        first_day = date(year, month, 1)
+        days_until_friday = (4 - first_day.weekday()) % 7
+        third_friday = first_day + timedelta(days=days_until_friday + 14)
+        if third_friday > current.date() or (
+            third_friday == current.date()
+            and (current.hour < 18 or (current.hour == 18 and current.minute < 0))
+        ):
+            return third_friday
+        month += 1
+        if month == 13:
+            month = 1
+            year += 1
+
+
+def _build_recurring_open_table_rows(source_id: int, venue_id: int) -> list[dict]:
+    weekly_rows = [
+        {
+            "title": "Open Table at The Craftivist",
+            "description": "Free in-person knit and crochet gathering. All crafts welcome.",
+            "weekday": 1,
+            "start_time": "14:00",
+            "end_time": "16:00",
+            "recurrence_rule": "FREQ=WEEKLY;BYDAY=TU",
+            "tags": ["open-table", "drop-in", "knitting", "crochet", "free", "inman-park"],
+        },
+        {
+            "title": "Open Table at The Craftivist",
+            "description": "Free in-person knit and crochet gathering. All crafts welcome.",
+            "weekday": 5,
+            "start_time": "15:00",
+            "end_time": "17:00",
+            "recurrence_rule": "FREQ=WEEKLY;BYDAY=SA",
+            "tags": ["open-table", "drop-in", "knitting", "crochet", "free", "inman-park"],
+        },
+        {
+            "title": "Open Table at The Craftivist",
+            "description": "Free in-person knit and crochet gathering. All crafts welcome.",
+            "weekday": 6,
+            "start_time": "15:00",
+            "end_time": "17:00",
+            "recurrence_rule": "FREQ=WEEKLY;BYDAY=SU",
+            "tags": ["open-table", "drop-in", "knitting", "crochet", "free", "inman-park"],
+        },
+        {
+            "title": "Virtual Open Table at The Craftivist",
+            "description": "Free Thursday night Zoom knit and crochet gathering.",
+            "weekday": 3,
+            "start_time": "19:00",
+            "end_time": "21:00",
+            "recurrence_rule": "FREQ=WEEKLY;BYDAY=TH",
+            "tags": ["open-table", "virtual", "knitting", "crochet", "free", "zoom"],
+        },
+    ]
+
+    rows: list[dict] = []
+    for row in weekly_rows:
+        hour, minute = (int(part) for part in row["start_time"].split(":", 1))
+        start_date = _next_weekday_date(
+            row["weekday"], hour=hour, minute=minute
+        ).isoformat()
+        rows.append(
+            {
+                "source_id": source_id,
+                "place_id": venue_id,
+                "title": row["title"],
+                "description": row["description"],
+                "start_date": start_date,
+                "start_time": row["start_time"],
+                "end_date": None,
+                "end_time": row["end_time"],
+                "is_all_day": False,
+                "category": "community",
+                "subcategory": "social",
+                "tags": row["tags"],
+                "price_min": 0,
+                "price_max": 0,
+                "price_note": None,
+                "is_free": True,
+                "source_url": OPEN_TABLE_URL,
+                "ticket_url": OPEN_TABLE_URL,
+                "image_url": None,
+                "raw_text": row["description"],
+                "extraction_confidence": 0.9,
+                "is_recurring": True,
+                "recurrence_rule": row["recurrence_rule"],
+                "content_hash": generate_content_hash(
+                    f"{row['title']} {WEEKDAY_CODES[row['weekday']]}",
+                    PLACE_DATA["name"],
+                    start_date,
+                ),
+            }
+        )
+
+    mixer_date = _third_friday_date().isoformat()
+    rows.append(
+        {
+            "source_id": source_id,
+            "place_id": venue_id,
+            "title": "Mykeala's Monthly Mixer at The Craftivist",
+            "description": "Free monthly Open Table mixer held every third Friday from 6-8 pm.",
+            "start_date": mixer_date,
+            "start_time": "18:00",
+            "end_date": None,
+            "end_time": "20:00",
+            "is_all_day": False,
+            "category": "community",
+            "subcategory": "social",
+            "tags": ["open-table", "mixer", "knitting", "crochet", "free", "inman-park"],
+            "price_min": 0,
+            "price_max": 0,
+            "price_note": None,
+            "is_free": True,
+            "source_url": urljoin(BASE_URL, "/products/mykealas-monthly-mixer"),
+            "ticket_url": urljoin(BASE_URL, "/products/mykealas-monthly-mixer"),
+            "image_url": None,
+            "raw_text": "Mykeala's Monthly Mixer every third Friday from 6-8 pm.",
+            "extraction_confidence": 0.9,
+            "is_recurring": True,
+            "recurrence_rule": "FREQ=MONTHLY;BYDAY=3FR",
+            "content_hash": generate_content_hash(
+                "Mykeala's Monthly Mixer at The Craftivist",
+                PLACE_DATA["name"],
+                mixer_date,
+            ),
+        }
+    )
+
+    return rows
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -242,52 +403,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     logger.error(f"Error processing product card: {e}")
                     continue
 
-            # --- Open Table (free drop-in) ---
+            # --- Recurring Open Table programming ---
             try:
                 logger.info(f"Checking Open Table: {OPEN_TABLE_URL}")
                 page.goto(OPEN_TABLE_URL, wait_until="domcontentloaded", timeout=30000)
                 page.wait_for_timeout(2000)
 
-                title = "Open Table at The Craftivist"
-                content_hash = generate_content_hash(title, PLACE_DATA["name"], "recurring")
-
-                existing = find_event_by_hash(content_hash)
-
-                event_record = {
-                    "source_id": source_id,
-                    "place_id": venue_id,
-                    "title": title,
-                    "description": "Free drop-in knit and crochet session. All crafts welcome. In-person and virtual (Zoom). Bring your project, meet other crafters.",
-                    "start_date": None,
-                    "start_time": None,
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": "community",
-                    "subcategory": "social",
-                    "tags": ["open-table", "drop-in", "knitting", "crochet", "free", "inman-park"],
-                    "price_min": 0,
-                    "price_max": 0,
-                    "price_note": None,
-                    "is_free": True,
-                    "source_url": OPEN_TABLE_URL,
-                    "ticket_url": OPEN_TABLE_URL,
-                    "image_url": None,
-                    "raw_text": None,
-                    "extraction_confidence": 0.80,
-                    "is_recurring": True,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                else:
+                for event_record in _build_recurring_open_table_rows(
+                    source_id, venue_id
+                ):
                     events_found += 1
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info("Added: Open Table (free drop-in)")
+                    existing = find_event_by_hash(event_record["content_hash"])
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                    else:
+                        insert_event(event_record)
+                        events_new += 1
+                        logger.info("Added recurring event: %s", event_record["title"])
 
             except Exception as e:
                 logger.warning(f"Could not fetch Open Table page: {e}")

@@ -2177,6 +2177,104 @@ class TestSmartUpdateExistingEvent:
         assert updates["classification_prompt_version"] == "v1.0-2026-03-27"
         assert set(updates["tags"]) == {"library", "technology"}
 
+    @patch("db.events.get_source_info", return_value=None)
+    @patch("db.events.events_support_film_identity_columns", return_value=False)
+    @patch("db.events.events_support_is_show_column", return_value=False)
+    @patch("db.events.events_support_content_kind_column", return_value=False)
+    @patch("db.events.events_support_is_active_column", return_value=False)
+    @patch("db.events.get_client")
+    def test_rewrite_from_workshops_persists_words_classification(
+        self,
+        mock_get_client,
+        _mock_events_active,
+        _mock_content_kind,
+        _mock_is_show,
+        _mock_film_identity,
+        _mock_get_source_info,
+    ):
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.update.return_value = table
+        table.eq.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 1994}])
+
+        from db import smart_update_existing_event
+
+        existing = {
+            "id": 1994,
+            "title": 'Passive Program: Library "Poet-Tree"',
+            "category_id": "workshops",
+            "classification_prompt_version": None,
+        }
+        incoming = {
+            "title": 'Passive Program: Library "Poet-Tree"',
+            "category_id": "words",
+            "classification_prompt_version": "v1.0-2026-03-27",
+            "_classification_confidence": 0.88,
+            "tags": ["poetry"],
+        }
+
+        with patch.dict(os.environ, {"CLASSIFY_V2_REWRITE_CATEGORY": "1"}):
+            updated = smart_update_existing_event(existing, incoming)
+
+        assert updated is True
+        updates = table.update.call_args[0][0]
+        assert updates["category_id"] == "words"
+        assert updates["classification_prompt_version"] == "v1.0-2026-03-27"
+        assert updates["tags"] == ["poetry"]
+
+    @patch("db.events.get_source_info", return_value=None)
+    @patch("db.events.events_support_film_identity_columns", return_value=False)
+    @patch("db.events.events_support_is_show_column", return_value=False)
+    @patch("db.events.events_support_content_kind_column", return_value=False)
+    @patch("db.events.events_support_is_active_column", return_value=False)
+    @patch("db.events.get_client")
+    def test_rewrite_from_fitness_persists_education_classification(
+        self,
+        mock_get_client,
+        _mock_events_active,
+        _mock_content_kind,
+        _mock_is_show,
+        _mock_film_identity,
+        _mock_get_source_info,
+    ):
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.update.return_value = table
+        table.eq.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 1995}])
+
+        from db import smart_update_existing_event
+
+        existing = {
+            "id": 1995,
+            "title": "Computer Literacy | Google Suite Boot Camp",
+            "category_id": "fitness",
+            "classification_prompt_version": "v1.0-2026-03-27",
+        }
+        incoming = {
+            "title": "Computer Literacy | Google Suite Boot Camp",
+            "category_id": "education",
+            "classification_prompt_version": "v1.0-2026-03-27",
+            "_classification_confidence": 0.88,
+            "tags": ["technology"],
+        }
+
+        with patch.dict(os.environ, {"CLASSIFY_V2_REWRITE_CATEGORY": "1"}):
+            updated = smart_update_existing_event(existing, incoming)
+
+        assert updated is True
+        updates = table.update.call_args[0][0]
+        assert updates["category_id"] == "education"
+        assert updates["classification_prompt_version"] == "v1.0-2026-03-27"
+        assert updates["tags"] == ["technology"]
+
     @patch("db.events.upsert_event_artists")
     @patch("db.events.parse_lineup_from_title")
     @patch("db.events.get_source_info", return_value=None)
@@ -2485,6 +2583,17 @@ class TestCrossSourceCanonicalSelection:
         inactive = _source_priority_for_dedupe("blakes-on-park", False)
 
         assert active < inactive
+
+    def test_source_priority_penalizes_generic_farmers_market_aggregator(self):
+        """Dedicated venue crawlers should outrank the generic farmers-market feed."""
+        from db import _source_priority_for_dedupe
+
+        aggregator = _source_priority_for_dedupe("farmers-markets", True)
+        dedicated = _source_priority_for_dedupe(
+            "peachtree-road-farmers-market", True
+        )
+
+        assert dedicated < aggregator
 
     @patch("db.events.get_source_info")
     @patch("db.events.get_client")

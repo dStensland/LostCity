@@ -3,7 +3,6 @@ import { headers } from "next/headers";
 import { getCityPhoto } from "@/lib/city-pulse/header-defaults";
 import { getTimeSlot, getDayOfWeek } from "@/lib/city-pulse/time-slots";
 import { getServerFeedData } from "@/lib/city-pulse/server-feed";
-import { getServerFindData } from "@/lib/find-data";
 import { getServerRegularsData } from "@/lib/server-regulars";
 import { AmbientBackground } from "@/components/ambient";
 import HappeningView from "@/components/find/HappeningView";
@@ -101,12 +100,7 @@ async function DefaultCityTemplate({
   );
 }
 
-/**
- * Async RSC wrapper for the Find/Explore shell.
- * Fetches find-data server-side so the launchpad renders with real data on
- * first load — eliminating the client-side fetch waterfall.
- */
-async function FindShellWithData({
+function FindShellWithData({
   portalSlug,
   portalId,
   portalExclusive,
@@ -115,13 +109,11 @@ async function FindShellWithData({
   portalId: string;
   portalExclusive: boolean;
 }) {
-  const findData = await getServerFindData(portalSlug);
   return (
     <FindShellClient
       portalSlug={portalSlug}
       portalId={portalId}
       portalExclusive={portalExclusive}
-      serverFindData={findData}
     />
   );
 }

@@ -2,7 +2,5 @@ version: 1
 slug: cherokee-county-schools-board
 name: Cherokee County Schools Board of Education
 data_goals:
-- classes
 - events
 - images
-- tickets

@@ -4,6 +4,7 @@
 **Status:** Active  
 **Surface:** `both`  
 **Roadmap parent:** `docs/superpowers/plans/2026-03-30-rich-data-roadmap.md`
+**Program board:** `docs/superpowers/plans/2026-04-01-rich-data-program-board.md`
 
 This workstream exists so execution can continue through the rest of the roadmap without requiring constant user check-ins for normal sequencing decisions.
 
@@ -44,21 +45,23 @@ Stop and ask only when one of these is true:
 
 - [ ] Finish the refreshed four-source library batch on the corrected process image:
   - [x] `fulton-library`
-  - `dekalb-library`
-  - `cobb-library`
-  - `gwinnett-library`
+  - [x] `dekalb-library`
+  - [x] `cobb-library`
+  - [ ] `gwinnett-library`
 
 #### Follow-on cleanup tranche
 
 - [ ] Revisit the false-negative music and show source set identified during `is_show` rollout:
-  - `smiths-olde-bar`
-  - `eddies-attic`
-  - `believe-music-hall`
-  - `commune`
   - `hotel-clermont`
+  - `boggs-social`
+  - `believe-music-hall`
+  - `eddies-attic`
+  - `commune`
+  - `smiths-olde-bar` only if fresh drift appears
 - [ ] Spot-check Music and Nightlife inventories after that tranche.
 - [ ] Reconcile `docs/superpowers/plans/2026-03-30-phase2-crawler-remediation-workstream.md` with the live execution record.
 - [ ] Define the exact handoff notes for Phase 0 and Phase 3 based on the repeated patterns observed in the Phase 2 sources.
+- [ ] Close the remaining library/community canary misses before treating the tranche as complete.
 
 #### Exit criteria
 
@@ -226,3 +229,38 @@ Stop and ask only when one of these is true:
   - wait for the active `cobb-library` process to exit
   - rerun `cobb-library` with `CLASSIFY_V2_ENABLED=1 CLASSIFY_V2_REWRITE_CATEGORY=1` on the corrected code
   - then rerun `gwinnett-library` with the same flags
+
+### 2026-04-01
+
+- The library/community tranche advanced materially:
+  - `cobb-library` corrected rerun finished successfully at `901 found / 1 new / 897 updated`
+  - the major Cobb canaries now persist correctly, including `Book-A-Librarian Tech Help` and `Book a Librarian 1:1 Tech Help`
+  - `gwinnett-library` corrected rerun finished successfully at `1010 found / 0 new / 1010 updated`
+- Shared hardening continued during the tranche instead of being deferred:
+  - deterministic classifier coverage now includes the main live library/program patterns seen in Cobb and Gwinnett
+  - the v2 rewrite gate now allows `workshops -> words` and `fitness -> education`, which were both blocking live remediation from sticking
+- The last known live Gwinnett stale bucket was `Computer Literacy | Google Suite Boot Camp`, which stayed `fitness` until the `fitness -> education` rewrite gate was added.
+- A final Gwinnett cleanup pass is now active on the corrected rewrite gate to close that remaining bucket cleanly.
+- Live revalidation after the corrected Gwinnett rerun now shows the tranche is in quantified tail mode rather than broad cleanup mode:
+  - future `gwinnett-library` inventory (`start_date >= 2026-04-01`) is `1013` rows
+  - only `8` future rows still lack `classification_prompt_version`
+  - those `8` rows currently split as `fitness=4`, `words=3`, `education=1`
+  - the major stale bucket is fixed live: `Computer Literacy | Google Suite Boot Camp` now persists as `education`
+  - the remaining tail is mostly acceptable-at-a-glance rows like `Chair Yoga`, `Drop-In Reading Buddies`, `Cards of Courage`, and `AI Tools for Job Seekers`
+- The queued Music/Nightlife tranche is now sized well enough to run immediately after library closeout:
+  - `hotel-clermont` is the noisiest follow-up source right now, with future inventory still mixing `music`, `nightlife`, and `games`
+  - `boggs-social` remains a real follow-up source because karaoke rows are still landing as `music` while `is_show=False`
+  - `believe-music-hall` still has mixed perreo / dance-floor rows split across `music` and `nightlife`
+  - `eddies-attic` is mostly clean, but still has obvious edge cases like `Comedy Throwdown` sitting in `music`
+  - `commune` is lower priority and `smiths-olde-bar` currently looks clean enough to monitor rather than lead with
+- The first upstream prep batch for that tranche is now landed in code before the production reruns:
+  - `hotel_clermont.py` no longer uses naive title keyword routing and now maps `Wine Down Wednesdays`, `Music Bingo`, and rooftop DJ nights more accurately
+  - `boggs_social.py` now routes trivia/bingo/gaming into `games`, treats music-video-night programming as `nightlife`, and no longer bypasses `insert_event()` on existing rows
+  - `believe_music_hall.py` now separates perreo / dance-floor variants from headliner music rows and no longer bypasses `insert_event()` on existing rows
+  - `eddies_attic.py` now lets obvious outliers like `Comedy Throwdown` escape the all-music default and no longer bypasses `insert_event()` on existing rows
+  - shared classifier rules now cover `music bingo`, `wine down wednesdays`, `cocktail party`, `perreo`, `music video night`, and `comedy throwdown`
+  - focused verification passed at `126 passed` across `test_classify_rules.py` and `test_music_nightlife_source_helpers.py`
+- The next useful move is still not a new phase. It is:
+  - let the final `gwinnett-library` cleanup pass finish
+  - revalidate the remaining 8-row Gwinnett tail
+  - then close the library/community tranche and move Phase 2 to true exit work

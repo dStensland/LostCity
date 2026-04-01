@@ -10,7 +10,4 @@ discovery:
   - https://volunteer.unitedwayatlanta.org/calendar
 detail:
   enabled: true
-data_goals:
-- events
-- images
-- tickets
+data_goals: []

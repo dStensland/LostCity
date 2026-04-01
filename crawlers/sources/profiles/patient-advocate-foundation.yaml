@@ -2,6 +2,4 @@ version: 1
 slug: patient-advocate-foundation
 name: Patient Advocate Foundation
 data_goals:
-- events
 - images
-- tickets

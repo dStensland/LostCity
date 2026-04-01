@@ -2,6 +2,4 @@ version: 1
 slug: topgolf-atlanta-midtown
 name: Topgolf Atlanta Midtown
 data_goals:
-- events
 - images
-- tickets

@@ -662,12 +662,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_recurring": is_recurring,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
-                        "organization_name": ORGANIZATION_NAME,
                     }
-
-                    # Venue name hints for downstream resolution if needed
-                    if venue_text and venue_id == org_venue_id:
-                        event_record["venue_name_hint"] = venue_text
 
                     events_found += 1
 

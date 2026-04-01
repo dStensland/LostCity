@@ -20,7 +20,6 @@ from db import (
     get_or_create_place,
     insert_event,
     find_existing_event_for_insert,
-    smart_update_existing_event,
 )
 from dedupe import generate_content_hash
 from utils import parse_price
@@ -76,14 +75,14 @@ def determine_category(title: str) -> tuple[str, Optional[str], list[str]]:
         return "comedy", "standup", tags + ["comedy"]
     if any(w in title_lower for w in ["karaoke", "music mike"]):
         return "nightlife", "karaoke", tags + ["karaoke"]
-    if any(w in title_lower for w in ["dj", "dance night"]):
+    if any(w in title_lower for w in ["dj", "dance night", "music video night"]):
         return "nightlife", "club", tags + ["dj"]
     if any(w in title_lower for w in ["bingo"]):
-        return "community", None, tags + ["bingo"]
+        return "games", "bingo", tags + ["bingo"]
     if any(w in title_lower for w in ["trivia", "quiz"]):
-        return "community", None, tags + ["trivia"]
+        return "games", "trivia", tags + ["trivia"]
     if any(w in title_lower for w in ["gaming", "tournament"]):
-        return "community", None, tags + ["gaming"]
+        return "games", None, tags + ["gaming"]
 
     return "music", "live", tags + ["live-music"]
 
@@ -215,14 +214,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         }
 
                         existing = find_existing_event_for_insert(event_record)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
-
                         try:
                             insert_event(event_record)
-                            events_new += 1
+                            if existing:
+                                events_updated += 1
+                            else:
+                                events_new += 1
                             logger.info(f"Added: {title} on {start_date} at {start_time}")
                         except Exception as e:
                             logger.error(f"Failed to insert: {title}: {e}")

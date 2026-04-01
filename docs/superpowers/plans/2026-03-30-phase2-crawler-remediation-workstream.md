@@ -4,6 +4,7 @@
 **Status:** In Progress  
 **Surface:** `both`  
 **Roadmap parent:** `docs/superpowers/plans/2026-03-30-rich-data-roadmap.md`
+**Program board:** `docs/superpowers/plans/2026-04-01-rich-data-program-board.md`
 
 This is the execution workstream for Phase 2 of the rich data roadmap.
 
@@ -147,15 +148,16 @@ This track integrates `docs/superpowers/specs/2026-03-30-event-classification-fi
 
 - [ ] Finish the refreshed library/community rewrite tranche on the corrected process image:
   - [x] `fulton-library`
-  - `dekalb-library`
-  - `cobb-library`
-  - `gwinnett-library`
+  - [x] `dekalb-library`
+  - [x] `cobb-library`
+  - [ ] `gwinnett-library`
 - [ ] Run the false-negative music and show cleanup tranche:
   - `smiths-olde-bar`
   - `eddies-attic`
   - `believe-music-hall`
   - `commune`
   - `hotel-clermont`
+- [ ] Close the remaining library/community canary misses
 - [ ] Close the remaining spot-check and docs reconciliation work needed for a real Phase 2 exit
 
 ## Exit Criteria
@@ -256,7 +258,68 @@ This track integrates `docs/superpowers/specs/2026-03-30-event-classification-fi
 - Added targeted route coverage in `web/app/api/portals/[slug]/shows/route.test.ts` for both the normal filter path and the missing-column fallback path.
 - `cd web && npx vitest run 'app/api/portals/[slug]/shows/route.test.ts' 'app/api/programs/route.test.ts' 'app/api/portals/[slug]/sources/route.test.ts'` passed with 6 tests green.
 - `cd web && npx tsc --noEmit` passed after the shows route change.
+- The library/community tranche reached true late-stage closeout:
+  - corrected `cobb-library` rerun completed successfully with `901 found / 1 new / 897 updated`
+  - the key Cobb canaries now persist correctly, including `Book-A-Librarian Tech Help` and `Book a Librarian 1:1 Tech Help`
+  - corrected `gwinnett-library` rerun completed successfully with `1010 found / 0 new / 1010 updated`
+- The final live stale Gwinnett bucket was `Computer Literacy | Google Suite Boot Camp`, which stayed `fitness` even after the corrected rerun.
+- Root cause was not the source crawler or rules layer any longer; it was the category rewrite gate refusing `fitness -> education` transitions on existing rows.
+- `crawlers/db/events.py` was patched so the rewriteable legacy source-category set now includes `fitness`.
+- Added targeted DB regression coverage for `fitness -> education` rewrites in `crawlers/tests/test_db.py`.
+- `python3 -m pytest crawlers/tests/test_db.py -q` passed with 73 tests green after the gate expansion.
+- A final `gwinnett-library` cleanup pass was launched on the corrected rewrite gate to close the last known stale bucket cleanly.
+- The current remaining gate to closing the library/community tranche is simply letting that final Gwinnett cleanup pass complete and then re-checking the live canaries.
 - Added `crawlers/scripts/backfill_is_show.py` so existing event rows can be remediated immediately after the migration is applied instead of waiting for crawl cadence.
+
+### 2026-04-01
+
+- The late-stage library/community reruns are now materially landed on corrected code:
+  - `fulton-library` corrected batch landed earlier and the library canaries there are no longer the pacing item
+  - `dekalb-library` corrected rerun landed successfully
+  - `cobb-library` corrected rerun completed `901 found / 1 new / 897 updated`
+  - `gwinnett-library` corrected rerun completed `1010 found / 0 new / 1010 updated`
+- The final Gwinnett cleanup pass remains active, but the tail is now quantified rather than fuzzy:
+  - future Gwinnett inventory (`start_date >= 2026-04-01`) is `1013` rows
+  - only `8` future rows still lack `classification_prompt_version`
+  - those 8 rows currently break down as `fitness=4`, `words=3`, `education=1`
+- The highest-risk stale Gwinnett bucket is closed live:
+  - `Computer Literacy | Google Suite Boot Camp` now persists as `education`
+  - `Book-A-Librarian Tech Help` is corrected through the active future window
+  - `Early Learning | Toddler Time` and the main `Reading Buddies` canaries are now persisting as `words` on the corrected image
+- The remaining Gwinnett tail now looks like closeout cleanup, not another broad remediation wave:
+  - `Health & Wellness | Chair Yoga`
+  - `Coummunity | Cards of Courage`
+  - `Jobs & Careers | AI Tools for Job Seekers`
+  - `Literacy | Drop-In Reading Buddies`
+- Phase 2 should not open another big classifier branch from this state. The right move is to let the active Gwinnett cleanup pass finish, validate the 8-row tail, then close the library/community tranche and move to the queued music/nightlife false-negative tranche.
+- The queued music/nightlife false-negative tranche is now concrete enough to run in order instead of as a loose venue list:
+  - `hotel-clermont` is now the clearest next source because future rows still mix `music`, `nightlife`, and `games` in ways that do not line up cleanly with the current source patterns
+  - `boggs-social` remains the next real music/nightlife fix after that because `Karaoke Night w/ Music Mike` still lands as `music` while `is_show=False`
+  - `believe-music-hall` still has mixed `music` / `nightlife` handling on perreo and dance-floor variants
+  - `eddies-attic` is mostly clean but still carries obvious mismatches like `Comedy Throwdown` in `music`
+  - `commune` is lower priority and `smiths-olde-bar` currently looks clean enough to monitor rather than lead with
+- The first upstream prep batch for that tranche is now landed in code:
+  - `hotel_clermont.py` now maps `Wine Down Wednesdays` to `food_drink`, `Music Bingo` to `games`, and rooftop DJ-night programming to `nightlife`
+  - `boggs_social.py` now maps trivia and bingo to `games`, music-video-night programming to `nightlife`, and routes existing rows back through `insert_event()` so reruns can apply v2 classification
+  - `believe_music_hall.py` now separates perreo / dance-floor titles from headliner music rows and routes existing rows back through `insert_event()`
+  - `eddies_attic.py` now lets obvious comedy outliers escape the all-music default and routes existing rows back through `insert_event()`
+  - shared classifier rules now explicitly cover `music bingo`, `wine down wednesdays`, `cocktail party`, `perreo`, `music video night`, and `comedy throwdown`
+- Focused verification for this prep batch passed:
+  - `python3 -m py_compile` across `classify.py`, `hotel_clermont.py`, `boggs_social.py`, `believe_music_hall.py`, `eddies_attic.py`, and the new source-helper test
+  - `python3 -m pytest tests/test_classify_rules.py tests/test_music_nightlife_source_helpers.py -q` passed with `126 passed`
+- Bounded dry-runs started cleanly for `hotel-clermont` and `boggs-social` on the corrected image:
+  - `hotel-clermont` immediately exercised the corrected `Wine Down Wednesdays` path in read-only mode
+  - `boggs-social` immediately exercised the corrected karaoke path in read-only mode
+  - the dry-runs were not allowed to churn through the full catalog because the exec-session pool is near its limit, not because of a source/runtime failure
+- Live canary checks confirm that several of the intended rewrites are now sticking in production:
+  - `Meet Up for Adults with Disabilities` -> `support`
+  - `Pokémon Club` -> `games`
+  - `Wednesday Crafternoon` -> `workshops`
+- The same canary sweep also shows the tranche is still open:
+  - `Book-A-Librarian Tech Help` remains `words` with `classification_prompt_version='v1.0-2026-03-27'`
+  - that points to a remaining shared classifier/rerun gap, not a docs problem
+- There are also stale unrelated `crawl_logs` rows still stuck in `running`; those are noisy but not yet the primary gate unless they start holding the production write lock.
+- Operational conclusion: do not pretend Phase 2 is done. The next batch should fix the remaining `Book-A-Librarian` miss, rerun the affected library source(s), rerun `gwinnett-library`, then decide whether the library/community tranche can finally close.
 - `python3 -m py_compile crawlers/scripts/backfill_is_show.py` passed.
 - Applied `supabase/migrations/20260330010001_event_is_show.sql` to production with `python3 database/apply_targeted_migrations.py --versions 20260330010001`.
 - Pre-apply verification:

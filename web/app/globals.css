@@ -1790,7 +1790,36 @@ body:has([data-vertical="hospital"])::after {
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-/* Removed: diagonal stripe ::before — created visual noise on a 52px bar */
+/* Overscroll canopy — solid bg extends above viewport so iOS rubber-band
+   doesn't reveal a gap behind the translucent header panel.
+   Inner glow + neon easter egg on pull-down. */
+.portal-feed-header::before {
+  content: "howdy there";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 100px;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 100%, rgba(0, 212, 232, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 50% 100%, rgba(255, 107, 122, 0.08) 0%, transparent 60%),
+    var(--void);
+  /* Pull-down easter egg — neon text near bottom of canopy */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 10px;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--neon-cyan);
+  text-shadow:
+    0 0 6px rgba(0, 212, 232, 0.7),
+    0 0 20px rgba(0, 212, 232, 0.3),
+    0 0 40px rgba(0, 212, 232, 0.1);
+}
 
 .portal-feed-header::after {
   content: "";

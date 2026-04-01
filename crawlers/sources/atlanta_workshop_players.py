@@ -36,6 +36,7 @@ from db import (
     insert_event,
     smart_update_existing_event,
 )
+from db.programs import insert_program
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -247,6 +248,51 @@ def _age_band_tags(text: str) -> list[str]:
     if "intensive" in lower and "performing arts" in lower:
         tags += ["tween", "teen"]
     return list(set(tags))
+
+
+def _build_program_record(
+    item: dict[str, Any],
+    *,
+    source_id: int,
+    venue_id: int,
+) -> dict[str, Any]:
+    tags = list(BASE_TAGS)
+    tags.extend(item.get("age_tags", []))
+    tags.extend(["summer-camp", "theater-camp"])
+    tags = list(dict.fromkeys(tags))
+
+    price = item.get("price")
+    cost_notes = None
+    if price is not None:
+        cost_notes = (
+            f"${price:,.0f} session tuition" if price == int(price) else f"${price:,.2f} session tuition"
+        )
+
+    return {
+        "source_id": source_id,
+        "place_id": venue_id,
+        "name": item["title"],
+        "description": (item.get("description") or "")[:2000],
+        "program_type": "camp",
+        "provider_name": PLACE_DATA["name"],
+        "season": "summer",
+        "session_start": item.get("start_date"),
+        "session_end": item.get("end_date") or item.get("start_date"),
+        "schedule_start_time": item.get("start_time"),
+        "schedule_end_time": None,
+        "cost_amount": price,
+        "cost_period": "per_session" if price is not None else None,
+        "cost_notes": cost_notes,
+        "registration_status": "open",
+        "registration_url": item.get("ticket_url") or BASE_URL,
+        "tags": tags,
+        "status": "active",
+        "metadata": {
+            "source_url": item.get("source_url") or BASE_URL,
+            "age_tags": item.get("age_tags") or [],
+        },
+        "_venue_name": PLACE_DATA["name"],
+    }
 
 
 # ─── camp page (requests + BeautifulSoup) ─────────────────────────────────────
@@ -742,6 +788,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
     logger.info("AWP: found %d camp sessions", len(camp_sessions))
 
     for session in camp_sessions:
+        insert_program(
+            _build_program_record(
+                session,
+                source_id=source_id,
+                venue_id=venue_id,
+            )
+        )
         found, new = _upsert_event(
             item=session,
             category="education",

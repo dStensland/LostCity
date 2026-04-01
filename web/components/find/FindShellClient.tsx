@@ -11,15 +11,15 @@
  * All lane renderers (EventsFinder, WhatsOnView, etc.) fetch their own data.
  */
 
-import { Suspense } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { FindSidebar } from "./FindSidebar";
 import { MobileLaneBar } from "./MobileLaneBar";
 import { FindContextProvider } from "./FindContextProvider";
 import EventsFinder from "./EventsFinder";
-import FindView from "./FindView";
-import type { ServerFindData } from "@/lib/find-data";
+import { ExploreHome } from "./ExploreHome";
+import type { ExploreHomeResponse } from "@/lib/types/explore-home";
 
 // Dynamic imports for renderers not needed on every lane
 const WhatsOnView = dynamic(() => import("./WhatsOnView"), {
@@ -35,25 +35,51 @@ const SpotsFinder = dynamic(() => import("./SpotsFinder"), {
 // Valid shell lanes — anything else falls back to launchpad
 const SHELL_LANES = new Set([
   "events", "now-showing", "live-music", "stage",
-  "regulars", "places", "calendar", "map",
+  "regulars", "places", "classes", "calendar", "map",
 ]);
 
 interface FindShellClientProps {
   portalSlug: string;
   portalId: string;
   portalExclusive: boolean;
-  serverFindData?: ServerFindData | null;
 }
 
 export default function FindShellClient({
   portalSlug,
   portalId,
   portalExclusive,
-  serverFindData,
 }: FindShellClientProps) {
   const searchParams = useSearchParams();
   const rawLane = searchParams.get("lane");
   const lane = rawLane && SHELL_LANES.has(rawLane) ? rawLane : null;
+
+  const [exploreData, setExploreData] = useState<ExploreHomeResponse | null>(null);
+  const [exploreLoading, setExploreLoading] = useState(true);
+
+  useEffect(() => {
+    // Only fetch when showing Explore Home (no lane selected)
+    if (lane) {
+      setExploreLoading(false);
+      return;
+    }
+    setExploreLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    fetch(`/api/portals/${portalSlug}/explore-home`, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => setExploreData(json as ExploreHomeResponse | null))
+      .catch(() => {})
+      .finally(() => {
+        clearTimeout(timeoutId);
+        setExploreLoading(false);
+      });
+
+    return () => {
+      controller.abort();
+      clearTimeout(timeoutId);
+    };
+  }, [portalSlug, lane]);
 
   return (
     <div className="min-h-[calc(100vh-4rem)]">
@@ -62,6 +88,7 @@ export default function FindShellClient({
         <FindSidebar
           portalSlug={portalSlug}
           activeLane={lane}
+          laneStates={exploreData?.lanes}
         />
       </div>
 
@@ -72,7 +99,7 @@ export default function FindShellClient({
       <div className="lg:ml-[240px] min-w-0">
         <FindContextProvider portalId={portalId} portalSlug={portalSlug} portalExclusive={portalExclusive}>
           {!lane && (
-            <FindView portalSlug={portalSlug} serverFindData={serverFindData ?? null} />
+            <ExploreHome portalSlug={portalSlug} data={exploreData} loading={exploreLoading} />
           )}
           {lane === "events" && (
             <EventsFinder
@@ -96,6 +123,12 @@ export default function FindShellClient({
               portalExclusive={portalExclusive}
               displayMode="list"
             />
+          )}
+          {lane === "classes" && (
+            <div className="py-16 text-center">
+              <p className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">CLASSES & WORKSHOPS</p>
+              <p className="text-sm text-[var(--soft)]">Coming soon</p>
+            </div>
           )}
           {lane === "calendar" && (
             <EventsFinder

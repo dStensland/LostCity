@@ -40,6 +40,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db.programs import insert_program, infer_season
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -268,6 +269,98 @@ def _build_event_record(
     }
 
 
+def _build_program_record(
+    *,
+    source_id: int,
+    venue_id: int,
+    event_date: str,
+    program_type: str,
+    location_name: str,
+    register_url: str,
+) -> dict:
+    if program_type == "both":
+        name = f"JA Homeschool Day: BizTown & Finance Park — {location_name}"
+        description = (
+            "Combined Junior Achievement homeschool day covering both JA BizTown "
+            "and JA Finance Park simulations."
+        )
+        age_min, age_max = 10, 15
+        tags = [
+            "educational",
+            "stem",
+            "financial-literacy",
+            "homeschool",
+            "middle-school",
+            "teen",
+            "civic",
+            "family-friendly",
+            "rsvp-required",
+        ]
+    elif program_type == "biztown":
+        name = f"JA BizTown Homeschool Day — {location_name}"
+        description = (
+            "Junior Achievement BizTown homeschool program focused on simulated "
+            "business, economy, and civic participation."
+        )
+        age_min, age_max = 10, 12
+        tags = [
+            "educational",
+            "stem",
+            "business",
+            "economics",
+            "homeschool",
+            "middle-school",
+            "civic",
+            "family-friendly",
+            "rsvp-required",
+        ]
+    else:
+        name = f"JA Finance Park Homeschool Day — {location_name}"
+        description = (
+            "Junior Achievement Finance Park homeschool program focused on "
+            "budgeting and real-world financial decision-making."
+        )
+        age_min, age_max = 12, 15
+        tags = [
+            "educational",
+            "stem",
+            "financial-literacy",
+            "homeschool",
+            "middle-school",
+            "teen",
+            "civic",
+            "family-friendly",
+            "rsvp-required",
+        ]
+
+    session_start = datetime.strptime(event_date, "%Y-%m-%d").date()
+    return {
+        "source_id": source_id,
+        "place_id": venue_id,
+        "name": name,
+        "description": description,
+        "program_type": "enrichment",
+        "provider_name": f"Junior Achievement of Georgia — {location_name}",
+        "age_min": age_min,
+        "age_max": age_max,
+        "season": infer_season(name, session_start),
+        "session_start": event_date,
+        "session_end": event_date,
+        "schedule_start_time": "10:00",
+        "schedule_end_time": "14:00",
+        "cost_amount": None,
+        "cost_period": None,
+        "registration_status": "open",
+        "registration_url": register_url,
+        "tags": tags,
+        "metadata": {
+            "program_type_hint": program_type,
+            "location_name": location_name,
+            "source_url": HOMESCHOOL_URL,
+        },
+    }
+
+
 def _parse_location_block(block_text: str, location_name: str) -> list[dict]:
     """
     Parse the content of a location block to extract (date, program_type) pairs.
@@ -427,6 +520,23 @@ def crawl(source: dict) -> tuple[int, int, int]:
             continue
 
         for event_date, program_type in event_pairs:
+            program_record = _build_program_record(
+                source_id=source_id,
+                venue_id=venue_id,
+                event_date=event_date,
+                program_type=program_type,
+                location_name=location_name,
+                register_url=loc_config["register_url"],
+            )
+            try:
+                insert_program(program_record)
+            except Exception as exc:
+                logger.error(
+                    "[ja-georgia] Failed to upsert program '%s': %s",
+                    program_record["name"],
+                    exc,
+                )
+
             event_record = _build_event_record(
                 source_id=source_id,
                 venue_id=venue_id,

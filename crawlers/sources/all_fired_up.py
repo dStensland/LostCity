@@ -35,6 +35,7 @@ from db import (
     find_event_by_hash,
     smart_update_existing_event,
 )
+from db.programs import infer_program_type, infer_season, insert_program
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -236,6 +237,65 @@ def _is_future_date(date_str: str) -> bool:
         return datetime.strptime(date_str, "%Y-%m-%d").date() >= datetime.now().date()
     except ValueError:
         return False
+
+
+def _calculate_end_time(start_time: Optional[str], duration_minutes: int) -> Optional[str]:
+    if not start_time or duration_minutes <= 0:
+        return None
+    try:
+        start_dt = datetime.strptime(start_time, "%H:%M")
+    except ValueError:
+        return None
+    end_dt = start_dt + timedelta(minutes=duration_minutes)
+    return end_dt.strftime("%H:%M")
+
+
+def _build_program_record(
+    *,
+    source_id: int,
+    venue_id: int,
+    venue_name: str,
+    clean_title: str,
+    description: str,
+    start_date: str,
+    start_time: Optional[str],
+    duration_minutes: int,
+    price_min: Optional[float],
+    source_url: str,
+    tags: list[str],
+    product_id: Optional[int],
+    external_id: Optional[str],
+) -> dict:
+    try:
+        session_start = datetime.strptime(start_date, "%Y-%m-%d").date()
+    except ValueError:
+        session_start = None
+
+    return {
+        "source_id": source_id,
+        "place_id": venue_id,
+        "name": clean_title,
+        "description": description,
+        "program_type": infer_program_type(clean_title),
+        "provider_name": venue_name,
+        "age_min": None,
+        "age_max": None,
+        "season": infer_season(clean_title, session_start),
+        "session_start": start_date,
+        "session_end": start_date,
+        "schedule_start_time": start_time,
+        "schedule_end_time": _calculate_end_time(start_time, duration_minutes),
+        "cost_amount": price_min,
+        "cost_period": "per_session" if price_min is not None else None,
+        "registration_status": "open",
+        "registration_url": source_url,
+        "tags": list(dict.fromkeys(tags)),
+        "metadata": {
+            "bta_product_id": product_id,
+            "shopify_product_id": external_id,
+            "duration_minutes": duration_minutes,
+        },
+    }
 
 
 def _fetch_bta_products(session: requests.Session) -> list[dict]:
@@ -466,6 +526,32 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "recurrence_rule": None,
                 "content_hash": content_hash,
             }
+
+            try:
+                insert_program(
+                    _build_program_record(
+                        source_id=source_id,
+                        venue_id=venue_id,
+                        venue_name=place_data["name"],
+                        clean_title=clean_title,
+                        description=description,
+                        start_date=start_date,
+                        start_time=start_time,
+                        duration_minutes=duration_minutes,
+                        price_min=price_min,
+                        source_url=source_url,
+                        tags=tags,
+                        product_id=bta_product_id,
+                        external_id=external_id,
+                    )
+                )
+            except Exception as exc:
+                logger.error(
+                    "All Fired Up Art: program upsert failed for '%s' on %s: %s",
+                    clean_title,
+                    start_date,
+                    exc,
+                )
 
             existing = find_event_by_hash(content_hash)
             if existing:
