@@ -13,6 +13,7 @@ import {
   MapTrifold,
   MapPin,
   ArrowLeft,
+  GraduationCap,
 } from "@phosphor-icons/react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { useWeather } from "@/lib/hooks/useWeather";
@@ -72,6 +73,13 @@ const BROWSE_LANES: Lane[] = [
     icon: MapPin,
     accent: "#00D9A0",
     href: "?view=find&lane=places",
+  },
+  {
+    id: "classes",
+    label: "Classes",
+    icon: GraduationCap,
+    accent: "#C9874F",
+    href: "?view=find&lane=classes",
   },
 ];
 

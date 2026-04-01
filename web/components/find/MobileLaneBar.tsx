@@ -11,6 +11,7 @@ const MOBILE_LANES = [
   { id: "stage", label: "Stage", accent: "#E855A0", href: "?view=find&lane=stage&vertical=stage" },
   { id: "regulars", label: "Regulars", accent: "#FFD93D", href: "?view=find&lane=regulars" },
   { id: "places", label: "Places", accent: "#00D9A0", href: "?view=find&lane=places" },
+  { id: "classes", label: "Classes", accent: "#C9874F", href: "?view=find&lane=classes" },
   { id: "calendar", label: "Calendar", accent: "#00D9A0", href: "?view=find&lane=calendar" },
   { id: "map", label: "Map", accent: "#00D4E8", href: "?view=find&lane=map" },
 ];
