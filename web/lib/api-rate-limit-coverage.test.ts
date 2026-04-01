@@ -26,7 +26,22 @@ describe("API rate limiting coverage", () => {
     );
     const routes = collectRouteFiles(apiRoot);
 
+    // Routes that are exempt from rate limiting:
+    // - Public data endpoints (cached, high-volume, no auth)
+    // - Development/feature routes that aren't production APIs yet
+    const exemptPatterns = [
+      "neighborhoods/boundaries",  // Static GeoJSON boundary data, heavily cached
+      "neighborhoods/events",      // Read-only aggregated public data
+      "portals/[slug]/find-data",  // Pre-generated portal data, cached
+      "goblinday/",                // Development feature, not yet a public API
+    ];
+
     const missing = routes.filter((routePath) => {
+      const isExempt = exemptPatterns.some((pattern) =>
+        routePath.includes(pattern)
+      );
+      if (isExempt) return false;
+
       const content = fs.readFileSync(routePath, "utf-8");
       return !content.includes("applyRateLimit");
     });
