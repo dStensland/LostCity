@@ -18,8 +18,7 @@ import { FindSidebar } from "./FindSidebar";
 import { MobileLaneBar } from "./MobileLaneBar";
 import { FindContextProvider } from "./FindContextProvider";
 import EventsFinder from "./EventsFinder";
-import FindView from "./FindView";
-import type { ServerFindData } from "@/lib/find-data";
+import { ExploreHome } from "./ExploreHome";
 
 // Dynamic imports for renderers not needed on every lane
 const WhatsOnView = dynamic(() => import("./WhatsOnView"), {
@@ -35,21 +34,19 @@ const SpotsFinder = dynamic(() => import("./SpotsFinder"), {
 // Valid shell lanes — anything else falls back to launchpad
 const SHELL_LANES = new Set([
   "events", "now-showing", "live-music", "stage",
-  "regulars", "places", "calendar", "map",
+  "regulars", "places", "classes", "calendar", "map",
 ]);
 
 interface FindShellClientProps {
   portalSlug: string;
   portalId: string;
   portalExclusive: boolean;
-  serverFindData?: ServerFindData | null;
 }
 
 export default function FindShellClient({
   portalSlug,
   portalId,
   portalExclusive,
-  serverFindData,
 }: FindShellClientProps) {
   const searchParams = useSearchParams();
   const rawLane = searchParams.get("lane");
@@ -72,7 +69,7 @@ export default function FindShellClient({
       <div className="lg:ml-[240px] min-w-0">
         <FindContextProvider portalId={portalId} portalSlug={portalSlug} portalExclusive={portalExclusive}>
           {!lane && (
-            <FindView portalSlug={portalSlug} serverFindData={serverFindData ?? null} />
+            <ExploreHome portalSlug={portalSlug} />
           )}
           {lane === "events" && (
             <EventsFinder
@@ -96,6 +93,12 @@ export default function FindShellClient({
               portalExclusive={portalExclusive}
               displayMode="list"
             />
+          )}
+          {lane === "classes" && (
+            <div className="py-16 text-center">
+              <p className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">CLASSES & WORKSHOPS</p>
+              <p className="text-sm text-[var(--soft)]">Coming soon</p>
+            </div>
           )}
           {lane === "calendar" && (
             <EventsFinder
