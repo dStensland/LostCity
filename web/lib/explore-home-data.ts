@@ -195,6 +195,8 @@ function generateLaneCopy(
           return `${todayCount} production${todayCount === 1 ? "" : "s"} tonight`;
         case "regulars":
           return `${todayCount} regular${todayCount === 1 ? "" : "s"} happening today`;
+        case "classes":
+          return `${todayCount} class${todayCount === 1 ? "" : "es"} today`;
         case "places":
           return `${totalCount} places to explore`;
         case "calendar":
@@ -224,6 +226,8 @@ function generateLaneCopy(
       return `${totalCount} production${totalCount === 1 ? "" : "s"} running this week — tickets available`;
     case "regulars":
       return `${totalCount} weekly regular${totalCount === 1 ? "" : "s"} in your city`;
+    case "classes":
+      return `${totalCount} class${totalCount === 1 ? "" : "es"} coming up`;
     case "places":
       return `${totalCount} places to explore`;
     case "calendar":
@@ -668,6 +672,59 @@ export async function getExploreHomeData(
         .order("data_quality", { ascending: false, nullsFirst: false })
         .limit(PREVIEW_LIMIT),
 
+      // ----- Classes lane -----
+      applyManifestFederatedScopeToQuery(
+        supabase
+          .from("events")
+          .select("id", { count: "exact", head: true })
+          .eq("is_class", true)
+          .eq("is_active", true)
+          .is("canonical_event_id", null)
+          .gte("start_date", today),
+        manifest,
+        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
+      ),
+
+      applyManifestFederatedScopeToQuery(
+        supabase
+          .from("events")
+          .select("id", { count: "exact", head: true })
+          .eq("is_class", true)
+          .eq("is_active", true)
+          .is("canonical_event_id", null)
+          .eq("start_date", today),
+        manifest,
+        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
+      ),
+
+      applyManifestFederatedScopeToQuery(
+        supabase
+          .from("events")
+          .select("id", { count: "exact", head: true })
+          .eq("is_class", true)
+          .eq("is_active", true)
+          .is("canonical_event_id", null)
+          .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
+          .lte("start_date", weekend.end),
+        manifest,
+        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
+      ),
+
+      applyManifestFederatedScopeToQuery(
+        supabase
+          .from("events")
+          .select(eventPreviewSelect)
+          .eq("is_class", true)
+          .eq("is_active", true)
+          .is("canonical_event_id", null)
+          .gte("start_date", today)
+          .order("image_url", { ascending: false, nullsFirst: false })
+          .order("start_date", { ascending: true })
+          .limit(PREVIEW_LIMIT),
+        manifest,
+        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
+      ),
+
       // ----- Calendar lane (total event count, no previews) -----
       baseEventQuery(
         supabase
@@ -724,14 +781,20 @@ export async function getExploreHomeData(
       placesCount,
       placesPreview,
 
+      // Classes lane
+      classesCount,
+      classesTodayCount,
+      classesWeekendCount,
+      classesPreview,
+
       // Calendar lane
       calendarCount,
 
       // Map lane
       mapCount,
     ] = settled.map((r, i) => {
-      // Indices 3,7,11,15,19,21 are data (preview) queries; rest are count queries
-      const isDataQuery = [3, 7, 11, 15, 19, 21].includes(i);
+      // Indices 3,7,11,15,19,21,25 are data (preview) queries; rest are count queries
+      const isDataQuery = [3, 7, 11, 15, 19, 21, 25].includes(i);
       return unwrapSettled(r, isDataQuery ? dataFallback : countFallback);
     });
 
@@ -850,15 +913,14 @@ export async function getExploreHomeData(
         placesPreview,
         mapPlaceItems,
       ),
-      // Classes lane — always zero state (no data yet)
-      classes: {
-        state: "zero",
-        count: 0,
-        count_today: null,
-        count_weekend: null,
-        copy: "Classes coming soon",
-        items: [],
-      },
+      classes: buildLane(
+        "classes",
+        classesCount,
+        classesTodayCount,
+        classesWeekendCount,
+        classesPreview,
+        mapEventItems,
+      ),
       calendar: buildLane(
         "calendar",
         calendarCount,
