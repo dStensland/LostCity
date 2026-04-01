@@ -13,7 +13,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
@@ -37,6 +37,14 @@ PLACE_DATA = {
     "spot_type": "music_venue",
     "website": BASE_URL,
 }
+
+
+def determine_category(title: str) -> tuple[str, Optional[str], list[str]]:
+    """Separate open-format dance nights from ticketed music shows."""
+    title_lower = (title or "").lower()
+    if any(keyword in title_lower for keyword in ["perreo", "pista de baile", "fridays", "pre-party", "after-party", "afterparty"]):
+        return "nightlife", "club", ["believe", "nightclub", "dj", "west-end"]
+    return "music", "live", ["believe", "nightclub", "edm", "electronic", "dj", "west-end"]
 
 
 def parse_date(date_text: str) -> Optional[str]:
@@ -220,6 +228,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
 
 
+                        category, subcategory, tags = determine_category(title)
+
                         event_record = {
                             "source_id": source_id,
                             "place_id": venue_id,
@@ -230,16 +240,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "end_date": None,
                             "end_time": None,
                             "is_all_day": False,
-                            "category": "nightlife",
-                            "subcategory": "club",
-                            "tags": [
-                                "believe",
-                                "nightclub",
-                                "edm",
-                                "electronic",
-                                "dj",
-                                "west-end",
-                            ],
+                            "category": category,
+                            "subcategory": subcategory,
+                            "tags": tags,
                             "price_min": None,
                             "price_max": None,
                             "price_note": None,
@@ -270,15 +273,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 event_record["is_free"] = False
 
                         existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            i += 1
-                            continue
-
                         try:
                             insert_event(event_record)
-                            events_new += 1
+                            if existing:
+                                events_updated += 1
+                            else:
+                                events_new += 1
                             logger.info(f"Added: {title} on {start_date}")
                         except Exception as e:
                             logger.error(f"Failed to insert: {title}: {e}")

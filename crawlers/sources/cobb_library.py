@@ -396,6 +396,10 @@ def resolve_branch_venue(location_title: str) -> dict:
 
     for key, branch in LIBRARY_BRANCHES.items():
         if key in loc_lower:
+            description = (
+                f"{branch['name']} is a Cobb County Public Library branch with books, "
+                "computers, study space, and free community programming."
+            )
             return {
                 "name": branch["name"],
                 "slug": slugify(branch["name"]),
@@ -404,6 +408,7 @@ def resolve_branch_venue(location_title: str) -> dict:
                 "state": branch["state"],
                 "zip": branch.get("zip"),
                 "place_type": "library",
+                "description": description,
             }
 
     # If it mentions "library", use the location title as the name
@@ -415,6 +420,10 @@ def resolve_branch_venue(location_title: str) -> dict:
             "city": "Marietta",
             "state": "GA",
             "place_type": "library",
+            "description": (
+                f"{name} is a Cobb County Public Library location offering books, "
+                "study space, and free public programming."
+            ),
         }
 
     return _default_venue()
@@ -427,6 +436,10 @@ def _default_venue() -> dict:
         "city": "Marietta",
         "state": "GA",
         "place_type": "library",
+        "description": (
+            "Cobb County Public Library System offers branch libraries with books, "
+            "computers, study space, and free community events across Cobb County."
+        ),
     }
 
 

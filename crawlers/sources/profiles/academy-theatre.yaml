@@ -2,7 +2,6 @@ version: 1
 slug: academy-theatre
 name: Academy Theatre
 data_goals:
-- classes
 - events
 - images
 - showtimes

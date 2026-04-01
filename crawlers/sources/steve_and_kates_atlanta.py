@@ -311,6 +311,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
         "All-inclusive (lunch, snacks, 8am–6pm)."
     )
 
+    place_data = dict(PLACE_DATA)
+    place_data["description"] = description
+    if image_url:
+        place_data["image_url"] = image_url
+
     row = {
         "title": "Steve & Kate's Camp Atlanta (Sandy Springs)",
         "description": description,
@@ -332,7 +337,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     }
 
     try:
-        venue_id = get_or_create_place(PLACE_DATA)
+        venue_id = get_or_create_place(place_data)
         record = _build_event_record(source_id, venue_id, row)
 
         existing = find_event_by_hash(record["content_hash"])

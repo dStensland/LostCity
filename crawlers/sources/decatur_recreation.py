@@ -35,6 +35,10 @@ PLACE_DATA = {
     "place_type": "community_center",
     "spot_type": "community_center",
     "website": BASE_URL,
+    "description": (
+        "City of Decatur recreation center with fitness, aquatics, camps, "
+        "gym space, and community programming near downtown Decatur."
+    ),
 }
 
 

@@ -13,7 +13,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 from utils import enrich_event_record
 
@@ -35,6 +35,25 @@ PLACE_DATA = {
     "place_type": "hotel",
     "website": BASE_URL,
 }
+
+
+def determine_category(event_type: Optional[str], event_name: Optional[str], title: str) -> tuple[str, Optional[str], list[str]]:
+    """Map Hotel Clermont programming to the right consumer-facing category."""
+    combined = " ".join(part for part in [event_type, event_name, title] if part).lower()
+
+    if any(keyword in combined for keyword in ["wine down", "wine feature", "wine features"]):
+        return "food_drink", "wine", ["food-drink", "wine", "hotel"]
+    if "music bingo" in combined:
+        return "games", "bingo", ["games", "bingo", "hotel"]
+    if any(keyword in combined for keyword in ["trivia", "quiz"]):
+        return "games", "trivia", ["games", "trivia", "hotel"]
+    if any(keyword in combined for keyword in ["comedy", "stand-up", "standup"]):
+        return "comedy", "standup", ["comedy", "hotel"]
+    if any(keyword in combined for keyword in ["karaoke", "dj", "dance party", "dance night", "party"]):
+        return "nightlife", "dj", ["nightlife", "hotel", "rooftop"]
+    if any(keyword in combined for keyword in ["live music", "band", "concert", "performance"]):
+        return "music", "live", ["music", "live-music", "hotel", "rooftop"]
+    return "nightlife", "special_event", ["nightlife", "hotel", "clermont"]
 
 
 def parse_squarespace_date(date_str: str) -> tuple[Optional[str], Optional[str]]:
@@ -227,17 +246,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
 
-                    # Determine category from title
-                    title_lower = title.lower()
-                    if any(w in title_lower for w in ["music", "live", "band", "dj", "concert", "performance"]):
-                        category, subcategory = "music", "live"
-                        tags = ["music", "live-music", "hotel", "rooftop"]
-                    elif any(w in title_lower for w in ["comedy", "stand-up"]):
-                        category, subcategory = "comedy", "standup"
-                        tags = ["comedy", "hotel"]
-                    else:
-                        category, subcategory = "nightlife", "special_event"
-                        tags = ["nightlife", "hotel", "clermont"]
+                    category, subcategory, tags = determine_category(event_type, event_name, title)
 
                     event_record = {
                         "source_id": source_id,
@@ -274,14 +283,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         enrich_event_record(event_record, source_name="Hotel Clermont")
 
                     existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        continue
-
                     try:
                         insert_event(event_record)
-                        events_new += 1
+                        if existing:
+                            events_updated += 1
+                        else:
+                            events_new += 1
                         logger.info(f"Added: {title} on {start_date}")
                     except Exception as e:
                         logger.error(f"Failed to insert {title}: {e}")

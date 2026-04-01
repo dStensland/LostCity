@@ -3,7 +3,7 @@ slug: smyrna-oysterfest
 name: "Smyrna Oysterfest"
 integration_method: playwright
 defaults:
-  venue_name: "Smyrna Oysterfest"
+  venue_name: "Atkins Park Restaurant & Bar"
 discovery:
   enabled: true
   type: html

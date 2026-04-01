@@ -236,6 +236,20 @@ def test_read_to_a_pet_words():
     assert "reading" in result.genres
 
 
+def test_paws_to_read_words():
+    """Paws-to-Read literacy variants should stay deterministic and literary."""
+    result = classify_rules(title="April Paws to Read: R.E.A.D. to Jack")
+    assert result.category == "words"
+    assert "reading" in result.genres
+
+
+def test_reading_paws_words():
+    """READing Paws variants should also stay literary."""
+    result = classify_rules(title="Literacy | READing Paws")
+    assert result.category == "words"
+    assert "reading" in result.genres
+
+
 def test_toddler_time_words_storytime():
     """Toddler Time should resolve to a words/storytime program."""
     result = classify_rules(title="Toddler Time")
@@ -259,6 +273,13 @@ def test_sensory_play_family():
     """Sensory play should classify as family programming."""
     result = classify_rules(title="Sensory Play")
     assert result.category == "family"
+
+
+def test_sensory_friendly_storytime_words():
+    """Sensory-friendly storytime should stay literary, not generic family."""
+    result = classify_rules(title="Sensory-Friendly Storytime")
+    assert result.category == "words"
+    assert "storytime" in result.genres
 
 
 def test_sensory_playtime_family():
@@ -385,6 +406,79 @@ def test_book_a_librarian_one_to_one_tech_help_education():
     assert "technology" in result.genres
 
 
+def test_technology_help_education():
+    """Generic technology-help programs should stay in education."""
+    result = classify_rules(title="Technology Help")
+    assert result.category == "education"
+    assert "technology" in result.genres
+
+
+def test_bookmobile_words():
+    """Bookmobile stops should stay in literary programming, not family."""
+    result = classify_rules(title="Bookmobile @ Stratford Ridge")
+    assert result.category == "words"
+    assert "reading" in result.genres
+
+
+def test_reading_group_words():
+    """Reading groups should stay literary even with theater-adjacent names."""
+    result = classify_rules(title="Shakespeare Reading Group")
+    assert result.category == "words"
+    assert "book-club" in result.genres
+
+
+def test_tax_aide_support():
+    """Tax-aide appointments are support services, not volunteer shifts."""
+    result = classify_rules(title="AARP Tax Aide at Mountain View")
+    assert result.category == "support"
+
+
+def test_sensory_friendly_family_movie_film():
+    """Family movie programs should resolve to film without LLM fallback."""
+    result = classify_rules(title="Sensory Friendly Family Movie")
+    assert result.category == "film"
+
+
+def test_diy_playdough_workshops():
+    """Simple hands-on playdough activities should classify as workshops."""
+    result = classify_rules(title="DIY Playdough")
+    assert result.category == "workshops"
+    assert "crafts" in result.genres
+
+
+def test_cubing_hangout_games():
+    """Cubing programs should classify as games rather than family catch-alls."""
+    result = classify_rules(title="Cubing Hangout")
+    assert result.category == "games"
+
+
+def test_songwriters_circle_music():
+    """Songwriters circles are music programming, not education."""
+    result = classify_rules(title="Songwriters' Circle")
+    assert result.category == "music"
+    assert "singer-songwriter" in result.genres
+
+
+def test_tutoring_education():
+    """Tutoring programs should resolve to education."""
+    result = classify_rules(title="Explore the Library | Tutoring")
+    assert result.category == "education"
+
+
+def test_knitted_together_workshops():
+    """Knitting/craft clubs should resolve to workshops."""
+    result = classify_rules(title="Community | Knitted Together")
+    assert result.category == "workshops"
+    assert "crafts" in result.genres
+
+
+def test_poet_tree_words():
+    """Poet-Tree passive programs should stay literary."""
+    result = classify_rules(title='Passive Program: Library "Poet-Tree"')
+    assert result.category == "words"
+    assert "poetry" in result.genres
+
+
 def test_computer_basics_education():
     """Computer basics classes should stay education-oriented."""
     result = classify_rules(title="Computer Basics")
@@ -427,6 +521,82 @@ def test_study_cafe_education():
     result = classify_rules(title="South Cobb Study Cafe")
     assert result.category == "education"
     assert "language" in result.genres
+
+
+def test_google_suite_boot_camp_education():
+    """Digital-literacy boot camps should resolve to education, not fitness."""
+    result = classify_rules(title="Computer Literacy | Google Suite Boot Camp")
+    assert result.category == "education"
+    assert "technology" in result.genres
+
+
+def test_email_basics_education():
+    """Email basics classes should resolve to education/technology."""
+    result = classify_rules(title="Email Basics (Group Class)")
+    assert result.category == "education"
+    assert "technology" in result.genres
+
+
+def test_conversation_circle_education():
+    """Conversation circles should resolve to education/language."""
+    result = classify_rules(title="English Conversation Circle")
+    assert result.category == "education"
+    assert "language" in result.genres
+
+
+def test_sketchbook_club_workshops():
+    """Sketchbook clubs are participatory art-making, not generic education."""
+    result = classify_rules(title="Sketchbook Club")
+    assert result.category == "workshops"
+    assert "crafts" in result.genres
+
+
+def test_obituary_writing_workshop_workshops():
+    """Writing workshops that are participatory should stay workshops."""
+    result = classify_rules(title="Writing | Obituary Writing Workshop")
+    assert result.category == "workshops"
+    assert "crafts" in result.genres
+
+
+def test_board_of_trustees_meeting_civic():
+    """Library board meetings should classify as civic programming."""
+    result = classify_rules(title="Library Board of Trustees Meeting")
+    assert result.category == "civic"
+
+
+def test_tech_savvy_seniors_education():
+    """Senior digital-literacy classes should stay in education."""
+    result = classify_rules(title="Computer Literacy | Tech Savvy Seniors, Part 1")
+    assert result.category == "education"
+    assert "technology" in result.genres
+
+
+def test_learning_labs_green_screen_workshops():
+    """Learning Labs maker/media sessions should classify as workshops."""
+    result = classify_rules(title="Learning Labs | Intro to Green Screen")
+    assert result.category == "workshops"
+    assert "crafts" in result.genres
+
+
+def test_learning_labs_cricut_workshops():
+    """Cricut sessions should classify as workshops."""
+    result = classify_rules(title="Learning Labs | Intro to Cricut")
+    assert result.category == "workshops"
+    assert "crafts" in result.genres
+
+
+def test_learning_labs_3d_printing_workshops():
+    """3D printing intro sessions should classify as workshops."""
+    result = classify_rules(title="Learning Labs | Intro to 3D Printing")
+    assert result.category == "workshops"
+    assert "crafts" in result.genres
+
+
+def test_healthy_recipes_food_drink():
+    """Culinary recipes classes should resolve to food and drink programming."""
+    result = classify_rules(title="Culinary Arts | Healthy Recipes for Kids of All Ages")
+    assert result.category == "food_drink"
+    assert "cooking-class" in result.genres
 
 
 # ---------------------------------------------------------------------------
@@ -659,3 +829,38 @@ def test_sports_bar_no_sport_keyword_stays_film():
     )
     # Should NOT be classified as sports — no sport keyword
     assert result.category != "sports"
+
+
+def test_music_bingo_is_games():
+    result = classify_rules(title="Game Night: Music Bingo")
+    assert result.category == "games"
+    assert "bingo" in result.genres
+
+
+def test_wine_down_wednesday_is_food_drink():
+    result = classify_rules(title="Wine Features: Wine Down Wednesdays")
+    assert result.category == "food_drink"
+    assert "wine" in result.genres
+
+
+def test_cocktail_party_is_food_drink():
+    result = classify_rules(title="Cocktail Party! - Bowler Spirits Takeover")
+    assert result.category == "food_drink"
+    assert "cocktails" in result.genres
+
+
+def test_perreo_fridays_is_nightlife():
+    result = classify_rules(title="Jombriel - Atlanta - Perreo Fridays")
+    assert result.category == "nightlife"
+    assert "dj" in result.genres
+
+
+def test_music_video_night_is_nightlife():
+    result = classify_rules(title="Sputnik! Dark Alternative Music Video Night")
+    assert result.category == "nightlife"
+    assert "dj" in result.genres
+
+
+def test_comedy_throwdown_is_comedy():
+    result = classify_rules(title="Comedy Throwdown")
+    assert result.category == "comedy"

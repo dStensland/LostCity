@@ -13,6 +13,4 @@ detail:
   fetch:
     render_js: true
 data_goals:
-- events
 - images
-- tickets

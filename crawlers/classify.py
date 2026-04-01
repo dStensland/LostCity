@@ -166,6 +166,7 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
     (["trivia night", "trivia"],             "games",     ["trivia"],       0.9),
     (["pub quiz"],                            "games",     ["trivia"],       0.9),
     (["bingo"],                               "games",     ["bingo"],        0.9),
+    (["music bingo"],                         "games",     ["bingo"],        0.9),
     (["poker night", "poker tournament"],     "games",     ["poker"],        0.9),
     (["board game", "board games", "board game night"], "games", ["board-games"], 0.85),
     (["warhammer", "warhammer 40k", "age of sigmar"], "games", ["warhammer"], 0.9),
@@ -183,6 +184,7 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
       "dnd campaign", "dnd night"],           "games",     ["dnd"],          0.9),
     (["escape room"],                         "games",     ["escape-room"],  0.9),
     (["game night", "game day"],              "games",     ["game-night"],   0.8),
+    (["cubing"],                              "games",     [],               0.86),
 
     # --- Comedy (BEFORE theater — improv is comedy, not theater) ---
     (["improv show", "improv night", "improv comedy", "improv"],
@@ -190,6 +192,7 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
     (["stand-up", "standup", "stand up comedy"], "comedy", ["stand-up"],    0.9),
     (["comedy show", "comedy night", "comedy open mic"],
                                               "comedy",    [],               0.85),
+    (["comedy throwdown"],                    "comedy",    [],               0.88),
     (["roast"],                               "comedy",    ["roast"],        0.8),
 
     # --- Theater ---
@@ -204,6 +207,8 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
 
     # --- Music (open mic is LOW — could be comedy or poetry) ---
     (["dj set", "dj night"],                  "music",     ["dj"],           0.88),
+    (["songwriters circle", "songwriter circle", "songwriters' circle", "songwriter's circle"],
+                                             "music",     ["singer-songwriter"], 0.88),
     (["dueling pianos"],                      "music",     [],               0.88),
     (["live music"],                          "music",     [],               0.82),
     (["open mic"],                            "music",     ["open-mic"],     0.60),  # ambiguous
@@ -211,6 +216,8 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
 
     # --- Nightlife / social formats ---
     (["karaoke night", "karaoke"],            "nightlife", ["karaoke"],      0.88),
+    (["perreo", "pista de baile", "music video night"],
+                                             "nightlife", ["dj"],           0.88),
 
     # --- Dance (each style maps to its own specific genre) ---
     (["salsa night", "salsa dancing", "salsa class", "salsa lessons"],
@@ -244,6 +251,7 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
     # --- Workshops ---
     (["paint and sip", "painting and sip", "sip and paint"],
                                               "workshops", ["painting"],     0.92),
+    (["playdough"],                           "workshops", ["crafts"],       0.88),
     (["sewing class", "sewing workshop", "kids sewing", "sewing"],
                                               "workshops", [],               0.88),
     (["origami", "papermaking", "soap making", "soapmaking"],
@@ -256,8 +264,11 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
     (["creative writing workshop", "clothing repair clinic", "repair clinic",
       "shell charm bracelet", "fearless art"],
                                               "workshops", ["crafts"],       0.87),
-    (["podcast workshop", "podcast basics workshop", "craft and chat"],
+    (["podcast workshop", "podcast basics workshop", "craft and chat", "sketchbook club",
+      "artist spotlight", "knitted together"],
                                               "workshops", ["crafts"],       0.86),
+    (["writing workshop", "obituary writing workshop"],
+                                              "workshops", ["crafts"],       0.87),
     (["pottery class", "pottery workshop", "pottery"],
                                               "workshops", ["pottery"],      0.88),
     (["cooking class", "cooking workshop", "culinary class"],
@@ -273,15 +284,22 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
     (["baby time"],                          "words",     ["storytime"],    0.92),
     (["toddler time"],                       "words",     ["storytime"],    0.9),
     (["tummy time"],                         "family",    [],               0.9),
-    (["read to a pet", "pet partner"],       "words",     ["reading"],      0.88),
+    (["read to a pet", "pet partner", "paws to read", "reading paws"],
+                                              "words",     ["reading"],      0.88),
     (["book club"],                           "words",     ["book-club"],    0.92),
+    (["reading group"],                       "words",     ["book-club"],    0.91),
+    (["book discussion"],                     "words",     ["book-club"],    0.9),
     (["reading buddies"],                     "words",     ["reading"],      0.9),
+    (["bookmobile"],                          "words",     ["reading"],      0.88),
     (["storywalk"],                           "words",     ["reading"],      0.88),
     (["author signing", "author talk", "book signing", "book talk"],
                                               "words",     ["signing"],      0.88),
     (["poetry slam", "poetry open mic"],      "words",     ["poetry-slam"],  0.9),
+    (["poet-tree"],                           "words",     ["poetry"],       0.88),
     (["poetry reading", "poetry night", "poetry"],
                                               "words",     ["poetry"],       0.85),
+    (["sensory-friendly storytime", "sensory storytime"],
+                                              "words",     ["storytime"],    0.92),
     (["storytime", "story time", "storycraft"], "words",   ["storytime"],    0.9),
     (["spoken word"],                         "words",     ["spoken-word"],  0.88),
 
@@ -316,10 +334,14 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
     (["public comment", "public hearing"],    "civic",     ["public-comment"], 0.88),
     (["voter registration"],                  "civic",     ["voter-registration"], 0.92),
     (["city council", "county commission"],   "civic",     ["commission"],   0.88),
+    (["board of trustees meeting", "trustees meeting"],
+                                             "civic",     [],               0.88),
 
     # --- Support ---
     (["social work intern"],                  "support",   ["peer-support"], 0.86),
     (["adults with disabilities"],            "support",   ["peer-support"], 0.88),
+    (["tax aide", "tax help", "tax assistance"],
+                                              "support",   [],               0.88),
     (["aa meeting", "alcoholics anonymous"],  "support",   ["recovery"],     0.92),
     (["na meeting", "narcotics anonymous"],   "support",   ["recovery"],     0.92),
     (["grief support", "grief group"],        "support",   ["grief"],        0.9),
@@ -332,11 +354,14 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
     (["prayer meeting", "prayer service"],    "religious", ["prayer"],       0.88),
 
     # --- Education ---
-    (["language learning", "conversations in english"],
+    (["language learning", "conversations in english", "conversation circle"],
                                               "education", ["language"],     0.9),
     (["homework help", "tutoring"],          "education", [],               0.9),
-    (["book-a-librarian", "book a librarian", "1:1 tech help", "tech help", "computer basics", "internet basics"],
+    (["book-a-librarian", "book a librarian", "1:1 tech help", "tech help", "technology help",
+      "computer help", "computer basics", "internet basics", "computer literacy",
+      "google suite boot camp", "tech savvy seniors"],
                                               "education", ["technology"],   0.88),
+    (["email basics"],                        "education", ["technology"],   0.88),
     (["english as a second language", "study cafe"],
                                               "education", ["language"],     0.88),
     (["ged study", "ged class"],             "education", [],               0.88),
@@ -359,17 +384,23 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
 
     # --- Film ---
     (["filmmakers club", "film club"],        "film",      [],               0.88),
-    (["movie night", "movie screening", "film screening", "friday movies"],
+    (["movie night", "movie screening", "film screening", "friday movies",
+      "family movie", "sensory friendly family movie"],
                                               "film",      [],               0.88),
 
     # --- Family ---
     (["sensory play", "sensory playtime"],    "family",    [],               0.85),
+    (["green screen", "cricut", "3d printing", "tinkercad"],
+                                              "workshops", ["crafts"],       0.86),
+    (["healthy recipes"],                      "food_drink", ["cooking-class"], 0.88),
     (["expo", "trade show", "trade expo"],    "conventions", ["trade"],      0.65),
     (["conference"],                          "conventions", [],             0.65),
     (["convention"],                          "conventions", ["convention"], 0.65),
 
     # --- Food & Drink ---
     (["happy hour"],                          "food_drink", ["happy-hour"],  0.88),
+    (["wine down wednesday", "wine down wednesdays", "wine features"],
+                                             "food_drink", ["wine"],        0.88),
     (["food festival", "food fest"],          "food_drink", ["food-festival"], 0.88),
     (["wine tasting", "wine dinner"],         "food_drink", ["wine"],        0.88),
     (["beer tasting", "beer festival", "brew fest"],
@@ -378,6 +409,7 @@ _TITLE_PATTERNS: list[tuple[list[str], str, list[str], float]] = [
                                               "food_drink", ["farmers-market"], 0.92),
     (["pop-up dinner", "pop-up restaurant"],  "food_drink", ["pop-up"],      0.85),
     (["cocktail class", "mixology class"],    "food_drink", ["cocktails"],   0.88),
+    (["cocktail party"],                      "food_drink", ["cocktails"],   0.86),
 ]
 
 # ---------------------------------------------------------------------------

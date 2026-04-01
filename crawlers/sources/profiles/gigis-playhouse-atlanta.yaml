@@ -2,6 +2,4 @@ version: 1
 slug: gigis-playhouse-atlanta
 name: GiGis Playhouse Atlanta
 data_goals:
-- events
 - images
-- tickets

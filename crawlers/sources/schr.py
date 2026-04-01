@@ -59,6 +59,10 @@ PLACE_DATA = {
     "place_type": "organization",
     "spot_type": "organization",
     "website": BASE_URL,
+    "description": (
+        "Southern Center for Human Rights is an Atlanta nonprofit focused on "
+        "criminal justice reform, legal advocacy, and public education."
+    ),
     # Note: vibes are for venue atmosphere/amenities, not program types
     # Tags on events will capture civil-rights, legal-aid, social-justice, etc.
 }

@@ -25,6 +25,7 @@ from db import (
     insert_event,
     smart_update_existing_event,
 )
+from db.programs import insert_program
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -321,6 +322,33 @@ def _build_event_record(source_id: int, venue_id: int, row: dict) -> dict:
     return record
 
 
+def _build_program_record(source_id: int, venue_id: int, row: dict) -> dict:
+    return {
+        "source_id": source_id,
+        "place_id": venue_id,
+        "name": row["title"],
+        "description": row["description"],
+        "program_type": "camp",
+        "provider_name": PLACE_DATA["name"],
+        "age_min": row.get("age_min"),
+        "age_max": row.get("age_max"),
+        "season": "summer",
+        "session_start": row["start_date"],
+        "session_end": row["end_date"],
+        "schedule_start_time": row["start_time"],
+        "schedule_end_time": row["end_time"],
+        "cost_amount": row.get("price_min"),
+        "cost_period": "per_session" if row.get("price_min") is not None else None,
+        "cost_notes": row.get("price_note"),
+        "registration_status": "open",
+        "registration_url": row["ticket_url"],
+        "tags": row["tags"],
+        "status": "active",
+        "metadata": {"source_url": row["source_url"]},
+        "_venue_name": PLACE_DATA["name"],
+    }
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     source_id = source["id"]
     events_found = 0
@@ -345,6 +373,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
         try:
             if row["end_date"] < today:
                 continue
+
+            insert_program(_build_program_record(source_id, venue_id, row))
 
             record = _build_event_record(source_id, venue_id, row)
             events_found += 1

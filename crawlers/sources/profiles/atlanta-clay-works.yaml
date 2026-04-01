@@ -13,6 +13,6 @@ detail:
   jsonld_only: true
   use_jsonld: true
 data_goals:
-- events
+- classes
 - images
 - tickets

@@ -16,4 +16,4 @@ discovery:
 detail:
   enabled: false
 data_goals:
-- events
+- classes

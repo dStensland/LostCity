@@ -133,7 +133,7 @@ def test_show_led_bar_profiles_do_not_require_hours():
     )
 
     assert mode == "profile"
-    assert goals == ["events", "images", "specials", "tickets"]
+    assert goals == ["events", "images", "tickets"]
 
 
 def test_atlanta_printmakers_profile_targets_exhibitions():

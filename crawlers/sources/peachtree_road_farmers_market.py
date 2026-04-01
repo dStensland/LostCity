@@ -1,22 +1,25 @@
-"""
-Crawler for Peachtree Road Farmers Market.
-Weekly community farmers market in Buckhead.
+"""Crawler for Peachtree Road Farmers Market.
 
-Site uses JavaScript rendering - must use Playwright.
+Weekly Saturday farmers market in Buckhead. The site is useful for venue and
+image refreshes, but the event itself is recurring and should not depend on
+fragile title/date scraping from page chrome.
 """
 
 from __future__ import annotations
 
-import re
 import logging
-from datetime import datetime
-from typing import Optional
+from datetime import date, datetime, timedelta
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_event_by_hash,
+    get_or_create_place,
+    insert_event,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -36,19 +39,25 @@ PLACE_DATA = {
     "place_type": "market",
     "website": BASE_URL,
 }
+MARKET_TITLE = "Peachtree Road Farmers Market"
+MARKET_DESCRIPTION = (
+    "Weekly Saturday farmers market in Buckhead featuring local produce, "
+    "prepared food, flowers, and community vendors."
+)
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
+def _next_market_date(now: datetime | None = None) -> date:
+    """Return the next valid Saturday market date.
+
+    If today is Saturday and it's still before noon, use today. Otherwise use
+    the next Saturday.
+    """
+    current = now or datetime.now()
+    today = current.date()
+    days_ahead = (5 - today.weekday()) % 7
+    if days_ahead == 0 and current.hour >= 12:
+        days_ahead = 7
+    return today + timedelta(days=days_ahead)
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -72,137 +81,64 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
 
-            # Extract images from page
             image_map = extract_images_from_page(page)
+            market_image = next((url for url in image_map.values() if url), None)
+            next_market = _next_market_date()
+            start_date = next_market.isoformat()
+            content_hash = generate_content_hash(
+                MARKET_TITLE, PLACE_DATA["name"], start_date
+            )
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+            event_record = {
+                "source_id": source_id,
+                "place_id": venue_id,
+                "title": MARKET_TITLE,
+                "description": MARKET_DESCRIPTION,
+                "start_date": start_date,
+                "start_time": "08:30",
+                "end_date": None,
+                "end_time": "12:00",
+                "is_all_day": False,
+                "category": "food_drink",
+                "subcategory": "market",
+                "tags": [
+                    "farmers-market",
+                    "local-produce",
+                    "buckhead",
+                    "community",
+                ],
+                "price_min": None,
+                "price_max": None,
+                "price_note": None,
+                "is_free": True,
+                "source_url": BASE_URL,
+                "ticket_url": None,
+                "image_url": market_image,
+                "raw_text": f"{MARKET_TITLE} - {start_date}",
+                "extraction_confidence": 0.95,
+                "is_recurring": True,
+                "recurrence_rule": "FREQ=WEEKLY;BYDAY=SA",
+                "content_hash": content_hash,
+            }
 
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                if len(line) < 3:
-                    i += 1
-                    continue
-
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        title = "Peachtree Road Farmers Market"
-
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
-
-                    events_found += 1
-                    content_hash = generate_content_hash(title, "Peachtree Road Farmers Market", start_date)
-
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    description = "Weekly farmers market in Buckhead"
-                    image_url = image_map.get(title)
-
-                    event_record = {
-                        "source_id": source_id,
-                        "place_id": venue_id,
-                        "title": title,
-                        "description": description,
-                        "start_date": start_date,
-                        "start_time": start_time or "08:30",
-                        "end_date": None,
-                        "end_time": "12:00",
-                        "is_all_day": False,
-                        "category": "food_drink",
-                        "subcategory": "market",
-                        "tags": ["farmers-market", "local-produce", "buckhead", "community"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": True,
-                        "source_url": event_url,
-                        "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
-                        "image_url": image_url,
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": True,
-                        "recurrence_rule": "FREQ=WEEKLY;BYDAY=SA",
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    series_hint = {
-                        "series_type": "recurring_show",
-                        "series_title": title,
-                        "frequency": "weekly",
-                        "day_of_week": "Saturday",
-                        "description": description,
-                    }
-                    if image_url:
-                        series_hint["image_url"] = image_url
-
-                    try:
-                        insert_event(event_record, series_hint=series_hint)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
+            events_found = 1
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated = 1
+            else:
+                series_hint = {
+                    "series_type": "recurring_show",
+                    "series_title": MARKET_TITLE,
+                    "frequency": "weekly",
+                    "day_of_week": "Saturday",
+                    "description": MARKET_DESCRIPTION,
+                }
+                if market_image:
+                    series_hint["image_url"] = market_image
+                insert_event(event_record, series_hint=series_hint)
+                events_new = 1
+                logger.info("Added recurring market row for %s", start_date)
 
             browser.close()
 

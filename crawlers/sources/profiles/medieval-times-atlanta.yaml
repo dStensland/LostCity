@@ -2,6 +2,6 @@ version: 1
 slug: medieval-times-atlanta
 name: Medieval Times Atlanta
 data_goals:
-- events
 - images
+- specials
 - tickets

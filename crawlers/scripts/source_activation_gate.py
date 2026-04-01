@@ -54,6 +54,7 @@ WARN_WEIGHT = {
     "planning": 12,
     "destination-batch": 10,
 }
+NEUTRAL_EVENT_DESTINATION_GOALS = {"images", "tickets"}
 
 
 @dataclass
@@ -172,7 +173,11 @@ def has_usable_hours(value: Any) -> bool:
         return False
     if isinstance(value, dict):
         return any(
-            isinstance(day, dict) and (day.get("open") or day.get("close"))
+            (
+                isinstance(day, dict)
+                and (day.get("open") or day.get("close"))
+            )
+            or (isinstance(day, str) and day.strip())
             for day in value.values()
         )
     return True
@@ -415,8 +420,14 @@ def evaluate_gate(source: SourceGate, *, now: datetime) -> SourceGate:
         reasons.append("source appears stale or uncrawled in the last 14 days")
         score += FAIL_WEIGHT["stale"]
 
-    needs_destination_signals = source.entity_mode in {"events", "programs", "destination"} and bool(
-        set(source.goals) & DESTINATION_INTELLIGENCE_GOALS
+    destination_goals = set(source.goals) & DESTINATION_INTELLIGENCE_GOALS
+    venue_required_goals = destination_goals - NEUTRAL_EVENT_DESTINATION_GOALS
+    needs_destination_signals = (
+        source.entity_mode in {"programs", "destination"}
+        and bool(destination_goals)
+    ) or (
+        source.entity_mode == "events"
+        and bool(venue_required_goals)
     )
     destination_batch_without_primary = (
         source.entity_mode == "destination" and source.primary_venue_id is None

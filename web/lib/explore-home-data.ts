@@ -312,6 +312,16 @@ export async function getExploreHomeData(
     const isCurrentlyWeekend = isWeekend(now);
     const currentHour = now.getHours();
 
+    // Time filter for today's preview queries: exclude events that ended more
+    // than 1 hour ago. Applied only to today's date rows; future dates pass
+    // through unconditionally. All-day events (null start_time) always pass.
+    const graceHour = now.getHours() - 1;
+    const gracePaddedHour = ((graceHour % 24) + 24) % 24; // handle midnight wrap
+    const currentTimeMinusOneHour = `${String(gracePaddedHour).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+    // PostgREST or() filter: keep row if start_date is in the future, or
+    // start_time is null (all-day), or start_time is on/after the grace cutoff.
+    const upcomingOrFilter = `start_date.gt.${today},start_time.is.null,start_time.gte.${currentTimeMinusOneHour}`;
+
     // Shared select for event preview items
     const eventPreviewSelect = `
       id, title, start_date, start_time, category_id, image_url,
@@ -413,7 +423,9 @@ export async function getExploreHomeData(
       )
         .not("category_id", "in", `(${FILM_CATEGORIES.join(",")})`)
         .or("is_class.eq.false,is_class.is.null")
+        .or(upcomingOrFilter)
         .order("start_date", { ascending: true })
+        .order("start_time", { ascending: true, nullsFirst: false })
         .order("data_quality", { ascending: false, nullsFirst: false })
         .limit(PREVIEW_LIMIT),
 
@@ -448,7 +460,9 @@ export async function getExploreHomeData(
           .select(eventPreviewSelect)
       )
         .in("category_id", FILM_CATEGORIES)
+        .or(upcomingOrFilter)
         .order("start_date", { ascending: true })
+        .order("start_time", { ascending: true, nullsFirst: false })
         .order("data_quality", { ascending: false, nullsFirst: false })
         .limit(PREVIEW_LIMIT),
 
@@ -483,7 +497,9 @@ export async function getExploreHomeData(
           .select(eventPreviewSelect)
       )
         .in("category_id", MUSIC_CATEGORIES)
+        .or(upcomingOrFilter)
         .order("start_date", { ascending: true })
+        .order("start_time", { ascending: true, nullsFirst: false })
         .order("data_quality", { ascending: false, nullsFirst: false })
         .limit(PREVIEW_LIMIT),
 
@@ -518,7 +534,9 @@ export async function getExploreHomeData(
           .select(eventPreviewSelect)
       )
         .in("category_id", STAGE_CATEGORIES)
+        .or(upcomingOrFilter)
         .order("start_date", { ascending: true })
+        .order("start_time", { ascending: true, nullsFirst: false })
         .order("data_quality", { ascending: false, nullsFirst: false })
         .limit(PREVIEW_LIMIT),
 
@@ -561,8 +579,9 @@ export async function getExploreHomeData(
         .is("canonical_event_id", null)
         .gte("start_date", today)
         .lte("start_date", weekEnd)
+        .or(upcomingOrFilter)
         .order("start_date", { ascending: true })
-        .order("start_time", { ascending: true })
+        .order("start_time", { ascending: true, nullsFirst: false })
         .limit(PREVIEW_LIMIT),
 
       // ----- Places lane (count + preview) -----

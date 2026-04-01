@@ -8,6 +8,7 @@ from scripts.source_activation_gate import (
     crawl_recency_days,
     detect_entity_mode,
     evaluate_gate,
+    has_usable_hours,
     parse_iso_datetime,
     render_markdown,
 )
@@ -68,11 +69,30 @@ def test_evaluate_gate_fails_when_destination_goals_have_no_primary_venue():
     assert "missing-primary-venue" in gate.failing_checks
 
 
+def test_evaluate_gate_allows_event_source_without_primary_venue_when_only_image_ticket_goals_exist():
+    gate = _gate(
+        goals=["events", "images", "tickets"],
+        primary_venue_id=None,
+        primary_venue_name=None,
+        future_events=4,
+        recent_events_30d=4,
+    )
+
+    evaluate_gate(gate, now=datetime(2026, 3, 31, tzinfo=timezone.utc))
+
+    assert "missing-primary-venue" not in gate.failing_checks
+    assert gate.status == "pass"
+
+
 def test_parse_iso_datetime_accepts_short_fractional_second_offsets():
     parsed = parse_iso_datetime("2026-03-31T07:09:31.14788+00:00")
     assert parsed is not None
     assert parsed.year == 2026
     assert parsed.minute == 9
+
+
+def test_has_usable_hours_accepts_string_day_ranges():
+    assert has_usable_hours({"monday": "16:00-23:00", "tuesday": ""}) is True
 
 
 def test_detect_entity_mode_treats_open_calls_sources_as_open_call_lane():

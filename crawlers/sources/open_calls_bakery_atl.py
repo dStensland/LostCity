@@ -124,6 +124,16 @@ def _infer_call_type(title: str, description: str) -> str:
     return "submission"
 
 
+def _looks_like_call_title(text: str) -> bool:
+    lowered = (text or "").strip().lower()
+    if not lowered or lowered.startswith("open calls from"):
+        return False
+    return any(
+        kw in lowered
+        for kw in ["call for", "submission", "artists", "volunteers", "models", "workshop"]
+    )
+
+
 # ---------------------------------------------------------------------------
 # Page parser
 # ---------------------------------------------------------------------------
@@ -167,10 +177,7 @@ def _parse_calls(html: str) -> list[dict]:
 
         # Skip blocks that are clearly not open calls (navigation, footer, etc.)
         title_lower = title.lower()
-        if not any(
-            kw in title_lower
-            for kw in ["call for", "submission", "artists", "volunteers", "models", "workshop"]
-        ):
+        if not _looks_like_call_title(title_lower):
             continue
 
         # Collect all paragraph text within the block
@@ -219,7 +226,7 @@ def _parse_calls(html: str) -> list[dict]:
         })
 
     logger.debug("Bakery ATL: parsed %d calls from fe-block divs", len(calls))
-    return calls
+    return calls or _parse_calls_by_headings(soup)
 
 
 def _parse_calls_by_headings(soup: BeautifulSoup) -> list[dict]:
@@ -228,53 +235,62 @@ def _parse_calls_by_headings(soup: BeautifulSoup) -> list[dict]:
     then collect sibling content until the next heading.
     """
     calls: list[dict] = []
-    headings = soup.find_all(["h2", "h3"])
+    text_blocks = soup.select("div.sqs-html-content")
+    current: Optional[dict] = None
 
-    for heading in headings:
-        title = heading.get_text(strip=True)
-        title_lower = title.lower()
-        if not any(
-            kw in title_lower
-            for kw in ["call for", "submission", "artists", "volunteers", "models", "workshop"]
-        ):
+    def finalize_current() -> None:
+        nonlocal current
+        if not current:
+            return
+        description = " ".join(current["desc_parts"]).strip()
+        calls.append(
+            {
+                "title": current["title"],
+                "description": description[:2000] if description else None,
+                "deadline": current["deadline"],
+                "application_url": current["application_url"] or SOURCE_URL,
+                "call_type": _infer_call_type(current["title"], description),
+                "source_url": SOURCE_URL,
+            }
+        )
+        current = None
+
+    for block in text_blocks:
+        heading = block.find(["h1", "h2", "h3"])
+        heading_text = heading.get_text(" ", strip=True) if heading else ""
+
+        if _looks_like_call_title(heading_text):
+            finalize_current()
+            current = {
+                "title": heading_text,
+                "desc_parts": [],
+                "deadline": None,
+                "application_url": None,
+            }
             continue
 
-        # Walk following siblings until next heading
-        desc_parts: list[str] = []
-        application_url: Optional[str] = None
-        deadline_raw: Optional[str] = None
+        if current is None:
+            continue
 
-        for sibling in heading.find_next_siblings():
-            if sibling.name in ("h2", "h3"):
+        text = block.get_text(" ", strip=True)
+        if not text or text.upper() in {"VISIT US", "SUPPORT", "CONNECT", "WORK WITH US", "ATLANTA ART RESOURCES"}:
+            continue
+
+        if current["deadline"] is None:
+            deadline = _parse_deadline(text)
+            if deadline:
+                current["deadline"] = deadline
+
+        for a in block.find_all("a", href=True):
+            href = a["href"]
+            if "docs.google.com/forms" in href or "forms.gle" in href:
+                current["application_url"] = href
                 break
-            text = sibling.get_text(" ", strip=True)
-            if text:
-                if deadline_raw is None and re.search(
-                    r"deadline|close[sd]?|due|by\s+\w+\s+\d", text, re.I
-                ):
-                    candidate = _parse_deadline(text)
-                    if candidate:
-                        deadline_raw = candidate
-                desc_parts.append(text)
-            # Check for Google Form link
-            if application_url is None:
-                for a in sibling.find_all("a", href=True):
-                    href = a["href"]
-                    if "docs.google.com/forms" in href or "forms.gle" in href:
-                        application_url = href
-                        break
 
-        description = " ".join(desc_parts).strip()
+        if text != ".":
+            current["desc_parts"].append(text)
 
-        calls.append({
-            "title": title,
-            "description": description[:2000] if description else None,
-            "deadline": deadline_raw,
-            "application_url": application_url or SOURCE_URL,
-            "call_type": _infer_call_type(title, description),
-            "source_url": SOURCE_URL,
-        })
-
+    finalize_current()
     logger.debug("Bakery ATL: parsed %d calls from heading scan", len(calls))
     return calls
 

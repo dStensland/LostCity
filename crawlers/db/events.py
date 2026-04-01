@@ -93,8 +93,10 @@ _CLASSIFY_V2_REWRITE_SOURCE_CATEGORIES = frozenset(
         "education",
         "learning",
         "words",
+        "workshops",
         "support",
         "support_group",
+        "fitness",
         "exercise",
         "recreation",
         "wellness",
@@ -121,6 +123,7 @@ _AGGREGATOR_SOURCE_SLUGS = {
     "discover-atlanta",
     "instagram-captions",
     "creative-loafing",
+    "farmers-markets",
     "nashville-scene",
 }
 
