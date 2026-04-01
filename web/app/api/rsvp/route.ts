@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { NextResponse } from "next/server";
 import { parseIntParam, validationError, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
@@ -6,6 +7,7 @@ import { withAuth } from "@/lib/api-middleware";
 import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 import { logger } from "@/lib/logger";
 import { resolveSessionEngagementContext } from "@/lib/session-engagement";
+import { sendPushToUser } from "@/lib/push-notifications";
 
 const VALID_STATUSES = ["going", "interested", "went"] as const;
 const VALID_VISIBILITIES = ["friends", "public", "private"] as const;
@@ -28,7 +30,7 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
 
   try {
     const body = await request.json();
-    const { event_id, status, visibility = "friends" } = body;
+    const { event_id, status, visibility = "friends", notify_friends } = body;
 
     // Validate event_id is a number
     if (typeof event_id !== "number" || !Number.isInteger(event_id) || event_id <= 0) {
@@ -80,6 +82,16 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
       return NextResponse.json(
         { error: "Failed to save RSVP" },
         { status: 500 }
+      );
+    }
+
+    // Schedule async notification fan-out AFTER the response is sent.
+    // next/server after() ensures the work completes even on Vercel serverless.
+    if (notify_friends && status === "going") {
+      after(() =>
+        notifyFriendsOfJoining(user.id, event_id, serviceClient).catch((err) => {
+          logger.error("Friend notification failed", err, { userId: user.id, eventId: event_id, component: "rsvp" });
+        })
       );
     }
 
@@ -176,3 +188,77 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
     );
   }
 });
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function notifyFriendsOfJoining(userId: string, eventId: number, serviceClient: any) {
+  // Get user's display name
+  const { data: profile } = await serviceClient
+    .from("profiles")
+    .select("display_name, username")
+    .eq("id", userId)
+    .single();
+
+  const name = profile?.display_name || profile?.username || "Someone";
+
+  // Get event title
+  const { data: event } = await serviceClient
+    .from("events")
+    .select("title")
+    .eq("id", eventId)
+    .single();
+
+  if (!event) return;
+
+  // Get friends who are going to this event
+  const { data: friendIdsData } = await serviceClient.rpc(
+    "get_friend_ids" as never,
+    { user_id: userId } as never
+  ) as { data: { friend_id: string }[] | null; error: unknown };
+
+  const friendIds = (friendIdsData || []).map((r: { friend_id: string }) => r.friend_id);
+  if (friendIds.length === 0) return;
+
+  // Find friends who RSVPed to this event
+  const { data: attendingFriends } = await serviceClient
+    .from("event_rsvps")
+    .select("user_id")
+    .eq("event_id", eventId)
+    .in("user_id", friendIds)
+    .eq("status", "going");
+
+  if (!attendingFriends || attendingFriends.length === 0) return;
+
+  // Throttle: check if we already notified each friend about this event in last 24h
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  for (const friend of attendingFriends as { user_id: string }[]) {
+    // Check throttle
+    const { data: existing } = await serviceClient
+      .from("notifications")
+      .select("id")
+      .eq("user_id", friend.user_id)
+      .eq("event_id", eventId)
+      .eq("type", "friend_joining")
+      .gte("created_at", oneDayAgo)
+      .limit(1);
+
+    if (existing && existing.length > 0) continue; // Already notified
+
+    // Insert notification
+    await serviceClient.from("notifications").insert({
+      user_id: friend.user_id,
+      type: "friend_joining",
+      event_id: eventId,
+      actor_id: userId,
+      message: `${name} is joining you at ${event.title}!`,
+    } as never);
+
+    // Push notification (fire-and-forget)
+    sendPushToUser(friend.user_id, {
+      title: "Your People",
+      body: `${name} is joining you at ${event.title}!`,
+      url: `/events/${eventId}`,
+      tag: `friend-joining-${eventId}`,
+    }).catch(() => {}); // Silently ignore push failures
+  }
+}
