@@ -39,18 +39,30 @@ const FILM_CATEGORIES = ["film"];
 const MUSIC_CATEGORIES = ["music"];
 const STAGE_CATEGORIES = ["theater", "comedy", "dance"];
 
-/** Weekend date range: Friday through Sunday */
+/** Weekend date range: Friday through Sunday (inclusive).
+ *  On Fri→today through Sun. On Sat→yesterday Fri through tomorrow Sun.
+ *  On Sun→Fri (2 days ago) through today. Mon-Thu→next Fri through next Sun. */
 function getWeekendRange(today: Date): { start: string; end: string } {
   const dayOfWeek = today.getDay(); // 0=Sun, 6=Sat
-  // Days until Friday (5)
-  const daysToFri = dayOfWeek <= 5 ? 5 - dayOfWeek : 5 - dayOfWeek + 7;
-  // Days until Sunday (0 = next week if today is Mon-Sat)
-  const daysToSun = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-
   const fri = new Date(today);
-  fri.setDate(fri.getDate() + daysToFri);
   const sun = new Date(today);
-  sun.setDate(sun.getDate() + daysToSun);
+
+  if (dayOfWeek === 0) {
+    // Sunday: Friday was 2 days ago, sun is today
+    fri.setDate(fri.getDate() - 2);
+  } else if (dayOfWeek === 6) {
+    // Saturday: Friday was yesterday, Sunday is tomorrow
+    fri.setDate(fri.getDate() - 1);
+    sun.setDate(sun.getDate() + 1);
+  } else if (dayOfWeek === 5) {
+    // Friday: today through Sunday
+    sun.setDate(sun.getDate() + 2);
+  } else {
+    // Mon-Thu: next weekend
+    const daysToFri = 5 - dayOfWeek;
+    fri.setDate(fri.getDate() + daysToFri);
+    sun.setDate(sun.getDate() + daysToFri + 2);
+  }
 
   return {
     start: getLocalDateString(fri),
@@ -209,6 +221,17 @@ function generateLaneCopy(
 }
 
 // ---------------------------------------------------------------------------
+// Promise.allSettled helper
+// ---------------------------------------------------------------------------
+
+/** Unwrap a settled promise result, returning the fallback on rejection. */
+function unwrapSettled<T>(result: PromiseSettledResult<T>, fallback: T): T {
+  if (result.status === "fulfilled") return result.value;
+  console.warn("[explore-home-data] Query rejected:", result.reason);
+  return fallback;
+}
+
+// ---------------------------------------------------------------------------
 // Query helpers
 // ---------------------------------------------------------------------------
 
@@ -318,20 +341,47 @@ export async function getExploreHomeData(
 
     const supabase = await createPortalScopedClient(portal.id);
 
-    // Date boundaries
+    // Date boundaries — all time-of-day computation uses Eastern Time so
+    // Vercel's UTC servers produce correct results for Atlanta.
     const now = new Date();
     const today = getLocalDateString(now);
     const weekEnd = getLocalDateStringOffset(7); // 7-day lookahead
-    const weekend = getWeekendRange(now);
-    const isCurrentlyWeekend = isWeekend(now);
-    const currentHour = now.getHours();
+
+    // Build an ET-localized Date for day-of-week arithmetic (getDay, etc.)
+    const etNow = new Date(
+      now.toLocaleString("en-US", { timeZone: "America/New_York" }),
+    );
+
+    const weekend = getWeekendRange(etNow);
+    const isCurrentlyWeekend = isWeekend(etNow);
+
+    const hourEt = Number(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        hour: "numeric",
+        hour12: false,
+      }).format(now),
+    );
+    const currentHour = hourEt;
 
     // Time filter for today's preview queries: exclude events that ended more
     // than 1 hour ago. Applied only to today's date rows; future dates pass
     // through unconditionally. All-day events (null start_time) always pass.
-    const graceHour = now.getHours() - 1;
+    const minuteEt = Number(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        minute: "numeric",
+      }).format(now),
+    );
+    const secondEt = Number(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        second: "numeric",
+      }).format(now),
+    );
+    const graceHour = hourEt - 1;
     const gracePaddedHour = ((graceHour % 24) + 24) % 24; // handle midnight wrap
-    const currentTimeMinusOneHour = `${String(gracePaddedHour).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+    const currentTimeMinusOneHour = `${String(gracePaddedHour).padStart(2, "0")}:${String(minuteEt).padStart(2, "0")}:${String(secondEt).padStart(2, "0")}`;
     // PostgREST or() filter: keep row if start_date is in the future, or
     // start_time is null (all-day), or start_time is on/after the grace cutoff.
     const upcomingOrFilter = `start_date.gt.${today},start_time.is.null,start_time.gte.${currentTimeMinusOneHour}`;
@@ -365,47 +415,10 @@ export async function getExploreHomeData(
     // 2. Run all lane queries in parallel
     // -----------------------------------------------------------------------
 
-    const [
-      // Events lane
-      eventsCount,
-      eventsTodayCount,
-      eventsWeekendCount,
-      eventsPreview,
+    const countFallback = { count: null, error: null };
+    const dataFallback = { data: null, error: null };
 
-      // Now Showing (film) lane
-      filmCount,
-      filmTodayCount,
-      filmWeekendCount,
-      filmPreview,
-
-      // Live Music lane
-      musicCount,
-      musicTodayCount,
-      musicWeekendCount,
-      musicPreview,
-
-      // Stage lane
-      stageCount,
-      stageTodayCount,
-      stageWeekendCount,
-      stagePreview,
-
-      // Regulars lane
-      regularsCount,
-      regularsTodayCount,
-      regularsWeekendCount,
-      regularsPreview,
-
-      // Places lane (count only)
-      placesCount,
-      placesPreview,
-
-      // Calendar lane (count only)
-      calendarCount,
-
-      // Map lane (count only — events with venue lat/lng)
-      mapCount,
-    ] = await Promise.all([
+    const settled = await Promise.allSettled([
       // ----- Events lane (all events except film and classes) -----
       baseEventQuery(
         supabase
@@ -654,6 +667,53 @@ export async function getExploreHomeData(
         .not("places.lat", "is", null)
         .not("places.lng", "is", null),
     ]);
+
+    // Unwrap settled results — rejected queries degrade to zero state
+    const [
+      // Events lane
+      eventsCount,
+      eventsTodayCount,
+      eventsWeekendCount,
+      eventsPreview,
+
+      // Now Showing (film) lane
+      filmCount,
+      filmTodayCount,
+      filmWeekendCount,
+      filmPreview,
+
+      // Live Music lane
+      musicCount,
+      musicTodayCount,
+      musicWeekendCount,
+      musicPreview,
+
+      // Stage lane
+      stageCount,
+      stageTodayCount,
+      stageWeekendCount,
+      stagePreview,
+
+      // Regulars lane
+      regularsCount,
+      regularsTodayCount,
+      regularsWeekendCount,
+      regularsPreview,
+
+      // Places lane
+      placesCount,
+      placesPreview,
+
+      // Calendar lane
+      calendarCount,
+
+      // Map lane
+      mapCount,
+    ] = settled.map((r, i) => {
+      // Indices 3,7,11,15,19,21 are data (preview) queries; rest are count queries
+      const isDataQuery = [3, 7, 11, 15, 19, 21].includes(i);
+      return unwrapSettled(r, isDataQuery ? dataFallback : countFallback);
+    });
 
     // -----------------------------------------------------------------------
     // 3. Assemble lane previews
