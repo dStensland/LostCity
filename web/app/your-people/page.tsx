@@ -13,19 +13,17 @@ import Link from "next/link";
 export default function YourPeoplePage() {
   const { user } = useAuth();
   const { pendingRequests, isLoading: requestsLoading } = useFriendRequests({ type: "received" });
-  const { friendCount } = useCrewBoard();
+  const { friendCount, isLoading: crewLoading } = useCrewBoard();
   const crewEventIds = useCrewBoardEventIds();
-
-  const isLowFriendCount = friendCount < 3;
 
   if (!user) {
     return <UnauthenticatedView />;
   }
 
-  if (requestsLoading) {
+  if (requestsLoading || crewLoading) {
     return (
       <div className="space-y-6">
-        <PageHeader subtitle="Loading..." />
+        <PageHeader />
         {[1, 2, 3].map((i) => (
           <div key={i} className="h-20 skeleton-shimmer rounded-xl" />
         ))}
@@ -33,10 +31,12 @@ export default function YourPeoplePage() {
     );
   }
 
+  const isLowFriendCount = friendCount < 3;
+
   return (
     <div className="space-y-6">
       <PageHeader
-        subtitle={friendCount > 0 ? `${friendCount} friend${friendCount !== 1 ? "s" : ""} going out this week` : undefined}
+        subtitle={friendCount > 0 ? `${friendCount} friend${friendCount !== 1 ? "s" : ""}` : undefined}
       />
 
       {/* Friend Requests — always first when present */}

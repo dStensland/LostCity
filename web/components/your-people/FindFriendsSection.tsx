@@ -27,7 +27,7 @@ export default function FindFriendsSection() {
     {
       label: "Search",
       description: "Find friends on Lost City",
-      href: "/people",
+      href: "/find-friends",
       iconBg: "rgba(232,85,160,0.1)",
       iconColor: "var(--neon-magenta)",
       icon: "search" as const,

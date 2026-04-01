@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
+import UserAvatar from "@/components/UserAvatar";
 import type { FriendSignalEvent } from "@/lib/hooks/useFriendSignalEvents";
 
 interface FriendRadarCardProps {
@@ -30,7 +31,7 @@ export default function FriendRadarCard({ event }: FriendRadarCardProps) {
         <div className="flex items-center gap-1.5">
           <div className="flex -space-x-1">
             {event.friend_avatars.slice(0, 2).map((a) => (
-              <div key={a.id} className="w-3.5 h-3.5 rounded-full bg-[var(--dusk)] border border-[var(--night)]" />
+              <UserAvatar key={a.id} src={a.avatar_url} name="" size="xs" />
             ))}
           </div>
           <span className="font-mono text-2xs font-medium" style={{ color: labelColor }}>

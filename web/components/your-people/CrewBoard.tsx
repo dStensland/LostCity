@@ -37,7 +37,7 @@ export default function CrewBoard() {
           <div className="text-center py-6">
             <p className="text-sm text-[var(--soft)] mb-3">Nobody&apos;s got plans yet.</p>
             <Link
-              href="/atl?view=find"
+              href="/atlanta?view=find"
               className="inline-flex items-center gap-1.5 font-mono text-xs text-[var(--coral)] hover:opacity-80 transition-opacity"
             >
               Browse events &rarr;

@@ -19,7 +19,7 @@ export default function FriendRadarCarousel({ excludeEventIds }: FriendRadarCaro
         title="On Your Friends' Radar"
         priority="tertiary"
         accentColor="var(--neon-cyan)"
-        seeAllHref="/atl?view=find"
+        seeAllHref="/atlanta?view=find"
       />
       <div className="flex gap-2.5 sm:gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4">
         {events.map((event) => (
