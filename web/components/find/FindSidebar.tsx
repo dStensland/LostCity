@@ -150,12 +150,14 @@ interface FindSidebarProps {
   portalSlug: string;
   activeLane?: string | null;
   pulse?: CategoryPulse[];
+  laneStates?: Record<string, { state: string; count: number; count_today: number | null }>;
 }
 
 export const FindSidebar = memo(function FindSidebar({
   portalSlug,
   activeLane,
   pulse,
+  laneStates,
 }: FindSidebarProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -226,6 +228,19 @@ export const FindSidebar = memo(function FindSidebar({
             >
               {badge}
             </span>
+          )}
+          {!activeLane && laneStates?.[lane.id] && (
+            <span
+              className="w-1.5 h-1.5 rounded-full ml-auto shrink-0"
+              style={{
+                backgroundColor:
+                  laneStates[lane.id].state === "alive"
+                    ? lane.accent
+                    : laneStates[lane.id].state === "quiet"
+                    ? "var(--twilight)"
+                    : "transparent",
+              }}
+            />
           )}
         </a>
       </li>

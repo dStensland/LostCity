@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import { ExploreHomeSection } from "./ExploreHomeSection";
@@ -56,34 +56,14 @@ function ExploreSkeleton() {
 
 export interface ExploreHomeProps {
   portalSlug: string;
+  data: ExploreHomeResponse | null;
+  loading: boolean;
 }
 
-export function ExploreHome({ portalSlug }: ExploreHomeProps) {
-  const [data, setData] = useState<ExploreHomeResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+export function ExploreHome({ portalSlug, data, loading }: ExploreHomeProps) {
   const [query, setQuery] = useState("");
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Fetch explore-home data on mount
-  useEffect(() => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-    fetch(`/api/portals/${portalSlug}/explore-home`, { signal: controller.signal })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => setData(json))
-      .catch(() => {})
-      .finally(() => {
-        clearTimeout(timeoutId);
-        setLoading(false);
-      });
-
-    return () => {
-      controller.abort();
-      clearTimeout(timeoutId);
-    };
-  }, [portalSlug]);
 
   // Submit search → events lane with query
   function handleSearch(e: React.FormEvent) {

@@ -11,7 +11,7 @@
  * All lane renderers (EventsFinder, WhatsOnView, etc.) fetch their own data.
  */
 
-import { Suspense } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { FindSidebar } from "./FindSidebar";
@@ -19,6 +19,7 @@ import { MobileLaneBar } from "./MobileLaneBar";
 import { FindContextProvider } from "./FindContextProvider";
 import EventsFinder from "./EventsFinder";
 import { ExploreHome } from "./ExploreHome";
+import type { ExploreHomeResponse } from "@/lib/types/explore-home";
 
 // Dynamic imports for renderers not needed on every lane
 const WhatsOnView = dynamic(() => import("./WhatsOnView"), {
@@ -52,6 +53,34 @@ export default function FindShellClient({
   const rawLane = searchParams.get("lane");
   const lane = rawLane && SHELL_LANES.has(rawLane) ? rawLane : null;
 
+  const [exploreData, setExploreData] = useState<ExploreHomeResponse | null>(null);
+  const [exploreLoading, setExploreLoading] = useState(true);
+
+  useEffect(() => {
+    // Only fetch when showing Explore Home (no lane selected)
+    if (lane) {
+      setExploreLoading(false);
+      return;
+    }
+    setExploreLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    fetch(`/api/portals/${portalSlug}/explore-home`, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => setExploreData(json as ExploreHomeResponse | null))
+      .catch(() => {})
+      .finally(() => {
+        clearTimeout(timeoutId);
+        setExploreLoading(false);
+      });
+
+    return () => {
+      controller.abort();
+      clearTimeout(timeoutId);
+    };
+  }, [portalSlug, lane]);
+
   return (
     <div className="min-h-[calc(100vh-4rem)]">
       {/* Desktop sidebar — fixed to viewport, ALWAYS mounted */}
@@ -59,6 +88,7 @@ export default function FindShellClient({
         <FindSidebar
           portalSlug={portalSlug}
           activeLane={lane}
+          laneStates={exploreData?.lanes}
         />
       </div>
 
@@ -69,7 +99,7 @@ export default function FindShellClient({
       <div className="lg:ml-[240px] min-w-0">
         <FindContextProvider portalId={portalId} portalSlug={portalSlug} portalExclusive={portalExclusive}>
           {!lane && (
-            <ExploreHome portalSlug={portalSlug} />
+            <ExploreHome portalSlug={portalSlug} data={exploreData} loading={exploreLoading} />
           )}
           {lane === "events" && (
             <EventsFinder
