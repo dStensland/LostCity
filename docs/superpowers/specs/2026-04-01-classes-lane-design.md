@@ -1,4 +1,4 @@
-# Classes & Workshops Lane — Design Spec
+# Classes & Workshops Lane — Design Spec (v2)
 
 ## Context
 
@@ -6,227 +6,287 @@ The Classes lane is one of 9 lanes in the Find tab's Explore shell. It currently
 
 Classes are excluded from the Events, Regulars, and Feed lanes to prevent volume pollution — daily programming from studios would drown one-off events. Classes surface in general search results but have their own dedicated lane with specialized filters.
 
-## What This Builds
-
-A three-level category-first browsing experience for classes and workshops:
-
-1. **Category Landing** — grid of 11 category tiles with counts
-2. **Studios List** — venue-grouped results within a selected category
-3. **Studio Schedule** — deduplicated class list for a specific venue
-
-Plus a map view accessible from the category landing.
+**Data model note:** The current model treats classes as events with an `is_class` flag. By the north star's entity taxonomy, recurring classes with sessions, skill levels, and capacity are closer to Programs than Events. This is acknowledged as pragmatic technical debt — the `is_class` flag ships V1, but the long-term model is a dedicated program entity.
 
 ---
 
-## Level 1: Category Landing
+## What This Builds
 
-When the user enters the Classes lane (`?view=find&lane=classes`), they see:
+A two-level studio-first browsing experience:
+
+1. **Studios List** (default) — venue-grouped classes with category/date/skill filter chips
+2. **Studio Schedule** — deduplicated class list for a specific venue
+
+Plus search (inline filtering) and map view (V2, deferred).
+
+---
+
+## Level 1: Studios List (Default Landing)
+
+When the user enters the Classes lane (`?view=find&lane=classes`), they land directly on a browsable list of studios — not a category picker. This matches every other lane in Find (Events, Places, Regulars all drop you into content immediately).
 
 ### Search Bar
 
-Full-width search input above the category grid. Searches across class titles, descriptions, instructors, and venue names. When a search query is active, results display as a flat chronological list (breaking out of the category hierarchy) with class cards showing category badge, title, venue, date/time, skill level, price.
-
-### Map Toggle
-
-Button in the search bar row (right side). Toggles to map view — all studios with classes, pins colored by category. Tap pin → studio card with class count and categories offered. Tap card → navigates to that studio's schedule within the classes lane.
-
-URL: `?view=find&lane=classes&display=map`
-
-### Category Tiles
-
-Responsive grid: 3 columns desktop, 2 columns mobile. Each tile:
-
-- Category icon (Phosphor, weight="duotone")
-- Category name
-- Active class count ("24 classes this week")
-- Tap → navigates to studios list for that category
-
-The 11 categories and their icons:
-
-| Category | Label | Icon |
-|----------|-------|------|
-| painting | Painting | Palette |
-| cooking | Cooking | CookingPot |
-| pottery | Pottery | Shapes (or custom) |
-| dance | Dance | MusicNotes |
-| fitness | Fitness | Barbell |
-| woodworking | Woodworking | Hammer |
-| floral | Floral | Flower |
-| photography | Photography | Camera |
-| candle-making | Candle Making | Flame |
-| outdoor-skills | Outdoor Skills | Tree |
-| mixed | Crafts & More | Sparkle |
-
-Categories with zero classes this week render dimmed (reduced opacity) but visible — not hidden.
-
-### "All Classes" Entry Point
-
-First position in the tile grid or a prominent chip above — for users who want to browse all categories at once. Navigates to studios list with no category filter.
-
-### URL Scheme
-
-```
-?view=find&lane=classes                          → category landing
-?view=find&lane=classes&display=map              → map view
-?view=find&lane=classes&category=painting         → studios list (painting)
-?view=find&lane=classes&category=painting&venue=atlanta-clay-works → studio schedule
-?view=find&lane=classes&q=pottery                 → search results (flat list)
-```
-
----
-
-## Level 2: Studios List
-
-When a category tile is tapped (`?view=find&lane=classes&category=painting`):
-
-### Breadcrumb
-
-"← Painting" with back arrow. Shows subtitle: "24 classes at 6 studios." Tapping the arrow returns to category landing.
+Full-width search input at top. Searches across class titles, descriptions, instructors, and venue names. When a query is active, the studios list filters to only studios with matching classes. Clearing the search (`q` param removed) restores the unfiltered list.
 
 ### Filter Bar
 
-Horizontal chip row:
+Horizontal scrollable chip row below the search bar:
 
-- **Date window**: This Week (default) | This Weekend | Next 2 Weeks | All Upcoming
-- **Skill level**: All Levels (default) | Beginner | Intermediate | Advanced
+**Category chips**: All (default) | Painting | Cooking | Pottery | Dance | Fitness | Crafts | Photography
 
-Filters sync to URL params via `window.history.replaceState()` (no full navigation). Active chip uses category accent color (`#C9874F`) at 10% opacity background.
+8 categories (merged from 11):
+- "Candle Making" + "Floral" + "Mixed" → **Crafts** (combined catch-all for small-volume categories)
+- "Outdoor Skills" → merged into **Fitness**
+- Remaining 7 stay as-is
+
+Each chip shows a count badge: "Painting (24)". Zero-count chips render dimmed but remain visible.
+
+**Date window chips** (after a subtle separator): This Week (default) | Weekend | Next 2 Weeks | All Upcoming
+
+**Skill level chips** (after separator): All Levels (default) | Beginner | Intermediate | Advanced
+
+Active chips use the classes accent color at 10% opacity: `color-mix(in srgb, var(--classes-accent) 10%, transparent)`. The accent color is `#C9874F` — needs a CSS variable token (`--classes-accent` or closest existing token).
+
+Filters sync to URL params via `window.history.replaceState()` (no full navigation).
+
+### Category Icons
+
+Used in filter chips and studio cards:
+
+| Category | Label | Icon (Phosphor) |
+|----------|-------|-----------------|
+| painting | Painting | Palette |
+| cooking | Cooking | CookingPot |
+| pottery | Pottery | HandGrabbing |
+| dance | Dance | PersonSimpleRun |
+| fitness | Fitness | Barbell |
+| woodworking | Woodworking | Hammer |
+| photography | Photography | Camera |
+| crafts | Crafts | Sparkle |
+
+Dance uses `PersonSimpleRun` (not `MusicNotes`, which belongs to the Live Music lane).
 
 ### Studio Cards
 
 Sorted by class count descending (busiest studios first). Each card:
 
 ```
-[venue image]  Studio Name
-               Neighborhood · distance
-               N classes this week
-               Next: Class Title · Day Time
-                                    View all →
+┌──────────────────────────────────────────────────────┐
+│  [venue image   ]  Atlanta Clay Works                 │
+│  [or fallback   ]  Inman Park · 2.1 mi               │
+│  [80x80 rounded ]  8 classes this week                │
+│                    Next: Wheel Throwing · Tue 6pm     │
+│                    Painting · Pottery         See schedule → │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-- Venue image from `places` table (80x80 rounded)
+- **Venue image** from `places` table (80x80 rounded). **Fallback** when no image: category-tinted icon box — accent color at 15% opacity background with a duotone Phosphor icon for the studio's primary category. Uses the existing `IconBox` component pattern from the design system.
 - Studio name, neighborhood, distance (if location available)
-- Class count for current filter window (date + skill level applied)
+- Class count for current filter window (date + skill + category applied)
 - Next upcoming class as teaser (title + day + time)
-- "View all →" link expands to studio schedule
+- Category pills showing what the studio offers (when "All" category is active)
+- **"See schedule →"** link navigates to studio schedule
 
 Studios with zero classes in the current filter window drop to bottom, dimmed.
 
-### Empty State
+### Data Density Check
 
-"No {category} classes found for {date window}." with a suggestion to expand the date range.
+If the total class count across all categories is below 10, skip the filter chips and show a simple chronological list of classes with no grouping. This prevents the filterable studios list from looking empty on portals with thin class data.
+
+### Empty States
+
+- **No classes match filters**: "No {category} classes found for {date window}. Try a broader date range or different category." with a button to reset filters.
+- **No classes at all**: "Classes coming soon. Know a studio that should be listed?" with a suggestion link.
+- **Search no results**: "No classes matching '{query}'. Try a different search or browse all categories." with a button to clear search.
+
+### Loading State
+
+Studios list skeleton: 4 studio card placeholders (image shimmer + text lines), matching the card layout. Uses `animate-pulse` with `bg-[var(--twilight)]` shimmer elements.
+
+### Error State
+
+"Unable to load classes. Try refreshing." centered, matching the ExploreHome error pattern.
 
 ---
 
-## Level 3: Studio Schedule
+## Level 2: Studio Schedule
 
-When "View all →" is tapped on a studio card (`?view=find&lane=classes&category=painting&venue=atlanta-clay-works`):
+When "See schedule →" is tapped on a studio card (`?view=find&lane=classes&studio=atlanta-clay-works`):
 
 ### Studio Header
 
-Compact hero: venue image (full-width, 120px height), studio name, neighborhood. Link to full venue detail page ("See venue →").
-
-### Class List
-
-**Deduplicated by series.** Each unique class (identified by `series_id`) appears once:
-
-```
-Class Title
-Skill Level · $Price · N spots left
-Schedule Pattern (e.g., "Tuesdays & Thursdays, 6–8 PM")
-Instructor: Name
-Next: Date                              Details →
-```
-
-- **Series classes**: Show schedule pattern derived from recurring instances ("Tuesdays & Thursdays, 6–8 PM"), not individual dates. `series_id IS NOT NULL` groups instances.
-- **One-off workshops**: Show single date and time ("Saturday, Apr 12 · 10:00 AM–1:00 PM").
-- **Skill level badge**: Color-coded (beginner=green, intermediate=gold, advanced=coral, all-levels=soft).
-- **Capacity**: Show "N spots left" if capacity data exists and is meaningful. Omit if null.
-- **Instructor**: Show if available. Omit if null.
-- **"Details →"**: Links to the event detail page for the next upcoming instance.
-
-**Sort**: Recurring series first (alphabetical), then one-offs by date.
+Compact hero: venue image (full-width, 120px height, fallback to accent gradient), studio name, neighborhood. Link to full venue detail page ("See venue →").
 
 ### Back Navigation
 
-"← Painting Studios" breadcrumb returns to the studios list.
+"← Studios" breadcrumb at top. On mobile, the back arrow collapses into the header area to save vertical space (no separate breadcrumb row).
 
----
+### Class List
 
-## Map View
+**Deduplicated by series with title+venue fallback.** Grouping logic:
 
-Accessible from the category landing via the map toggle button.
+1. **Primary**: Group by `series_id` when present
+2. **Fallback**: Group by `(place_id + normalized_title + start_time)` for classes with `series_id = NULL` but identical title/venue/time across multiple dates
+3. **Ungrouped**: One-off workshops that don't match either pattern
 
-### Display
+Each unique class appears once:
 
-Full-height map (desktop: split-pane with sidebar list, mobile: full map with bottom sheet). Follows the same split-pane pattern used by the Events and Places map views.
+```
+┌──────────────────────────────────────────────────────┐
+│  Wheel Throwing Basics                                │
+│  [Beginner] · $45 · Capacity: 12                     │
+│  Tuesdays & Thursdays, 6:00–8:00 PM                 │
+│  Instructor: Sarah Chen                               │
+│  Next: Tue Apr 8                        Details →    │
+└──────────────────────────────────────────────────────┘
+```
 
-### Pins
+### Three class display patterns:
 
-Each pin represents a studio (venue) that offers classes. Pin color matches the category if a category filter is active. If no category filter, pins use the default classes accent (#C9874F).
+**Regular recurring** (`series_id` set, or title+venue+time match across 3+ dates):
+- Show schedule pattern: "Tuesdays & Thursdays, 6–8 PM"
+- Show "Next: {date}" for the upcoming instance
 
-### Pin Interaction
+**Multi-session series** (same series_id, varying dates, finite count):
+- Show date range + count: "6 sessions · Apr 5 – May 10"
+- Show next session date
 
-Tap pin → studio popup card showing: studio name, neighborhood, class count, categories offered as pills. Tap card → navigates to studio schedule within the classes lane.
+**One-off workshop** (single date, no series match):
+- Show single date: "Saturday, Apr 12 · 10:00 AM – 1:00 PM"
+
+**"Too complex" fallback**: If pattern derivation produces an irregular result (e.g., Mon, Wed, Fri one week, Tue, Thu the next), show "Multiple sessions" with an expandable list of individual dates.
+
+### Metadata
+
+- **Skill level badge**: Color-coded pill. Beginner = `var(--neon-green)`, Intermediate = `var(--gold)`, Advanced = `var(--coral)`, All Levels = `var(--twilight)` background with `var(--soft)` text.
+- **Capacity**: Show "Capacity: N" when capacity data exists (raw capacity from source). Do not imply remaining availability ("spots left") unless the crawler provides it directly. Omit if null.
+- **Instructor**: Show if available. Omit if null.
+- **Price**: Show if available ($45, Free, etc.). Omit if null.
+- **"Details →"**: Links to the event detail page for the next upcoming instance. The event detail page should show series siblings if the event has a `series_id` — this is existing behavior, not new work.
+
+### Sort
+
+Recurring series first (alphabetical by title), then one-offs by date.
 
 ### Filters
 
-Same filter bar as studios list: category chips (if viewing "All Classes" map) + date window + skill level. Applied client-side to the map data.
+Same filter bar carries over from Level 1: date window + skill level chips. Category chips hidden (you're already scoped to a studio). Active filters from Level 1 persist into Level 2.
+
+### Empty State
+
+"No upcoming classes at this studio for {date window}." with suggestion to expand date range.
+
+### Loading State
+
+Class list skeleton: 3 class card placeholders with shimmer text lines.
+
+---
+
+## Map View (V2 — Deferred)
+
+Map is deferred to a follow-up spec. The core browse flow (Studios List → Studio Schedule) ships first, polished.
+
+When built, the map will:
+- Follow the split-pane pattern from Events/Places map views
+- Show studio pins colored by primary category (when category filter active) or default accent (when unfiltered)
+- Use the `/api/classes/studios` endpoint for pin data (lat, lng, name, count, categories)
+- Multi-category studios on the unfiltered map use the default classes accent
+
+The URL `?view=find&lane=classes&display=map` is reserved for this future work.
 
 ---
 
 ## Explore Home Integration
 
-The Classes lane on Explore Home currently shows zero state ("Coming soon"). Once this lane ships:
+### Update `explore-home-data.ts`
 
-### Alive State
+Replace the hardcoded zero state for the classes lane with a real query:
 
-Update `explore-home-data.ts` to query classes data instead of hardcoding zero. The alive preview shows:
+- Count: `SELECT COUNT(*) FROM events WHERE is_class = true AND start_date >= today AND portal scope`
+- Count today: same with `start_date = today`
+- Preview items: 3-4 upcoming classes with images, using the same pattern as other lane previews
 
-- Section header: "CLASSES & WORKSHOPS" with liveness badge
-- 3-4 preview items: upcoming classes with images, title, venue, time
-- "Explore Classes →" footer link
+**Important**: The Explore Home preview query follows the same simple count + items pattern as other lanes. It does NOT load category counts or studio grouping — those are only fetched when entering the Classes lane.
 
 ### Scoring
 
-Classes are non-temporal in the same way Places is — they're always available if data exists. Use the same non-temporal scoring path: alive when `totalCount >= 3`.
+Classes use the non-temporal scoring path (same as Places): alive when `totalCount >= 3`.
 
 ---
 
 ## Data Architecture
 
-### Existing API
+### Existing API — `/api/classes`
 
-`GET /api/classes` already supports all needed queries:
+Already supports filtering by `class_category`, `skill_level`, date range, `neighborhood`, search/`q`, `sort`, `limit`/`offset`, portal scoping. **Hard limit: 50 results per page.**
 
-| Parameter | Purpose |
-|-----------|---------|
-| `class_category` | Filter by category (11 values) |
-| `skill_level` | Filter by skill |
-| `start_date` / `end_date` | Date window |
-| `neighborhood` | Geographic filter |
-| `search` / `q` | Full-text search |
-| `sort` | "date" (default) or "price" |
-| `limit` / `offset` | Pagination |
-| `portal` / `portal_id` | Portal scoping |
+### New: Add `place_id` filter to `/api/classes`
 
-### New Queries Needed
+The existing endpoint has no way to filter by venue. Add a `place_id` parameter (accepts numeric ID or venue slug) to the query builder. This is essential for Level 2 (studio schedule).
 
-**Category counts**: For the category landing, we need counts per category. Options:
-- 11 parallel calls to `/api/classes?class_category=X&limit=0` (using count-only mode)
-- A new lightweight endpoint or RPC: `get_class_category_counts(portal_id, start_date, end_date)` → `{ painting: 24, cooking: 18, ... }`
+### New: `GET /api/classes/studios` — Server-Side Studio Grouping
 
-Recommendation: New RPC for efficiency. One query instead of 11.
+The existing `/api/classes` returns flat class rows with a 50-item page limit. Client-side grouping would require multiple paginated requests. Instead, create a lightweight server-side grouping endpoint:
 
-**Studios grouped by venue**: The existing `/api/classes` returns flat class rows. For the studios list, we need classes grouped by venue with count and next-class info. Options:
-- Client-side grouping from flat results
-- A new endpoint: `GET /api/classes/studios?category=painting&date_window=this_week` → grouped response
+```
+GET /api/classes/studios?class_category=painting&start_date=2026-04-01&end_date=2026-04-07&skill_level=beginner&portal=atlanta
+```
 
-Recommendation: Client-side grouping from the existing endpoint is simpler and the result set is small enough (typically <100 classes per category per week).
+Response:
+```json
+{
+  "studios": [
+    {
+      "place_id": 123,
+      "name": "Atlanta Clay Works",
+      "slug": "atlanta-clay-works",
+      "neighborhood": "Inman Park",
+      "lat": 33.758,
+      "lng": -84.352,
+      "image_url": "...",
+      "class_count": 8,
+      "categories": ["painting", "pottery"],
+      "next_class": {
+        "title": "Wheel Throwing Basics",
+        "start_date": "2026-04-08",
+        "start_time": "18:00"
+      }
+    }
+  ],
+  "category_counts": {
+    "painting": 24,
+    "cooking": 18,
+    "pottery": 15,
+    "dance": 31,
+    "fitness": 47,
+    "woodworking": 6,
+    "photography": 3,
+    "crafts": 13
+  },
+  "total_count": 157
+}
+```
 
-**Series deduplication**: For the studio schedule, group by `series_id`. Events with the same `series_id` are instances of the same recurring class. Show one entry per series, with the schedule pattern derived from the instance dates/times.
+This endpoint:
+- Groups by `place_id` with count, next class, and categories per studio
+- Returns category counts in one shot (replaces the separate RPC)
+- Applies the same portal scoping chain as `/api/classes`: portal context resolution, federated scope, city filter, content scope filter
+- Cached at 90 seconds (matching `/api/classes`)
 
-Recommendation: Client-side deduplication. Fetch all classes for a venue, group by `series_id`, compute schedule pattern from the instances.
+### Series Deduplication (Client-Side)
+
+For Level 2 (studio schedule), fetch all classes for a venue via `/api/classes?place_id=X&limit=200`, then group client-side:
+
+1. Group by `series_id` when not null
+2. Fallback: group by `(place_id + normalized_title + start_time)` — normalized_title strips date suffixes
+3. Ungrouped: one-off workshops
+
+Derive schedule pattern from the grouped instances:
+- 3+ instances on the same weekday → "Tuesdays, 6–8 PM"
+- 3+ instances on multiple weekdays → "Tuesdays & Thursdays, 6–8 PM"
+- Finite series with varying dates → "6 sessions · Apr 5 – May 10"
+- Irregular → "Multiple sessions" with expandable date list
 
 ---
 
@@ -234,14 +294,42 @@ Recommendation: Client-side deduplication. Fetch all classes for a venue, group 
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| `ClassesView` | `web/components/find/ClassesView.tsx` | Top-level lane component, handles URL routing between levels |
-| `ClassCategoryGrid` | `web/components/find/classes/ClassCategoryGrid.tsx` | Category tile grid with counts |
-| `ClassStudiosList` | `web/components/find/classes/ClassStudiosList.tsx` | Venue-grouped list with filters |
+| `ClassesView` | `web/components/find/ClassesView.tsx` | Top-level lane component, owns data fetching via `useClassesData`, URL routing |
+| `ClassStudiosList` | `web/components/find/classes/ClassStudiosList.tsx` | Venue-grouped list with filter bar |
 | `ClassStudioSchedule` | `web/components/find/classes/ClassStudioSchedule.tsx` | Deduplicated class list for a venue |
-| `ClassSearchResults` | `web/components/find/classes/ClassSearchResults.tsx` | Flat search results list |
-| `ClassMapView` | `web/components/find/classes/ClassMapView.tsx` | Map view with studio pins |
+| `ClassStudioCard` | `web/components/find/classes/ClassStudioCard.tsx` | Individual studio card |
+| `ClassCard` | `web/components/find/classes/ClassCard.tsx` | Individual class row in schedule |
+| `useClassesData` | `web/lib/hooks/useClassesData.ts` | Data fetching hook — manages fetch lifecycle, caching, shared state |
 
-`ClassesView` reads URL params (`category`, `venue`, `display`, `q`) and renders the appropriate sub-component. Sub-components are lazy-loaded via `dynamic()`.
+### Data Fetching — `useClassesData`
+
+`ClassesView` owns the `useClassesData` hook and passes data to sub-components via props. The hook:
+
+- Fetches from `/api/classes/studios` for the studios list
+- Fetches from `/api/classes?place_id=X` for the studio schedule
+- Manages loading/error/data states per level
+- Caches fetched data for session duration within the lane — navigating back from Level 2 to Level 1 does NOT re-fetch
+- Shares studios data between list view and (future) map view
+
+Sub-components are display-only — they receive data via props and render it. They do not fetch independently.
+
+`ClassStudiosList` and `ClassStudioSchedule` are lazy-loaded via `dynamic()`.
+
+---
+
+## URL Scheme
+
+```
+?view=find&lane=classes                                → studios list (all categories)
+?view=find&lane=classes&category=painting               → studios list (painting filter active)
+?view=find&lane=classes&category=painting&window=weekend → studios list with date filter
+?view=find&lane=classes&studio=atlanta-clay-works        → studio schedule
+?view=find&lane=classes&q=pottery                        → studios list filtered by search
+```
+
+URL param `studio` uses the venue slug for readability. `ClassesView` resolves the slug to `place_id` from the studios list data (already loaded at Level 1). If deep-linked directly to a studio schedule, the component fetches studio metadata separately.
+
+Filter params: `category`, `window` (date), `skill`, `q` (search). All optional.
 
 ---
 
@@ -262,23 +350,30 @@ Already have the Classes lane (added in Explore Home work). No changes needed.
 
 ### Chip Bar Behavior
 
-When inside the Classes lane, the mobile chip bar shows "Classes" as the active chip. Navigating between category landing, studios list, and studio schedule stays within the Classes lane — the chip bar doesn't change.
+When inside the Classes lane, the mobile chip bar shows "Classes" as the active chip. Navigating between studios list and studio schedule stays within the lane — the chip bar doesn't change.
 
 ---
 
 ## Verification
 
 1. `npx tsc --noEmit` — clean build
-2. Category landing: 11 category tiles render with counts. Zero-count categories are dimmed.
-3. Category tile tap → studios list with correct category filter
-4. Studios list: venue cards sorted by class count. Filters (date window, skill level) work.
-5. Studio "View all →" → schedule with series deduplication
-6. Series classes show schedule pattern ("Tuesdays & Thursdays, 6–8 PM")
-7. One-off workshops show single date
-8. Back navigation works at each level
-9. Search bar: typing a query shows flat results
-10. Map view: studio pins render, tap → popup card → studio schedule
-11. Mobile (375px): 2-column category grid, stacked studios list, full-width schedule
-12. Empty states render correctly at each level
-13. Explore Home: Classes lane shows alive state with preview items (not "Coming soon")
-14. URL params sync correctly at each navigation level
+2. Studios list: renders studio cards sorted by class count, all 8 category chips with counts
+3. Category chip tap: filters studios list to matching category
+4. Date window + skill level chips: filter correctly
+5. Studio card "See schedule →" → schedule with series deduplication
+6. Regular recurring classes: show schedule pattern ("Tuesdays & Thursdays, 6–8 PM")
+7. Multi-session series: show date range + session count
+8. One-off workshops: show single date
+9. Irregular classes: show "Multiple sessions" with expandable dates
+10. Title+venue fallback grouping: classes with same title/venue but no series_id group together
+11. Back navigation: studio schedule → studios list preserves filter state and scroll position
+12. Search: typing a query filters studios to matching. Clearing restores unfiltered list.
+13. Mobile (375px): full-width studio cards, horizontally scrollable filter chips, compact header
+14. Empty states: no-results, no-classes, search-no-results all render correctly
+15. Loading states: skeleton cards while fetching
+16. Error state: "Unable to load" message on API failure
+17. Data density: below 10 total classes, simplified flat list without filters
+18. Image fallbacks: studios without images show category-tinted icon box
+19. Explore Home: Classes lane shows alive state with preview items (not "Coming soon")
+20. URL params sync correctly when filtering and navigating
+21. Navigating back from schedule to studios list does NOT re-fetch (cached)
