@@ -16,7 +16,6 @@ const SpotsFinder = dynamic(() => import("@/components/find/SpotsFinder"), {
 const FindView = dynamic(() => import("@/components/find/FindView"), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading...</div>,
 });
-import CommunityHub from "@/components/community/CommunityHub";
 import DetailViewRouter from "@/components/views/DetailViewRouter";
 import { DefaultTemplate } from "./_templates/default";
 import { GalleryTemplate } from "./_templates/gallery";
@@ -44,7 +43,7 @@ import {
   shouldDisableAmbientEffects,
   toFeedSkeletonVertical,
 } from "@/lib/portal-taxonomy";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import HorseSpinner from "@/components/ui/HorseSpinner";
 import { CivicTabBar } from "@/components/civic/CivicTabBar";
@@ -438,6 +437,11 @@ export default async function PortalPage({ params, searchParams }: Props) {
     }
   }
 
+  // ?view=community now lives at /your-people — redirect immediately
+  if (viewMode === "community") {
+    redirect("/your-people");
+  }
+
   // ─── Happening Content Type ─────────────────────────────────────────────
   // Maps ?content= param (or legacy ?type= param) to content type
   let happeningContent: HappeningContent = "all";
@@ -627,13 +631,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
                     </div>
                   )}
 
-                  {viewMode === "community" && (
-                    <div data-skeleton-route="community-view" className="contents">
-                      <CommunityHub
-                        portalSlug={portal.slug}
-                      />
-                    </div>
-                  )}
+
                 </>
               );
             })()}
