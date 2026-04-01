@@ -3,18 +3,20 @@
 import { useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { House } from "@phosphor-icons/react";
+import { LANE_META } from "@/lib/explore-lane-meta";
+import type { LaneSlug } from "@/lib/types/explore-home";
 
-const MOBILE_LANES = [
-  { id: "events", label: "Events", accent: "#FF6B7A", href: "?view=find&lane=events" },
-  { id: "now-showing", label: "Film", accent: "#FF6B7A", href: "?view=find&lane=now-showing&vertical=film" },
-  { id: "live-music", label: "Music", accent: "#A78BFA", href: "?view=find&lane=live-music&vertical=music" },
-  { id: "stage", label: "Stage", accent: "#E855A0", href: "?view=find&lane=stage&vertical=stage" },
-  { id: "regulars", label: "Regulars", accent: "#FFD93D", href: "?view=find&lane=regulars" },
-  { id: "places", label: "Places", accent: "#00D9A0", href: "?view=find&lane=places" },
-  { id: "classes", label: "Classes", accent: "#C9874F", href: "?view=find&lane=classes" },
-  { id: "calendar", label: "Calendar", accent: "#00D9A0", href: "?view=find&lane=calendar" },
-  { id: "map", label: "Map", accent: "#00D4E8", href: "?view=find&lane=map" },
+const MOBILE_LANE_ORDER: LaneSlug[] = [
+  "events", "now-showing", "live-music", "stage",
+  "regulars", "places", "classes", "calendar", "map",
 ];
+
+const MOBILE_LANES = MOBILE_LANE_ORDER.map((slug) => ({
+  id: slug,
+  label: LANE_META[slug].mobileLabel,
+  accent: LANE_META[slug].accent,
+  href: LANE_META[slug].href,
+}));
 
 interface MobileLaneBarProps {
   portalSlug: string;
@@ -62,7 +64,7 @@ export function MobileLaneBar({ portalSlug, activeLane }: MobileLaneBarProps) {
               className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap"
               style={
                 isActive
-                  ? { backgroundColor: `${lane.accent}20`, color: lane.accent }
+                  ? { backgroundColor: `color-mix(in srgb, ${lane.accent} 12%, transparent)`, color: lane.accent }
                   : { color: "var(--soft)" }
               }
             >

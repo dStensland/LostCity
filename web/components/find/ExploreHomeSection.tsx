@@ -4,70 +4,7 @@ import { memo } from "react";
 import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
 import type { LaneSlug, LanePreview } from "@/lib/types/explore-home";
-
-// ---------------------------------------------------------------------------
-// Lane metadata
-// ---------------------------------------------------------------------------
-
-const LANE_META: Record<
-  LaneSlug,
-  { label: string; accent: string; href: string; zeroCta: string }
-> = {
-  events: {
-    label: "EVENTS",
-    accent: "#FF6B7A",
-    href: "?view=find&lane=events",
-    zeroCta: "",
-  },
-  "now-showing": {
-    label: "NOW SHOWING",
-    accent: "#FF6B7A",
-    href: "?view=find&lane=now-showing&vertical=film",
-    zeroCta: "",
-  },
-  "live-music": {
-    label: "LIVE MUSIC",
-    accent: "#A78BFA",
-    href: "?view=find&lane=live-music&vertical=music",
-    zeroCta: "",
-  },
-  stage: {
-    label: "STAGE & COMEDY",
-    accent: "#E855A0",
-    href: "?view=find&lane=stage&vertical=stage",
-    zeroCta: "",
-  },
-  regulars: {
-    label: "REGULARS",
-    accent: "#FFD93D",
-    href: "?view=find&lane=regulars",
-    zeroCta: "",
-  },
-  places: {
-    label: "PLACES",
-    accent: "#00D9A0",
-    href: "?view=find&lane=places",
-    zeroCta: "",
-  },
-  classes: {
-    label: "CLASSES & WORKSHOPS",
-    accent: "#C9874F",
-    href: "?view=find&lane=classes",
-    zeroCta: "Coming soon — know a great class?",
-  },
-  calendar: {
-    label: "CALENDAR",
-    accent: "#FFD93D",
-    href: "?view=find&lane=calendar",
-    zeroCta: "",
-  },
-  map: {
-    label: "MAP",
-    accent: "#00D4E8",
-    href: "?view=find&lane=map",
-    zeroCta: "",
-  },
-};
+import { LANE_META } from "@/lib/explore-lane-meta";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -89,6 +26,7 @@ interface LivenessBadgeProps {
   countWeekend: number | null;
   count: number;
   accent: string;
+  badgePrefix: string;
 }
 
 function LivenessBadge({
@@ -96,12 +34,13 @@ function LivenessBadge({
   countWeekend,
   count,
   accent,
+  badgePrefix,
 }: LivenessBadgeProps) {
   let text: string;
   let showPulse: boolean;
 
   if (countToday && countToday > 0) {
-    text = `TONIGHT · ${countToday}`;
+    text = `${badgePrefix} · ${countToday}`;
     showPulse = true;
   } else if (countWeekend && countWeekend > 0) {
     text = `THIS WEEKEND · ${countWeekend}`;
@@ -115,7 +54,7 @@ function LivenessBadge({
     <span
       className="inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 font-mono text-2xs font-bold tracking-wider"
       style={{
-        backgroundColor: `${accent}1A`,
+        backgroundColor: `color-mix(in srgb, ${accent} 10%, transparent)`,
         color: accent,
       }}
     >
@@ -190,6 +129,7 @@ export const ExploreHomeSection = memo(function ExploreHomeSection({
             countWeekend={count_weekend}
             count={count}
             accent={accent}
+            badgePrefix={meta.badgePrefix ?? "TONIGHT"}
           />
         )}
       </header>

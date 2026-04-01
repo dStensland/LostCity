@@ -18,6 +18,7 @@ import {
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { useWeather } from "@/lib/hooks/useWeather";
 import type { CategoryPulse } from "@/lib/find-data";
+import { LANE_META } from "@/lib/explore-lane-meta";
 
 // -------------------------------------------------------------------------
 // Lane definitions
@@ -36,50 +37,50 @@ const BROWSE_LANES: Lane[] = [
     id: "events",
     label: "Events",
     icon: Ticket,
-    accent: "#FF6B7A",
-    href: "?view=find&lane=events",
+    accent: LANE_META["events"].accent,
+    href: LANE_META["events"].href,
   },
   {
     id: "now-showing",
     label: "Now Showing",
     icon: FilmSlate,
-    accent: "#FF6B7A",
-    href: "?view=find&lane=now-showing&vertical=film",
+    accent: LANE_META["now-showing"].accent,
+    href: LANE_META["now-showing"].href,
   },
   {
     id: "live-music",
     label: "Live Music",
     icon: MusicNotes,
-    accent: "#A78BFA",
-    href: "?view=find&lane=live-music&vertical=music",
+    accent: LANE_META["live-music"].accent,
+    href: LANE_META["live-music"].href,
   },
   {
     id: "stage",
     label: "Stage & Comedy",
     icon: MaskHappy,
-    accent: "#E855A0",
-    href: "?view=find&lane=stage&vertical=stage",
+    accent: LANE_META["stage"].accent,
+    href: LANE_META["stage"].href,
   },
   {
     id: "regulars",
     label: "Regulars",
     icon: ArrowsClockwise,
-    accent: "#FFD93D",
-    href: "?view=find&lane=regulars",
+    accent: LANE_META["regulars"].accent,
+    href: LANE_META["regulars"].href,
   },
   {
     id: "places",
     label: "Places",
     icon: MapPin,
-    accent: "#00D9A0",
-    href: "?view=find&lane=places",
+    accent: LANE_META["places"].accent,
+    href: LANE_META["places"].href,
   },
   {
     id: "classes",
     label: "Classes",
     icon: GraduationCap,
-    accent: "#C9874F",
-    href: "?view=find&lane=classes",
+    accent: LANE_META["classes"].accent,
+    href: LANE_META["classes"].href,
   },
 ];
 
@@ -88,15 +89,15 @@ const VIEW_LANES: Lane[] = [
     id: "calendar",
     label: "Calendar",
     icon: CalendarBlank,
-    accent: "#00D9A0",
-    href: "?view=find&lane=calendar",
+    accent: LANE_META["calendar"].accent,
+    href: LANE_META["calendar"].href,
   },
   {
     id: "map",
     label: "Map",
     icon: MapTrifold,
-    accent: "#00D4E8",
-    href: "?view=find&lane=map",
+    accent: LANE_META["map"].accent,
+    href: LANE_META["map"].href,
   },
 ];
 
@@ -204,7 +205,7 @@ export const FindSidebar = memo(function FindSidebar({
           ].join(" ")}
           style={
             isActive
-              ? { backgroundColor: `${lane.accent}14`, color: lane.accent }
+              ? { backgroundColor: `color-mix(in srgb, ${lane.accent} 8%, transparent)`, color: lane.accent }
               : undefined
           }
         >
