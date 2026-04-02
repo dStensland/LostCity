@@ -7,7 +7,7 @@ import { LANE_META } from "@/lib/explore-lane-meta";
 import type { LaneSlug } from "@/lib/types/explore-home";
 
 const MOBILE_LANE_ORDER: LaneSlug[] = [
-  "events", "now-showing", "live-music", "stage",
+  "events", "shows",
   "regulars", "places", "classes", "calendar", "map",
 ];
 
