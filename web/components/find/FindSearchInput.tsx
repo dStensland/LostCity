@@ -38,14 +38,14 @@ function resolveViewAllHref(params: {
   }
 
   if (params.resultType === "venue") {
-    return `/${params.portalSlug}?view=places&search=${encodedQuery}`;
+    return `/${params.portalSlug}?view=find&lane=places&search=${encodedQuery}`;
   }
 
   if (params.findType === "classes") {
     return `/${params.portalSlug}?view=happening&content=classes&search=${encodedQuery}`;
   }
 
-  return `/${params.portalSlug}?view=happening&search=${encodedQuery}`;
+  return `/${params.portalSlug}?view=find&lane=events&search=${encodedQuery}`;
 }
 
 export default function FindSearchInput({
