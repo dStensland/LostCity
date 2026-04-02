@@ -561,14 +561,19 @@ export async function getExploreHomeData(
         .limit(PREVIEW_LIMIT),
 
       // ----- Regulars lane (recurring events with series) -----
+      // Filters mirror the production /api/regulars route exactly:
+      // is_regular_ready strict gate + exclude classes and non-hang categories
+      // (film showtimes, theater runs, civic meetings, recovery, etc.)
       applyManifestFederatedScopeToQuery(
         supabase
           .from("events")
           .select("id", { count: "exact", head: true })
           .eq("is_active", true)
-          .or("is_feed_ready.eq.true,is_feed_ready.is.null,is_regular_ready.eq.true")
+          .eq("is_regular_ready", true)
           .not("series_id", "is", null)
           .is("canonical_event_id", null)
+          .not("is_class", "eq", true)
+          .not("category_id", "in", "(film,theater,education,support,support_group,civic,volunteer,religious,community,family,learning)")
           .gte("start_date", today)
           .lte("start_date", weekEnd),
         manifest,
@@ -580,9 +585,11 @@ export async function getExploreHomeData(
           .from("events")
           .select("id", { count: "exact", head: true })
           .eq("is_active", true)
-          .or("is_feed_ready.eq.true,is_feed_ready.is.null,is_regular_ready.eq.true")
+          .eq("is_regular_ready", true)
           .not("series_id", "is", null)
           .is("canonical_event_id", null)
+          .not("is_class", "eq", true)
+          .not("category_id", "in", "(film,theater,education,support,support_group,civic,volunteer,religious,community,family,learning)")
           .eq("start_date", today),
         manifest,
         { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
@@ -593,9 +600,11 @@ export async function getExploreHomeData(
           .from("events")
           .select("id", { count: "exact", head: true })
           .eq("is_active", true)
-          .or("is_feed_ready.eq.true,is_feed_ready.is.null,is_regular_ready.eq.true")
+          .eq("is_regular_ready", true)
           .not("series_id", "is", null)
           .is("canonical_event_id", null)
+          .not("is_class", "eq", true)
+          .not("category_id", "in", "(film,theater,education,support,support_group,civic,volunteer,religious,community,family,learning)")
           .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
           .lte("start_date", weekend.end),
         manifest,
@@ -607,9 +616,11 @@ export async function getExploreHomeData(
           .from("events")
           .select(eventPreviewSelect)
           .eq("is_active", true)
-          .or("is_feed_ready.eq.true,is_feed_ready.is.null,is_regular_ready.eq.true")
+          .eq("is_regular_ready", true)
           .not("series_id", "is", null)
           .is("canonical_event_id", null)
+          .not("is_class", "eq", true)
+          .not("category_id", "in", "(film,theater,education,support,support_group,civic,volunteer,religious,community,family,learning)")
           .gte("start_date", today)
           .lte("start_date", weekEnd)
           .or(upcomingOrFilter)
@@ -775,8 +786,19 @@ export async function getExploreHomeData(
       previewResult: { data: unknown[] | null; error: unknown } | null,
       mapItems: (rows: unknown[]) => PreviewItem[],
     ): LanePreview {
+      if (countResult.error) {
+        console.warn(`[explore-home-data] Lane "${lane}" count query error:`, countResult.error);
+      }
       const rawTotal = countResult.count ?? 0;
+
+      if (todayResult?.error) {
+        console.warn(`[explore-home-data] Lane "${lane}" count_today query error:`, todayResult.error);
+      }
       const todayN = todayResult !== null ? (todayResult.count ?? 0) : null;
+
+      if (weekendResult?.error) {
+        console.warn(`[explore-home-data] Lane "${lane}" count_weekend query error:`, weekendResult.error);
+      }
       const weekendN = weekendResult !== null ? (weekendResult.count ?? 0) : null;
 
       // If the total count query failed (returned 0/null) but today or weekend
