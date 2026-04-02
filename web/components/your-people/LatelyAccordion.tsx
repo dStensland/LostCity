@@ -4,7 +4,7 @@ import { useState } from "react";
 import { FriendsActivity } from "@/components/community/FriendsActivity";
 
 export default function LatelyAccordion() {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   return (
     <div className="border border-[var(--twilight)] rounded-xl overflow-hidden">
