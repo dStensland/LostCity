@@ -56,12 +56,26 @@ export default function MobileCalendarView({
   portalSlug = DEFAULT_PORTAL_SLUG,
   portalExclusive
 }: Props) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  // Initialize month/year from URL params for deep-linking
+  const [currentDate, setCurrentDate] = useState(() => {
+    if (typeof window === "undefined") return new Date();
+    const params = new URLSearchParams(window.location.search);
+    const urlMonth = params.get("month");
+    const urlYear = params.get("year");
+    if (urlMonth && urlYear) {
+      const m = parseInt(urlMonth, 10) - 1;
+      const y = parseInt(urlYear, 10);
+      if (!isNaN(m) && !isNaN(y) && m >= 0 && m <= 11 && y >= 2000 && y <= 2100) {
+        return new Date(y, m, 1);
+      }
+    }
+    return new Date();
+  });
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Use React Query hook for calendar events
-  const { eventsByDate, isLoading, isRefetching } = useCalendarEvents({
+  const { eventsByDate, isLoading, isRefetching, error, refetch } = useCalendarEvents({
     month: currentDate.getMonth() + 1,
     year: currentDate.getFullYear(),
     portalId,
@@ -152,55 +166,91 @@ export default function MobileCalendarView({
     };
   }, [calendarDays]);
 
+  // Sync month/year to URL for deep-linking and back-navigation
+  const syncMonthToUrl = useCallback((date: Date) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("month", String(date.getMonth() + 1));
+    url.searchParams.set("year", String(date.getFullYear()));
+    window.history.replaceState({}, "", url.toString());
+  }, []);
+
   // Navigation
   const goToPrevWeek = useCallback(() => {
     setSelectedDate(d => subWeeks(d, 1));
     setCurrentDate(d => {
       const newSelected = subWeeks(selectedDate, 1);
       if (!isSameMonth(newSelected, d)) {
-        return subMonths(d, 1);
+        const prev = subMonths(d, 1);
+        syncMonthToUrl(prev);
+        return prev;
       }
       return d;
     });
-  }, [selectedDate]);
+  }, [selectedDate, syncMonthToUrl]);
 
   const goToNextWeek = useCallback(() => {
     setSelectedDate(d => addWeeks(d, 1));
     setCurrentDate(d => {
       const newSelected = addWeeks(selectedDate, 1);
       if (!isSameMonth(newSelected, d)) {
-        return addMonths(d, 1);
+        const next = addMonths(d, 1);
+        syncMonthToUrl(next);
+        return next;
       }
       return d;
     });
-  }, [selectedDate]);
+  }, [selectedDate, syncMonthToUrl]);
 
   const goToPrevMonth = useCallback(() => {
-    setCurrentDate(m => subMonths(m, 1));
-  }, []);
+    setCurrentDate(m => {
+      const prev = subMonths(m, 1);
+      syncMonthToUrl(prev);
+      return prev;
+    });
+  }, [syncMonthToUrl]);
 
   const goToNextMonth = useCallback(() => {
-    setCurrentDate(m => addMonths(m, 1));
-  }, []);
+    setCurrentDate(m => {
+      const next = addMonths(m, 1);
+      syncMonthToUrl(next);
+      return next;
+    });
+  }, [syncMonthToUrl]);
 
   const goToToday = useCallback(() => {
     const today = new Date();
     setCurrentDate(today);
     setSelectedDate(today);
-  }, []);
+    syncMonthToUrl(today);
+  }, [syncMonthToUrl]);
 
   const handleDaySelect = useCallback((date: Date) => {
     setSelectedDate(date);
     if (!isSameMonth(date, currentDate)) {
       setCurrentDate(date);
+      syncMonthToUrl(date);
     }
     // Collapse after selecting in expanded view
     if (isExpanded) {
       setIsExpanded(false);
     }
-  }, [currentDate, isExpanded]);
+  }, [currentDate, isExpanded, syncMonthToUrl]);
 
   const weekDayLabels = ["S", "M", "T", "W", "T", "F", "S"];
+
+  if (error && !isLoading) {
+    return (
+      <div className="py-16 text-center">
+        <p className="text-sm text-[var(--coral)]">Unable to load calendar events.</p>
+        <button
+          onClick={() => refetch()}
+          className="mt-2 text-xs text-[var(--soft)] hover:text-[var(--cream)] transition-colors"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="py-2">
@@ -408,7 +458,7 @@ export default function MobileCalendarView({
       {/* View all link */}
       {selectedDayEvents.length > 3 && (
         <Link
-          href={`/${portalSlug}?view=events&date_start=${format(selectedDate, "yyyy-MM-dd")}&date_end=${format(selectedDate, "yyyy-MM-dd")}`}
+          href={`/${portalSlug}?view=find&lane=events&date_start=${format(selectedDate, "yyyy-MM-dd")}&date_end=${format(selectedDate, "yyyy-MM-dd")}`}
           className="block mt-4 mx-1 text-center py-2.5 rounded-xl border border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--coral)]/50 transition-colors font-mono text-xs"
         >
           View all {formatCompactCount(selectedDayEvents.length)} events →
