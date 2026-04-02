@@ -58,6 +58,7 @@ export function useShowListings<T extends { event_id: number }>(
       cacheRef.current.set(date, { shows: [], loaded: false });
       const url = new URL(apiPath, window.location.origin);
       url.searchParams.set("date", date);
+      url.searchParams.set("portal", config.portalSlug);
       fetch(url.toString())
         .then((res) => (res.ok ? res.json() : null))
         .then((data: ApiResponse<T> | null) => {
@@ -71,7 +72,7 @@ export function useShowListings<T extends { event_id: number }>(
           cacheRef.current.delete(date);
         });
     },
-    [apiPath],
+    [apiPath, config.portalSlug],
   );
 
   const prefetchAdjacent = useCallback(
@@ -107,6 +108,7 @@ export function useShowListings<T extends { event_id: number }>(
       try {
         const url = new URL(apiPath, window.location.origin);
         url.searchParams.set("date", date);
+        url.searchParams.set("portal", config.portalSlug);
         const res = await fetch(url.toString(), {
           signal: controller.signal,
         });
@@ -128,7 +130,7 @@ export function useShowListings<T extends { event_id: number }>(
         }
       }
     },
-    [apiPath, meta?.available_dates, prefetchAdjacent],
+    [apiPath, config.portalSlug, meta?.available_dates, prefetchAdjacent],
   );
 
   // Fetch meta + initial data on mount
@@ -141,6 +143,7 @@ export function useShowListings<T extends { event_id: number }>(
         const url = new URL(apiPath, window.location.origin);
         url.searchParams.set("date", dateStr);
         url.searchParams.set("meta", "true");
+        url.searchParams.set("portal", config.portalSlug);
         const res = await fetch(url.toString(), {
           signal: controller.signal,
         });

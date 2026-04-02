@@ -41,6 +41,13 @@ const SHELL_LANES = new Set([
   "regulars", "places", "classes", "calendar", "map",
 ]);
 
+// Legacy lane params that should redirect to the consolidated shows lane
+const SHOW_LANE_REDIRECTS: Record<string, string> = {
+  "now-showing": "film",
+  "live-music": "music",
+  "stage": "theater",
+};
+
 interface FindShellClientProps {
   portalSlug: string;
   portalId: string;
@@ -54,7 +61,23 @@ export default function FindShellClient({
 }: FindShellClientProps) {
   const searchParams = useSearchParams();
   const rawLane = searchParams.get("lane");
-  const lane = rawLane && SHELL_LANES.has(rawLane) ? rawLane : null;
+
+  // Compute effective lane synchronously — legacy show lanes resolve to "shows"
+  const lane = rawLane && rawLane in SHOW_LANE_REDIRECTS
+    ? "shows"
+    : rawLane && SHELL_LANES.has(rawLane) ? rawLane : null;
+
+  // Side-effect: rewrite legacy lane URLs so bookmarks/sharing get the new URL
+  useEffect(() => {
+    if (rawLane && rawLane in SHOW_LANE_REDIRECTS) {
+      const tab = SHOW_LANE_REDIRECTS[rawLane];
+      const url = new URL(window.location.href);
+      url.searchParams.set("lane", "shows");
+      url.searchParams.set("tab", tab);
+      url.searchParams.delete("vertical");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [rawLane]);
 
   const [exploreData, setExploreData] = useState<ExploreHomeResponse | null>(null);
   const [exploreLoading, setExploreLoading] = useState(true);
