@@ -19,6 +19,7 @@ export interface StageShow {
   genres: string[];
   category_id: string;
   age_policy: string | null;
+  ticket_url: string | null;
   series_id: string | null;
   series_slug: string | null;
   venue: {

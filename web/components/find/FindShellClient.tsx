@@ -22,7 +22,7 @@ import { ExploreHome } from "./ExploreHome";
 import type { ExploreHomeResponse } from "@/lib/types/explore-home";
 
 // Dynamic imports for renderers not needed on every lane
-const WhatsOnView = dynamic(() => import("./WhatsOnView"), {
+const ShowsView = dynamic(() => import("./ShowsView").then((m) => m.ShowsView), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading...</div>,
 });
 const RegularsView = dynamic(() => import("./RegularsView"), {
@@ -37,9 +37,16 @@ const ClassesView = dynamic(() => import("./ClassesView").then((m) => m.ClassesV
 
 // Valid shell lanes — anything else falls back to launchpad
 const SHELL_LANES = new Set([
-  "events", "now-showing", "live-music", "stage",
+  "events", "shows",
   "regulars", "places", "classes", "calendar", "map",
 ]);
+
+// Legacy lane params that should redirect to the consolidated shows lane
+const SHOW_LANE_REDIRECTS: Record<string, string> = {
+  "now-showing": "film",
+  "live-music": "music",
+  "stage": "theater",
+};
 
 interface FindShellClientProps {
   portalSlug: string;
@@ -54,7 +61,23 @@ export default function FindShellClient({
 }: FindShellClientProps) {
   const searchParams = useSearchParams();
   const rawLane = searchParams.get("lane");
-  const lane = rawLane && SHELL_LANES.has(rawLane) ? rawLane : null;
+
+  // Compute effective lane synchronously — legacy show lanes resolve to "shows"
+  const lane = rawLane && rawLane in SHOW_LANE_REDIRECTS
+    ? "shows"
+    : rawLane && SHELL_LANES.has(rawLane) ? rawLane : null;
+
+  // Side-effect: rewrite legacy lane URLs so bookmarks/sharing get the new URL
+  useEffect(() => {
+    if (rawLane && rawLane in SHOW_LANE_REDIRECTS) {
+      const tab = SHOW_LANE_REDIRECTS[rawLane];
+      const url = new URL(window.location.href);
+      url.searchParams.set("lane", "shows");
+      url.searchParams.set("tab", tab);
+      url.searchParams.delete("vertical");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [rawLane]);
 
   const [exploreData, setExploreData] = useState<ExploreHomeResponse | null>(null);
   const [exploreLoading, setExploreLoading] = useState(true);
@@ -113,8 +136,8 @@ export default function FindShellClient({
               hasActiveFilters={false}
             />
           )}
-          {(lane === "now-showing" || lane === "live-music" || lane === "stage") && (
-            <WhatsOnView portalId={portalId} portalSlug={portalSlug} />
+          {lane === "shows" && (
+            <ShowsView portalId={portalId} portalSlug={portalSlug} />
           )}
           {lane === "regulars" && (
             <RegularsView portalId={portalId} portalSlug={portalSlug} />

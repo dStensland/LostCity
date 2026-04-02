@@ -12,9 +12,7 @@ import type { LaneSlug, ExploreHomeResponse } from "@/lib/types/explore-home";
 
 const LANE_ORDER: LaneSlug[] = [
   "events",
-  "now-showing",
-  "live-music",
-  "stage",
+  "shows",
   "regulars",
   "places",
   "classes",

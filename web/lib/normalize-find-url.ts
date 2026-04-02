@@ -5,9 +5,13 @@
  * - ?view=happening, ?view=places, ?view=events, ?view=spots → ?view=find
  * - ?view=map, ?view=calendar → ?view=find&display=map|calendar
  * - ?tab=eat-drink etc. → ?view=find&lane=dining etc.
- * - ?content=showtimes → ?view=find&lane=music
+ * - ?content=showtimes → ?view=find&lane=shows
  * - ?content=regulars → ?view=find&regulars=true
  * - ?type=showtimes etc. → lane mapping when view resolves to find
+ * - ?lane=now-showing → ?lane=shows&tab=film
+ * - ?lane=live-music → ?lane=shows&tab=music
+ * - ?lane=stage → ?lane=shows&tab=theater
+ * - ?view=happening&content=showtimes[&vertical=film|music] → ?view=find&lane=shows[&tab=...]
  *
  * Returns a new URLSearchParams (does not mutate the input).
  */
@@ -24,15 +28,28 @@ const TAB_TO_LANE: Record<string, string> = {
 };
 
 const CONTENT_TO_LANE: Record<string, string> = {
-  showtimes: "live-music",
-  whats_on: "live-music",
+  showtimes: "shows",
+  whats_on: "shows",
 };
 
 const TYPE_TO_LANE: Record<string, string> = {
-  showtimes: "live-music",
-  whats_on: "live-music",
+  showtimes: "shows",
+  whats_on: "shows",
   destinations: "outdoors",
   spots: "outdoors",
+};
+
+// Show lane consolidation: old per-vertical lanes → shows + tab
+const SHOW_LANE_REDIRECTS: Record<string, string> = {
+  "now-showing": "film",
+  "live-music": "music",
+  stage: "theater",
+};
+
+// Vertical param values that map to a tab when redirecting showtimes content
+const VERTICAL_TO_TAB: Record<string, string> = {
+  film: "film",
+  music: "music",
 };
 
 export function normalizeFinURLParams(params: URLSearchParams): URLSearchParams {
@@ -47,6 +64,19 @@ export function normalizeFinURLParams(params: URLSearchParams): URLSearchParams 
     result.set("view", "find");
     result.set("regulars", "true");
     result.delete("content");
+    return result;
+  }
+
+  // ?view=happening&content=showtimes → ?view=find&lane=shows[&tab=film|music]
+  if (view === "happening" && content === "showtimes") {
+    result.set("view", "find");
+    result.set("lane", "shows");
+    result.delete("content");
+    const vertical = result.get("vertical");
+    if (vertical && VERTICAL_TO_TAB[vertical]) {
+      result.set("tab", VERTICAL_TO_TAB[vertical]);
+    }
+    result.delete("vertical");
     return result;
   }
 
@@ -70,20 +100,25 @@ export function normalizeFinURLParams(params: URLSearchParams): URLSearchParams 
 
   // Explore shell lanes (?view=find&lane=X) — these are the new canonical URLs.
   // Don't normalize them — they're already in the right format.
-  const SHELL_LANES = new Set(["events", "now-showing", "live-music", "stage", "regulars", "places", "calendar", "map"]);
+  const SHELL_LANES = new Set(["events", "shows", "regulars", "places", "calendar", "map"]);
 
   const LEGACY_LANE_MAP: Record<string, string> = {
-    film: "now-showing",
-    music: "live-music",
+    film: "shows",
+    music: "shows",
   };
 
   const existingLane = result.get("lane");
-  if (existingLane && LEGACY_LANE_MAP[existingLane]) {
+
+  // Show lane consolidation: now-showing/live-music/stage → shows + tab
+  if (existingLane && SHOW_LANE_REDIRECTS[existingLane]) {
+    result.set("lane", "shows");
+    result.set("tab", SHOW_LANE_REDIRECTS[existingLane]);
+  } else if (existingLane && LEGACY_LANE_MAP[existingLane]) {
     result.set("lane", LEGACY_LANE_MAP[existingLane]);
   }
 
   const canonicalLane = result.get("lane");
-  if (view === "find" && canonicalLane && SHELL_LANES.has(canonicalLane)) {
+  if (result.get("view") === "find" && canonicalLane && SHELL_LANES.has(canonicalLane)) {
     // Already a valid Explore shell URL — pass through unchanged
     return result;
   }
@@ -110,7 +145,6 @@ export function normalizeFinURLParams(params: URLSearchParams): URLSearchParams 
         nightlife: { view: "places", tab: "nightlife" },
         arts: { view: "places", tab: "things-to-do", venue_type: "museum,gallery,arts_center,theater" },
         outdoors: { view: "places", tab: "things-to-do", venue_type: "park,trail,recreation,viewpoint,landmark" },
-        music: { view: "happening", content: "showtimes", vertical: "music" },
         entertainment: { view: "places", tab: "things-to-do", venue_type: "arcade,attraction,entertainment,escape_room,bowling,zoo,aquarium,cinema" },
       };
       const redirect = LANE_REDIRECTS[lane];

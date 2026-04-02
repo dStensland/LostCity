@@ -2,7 +2,7 @@
  * Server-side data fetcher for the Explore Home dashboard.
  *
  * Resolves the portal, then runs parallel Supabase queries to build
- * lane preview data for all 9 lanes. Each lane gets:
+ * lane preview data for all 7 lanes. Each lane gets:
  *   - count (total items)
  *   - count_today / count_weekend (for alive/quiet scoring)
  *   - up to 4 preview items
@@ -34,10 +34,8 @@ import type {
 /** Max preview items per lane */
 const PREVIEW_LIMIT = 4;
 
-/** Category IDs that map to each vertical lane */
-const FILM_CATEGORIES = ["film"];
-const MUSIC_CATEGORIES = ["music"];
-const STAGE_CATEGORIES = ["theater", "comedy", "dance"];
+/** Category IDs for the consolidated Shows lane */
+const SHOW_CATEGORIES = ["film", "music", "theater", "comedy", "dance"];
 
 /** Weekend date range: Friday through Sunday (inclusive).
  *  On Fri→today through Sun. On Sat→yesterday Fri through tomorrow Sun.
@@ -129,13 +127,9 @@ function getTimeBoostForLane(lane: LaneSlug, hour: number): number {
   const slot = getTimeSlot(hour);
 
   switch (lane) {
-    case "live-music":
-    case "stage":
+    case "shows":
       if (slot === "evening" || slot === "late_night") return 2;
       if (slot === "happy_hour") return 1;
-      return 0;
-    case "now-showing":
-      if (slot === "midday" || slot === "happy_hour" || slot === "evening") return 1;
       return 0;
     case "events":
       if (slot === "evening") return 1;
@@ -163,12 +157,8 @@ function generateLaneCopy(
     switch (lane) {
       case "events":
         return "No upcoming events found";
-      case "now-showing":
-        return "No films showing right now";
-      case "live-music":
-        return "No live music scheduled";
-      case "stage":
-        return "No stage productions listed";
+      case "shows":
+        return "No shows scheduled";
       case "regulars":
         return "No weekly regulars found";
       case "places":
@@ -187,12 +177,8 @@ function generateLaneCopy(
       switch (lane) {
         case "events":
           return `${todayCount} event${todayCount === 1 ? "" : "s"} happening today`;
-        case "now-showing":
-          return `${todayCount} screening${todayCount === 1 ? "" : "s"} today`;
-        case "live-music":
+        case "shows":
           return `${todayCount} show${todayCount === 1 ? "" : "s"} tonight`;
-        case "stage":
-          return `${todayCount} production${todayCount === 1 ? "" : "s"} tonight`;
         case "regulars":
           return `${todayCount} regular${todayCount === 1 ? "" : "s"} happening today`;
         case "classes":
@@ -218,12 +204,8 @@ function generateLaneCopy(
   switch (lane) {
     case "events":
       return `${totalCount} event${totalCount === 1 ? "" : "s"} coming up this week`;
-    case "now-showing":
-      return `${totalCount} film${totalCount === 1 ? "" : "s"} screening this week`;
-    case "live-music":
-      return `${totalCount} show${totalCount === 1 ? "" : "s"} this week — check back tonight`;
-    case "stage":
-      return `${totalCount} production${totalCount === 1 ? "" : "s"} running this week — tickets available`;
+    case "shows":
+      return `${totalCount} show${totalCount === 1 ? "" : "s"} this week`;
     case "regulars":
       return `${totalCount} weekly regular${totalCount === 1 ? "" : "s"} in your city`;
     case "classes":
@@ -438,13 +420,13 @@ export async function getExploreHomeData(
     const dataFallback = { data: null, error: null };
 
     const settled = await Promise.allSettled([
-      // ----- Events lane (all events except film and classes) -----
+      // ----- Events lane (all events except shows and classes) -----
       baseEventQuery(
         supabase
           .from("events")
           .select("id", { count: "exact", head: true })
       )
-        .not("category_id", "in", `(${FILM_CATEGORIES.join(",")})`)
+        .not("category_id", "in", `(${SHOW_CATEGORIES.join(",")})`)
         .or("is_class.eq.false,is_class.is.null"),
 
       baseEventQuery(
@@ -452,7 +434,7 @@ export async function getExploreHomeData(
           .from("events")
           .select("id", { count: "exact", head: true })
       )
-        .not("category_id", "in", `(${FILM_CATEGORIES.join(",")})`)
+        .not("category_id", "in", `(${SHOW_CATEGORIES.join(",")})`)
         .or("is_class.eq.false,is_class.is.null")
         .eq("start_date", today),
 
@@ -462,7 +444,7 @@ export async function getExploreHomeData(
           .from("events")
           .select("id", { count: "exact", head: true })
       )
-        .not("category_id", "in", `(${FILM_CATEGORIES.join(",")})`)
+        .not("category_id", "in", `(${SHOW_CATEGORIES.join(",")})`)
         .or("is_class.eq.false,is_class.is.null")
         .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
         .lte("start_date", weekend.end),
@@ -472,7 +454,7 @@ export async function getExploreHomeData(
           .from("events")
           .select(eventPreviewSelect)
       )
-        .not("category_id", "in", `(${FILM_CATEGORIES.join(",")})`)
+        .not("category_id", "in", `(${SHOW_CATEGORIES.join(",")})`)
         .or("is_class.eq.false,is_class.is.null")
         .or(upcomingOrFilter)
         .order("start_date", { ascending: true })
@@ -481,20 +463,22 @@ export async function getExploreHomeData(
         .order("image_url", { ascending: false, nullsFirst: false })
         .limit(PREVIEW_LIMIT),
 
-      // ----- Now Showing (film) lane -----
+      // ----- Shows lane (film, music, theater, comedy, dance) -----
       baseEventQuery(
         supabase
           .from("events")
           .select("id", { count: "exact", head: true })
       )
-        .in("category_id", FILM_CATEGORIES),
+        .in("category_id", SHOW_CATEGORIES)
+        .or("is_class.eq.false,is_class.is.null"),
 
       baseEventQuery(
         supabase
           .from("events")
           .select("id", { count: "exact", head: true })
       )
-        .in("category_id", FILM_CATEGORIES)
+        .in("category_id", SHOW_CATEGORIES)
+        .or("is_class.eq.false,is_class.is.null")
         .eq("start_date", today),
 
       baseEventQuery(
@@ -502,7 +486,8 @@ export async function getExploreHomeData(
           .from("events")
           .select("id", { count: "exact", head: true })
       )
-        .in("category_id", FILM_CATEGORIES)
+        .in("category_id", SHOW_CATEGORIES)
+        .or("is_class.eq.false,is_class.is.null")
         .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
         .lte("start_date", weekend.end),
 
@@ -511,87 +496,11 @@ export async function getExploreHomeData(
           .from("events")
           .select(eventPreviewSelect)
       )
-        .in("category_id", FILM_CATEGORIES)
+        .in("category_id", SHOW_CATEGORIES)
+        .or("is_class.eq.false,is_class.is.null")
         .or(upcomingOrFilter)
-        .order("start_date", { ascending: true })
-        .order("start_time", { ascending: true, nullsFirst: false })
         .order("data_quality", { ascending: false, nullsFirst: false })
-        .order("image_url", { ascending: false, nullsFirst: false })
-        .limit(PREVIEW_LIMIT),
-
-      // ----- Live Music lane -----
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      )
-        .in("category_id", MUSIC_CATEGORIES),
-
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      )
-        .in("category_id", MUSIC_CATEGORIES)
-        .eq("start_date", today),
-
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      )
-        .in("category_id", MUSIC_CATEGORIES)
-        .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
-        .lte("start_date", weekend.end),
-
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select(eventPreviewSelect)
-      )
-        .in("category_id", MUSIC_CATEGORIES)
-        .or(upcomingOrFilter)
         .order("start_date", { ascending: true })
-        .order("start_time", { ascending: true, nullsFirst: false })
-        .order("data_quality", { ascending: false, nullsFirst: false })
-        .order("image_url", { ascending: false, nullsFirst: false })
-        .limit(PREVIEW_LIMIT),
-
-      // ----- Stage lane (theater, comedy, dance) -----
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      )
-        .in("category_id", STAGE_CATEGORIES),
-
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      )
-        .in("category_id", STAGE_CATEGORIES)
-        .eq("start_date", today),
-
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      )
-        .in("category_id", STAGE_CATEGORIES)
-        .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
-        .lte("start_date", weekend.end),
-
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select(eventPreviewSelect)
-      )
-        .in("category_id", STAGE_CATEGORIES)
-        .or(upcomingOrFilter)
-        .order("start_date", { ascending: true })
-        .order("start_time", { ascending: true, nullsFirst: false })
-        .order("data_quality", { ascending: false, nullsFirst: false })
         .order("image_url", { ascending: false, nullsFirst: false })
         .limit(PREVIEW_LIMIT),
 
@@ -759,23 +668,11 @@ export async function getExploreHomeData(
       eventsWeekendCount,
       eventsPreview,
 
-      // Now Showing (film) lane
-      filmCount,
-      filmTodayCount,
-      filmWeekendCount,
-      filmPreview,
-
-      // Live Music lane
-      musicCount,
-      musicTodayCount,
-      musicWeekendCount,
-      musicPreview,
-
-      // Stage lane
-      stageCount,
-      stageTodayCount,
-      stageWeekendCount,
-      stagePreview,
+      // Shows lane (film, music, theater, comedy, dance)
+      showsCount,
+      showsTodayCount,
+      showsWeekendCount,
+      showsPreview,
 
       // Regulars lane
       regularsCount,
@@ -799,8 +696,8 @@ export async function getExploreHomeData(
       // Map lane
       mapCount,
     ] = settled.map((r, i) => {
-      // Indices 3,7,11,15,19,21,25 are data (preview) queries; rest are count queries
-      const isDataQuery = [3, 7, 11, 15, 19, 21, 25].includes(i);
+      // Indices 3,7,11,13,17 are data (preview) queries; rest are count queries
+      const isDataQuery = [3, 7, 11, 13, 17].includes(i);
       return unwrapSettled(r, isDataQuery ? dataFallback : countFallback);
     });
 
@@ -879,29 +776,13 @@ export async function getExploreHomeData(
         eventsPreview,
         mapEventItems,
       ),
-      "now-showing": buildLane(
-        "now-showing",
-        filmCount,
-        filmTodayCount,
-        filmWeekendCount,
-        filmPreview,
+      shows: buildLane(
+        "shows",
+        showsCount,
+        showsTodayCount,
+        showsWeekendCount,
+        showsPreview,
         mapShowtimeItems,
-      ),
-      "live-music": buildLane(
-        "live-music",
-        musicCount,
-        musicTodayCount,
-        musicWeekendCount,
-        musicPreview,
-        mapEventItems,
-      ),
-      stage: buildLane(
-        "stage",
-        stageCount,
-        stageTodayCount,
-        stageWeekendCount,
-        stagePreview,
-        mapEventItems,
       ),
       regulars: buildLane(
         "regulars",

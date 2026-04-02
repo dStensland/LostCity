@@ -12,6 +12,8 @@ export interface MusicShow {
   title: string;
   start_time: string | null;
   is_free: boolean;
+  ticket_url: string | null;
+  price_min: number | null;
   tags: string[];
   genres: string[];
   age_policy: string | null;

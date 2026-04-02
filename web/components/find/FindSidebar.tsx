@@ -5,8 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   FilmSlate,
-  MusicNotes,
-  MaskHappy,
   Ticket,
   ArrowsClockwise,
   CalendarBlank,
@@ -41,25 +39,11 @@ const BROWSE_LANES: Lane[] = [
     href: LANE_META["events"].href,
   },
   {
-    id: "now-showing",
-    label: "Now Showing",
+    id: "shows",
+    label: "Shows",
     icon: FilmSlate,
-    accent: LANE_META["now-showing"].accent,
-    href: LANE_META["now-showing"].href,
-  },
-  {
-    id: "live-music",
-    label: "Live Music",
-    icon: MusicNotes,
-    accent: LANE_META["live-music"].accent,
-    href: LANE_META["live-music"].href,
-  },
-  {
-    id: "stage",
-    label: "Stage & Comedy",
-    icon: MaskHappy,
-    accent: LANE_META["stage"].accent,
-    href: LANE_META["stage"].href,
+    accent: LANE_META["shows"].accent,
+    href: LANE_META["shows"].href,
   },
   {
     id: "regulars",
@@ -106,8 +90,7 @@ const VIEW_LANES: Lane[] = [
 // -------------------------------------------------------------------------
 
 const LANE_PULSE_MAPPING: Record<string, string> = {
-  "live-music": "music",
-  "now-showing": "entertainment",
+  shows: "entertainment",
 };
 
 function getBadgeCount(laneId: string, pulse?: CategoryPulse[]): number {
