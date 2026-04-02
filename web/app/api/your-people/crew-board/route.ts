@@ -2,6 +2,26 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-middleware";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
+type RsvpRow = {
+  user_id: string;
+  status: string;
+  event: {
+    id: number;
+    title: string;
+    start_date: string;
+    start_time: string | null;
+    image_url: string | null;
+    is_active: boolean;
+    venue: { name: string } | null;
+  } | null;
+  user: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  } | null;
+};
+
 type CrewEvent = {
   event_id: number;
   title: string;
@@ -53,7 +73,7 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
       user_id,
       status,
       event:events!event_rsvps_event_id_fkey(
-        id, title, start_date, start_time, image_url,
+        id, title, start_date, start_time, image_url, is_active,
         venue:places(name)
       ),
       user:profiles!event_rsvps_user_id_fkey(
@@ -70,9 +90,8 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
   // Group by event, then by day
   const eventMap = new Map<number, CrewEvent>();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for (const rsvp of (rsvpData || []) as any[]) {
-    if (!rsvp.event || !rsvp.user) continue;
+  for (const rsvp of (rsvpData || []) as unknown as RsvpRow[]) {
+    if (!rsvp.event || !rsvp.user || !rsvp.event.is_active) continue;
     const eventId = rsvp.event.id;
 
     const existing = eventMap.get(eventId);
@@ -85,8 +104,7 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
     };
 
     if (existing) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (!existing.friends.find((f: any) => f.id === friend.id)) {
+      if (!existing.friends.find((f) => f.id === friend.id)) {
         existing.friends.push(friend);
       }
     } else {
