@@ -369,7 +369,7 @@ function HappeningViewInner({
           </div>
         )}
 
-        {/* Events filter bar (inside panel, only for events content) */}
+        {/* Filters — rendered inside the control panel for the "all" content type */}
         {contentType === "all" && (
           <EventsFinderFilters
             portalId={portalId}
@@ -380,6 +380,7 @@ function HappeningViewInner({
             vertical={vertical}
           />
         )}
+
       </section>
 
       {/* ─── Content Area ─────────────────────────────────────────────────── */}
@@ -392,6 +393,8 @@ function HappeningViewInner({
             portalExclusive={portalExclusive}
             displayMode={displayMode}
             hasActiveFilters={hasActiveFilters}
+            vertical={vertical}
+            showFilters={false}
           />
         )}
 

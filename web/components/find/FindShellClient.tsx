@@ -198,6 +198,7 @@ export default function FindShellClient({
               portalExclusive={portalExclusive}
               displayMode="calendar"
               hasActiveFilters={false}
+              showFilters={false}
             />
           )}
           {lane === "map" && (
@@ -207,6 +208,7 @@ export default function FindShellClient({
               portalExclusive={portalExclusive}
               displayMode="map"
               hasActiveFilters={false}
+              showFilters={false}
             />
           )}
           {lane === "game-day" && (
