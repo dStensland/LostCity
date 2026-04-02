@@ -13,9 +13,6 @@ import FindShellClient from "@/components/find/FindShellClient";
 const SpotsFinder = dynamic(() => import("@/components/find/SpotsFinder"), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading places...</div>,
 });
-const FindView = dynamic(() => import("@/components/find/FindView"), {
-  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading...</div>,
-});
 import DetailViewRouter from "@/components/views/DetailViewRouter";
 import { DefaultTemplate } from "./_templates/default";
 import { GalleryTemplate } from "./_templates/gallery";

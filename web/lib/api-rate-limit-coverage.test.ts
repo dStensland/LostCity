@@ -32,7 +32,6 @@ describe("API rate limiting coverage", () => {
     const exemptPatterns = [
       "neighborhoods/boundaries",  // Static GeoJSON boundary data, heavily cached
       "neighborhoods/events",      // Read-only aggregated public data
-      "portals/[slug]/find-data",  // Pre-generated portal data, cached
       "goblinday/",                // Development feature, not yet a public API
     ];
 
