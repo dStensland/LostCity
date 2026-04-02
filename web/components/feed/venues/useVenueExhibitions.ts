@@ -171,7 +171,7 @@ export function useVenueAttractionShows(portalSlug: string): {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-    const venueTypes = "zoo,aquarium,attraction,theme_park";
+    const venueTypes = "zoo,aquarium,attraction,theme_park,museum";
     const url = `/api/portals/${encodeURIComponent(portalSlug)}/shows?venue_types=${venueTypes}`;
 
     fetch(url, { signal: controller.signal })
