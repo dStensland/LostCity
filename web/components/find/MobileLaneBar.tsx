@@ -35,15 +35,17 @@ export function MobileLaneBar({ portalSlug, activeLane }: MobileLaneBarProps) {
     [router, startTransition]
   );
 
-  if (!activeLane && !isPending) return null;
-
   return (
     <div className="lg:hidden sticky top-[73px] z-40 bg-[var(--void)]/95 backdrop-blur-sm border-b border-[var(--twilight)]/30">
       <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide px-3 py-2">
         <a
           href={`/${portalSlug}?view=find`}
           onClick={(e) => handleClick(`/${portalSlug}?view=find`, null, e)}
-          className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-[var(--soft)] hover:bg-[var(--dusk)] transition-colors"
+          className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+            !visualActiveLane
+              ? "bg-[var(--coral)]/15 text-[var(--coral)]"
+              : "text-[var(--soft)] hover:bg-[var(--dusk)]"
+          }`}
         >
           <House size={14} weight="duotone" />
           Explore
