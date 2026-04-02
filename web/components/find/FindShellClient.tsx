@@ -31,6 +31,9 @@ const RegularsView = dynamic(() => import("./RegularsView"), {
 const SpotsFinder = dynamic(() => import("./SpotsFinder"), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading...</div>,
 });
+const ClassesView = dynamic(() => import("./ClassesView").then((m) => m.ClassesView), {
+  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading...</div>,
+});
 
 // Valid shell lanes — anything else falls back to launchpad
 const SHELL_LANES = new Set([
@@ -125,10 +128,7 @@ export default function FindShellClient({
             />
           )}
           {lane === "classes" && (
-            <div className="py-16 text-center">
-              <p className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">CLASSES & WORKSHOPS</p>
-              <p className="text-sm text-[var(--soft)]">Coming soon</p>
-            </div>
+            <ClassesView portalId={portalId} portalSlug={portalSlug} />
           )}
           {lane === "calendar" && (
             <EventsFinder

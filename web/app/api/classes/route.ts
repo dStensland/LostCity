@@ -81,7 +81,11 @@ export async function GET(request: NextRequest) {
   const neighborhood = searchParams.get("neighborhood");
   const search = (searchParams.get("search") || searchParams.get("q") || "").trim();
   const sort = searchParams.get("sort") || "date";
-  const limit = Math.min(parseIntParam(searchParams.get("limit"), 20) ?? 20, 50);
+  const placeIdParam = searchParams.get("place_id");
+  const placeSlugParam = searchParams.get("place_slug");
+  const hasPlaceFilter = !!(placeIdParam || placeSlugParam);
+  const limitCap = hasPlaceFilter ? 200 : 50;
+  const limit = Math.min(parseIntParam(searchParams.get("limit"), 20) ?? 20, limitCap);
   const offset = parseIntParam(searchParams.get("offset"), 0) ?? 0;
 
   // Validate params
@@ -92,7 +96,32 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid skill_level" }, { status: 400 });
   }
 
+  let resolvedPlaceId: number | null = null;
+  if (placeIdParam !== null) {
+    const parsed = parseInt(placeIdParam, 10);
+    if (isNaN(parsed)) {
+      return NextResponse.json({ error: "Invalid place_id" }, { status: 400 });
+    }
+    resolvedPlaceId = parsed;
+  }
+
   const supabase = await createClient();
+
+  if (placeSlugParam && resolvedPlaceId === null) {
+    if (!isValidString(placeSlugParam, 1, 200)) {
+      return NextResponse.json({ error: "Invalid place_slug" }, { status: 400 });
+    }
+    const { data: placeRow } = await supabase
+      .from("places")
+      .select("id")
+      .eq("slug", placeSlugParam)
+      .maybeSingle();
+    if (!placeRow) {
+      return NextResponse.json({ error: "Place not found" }, { status: 404 });
+    }
+    resolvedPlaceId = (placeRow as { id: number }).id;
+  }
+
   const portalContext = await resolvePortalQueryContext(supabase, searchParams);
   if (portalContext.hasPortalParamMismatch) {
     return NextResponse.json(
@@ -234,6 +263,10 @@ export async function GET(request: NextRequest) {
 
     if (neighborhood && isValidString(neighborhood, 1, 100)) {
       query = query.eq("places.neighborhood", neighborhood);
+    }
+
+    if (resolvedPlaceId !== null) {
+      query = query.eq("place_id", resolvedPlaceId);
     }
 
     if (search.length >= 2) {
