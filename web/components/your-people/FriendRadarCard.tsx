@@ -31,7 +31,7 @@ export default function FriendRadarCard({ event }: FriendRadarCardProps) {
         <div className="flex items-center gap-1.5">
           <div className="flex -space-x-1">
             {event.friend_avatars.slice(0, 2).map((a) => (
-              <UserAvatar key={a.id} src={a.avatar_url} name="" size="xs" />
+              <UserAvatar key={a.id} src={a.avatar_url} name={a.name} size="xs" />
             ))}
           </div>
           <span className="font-mono text-2xs font-medium" style={{ color: labelColor }}>

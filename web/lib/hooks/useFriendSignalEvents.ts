@@ -11,7 +11,7 @@ export type FriendSignalEvent = {
   venue_name: string | null;
   going_count: number;
   interested_count: number;
-  friend_avatars: { id: string; avatar_url: string | null }[];
+  friend_avatars: { id: string; avatar_url: string | null; name: string }[];
 };
 
 type FriendSignalResponse = {

@@ -10,7 +10,7 @@ type FriendSignalEvent = {
   venue_name: string | null;
   going_count: number;
   interested_count: number;
-  friend_avatars: { id: string; avatar_url: string | null }[];
+  friend_avatars: { id: string; avatar_url: string | null; name: string }[];
 };
 
 export const GET = withAuth(async (request, { user, serviceClient }) => {
@@ -44,7 +44,7 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
         id, title, start_date, image_url,
         venue:places(name)
       ),
-      user:profiles!event_rsvps_user_id_fkey(id, avatar_url)
+      user:profiles!event_rsvps_user_id_fkey(id, avatar_url, display_name, username)
     `)
     .in("user_id", friendIds)
     .in("status", ["going", "interested"])
@@ -61,7 +61,7 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
         id, title, start_date, image_url,
         venue:places(name)
       ),
-      user:profiles!saved_items_user_id_fkey(id, avatar_url)
+      user:profiles!saved_items_user_id_fkey(id, avatar_url, display_name, username)
     `)
     .in("user_id", friendIds)
     .not("event_id", "is", null)
@@ -92,7 +92,7 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (rsvp.user && !existing.friend_avatars.find((a: any) => a.id === rsvp.user.id)) {
-      existing.friend_avatars.push({ id: rsvp.user.id, avatar_url: rsvp.user.avatar_url });
+      existing.friend_avatars.push({ id: rsvp.user.id, avatar_url: rsvp.user.avatar_url, name: rsvp.user.display_name || rsvp.user.username || "" });
     }
 
     eventMap.set(eid, existing);
@@ -117,7 +117,7 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (save.user && !existing.friend_avatars.find((a: any) => a.id === save.user.id)) {
-      existing.friend_avatars.push({ id: save.user.id, avatar_url: save.user.avatar_url });
+      existing.friend_avatars.push({ id: save.user.id, avatar_url: save.user.avatar_url, name: save.user.display_name || save.user.username || "" });
     }
 
     eventMap.set(eid, existing);
