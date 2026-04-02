@@ -23,7 +23,7 @@ const STAGE_EVENT_LIMIT = 200;
 const STAGE_META_DATE_LIMIT = 1000;
 const STAGE_META_LOOKAHEAD_DAYS = 30;
 
-const STAGE_CATEGORIES = ["comedy", "theater"] as const;
+const STAGE_CATEGORIES = ["comedy", "theater", "dance"] as const;
 type StageCategory = (typeof STAGE_CATEGORIES)[number];
 
 function isStageCategory(value: string | null): value is StageCategory {
@@ -60,6 +60,7 @@ type StageEvent = {
   genres: string[] | null;
   category_id: string | null;
   age_policy: string | null;
+  ticket_url: string | null;
   series_id: string | null;
   venue: StageVenue | null;
   series: StageSeries | null;
@@ -76,6 +77,7 @@ type StageShow = {
   genres: string[];
   category_id: string;
   age_policy: string | null;
+  ticket_url: string | null;
   series_id: string | null;
   series_slug: string | null;
   venue: {
@@ -101,6 +103,7 @@ function toShow(event: StageEvent): StageShow {
     genres: event.genres ?? [],
     category_id: event.category_id ?? "theater",
     age_policy: event.age_policy,
+    ticket_url: event.ticket_url,
     series_id: event.series_id,
     series_slug: event.series?.slug ?? null,
     venue: {
@@ -173,6 +176,7 @@ export async function GET(request: NextRequest) {
           genres,
           category_id,
           age_policy,
+          ticket_url,
           series_id,
           venue:places!events_place_id_fkey(
             id,
@@ -197,8 +201,10 @@ export async function GET(request: NextRequest) {
         .order("start_time", { ascending: true })
         .limit(STAGE_EVENT_LIMIT);
 
-      // Apply category filter: single category or both stage categories
-      if (categoryFilter) {
+      // Apply category filter: theater includes dance, otherwise single category
+      if (categoryFilter === "theater") {
+        stageQuery = stageQuery.in("category_id", ["theater", "dance"]);
+      } else if (categoryFilter) {
         stageQuery = stageQuery.eq("category_id", categoryFilter);
       } else {
         stageQuery = stageQuery.in("category_id", [...STAGE_CATEGORIES]);
@@ -246,7 +252,9 @@ export async function GET(request: NextRequest) {
           .order("start_date", { ascending: true })
           .limit(STAGE_META_DATE_LIMIT);
 
-        if (categoryFilter) {
+        if (categoryFilter === "theater") {
+          metaQuery = metaQuery.in("category_id", ["theater", "dance"]);
+        } else if (categoryFilter) {
           metaQuery = metaQuery.eq("category_id", categoryFilter);
         } else {
           metaQuery = metaQuery.in("category_id", [...STAGE_CATEGORIES]);

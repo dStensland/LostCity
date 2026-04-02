@@ -40,7 +40,7 @@ export interface UseShowListingsResult<T> {
 export function useShowListings<T extends { event_id: number }>(
   config: UseShowListingsConfig,
 ): UseShowListingsResult<T> {
-  const { apiPath, portalSlug } = config;
+  const { apiPath } = config;
   const today = getLocalDateString(new Date());
 
   const [selectedDate, setSelectedDate] = useState<string>(today);
@@ -56,8 +56,9 @@ export function useShowListings<T extends { event_id: number }>(
     (date: string) => {
       if (cacheRef.current.has(date)) return;
       cacheRef.current.set(date, { shows: [], loaded: false });
-      const params = new URLSearchParams({ date, portal: portalSlug });
-      fetch(`${apiPath}?${params}`)
+      const url = new URL(apiPath, window.location.origin);
+      url.searchParams.set("date", date);
+      fetch(url.toString())
         .then((res) => (res.ok ? res.json() : null))
         .then((data: ApiResponse<T> | null) => {
           if (!data) {
@@ -70,7 +71,7 @@ export function useShowListings<T extends { event_id: number }>(
           cacheRef.current.delete(date);
         });
     },
-    [apiPath, portalSlug],
+    [apiPath],
   );
 
   const prefetchAdjacent = useCallback(
@@ -104,8 +105,9 @@ export function useShowListings<T extends { event_id: number }>(
       abortRef.current = controller;
 
       try {
-        const params = new URLSearchParams({ date, portal: portalSlug });
-        const res = await fetch(`${apiPath}?${params}`, {
+        const url = new URL(apiPath, window.location.origin);
+        url.searchParams.set("date", date);
+        const res = await fetch(url.toString(), {
           signal: controller.signal,
         });
         if (!res.ok) return;
@@ -126,7 +128,7 @@ export function useShowListings<T extends { event_id: number }>(
         }
       }
     },
-    [apiPath, meta?.available_dates, prefetchAdjacent, portalSlug],
+    [apiPath, meta?.available_dates, prefetchAdjacent],
   );
 
   // Fetch meta + initial data on mount
@@ -136,12 +138,10 @@ export function useShowListings<T extends { event_id: number }>(
       setMetaLoading(true);
       try {
         const dateStr = getLocalDateString(new Date());
-        const params = new URLSearchParams({
-          date: dateStr,
-          meta: "true",
-          portal: portalSlug,
-        });
-        const res = await fetch(`${apiPath}?${params}`, {
+        const url = new URL(apiPath, window.location.origin);
+        url.searchParams.set("date", dateStr);
+        url.searchParams.set("meta", "true");
+        const res = await fetch(url.toString(), {
           signal: controller.signal,
         });
         if (!res.ok) return;

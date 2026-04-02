@@ -51,6 +51,7 @@ type MusicEvent = {
   genres: string[] | null;
   age_policy: string | null;
   ticket_url: string | null;
+  price_min: number | null;
   venue: MusicVenue | null;
   event_artists: MusicArtist[] | null;
 };
@@ -63,6 +64,8 @@ type ShowShape = {
   tags: string[];
   genres: string[];
   age_policy: string | null;
+  ticket_url: string | null;
+  price_min: number | null;
   artists: {
     name: string;
     is_headliner: boolean;
@@ -97,6 +100,8 @@ function toShow(event: MusicEvent): ShowShape {
     tags: event.tags ?? [],
     genres: event.genres ?? [],
     age_policy: event.age_policy,
+    ticket_url: event.ticket_url,
+    price_min: event.price_min,
     artists: artists.map((a) => ({
       name: a.name,
       is_headliner: a.is_headliner,
@@ -165,6 +170,8 @@ export async function GET(request: NextRequest) {
           tags,
           genres,
           age_policy,
+          ticket_url,
+          price_min,
           venue:places!events_place_id_fkey(
             id,
             name,
