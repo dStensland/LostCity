@@ -342,6 +342,10 @@ export default function LineupSection({
     const dedup = (items: CityPulseEventItem[]) => {
       const seen = new Set<number>();
       return items.filter((e) => {
+        // Filter out cancelled events that slipped through ingestion
+        const title = (e.event.title ?? "").toLowerCase();
+        if (title.includes("canceled") || title.includes("cancelled") || title.includes("postponed")) return false;
+
         if (!keepRecurring && !ENABLE_LINEUP_RECURRING && isSceneEvent(e.event as FeedEventData)) return false;
         const ev = e.event as FeedEventData & Record<string, unknown>;
         const ev_series = ev.series as { series_type?: string | null } | null;

@@ -16,10 +16,10 @@
  *  2. TodayInAtlantaSection — tabbed local news
  *  3. LineupSection — tabbed timeline: Today / This Week / Coming Up (events only)
  *  4. RegularHangsSection — recurring weekly events (trivia, run clubs, etc.)
- *  5. Destinations + Neighborhoods
+ *  5. PlacesToGoSection — category-based venue discovery
  *  6. VenuesSection — Film/Music/Comedy/Theater/Nightlife/Arts/Attractions
- *  7. PlanningHorizonSection — big future events
- *  8. Browse by Category
+ *  7. GameDaySection — sports schedules
+ *  8. PlanningHorizonSection — big future events
  *
  * Section visibility and order are controlled by FeedLayout preferences.
  *
@@ -520,6 +520,12 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
       {/* Regular Hangs — recurring weekly events (trivia, run clubs, karaoke, etc.) */}
       <RegularHangsSection portalSlug={portalSlug} />
 
+      {/* Places to Go — category-based venue discovery */}
+      <div id="city-pulse-places-to-go" className="scroll-mt-28 mt-6">
+        <LazySection minHeight={400}>
+          <PlacesToGoSection portalSlug={portalSlug} />
+        </LazySection>
+      </div>
 
       {/* 6. Interest Channels — only on civic portals where groups are meaningful */}
       {portal?.settings?.vertical === "community" && (
@@ -567,16 +573,6 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
           </div>
         </div>
       )}
-
-      {/* Places to Go (always last) */}
-      <div id="city-pulse-places-to-go" className="scroll-mt-28 mt-8">
-        <div className="h-px bg-[var(--twilight)]" />
-        <div className="pt-6">
-          <LazySection minHeight={400}>
-            <PlacesToGoSection portalSlug={portalSlug} />
-          </LazySection>
-        </div>
-      </div>
 
       {/* Admin: Feed Time Machine */}
       {showTimeMachine && (

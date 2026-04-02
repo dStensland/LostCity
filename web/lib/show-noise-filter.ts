@@ -11,6 +11,8 @@ export const NOISE_TITLE_PATTERNS = [
   "mahjong", "mah jong", "chess night",
   "bocce", "bowling", "duckpin", "skee-ball", "skeeball",
   "cornhole", "shuffleboard", "pool league", "billiards",
+  // Cancelled/postponed
+  "canceled", "cancelled", "postponed",
   // Not shows
   "pro wrestling", "wrestling show",
   "drone show", "light show",
