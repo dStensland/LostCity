@@ -4,17 +4,31 @@
 
 The Find tab has 3 showtime lanes (Now Showing, Live Music, Stage & Comedy) and no Game Day lane. Now Showing is production-ready (825-line ShowtimesView). Live Music and Stage are functional but basic — flat list views that don't mirror the feed's venue-grouped "See Shows" experience. The feed's "See all" links still point to the legacy HappeningView instead of the Find shell lanes.
 
-This spec upgrades Live Music and Stage to venue-grouped experiences matching their feed counterparts, adds a Game Day lane for sports, and routes all feed "See all" links to the correct Find lanes.
+This spec upgrades Live Music, splits Stage & Comedy into separate Theater and Comedy lanes, adds a Game Day lane for sports, and routes all feed "See all" links to the correct Find lanes — including Nightlife/Arts/Attractions routing to the Places lane.
+
+The feed's VENUES widget has 7 tabs (Film, Music, Comedy, Theater, Nightlife, Arts, Attractions). Each tab's "See all" should land in the appropriate Find lane:
+
+| Feed Tab | Find Lane Destination |
+|----------|----------------------|
+| Film | Now Showing (existing, production-ready) |
+| Music | Live Music (upgrade) |
+| Comedy | Comedy (new lane, split from Stage & Comedy) |
+| Theater | Theater (rename from Stage & Comedy, upgrade) |
+| Nightlife | Places lane → `?view=find&lane=places&vertical=nightlife` |
+| Arts | Places lane → `?view=find&lane=places&vertical=arts` |
+| Attractions | Places lane → `?view=find&lane=places&vertical=entertainment` |
+| Game Day | Game Day (new lane) |
 
 ---
 
 ## What This Builds
 
-1. **Live Music lane** — upgrade from flat list to venue-grouped shows (mirrors feed's SeeShows Music tab)
-2. **Stage & Comedy lane** — upgrade from flat list to venue-grouped productions (mirrors feed's SeeShows Theater tab)
-3. **Game Day lane** — new lane with calendar-first timeline, team filter chips, game-as-hub grouping
-4. **Feed routing** — update SeeShowsSection + GameDaySection "See all" links to Find lanes
-5. **Sidebar + chip bar + Explore Home** — add Game Day
+1. **Live Music lane** — upgrade from flat list to venue-grouped shows (mirrors feed Music tab)
+2. **Theater lane** — rename from "Stage & Comedy", upgrade to venue-grouped productions (mirrors feed Theater tab)
+3. **Comedy lane** — new lane, split from Stage & Comedy (mirrors feed Comedy tab)
+4. **Game Day lane** — new lane with calendar-first timeline, team filter chips, game-as-hub grouping
+5. **Feed routing** — update all VENUES widget "See all" links to correct Find lanes
+6. **Sidebar + chip bar + Explore Home** — add Comedy and Game Day, rename Stage & Comedy → Theater
 
 ---
 
@@ -60,37 +74,87 @@ Existing `/api/whats-on/music` already returns venue-grouped data. The current `
 
 ---
 
-## Stage & Comedy Lane — Venue-Grouped Upgrade
+## Theater Lane — Venue-Grouped Upgrade
 
-Same architectural pattern as Live Music but adapted for stage content.
+Renamed from "Stage & Comedy." Comedy becomes its own lane (see below). Theater covers plays, musicals, dance, and dramatic performances.
 
-### Landing (`?view=find&lane=stage`)
+### Landing (`?view=find&lane=theater`)
 
 **Date navigation**: Same date pill strip.
 
-**Category filter chips**: All (default) | Theater | Comedy | Dance. With counts.
+**Category filter chips**: All (default) | Drama | Musical | Dance | Improv. With counts.
 
 **Venue-grouped productions**: Each venue with shows on the selected date:
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  [venue image]  Dad's Garage Theatre                  │
-│                 Inman Park · 2 shows tonight          │
+│  [venue image]  Alliance Theatre                      │
+│                 Midtown · 2 shows tonight             │
 │                                                       │
-│  7:30 PM  The Improvised Musical     $20  Tickets →  │
-│           Comedy · Runs through Apr 30                │
-│  9:30 PM  Thunderdome               $15  Tickets →  │
-│           Improv · Tonight only                       │
+│  7:30 PM  The Lehman Trilogy          $45  Tickets → │
+│           Drama · Runs through Apr 30                 │
+│  2:00 PM  School Matinee             $15  Tickets → │
+│           Musical · Today only                        │
 └──────────────────────────────────────────────────────────┘
 ```
 
-Key difference from Music: Stage productions often run for weeks. Show the run period ("Runs through Apr 30" or "Tonight only" or "Fri-Sun through May 15"). This info comes from `start_date`/`end_date` on the event.
+Key difference from Music: Theater productions often run for weeks. Show the run period ("Runs through Apr 30" or "Today only" or "Fri-Sun through May 15"). This info comes from `start_date`/`end_date` on the event.
 
 **Sort, URL sync, empty state, skeleton**: Same patterns as Live Music.
 
 ### API
 
-Existing `/api/whats-on/stage` already returns the data. Same upgrade path — use grouped structure instead of flattening.
+Existing `/api/whats-on/stage` already returns the data. Filter to `category_id IN ('theater', 'dance')` — excluding comedy (which gets its own lane). The lane slug changes from `stage` to `theater` but the API can stay the same with a category filter param.
+
+### URL
+
+```
+?view=find&lane=theater                    → all theater
+?view=find&lane=theater&date=2026-04-05    → specific date
+```
+
+**Backward compat**: `?view=find&lane=stage` redirects to `?view=find&lane=theater` via normalize-find-url.ts.
+
+---
+
+## Comedy Lane — New (Split from Stage & Comedy)
+
+Comedy gets its own lane because it has distinct venues (comedy clubs, improv theaters), distinct browsing patterns (open mics vs headliner shows vs improv nights), and is a separate tab in the feed's VENUES widget.
+
+### Landing (`?view=find&lane=comedy`)
+
+**Date navigation**: Same date pill strip.
+
+**Category filter chips**: All (default) | Stand-Up | Improv | Open Mic. With counts.
+
+**Venue-grouped shows**: Same card pattern as Music and Theater:
+
+```
+┌──────────────────────────────────────────────────────┐
+│  [venue image]  Laughing Skull Lounge                 │
+│                 Midtown · 3 shows tonight             │
+│                                                       │
+│  7:00 PM  Open Mic Night            Free              │
+│           Open Mic · Weekly                           │
+│  8:30 PM  Best of Atlanta Comedy    $20  Tickets →   │
+│           Stand-Up · Tonight only                     │
+│  10:00 PM Late Show                 $15  Tickets →   │
+│           Stand-Up                                    │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Sort, URL sync, empty state, skeleton**: Same patterns as Music.
+
+### API
+
+Same `/api/whats-on/stage` endpoint but filtered to `category_id = 'comedy'`. Or a new `/api/whats-on/comedy` if the filtering needs to be server-side.
+
+### URL
+
+```
+?view=find&lane=comedy                     → all comedy
+?view=find&lane=comedy&date=2026-04-05     → specific date
+```
 
 ---
 
@@ -177,21 +241,27 @@ Check if crawlers are producing these tags. If not, the hub will just show games
 
 ## Feed "See All" Routing
 
-Update feed section "See all" links to point to Find lanes:
+Update all VENUES widget tab "See all" links and other feed section links:
 
-| Feed Section | Current URL | New URL |
+| Feed Section / Tab | Current URL | New URL |
 |---|---|---|
-| SeeShows (Film tab) | `?view=happening&content=showtimes` | `?view=find&lane=now-showing` |
-| SeeShows (Music tab) | `?view=happening&content=showtimes` | `?view=find&lane=live-music` |
-| SeeShows (Theater tab) | `?view=happening&content=showtimes` | `?view=find&lane=stage` |
-| GameDay | `?view=happening&category=sports` | `?view=find&lane=game-day` |
+| VENUES → Film | `?view=happening&content=showtimes` | `?view=find&lane=now-showing` |
+| VENUES → Music | `?view=happening&content=showtimes` | `?view=find&lane=live-music` |
+| VENUES → Comedy | `?view=happening&content=showtimes` | `?view=find&lane=comedy` |
+| VENUES → Theater | `?view=happening&content=showtimes` | `?view=find&lane=theater` |
+| VENUES → Nightlife | `?view=happening` or places | `?view=find&lane=places&vertical=nightlife` |
+| VENUES → Arts | `?view=happening` or places | `?view=find&lane=places&vertical=arts` |
+| VENUES → Attractions | `?view=happening` or places | `?view=find&lane=places&vertical=entertainment` |
+| Game Day | `?view=happening&category=sports` | `?view=find&lane=game-day` |
 
-Also update any other feed sections that point to HappeningView with content/filter params. The legacy `?view=happening` URLs should continue to work (backward compat via normalize-find-url.ts).
+Legacy `?view=happening` URLs continue to work via normalize-find-url.ts. Add new legacy mappings:
+- `?view=find&lane=stage` → `?view=find&lane=theater` (renamed lane)
 
 ### Files to update:
-- `web/components/feed/sections/SeeShowsSection.tsx`
-- `web/components/feed/sections/NowShowingSection.tsx`
-- `web/components/feed/sections/GameDaySection.tsx`
+- `web/components/feed/sections/SeeShowsSection.tsx` — all tab "See all" links
+- `web/components/feed/sections/NowShowingSection.tsx` — Film "See all"
+- `web/components/feed/sections/GameDaySection.tsx` — Game Day "See all"
+- `web/lib/normalize-find-url.ts` — add `stage → theater` legacy mapping
 
 ---
 
@@ -199,14 +269,15 @@ Also update any other feed sections that point to HappeningView with content/fil
 
 ### Sidebar
 
-Add Game Day to BROWSE group:
+Rename Stage & Comedy → Theater, add Comedy and Game Day to BROWSE group:
 
 ```
 BROWSE
   Events
   Now Showing
   Live Music
-  Stage & Comedy
+  Theater           ← RENAMED from "Stage & Comedy"
+  Comedy            ← NEW (split from Stage & Comedy)
   Game Day          ← NEW
   Regulars
   Places
@@ -217,30 +288,42 @@ VIEWS
   Map
 ```
 
-Position after Stage & Comedy, before Regulars. Icon: `Trophy` from Phosphor. Accent: team-neutral color — use `var(--gold)` (#FFD93D) for the sports energy.
+**Theater**: Icon stays `MaskHappy`, accent stays `var(--neon-magenta)`. Lane slug changes from `stage` to `theater`.
+
+**Comedy**: Icon `Microphone` from Phosphor. Accent `var(--gold)` — comedy has a warm spotlight energy.
+
+**Game Day**: Icon `Trophy` from Phosphor. Accent `var(--coral)` — high-energy sports red.
 
 ### MobileLaneBar
 
-Add Game Day chip: `{ id: "game-day", label: "Game Day", accent: "var(--gold)", href: "?view=find&lane=game-day" }`
+Update and add chips:
+- Rename "Stage" chip → "Theater" with new lane slug
+- Add Comedy chip: `{ id: "comedy", label: "Comedy", accent: "var(--gold)", href: "?view=find&lane=comedy" }`
+- Add Game Day chip: `{ id: "game-day", label: "Game Day", accent: "var(--coral)", href: "?view=find&lane=game-day" }`
 
 ### FindShellClient
 
-Add `"game-day"` to `SHELL_LANES`. Add dynamic import for `GameDayView`. Conditional render.
+- Rename `"stage"` → `"theater"` in `SHELL_LANES` (keep `"stage"` as legacy alias via normalize-find-url)
+- Add `"comedy"` and `"game-day"` to `SHELL_LANES`
+- Add dynamic imports for `TheaterListingsView`, `ComedyListingsView`, `GameDayView`
+- Update conditional renders
 
 ### Explore Home
 
-Add Game Day lane to `explore-home-data.ts`:
-- Count: events with `category_id = 'sports'`, upcoming
-- Count today: same with today filter
-- Preview: 2-3 upcoming games with team logos
-- Scoring: temporal (uses today/weekend counts like Events)
+Add Comedy and Game Day lanes to `explore-home-data.ts` and `explore-lane-meta.ts`:
 
-Add to `explore-lane-meta.ts`:
 ```typescript
-"game-day": { label: "GAME DAY", mobileLabel: "Game Day", accent: "var(--gold)", href: "?view=find&lane=game-day", zeroCta: "" },
+// explore-lane-meta.ts additions:
+comedy:     { label: "COMEDY",   mobileLabel: "Comedy",   accent: "var(--gold)",  href: "?view=find&lane=comedy",   zeroCta: "" },
+"game-day": { label: "GAME DAY", mobileLabel: "Game Day", accent: "var(--coral)", href: "?view=find&lane=game-day", zeroCta: "" },
 ```
 
-Update `LaneSlug` type to include `"game-day"`.
+Update `LaneSlug` type to include `"comedy"` and `"game-day"`.
+
+Rename `"stage"` to `"theater"` in lane meta, type, and data fetcher.
+
+Comedy scoring: temporal (comedy shows happen tonight or not).
+Game Day scoring: temporal (games today/this weekend).
 
 ---
 
@@ -249,8 +332,9 @@ Update `LaneSlug` type to include `"game-day"`.
 | Component | File | Purpose |
 |-----------|------|---------|
 | `MusicListingsView` | `web/components/find/MusicListingsView.tsx` | **Upgrade in place** — venue-grouped shows |
-| `StageListingsView` | `web/components/find/StageListingsView.tsx` | **Upgrade in place** — venue-grouped productions |
-| `VenueShowsCard` | `web/components/find/shows/VenueShowsCard.tsx` | Shared venue card for Music + Stage |
+| `TheaterListingsView` | `web/components/find/TheaterListingsView.tsx` | **Rename from StageListingsView** — venue-grouped productions |
+| `ComedyListingsView` | `web/components/find/ComedyListingsView.tsx` | **New** — venue-grouped comedy shows |
+| `VenueShowsCard` | `web/components/find/shows/VenueShowsCard.tsx` | Shared venue card for Music, Theater, Comedy |
 | `ShowRow` | `web/components/find/shows/ShowRow.tsx` | Individual show row within a venue card |
 | `GameDayView` | `web/components/find/GameDayView.tsx` | Top-level Game Day lane component |
 | `GameHubCard` | `web/components/find/gameday/GameHubCard.tsx` | Game hub with satellite events |
@@ -258,7 +342,7 @@ Update `LaneSlug` type to include `"game-day"`.
 
 ### Shared Components
 
-`VenueShowsCard` and `ShowRow` are shared between Music and Stage lanes. The venue card container is identical — only the show metadata differs (Music shows genres, Stage shows run period). Use a `variant` prop or conditional metadata rendering.
+`VenueShowsCard` and `ShowRow` are shared between Music, Theater, and Comedy lanes. The venue card container is identical — only the show metadata differs (Music shows genres, Theater shows run period, Comedy shows format/style). Use a `variant` prop or conditional metadata rendering.
 
 ---
 
@@ -266,13 +350,17 @@ Update `LaneSlug` type to include `"game-day"`.
 
 1. `npx tsc --noEmit` — clean build
 2. **Live Music**: venue-grouped shows, genre chips with counts, date navigation, URL sync
-3. **Stage & Comedy**: venue-grouped productions with run periods, category chips, date nav
-4. **Game Day**: calendar timeline, team chips, game hub with tailgates/watch parties
-5. **Feed routing**: SeeShows "See all" → correct Find lanes, GameDay "See all" → game-day lane
-6. **Sidebar**: Game Day visible in BROWSE group with Trophy icon
-7. **Mobile chip bar**: Game Day chip present
-8. **Explore Home**: Game Day lane shows alive/quiet state
-9. **Empty states**: all three lanes handle no-data gracefully
-10. **Mobile (375px)**: venue cards full-width, filter chips scrollable, game hubs readable
-11. **Backward compat**: `?view=happening&content=showtimes` still works
-12. **URL sync**: date/genre/team params persist in URL via replaceState
+3. **Theater**: venue-grouped productions with run periods, category chips, date nav
+4. **Comedy**: venue-grouped comedy shows, format chips, date nav
+5. **Game Day**: calendar timeline, team chips, game hub with tailgates/watch parties
+6. **Feed routing**: All VENUES widget tabs → correct Find lanes
+7. **Feed routing**: Nightlife/Arts/Attractions → Places lane with vertical filter
+8. **Feed routing**: GameDay → game-day lane
+9. **Sidebar**: Theater (renamed), Comedy, Game Day in BROWSE group
+10. **Mobile chip bar**: Theater (renamed), Comedy, Game Day chips present
+11. **Explore Home**: Comedy and Game Day lanes show alive/quiet state, Theater renamed
+12. **Empty states**: all four lanes handle no-data gracefully
+13. **Mobile (375px)**: venue cards full-width, filter chips scrollable, game hubs readable
+14. **Backward compat**: `?view=find&lane=stage` redirects to `?view=find&lane=theater`
+15. **Backward compat**: `?view=happening&content=showtimes` still works
+16. **URL sync**: date/genre/team params persist in URL via replaceState
