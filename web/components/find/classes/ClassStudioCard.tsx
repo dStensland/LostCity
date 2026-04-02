@@ -1,7 +1,6 @@
 "use client";
 
 import { memo } from "react";
-import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
 import Dot from "@/components/ui/Dot";
 import { getCategoryMeta, toUiCategory } from "@/lib/class-categories";
@@ -22,17 +21,16 @@ export interface StudioSummary {
 export interface ClassStudioCardProps {
   studio: StudioSummary;
   portalSlug: string;
+  onStudioClick: (slug: string) => void;
 }
 
 export const ClassStudioCard = memo(function ClassStudioCard({
   studio,
-  portalSlug,
+  onStudioClick,
 }: ClassStudioCardProps) {
   const uiCategory = toUiCategory(studio.primaryCategory);
   const categoryMeta = getCategoryMeta(uiCategory);
   const CategoryIcon = categoryMeta?.icon ?? null;
-
-  const scheduleHref = `/${portalSlug}/venues/${studio.venueSlug}?tab=classes`;
 
   return (
     <div className="rounded-card bg-[var(--night)] border border-[var(--twilight)]/40 p-3 sm:p-4 flex items-start gap-3 sm:gap-4 hover:border-[var(--twilight)]/70 transition-colors">
@@ -104,13 +102,14 @@ export const ClassStudioCard = memo(function ClassStudioCard({
           </p>
         )}
 
-        {/* Link */}
-        <Link
-          href={scheduleHref}
+        {/* Schedule button */}
+        <button
+          type="button"
+          onClick={() => onStudioClick(studio.venueSlug)}
           className="inline-block mt-2 text-xs font-medium text-[var(--coral)] hover:text-[var(--coral)]/80 transition-colors"
         >
           See schedule →
-        </Link>
+        </button>
       </div>
     </div>
   );

@@ -185,7 +185,7 @@ export const ClassStudiosList = function ClassStudiosList({
                 onClick={() => onFilterChange({ category: null })}
               />
 
-              {/* Category chips — only show categories with non-zero counts */}
+              {/* Category chips — always visible, dimmed when count is 0 */}
               {CLASS_CATEGORIES.map((cat) => {
                 const count =
                   studios?.category_counts?.[cat.slug] ??
@@ -193,20 +193,25 @@ export const ClassStudiosList = function ClassStudiosList({
                     (sum, v) => sum + (studios?.category_counts?.[v] ?? 0),
                     0
                   );
-                if (count === 0 && category !== cat.slug) return null;
+                const isActive = category === cat.slug;
+                const isDimmed = count === 0 && !isActive;
                 return (
-                  <FilterChip
+                  <div
                     key={cat.slug}
-                    label={cat.label}
-                    variant="category"
-                    active={category === cat.slug}
-                    count={count}
-                    onClick={() =>
-                      onFilterChange({
-                        category: category === cat.slug ? null : cat.slug,
-                      })
-                    }
-                  />
+                    className={isDimmed ? "opacity-40" : undefined}
+                  >
+                    <FilterChip
+                      label={cat.label}
+                      variant="category"
+                      active={isActive}
+                      count={count}
+                      onClick={() =>
+                        onFilterChange({
+                          category: isActive ? null : cat.slug,
+                        })
+                      }
+                    />
+                  </div>
                 );
               })}
             </div>
@@ -318,6 +323,7 @@ export const ClassStudiosList = function ClassStudiosList({
               key={studio.place_id}
               studio={toCardStudio(studio)}
               portalSlug={portalSlug}
+              onStudioClick={(slug) => onFilterChange({ studio: slug })}
             />
           ))}
         </div>

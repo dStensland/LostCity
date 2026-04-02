@@ -137,8 +137,7 @@ export function ClassesView({ portalSlug }: ClassesViewProps) {
       studios?.studios.find((s) => s.slug === studioSlug) ?? null;
     return (
       <ClassStudioSchedule
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        schedule={(schedule?.classes ?? null) as any}
+        schedule={schedule?.classes ?? null}
         studioMeta={studioMeta}
         studioSlug={studioSlug}
         portalSlug={portalSlug}

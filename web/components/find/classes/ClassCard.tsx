@@ -5,30 +5,11 @@ import Link from "next/link";
 import Dot from "@/components/ui/Dot";
 
 // ---------------------------------------------------------------------------
-// Types
+// Types — re-export from the canonical hook definition
 // ---------------------------------------------------------------------------
 
-/**
- * A single class event instance as returned by the API / useClassesData hook.
- * If useClassesData is finalized, reconcile this definition with the one there.
- */
-export interface ClassEvent {
-  event_id: number;
-  series_id: string | null;
-  title: string;
-  venue_id: number;
-  start_date: string;       // ISO date "YYYY-MM-DD"
-  start_time: string | null; // "HH:MM" 24-hour local
-  end_time: string | null;
-  skill_level: string | null;
-  instructor: string | null;
-  capacity: number | null;
-  price_min: number | null;
-  price_max: number | null;
-  is_free: boolean | null;
-  detail_url: string | null;
-  class_category: string | null;
-}
+import type { ClassEvent } from "@/lib/hooks/useClassesData";
+export type { ClassEvent };
 
 export interface GroupedClass {
   key: string;
@@ -194,7 +175,8 @@ export function groupClassesBySeries(
       bucket.push(evt);
       seriesMap.set(evt.series_id, bucket);
     } else {
-      const key = `${evt.venue_id}||${normalizeTitle(evt.title)}||${evt.start_time ?? ""}`;
+      const venueKey = evt.venue?.id ?? evt.place_id ?? 0;
+      const key = `${venueKey}||${normalizeTitle(evt.title)}||${evt.start_time ?? ""}`;
       const bucket = fallbackMap.get(key) ?? [];
       bucket.push(evt);
       fallbackMap.set(key, bucket);
@@ -218,7 +200,7 @@ export function groupClassesBySeries(
       patternType,
       nextDate: rep.start_date,
       nextTime: rep.start_time,
-      detailUrl: rep.detail_url ?? `/${portalSlug}?event=${rep.event_id}`,
+      detailUrl: rep.source_url ?? `/${portalSlug}/events/${rep.slug || rep.id}`,
       instances,
     };
   }

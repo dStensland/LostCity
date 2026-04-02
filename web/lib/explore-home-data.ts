@@ -679,6 +679,7 @@ export async function getExploreHomeData(
           .select("id", { count: "exact", head: true })
           .eq("is_class", true)
           .eq("is_active", true)
+          .or("is_feed_ready.eq.true,is_feed_ready.is.null")
           .is("canonical_event_id", null)
           .gte("start_date", today),
         manifest,
@@ -691,6 +692,7 @@ export async function getExploreHomeData(
           .select("id", { count: "exact", head: true })
           .eq("is_class", true)
           .eq("is_active", true)
+          .or("is_feed_ready.eq.true,is_feed_ready.is.null")
           .is("canonical_event_id", null)
           .eq("start_date", today),
         manifest,
@@ -703,6 +705,7 @@ export async function getExploreHomeData(
           .select("id", { count: "exact", head: true })
           .eq("is_class", true)
           .eq("is_active", true)
+          .or("is_feed_ready.eq.true,is_feed_ready.is.null")
           .is("canonical_event_id", null)
           .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
           .lte("start_date", weekend.end),
@@ -716,10 +719,13 @@ export async function getExploreHomeData(
           .select(eventPreviewSelect)
           .eq("is_class", true)
           .eq("is_active", true)
+          .or("is_feed_ready.eq.true,is_feed_ready.is.null")
           .is("canonical_event_id", null)
           .gte("start_date", today)
-          .order("image_url", { ascending: false, nullsFirst: false })
           .order("start_date", { ascending: true })
+          .order("start_time", { ascending: true, nullsFirst: false })
+          .order("data_quality", { ascending: false, nullsFirst: false })
+          .order("image_url", { ascending: false, nullsFirst: false })
           .limit(PREVIEW_LIMIT),
         manifest,
         { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },

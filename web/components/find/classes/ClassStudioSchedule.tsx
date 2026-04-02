@@ -90,10 +90,19 @@ export const ClassStudioSchedule = memo(function ClassStudioSchedule({
   skillLevel,
   onFilterChange,
 }: ClassStudioScheduleProps) {
-  const displayName = studioMeta?.name ?? slugToTitle(studioSlug);
-  const neighborhood = studioMeta?.neighborhood ?? null;
-  const imageUrl = studioMeta?.image_url ?? null;
-  const hasFullMeta = studioMeta !== null;
+  // Derive studio metadata from schedule events when studioMeta is unavailable
+  // (deep-link scenario where studios cache is empty)
+  const derivedVenue = !studioMeta && schedule && schedule.length > 0
+    ? schedule.find((e) => e.venue)?.venue ?? null
+    : null;
+  const derivedImageUrl = !studioMeta && schedule && schedule.length > 0
+    ? schedule.find((e) => e.image_url)?.image_url ?? null
+    : null;
+
+  const displayName = studioMeta?.name ?? derivedVenue?.name ?? slugToTitle(studioSlug);
+  const neighborhood = studioMeta?.neighborhood ?? derivedVenue?.neighborhood ?? null;
+  const imageUrl = studioMeta?.image_url ?? derivedImageUrl;
+  const hasFullMeta = studioMeta !== null || derivedVenue !== null;
 
   const activeDate = dateWindow ?? "week";
   const activeSkill = skillLevel ?? "all";
