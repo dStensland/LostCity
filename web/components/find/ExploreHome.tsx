@@ -4,22 +4,14 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import { ExploreHomeSection } from "./ExploreHomeSection";
-import type { LaneSlug, ExploreHomeResponse } from "@/lib/types/explore-home";
+import type { ExploreHomeResponse } from "@/lib/types/explore-home";
+import { BROWSE_LANES, VIEW_LANES } from "@/lib/explore-lane-meta";
 
 // ---------------------------------------------------------------------------
 // Lane order — fixed, never reorders between visits
 // ---------------------------------------------------------------------------
 
-const LANE_ORDER: LaneSlug[] = [
-  "events",
-  "shows",
-  "game-day",
-  "regulars",
-  "places",
-  "classes",
-  "calendar",
-  "map",
-];
+const LANE_ORDER = [...BROWSE_LANES, ...VIEW_LANES];
 
 // ---------------------------------------------------------------------------
 // Loading skeleton

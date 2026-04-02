@@ -4,20 +4,12 @@ import { memo, useState, useTransition, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  FilmSlate,
-  Ticket,
-  ArrowsClockwise,
-  CalendarBlank,
-  MapTrifold,
-  MapPin,
   ArrowLeft,
-  GraduationCap,
-  Trophy,
 } from "@phosphor-icons/react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { useWeather } from "@/lib/hooks/useWeather";
 import type { CategoryPulse } from "@/lib/find-data";
-import { LANE_META } from "@/lib/explore-lane-meta";
+import { LANE_META, BROWSE_LANES as BROWSE_LANE_SLUGS, VIEW_LANES as VIEW_LANE_SLUGS, LANE_ICONS } from "@/lib/explore-lane-meta";
 
 // -------------------------------------------------------------------------
 // Lane definitions
@@ -31,67 +23,21 @@ interface Lane {
   href: string;
 }
 
-const BROWSE_LANES: Lane[] = [
-  {
-    id: "events",
-    label: "Events",
-    icon: Ticket,
-    accent: LANE_META["events"].accent,
-    href: LANE_META["events"].href,
-  },
-  {
-    id: "shows",
-    label: "Shows",
-    icon: FilmSlate,
-    accent: LANE_META["shows"].accent,
-    href: LANE_META["shows"].href,
-  },
-  {
-    id: "game-day",
-    label: "Game Day",
-    icon: Trophy,
-    accent: LANE_META["game-day"].accent,
-    href: LANE_META["game-day"].href,
-  },
-  {
-    id: "regulars",
-    label: "Regulars",
-    icon: ArrowsClockwise,
-    accent: LANE_META["regulars"].accent,
-    href: LANE_META["regulars"].href,
-  },
-  {
-    id: "places",
-    label: "Places",
-    icon: MapPin,
-    accent: LANE_META["places"].accent,
-    href: LANE_META["places"].href,
-  },
-  {
-    id: "classes",
-    label: "Classes",
-    icon: GraduationCap,
-    accent: LANE_META["classes"].accent,
-    href: LANE_META["classes"].href,
-  },
-];
+const BROWSE_LANES: Lane[] = BROWSE_LANE_SLUGS.map((id) => ({
+  id,
+  label: LANE_META[id].mobileLabel,
+  icon: LANE_ICONS[id],
+  accent: LANE_META[id].accent,
+  href: LANE_META[id].href,
+}));
 
-const VIEW_LANES: Lane[] = [
-  {
-    id: "calendar",
-    label: "Calendar",
-    icon: CalendarBlank,
-    accent: LANE_META["calendar"].accent,
-    href: LANE_META["calendar"].href,
-  },
-  {
-    id: "map",
-    label: "Map",
-    icon: MapTrifold,
-    accent: LANE_META["map"].accent,
-    href: LANE_META["map"].href,
-  },
-];
+const VIEW_LANES: Lane[] = VIEW_LANE_SLUGS.map((id) => ({
+  id,
+  label: LANE_META[id].mobileLabel,
+  icon: LANE_ICONS[id],
+  accent: LANE_META[id].accent,
+  href: LANE_META[id].href,
+}));
 
 // -------------------------------------------------------------------------
 // Badge count helper

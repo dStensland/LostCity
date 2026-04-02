@@ -3,15 +3,9 @@
 import { useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { House } from "@phosphor-icons/react";
-import { LANE_META } from "@/lib/explore-lane-meta";
-import type { LaneSlug } from "@/lib/types/explore-home";
+import { LANE_META, BROWSE_LANES, VIEW_LANES } from "@/lib/explore-lane-meta";
 
-const MOBILE_LANE_ORDER: LaneSlug[] = [
-  "events", "shows", "game-day",
-  "regulars", "places", "classes", "calendar", "map",
-];
-
-const MOBILE_LANES = MOBILE_LANE_ORDER.map((slug) => ({
+const MOBILE_LANES = [...BROWSE_LANES, ...VIEW_LANES].map((slug) => ({
   id: slug,
   label: LANE_META[slug].mobileLabel,
   accent: LANE_META[slug].accent,
