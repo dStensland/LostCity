@@ -12,6 +12,7 @@ import {
   MapPin,
   ArrowLeft,
   GraduationCap,
+  Trophy,
 } from "@phosphor-icons/react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { useWeather } from "@/lib/hooks/useWeather";
@@ -44,6 +45,13 @@ const BROWSE_LANES: Lane[] = [
     icon: FilmSlate,
     accent: LANE_META["shows"].accent,
     href: LANE_META["shows"].href,
+  },
+  {
+    id: "game-day",
+    label: "Game Day",
+    icon: Trophy,
+    accent: LANE_META["game-day"].accent,
+    href: LANE_META["game-day"].href,
   },
   {
     id: "regulars",

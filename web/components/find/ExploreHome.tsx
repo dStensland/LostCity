@@ -13,6 +13,7 @@ import type { LaneSlug, ExploreHomeResponse } from "@/lib/types/explore-home";
 const LANE_ORDER: LaneSlug[] = [
   "events",
   "shows",
+  "game-day",
   "regulars",
   "places",
   "classes",
