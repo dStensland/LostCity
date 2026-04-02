@@ -88,7 +88,7 @@ async function checkElevationSeed(): Promise<boolean> {
   return !!data;
 }
 
-// ── Create mutual follows (friendships) ─────────────────────────────────────
+// ── Create friendships (via friendships table + follows for compat) ──────────
 
 async function createFriendships(realUserId: string) {
   console.log("\n── Creating friendships with seed users ──");
@@ -97,12 +97,15 @@ async function createFriendships(realUserId: string) {
   let skipped = 0;
 
   for (const seedId of SEED_IDS) {
-    // Check if follow already exists (real → seed)
+    // Check if friendship already exists in the friendships table
+    const smallerId = realUserId < seedId ? realUserId : seedId;
+    const largerId = realUserId < seedId ? seedId : realUserId;
+
     const { data: existing } = await supabase
-      .from("follows")
+      .from("friendships")
       .select("id")
-      .eq("follower_id", realUserId)
-      .eq("followed_user_id", seedId)
+      .eq("user_a_id", smallerId)
+      .eq("user_b_id", largerId)
       .maybeSingle();
 
     if (existing) {
@@ -110,21 +113,30 @@ async function createFriendships(realUserId: string) {
       continue;
     }
 
-    // Create bidirectional follows (mutual = friendship)
-    const { error: e1 } = await supabase.from("follows").insert({
+    // Create friendship via RPC (handles canonical ordering)
+    const { error: friendshipErr } = await supabase.rpc(
+      "create_friendship" as never,
+      { user_a: realUserId, user_b: seedId } as never
+    );
+
+    // Also create bidirectional follows for backward compat with activity feed
+    const { error: e1 } = await supabase.from("follows").upsert({
       follower_id: realUserId,
       followed_user_id: seedId,
-    } as never);
+    } as never, { onConflict: "follower_id,followed_user_id" });
 
-    const { error: e2 } = await supabase.from("follows").insert({
+    const { error: e2 } = await supabase.from("follows").upsert({
       follower_id: seedId,
       followed_user_id: realUserId,
-    } as never);
+    } as never, { onConflict: "follower_id,followed_user_id" });
 
-    if (e1 || e2) {
-      console.error(`  Error creating friendship with ${seedId}:`, e1?.message || e2?.message);
+    if (friendshipErr) {
+      console.error(`  Error creating friendship with ${seedId}:`, friendshipErr.message);
     } else {
       created++;
+    }
+    if (e1 || e2) {
+      // Follow errors are non-critical (may already exist)
     }
   }
 
@@ -234,6 +246,14 @@ async function clean(realUserId: string) {
     .eq("followed_user_id", realUserId);
 
   console.log("  Deleted mutual follows");
+
+  // Remove friendships between real user and seed users
+  await supabase
+    .from("friendships")
+    .delete()
+    .or(`user_a_id.eq.${realUserId},user_b_id.eq.${realUserId}`);
+
+  console.log("  Deleted friendships");
 
   // Remove saved items from seed users
   await supabase
