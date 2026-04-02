@@ -84,6 +84,7 @@ export default function FindShellClient({
 
   const [exploreData, setExploreData] = useState<ExploreHomeResponse | null>(null);
   const [exploreLoading, setExploreLoading] = useState(true);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     // Only fetch when showing Explore Home (no lane selected)
@@ -91,24 +92,55 @@ export default function FindShellClient({
       setExploreLoading(false);
       return;
     }
-    setExploreLoading(true);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-    fetch(`/api/portals/${portalSlug}/explore-home`, { signal: controller.signal })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => setExploreData(json as ExploreHomeResponse | null))
-      .catch(() => {})
-      .finally(() => {
-        clearTimeout(timeoutId);
+    let retryCount = 0;
+    const MAX_RETRIES = 2;
+    let cancelled = false;
+
+    async function fetchExploreData() {
+      setExploreLoading(true);
+
+      while (retryCount <= MAX_RETRIES && !cancelled) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+          const res = await fetch(`/api/portals/${portalSlug}/explore-home`, {
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+          }
+
+          const json = await res.json();
+          if (!cancelled) {
+            setExploreData(json as ExploreHomeResponse);
+            setExploreLoading(false);
+          }
+          return; // Success — exit retry loop
+        } catch {
+          retryCount++;
+          if (retryCount <= MAX_RETRIES && !cancelled) {
+            // Wait before retry: 750ms, then 1750ms
+            await new Promise((r) => setTimeout(r, retryCount * 500 + 250));
+          }
+        }
+      }
+
+      // All retries exhausted
+      if (!cancelled) {
         setExploreLoading(false);
-      });
+      }
+    }
+
+    fetchExploreData();
 
     return () => {
-      controller.abort();
-      clearTimeout(timeoutId);
+      cancelled = true;
     };
-  }, [portalSlug, lane]);
+  }, [portalSlug, lane, retryKey]);
 
   return (
     <div className="min-h-[calc(100vh-4rem)]">
@@ -128,7 +160,12 @@ export default function FindShellClient({
       <div className="lg:ml-[240px] min-w-0">
         <FindContextProvider portalId={portalId} portalSlug={portalSlug} portalExclusive={portalExclusive}>
           {!lane && (
-            <ExploreHome portalSlug={portalSlug} data={exploreData} loading={exploreLoading} />
+            <ExploreHome
+              portalSlug={portalSlug}
+              data={exploreData}
+              loading={exploreLoading}
+              onRetry={() => setRetryKey((k) => k + 1)}
+            />
           )}
           {lane === "events" && (
             <EventsFinder

@@ -57,9 +57,10 @@ export interface ExploreHomeProps {
   portalSlug: string;
   data: ExploreHomeResponse | null;
   loading: boolean;
+  onRetry?: () => void;
 }
 
-export function ExploreHome({ portalSlug, data, loading }: ExploreHomeProps) {
+export function ExploreHome({ portalSlug, data, loading, onRetry }: ExploreHomeProps) {
   const [query, setQuery] = useState("");
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -104,9 +105,19 @@ export function ExploreHome({ portalSlug, data, loading }: ExploreHomeProps) {
 
       {/* Error / empty state */}
       {!loading && !data && (
-        <p className="text-sm text-[var(--muted)] text-center py-16">
-          Could not load explore sections. Please try again.
-        </p>
+        <div className="text-center py-16">
+          <p className="text-sm text-[var(--soft)]">
+            Could not load explore sections.
+          </p>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="mt-3 text-xs font-mono text-[var(--coral)] hover:opacity-80 transition-opacity"
+            >
+              Try again
+            </button>
+          )}
+        </div>
       )}
 
       {/* 2-col grid on desktop, single col on mobile */}
