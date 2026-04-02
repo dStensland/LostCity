@@ -45,19 +45,21 @@ const CATEGORY_PRIORITY = [
 ];
 
 // Genre-specific colors for film events
+// Uses design system tokens where possible; remaining genres use curated hex
+// TODO: add genre color tokens to globals.css for full token coverage
 const FILM_GENRE_COLORS: Record<string, string> = {
-  horror: "#ef4444",
-  comedy: "#facc15",
-  drama: "#818cf8",
-  documentary: "#6ee7b7",
-  thriller: "#f97316",
-  "sci-fi": "#22d3ee",
-  action: "#f87171",
-  animation: "#c084fc",
-  romance: "#fb7185",
-  classic: "#d4d4d8",
-  foreign: "#a78bfa",
-  indie: "#34d399",
+  horror: "var(--neon-red)",       // #FF5A5A
+  comedy: "var(--gold)",           // #FFD93D
+  drama: "var(--vibe)",            // #A78BFA
+  documentary: "var(--neon-green)",// #00D9A0
+  thriller: "#f97316",             // no matching token — warm orange
+  "sci-fi": "var(--neon-cyan)",    // #00D4E8
+  action: "var(--coral)",          // #FF6B7A
+  animation: "#c084fc",            // no matching token — light purple
+  romance: "var(--neon-magenta)",  // #E855A0
+  classic: "var(--soft)",          // #A1A1AA
+  foreign: "var(--vibe)",          // #A78BFA
+  indie: "var(--neon-green)",      // #00D9A0
 };
 
 // Build a full 6-week grid for stable date math; UI can render a trimmed subset.
@@ -92,14 +94,28 @@ export default function CalendarView({
   portalExclusive,
   fullBleed = false,
 }: Props) {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  // Initialize month/year from URL params for deep-linking
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    if (typeof window === "undefined") return new Date();
+    const params = new URLSearchParams(window.location.search);
+    const urlMonth = params.get("month");
+    const urlYear = params.get("year");
+    if (urlMonth && urlYear) {
+      const m = parseInt(urlMonth, 10) - 1;
+      const y = parseInt(urlYear, 10);
+      if (!isNaN(m) && !isNaN(y) && m >= 0 && m <= 11 && y >= 2000 && y <= 2100) {
+        return new Date(y, m, 1);
+      }
+    }
+    return new Date();
+  });
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
   const dayButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const keyboardNavRef = useRef(false);
 
   // Use the new React Query hook for calendar events
-  const { eventsByDate, summary, isLoading: loading, isRefetching } = useCalendarEvents({
+  const { eventsByDate, summary, isLoading: loading, isRefetching, error, refetch } = useCalendarEvents({
     month: currentMonth.getMonth() + 1,
     year: currentMonth.getFullYear(),
     portalId,
@@ -166,11 +182,22 @@ export default function CalendarView({
     return idx >= 0 ? idx : 0;
   }, [selectedDate, visibleCalendarDays]);
 
+  // Sync month/year to URL for deep-linking and back-navigation
+  const syncMonthToUrl = useCallback((date: Date) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("month", String(date.getMonth() + 1));
+    url.searchParams.set("year", String(date.getFullYear()));
+    window.history.replaceState({}, "", url.toString());
+  }, []);
+
   const handleSelectDate = useCallback((date: Date) => {
     setSelectedDate(date);
+    if (!isSameMonth(date, currentMonth)) {
+      syncMonthToUrl(date);
+    }
     setCurrentMonth(date);
     setHoveredDate(null);
-  }, []);
+  }, [currentMonth, syncMonthToUrl]);
 
   // Navigation handlers - immediate updates, CSS handles transitions
   // Auto-select first day of the new month (selectedDate will be refined
@@ -179,24 +206,27 @@ export default function CalendarView({
     setCurrentMonth((m) => {
       const prev = subMonths(m, 1);
       setSelectedDate(startOfMonth(prev));
+      syncMonthToUrl(prev);
       return prev;
     });
-  }, []);
+  }, [syncMonthToUrl]);
 
   const goToNextMonth = useCallback(() => {
     setCurrentMonth((m) => {
       const next = addMonths(m, 1);
       setSelectedDate(startOfMonth(next));
+      syncMonthToUrl(next);
       return next;
     });
-  }, []);
+  }, [syncMonthToUrl]);
 
   const goToToday = useCallback(() => {
     const today = new Date();
     setCurrentMonth(today);
     setSelectedDate(today);
     setHoveredDate(null);
-  }, []);
+    syncMonthToUrl(today);
+  }, [syncMonthToUrl]);
 
   useEffect(() => {
     if (!keyboardNavRef.current) return;
@@ -369,6 +399,20 @@ export default function CalendarView({
   }, [calendarDays]);
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  if (error && !loading) {
+    return (
+      <div className="py-16 text-center">
+        <p className="text-sm text-[var(--coral)]">Unable to load calendar events.</p>
+        <button
+          onClick={() => refetch()}
+          className="mt-2 text-xs text-[var(--soft)] hover:text-[var(--cream)] transition-colors"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className={fullBleed ? "py-0" : "py-3"}>
@@ -738,7 +782,7 @@ export default function CalendarView({
 
                       {activeDate && (
                         <Link
-                          href={`/${portalSlug}?view=events&date_start=${format(activeDate, "yyyy-MM-dd")}&date_end=${format(activeDate, "yyyy-MM-dd")}`}
+                          href={`/${portalSlug}?view=find&lane=events&date_start=${format(activeDate, "yyyy-MM-dd")}&date_end=${format(activeDate, "yyyy-MM-dd")}`}
                           className="block mt-3 text-center py-2.5 rounded-xl border border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--coral)]/50 transition-colors font-mono text-xs"
                         >
                           View all {formatCompactCount(activeDayEvents.length)} events in list view
