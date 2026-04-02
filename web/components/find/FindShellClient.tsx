@@ -34,11 +34,14 @@ const SpotsFinder = dynamic(() => import("./SpotsFinder"), {
 const ClassesView = dynamic(() => import("./ClassesView").then((m) => m.ClassesView), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading...</div>,
 });
+const GameDayView = dynamic(() => import("./GameDayView").then(m => m.GameDayView), {
+  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading...</div>,
+});
 
 // Valid shell lanes — anything else falls back to launchpad
 const SHELL_LANES = new Set([
   "events", "shows",
-  "regulars", "places", "classes", "calendar", "map",
+  "regulars", "places", "classes", "calendar", "map", "game-day",
 ]);
 
 // Legacy lane params that should redirect to the consolidated shows lane
@@ -170,6 +173,9 @@ export default function FindShellClient({
               displayMode="map"
               hasActiveFilters={false}
             />
+          )}
+          {lane === "game-day" && (
+            <GameDayView portalId={portalId} portalSlug={portalSlug} />
           )}
         </FindContextProvider>
       </div>
