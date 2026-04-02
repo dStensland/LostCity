@@ -271,7 +271,7 @@ export default function NowShowingSection({ portalSlug, embedded = false }: NowS
             priority="secondary"
             accentColor="var(--vibe)"
             icon={<FilmSlate weight="duotone" className="w-5 h-5" />}
-            seeAllHref={`/${portalSlug}?view=happening&content=showtimes`}
+            seeAllHref={`/${portalSlug}?view=find&lane=shows&tab=film`}
           />
         )}
         <div className="flex gap-3 overflow-hidden">
@@ -324,7 +324,7 @@ export default function NowShowingSection({ portalSlug, embedded = false }: NowS
           priority="secondary"
           accentColor="var(--vibe)"
           icon={<FilmSlate weight="duotone" className="w-5 h-5" />}
-          seeAllHref={`/${portalSlug}?view=happening&content=showtimes`}
+          seeAllHref={`/${portalSlug}?view=find&lane=shows&tab=film`}
           actionIcon={user ? <GearSix weight="bold" className="w-3.5 h-3.5" /> : undefined}
           onAction={user ? () => setCustomizerOpen((v) => !v) : undefined}
           actionActive={customizerOpen}

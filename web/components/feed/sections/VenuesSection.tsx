@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { MapPin } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import NowShowingSection from "./NowShowingSection";
@@ -40,6 +41,16 @@ const TABS: { id: VenueTab; label: string; accent: string }[] = [
 ];
 
 const FETCH_TIMEOUT_MS = 10_000;
+
+const TAB_SEE_ALL: Record<VenueTab, { href: string; label: string }> = {
+  film: { href: "?view=find&lane=shows&tab=film", label: "All showtimes" },
+  music: { href: "?view=find&lane=shows&tab=music", label: "All shows" },
+  comedy: { href: "?view=find&lane=shows&tab=comedy", label: "All shows" },
+  theater: { href: "?view=find&lane=shows&tab=theater", label: "All shows" },
+  nightlife: { href: "?view=find&lane=places&venue_type=bar,nightclub,lounge", label: "All venues" },
+  arts: { href: "?view=find&lane=places&venue_type=museum,gallery,arts_center", label: "All venues" },
+  attractions: { href: "?view=find&lane=places&venue_type=arcade,attraction,entertainment,escape_room,bowling,zoo,aquarium", label: "All venues" },
+};
 
 // ── ProgrammingTabContent ──────────────────────────────────────────────────────
 
@@ -293,7 +304,7 @@ export default function VenuesSection({ portalSlug }: { portalSlug: string }) {
         priority="secondary"
         accentColor="var(--vibe)"
         icon={<MapPin weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=find&type=destinations`}
+        seeAllHref={`/${portalSlug}?view=find&lane=shows`}
       />
 
       {/* Tab bar — horizontal scroll for 7 tabs */}
@@ -388,6 +399,17 @@ export default function VenuesSection({ portalSlug }: { portalSlug: string }) {
             accentColor="var(--neon-green)"
           />
         )}
+      </div>
+
+      {/* Per-tab "See all" footer link */}
+      <div className="flex justify-end px-4 pt-2 pb-1">
+        <Link
+          href={`/${portalSlug}${TAB_SEE_ALL[activeTab].href}`}
+          className="flex items-center gap-1 text-xs font-mono hover:opacity-80 transition-opacity"
+          style={{ color: "var(--coral)" }}
+        >
+          {TAB_SEE_ALL[activeTab].label} →
+        </Link>
       </div>
     </section>
   );

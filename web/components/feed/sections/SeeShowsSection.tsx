@@ -44,7 +44,7 @@ export default function SeeShowsSection({ portalSlug }: SeeShowsSectionProps) {
         priority="secondary"
         accentColor="var(--coral)"
         icon={<Ticket weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=happening&content=showtimes`}
+        seeAllHref={`/${portalSlug}?view=find&lane=shows`}
       />
 
       {/* Tab bar — each tab gets its own accent color */}
