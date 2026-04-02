@@ -13,11 +13,28 @@ import Link from "next/link";
 export default function YourPeoplePage() {
   const { user } = useAuth();
   const { pendingRequests, isLoading: requestsLoading } = useFriendRequests({ type: "received" });
-  const { friendCount, isLoading: crewLoading } = useCrewBoard();
+  const { friendCount, isLoading: crewLoading, error: crewError } = useCrewBoard();
   const crewEventIds = useCrewBoardEventIds();
 
   if (!user) {
     return <UnauthenticatedView />;
+  }
+
+  if (crewError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader />
+        <div className="p-6 rounded-xl border border-[var(--coral)]/30 bg-[var(--coral)]/5 text-center">
+          <p className="text-sm text-[var(--soft)]">Something went wrong loading your crew.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-3 font-mono text-xs text-[var(--coral)] hover:opacity-80 transition-opacity"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (requestsLoading || crewLoading) {

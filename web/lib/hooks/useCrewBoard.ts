@@ -51,5 +51,6 @@ export function useCrewBoard() {
     days: query.data?.days || [],
     friendCount: query.data?.friendCount || 0,
     isLoading: query.isLoading,
+    error: query.error,
   };
 }

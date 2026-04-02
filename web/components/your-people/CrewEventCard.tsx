@@ -21,7 +21,7 @@ export default function CrewEventCard({ event }: CrewEventCardProps) {
   const metaParts = [timeStr, event.venue_name].filter(Boolean).join(" · ");
 
   return (
-    <div className="flex items-center gap-2.5 sm:gap-3.5 p-3 sm:p-3.5 rounded-[10px] bg-[var(--night)] border border-[var(--twilight)] hover:border-[var(--twilight)]/80 transition-colors">
+    <div className="flex items-center gap-2.5 sm:gap-3.5 p-3 sm:p-3.5 rounded-[10px] bg-[var(--night)] border border-[var(--twilight)] hover:border-[var(--coral)]/30 transition-colors">
       {/* Event image */}
       <Link href={`/events/${event.event_id}`} className="flex-shrink-0">
         <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden bg-[var(--dusk)]">
