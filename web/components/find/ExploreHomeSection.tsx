@@ -135,7 +135,7 @@ export const ExploreHomeSection = memo(function ExploreHomeSection({
       </header>
 
       {/* Body */}
-      {state === "alive" && items.length > 0 && (
+      {state === "alive" && items && items.length > 0 && (
         <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-1 px-1">
           {items.map((item) => (
             <Link

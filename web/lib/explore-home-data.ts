@@ -1,15 +1,18 @@
 /**
  * Server-side data fetcher for the Explore Home dashboard.
  *
- * Resolves the portal, then runs parallel Supabase queries to build
- * lane preview data for all 7 lanes. Each lane gets:
+ * Resolves the portal, then runs parallel Supabase count queries to build
+ * lane metadata for all 8 lanes. Each lane gets:
  *   - count (total items)
  *   - count_today / count_weekend (for alive/quiet scoring)
- *   - up to 4 preview items
  *   - state: "alive" | "quiet" | "zero"
  *   - copy: human-readable summary
  *
- * Called by the API route (Task 3) which adds HTTP caching on top.
+ * No preview items are fetched — the search-forward ExploreHome layout
+ * uses lane tiles with counts/copy only; actual content is loaded when
+ * the user navigates into a lane.
+ *
+ * Called by the API route which adds HTTP caching on top.
  */
 
 import { createPortalScopedClient } from "@/lib/supabase/server";
@@ -24,15 +27,11 @@ import type {
   LanePreview,
   LaneSlug,
   LaneState,
-  PreviewItem,
 } from "@/lib/types/explore-home";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-/** Max preview items per lane */
-const PREVIEW_LIMIT = 4;
 
 /** Category IDs for the consolidated Shows lane */
 const SHOW_CATEGORIES = ["film", "music", "theater", "comedy", "dance"];
@@ -247,81 +246,6 @@ function unwrapSettled<T>(result: PromiseSettledResult<T>, fallback: T): T {
 }
 
 // ---------------------------------------------------------------------------
-// Query helpers
-// ---------------------------------------------------------------------------
-
-interface EventPreviewRow {
-  id: number;
-  title: string;
-  start_date: string;
-  start_time: string | null;
-  category_id: string | null;
-  image_url: string | null;
-  venue: { name: string; neighborhood: string | null } | null;
-}
-
-interface PlacePreviewRow {
-  id: number;
-  name: string;
-  slug: string;
-  place_type: string | null;
-  neighborhood: string | null;
-  image_url: string | null;
-}
-
-function eventToPreviewItem(
-  row: EventPreviewRow,
-  type: PreviewItem["type"],
-  portalSlug: string,
-): PreviewItem {
-  const venueName = row.venue?.name ?? "";
-  const neighborhood = row.venue?.neighborhood ?? "";
-  const subtitle = [venueName, neighborhood].filter(Boolean).join(" · ");
-  const timeStr = row.start_time
-    ? formatTimeCompact(row.start_time)
-    : "All day";
-  const dateStr = row.start_date;
-
-  return {
-    id: row.id,
-    type,
-    title: row.title,
-    subtitle,
-    image_url: row.image_url,
-    metadata: `${dateStr} · ${timeStr}`,
-    detail_url: `/${portalSlug}/events/${row.id}`,
-  };
-}
-
-function placeToPreviewItem(
-  row: PlacePreviewRow,
-  portalSlug: string,
-): PreviewItem {
-  const subtitle = [row.place_type, row.neighborhood]
-    .filter(Boolean)
-    .join(" · ");
-
-  return {
-    id: row.id,
-    type: "place",
-    title: row.name,
-    subtitle,
-    image_url: row.image_url,
-    metadata: "",
-    detail_url: `/${portalSlug}/places/${row.slug}`,
-  };
-}
-
-/** Format "HH:MM:SS" → compact display like "7pm" or "7:30pm" */
-function formatTimeCompact(time: string): string {
-  const [h, m] = time.split(":").map(Number);
-  const period = h >= 12 ? "pm" : "am";
-  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  if (m === 0) return `${hour12}${period}`;
-  return `${hour12}:${m.toString().padStart(2, "0")}${period}`;
-}
-
-// ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
 
@@ -379,34 +303,6 @@ export async function getExploreHomeData(
     );
     const currentHour = hourEt;
 
-    // Time filter for today's preview queries: exclude events that ended more
-    // than 1 hour ago. Applied only to today's date rows; future dates pass
-    // through unconditionally. All-day events (null start_time) always pass.
-    const minuteEt = Number(
-      new Intl.DateTimeFormat("en-US", {
-        timeZone: "America/New_York",
-        minute: "numeric",
-      }).format(now),
-    );
-    const secondEt = Number(
-      new Intl.DateTimeFormat("en-US", {
-        timeZone: "America/New_York",
-        second: "numeric",
-      }).format(now),
-    );
-    const graceHour = hourEt - 1;
-    const gracePaddedHour = ((graceHour % 24) + 24) % 24; // handle midnight wrap
-    const currentTimeMinusOneHour = `${String(gracePaddedHour).padStart(2, "0")}:${String(minuteEt).padStart(2, "0")}:${String(secondEt).padStart(2, "0")}`;
-    // PostgREST or() filter: keep row if start_date is in the future, or
-    // start_time is null (all-day), or start_time is on/after the grace cutoff.
-    const upcomingOrFilter = `start_date.gt.${today},start_time.is.null,start_time.gte.${currentTimeMinusOneHour}`;
-
-    // Shared select for event preview items
-    const eventPreviewSelect = `
-      id, title, start_date, start_time, category_id, image_url,
-      venue:places(name, neighborhood)
-    `;
-
     // Base filters applied to all event queries (includes portal scoping)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function baseEventQuery(q: any) {
@@ -431,10 +327,10 @@ export async function getExploreHomeData(
     // -----------------------------------------------------------------------
 
     const countFallback = { count: null, error: null };
-    const dataFallback = { data: null, error: null };
 
     const settled = await Promise.allSettled([
       // ----- Events lane (all events except shows and classes) -----
+      // [0] total count
       baseEventQuery(
         supabase
           .from("events")
@@ -443,6 +339,7 @@ export async function getExploreHomeData(
         .not("category_id", "in", `(${SHOW_CATEGORIES.join(",")})`)
         .or("is_class.eq.false,is_class.is.null"),
 
+      // [1] today count
       baseEventQuery(
         supabase
           .from("events")
@@ -452,7 +349,7 @@ export async function getExploreHomeData(
         .or("is_class.eq.false,is_class.is.null")
         .eq("start_date", today),
 
-      // Weekend count — if currently weekend, use today-Sun range; else Fri-Sun
+      // [2] weekend count
       baseEventQuery(
         supabase
           .from("events")
@@ -462,22 +359,9 @@ export async function getExploreHomeData(
         .or("is_class.eq.false,is_class.is.null")
         .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
         .lte("start_date", weekend.end),
-
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select(eventPreviewSelect)
-      )
-        .not("category_id", "in", `(${SHOW_CATEGORIES.join(",")})`)
-        .or("is_class.eq.false,is_class.is.null")
-        .or(upcomingOrFilter)
-        .order("start_date", { ascending: true })
-        .order("start_time", { ascending: true, nullsFirst: false })
-        .order("data_quality", { ascending: false, nullsFirst: false })
-        .order("image_url", { ascending: false, nullsFirst: false })
-        .limit(PREVIEW_LIMIT),
 
       // ----- Shows lane (film, music, theater, comedy, dance) -----
+      // [3] total count
       baseEventQuery(
         supabase
           .from("events")
@@ -486,6 +370,7 @@ export async function getExploreHomeData(
         .in("category_id", SHOW_CATEGORIES)
         .or("is_class.eq.false,is_class.is.null"),
 
+      // [4] today count
       baseEventQuery(
         supabase
           .from("events")
@@ -495,6 +380,7 @@ export async function getExploreHomeData(
         .or("is_class.eq.false,is_class.is.null")
         .eq("start_date", today),
 
+      // [5] weekend count
       baseEventQuery(
         supabase
           .from("events")
@@ -504,21 +390,9 @@ export async function getExploreHomeData(
         .or("is_class.eq.false,is_class.is.null")
         .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
         .lte("start_date", weekend.end),
-
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select(eventPreviewSelect)
-      )
-        .in("category_id", SHOW_CATEGORIES)
-        .or("is_class.eq.false,is_class.is.null")
-        .or(upcomingOrFilter)
-        .order("data_quality", { ascending: false, nullsFirst: false })
-        .order("start_date", { ascending: true })
-        .order("image_url", { ascending: false, nullsFirst: false })
-        .limit(PREVIEW_LIMIT),
 
       // ----- Game Day lane (sports events) -----
+      // [6] total count
       baseEventQuery(
         supabase
           .from("events")
@@ -527,6 +401,7 @@ export async function getExploreHomeData(
         .eq("category_id", SPORTS_CATEGORY)
         .or("is_class.eq.false,is_class.is.null"),
 
+      // [7] today count
       baseEventQuery(
         supabase
           .from("events")
@@ -536,6 +411,7 @@ export async function getExploreHomeData(
         .or("is_class.eq.false,is_class.is.null")
         .eq("start_date", today),
 
+      // [8] weekend count
       baseEventQuery(
         supabase
           .from("events")
@@ -546,24 +422,8 @@ export async function getExploreHomeData(
         .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
         .lte("start_date", weekend.end),
 
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select(eventPreviewSelect)
-      )
-        .eq("category_id", SPORTS_CATEGORY)
-        .or("is_class.eq.false,is_class.is.null")
-        .or(upcomingOrFilter)
-        .order("start_date", { ascending: true })
-        .order("start_time", { ascending: true, nullsFirst: false })
-        .order("data_quality", { ascending: false, nullsFirst: false })
-        .order("image_url", { ascending: false, nullsFirst: false })
-        .limit(PREVIEW_LIMIT),
-
       // ----- Regulars lane (recurring events with series) -----
-      // Filters mirror the production /api/regulars route exactly:
-      // is_regular_ready strict gate + exclude classes and non-hang categories
-      // (film showtimes, theater runs, civic meetings, recovery, etc.)
+      // [9] total count
       applyManifestFederatedScopeToQuery(
         supabase
           .from("events")
@@ -580,6 +440,7 @@ export async function getExploreHomeData(
         { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
       ),
 
+      // [10] today count
       applyManifestFederatedScopeToQuery(
         supabase
           .from("events")
@@ -595,6 +456,7 @@ export async function getExploreHomeData(
         { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
       ),
 
+      // [11] weekend count
       applyManifestFederatedScopeToQuery(
         supabase
           .from("events")
@@ -611,44 +473,16 @@ export async function getExploreHomeData(
         { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
       ),
 
-      applyManifestFederatedScopeToQuery(
-        supabase
-          .from("events")
-          .select(eventPreviewSelect)
-          .eq("is_active", true)
-          .eq("is_regular_ready", true)
-          .not("series_id", "is", null)
-          .is("canonical_event_id", null)
-          .not("is_class", "eq", true)
-          .not("category_id", "in", "(film,theater,education,support,support_group,civic,volunteer,religious,community,family,learning)")
-          .gte("start_date", today)
-          .lte("start_date", weekEnd)
-          .or(upcomingOrFilter)
-          .order("start_date", { ascending: true })
-          .order("start_time", { ascending: true, nullsFirst: false })
-          .order("image_url", { ascending: false, nullsFirst: false })
-          .limit(PREVIEW_LIMIT),
-        manifest,
-        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
-      ),
-
-      // ----- Places lane (count + preview) -----
+      // ----- Places lane (count only) -----
+      // [12] total count
       supabase
         .from("places")
         .select("id", { count: "exact", head: true })
         .neq("is_active", false)
         .ilike("city", cityFilter),
 
-      supabase
-        .from("places")
-        .select("id, name, slug, place_type, neighborhood, image_url")
-        .neq("is_active", false)
-        .ilike("city", cityFilter)
-        .not("image_url", "is", null)
-        .order("data_quality", { ascending: false, nullsFirst: false })
-        .limit(PREVIEW_LIMIT),
-
       // ----- Classes lane -----
+      // [13] total count
       applyManifestFederatedScopeToQuery(
         supabase
           .from("events")
@@ -662,6 +496,7 @@ export async function getExploreHomeData(
         { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
       ),
 
+      // [14] today count
       applyManifestFederatedScopeToQuery(
         supabase
           .from("events")
@@ -675,6 +510,7 @@ export async function getExploreHomeData(
         { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
       ),
 
+      // [15] weekend count
       applyManifestFederatedScopeToQuery(
         supabase
           .from("events")
@@ -689,25 +525,8 @@ export async function getExploreHomeData(
         { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
       ),
 
-      applyManifestFederatedScopeToQuery(
-        supabase
-          .from("events")
-          .select(eventPreviewSelect)
-          .eq("is_class", true)
-          .eq("is_active", true)
-          .or("is_feed_ready.eq.true,is_feed_ready.is.null")
-          .is("canonical_event_id", null)
-          .gte("start_date", today)
-          .order("start_date", { ascending: true })
-          .order("start_time", { ascending: true, nullsFirst: false })
-          .order("data_quality", { ascending: false, nullsFirst: false })
-          .order("image_url", { ascending: false, nullsFirst: false })
-          .limit(PREVIEW_LIMIT),
-        manifest,
-        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
-      ),
-
-      // ----- Calendar lane (total event count, no previews) -----
+      // ----- Calendar lane (total event count) -----
+      // [16]
       baseEventQuery(
         supabase
           .from("events")
@@ -715,6 +534,7 @@ export async function getExploreHomeData(
       ),
 
       // ----- Map lane (events with venue lat/lng) -----
+      // [17]
       baseEventQuery(
         supabase
           .from("events")
@@ -727,55 +547,30 @@ export async function getExploreHomeData(
         .not("places.lng", "is", null),
     ]);
 
-    // Unwrap settled results — rejected queries degrade to zero state
+    // Unwrap settled results — all queries are count-only now
+    const results = settled.map((r) => unwrapSettled(r, countFallback));
+
     const [
-      // Events lane
-      eventsCount,
-      eventsTodayCount,
-      eventsWeekendCount,
-      eventsPreview,
-
-      // Shows lane (film, music, theater, comedy, dance)
-      showsCount,
-      showsTodayCount,
-      showsWeekendCount,
-      showsPreview,
-
-      // Game Day lane (sports)
-      gameDayCount,
-      gameDayTodayCount,
-      gameDayWeekendCount,
-      gameDayPreview,
-
-      // Regulars lane
-      regularsCount,
-      regularsTodayCount,
-      regularsWeekendCount,
-      regularsPreview,
-
-      // Places lane
+      // Events lane [0-2]
+      eventsCount, eventsTodayCount, eventsWeekendCount,
+      // Shows lane [3-5]
+      showsCount, showsTodayCount, showsWeekendCount,
+      // Game Day lane [6-8]
+      gameDayCount, gameDayTodayCount, gameDayWeekendCount,
+      // Regulars lane [9-11]
+      regularsCount, regularsTodayCount, regularsWeekendCount,
+      // Places lane [12]
       placesCount,
-      placesPreview,
-
-      // Classes lane
-      classesCount,
-      classesTodayCount,
-      classesWeekendCount,
-      classesPreview,
-
-      // Calendar lane
+      // Classes lane [13-15]
+      classesCount, classesTodayCount, classesWeekendCount,
+      // Calendar lane [16]
       calendarCount,
-
-      // Map lane
+      // Map lane [17]
       mapCount,
-    ] = settled.map((r, i) => {
-      // Indices 3,7,11,15,17,21 are data (preview) queries; rest are count queries
-      const isDataQuery = [3, 7, 11, 15, 17, 21].includes(i);
-      return unwrapSettled(r, isDataQuery ? dataFallback : countFallback);
-    });
+    ] = results;
 
     // -----------------------------------------------------------------------
-    // 3. Assemble lane previews
+    // 3. Assemble lane data (counts + state + copy, no preview items)
     // -----------------------------------------------------------------------
 
     function buildLane(
@@ -783,8 +578,6 @@ export async function getExploreHomeData(
       countResult: { count: number | null; error: unknown },
       todayResult: { count: number | null; error: unknown } | null,
       weekendResult: { count: number | null; error: unknown } | null,
-      previewResult: { data: unknown[] | null; error: unknown } | null,
-      mapItems: (rows: unknown[]) => PreviewItem[],
     ): LanePreview {
       if (countResult.error) {
         console.warn(`[explore-home-data] Lane "${lane}" count query error:`, countResult.error);
@@ -812,7 +605,6 @@ export async function getExploreHomeData(
       const boost = getTimeBoostForLane(lane, currentHour);
       const state = computeLaneState(total, todayN, weekendN, boost);
       const copy = generateLaneCopy(lane, state, total, todayN, weekendN);
-      const items = previewResult?.data ? mapItems(previewResult.data) : [];
 
       // Log when total count appears degraded but sub-counts have data
       if (rawTotal === 0 && total > 0) {
@@ -821,101 +613,18 @@ export async function getExploreHomeData(
         );
       }
 
-      return {
-        state,
-        count: total,
-        count_today: todayN,
-        count_weekend: weekendN,
-        copy,
-        items,
-      };
+      return { state, count: total, count_today: todayN, count_weekend: weekendN, copy };
     }
 
-    const mapEventItems = (rows: unknown[]) =>
-      (rows as EventPreviewRow[]).map((r) =>
-        eventToPreviewItem(r, "event", portalSlug),
-      );
-
-    const mapShowtimeItems = (rows: unknown[]) =>
-      (rows as EventPreviewRow[]).map((r) =>
-        eventToPreviewItem(r, "showtime", portalSlug),
-      );
-
-    const mapRegularItems = (rows: unknown[]) =>
-      (rows as EventPreviewRow[]).map((r) =>
-        eventToPreviewItem(r, "regular", portalSlug),
-      );
-
-    const mapPlaceItems = (rows: unknown[]) =>
-      (rows as PlacePreviewRow[]).map((r) =>
-        placeToPreviewItem(r, portalSlug),
-      );
-
     const lanes: Record<LaneSlug, LanePreview> = {
-      events: buildLane(
-        "events",
-        eventsCount,
-        eventsTodayCount,
-        eventsWeekendCount,
-        eventsPreview,
-        mapEventItems,
-      ),
-      shows: buildLane(
-        "shows",
-        showsCount,
-        showsTodayCount,
-        showsWeekendCount,
-        showsPreview,
-        mapShowtimeItems,
-      ),
-      "game-day": buildLane(
-        "game-day",
-        gameDayCount,
-        gameDayTodayCount,
-        gameDayWeekendCount,
-        gameDayPreview,
-        mapEventItems,
-      ),
-      regulars: buildLane(
-        "regulars",
-        regularsCount,
-        regularsTodayCount,
-        regularsWeekendCount,
-        regularsPreview,
-        mapRegularItems,
-      ),
-      places: buildLane(
-        "places",
-        placesCount,
-        null,
-        null,
-        placesPreview,
-        mapPlaceItems,
-      ),
-      classes: buildLane(
-        "classes",
-        classesCount,
-        classesTodayCount,
-        classesWeekendCount,
-        classesPreview,
-        mapEventItems,
-      ),
-      calendar: buildLane(
-        "calendar",
-        calendarCount,
-        null,
-        null,
-        null,
-        () => [],
-      ),
-      map: buildLane(
-        "map",
-        mapCount,
-        null,
-        null,
-        null,
-        () => [],
-      ),
+      events: buildLane("events", eventsCount, eventsTodayCount, eventsWeekendCount),
+      shows: buildLane("shows", showsCount, showsTodayCount, showsWeekendCount),
+      "game-day": buildLane("game-day", gameDayCount, gameDayTodayCount, gameDayWeekendCount),
+      regulars: buildLane("regulars", regularsCount, regularsTodayCount, regularsWeekendCount),
+      places: buildLane("places", placesCount, null, null),
+      classes: buildLane("classes", classesCount, classesTodayCount, classesWeekendCount),
+      calendar: buildLane("calendar", calendarCount, null, null),
+      map: buildLane("map", mapCount, null, null),
     };
 
     return { lanes };

@@ -160,6 +160,7 @@ export default function FindShellClient({
           {!lane && (
             <ExploreHome
               portalSlug={portalSlug}
+              portalId={portalId}
               data={exploreData}
               loading={exploreLoading}
               onRetry={() => setRetryKey((k) => k + 1)}

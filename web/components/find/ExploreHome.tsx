@@ -1,103 +1,115 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { MagnifyingGlass } from "@phosphor-icons/react";
-import { ExploreHomeSection } from "./ExploreHomeSection";
+import FindSearchInput from "@/components/find/FindSearchInput";
+import { BROWSE_LANES, VIEW_LANES, LANE_META, LANE_ICONS } from "@/lib/explore-lane-meta";
+import { buildFindUrl } from "@/lib/find-url";
 import type { ExploreHomeResponse } from "@/lib/types/explore-home";
-import { BROWSE_LANES, VIEW_LANES } from "@/lib/explore-lane-meta";
 
 // ---------------------------------------------------------------------------
-// Lane order — fixed, never reorders between visits
+// Quick-action chips — time-of-day reordering
 // ---------------------------------------------------------------------------
 
-const LANE_ORDER = [...BROWSE_LANES, ...VIEW_LANES];
+interface QuickChip {
+  label: string;
+  href: string;
+}
 
-// ---------------------------------------------------------------------------
-// Loading skeleton
-// ---------------------------------------------------------------------------
+function getQuickChips(portalSlug: string): QuickChip[] {
+  const hour = new Date().getHours();
+  const chips: QuickChip[] = [
+    { label: "Tonight", href: buildFindUrl({ portalSlug, lane: "events", date: "today" }) },
+    { label: "This weekend", href: buildFindUrl({ portalSlug, lane: "events", date: "weekend" }) },
+    { label: "Free", href: buildFindUrl({ portalSlug, lane: "events", price: "free" }) },
+    { label: "Music", href: buildFindUrl({ portalSlug, lane: "events", categories: "music" }) },
+    { label: "Classes", href: buildFindUrl({ portalSlug, lane: "classes" }) },
+  ];
 
-function ExploreSkeleton() {
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 animate-pulse">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div
-          key={i}
-          className="rounded-card bg-[var(--night)] border border-[var(--twilight)]/40 p-4 sm:p-5 flex flex-col gap-3"
-        >
-          {/* Section header shimmer */}
-          <div className="h-3 w-24 rounded bg-[var(--twilight)]" />
+  // Time-of-day reordering: morning pushes Classes first, evening pushes Tonight first
+  if (hour < 12) {
+    const classesIdx = chips.findIndex((c) => c.label === "Classes");
+    if (classesIdx > 0) {
+      const [cls] = chips.splice(classesIdx, 1);
+      chips.unshift(cls);
+    }
+  }
 
-          {/* Two card placeholder rows */}
-          {[0, 1].map((j) => (
-            <div key={j} className="flex flex-col gap-1.5">
-              <div className="aspect-[16/10] w-full rounded-lg bg-[var(--twilight)]" />
-              <div className="h-2.5 w-3/4 rounded bg-[var(--twilight)]" />
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
+  return chips;
 }
 
 // ---------------------------------------------------------------------------
-// ExploreHome
+// Capitalize portal slug for display (e.g. "atlanta" → "Atlanta")
+// ---------------------------------------------------------------------------
+
+function formatPortalLabel(slug: string): string {
+  return slug.charAt(0).toUpperCase() + slug.slice(1);
+}
+
+// ---------------------------------------------------------------------------
+// ExploreHome — search-forward layout
 // ---------------------------------------------------------------------------
 
 export interface ExploreHomeProps {
   portalSlug: string;
+  portalId: string;
   data: ExploreHomeResponse | null;
   loading: boolean;
   onRetry?: () => void;
 }
 
-export function ExploreHome({ portalSlug, data, loading, onRetry }: ExploreHomeProps) {
-  const [query, setQuery] = useState("");
+export function ExploreHome({
+  portalSlug,
+  portalId,
+  data,
+  loading,
+  onRetry,
+}: ExploreHomeProps) {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Submit search → events lane with query
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    const q = query.trim();
-    if (!q) return;
-    router.push(`?view=find&lane=events&q=${encodeURIComponent(q)}`);
-  }
-
-  // Split lanes into two columns for desktop: even indices → col 1, odd → col 2
-  const col1 = LANE_ORDER.filter((_, i) => i % 2 === 0);
-  const col2 = LANE_ORDER.filter((_, i) => i % 2 !== 0);
+  const chips = getQuickChips(portalSlug);
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-[1200px] mx-auto">
-      {/* Search bar */}
-      <form onSubmit={handleSearch} className="mb-5 sm:mb-6">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] focus-within:border-[var(--coral)] transition-colors">
-          <MagnifyingGlass
-            size={16}
-            weight="bold"
-            className="shrink-0 text-[var(--muted)]"
-            aria-hidden
+    <div className="flex flex-col gap-6 max-w-lg mx-auto px-4 py-8">
+      {/* Search hero */}
+      <div className="text-center">
+        <p className="text-2xs font-mono uppercase tracking-[0.14em] text-[var(--muted)] mb-3">
+          Explore {formatPortalLabel(portalSlug)}
+        </p>
+        <Suspense fallback={<div className="h-12 bg-[var(--night)] rounded-xl" />}>
+          <FindSearchInput
+            portalSlug={portalSlug}
+            portalId={portalId}
+            placeholder="Search places, events, classes..."
           />
-          <input
-            ref={inputRef}
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search places, events, artists..."
-            className="flex-1 bg-transparent text-[var(--cream)] placeholder:text-[var(--muted)] text-sm focus:outline-none"
-            aria-label="Search"
-          />
-        </div>
-      </form>
+        </Suspense>
+      </div>
 
-      {/* Loading skeleton */}
-      {loading && <ExploreSkeleton />}
+      {/* Quick-action chips */}
+      <div className="flex gap-2 justify-center flex-wrap">
+        {chips.map((chip) => (
+          <a
+            key={chip.label}
+            href={chip.href}
+            onClick={(e) => {
+              e.preventDefault();
+              router.push(chip.href);
+            }}
+            className="px-4 py-2 rounded-full text-sm font-medium
+              bg-[var(--void)]/60 border border-[var(--twilight)]/40
+              text-[var(--cream)]/80 hover:border-[var(--coral)]/40
+              hover:text-[var(--coral)] transition-colors"
+          >
+            {chip.label}
+          </a>
+        ))}
+      </div>
 
-      {/* Error / empty state */}
+      {/* Divider */}
+      <div className="border-t border-[var(--twilight)]/20" />
+
+      {/* Error state */}
       {!loading && !data && (
-        <div className="text-center py-16">
+        <div className="text-center py-8">
           <p className="text-sm text-[var(--soft)]">
             Could not load explore sections.
           </p>
@@ -112,42 +124,83 @@ export function ExploreHome({ portalSlug, data, loading, onRetry }: ExploreHomeP
         </div>
       )}
 
-      {/* 2-col grid on desktop, single col on mobile */}
-      {!loading && data && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 lg:items-start">
-          {/* Column 1 — even-indexed lanes */}
-          <div className="flex flex-col gap-4 sm:gap-5">
-            {col1.map((slug) => {
-              const preview = data.lanes[slug];
-              if (!preview) return null;
-              return (
-                <ExploreHomeSection
-                  key={slug}
-                  laneSlug={slug}
-                  preview={preview}
-                  portalSlug={portalSlug}
-                />
-              );
-            })}
-          </div>
+      {/* Lane tile grid */}
+      <div className="grid grid-cols-2 gap-2">
+        {BROWSE_LANES.map((slug) => {
+          const meta = LANE_META[slug];
+          const Icon = LANE_ICONS[slug];
+          const laneData = data?.lanes?.[slug];
+          const count = laneData?.count ?? 0;
+          const isZero = count === 0 && !loading;
 
-          {/* Column 2 — odd-indexed lanes */}
-          <div className="flex flex-col gap-4 sm:gap-5">
-            {col2.map((slug) => {
-              const preview = data.lanes[slug];
-              if (!preview) return null;
-              return (
-                <ExploreHomeSection
-                  key={slug}
-                  laneSlug={slug}
-                  preview={preview}
-                  portalSlug={portalSlug}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
+          return (
+            <a
+              key={slug}
+              href={meta.href}
+              onClick={(e) => {
+                e.preventDefault();
+                router.push(meta.href);
+              }}
+              className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                isZero
+                  ? "opacity-50 border-[var(--twilight)]/20 bg-transparent"
+                  : "border-[var(--twilight)]/30 hover:border-[var(--twilight)]/60"
+              }`}
+              style={{
+                background: isZero
+                  ? "transparent"
+                  : `color-mix(in srgb, ${meta.accent} 6%, transparent)`,
+              }}
+            >
+              <Icon
+                size={22}
+                weight="duotone"
+                className="flex-shrink-0"
+                style={{ color: meta.accent }}
+              />
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-[var(--cream)] truncate">
+                  {meta.mobileLabel}
+                </div>
+                {!isZero && count > 0 && (
+                  <div
+                    className="text-2xs font-mono"
+                    style={{ color: meta.accent }}
+                  >
+                    {laneData?.copy || `${count.toLocaleString()}`}
+                  </div>
+                )}
+                {loading && (
+                  <div className="h-3 w-16 rounded bg-[var(--twilight)]/30 animate-pulse" />
+                )}
+              </div>
+            </a>
+          );
+        })}
+      </div>
+
+      {/* Utility links: Calendar & Map */}
+      <div className="flex gap-4 justify-center">
+        {VIEW_LANES.map((slug) => {
+          const meta = LANE_META[slug];
+          const Icon = LANE_ICONS[slug];
+          return (
+            <a
+              key={slug}
+              href={meta.href}
+              onClick={(e) => {
+                e.preventDefault();
+                router.push(meta.href);
+              }}
+              className="flex items-center gap-1.5 text-sm text-[var(--muted)]
+                hover:text-[var(--cream)] transition-colors"
+            >
+              <Icon size={16} weight="duotone" />
+              {meta.mobileLabel}
+            </a>
+          );
+        })}
+      </div>
     </div>
   );
 }
