@@ -264,7 +264,7 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
           priority="secondary"
           accentColor="var(--neon-cyan)"
           icon={<Trophy weight="duotone" className="w-5 h-5" />}
-          seeAllHref={`/${portalSlug}?view=happening&category=sports`}
+          seeAllHref={`/${portalSlug}?view=find&lane=game-day`}
         />
         <div className="flex gap-3 overflow-hidden">
           {[0, 1, 2].map((i) => (
@@ -297,7 +297,7 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
         priority="secondary"
         accentColor="var(--neon-cyan)"
         icon={<Trophy weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=happening&category=sports`}
+        seeAllHref={`/${portalSlug}?view=find&lane=game-day`}
         actionIcon={user ? <GearSix weight="bold" className="w-3.5 h-3.5" /> : undefined}
         onAction={user ? () => setCustomizerOpen((v) => !v) : undefined}
         actionActive={customizerOpen}

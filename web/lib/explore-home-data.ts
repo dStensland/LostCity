@@ -37,6 +37,9 @@ const PREVIEW_LIMIT = 4;
 /** Category IDs for the consolidated Shows lane */
 const SHOW_CATEGORIES = ["film", "music", "theater", "comedy", "dance"];
 
+/** Category ID for the Game Day lane */
+const SPORTS_CATEGORY = "sports";
+
 /** Weekend date range: Friday through Sunday (inclusive).
  *  On Fri→today through Sun. On Sat→yesterday Fri through tomorrow Sun.
  *  On Sun→Fri (2 days ago) through today. Mon-Thu→next Fri through next Sun. */
@@ -137,6 +140,11 @@ function getTimeBoostForLane(lane: LaneSlug, hour: number): number {
     case "regulars":
       if (slot === "evening" || slot === "happy_hour") return 1;
       return 0;
+    case "game-day":
+      // Games typically tip off in the evening
+      if (slot === "evening" || slot === "late_night") return 2;
+      if (slot === "happy_hour") return 1;
+      return 0;
     default:
       return 0;
   }
@@ -159,6 +167,8 @@ function generateLaneCopy(
         return "No upcoming events found";
       case "shows":
         return "No shows scheduled";
+      case "game-day":
+        return "No games scheduled";
       case "regulars":
         return "No weekly regulars found";
       case "places":
@@ -179,6 +189,8 @@ function generateLaneCopy(
           return `${todayCount} event${todayCount === 1 ? "" : "s"} happening today`;
         case "shows":
           return `${todayCount} show${todayCount === 1 ? "" : "s"} tonight`;
+        case "game-day":
+          return `${todayCount} game${todayCount === 1 ? "" : "s"} today`;
         case "regulars":
           return `${todayCount} regular${todayCount === 1 ? "" : "s"} happening today`;
         case "classes":
@@ -206,6 +218,8 @@ function generateLaneCopy(
       return `${totalCount} event${totalCount === 1 ? "" : "s"} coming up this week`;
     case "shows":
       return `${totalCount} show${totalCount === 1 ? "" : "s"} this week`;
+    case "game-day":
+      return `${totalCount} game${totalCount === 1 ? "" : "s"} this week`;
     case "regulars":
       return `${totalCount} weekly regular${totalCount === 1 ? "" : "s"} in your city`;
     case "classes":
@@ -504,6 +518,48 @@ export async function getExploreHomeData(
         .order("image_url", { ascending: false, nullsFirst: false })
         .limit(PREVIEW_LIMIT),
 
+      // ----- Game Day lane (sports events) -----
+      baseEventQuery(
+        supabase
+          .from("events")
+          .select("id", { count: "exact", head: true })
+      )
+        .eq("category_id", SPORTS_CATEGORY)
+        .or("is_class.eq.false,is_class.is.null"),
+
+      baseEventQuery(
+        supabase
+          .from("events")
+          .select("id", { count: "exact", head: true })
+      )
+        .eq("category_id", SPORTS_CATEGORY)
+        .or("is_class.eq.false,is_class.is.null")
+        .eq("start_date", today),
+
+      baseEventQuery(
+        supabase
+          .from("events")
+          .select("id", { count: "exact", head: true })
+      )
+        .eq("category_id", SPORTS_CATEGORY)
+        .or("is_class.eq.false,is_class.is.null")
+        .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
+        .lte("start_date", weekend.end),
+
+      baseEventQuery(
+        supabase
+          .from("events")
+          .select(eventPreviewSelect)
+      )
+        .eq("category_id", SPORTS_CATEGORY)
+        .or("is_class.eq.false,is_class.is.null")
+        .or(upcomingOrFilter)
+        .order("start_date", { ascending: true })
+        .order("start_time", { ascending: true, nullsFirst: false })
+        .order("data_quality", { ascending: false, nullsFirst: false })
+        .order("image_url", { ascending: false, nullsFirst: false })
+        .limit(PREVIEW_LIMIT),
+
       // ----- Regulars lane (recurring events with series) -----
       applyManifestFederatedScopeToQuery(
         supabase
@@ -674,6 +730,12 @@ export async function getExploreHomeData(
       showsWeekendCount,
       showsPreview,
 
+      // Game Day lane (sports)
+      gameDayCount,
+      gameDayTodayCount,
+      gameDayWeekendCount,
+      gameDayPreview,
+
       // Regulars lane
       regularsCount,
       regularsTodayCount,
@@ -696,8 +758,8 @@ export async function getExploreHomeData(
       // Map lane
       mapCount,
     ] = settled.map((r, i) => {
-      // Indices 3,7,11,13,17 are data (preview) queries; rest are count queries
-      const isDataQuery = [3, 7, 11, 13, 17].includes(i);
+      // Indices 3,7,11,15,17,21 are data (preview) queries; rest are count queries
+      const isDataQuery = [3, 7, 11, 15, 17, 21].includes(i);
       return unwrapSettled(r, isDataQuery ? dataFallback : countFallback);
     });
 
@@ -783,6 +845,14 @@ export async function getExploreHomeData(
         showsWeekendCount,
         showsPreview,
         mapShowtimeItems,
+      ),
+      "game-day": buildLane(
+        "game-day",
+        gameDayCount,
+        gameDayTodayCount,
+        gameDayWeekendCount,
+        gameDayPreview,
+        mapEventItems,
       ),
       regulars: buildLane(
         "regulars",

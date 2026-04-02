@@ -3,6 +3,7 @@ export type LaneState = "alive" | "quiet" | "zero";
 export type LaneSlug =
   | "events"
   | "shows"
+  | "game-day"
   | "regulars"
   | "places"
   | "classes"
