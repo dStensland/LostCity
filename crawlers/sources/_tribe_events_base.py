@@ -755,9 +755,35 @@ class TribeConfig:
     # Maximum number of API pages to fetch per crawl
     max_pages: int = _MAX_PAGES
 
+    # Page size for API pagination. Some high-volume sources need 50 to keep
+    # crawl time reasonable.
+    page_size: int = _PAGE_SIZE
+
+    # Optional fixed extra query params for the Tribe API, e.g. end_date for
+    # sources that intentionally cap their scheduling horizon.
+    extra_query_params: dict[str, str] = field(default_factory=dict)
+
     # Optional source-specific record mutator.
     # Runs after the shared record is built and before dedupe/upsert.
-    record_transform: Optional[Callable[[dict, dict], dict]] = None
+    # Return None to skip the raw event entirely.
+    record_transform: Optional[Callable[[dict, dict], Optional[dict]]] = None
+
+    # Optional source-specific recurring-series detector. Runs after the
+    # record transform so mixed-surface sources can preserve bespoke series
+    # grouping while still using the shared connector.
+    series_hint_builder: Optional[Callable[[dict, dict], Optional[dict]]] = None
+
+    # Optional per-event venue resolver for multi-venue feeds.
+    # Receives (raw_event, default_venue_id, default_venue_name) and returns
+    # the (venue_id, venue_name) that should own the event.
+    place_resolver: Optional[Callable[[dict, int, str], tuple[int, str]]] = None
+
+    # Optional existing-event lookup override. Defaults to content-hash lookup.
+    existing_record_lookup: Optional[Callable[[dict], Optional[dict]]] = None
+
+    # Optional post-crawl hook, typically for stale-row cleanup after a full
+    # API refresh. Receives the set of current content hashes.
+    post_crawl_hook: Optional[Callable[[set[str]], None]] = None
 
     @property
     def api_url(self) -> str:
@@ -789,7 +815,12 @@ def _build_event_record(
 
     # Strip common Tribe status prefixes that some sites embed in the title field
     # e.g. "[SOLD OUT] Event Name" → "Event Name"
-    title = re.sub(r"^\[SOLD OUT\]\s*", "", title, flags=re.IGNORECASE).strip()
+    title = re.sub(
+        r"^(?:\[SOLD OUT\]|SOLD\s+OUT\s*[:\-])\s*",
+        "",
+        title,
+        flags=re.IGNORECASE,
+    ).strip()
     if not title:
         return None
 
@@ -926,11 +957,24 @@ def _build_event_record(
     if config.record_transform:
         try:
             transformed = config.record_transform(event, dict(record))
-            if transformed:
-                record = transformed
+            if transformed is None:
+                return None
+            record = transformed
         except Exception as exc:
             logger.warning(
                 "[tribe/%s] record_transform failed for %r: %s",
+                config.place_data.get("slug") or config.base_url,
+                title,
+                exc,
+            )
+
+    if config.series_hint_builder:
+        try:
+            series_hint = config.series_hint_builder(event, dict(record))
+            record["is_recurring"] = series_hint is not None
+        except Exception as exc:
+            logger.warning(
+                "[tribe/%s] series_hint_builder failed for %r: %s",
                 config.place_data.get("slug") or config.base_url,
                 title,
                 exc,
@@ -956,6 +1000,7 @@ def crawl_tribe(source: dict, config: TribeConfig) -> tuple[int, int, int]:
     events_found = 0
     events_new = 0
     events_updated = 0
+    current_hashes: set[str] = set()
 
     # Ensure venue exists
     try:
@@ -983,11 +1028,13 @@ def crawl_tribe(source: dict, config: TribeConfig) -> tuple[int, int, int]:
 
     while True:
         params: dict = {
-            "per_page": _PAGE_SIZE,
+            "per_page": config.page_size,
             "page": page,
         }
         if config.future_only:
             params["start_date"] = today_str
+        if config.extra_query_params:
+            params.update(config.extra_query_params)
 
         data = _api_get(http_session, api_url, params)
 
@@ -1015,8 +1062,24 @@ def crawl_tribe(source: dict, config: TribeConfig) -> tuple[int, int, int]:
             break
 
         for raw_event in raw_events:
+            event_venue_id = venue_id
+            event_venue_name = venue_name
+            if config.place_resolver:
+                try:
+                    event_venue_id, event_venue_name = config.place_resolver(
+                        raw_event, venue_id, venue_name
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "[tribe/%s] place_resolver failed for %r: %s",
+                        config.place_data.get("slug", "?"),
+                        raw_event.get("title") or "(untitled)",
+                        exc,
+                    )
+                    continue
+
             result = _build_event_record(
-                raw_event, source_id, venue_id, venue_name, config
+                raw_event, source_id, event_venue_id, event_venue_name, config
             )
             if result is None:
                 continue
@@ -1025,8 +1088,13 @@ def crawl_tribe(source: dict, config: TribeConfig) -> tuple[int, int, int]:
 
             events_found += 1
             content_hash = record["content_hash"]
+            current_hashes.add(content_hash)
 
-            existing = find_event_by_hash(content_hash)
+            existing = (
+                config.existing_record_lookup(record)
+                if config.existing_record_lookup
+                else find_event_by_hash(content_hash)
+            )
             if existing:
                 smart_update_existing_event(existing, record)
                 events_updated += 1
@@ -1066,4 +1134,13 @@ def crawl_tribe(source: dict, config: TribeConfig) -> tuple[int, int, int]:
         events_new,
         events_updated,
     )
+    if config.post_crawl_hook:
+        try:
+            config.post_crawl_hook(current_hashes)
+        except Exception as exc:
+            logger.warning(
+                "[tribe/%s] post_crawl_hook failed: %s",
+                config.place_data.get("slug", "?"),
+                exc,
+            )
     return events_found, events_new, events_updated

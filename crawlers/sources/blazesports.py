@@ -3,34 +3,44 @@ Crawler for BlazeSports America (blazesports.org).
 
 BlazeSports publishes events via The Events Calendar. The official JSON API
 includes recurring instances directly, along with structured venue, image, and
-category data. This crawler uses that API instead of the older first-page HTML
-scrape so adaptive sports programs are surfaced consistently.
+category data. This crawler uses the shared Tribe connector so adaptive sports
+programs stay on the common pagination/dedupe/runtime path.
 """
 
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import date, timedelta
 from typing import Optional
 
-import requests
 from bs4 import BeautifulSoup
 
 from db import (
     find_existing_event_for_insert,
     get_or_create_place,
-    insert_event,
     remove_stale_source_events,
-    smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from sources._tribe_events_base import TribeConfig, crawl_tribe
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://blazesports.org"
-API_URL = f"{BASE_URL}/wp-json/tribe/events/v1/events"
-PER_PAGE = 50
 HORIZON_DAYS = 120
+
+DEFAULT_PLACE_DATA = {
+    "name": "BlazeSports America",
+    "slug": "blazesports-america",
+    "address": "1670 Oakbrook Dr, Suite 331",
+    "neighborhood": "Norcross",
+    "city": "Norcross",
+    "state": "GA",
+    "zip": "30093",
+    "place_type": "organization",
+    "spot_type": "organization",
+    "website": BASE_URL,
+    "description": "Adaptive sports organization serving metro Atlanta.",
+}
 
 
 def _text_from_html(value: str) -> str:
@@ -61,19 +71,7 @@ def _extract_price_range(cost_text: str) -> tuple[Optional[float], Optional[floa
 
 def build_venue_data(api_venue: dict | None) -> dict:
     if not api_venue:
-        return {
-            "name": "BlazeSports America",
-            "slug": "blazesports-america",
-            "address": "1670 Oakbrook Dr, Suite 331",
-            "neighborhood": "Norcross",
-            "city": "Norcross",
-            "state": "GA",
-            "zip": "30093",
-            "place_type": "organization",
-            "spot_type": "organization",
-            "website": BASE_URL,
-            "description": "Adaptive sports organization serving metro Atlanta.",
-        }
+        return dict(DEFAULT_PLACE_DATA)
 
     city = api_venue.get("city") or ""
     return {
@@ -145,155 +143,89 @@ def categorize_event(title: str, description: str, category_slugs: list[str]) ->
     return "sports", "adaptive_sports", tags
 
 
-def parse_api_event(event: dict) -> Optional[dict]:
-    title = (event.get("title") or "").strip()
-    start_date_raw = event.get("start_date")
-    end_date_raw = event.get("end_date")
-    if not title or not start_date_raw:
-        return None
-
-    start_dt = datetime.strptime(start_date_raw, "%Y-%m-%d %H:%M:%S")
-    end_dt = (
-        datetime.strptime(end_date_raw, "%Y-%m-%d %H:%M:%S")
-        if end_date_raw
-        else None
-    )
-
-    description_text = _text_from_html(event.get("description") or "")
-    place_data = build_venue_data(event.get("venue"))
+def _transform_blazesports_record(raw_event: dict, record: dict) -> Optional[dict]:
+    description = _text_from_html(raw_event.get("description") or "")
     category_slugs = [
         category.get("slug")
-        for category in (event.get("categories") or [])
+        for category in (raw_event.get("categories") or [])
         if category.get("slug")
     ]
-    category, subcategory, tags = categorize_event(title, description_text, category_slugs)
-    price_min, price_max, is_free = _extract_price_range(event.get("cost") or "")
+    category, subcategory, tags = categorize_event(
+        record.get("title", ""),
+        description,
+        category_slugs,
+    )
+    price_min, price_max, is_free = _extract_price_range(raw_event.get("cost") or "")
 
-    return {
+    record["description"] = description
+    record["category"] = category
+    record["subcategory"] = subcategory
+    record["tags"] = tags
+    record["price_min"] = price_min
+    record["price_max"] = price_max
+    record["is_free"] = is_free
+    record["price_note"] = raw_event.get("cost") or None
+    record["ticket_url"] = raw_event.get("website") or record.get("source_url") or BASE_URL
+    record["image_url"] = ((raw_event.get("image") or {}).get("url") or None)
+    record["raw_text"] = description
+    record["extraction_confidence"] = 0.97
+
+    # Preserve the pre-connector hash strategy so this migration reconciles
+    # onto existing BlazeSports rows instead of churning the whole source.
+    venue_data = build_venue_data(raw_event.get("venue"))
+    record["content_hash"] = generate_content_hash(
+        record.get("title", ""),
+        venue_data["name"],
+        record.get("start_date", ""),
+    )
+    return record
+
+
+def parse_api_event(event: dict) -> Optional[dict]:
+    title = (event.get("title") or "").strip()
+    if not title or not event.get("start_date"):
+        return None
+
+    record = {
         "title": title,
-        "description": description_text,
-        "start_date": start_dt.strftime("%Y-%m-%d"),
-        "start_time": start_dt.strftime("%H:%M"),
-        "end_time": end_dt.strftime("%H:%M") if end_dt else None,
-        "venue_data": place_data,
-        "category": category,
-        "subcategory": subcategory,
-        "tags": tags,
-        "price_min": price_min,
-        "price_max": price_max,
-        "is_free": is_free,
-        "price_note": event.get("cost") or None,
+        "description": None,
+        "start_date": str(event.get("start_date", "")).split(" ")[0],
+        "start_time": str(event.get("start_date", "")).split(" ")[1][:5],
+        "end_time": (str(event.get("end_date", "")).split(" ")[1][:5] if event.get("end_date") else None),
+        "is_free": False,
+        "price_min": None,
+        "price_max": None,
         "source_url": event.get("url") or BASE_URL,
-        "ticket_url": event.get("website") or event.get("url") or BASE_URL,
-        "image_url": ((event.get("image") or {}).get("url") or None),
-        "raw_text": description_text,
     }
+    transformed = _transform_blazesports_record(event, record)
+    if transformed is None:
+        return None
+    transformed["venue_data"] = build_venue_data(event.get("venue"))
+    return transformed
 
 
-def _fetch_events(start_date: str, end_date: str) -> list[dict]:
-    events: list[dict] = []
-    page = 1
-    total_pages = 1
-
-    while page <= total_pages:
-        response = requests.get(
-            API_URL,
-            params={
-                "start_date": start_date,
-                "end_date": end_date,
-                "per_page": PER_PAGE,
-                "page": page,
-            },
-            headers={"User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"},
-            timeout=30,
-        )
-        response.raise_for_status()
-        payload = response.json()
-        total_pages = payload.get("total_pages", 1)
-        events.extend(payload.get("events", []))
-        page += 1
-
-    return events
+def _resolve_venue(raw_event: dict, default_venue_id: int, default_venue_name: str) -> tuple[int, str]:
+    venue_data = build_venue_data(raw_event.get("venue"))
+    venue_id = get_or_create_place(venue_data)
+    return venue_id, venue_data["name"]
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
     source_id = source["id"]
-    events_found = 0
-    events_new = 0
-    events_updated = 0
-    current_hashes: set[str] = set()
-
-    today = datetime.now().date()
-    start_date = f"{today.isoformat()} 00:00:00"
-    end_date = f"{(today + timedelta(days=HORIZON_DAYS)).isoformat()} 23:59:59"
-
-    try:
-        api_events = _fetch_events(start_date, end_date)
-    except Exception as exc:
-        logger.error("Failed to fetch BlazeSports API events: %s", exc)
-        return 0, 0, 0
-
-    logger.info("Fetched %s BlazeSports API events through %s", len(api_events), end_date)
-
-    for event in api_events:
-        parsed = parse_api_event(event)
-        if not parsed:
-            continue
-
-        venue_id = get_or_create_place(parsed["venue_data"])
-        events_found += 1
-
-        content_hash = generate_content_hash(
-            parsed["title"],
-            parsed["venue_data"]["name"],
-            parsed["start_date"],
-        )
-        current_hashes.add(content_hash)
-
-        event_record = {
-            "source_id": source_id,
-            "place_id": venue_id,
-            "title": parsed["title"],
-            "description": parsed["description"],
-            "start_date": parsed["start_date"],
-            "start_time": parsed["start_time"],
-            "end_date": None,
-            "end_time": parsed["end_time"],
-            "is_all_day": False,
-            "category": parsed["category"],
-            "subcategory": parsed["subcategory"],
-            "tags": parsed["tags"],
-            "price_min": parsed["price_min"],
-            "price_max": parsed["price_max"],
-            "price_note": parsed["price_note"],
-            "is_free": parsed["is_free"],
-            "source_url": parsed["source_url"],
-            "ticket_url": parsed["ticket_url"],
-            "image_url": parsed["image_url"],
-            "raw_text": parsed["raw_text"],
-            "extraction_confidence": 0.97,
-            "is_recurring": False,
-            "recurrence_rule": None,
-            "content_hash": content_hash,
-        }
-
-        existing = find_existing_event_for_insert(event_record)
-        if existing:
-            smart_update_existing_event(existing, event_record)
-            events_updated += 1
-            continue
-
-        insert_event(event_record)
-        events_new += 1
-
-    stale_removed = remove_stale_source_events(source_id, current_hashes)
-    if stale_removed:
-        logger.info("Removed %s stale BlazeSports rows after API refresh", stale_removed)
-
-    logger.info(
-        "BlazeSports crawl complete: found=%s new=%s updated=%s",
-        events_found,
-        events_new,
-        events_updated,
+    config = TribeConfig(
+        base_url=BASE_URL,
+        place_data=DEFAULT_PLACE_DATA,
+        default_category="sports",
+        default_tags=["adaptive-sports", "accessible", "family-friendly"],
+        page_size=50,
+        extra_query_params={
+            "end_date": f"{(date.today() + timedelta(days=HORIZON_DAYS)).isoformat()} 23:59:59",
+        },
+        record_transform=_transform_blazesports_record,
+        place_resolver=_resolve_venue,
+        existing_record_lookup=find_existing_event_for_insert,
+        post_crawl_hook=lambda current_hashes: remove_stale_source_events(
+            source_id, current_hashes
+        ),
     )
-    return events_found, events_new, events_updated
+    return crawl_tribe(source, config)
