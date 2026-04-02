@@ -52,11 +52,14 @@ function ProgrammingTabContent({
   categories,
   accentColor,
   label,
+  requireShow = false,
 }: {
   portalSlug: string;
   categories: string;
   accentColor: string;
   label: string;
+  /** When true, adds is_show=true filter to only show booked performances */
+  requireShow?: boolean;
 }) {
   const [venues, setVenues] = useState<ShowVenueData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +68,8 @@ function ProgrammingTabContent({
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-    const url = `/api/portals/${encodeURIComponent(portalSlug)}/shows?categories=${encodeURIComponent(categories)}`;
+    let url = `/api/portals/${encodeURIComponent(portalSlug)}/shows?categories=${encodeURIComponent(categories)}`;
+    if (requireShow) url += "&is_show=true";
 
     fetch(url, { signal: controller.signal })
       .then((res) => {
@@ -333,6 +337,7 @@ export default function VenuesSection({ portalSlug }: { portalSlug: string }) {
             categories="music"
             accentColor="#E855A0"
             label="music"
+            requireShow
           />
         )}
       </div>
@@ -357,6 +362,7 @@ export default function VenuesSection({ portalSlug }: { portalSlug: string }) {
             categories="theater,dance"
             accentColor="var(--neon-cyan)"
             label="theater"
+            requireShow
           />
         )}
       </div>
