@@ -111,6 +111,7 @@
   --neon-red: #FF5A5A;          /* Live/error indicator */
   --vibe: #A78BFA;              /* Vibe/mood filter accent - lavender */
   --lavender: #A78BFA;          /* Alias for --vibe, used by accessibility tags */
+  --copper: #C9874F;            /* Classes/workshops accent - warm copper */
   --sage: #86EFAC;              /* Amenity tag accent */
 
   /* Deep purple/blue palette for calendar depth */

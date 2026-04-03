@@ -1,23 +1,11 @@
 "use client";
 
 import { memo, useState, useTransition, useCallback } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  FilmSlate,
-  Ticket,
-  ArrowsClockwise,
-  CalendarBlank,
-  MapTrifold,
-  MapPin,
-  ArrowLeft,
-  GraduationCap,
-  Trophy,
-} from "@phosphor-icons/react";
+import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { useWeather } from "@/lib/hooks/useWeather";
-import type { CategoryPulse } from "@/lib/find-data";
-import { LANE_META } from "@/lib/explore-lane-meta";
+import { LANE_META, BROWSE_LANES as BROWSE_LANE_SLUGS, VIEW_LANES as VIEW_LANE_SLUGS, LANE_ICONS } from "@/lib/explore-lane-meta";
 
 // -------------------------------------------------------------------------
 // Lane definitions
@@ -31,82 +19,21 @@ interface Lane {
   href: string;
 }
 
-const BROWSE_LANES: Lane[] = [
-  {
-    id: "events",
-    label: "Events",
-    icon: Ticket,
-    accent: LANE_META["events"].accent,
-    href: LANE_META["events"].href,
-  },
-  {
-    id: "shows",
-    label: "Shows",
-    icon: FilmSlate,
-    accent: LANE_META["shows"].accent,
-    href: LANE_META["shows"].href,
-  },
-  {
-    id: "game-day",
-    label: "Game Day",
-    icon: Trophy,
-    accent: LANE_META["game-day"].accent,
-    href: LANE_META["game-day"].href,
-  },
-  {
-    id: "regulars",
-    label: "Regulars",
-    icon: ArrowsClockwise,
-    accent: LANE_META["regulars"].accent,
-    href: LANE_META["regulars"].href,
-  },
-  {
-    id: "places",
-    label: "Places",
-    icon: MapPin,
-    accent: LANE_META["places"].accent,
-    href: LANE_META["places"].href,
-  },
-  {
-    id: "classes",
-    label: "Classes",
-    icon: GraduationCap,
-    accent: LANE_META["classes"].accent,
-    href: LANE_META["classes"].href,
-  },
-];
+const BROWSE_LANES: Lane[] = BROWSE_LANE_SLUGS.map((id) => ({
+  id,
+  label: LANE_META[id].mobileLabel,
+  icon: LANE_ICONS[id],
+  accent: LANE_META[id].accent,
+  href: LANE_META[id].href,
+}));
 
-const VIEW_LANES: Lane[] = [
-  {
-    id: "calendar",
-    label: "Calendar",
-    icon: CalendarBlank,
-    accent: LANE_META["calendar"].accent,
-    href: LANE_META["calendar"].href,
-  },
-  {
-    id: "map",
-    label: "Map",
-    icon: MapTrifold,
-    accent: LANE_META["map"].accent,
-    href: LANE_META["map"].href,
-  },
-];
-
-// -------------------------------------------------------------------------
-// Badge count helper
-// -------------------------------------------------------------------------
-
-const LANE_PULSE_MAPPING: Record<string, string> = {
-  shows: "entertainment",
-};
-
-function getBadgeCount(laneId: string, pulse?: CategoryPulse[]): number {
-  if (!pulse) return 0;
-  const category = LANE_PULSE_MAPPING[laneId];
-  if (!category) return 0;
-  return pulse.find((p) => p.category === category)?.count ?? 0;
-}
+const VIEW_LANES: Lane[] = VIEW_LANE_SLUGS.map((id) => ({
+  id,
+  label: LANE_META[id].mobileLabel,
+  icon: LANE_ICONS[id],
+  accent: LANE_META[id].accent,
+  href: LANE_META[id].href,
+}));
 
 // -------------------------------------------------------------------------
 // Context block — date + weather
@@ -140,14 +67,12 @@ function ContextBlock() {
 interface FindSidebarProps {
   portalSlug: string;
   activeLane?: string | null;
-  pulse?: CategoryPulse[];
   laneStates?: Record<string, { state: string; count: number; count_today: number | null }>;
 }
 
 export const FindSidebar = memo(function FindSidebar({
   portalSlug,
   activeLane,
-  pulse,
   laneStates,
 }: FindSidebarProps) {
   const router = useRouter();
@@ -182,7 +107,6 @@ export const FindSidebar = memo(function FindSidebar({
 
   function renderLane(lane: Lane) {
     const LaneIcon = lane.icon;
-    const badge = getBadgeCount(lane.id, pulse);
     const isActive = visualActiveLane === lane.id;
 
     return (
@@ -209,17 +133,6 @@ export const FindSidebar = memo(function FindSidebar({
             className="flex-shrink-0"
           />
           <span className="flex-1 text-sm">{lane.label}</span>
-          {badge > 0 && (
-            <span
-              className="text-2xs font-mono font-bold tabular-nums px-1.5 py-0.5 rounded-full"
-              style={{
-                backgroundColor: `color-mix(in srgb, ${lane.accent} 20%, transparent)`,
-                color: lane.accent,
-              }}
-            >
-              {badge}
-            </span>
-          )}
           {!activeLane && laneStates?.[lane.id] && (
             <span
               className="w-1.5 h-1.5 rounded-full ml-auto shrink-0"
@@ -243,17 +156,30 @@ export const FindSidebar = memo(function FindSidebar({
       className="w-[240px] h-full bg-[var(--night)] border-r border-[var(--twilight)] p-6 flex flex-col gap-6"
       aria-label="Explore navigation"
     >
-      {/* Title — links back to launchpad; shows back arrow when a lane is active */}
+      {/* Title — always visible home link; coral when on home, cream when in a lane */}
       <a
         href={`/${portalSlug}?view=find`}
         onClick={handleExploreClick}
-        className="flex items-center gap-1.5 text-2xl font-bold text-[var(--cream)] leading-none hover:text-[var(--coral)] transition-colors cursor-pointer"
+        className={`text-2xl font-bold leading-none transition-colors cursor-pointer ${
+          !visualActiveLane
+            ? "text-[var(--coral)]"
+            : "text-[var(--cream)] hover:text-[var(--coral)]"
+        }`}
       >
-        {visualActiveLane && (
-          <ArrowLeft size={18} weight="duotone" className="flex-shrink-0" />
-        )}
         Explore
       </a>
+
+      {/* Search button */}
+      <button
+        onClick={() => router.push(`/${portalSlug}?view=find&focus=search`)}
+        className="flex items-center gap-2 w-full px-3 py-2 rounded-lg
+          bg-[var(--void)]/50 border border-[var(--twilight)]/40
+          text-[var(--muted)] text-sm hover:border-[var(--twilight)]
+          hover:text-[var(--cream)] transition-colors"
+      >
+        <MagnifyingGlass size={14} weight="duotone" />
+        <span>Search...</span>
+      </button>
 
       {/* Browse group */}
       <nav className="flex-1">

@@ -26,7 +26,8 @@ export interface LanePreview {
   count_today: number | null;
   count_weekend: number | null;
   copy: string;
-  items: PreviewItem[];
+  /** @deprecated Retained as optional for ExploreHomeSection (Task 9 removal). */
+  items?: PreviewItem[];
 }
 
 export interface ExploreHomeResponse {

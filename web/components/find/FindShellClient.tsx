@@ -20,6 +20,7 @@ import { FindContextProvider } from "./FindContextProvider";
 import EventsFinder from "./EventsFinder";
 import { ExploreHome } from "./ExploreHome";
 import type { ExploreHomeResponse } from "@/lib/types/explore-home";
+import { SHELL_LANE_SET } from "@/lib/explore-lane-meta";
 
 // Dynamic imports for renderers not needed on every lane
 const ShowsView = dynamic(() => import("./ShowsView").then((m) => m.ShowsView), {
@@ -39,10 +40,7 @@ const GameDayView = dynamic(() => import("./GameDayView").then(m => m.GameDayVie
 });
 
 // Valid shell lanes — anything else falls back to launchpad
-const SHELL_LANES = new Set([
-  "events", "shows",
-  "regulars", "places", "classes", "calendar", "map", "game-day",
-]);
+const SHELL_LANES = SHELL_LANE_SET;
 
 // Legacy lane params that should redirect to the consolidated shows lane
 const SHOW_LANE_REDIRECTS: Record<string, string> = {
@@ -64,6 +62,17 @@ export default function FindShellClient({
 }: FindShellClientProps) {
   const searchParams = useSearchParams();
   const rawLane = searchParams.get("lane");
+
+  const hasActiveFilters = !!(
+    searchParams?.get("search") ||
+    searchParams?.get("categories") ||
+    searchParams?.get("date") ||
+    searchParams?.get("genres") ||
+    searchParams?.get("tags") ||
+    searchParams?.get("vibes") ||
+    searchParams?.get("price") ||
+    searchParams?.get("free")
+  );
 
   // Compute effective lane synchronously — legacy show lanes resolve to "shows"
   const lane = rawLane && rawLane in SHOW_LANE_REDIRECTS
@@ -162,6 +171,7 @@ export default function FindShellClient({
           {!lane && (
             <ExploreHome
               portalSlug={portalSlug}
+              portalId={portalId}
               data={exploreData}
               loading={exploreLoading}
               onRetry={() => setRetryKey((k) => k + 1)}
@@ -173,7 +183,7 @@ export default function FindShellClient({
               portalSlug={portalSlug}
               portalExclusive={portalExclusive}
               displayMode="list"
-              hasActiveFilters={false}
+              hasActiveFilters={hasActiveFilters}
             />
           )}
           {lane === "shows" && (
@@ -200,6 +210,7 @@ export default function FindShellClient({
               portalExclusive={portalExclusive}
               displayMode="calendar"
               hasActiveFilters={false}
+              showFilters={false}
             />
           )}
           {lane === "map" && (
@@ -209,6 +220,7 @@ export default function FindShellClient({
               portalExclusive={portalExclusive}
               displayMode="map"
               hasActiveFilters={false}
+              showFilters={false}
             />
           )}
           {lane === "game-day" && (

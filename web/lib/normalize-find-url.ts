@@ -16,6 +16,8 @@
  * Returns a new URLSearchParams (does not mutate the input).
  */
 
+import { SHELL_LANE_SET } from "@/lib/explore-lane-meta";
+
 // "happening" and "places" are NOT normalized — they're standalone backward-compat paths.
 // Only truly dead view aliases (events, spots) get normalized to find.
 const LEGACY_FIND_VIEWS = new Set(["events", "spots"]);
@@ -100,7 +102,7 @@ export function normalizeFinURLParams(params: URLSearchParams): URLSearchParams 
 
   // Explore shell lanes (?view=find&lane=X) — these are the new canonical URLs.
   // Don't normalize them — they're already in the right format.
-  const SHELL_LANES = new Set(["events", "shows", "regulars", "places", "calendar", "map"]);
+  const SHELL_LANES = SHELL_LANE_SET;
 
   const LEGACY_LANE_MAP: Record<string, string> = {
     film: "shows",

@@ -34,6 +34,7 @@ interface EventsFinderProps {
   displayMode: DisplayMode;
   hasActiveFilters: boolean;
   vertical?: string | null;
+  showFilters?: boolean; // default true for list mode
 }
 
 /**
@@ -125,32 +126,21 @@ function EventsFinderFiltersInner({
 }
 
 /**
- * Events filter bar section — rendered inside FindShell's control panel.
+ * Re-exported filter block for use in external containers (e.g. HappeningView's
+ * sticky control panel). Wraps EventsFinderFiltersInner in a Suspense boundary.
  */
-export function EventsFinderFilters({
-  portalId,
-  portalSlug,
-  portalExclusive,
-  displayMode,
-  hasActiveFilters,
-  vertical,
-}: EventsFinderProps) {
+export function EventsFinderFilters(props: Omit<EventsFinderProps, "showFilters">) {
   return (
     <Suspense fallback={<div className="h-10 bg-[var(--night)] rounded-xl mt-3" />}>
-      <EventsFinderFiltersInner
-        portalId={portalId}
-        portalSlug={portalSlug}
-        portalExclusive={portalExclusive}
-        displayMode={displayMode}
-        hasActiveFilters={hasActiveFilters}
-        vertical={vertical}
-      />
+      <EventsFinderFiltersInner {...props} />
     </Suspense>
   );
 }
 
 /**
  * Events content area — list, calendar, or map display modes.
+ * When showFilters=true (default) and displayMode="list", renders the search
+ * bar and filter chips above the content.
  */
 export default function EventsFinder({
   portalId,
@@ -158,7 +148,10 @@ export default function EventsFinder({
   portalExclusive,
   displayMode,
   hasActiveFilters,
+  vertical,
+  showFilters = true,
 }: EventsFinderProps) {
+  const renderFilters = showFilters && displayMode === "list";
   const searchParams = useSearchParams();
   // Detect in-flight filter changes: useDeferredValue holds the previous
   // searchParams string until React commits the new render. While they differ,
@@ -202,6 +195,19 @@ export default function EventsFinder({
 
   return (
     <>
+      {renderFilters && (
+        <Suspense fallback={<div className="h-10 bg-[var(--night)] rounded-xl mt-3" />}>
+          <EventsFinderFiltersInner
+            portalId={portalId}
+            portalSlug={portalSlug}
+            portalExclusive={portalExclusive}
+            displayMode={displayMode}
+            hasActiveFilters={hasActiveFilters}
+            vertical={vertical}
+          />
+        </Suspense>
+      )}
+
       {/* List mode */}
       {displayMode === "list" && (
         <TransitionContainer isPending={isFilterPending}>
