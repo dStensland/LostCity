@@ -72,7 +72,7 @@ export function ExploreHome({
     <div className="flex flex-col gap-6 max-w-lg mx-auto px-4 py-8">
       {/* Search hero */}
       <div className="text-center">
-        <p className="text-2xs font-mono uppercase tracking-[0.14em] text-[var(--muted)] mb-3">
+        <p className="text-xs font-mono uppercase tracking-[0.14em] text-[var(--muted)] mb-3">
           Explore {formatPortalLabel(portalSlug)}
         </p>
         <Suspense fallback={<div className="h-12 bg-[var(--night)] rounded-xl" />}>

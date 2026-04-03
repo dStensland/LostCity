@@ -26,8 +26,8 @@ export const LANE_META: Record<LaneSlug, LaneMeta> = {
   regulars:      { label: "REGULARS",           mobileLabel: "Regulars", accent: "var(--gold)",         href: "?view=find&lane=regulars",  zeroCta: "", badgePrefix: "TODAY" },
   places:        { label: "PLACES",             mobileLabel: "Places",   accent: "var(--neon-green)",   href: "?view=find&lane=places",    zeroCta: "" },
   classes:       { label: "CLASSES & WORKSHOPS", mobileLabel: "Classes", accent: "var(--copper)",       href: "?view=find&lane=classes",   zeroCta: "Coming soon — know a great class?" },
-  calendar:      { label: "CALENDAR",           mobileLabel: "Calendar", accent: "var(--neon-green)",   href: "?view=find&lane=calendar",  zeroCta: "" },
-  map:           { label: "MAP",                mobileLabel: "Map",      accent: "var(--neon-cyan)",    href: "?view=find&lane=map",       zeroCta: "" },
+  calendar:      { label: "CALENDAR",           mobileLabel: "Calendar", accent: "var(--neon-amber)",   href: "?view=find&lane=calendar",  zeroCta: "" },
+  map:           { label: "MAP",                mobileLabel: "Map",      accent: "var(--neon-magenta)", href: "?view=find&lane=map",       zeroCta: "" },
 };
 
 export type { LaneSlug };
