@@ -401,7 +401,7 @@ export default async function NeighborhoodPage({ params }: Props) {
               Popular Spots
             </span>
             <Link
-              href={`/${portal}/find?neighborhood=${encodeURIComponent(neighborhood.name)}&view=places`}
+              href={`/${portal}?view=find&lane=places&neighborhood=${encodeURIComponent(neighborhood.name)}`}
               className="text-xs font-medium transition-opacity hover:opacity-70"
               style={{ color: color }}
             >

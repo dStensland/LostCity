@@ -59,7 +59,7 @@ export default async function ThisWeekendPage({ params }: Props) {
       portalSlug={portal.slug}
       portalName={cityName}
       canonicalPath={`/${portal.slug}/this-weekend`}
-      findHref={`/${portal.slug}?view=happening&date=weekend`}
+      findHref={`/${portal.slug}?view=find&lane=events&date=weekend`}
       breadcrumbLabel="This Weekend"
       events={events}
     />

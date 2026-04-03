@@ -59,7 +59,7 @@ export default async function TonightPage({ params }: Props) {
       portalSlug={portal.slug}
       portalName={cityName}
       canonicalPath={`/${portal.slug}/tonight`}
-      findHref={`/${portal.slug}?view=happening&date=today`}
+      findHref={`/${portal.slug}?view=find&lane=events&date=today`}
       breadcrumbLabel="Tonight"
       events={events}
     />

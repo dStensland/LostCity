@@ -28,7 +28,7 @@ export default async function DogServicesPage({
 
   const vertical = getPortalVertical(portal);
   if (vertical !== "dog" && !isDogPortal(portal.slug)) {
-    redirect(`/${portal.slug}?view=places`);
+    redirect(`/${portal.slug}?view=find&lane=places`);
   }
 
   const venues = await getDogServices(sp.type);

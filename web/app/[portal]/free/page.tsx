@@ -59,7 +59,7 @@ export default async function FreePage({ params }: Props) {
       portalSlug={portal.slug}
       portalName={cityName}
       canonicalPath={`/${portal.slug}/free`}
-      findHref={`/${portal.slug}?view=happening&free=true`}
+      findHref={`/${portal.slug}?view=find&lane=events&price=free`}
       breadcrumbLabel="Free Events"
       events={events}
     />

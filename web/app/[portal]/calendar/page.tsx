@@ -17,7 +17,7 @@ export default async function FilmCalendarPage({ params }: Props) {
   }
 
   if (getPortalVertical(portal) !== "film") {
-    redirect(`/${portal.slug}?view=happening&display=calendar`);
+    redirect(`/${portal.slug}?view=find&lane=calendar`);
   }
 
   return (

@@ -352,7 +352,7 @@ export default async function PortalSeriesPage({ params }: Props) {
           __html: safeJsonLd(
             buildBreadcrumbSchema([
               { name: activePortalName, href: `/${activePortalSlug}` },
-              { name: getSeriesTypeLabel(series.series_type), href: `/${activePortalSlug}?view=happening` },
+              { name: getSeriesTypeLabel(series.series_type), href: `/${activePortalSlug}?view=find&lane=events` },
               { name: series.title },
             ])
           ),

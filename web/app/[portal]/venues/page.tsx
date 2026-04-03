@@ -174,7 +174,7 @@ export default async function FilmVenuesPage({ params }: Props) {
   }
 
   if (getPortalVertical(portal) !== "film") {
-    redirect(`/${portal.slug}?view=places`);
+    redirect(`/${portal.slug}?view=find&lane=places`);
   }
 
   const venues = await getVenuePulse(36);
