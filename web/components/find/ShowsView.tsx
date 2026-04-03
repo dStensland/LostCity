@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
 function TabSkeleton() {
@@ -41,17 +41,18 @@ interface ShowsViewProps {
 
 export function ShowsView({ portalId, portalSlug }: ShowsViewProps) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const rawTab = searchParams?.get("tab");
-  const initialTab: ShowsTab = isValidTab(rawTab) ? rawTab : "film";
+  const activeTab: ShowsTab = isValidTab(rawTab) ? rawTab : "film";
 
-  const [activeTab, setActiveTab] = useState<ShowsTab>(initialTab);
-
-  const handleTabChange = useCallback((tab: ShowsTab) => {
-    setActiveTab(tab);
-    const url = new URL(window.location.href);
-    url.searchParams.set("tab", tab);
-    window.history.replaceState({}, "", url.toString());
-  }, []);
+  const handleTabChange = useCallback(
+    (tab: ShowsTab) => {
+      const params = new URLSearchParams(searchParams?.toString() || "");
+      params.set("tab", tab);
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams],
+  );
 
   return (
     <div>
