@@ -13,18 +13,48 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { FindSidebar } from "./FindSidebar";
 import { MobileLaneBar } from "./MobileLaneBar";
 import { FindContextProvider } from "./FindContextProvider";
 import EventsFinder from "./EventsFinder";
 import { ExploreHome } from "./ExploreHome";
-import { ShowsView } from "./ShowsView";
-import RegularsView from "./RegularsView";
-import SpotsFinder from "./SpotsFinder";
-import { ClassesView } from "./ClassesView";
-import { GameDayView } from "./GameDayView";
 import type { ExploreHomeResponse } from "@/lib/types/explore-home";
 import { SHELL_LANE_SET } from "@/lib/explore-lane-meta";
+
+function LaneSkeleton() {
+  return (
+    <div className="space-y-4 py-6 px-2 animate-pulse">
+      <div className="h-10 bg-[var(--twilight)]/30 rounded-xl" />
+      <div className="h-10 bg-[var(--twilight)]/20 rounded-xl" />
+      <div className="space-y-2 pt-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-20 bg-[var(--twilight)]/15 rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const showsImport = () => import("./ShowsView").then((m) => m.ShowsView);
+const regularsImport = () => import("./RegularsView");
+const spotsImport = () => import("./SpotsFinder");
+const classesImport = () => import("./ClassesView").then((m) => m.ClassesView);
+const gameDayImport = () => import("./GameDayView").then((m) => m.GameDayView);
+
+const ShowsView = dynamic(showsImport, { loading: LaneSkeleton });
+const RegularsView = dynamic(regularsImport, { loading: LaneSkeleton });
+const SpotsFinder = dynamic(spotsImport, { loading: LaneSkeleton });
+const ClassesView = dynamic(classesImport, { loading: LaneSkeleton });
+const GameDayView = dynamic(gameDayImport, { loading: LaneSkeleton });
+
+const LANE_PRELOADS: Record<string, () => void> = {
+  shows: () => void showsImport(),
+  regulars: () => void regularsImport(),
+  places: () => void spotsImport(),
+  classes: () => void classesImport(),
+  "game-day": () => void gameDayImport(),
+};
 
 // Valid shell lanes — anything else falls back to launchpad
 const SHELL_LANES = SHELL_LANE_SET;
@@ -146,6 +176,7 @@ export default function FindShellClient({
           portalSlug={portalSlug}
           activeLane={lane}
           laneStates={exploreData?.lanes}
+          onLaneHover={(laneId) => LANE_PRELOADS[laneId]?.()}
         />
       </div>
 
