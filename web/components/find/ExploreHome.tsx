@@ -4,39 +4,8 @@ import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import FindSearchInput from "@/components/find/FindSearchInput";
 import { BROWSE_LANES, VIEW_LANES, LANE_META, LANE_ICONS } from "@/lib/explore-lane-meta";
-import { buildFindUrl } from "@/lib/find-url";
 import type { ExploreHomeResponse } from "@/lib/types/explore-home";
 
-// ---------------------------------------------------------------------------
-// Quick-action chips — time-of-day reordering
-// ---------------------------------------------------------------------------
-
-interface QuickChip {
-  label: string;
-  href: string;
-}
-
-function getQuickChips(portalSlug: string): QuickChip[] {
-  const hour = new Date().getHours();
-  const chips: QuickChip[] = [
-    { label: "Tonight", href: buildFindUrl({ portalSlug, lane: "events", date: "today" }) },
-    { label: "This weekend", href: buildFindUrl({ portalSlug, lane: "events", date: "weekend" }) },
-    { label: "Free", href: buildFindUrl({ portalSlug, lane: "events", price: "free" }) },
-    { label: "Music", href: buildFindUrl({ portalSlug, lane: "events", categories: "music" }) },
-    { label: "Classes", href: buildFindUrl({ portalSlug, lane: "classes" }) },
-  ];
-
-  // Time-of-day reordering: morning pushes Classes first, evening pushes Tonight first
-  if (hour < 12) {
-    const classesIdx = chips.findIndex((c) => c.label === "Classes");
-    if (classesIdx > 0) {
-      const [cls] = chips.splice(classesIdx, 1);
-      chips.unshift(cls);
-    }
-  }
-
-  return chips;
-}
 
 // ---------------------------------------------------------------------------
 // Capitalize portal slug for display (e.g. "atlanta" → "Atlanta")
@@ -68,7 +37,6 @@ export function ExploreHome({
   const router = useRouter();
   const searchParams = useSearchParams();
   const shouldFocusSearch = searchParams?.get("focus") === "search";
-  const chips = getQuickChips(portalSlug);
 
   return (
     <div className="flex flex-col gap-6 max-w-xl mx-auto px-4 py-8">
@@ -87,28 +55,6 @@ export function ExploreHome({
         </Suspense>
       </div>
 
-      {/* Quick-action chips */}
-      <div className="flex gap-2 justify-center flex-wrap">
-        {chips.map((chip) => (
-          <a
-            key={chip.label}
-            href={chip.href}
-            onClick={(e) => {
-              e.preventDefault();
-              router.push(chip.href);
-            }}
-            className="px-4 py-2 rounded-full text-sm font-medium
-              bg-[var(--void)]/60 border border-[var(--twilight)]/40
-              text-[var(--cream)]/80 hover:border-[var(--coral)]/40
-              hover:text-[var(--coral)] transition-colors"
-          >
-            {chip.label}
-          </a>
-        ))}
-      </div>
-
-      {/* Divider */}
-      <div className="border-t border-[var(--twilight)]/20" />
 
       {/* Error state */}
       {!loading && !data && (
