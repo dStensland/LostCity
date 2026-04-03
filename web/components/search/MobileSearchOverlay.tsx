@@ -159,7 +159,7 @@ export function MobileSearchOverlay({
       const q = query.trim();
       if (!q) return;
       addRecentSearch(q);
-      router.push(`/${portalSlug}?view=happening&search=${encodeURIComponent(q)}`);
+      router.push(`/${portalSlug}?view=find&lane=events&search=${encodeURIComponent(q)}`);
       onClose();
     },
     [query, portalSlug, router, onClose]
@@ -168,7 +168,7 @@ export function MobileSearchOverlay({
   // Trending pill click — treat like submit
   const handleTrendingClick = useCallback(
     (term: string) => {
-      router.push(`/${portalSlug}?view=happening&search=${encodeURIComponent(term)}`);
+      router.push(`/${portalSlug}?view=find&lane=events&search=${encodeURIComponent(term)}`);
       onClose();
     },
     [portalSlug, router, onClose]

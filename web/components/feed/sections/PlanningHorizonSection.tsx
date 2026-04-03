@@ -69,7 +69,7 @@ export default function PlanningHorizonSection({ section, portalSlug }: Props) {
         priority="secondary"
         accentColor="var(--gold)"
         icon={<Binoculars weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=happening&dateRange=month`}
+        seeAllHref={`/${portalSlug}?view=find&lane=events&dateRange=month`}
         seeAllLabel="All big events"
       />
 

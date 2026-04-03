@@ -264,7 +264,7 @@ export default function SpotsFinder({
             <DestinationsMapFilterBar portalSlug={portalSlug} />
           </div>
           <div style={{ height: MAP_DESKTOP_HEIGHT }}>
-            <MapErrorBoundary listHref={`/${portalSlug}?view=places`}>
+            <MapErrorBoundary listHref={`/${portalSlug}?view=find&lane=places`}>
               <MapViewWrapper
                 portalId={portalId}
                 portalExclusive={portalExclusive}

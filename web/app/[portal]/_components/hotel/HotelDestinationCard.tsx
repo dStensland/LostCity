@@ -62,7 +62,7 @@ function contextBadgeLabel(destination: Destination, daypartContext: DaypartCont
 function resolveDestinationHref(portalSlug: string, destination: Destination): string {
   const slug = typeof destination.venue.slug === "string" ? destination.venue.slug.trim() : "";
   if (slug) return `/${portalSlug}?spot=${slug}`;
-  return `/${portalSlug}?view=places&search=${encodeURIComponent(destination.venue.name)}`;
+  return `/${portalSlug}?view=find&lane=places&search=${encodeURIComponent(destination.venue.name)}`;
 }
 
 export default function HotelDestinationCard({

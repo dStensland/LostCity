@@ -800,7 +800,7 @@ export default function MapView({
             </svg>
             <span className="text-[var(--cream)] text-sm whitespace-nowrap">No events found</span>
             <Link
-              href={`/${portal.slug}?view=happening&display=map`}
+              href={`/${portal.slug}?view=find&lane=map`}
               className="flex-shrink-0 px-2.5 py-1 rounded-full bg-[var(--coral)] text-[var(--void)] text-xs font-mono font-medium hover:bg-[var(--rose)] transition-colors"
             >
               Clear filters

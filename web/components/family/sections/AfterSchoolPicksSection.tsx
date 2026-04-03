@@ -241,7 +241,7 @@ export function AfterSchoolPicksSection({
         color={AMBER}
         rightSlot={
           has ? (
-            <SeeAllLink href={`/${portalSlug}?view=happening&date=today`} />
+            <SeeAllLink href={`/${portalSlug}?view=find&lane=events&date=today`} />
           ) : undefined
         }
       />

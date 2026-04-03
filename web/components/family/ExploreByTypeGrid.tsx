@@ -212,7 +212,7 @@ export const ExploreByTypeGrid = memo(function ExploreByTypeGrid({
             cat.venueTypes.length > 0
               ? `&venue_type=${cat.venueTypes.join(",")}`
               : "";
-          const href = `/${portalSlug}?view=places${typeParam}`;
+          const href = `/${portalSlug}?view=find&lane=places${typeParam}`;
 
           const IconComponent = cat.icon;
           return (
@@ -271,7 +271,7 @@ export const ExploreByTypeGrid = memo(function ExploreByTypeGrid({
       {/* See all destinations link */}
       <div style={{ marginTop: 10, textAlign: "center" }}>
         <Link
-          href={`/${portalSlug}?view=places`}
+          href={`/${portalSlug}?view=find&lane=places`}
           style={{
             fontFamily: FONT_BODY,
             fontSize: 12,

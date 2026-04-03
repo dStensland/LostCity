@@ -298,7 +298,7 @@ export function detectQuickActions(
   }
 
   const actions: QuickAction[] = [];
-  const baseUrl = `/${portalSlug}?view=happening`;
+  const baseUrl = `/${portalSlug}?view=find&lane=events`;
 
   // Check for "free" intent
   if (/\bfree\b/i.test(trimmedQuery)) {

@@ -121,7 +121,7 @@ export function SignalStrip({ context, sportsTentpole, portalSlug = "atlanta" }:
   const rain = isRaining(context.weather?.condition);
   const holiday = context.active_holidays?.[0] ?? null;
 
-  const happeningHref = `/${portalSlug}?view=happening`;
+  const happeningHref = `/${portalSlug}?view=find&lane=events`;
 
   // Sports time label — compute once
   const sportsLabel = useMemo(() => {

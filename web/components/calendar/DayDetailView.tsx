@@ -83,7 +83,7 @@ export default function DayDetailView({ eventsByDate, plansByDate, friendEventsB
 
           {/* Add from Find link */}
           <Link
-            href={`/${DEFAULT_PORTAL_SLUG}?view=happening&date_start=${format(selectedDate, "yyyy-MM-dd")}&date_end=${format(selectedDate, "yyyy-MM-dd")}`}
+            href={`/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&date_start=${format(selectedDate, "yyyy-MM-dd")}&date_end=${format(selectedDate, "yyyy-MM-dd")}`}
             className="px-2.5 py-0.5 rounded-full bg-[var(--coral)]/20 text-[var(--coral)] font-mono text-xs font-medium hover:bg-[var(--coral)]/30 transition-colors"
           >
             + Add from Find
@@ -448,7 +448,7 @@ function EmptyDayState({
         {isPast ? "That date has passed." : "Nothing planned yet."}
       </p>
       <Link
-        href={`/${DEFAULT_PORTAL_SLUG}?view=happening&date_start=${format(selectedDate, "yyyy-MM-dd")}&date_end=${format(selectedDate, "yyyy-MM-dd")}`}
+        href={`/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&date_start=${format(selectedDate, "yyyy-MM-dd")}&date_end=${format(selectedDate, "yyyy-MM-dd")}`}
         className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[var(--coral)]/20 text-[var(--coral)] font-mono text-xs font-medium hover:bg-[var(--coral)]/30 transition-colors"
       >
         Explore in Find

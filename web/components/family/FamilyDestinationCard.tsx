@@ -173,7 +173,7 @@ export const FamilyDestinationCard = memo(function FamilyDestinationCard({
     library_pass_eligible,
   } = destination;
 
-  const href = slug ? `/${portalSlug}/spots/${slug}` : `/${portalSlug}?view=places`;
+  const href = slug ? `/${portalSlug}/spots/${slug}` : `/${portalSlug}?view=find&lane=places`;
   const typeLabel = venue_type ? (VENUE_TYPE_LABELS[venue_type] ?? null) : null;
 
   // Fallback gradient color based on venue type

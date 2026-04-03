@@ -216,9 +216,9 @@ function inferTrackedTargetFromHref(href: string): {
     return { kind: "festival", id: festivalPathMatch[1] };
 
   if (
+    href.includes("view=find") ||
     href.includes("view=happening") ||
     href.includes("view=places") ||
-    href.includes("view=find") ||
     href.includes("categories=") ||
     href.includes("tags=")
   ) {
@@ -233,7 +233,7 @@ function getSeeAllUrl(section: FeedSectionData, portalSlug: string): string {
   const params = new URLSearchParams();
   const autoFilter = section.auto_filter;
 
-  // Always include view=happening when there are filters to show filtered results
+  // Always include view=find&lane=events when there are filters to show filtered results
   let hasFilters = false;
 
   if (autoFilter?.categories?.length) {
@@ -262,9 +262,10 @@ function getSeeAllUrl(section: FeedSectionData, portalSlug: string): string {
     hasFilters = true;
   }
 
-  // Switch to happening view when filters are applied
+  // Switch to find view when filters are applied
   if (hasFilters) {
-    params.set("view", "happening");
+    params.set("view", "find");
+    params.set("lane", "events");
   }
 
   const queryString = params.toString();
@@ -491,7 +492,7 @@ export function HolidayGrid({
           const glowColor = cardStyle?.glowColor || accentColor;
           const tag = section.auto_filter?.tags?.[0];
           const filterUrl = tag
-            ? `/${portalSlug}?tags=${tag}&view=happening`
+            ? `/${portalSlug}?tags=${tag}&view=find&lane=events`
             : getSeeAllUrl(section, portalSlug);
           const eventCount = section.events.length;
 
@@ -1009,7 +1010,7 @@ function CollapsibleEvents({
   // Build URL with tag filter - clicking the card navigates to filtered view
   const tag = section.auto_filter?.tags?.[0];
   const filterUrl = tag
-    ? `/${portalSlug}?tags=${tag}&view=happening`
+    ? `/${portalSlug}?tags=${tag}&view=find&lane=events`
     : getSeeAllUrl(section, portalSlug);
 
   return (
@@ -1462,7 +1463,7 @@ function NightlifeCarousel({
           </h3>
         </div>
         <Link
-          href={`/${portalSlug}?view=happening&categories=nightlife`}
+          href={`/${portalSlug}?view=find&lane=events&categories=nightlife`}
           className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-mono transition-all group"
           style={{
             color: "var(--neon-magenta)",
@@ -1692,7 +1693,7 @@ function CategoryGrid({
         {categories.map((cat) => (
           <Link
             key={cat.id}
-            href={`/${portalSlug}?view=happening&categories=${cat.id}`}
+            href={`/${portalSlug}?view=find&lane=events&categories=${cat.id}`}
             className="flex flex-col items-center gap-2 p-4 rounded-xl border border-[var(--twilight)] hover:border-[var(--coral)]/50 transition-all group min-h-[80px] relative bg-[var(--card-bg)]"
           >
             <CategoryIcon

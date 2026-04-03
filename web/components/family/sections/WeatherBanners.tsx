@@ -139,7 +139,7 @@ export function GetOutsideBanner({
               {condition} and {temp}°F — a great day to head outdoors with the kids.
             </p>
             <Link
-              href={`/${portalSlug}?view=happening&tags=family-friendly&outdoor=1`}
+              href={`/${portalSlug}?view=find&lane=events&tags=family-friendly&outdoor=1`}
               className="inline-flex items-center gap-1.5 hover:opacity-80 transition-opacity"
               style={{
                 fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",

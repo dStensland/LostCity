@@ -141,9 +141,9 @@ export function buildSeeAllHref(
   category: PlacesToGoCategoryConfig
 ): string {
   if (category.seeAllTab) {
-    return `/${portalSlug}?view=places&tab=${category.seeAllTab}`;
+    return `/${portalSlug}?view=find&lane=places&tab=${category.seeAllTab}`;
   }
-  return `/${portalSlug}?view=places&venue_type=${category.placeTypes.join(",")}`;
+  return `/${portalSlug}?view=find&lane=places&venue_type=${category.placeTypes.join(",")}`;
 }
 
 /**

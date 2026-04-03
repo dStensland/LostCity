@@ -64,7 +64,7 @@ export function PlacesToGoSection({ portalSlug }: PlacesToGoSectionProps) {
         priority="secondary"
         accentColor="var(--neon-green)"
         icon={<MapPin weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=places`}
+        seeAllHref={`/${portalSlug}?view=find&lane=places`}
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">

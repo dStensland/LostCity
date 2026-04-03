@@ -299,7 +299,7 @@ export default function YonderRegionalEscapesSection({
         priority="secondary"
         accentColor="var(--gold)"
         icon={<Mountains weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=places`}
+        seeAllHref={`/${portalSlug}?view=find&lane=places`}
         seeAllLabel="All spots"
       />
 

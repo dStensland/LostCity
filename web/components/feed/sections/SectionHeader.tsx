@@ -120,7 +120,7 @@ export function HolidayGrid({
           const glowColor = cardStyle?.glowColor || accentColor;
           const tag = section.auto_filter?.tags?.[0];
           const filterUrl = tag
-            ? `/${portalSlug}?tags=${tag}&view=happening`
+            ? `/${portalSlug}?tags=${tag}&view=find&lane=events`
             : getSeeAllUrl(section, portalSlug);
           const eventCount = section.events.length;
 

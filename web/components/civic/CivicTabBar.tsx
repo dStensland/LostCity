@@ -33,8 +33,8 @@ export function isCivicTabActive(
       // Active on /groups sub-route
       return pathname.startsWith(`/${portalSlug}/groups`);
     case "calendar":
-      // Active on portal root with view=happening and display=calendar
-      return isPortalRoot && (viewParam === "happening" || viewParam === "find") && (tabParam === "calendar" || searchParams.get("display") === "calendar");
+      // Active on portal root with view=find and lane=calendar
+      return isPortalRoot && viewParam === "find" && (tabParam === "calendar" || searchParams.get("lane") === "calendar" || searchParams.get("display") === "calendar");
     case "support":
       return pathname.startsWith(`/${portalSlug}/support`);
     default:
@@ -62,7 +62,7 @@ export function getCivicTabs(portalSlug: string, actLabel = "Act"): Tab[] {
       key: "calendar",
       label: "Calendar",
       icon: CalendarBlank,
-      href: `/${portalSlug}?view=happening&display=calendar`,
+      href: `/${portalSlug}?view=find&lane=calendar`,
     },
     ...(showSupport
       ? [

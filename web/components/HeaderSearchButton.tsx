@@ -122,7 +122,7 @@ export default function HeaderSearchButton({ portalSlug }: HeaderSearchButtonPro
           search.setShowDropdown(false);
           setIsFocused(false);
           inputRef.current?.blur();
-          router.push(`/${slug}?view=happening&search=${encodeURIComponent(trimmed)}`);
+          router.push(`/${slug}?view=find&lane=events&search=${encodeURIComponent(trimmed)}`);
           search.clear();
         }
         return;

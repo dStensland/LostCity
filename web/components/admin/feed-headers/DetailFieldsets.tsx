@@ -86,7 +86,7 @@ export default function DetailFieldsets({
                 />
               </div>
               <input
-                placeholder="href (e.g. /atlanta?view=happening)"
+                placeholder="href (e.g. /atlanta?view=find&lane=events)"
                 value={card.href}
                 onChange={(e) => {
                   const updated = [...formData.dashboard_cards];

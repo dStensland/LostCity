@@ -404,7 +404,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
   );
 
   // ─── View Mode Resolution ───────────────────────────────────────────────
-  // New URL scheme: view=happening, view=places, view=community
+  // New URL scheme: view=find with lane= param, view=community
   // Backward compat: view=find maps to happening or places based on type param
   let viewMode: ViewMode = "feed";
   if (viewParam === "feed") {

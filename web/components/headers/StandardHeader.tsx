@@ -406,7 +406,7 @@ export default function StandardHeader({
               {mobileMenuOpen && (
                 <div className="absolute right-0 top-full mt-2 w-48 py-2 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl z-[200]">
                   <Link
-                    href={`/${portalSlug}?view=happening&display=map`}
+                    href={`/${portalSlug}?view=find&lane=map`}
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--soft)] hover:bg-[var(--twilight)]/30"
                   >

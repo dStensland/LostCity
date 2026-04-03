@@ -36,7 +36,7 @@ export default function FilmPortalNav({ portalSlug }: FilmPortalNavProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        router.push(`/${portalSlug}?view=happening&categories=film`);
+        router.push(`/${portalSlug}?view=find&lane=events&categories=film`);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -72,7 +72,7 @@ export default function FilmPortalNav({ portalSlug }: FilmPortalNavProps) {
         <button
           type="button"
           onClick={() =>
-            router.push(`/${portalSlug}?view=happening&categories=film`)
+            router.push(`/${portalSlug}?view=find&lane=events&categories=film`)
           }
           className="ml-auto flex shrink-0 items-center justify-center rounded-xl border border-transparent bg-[#10182b] p-2 text-[#a4b5d3] transition-colors hover:border-[#33405f] hover:text-[#d8e2f5]"
           aria-label="Search films (⌘K)"

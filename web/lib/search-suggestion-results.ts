@@ -14,9 +14,9 @@ function buildFindSearchHref(
   query: string,
 ): string {
   if (findType === "destinations") {
-    return `/${portalSlug}?view=places&search=${encodeURIComponent(query)}`;
+    return `/${portalSlug}?view=find&lane=places&search=${encodeURIComponent(query)}`;
   }
-  return `/${portalSlug}?view=happening&search=${encodeURIComponent(query)}`;
+  return `/${portalSlug}?view=find&lane=events&search=${encodeURIComponent(query)}`;
 }
 
 function shouldIncludeSuggestionType(
@@ -104,8 +104,8 @@ export function mapSuggestionToSearchResult(
         subtitle: mode === "preview" ? "Neighborhood" : undefined,
         href:
           navigationContext.findType === "destinations"
-            ? `/${portalSlug}?view=places&neighborhoods=${encoded}`
-            : `/${portalSlug}?view=happening&neighborhoods=${encoded}`,
+            ? `/${portalSlug}?view=find&lane=places&neighborhoods=${encoded}`
+            : `/${portalSlug}?view=find&lane=events&neighborhoods=${encoded}`,
         score: baseScore - 40,
       };
     case "category":
@@ -114,7 +114,7 @@ export function mapSuggestionToSearchResult(
         type: mode === "preview" ? "event" : "category",
         title: suggestion.text,
         subtitle: mode === "preview" ? "Category" : undefined,
-        href: `/${portalSlug}?view=happening&categories=${encoded}`,
+        href: `/${portalSlug}?view=find&lane=events&categories=${encoded}`,
         score: baseScore - 50,
       };
     case "tag":
@@ -123,7 +123,7 @@ export function mapSuggestionToSearchResult(
         type: mode === "preview" ? "event" : "category",
         title: suggestion.text,
         subtitle: mode === "preview" ? "Tag" : "Tag",
-        href: `/${portalSlug}?view=happening&tags=${encoded}`,
+        href: `/${portalSlug}?view=find&lane=events&tags=${encoded}`,
         score: baseScore - 55,
       };
     case "vibe":
@@ -132,7 +132,7 @@ export function mapSuggestionToSearchResult(
         type: "venue",
         title: suggestion.text,
         subtitle: "Vibe",
-        href: `/${portalSlug}?view=places&vibes=${encoded}`,
+        href: `/${portalSlug}?view=find&lane=places&vibes=${encoded}`,
         score: baseScore - 60,
       };
     case "program":

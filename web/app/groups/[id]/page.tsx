@@ -733,7 +733,7 @@ export default function GroupDetailPage({
             </button>
             {/* Check In — links to find venues via feed */}
             <Link
-              href={`/?view=places`}
+              href={`/?view=find&lane=places`}
               className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-[var(--neon-green)]/40 text-[var(--neon-green)] font-mono text-xs font-medium hover:bg-[var(--neon-green)]/5 transition-colors whitespace-nowrap"
             >
               <Users weight="bold" className="w-3.5 h-3.5" />

@@ -550,7 +550,7 @@ function TeamCard({
           {/* +N more overflow link */}
           {overflowCount > 0 && (
             <Link
-              href={`/${portalSlug}?view=happening&category=sports&q=${encodeURIComponent(team.shortName)}`}
+              href={`/${portalSlug}?view=find&lane=events&category=sports&q=${encodeURIComponent(team.shortName)}`}
               className="block px-3 py-1 font-mono text-xs font-medium text-[var(--neon-cyan)] hover:opacity-80 transition-colors"
             >
               +{overflowCount} more →

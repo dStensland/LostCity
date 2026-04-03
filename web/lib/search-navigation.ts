@@ -49,9 +49,9 @@ export function buildSearchResultHref(
     case "list":
       return `/${portal}/curations/${slug}`;
     case "neighborhood":
-      return `/${portal}?view=happening&neighborhoods=${encodeURIComponent(result.title)}`;
+      return `/${portal}?view=find&lane=events&neighborhoods=${encodeURIComponent(result.title)}`;
     case "category":
-      return `/${portal}?view=happening&categories=${encodeURIComponent(result.title)}`;
+      return `/${portal}?view=find&lane=events&categories=${encodeURIComponent(result.title)}`;
     case "program":
       // Programs link to the family portal programs view, filtered by slug when available
       return slug ? `/family?program=${slug}` : `/family?view=programs`;

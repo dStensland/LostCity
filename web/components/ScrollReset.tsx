@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react";
  * Resets scroll position to top when the route or view changes.
  *
  * Next.js preserves scroll when navigating between query-param variations
- * of the same page (e.g. ?view=feed → ?view=happening). This component detects
+ * of the same page (e.g. ?view=feed → ?view=find). This component detects
  * meaningful navigation changes and scrolls to top.
  *
  * It ignores filter-only changes (categories, tags, search, etc.) so that
