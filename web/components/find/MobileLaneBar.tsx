@@ -3,7 +3,7 @@
 import { useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { House } from "@phosphor-icons/react";
-import { LANE_META, BROWSE_LANES, VIEW_LANES } from "@/lib/explore-lane-meta";
+import { LANE_META, BROWSE_LANES, VIEW_LANES, LANE_ICONS } from "@/lib/explore-lane-meta";
 
 const MOBILE_LANES = [...BROWSE_LANES, ...VIEW_LANES].map((slug) => ({
   id: slug,
@@ -52,18 +52,20 @@ export function MobileLaneBar({ portalSlug, activeLane }: MobileLaneBarProps) {
         </a>
         {MOBILE_LANES.map((lane) => {
           const isActive = visualActiveLane === lane.id;
+          const Icon = LANE_ICONS[lane.id];
           return (
             <a
               key={lane.id}
               href={`/${portalSlug}${lane.href}`}
               onClick={(e) => handleClick(`/${portalSlug}${lane.href}`, lane.id, e)}
-              className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap"
+              className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap"
               style={
                 isActive
                   ? { backgroundColor: `color-mix(in srgb, ${lane.accent} 12%, transparent)`, color: lane.accent }
                   : { color: "var(--soft)" }
               }
             >
+              <Icon size={12} weight="duotone" />
               {lane.label}
             </a>
           );
