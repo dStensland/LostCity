@@ -1,8 +1,8 @@
 /**
  * Server-side data fetcher for the Explore Home dashboard.
  *
- * Resolves the portal, then runs parallel Supabase count queries to build
- * lane metadata for all 8 lanes. Each lane gets:
+ * Resolves the portal, then calls the `get_explore_home_counts` SQL function
+ * via a single Supabase RPC to get all lane counts in one query. Each lane gets:
  *   - count (total items)
  *   - count_today / count_weekend (for alive/quiet scoring)
  *   - state: "alive" | "quiet" | "zero"
@@ -20,8 +20,6 @@ import { getPortalBySlug } from "@/lib/portal";
 import { getTimeSlot, isWeekend } from "@/lib/city-pulse/time-slots";
 import { getLocalDateString, getLocalDateStringOffset } from "@/lib/formats";
 import { getPortalSourceAccess } from "@/lib/federation";
-import { buildPortalManifest } from "@/lib/portal-manifest";
-import { applyManifestFederatedScopeToQuery } from "@/lib/portal-scope";
 import type {
   ExploreHomeResponse,
   LanePreview,
@@ -33,15 +31,28 @@ import type {
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Category IDs for the consolidated Shows lane */
-const SHOW_CATEGORIES = ["film", "music", "theater", "comedy", "dance"];
+/** All lane slugs the RPC returns counts for. */
+const LANE_SLUGS: LaneSlug[] = [
+  "events",
+  "shows",
+  "game-day",
+  "regulars",
+  "classes",
+  "calendar",
+  "map",
+  "places",
+];
 
-/** Category ID for the Game Day lane */
-const SPORTS_CATEGORY = "sports";
+/** Lanes where today/weekend counts are not applicable (non-temporal). */
+const NON_TEMPORAL_LANES: ReadonlySet<LaneSlug> = new Set([
+  "calendar",
+  "map",
+  "places",
+]);
 
 /** Weekend date range: Friday through Sunday (inclusive).
- *  On Fri→today through Sun. On Sat→yesterday Fri through tomorrow Sun.
- *  On Sun→Fri (2 days ago) through today. Mon-Thu→next Fri through next Sun. */
+ *  On Fri -> today through Sun. On Sat -> yesterday Fri through tomorrow Sun.
+ *  On Sun -> Fri (2 days ago) through today. Mon-Thu -> next Fri through next Sun. */
 function getWeekendRange(today: Date): { start: string; end: string } {
   const dayOfWeek = today.getDay(); // 0=Sun, 6=Sat
   const fri = new Date(today);
@@ -81,12 +92,12 @@ function getWeekendRange(today: Date): { start: string; end: string } {
  *   - Has content today/tonight: +3
  *   - Has content this weekend:  +2
  *   - Item count above threshold: +1
- *   - Time-of-day boost:         +0–2
+ *   - Time-of-day boost:         +0-2
  *
- * Score >= 3 → alive, score > 0 → quiet, 0 items → zero.
+ * Score >= 3 -> alive, score > 0 -> quiet, 0 items -> zero.
  *
  * Non-temporal lanes (todayCount === null && weekendCount === null):
- *   today/weekend are not applicable — alive when totalCount >= 3.
+ *   today/weekend are not applicable -- alive when totalCount >= 3.
  */
 function computeLaneState(
   totalCount: number,
@@ -95,7 +106,7 @@ function computeLaneState(
   timeSlotBoost: number,
 ): LaneState {
   // Only declare "zero" when ALL counts are empty. If totalCount is 0 but
-  // today/weekend have items, the total count query likely failed — the lane
+  // today/weekend have items, the total count query likely failed -- the lane
   // clearly isn't empty.
   const effectiveToday = todayCount ?? 0;
   const effectiveWeekend = weekendCount ?? 0;
@@ -204,14 +215,14 @@ function generateLaneCopy(
           return `${todayCount} today`;
       }
     }
-    // Alive but nothing specifically today — use weekend or total
+    // Alive but nothing specifically today -- use weekend or total
     if ((weekendCount ?? 0) > 0) {
       return `${weekendCount} this weekend`;
     }
     return `${totalCount} upcoming`;
   }
 
-  // Quiet state — informative nudge
+  // Quiet state -- informative nudge
   switch (lane) {
     case "events":
       return `${totalCount} event${totalCount === 1 ? "" : "s"} coming up this week`;
@@ -235,14 +246,14 @@ function generateLaneCopy(
 }
 
 // ---------------------------------------------------------------------------
-// Promise.allSettled helper
+// RPC result shape
 // ---------------------------------------------------------------------------
 
-/** Unwrap a settled promise result, returning the fallback on rejection. */
-function unwrapSettled<T>(result: PromiseSettledResult<T>, fallback: T): T {
-  if (result.status === "fulfilled") return result.value;
-  console.warn("[explore-home-data] Query rejected:", result.reason);
-  return fallback;
+/** Shape of each lane's counts in the RPC JSONB result. */
+interface RpcLaneCounts {
+  count: number | null;
+  count_today: number | null;
+  count_weekend: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -253,7 +264,7 @@ function unwrapSettled<T>(result: PromiseSettledResult<T>, fallback: T): T {
  * Fetch all Explore Home lane data for a portal.
  *
  * Returns null on fatal errors (portal not found, service client failure).
- * Individual lane failures degrade to zero state rather than failing the
+ * On RPC failure all lanes degrade to "zero" state rather than failing the
  * entire response.
  */
 export async function getExploreHomeData(
@@ -268,19 +279,10 @@ export async function getExploreHomeData(
       (portal.filters as { city?: string } | null)?.city || "Atlanta";
 
     const sourceAccess = await getPortalSourceAccess(portal.id);
-    const manifest = buildPortalManifest({
-      portalId: portal.id,
-      slug: portal.slug,
-      portalType: portal.portal_type,
-      parentPortalId: portal.parent_portal_id,
-      settings: portal.settings,
-      filters: portal.filters as { city?: string; cities?: string[] } | null,
-      sourceIds: sourceAccess.sourceIds,
-    });
 
     const supabase = await createPortalScopedClient(portal.id);
 
-    // Date boundaries — all time-of-day computation uses Eastern Time so
+    // Date boundaries -- all time-of-day computation uses Eastern Time so
     // Vercel's UTC servers produce correct results for Atlanta.
     const now = new Date();
     const today = getLocalDateString(now);
@@ -303,329 +305,76 @@ export async function getExploreHomeData(
     );
     const currentHour = hourEt;
 
-    // Base filters applied to all event queries (includes portal scoping)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    function baseEventQuery(q: any) {
-      const filtered = q
-        .eq("is_active", true)
-        .or("is_feed_ready.eq.true,is_feed_ready.is.null")
-        .is("canonical_event_id", null)
-        .gte("start_date", today)
-        .lte("start_date", weekEnd);
-      return applyManifestFederatedScopeToQuery(filtered, manifest, {
-        publicOnlyWhenNoPortal: true,
-        sourceIds: sourceAccess.sourceIds,
-        sourceColumn: "source_id",
-      });
+    // Weekend start adjusts to today when we're already in the weekend,
+    // matching the previous per-query behavior.
+    const weekendStart = isCurrentlyWeekend ? today : weekend.start;
+
+    // -----------------------------------------------------------------------
+    // 2. Single RPC call replaces ~18 individual Supabase REST queries
+    // -----------------------------------------------------------------------
+
+    const { data: counts, error: rpcError } = await supabase.rpc(
+      "get_explore_home_counts" as never,
+      {
+        p_portal_id: portal.id,
+        p_source_ids:
+          sourceAccess.sourceIds.length > 0 ? sourceAccess.sourceIds : null,
+        p_today: today,
+        p_week_end: weekEnd,
+        p_weekend_start: weekendStart,
+        p_weekend_end: weekend.end,
+        p_city_filter: `${city}%`,
+      } as never,
+    );
+
+    if (rpcError) {
+      console.warn("[explore-home-data] RPC error:", rpcError);
     }
 
-    // City filter for places
-    const cityFilter = `${city}%`;
-
-    // -----------------------------------------------------------------------
-    // 2. Run all lane queries in parallel
-    // -----------------------------------------------------------------------
-
-    const countFallback = { count: null, error: null };
-
-    const settled = await Promise.allSettled([
-      // ----- Events lane (all events except shows and classes) -----
-      // [0] total count
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      )
-        .not("category_id", "in", `(${SHOW_CATEGORIES.join(",")})`)
-        .or("is_class.eq.false,is_class.is.null"),
-
-      // [1] today count
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      )
-        .not("category_id", "in", `(${SHOW_CATEGORIES.join(",")})`)
-        .or("is_class.eq.false,is_class.is.null")
-        .eq("start_date", today),
-
-      // [2] weekend count
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      )
-        .not("category_id", "in", `(${SHOW_CATEGORIES.join(",")})`)
-        .or("is_class.eq.false,is_class.is.null")
-        .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
-        .lte("start_date", weekend.end),
-
-      // ----- Shows lane (film, music, theater, comedy, dance) -----
-      // [3] total count
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      )
-        .in("category_id", SHOW_CATEGORIES)
-        .or("is_class.eq.false,is_class.is.null"),
-
-      // [4] today count
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      )
-        .in("category_id", SHOW_CATEGORIES)
-        .or("is_class.eq.false,is_class.is.null")
-        .eq("start_date", today),
-
-      // [5] weekend count
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      )
-        .in("category_id", SHOW_CATEGORIES)
-        .or("is_class.eq.false,is_class.is.null")
-        .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
-        .lte("start_date", weekend.end),
-
-      // ----- Game Day lane (sports events) -----
-      // [6] total count
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      )
-        .eq("category_id", SPORTS_CATEGORY)
-        .or("is_class.eq.false,is_class.is.null"),
-
-      // [7] today count
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      )
-        .eq("category_id", SPORTS_CATEGORY)
-        .or("is_class.eq.false,is_class.is.null")
-        .eq("start_date", today),
-
-      // [8] weekend count
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      )
-        .eq("category_id", SPORTS_CATEGORY)
-        .or("is_class.eq.false,is_class.is.null")
-        .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
-        .lte("start_date", weekend.end),
-
-      // ----- Regulars lane (recurring events with series) -----
-      // [9] total count
-      applyManifestFederatedScopeToQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-          .eq("is_active", true)
-          .eq("is_regular_ready", true)
-          .not("series_id", "is", null)
-          .is("canonical_event_id", null)
-          .not("is_class", "eq", true)
-          .not("category_id", "in", "(film,theater,education,support,support_group,civic,volunteer,religious,community,family,learning)")
-          .gte("start_date", today)
-          .lte("start_date", weekEnd),
-        manifest,
-        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
-      ),
-
-      // [10] today count
-      applyManifestFederatedScopeToQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-          .eq("is_active", true)
-          .eq("is_regular_ready", true)
-          .not("series_id", "is", null)
-          .is("canonical_event_id", null)
-          .not("is_class", "eq", true)
-          .not("category_id", "in", "(film,theater,education,support,support_group,civic,volunteer,religious,community,family,learning)")
-          .eq("start_date", today),
-        manifest,
-        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
-      ),
-
-      // [11] weekend count
-      applyManifestFederatedScopeToQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-          .eq("is_active", true)
-          .eq("is_regular_ready", true)
-          .not("series_id", "is", null)
-          .is("canonical_event_id", null)
-          .not("is_class", "eq", true)
-          .not("category_id", "in", "(film,theater,education,support,support_group,civic,volunteer,religious,community,family,learning)")
-          .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
-          .lte("start_date", weekend.end),
-        manifest,
-        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
-      ),
-
-      // ----- Places lane (count only) -----
-      // [12] total count
-      supabase
-        .from("places")
-        .select("id", { count: "exact", head: true })
-        .neq("is_active", false)
-        .ilike("city", cityFilter),
-
-      // ----- Classes lane -----
-      // [13] total count
-      applyManifestFederatedScopeToQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-          .eq("is_class", true)
-          .eq("is_active", true)
-          .or("is_feed_ready.eq.true,is_feed_ready.is.null")
-          .is("canonical_event_id", null)
-          .gte("start_date", today),
-        manifest,
-        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
-      ),
-
-      // [14] today count
-      applyManifestFederatedScopeToQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-          .eq("is_class", true)
-          .eq("is_active", true)
-          .or("is_feed_ready.eq.true,is_feed_ready.is.null")
-          .is("canonical_event_id", null)
-          .eq("start_date", today),
-        manifest,
-        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
-      ),
-
-      // [15] weekend count
-      applyManifestFederatedScopeToQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-          .eq("is_class", true)
-          .eq("is_active", true)
-          .or("is_feed_ready.eq.true,is_feed_ready.is.null")
-          .is("canonical_event_id", null)
-          .gte("start_date", isCurrentlyWeekend ? today : weekend.start)
-          .lte("start_date", weekend.end),
-        manifest,
-        { publicOnlyWhenNoPortal: true, sourceIds: sourceAccess.sourceIds, sourceColumn: "source_id" },
-      ),
-
-      // ----- Calendar lane (total event count) -----
-      // [16]
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-      ),
-
-      // ----- Map lane (events with venue lat/lng) -----
-      // [17]
-      baseEventQuery(
-        supabase
-          .from("events")
-          .select("id, venue:places!inner(lat, lng)", {
-            count: "exact",
-            head: true,
-          })
-      )
-        .not("places.lat", "is", null)
-        .not("places.lng", "is", null),
-    ]);
-
-    // Unwrap settled results — all queries are count-only now
-    const results = settled.map((r) => unwrapSettled(r, countFallback));
-
-    const [
-      // Events lane [0-2]
-      eventsCount, eventsTodayCount, eventsWeekendCount,
-      // Shows lane [3-5]
-      showsCount, showsTodayCount, showsWeekendCount,
-      // Game Day lane [6-8]
-      gameDayCount, gameDayTodayCount, gameDayWeekendCount,
-      // Regulars lane [9-11]
-      regularsCount, regularsTodayCount, regularsWeekendCount,
-      // Places lane [12]
-      placesCount,
-      // Classes lane [13-15]
-      classesCount, classesTodayCount, classesWeekendCount,
-      // Calendar lane [16]
-      calendarCount,
-      // Map lane [17]
-      mapCount,
-    ] = results;
+    // The RPC returns a JSONB object keyed by lane slug. If the RPC failed,
+    // counts will be null and every lane degrades to "zero".
+    const rpcResult = (counts ?? {}) as Record<string, RpcLaneCounts>;
 
     // -----------------------------------------------------------------------
     // 3. Assemble lane data (counts + state + copy, no preview items)
     // -----------------------------------------------------------------------
 
-    function buildLane(
-      lane: LaneSlug,
-      countResult: { count: number | null; error: unknown },
-      todayResult: { count: number | null; error: unknown } | null,
-      weekendResult: { count: number | null; error: unknown } | null,
-    ): LanePreview {
-      if (countResult.error) {
-        console.warn(`[explore-home-data] Lane "${lane}" count query error:`, countResult.error);
-      }
-      const rawTotal = countResult.count ?? 0;
+    const lanes = {} as Record<LaneSlug, LanePreview>;
 
-      if (todayResult?.error) {
-        console.warn(`[explore-home-data] Lane "${lane}" count_today query error:`, todayResult.error);
-      }
-      const todayN = todayResult !== null ? (todayResult.count ?? 0) : null;
+    for (const slug of LANE_SLUGS) {
+      const laneData = rpcResult[slug];
+      const rawTotal = laneData?.count ?? 0;
+      const isNonTemporal = NON_TEMPORAL_LANES.has(slug);
 
-      if (weekendResult?.error) {
-        console.warn(`[explore-home-data] Lane "${lane}" count_weekend query error:`, weekendResult.error);
-      }
-      const weekendN = weekendResult !== null ? (weekendResult.count ?? 0) : null;
+      // Non-temporal lanes don't use today/weekend counts for scoring
+      const todayN = isNonTemporal ? null : (laneData?.count_today ?? 0);
+      const weekendN = isNonTemporal ? null : (laneData?.count_weekend ?? 0);
 
-      // If the total count query failed (returned 0/null) but today or weekend
-      // succeeded, use the best available sub-count as the display total so
-      // copy doesn't say "0 regulars".
+      // If the total count came back 0 but sub-counts have data, use the
+      // best sub-count as the display total so copy doesn't say "0 regulars".
       const total =
         rawTotal > 0
           ? rawTotal
           : Math.max(todayN ?? 0, weekendN ?? 0, rawTotal);
 
-      const boost = getTimeBoostForLane(lane, currentHour);
-      const state = computeLaneState(total, todayN, weekendN, boost);
-      const copy = generateLaneCopy(lane, state, total, todayN, weekendN);
-
-      // Log when total count appears degraded but sub-counts have data
       if (rawTotal === 0 && total > 0) {
         console.warn(
-          `[explore-home-data] Lane "${lane}" total count is 0 but sub-counts have data (today=${todayN}, weekend=${weekendN}). Total count query may have failed.`,
+          `[explore-home-data] Lane "${slug}" total count is 0 but sub-counts have data (today=${todayN}, weekend=${weekendN}).`,
         );
       }
 
-      return { state, count: total, count_today: todayN, count_weekend: weekendN, copy };
-    }
+      const boost = getTimeBoostForLane(slug, currentHour);
+      const state = computeLaneState(total, todayN, weekendN, boost);
+      const copy = generateLaneCopy(slug, state, total, todayN, weekendN);
 
-    const lanes: Record<LaneSlug, LanePreview> = {
-      events: buildLane("events", eventsCount, eventsTodayCount, eventsWeekendCount),
-      shows: buildLane("shows", showsCount, showsTodayCount, showsWeekendCount),
-      "game-day": buildLane("game-day", gameDayCount, gameDayTodayCount, gameDayWeekendCount),
-      regulars: buildLane("regulars", regularsCount, regularsTodayCount, regularsWeekendCount),
-      places: buildLane("places", placesCount, null, null),
-      classes: buildLane("classes", classesCount, classesTodayCount, classesWeekendCount),
-      calendar: buildLane("calendar", calendarCount, null, null),
-      map: buildLane("map", mapCount, null, null),
-    };
+      lanes[slug] = {
+        state,
+        count: total,
+        count_today: todayN,
+        count_weekend: weekendN,
+        copy,
+      };
+    }
 
     return { lanes };
   } catch (err) {
