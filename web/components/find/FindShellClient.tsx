@@ -63,6 +63,17 @@ export default function FindShellClient({
   const searchParams = useSearchParams();
   const rawLane = searchParams.get("lane");
 
+  const hasActiveFilters = !!(
+    searchParams?.get("search") ||
+    searchParams?.get("categories") ||
+    searchParams?.get("date") ||
+    searchParams?.get("genres") ||
+    searchParams?.get("tags") ||
+    searchParams?.get("vibes") ||
+    searchParams?.get("price") ||
+    searchParams?.get("free")
+  );
+
   // Compute effective lane synchronously — legacy show lanes resolve to "shows"
   const lane = rawLane && rawLane in SHOW_LANE_REDIRECTS
     ? "shows"
@@ -172,7 +183,7 @@ export default function FindShellClient({
               portalSlug={portalSlug}
               portalExclusive={portalExclusive}
               displayMode="list"
-              hasActiveFilters={false}
+              hasActiveFilters={hasActiveFilters}
             />
           )}
           {lane === "shows" && (
