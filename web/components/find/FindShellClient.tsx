@@ -13,6 +13,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useReplaceStateParams } from "@/lib/hooks/useReplaceStateParams";
 import dynamic from "next/dynamic";
 import { FindSidebar } from "./FindSidebar";
 import { MobileLaneBar } from "./MobileLaneBar";
@@ -77,18 +78,19 @@ export default function FindShellClient({
   portalId,
   portalExclusive,
 }: FindShellClientProps) {
-  const searchParams = useSearchParams();
-  const rawLane = searchParams.get("lane");
+  const nextSearchParams = useSearchParams(); // needed for Suspense hydration
+  const liveParams = useReplaceStateParams(); // reacts to ALL URL changes (push + replace + popstate)
+  const rawLane = liveParams.get("lane");
 
   const hasActiveFilters = !!(
-    searchParams?.get("search") ||
-    searchParams?.get("categories") ||
-    searchParams?.get("date") ||
-    searchParams?.get("genres") ||
-    searchParams?.get("tags") ||
-    searchParams?.get("vibes") ||
-    searchParams?.get("price") ||
-    searchParams?.get("free")
+    liveParams.get("search") ||
+    liveParams.get("categories") ||
+    liveParams.get("date") ||
+    liveParams.get("genres") ||
+    liveParams.get("tags") ||
+    liveParams.get("vibes") ||
+    liveParams.get("price") ||
+    liveParams.get("free")
   );
 
   // Compute effective lane synchronously — legacy show lanes resolve to "shows"

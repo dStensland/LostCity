@@ -14,13 +14,34 @@ import { useSyncExternalStore, useMemo } from "react";
 // The hook also listens for `popstate` (back/forward nav) so browser history
 // navigation still triggers re-renders.
 
-const REPLACE_STATE_EVENT = "lostcity:replacestate";
+const URL_CHANGE_EVENT = "lostcity:urlchange";
 
-/** Dispatch after calling window.history.replaceState to notify subscribers. */
+// ─── Patch History API to auto-dispatch on all URL changes ───────────────────
+// Next.js router.push uses pushState, filter writes use replaceState.
+// We patch both so every URL change fires our custom event automatically.
+// This eliminates the need to manually call dispatchReplaceState() after
+// every replaceState call (though it still works for backward compat).
+if (typeof window !== "undefined" && !(window as unknown as Record<string, boolean>).__lc_history_patched) {
+  (window as unknown as Record<string, boolean>).__lc_history_patched = true;
+
+  const origPush = history.pushState.bind(history);
+  const origReplace = history.replaceState.bind(history);
+
+  history.pushState = function (...args: Parameters<typeof origPush>) {
+    origPush(...args);
+    window.dispatchEvent(new Event(URL_CHANGE_EVENT));
+  };
+
+  history.replaceState = function (...args: Parameters<typeof origReplace>) {
+    origReplace(...args);
+    window.dispatchEvent(new Event(URL_CHANGE_EVENT));
+  };
+}
+
+/** @deprecated — History API is now auto-patched. Kept for backward compat. */
 export function dispatchReplaceState(): void {
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(REPLACE_STATE_EVENT));
-  }
+  // No-op — the patched replaceState already dispatches automatically.
+  // Kept as export so existing call sites don't break.
 }
 
 // ─── useSyncExternalStore integration ────────────────────────────────────────
@@ -28,10 +49,10 @@ export function dispatchReplaceState(): void {
 // useEffect would have. The "store" is window.location.search.
 
 function subscribe(callback: () => void): () => void {
-  window.addEventListener(REPLACE_STATE_EVENT, callback);
+  window.addEventListener(URL_CHANGE_EVENT, callback);
   window.addEventListener("popstate", callback);
   return () => {
-    window.removeEventListener(REPLACE_STATE_EVENT, callback);
+    window.removeEventListener(URL_CHANGE_EVENT, callback);
     window.removeEventListener("popstate", callback);
   };
 }
