@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useTransition, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { House } from "@phosphor-icons/react";
 import { LANE_META, BROWSE_LANES, VIEW_LANES, LANE_ICONS } from "@/lib/explore-lane-meta";
@@ -22,7 +22,17 @@ export function MobileLaneBar({ portalSlug, activeLane }: MobileLaneBarProps) {
   const [isPending, startTransition] = useTransition();
   const [pendingLane, setPendingLane] = useState<string | null>(null);
 
-  const visualActiveLane = isPending && pendingLane !== undefined ? pendingLane : activeLane;
+  // Clear pendingLane once parent's activeLane catches up
+  useEffect(() => {
+    if (pendingLane !== null && activeLane === pendingLane) {
+      setPendingLane(null);
+    }
+  }, [activeLane, pendingLane]);
+
+  // Show pendingLane until activeLane matches — don't rely on isPending timing
+  const visualActiveLane = pendingLane !== null && pendingLane !== activeLane
+    ? pendingLane
+    : activeLane;
 
   const handleClick = useCallback(
     (href: string, laneId: string | null, e: React.MouseEvent) => {

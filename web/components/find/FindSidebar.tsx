@@ -1,11 +1,12 @@
 "use client";
 
-import { memo, useState, useTransition, useCallback } from "react";
+import { memo, useState, useTransition, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { useWeather } from "@/lib/hooks/useWeather";
 import { LANE_META, BROWSE_LANES as BROWSE_LANE_SLUGS, VIEW_LANES as VIEW_LANE_SLUGS, LANE_ICONS } from "@/lib/explore-lane-meta";
+import AmbientBackground from "@/components/AmbientBackground";
 
 // -------------------------------------------------------------------------
 // Lane definitions
@@ -79,9 +80,17 @@ export const FindSidebar = memo(function FindSidebar({
   const [isPending, startTransition] = useTransition();
   const [pendingLane, setPendingLane] = useState<string | null>(null);
 
-  // The visually active lane: show the pending lane immediately on click,
-  // fall back to the server-confirmed activeLane
-  const visualActiveLane = isPending && pendingLane ? pendingLane : activeLane;
+  // Clear pendingLane once the parent's activeLane catches up
+  useEffect(() => {
+    if (pendingLane && activeLane === pendingLane) {
+      setPendingLane(null);
+    }
+  }, [activeLane, pendingLane]);
+
+  // Show pendingLane until activeLane matches — don't rely on isPending timing
+  const visualActiveLane = pendingLane && pendingLane !== activeLane
+    ? pendingLane
+    : activeLane;
 
   const handleLaneClick = useCallback(
     (lane: Lane, e: React.MouseEvent) => {
@@ -153,54 +162,67 @@ export const FindSidebar = memo(function FindSidebar({
 
   return (
     <aside
-      className="w-[240px] h-full bg-[var(--night)] border-r border-[var(--twilight)] p-6 flex flex-col gap-6"
+      className="w-[240px] h-full border-r border-[var(--twilight)] relative overflow-hidden"
       aria-label="Explore navigation"
     >
-      {/* Title — always visible home link; coral when on home, cream when in a lane */}
-      <a
-        href={`/${portalSlug}?view=find`}
-        onClick={handleExploreClick}
-        className={`text-2xl font-bold leading-none transition-colors cursor-pointer ${
-          !visualActiveLane
-            ? "text-[var(--coral)]"
-            : "text-[var(--cream)] hover:text-[var(--coral)]"
-        }`}
-      >
-        Explore
-      </a>
+      {/* Ambient background effect */}
+      <AmbientBackground
+        effect="trunk-rings"
+        fps={24}
+        resolution={0.75}
+        className="absolute inset-0 z-0 opacity-60"
+      />
+      {/* Dark scrim for text readability */}
+      <div className="absolute inset-0 z-[1] bg-[var(--night)]/55" />
 
-      {/* Search button */}
-      <button
-        onClick={() => router.push(`/${portalSlug}?view=find&focus=search`)}
-        className="flex items-center gap-2 w-full px-3 py-2 rounded-lg
-          bg-[var(--void)]/50 border border-[var(--twilight)]/40
-          text-[var(--muted)] text-sm hover:border-[var(--twilight)]
-          hover:text-[var(--cream)] transition-colors"
-      >
-        <MagnifyingGlass size={14} weight="duotone" />
-        <span>Search...</span>
-      </button>
+      {/* Content — above background layers */}
+      <div className="relative z-[2] p-6 flex flex-col gap-6 h-full">
+        {/* Title — always visible home link; coral when on home, cream when in a lane */}
+        <a
+          href={`/${portalSlug}?view=find`}
+          onClick={handleExploreClick}
+          className={`text-2xl font-bold leading-none transition-colors cursor-pointer ${
+            !visualActiveLane
+              ? "text-[var(--coral)]"
+              : "text-[var(--cream)] hover:text-[var(--coral)]"
+          }`}
+        >
+          Explore
+        </a>
 
-      {/* Browse group */}
-      <nav className="flex-1">
-        <p className="font-mono text-2xs font-bold tracking-[0.14em] uppercase text-[var(--muted)] mb-2">
-          Browse
-        </p>
-        <ul className="space-y-0.5">
-          {BROWSE_LANES.map(renderLane)}
-        </ul>
+        {/* Search button */}
+        <button
+          onClick={() => router.push(`/${portalSlug}?view=find&focus=search`)}
+          className="flex items-center gap-2 w-full px-3 py-2 rounded-lg
+            bg-[var(--void)]/50 border border-[var(--twilight)]/40
+            text-[var(--muted)] text-sm hover:border-[var(--twilight)]
+            hover:text-[var(--cream)] transition-colors"
+        >
+          <MagnifyingGlass size={14} weight="duotone" />
+          <span>Search...</span>
+        </button>
 
-        {/* Views group */}
-        <p className="font-mono text-2xs font-bold tracking-[0.14em] uppercase text-[var(--muted)] mt-5 mb-2">
-          Views
-        </p>
-        <ul className="space-y-0.5">
-          {VIEW_LANES.map(renderLane)}
-        </ul>
-      </nav>
+        {/* Browse group */}
+        <nav className="flex-1">
+          <p className="font-mono text-2xs font-bold tracking-[0.14em] uppercase text-[var(--muted)] mb-2">
+            Browse
+          </p>
+          <ul className="space-y-0.5">
+            {BROWSE_LANES.map(renderLane)}
+          </ul>
 
-      {/* Context block */}
-      <ContextBlock />
+          {/* Views group */}
+          <p className="font-mono text-2xs font-bold tracking-[0.14em] uppercase text-[var(--muted)] mt-5 mb-2">
+            Views
+          </p>
+          <ul className="space-y-0.5">
+            {VIEW_LANES.map(renderLane)}
+          </ul>
+        </nav>
+
+        {/* Context block */}
+        <ContextBlock />
+      </div>
     </aside>
   );
 });
