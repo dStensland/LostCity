@@ -1,7 +1,6 @@
 "use client";
 
-import { memo, useState, useCallback, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { memo, useCallback } from "react";
 import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { useWeather } from "@/lib/hooks/useWeather";
@@ -69,6 +68,7 @@ interface FindSidebarProps {
   portalSlug: string;
   activeLane?: string | null;
   laneStates?: Record<string, { state: string; count: number; count_today: number | null }>;
+  onLaneChange: (laneId: string | null) => void;
   onLaneHover?: (laneId: string) => void;
 }
 
@@ -76,44 +76,31 @@ export const FindSidebar = memo(function FindSidebar({
   portalSlug,
   activeLane,
   laneStates,
+  onLaneChange,
   onLaneHover,
 }: FindSidebarProps) {
-  const router = useRouter();
-  const [pendingLane, setPendingLane] = useState<string | null>(null);
-
-  // Clear pendingLane once the parent's activeLane catches up
-  useEffect(() => {
-    if (pendingLane && activeLane === pendingLane) {
-      setPendingLane(null);
-    }
-  }, [activeLane, pendingLane]);
-
-  // Show pendingLane until activeLane matches — don't rely on isPending timing
-  const visualActiveLane = pendingLane && pendingLane !== activeLane
-    ? pendingLane
-    : activeLane;
+  // No router.push — lane switching is local state in FindShellClient.
+  // setLane is synchronous so activeLane updates immediately. No pendingLane needed.
 
   const handleLaneClick = useCallback(
     (lane: Lane, e: React.MouseEvent) => {
       e.preventDefault();
-      setPendingLane(lane.id);
-      router.push(`/${portalSlug}${lane.href}`);
+      onLaneChange(lane.id);
     },
-    [portalSlug, router]
+    [onLaneChange]
   );
 
   const handleExploreClick = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      setPendingLane(null);
-      router.push(`/${portalSlug}?view=find`);
+      onLaneChange(null);
     },
-    [portalSlug, router]
+    [onLaneChange]
   );
 
   function renderLane(lane: Lane) {
     const LaneIcon = lane.icon;
-    const isActive = visualActiveLane === lane.id;
+    const isActive = activeLane === lane.id;
 
     return (
       <li key={lane.id}>
@@ -180,7 +167,7 @@ export const FindSidebar = memo(function FindSidebar({
           href={`/${portalSlug}?view=find`}
           onClick={handleExploreClick}
           className={`text-2xl font-bold leading-none transition-colors cursor-pointer ${
-            !visualActiveLane
+            !activeLane
               ? "text-[var(--coral)]"
               : "text-[var(--cream)] hover:text-[var(--coral)]"
           }`}
@@ -190,7 +177,13 @@ export const FindSidebar = memo(function FindSidebar({
 
         {/* Search button */}
         <button
-          onClick={() => router.push(`/${portalSlug}?view=find&focus=search`)}
+          onClick={() => {
+            onLaneChange(null);
+            // Add focus=search to URL so ExploreHome auto-focuses the search input
+            const url = new URL(window.location.href);
+            url.searchParams.set("focus", "search");
+            window.history.replaceState({}, "", url.toString());
+          }}
           className="flex items-center gap-2 w-full px-3 py-2 rounded-lg
             bg-[var(--void)]/50 border border-[var(--twilight)]/40
             text-[var(--muted)] text-sm hover:border-[var(--twilight)]

@@ -11,7 +11,7 @@
  * All lane renderers (EventsFinder, WhatsOnView, etc.) fetch their own data.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useReplaceStateParams } from "@/lib/hooks/useReplaceStateParams";
 import dynamic from "next/dynamic";
@@ -78,9 +78,63 @@ export default function FindShellClient({
   portalId,
   portalExclusive,
 }: FindShellClientProps) {
-  const nextSearchParams = useSearchParams(); // needed for Suspense hydration
-  const liveParams = useReplaceStateParams(); // reacts to ALL URL changes (push + replace + popstate)
-  const rawLane = liveParams.get("lane");
+  // Lane is client-only state — the server component doesn't use it.
+  // Using router.push for lane changes triggers a server round-trip that
+  // returns identical output, causing useSearchParams to not update.
+  // Instead: React state is the source of truth, pushState keeps URL in sync.
+  const initialSearchParams = useSearchParams();
+  const liveParams = useReplaceStateParams(); // for filter state reads (search, categories, etc.)
+
+  function resolveLane(raw: string | null): string | null {
+    if (raw && raw in SHOW_LANE_REDIRECTS) return "shows";
+    if (raw && SHELL_LANES.has(raw)) return raw;
+    return null;
+  }
+
+  const [lane, setLane] = useState<string | null>(() => {
+    const raw = (typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search)
+      : initialSearchParams
+    ).get("lane");
+    return resolveLane(raw);
+  });
+
+  // Back/forward navigation: read lane from URL when browser history changes
+  useEffect(() => {
+    const onPopState = () => {
+      const raw = new URLSearchParams(window.location.search).get("lane");
+      setLane(resolveLane(raw));
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  // Rewrite legacy lane URLs on mount
+  useEffect(() => {
+    const raw = new URLSearchParams(window.location.search).get("lane");
+    if (raw && raw in SHOW_LANE_REDIRECTS) {
+      const tab = SHOW_LANE_REDIRECTS[raw];
+      const url = new URL(window.location.href);
+      url.searchParams.set("lane", "shows");
+      url.searchParams.set("tab", tab);
+      url.searchParams.delete("vertical");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, []);
+
+  // Lane change handler — passed to sidebar and mobile bar
+  const handleLaneChange = useCallback((laneId: string | null) => {
+    setLane(laneId);
+    const url = new URL(window.location.href);
+    if (laneId) {
+      url.searchParams.set("view", "find");
+      url.searchParams.set("lane", laneId);
+    } else {
+      url.searchParams.delete("lane");
+    }
+    // pushState (not replaceState) so back/forward between lanes works
+    window.history.pushState({}, "", url.toString());
+  }, []);
 
   const hasActiveFilters = !!(
     liveParams.get("search") ||
@@ -92,23 +146,6 @@ export default function FindShellClient({
     liveParams.get("price") ||
     liveParams.get("free")
   );
-
-  // Compute effective lane synchronously — legacy show lanes resolve to "shows"
-  const lane = rawLane && rawLane in SHOW_LANE_REDIRECTS
-    ? "shows"
-    : rawLane && SHELL_LANES.has(rawLane) ? rawLane : null;
-
-  // Side-effect: rewrite legacy lane URLs so bookmarks/sharing get the new URL
-  useEffect(() => {
-    if (rawLane && rawLane in SHOW_LANE_REDIRECTS) {
-      const tab = SHOW_LANE_REDIRECTS[rawLane];
-      const url = new URL(window.location.href);
-      url.searchParams.set("lane", "shows");
-      url.searchParams.set("tab", tab);
-      url.searchParams.delete("vertical");
-      window.history.replaceState({}, "", url.toString());
-    }
-  }, [rawLane]);
 
   const [exploreData, setExploreData] = useState<ExploreHomeResponse | null>(null);
   const [exploreLoading, setExploreLoading] = useState(true);
@@ -178,12 +215,13 @@ export default function FindShellClient({
           portalSlug={portalSlug}
           activeLane={lane}
           laneStates={exploreData?.lanes}
+          onLaneChange={handleLaneChange}
           onLaneHover={(laneId) => LANE_PRELOADS[laneId]?.()}
         />
       </div>
 
       {/* Mobile lane bar — sticky, ALWAYS mounted */}
-      <MobileLaneBar portalSlug={portalSlug} activeLane={lane} />
+      <MobileLaneBar portalSlug={portalSlug} activeLane={lane} onLaneChange={handleLaneChange} />
 
       {/* Content area — offset for sidebar on desktop */}
       <div className="lg:ml-[240px] min-w-0">
