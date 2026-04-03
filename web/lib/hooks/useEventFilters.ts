@@ -1,7 +1,8 @@
 "use client";
 
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useCallback, useMemo } from "react";
+import { useReplaceStateParams, dispatchReplaceState } from "@/lib/hooks/useReplaceStateParams";
 
 /**
  * Filter state parsed from URL
@@ -88,7 +89,9 @@ export function useEventFilters(options?: {
   enablePersistence?: boolean;
   portalVertical?: string;
 }) {
-  const searchParams = useSearchParams();
+  // Use replaceState-aware params so filter changes from useFilterEngine
+  // (which writes via window.history.replaceState) are visible here.
+  const searchParams = useReplaceStateParams();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -148,7 +151,7 @@ export function useEventFilters(options?: {
     return params.toString();
   }, [searchParams]);
 
-  // Update a single filter
+  // Update a single filter via replaceState (no Suspense trigger)
   const setFilter = useCallback(
     (key: keyof EventFilters, value: string | string[] | undefined) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -162,12 +165,14 @@ export function useEventFilters(options?: {
       }
 
       const queryString = params.toString();
-      router.push(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+      const url = queryString ? `${pathname}?${queryString}` : pathname;
+      window.history.replaceState(null, "", url);
+      dispatchReplaceState();
     },
-    [searchParams, router, pathname]
+    [searchParams, pathname]
   );
 
-  // Update multiple filters at once
+  // Update multiple filters at once via replaceState
   const setFilters = useCallback(
     (updates: Partial<EventFilters>) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -183,9 +188,11 @@ export function useEventFilters(options?: {
       });
 
       const queryString = params.toString();
-      router.push(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+      const url = queryString ? `${pathname}?${queryString}` : pathname;
+      window.history.replaceState(null, "", url);
+      dispatchReplaceState();
     },
-    [searchParams, router, pathname]
+    [searchParams, pathname]
   );
 
   // Clear all filters (optionally keep view)
@@ -197,12 +204,15 @@ export function useEventFilters(options?: {
         if (view) params.set("view", view);
       }
       const queryString = params.toString();
-      router.push(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+      const url = queryString ? `${pathname}?${queryString}` : pathname;
+      window.history.replaceState(null, "", url);
+      dispatchReplaceState();
     },
-    [searchParams, router, pathname]
+    [searchParams, pathname]
   );
 
-  // Switch view while preserving shared filters
+  // Switch view — this is a navigation action (changes the view mode),
+  // so we keep router.push to trigger proper page transitions.
   const switchView = useCallback(
     (newView: "events" | "calendar" | "map") => {
       const params = new URLSearchParams();

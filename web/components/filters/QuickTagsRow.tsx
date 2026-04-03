@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import FilterChip, { getTagVariant } from "./FilterChip";
+import { dispatchReplaceState } from "@/lib/hooks/useReplaceStateParams";
 
 // Group configuration for visual separation
 type TagGroup = "access" | "vibe" | "special";
@@ -55,7 +56,6 @@ interface QuickTagsRowProps {
 }
 
 export default function QuickTagsRow({ className = "", showGroupLabels = false }: QuickTagsRowProps) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -99,7 +99,7 @@ export default function QuickTagsRow({ className = "", showGroupLabels = false }
     }
   }, []);
 
-  // Toggle a tag on/off
+  // Toggle a tag on/off via replaceState (no Suspense trigger)
   const toggleTag = useCallback(
     (tagValue: string) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -117,9 +117,10 @@ export default function QuickTagsRow({ className = "", showGroupLabels = false }
       params.delete("page");
 
       const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-      router.push(newUrl, { scroll: false });
+      window.history.replaceState(null, "", newUrl);
+      dispatchReplaceState();
     },
-    [router, pathname, searchParams, activeTags]
+    [pathname, searchParams, activeTags]
   );
 
   // Divider component - enhanced visibility

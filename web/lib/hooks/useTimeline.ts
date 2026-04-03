@@ -1,11 +1,11 @@
 "use client";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
 import { useMemo, useCallback } from "react";
 import type { EventWithLocation } from "@/lib/search";
 import type { Festival } from "@/lib/festivals";
 import { fetchWithRetry } from "@/lib/fetchWithRetry";
+import { useReplaceStateParams } from "@/lib/hooks/useReplaceStateParams";
 
 /**
  * Response from /api/timeline — events + festivals in one stream
@@ -36,7 +36,9 @@ interface UseTimelineOptions {
  */
 export function useTimeline(options: UseTimelineOptions = {}) {
   const { portalId, portalExclusive, initialData, enabled = true, dateOverride } = options;
-  const searchParams = useSearchParams();
+  // Use replaceState-aware params so filter changes from useFilterEngine
+  // (which writes via window.history.replaceState) trigger refetches.
+  const searchParams = useReplaceStateParams();
 
   // Stable query key from filter params (exclude view param)
   const filtersKey = useMemo(() => {

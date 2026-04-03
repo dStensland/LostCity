@@ -1,13 +1,14 @@
 "use client";
 
 import { Suspense, useState, useCallback, useDeferredValue } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { TransitionContainer } from "@/components/ui/TransitionContainer";
 import FindFilterBar from "@/components/find/FindFilterBar";
 import FindSearchInput from "@/components/find/FindSearchInput";
 import { PreSearchState } from "@/components/search";
 import type { PreSearchPayload } from "@/lib/search-presearch";
 import { TRENDING_SEARCHES } from "@/lib/search-presearch";
+import { dispatchReplaceState } from "@/lib/hooks/useReplaceStateParams";
 import EventList from "@/components/EventList";
 import MapViewWrapper from "@/components/MapViewWrapper";
 import CalendarView from "@/components/CalendarView";
@@ -49,7 +50,6 @@ function EventsFinderFiltersInner({
   hasActiveFilters,
   vertical,
 }: EventsFinderProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const urlSearch = searchParams?.get("search") || "";
 
@@ -93,12 +93,14 @@ function EventsFinderFiltersInner({
             trending={preSearchData.trending}
             popularNow={preSearchData.popularNow}
             onTrendingClick={(term) => {
-              // Clicking a trending pill sets it as a URL search param.
-              // FindSearchInput's URL→query sync effect picks this up automatically.
+              // Clicking a trending pill sets it as a URL search param via
+              // replaceState (no Suspense trigger). FindSearchInput's URL→query
+              // sync effect picks this up automatically.
               const params = new URLSearchParams(searchParams?.toString() || "");
               params.set("search", term);
               params.delete("page");
-              router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
+              window.history.replaceState(null, "", `/${portalSlug}?${params.toString()}`);
+              dispatchReplaceState();
             }}
             portalSlug={portalSlug}
             layout="wrap"
@@ -153,9 +155,11 @@ export default function EventsFinder({
 }: EventsFinderProps) {
   const renderFilters = showFilters && displayMode === "list";
   const searchParams = useSearchParams();
-  // Detect in-flight filter changes: useDeferredValue holds the previous
-  // searchParams string until React commits the new render. While they differ,
-  // the results area dims via TransitionContainer.
+  // With replaceState-based filter writes, useSearchParams doesn't re-render
+  // on filter changes, so isFilterPending is effectively always false.
+  // This is intentional — filters update instantly without a dimming transition.
+  // The deferred value logic is kept as a fallback for any code paths that
+  // still use router.push/replace (e.g., view switching).
   const searchParamsStr = searchParams?.toString() ?? "";
   const deferredSearchParamsStr = useDeferredValue(searchParamsStr);
   const isFilterPending = searchParamsStr !== deferredSearchParamsStr;
@@ -329,7 +333,7 @@ export default function EventsFinder({
               />
             </div>
             <div className="flex-1 min-w-0">
-              <MapErrorBoundary listHref={`/${portalSlug}?view=happening`}>
+              <MapErrorBoundary listHref={`/${portalSlug}?view=find&lane=events`}>
                 <MapViewWrapper
                   events={mapEvents}
                   portalId={portalId}
@@ -353,7 +357,7 @@ export default function EventsFinder({
             className="md:hidden relative"
             style={{ height: MAP_MOBILE_HEIGHT }}
           >
-            <MapErrorBoundary listHref={`/${portalSlug}?view=happening`}>
+            <MapErrorBoundary listHref={`/${portalSlug}?view=find&lane=events`}>
               <MapViewWrapper
                 events={mapEvents}
                 portalId={portalId}

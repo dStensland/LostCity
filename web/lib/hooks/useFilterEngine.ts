@@ -1,10 +1,11 @@
 "use client";
 
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useCallback, useMemo, useState, useEffect, useRef, useTransition } from "react";
+import { useSearchParams, usePathname } from "next/navigation";
+import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import { CATEGORIES, TAG_GROUPS } from "@/lib/search-constants";
 import { VIBE_GROUPS } from "@/lib/spots-constants";
 import { type FindType } from "@/lib/find-filter-schema";
+import { dispatchReplaceState } from "@/lib/hooks/useReplaceStateParams";
 import {
   createFindFilterSnapshot,
   diffFindFilterKeys,
@@ -107,10 +108,19 @@ export function useFilterEngine({
   findType = "events",
   enableTracking = true,
 }: UseFilterEngineOptions): UseFilterEngineReturn {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+
+  // ─── Local param override ──────────────────────────────────────────────────
+  // replaceState does NOT trigger useSearchParams to re-render. We keep a
+  // local URLSearchParams that's applied immediately on write, so the UI
+  // reflects filter changes instantly. It's cleared once useSearchParams
+  // catches up (i.e. when a real navigation or Next.js flush occurs) — but
+  // in practice it stays in sync because both read from the same URL.
+  const [localParams, setLocalParams] = useState<URLSearchParams | null>(null);
+
+  // The effective params for reading: local override wins while it's present.
+  const effectiveParams = localParams ?? searchParams;
 
   // ─── Availability state ────────────────────────────────────────────────────
   const [genreOptions, setGenreOptions] = useState<GenreOption[]>([]);
@@ -121,25 +131,25 @@ export function useFilterEngine({
 
   // ─── Parsed filter values ──────────────────────────────────────────────────
   const currentCategories = useMemo(
-    () => searchParams.get("categories")?.split(",").filter(Boolean) || [],
-    [searchParams]
+    () => effectiveParams.get("categories")?.split(",").filter(Boolean) || [],
+    [effectiveParams]
   );
   const currentGenres = useMemo(
-    () => searchParams.get("genres")?.split(",").filter(Boolean) || [],
-    [searchParams]
+    () => effectiveParams.get("genres")?.split(",").filter(Boolean) || [],
+    [effectiveParams]
   );
   const currentTags = useMemo(
-    () => searchParams.get("tags")?.split(",").filter(Boolean) || [],
-    [searchParams]
+    () => effectiveParams.get("tags")?.split(",").filter(Boolean) || [],
+    [effectiveParams]
   );
   const currentVibes = useMemo(
-    () => searchParams.get("vibes")?.split(",").filter(Boolean) || [],
-    [searchParams]
+    () => effectiveParams.get("vibes")?.split(",").filter(Boolean) || [],
+    [effectiveParams]
   );
-  const currentMood = searchParams.get("mood") || "";
-  const currentDateFilter = searchParams.get("date") || "";
+  const currentMood = effectiveParams.get("mood") || "";
+  const currentDateFilter = effectiveParams.get("date") || "";
   const effectiveDateFilter = currentDateFilter;
-  const currentFreeOnly = searchParams.get("free") === "1" || searchParams.get("price") === "free";
+  const currentFreeOnly = effectiveParams.get("free") === "1" || effectiveParams.get("price") === "free";
 
   const hasFilters =
     currentCategories.length > 0 ||
@@ -225,7 +235,9 @@ export function useFilterEngine({
   // ─── URL update helper ─────────────────────────────────────────────────────
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
-      const params = new URLSearchParams(searchParams.toString());
+      // Build the new params from the current effective state (local override
+      // or searchParams) so rapid toggling stays consistent.
+      const params = new URLSearchParams(effectiveParams.toString());
       for (const [key, value] of Object.entries(updates)) {
         if (!value) params.delete(key);
         else params.set(key, value);
@@ -233,11 +245,21 @@ export function useFilterEngine({
       params.set("view", "find");
       params.delete("page");
       const url = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-      startTransition(() => {
-        router.replace(url, { scroll: false });
-      });
+
+      // Write to history without triggering a Next.js navigation cycle.
+      // This avoids re-entering Suspense boundaries on every filter toggle.
+      window.history.replaceState(null, "", url);
+
+      // Notify data-fetching hooks (useTimeline, useEventFilters) that the URL
+      // changed so they re-read params and refetch. Without this, hooks using
+      // useReplaceStateParams would never see the change.
+      dispatchReplaceState();
+
+      // Immediately update local state so the UI reflects the change without
+      // waiting for useSearchParams to re-render (which it won't from replaceState).
+      setLocalParams(params);
     },
-    [router, pathname, searchParams, startTransition]
+    [pathname, effectiveParams]
   );
 
   // ─── Toggle helpers ────────────────────────────────────────────────────────
@@ -406,7 +428,7 @@ export function useFilterEngine({
     setDateFilter,
     toggleFreeOnly,
     clearAll,
-    isPending,
+    isPending: false,
     snapshot,
   };
 }

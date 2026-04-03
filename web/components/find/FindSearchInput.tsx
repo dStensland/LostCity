@@ -6,6 +6,7 @@ import { useInstantSearch } from "@/lib/hooks/useInstantSearch";
 import { buildSearchResultHref } from "@/lib/search-navigation";
 import { trackSearchResultClick } from "@/lib/analytics/find-tracking";
 import { addRecentSearch } from "@/lib/searchHistory";
+import { dispatchReplaceState } from "@/lib/hooks/useReplaceStateParams";
 import { SuggestionGroup, QuickActionsList } from "@/components/search";
 import type { SearchResult } from "@/lib/unified-search";
 import type { QuickAction } from "@/lib/search-ranking";
@@ -43,7 +44,7 @@ function resolveViewAllHref(params: {
   }
 
   if (params.findType === "classes") {
-    return `/${params.portalSlug}?view=happening&content=classes&search=${encodedQuery}`;
+    return `/${params.portalSlug}?view=find&lane=events&content=classes&search=${encodedQuery}`;
   }
 
   return `/${params.portalSlug}?view=find&lane=events&search=${encodedQuery}`;
@@ -100,7 +101,10 @@ export default function FindSearchInput({
     }
   }, [urlSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Debounced sync of query → URL
+  // Debounced sync of query → URL via replaceState (no Suspense trigger).
+  // The search query is local state in useInstantSearch; we persist it to
+  // the URL so refreshes/back-nav preserve the query, and so data-fetching
+  // hooks (useTimeline) see the updated ?search= param.
   useEffect(() => {
     clearTimeout(urlSyncRef.current);
     if (skipUrlSyncRef.current > 0) {
@@ -117,11 +121,12 @@ export default function FindSearchInput({
       }
       params.delete("page");
       const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-      router.replace(newUrl, { scroll: false });
+      window.history.replaceState(null, "", newUrl);
+      dispatchReplaceState();
     }, 300);
 
     return () => clearTimeout(urlSyncRef.current);
-  }, [search.query, router, searchParams, pathname]);
+  }, [search.query, searchParams, pathname]);
 
   // Handle suggestion selection → navigate to detail
   const handleSelectSuggestion = useCallback(
@@ -193,7 +198,8 @@ export default function FindSearchInput({
           const params = new URLSearchParams(searchParams?.toString() || "");
           params.set("search", trimmed);
           params.delete("page");
-          router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+          window.history.replaceState(null, "", `${pathname}?${params.toString()}`);
+          dispatchReplaceState();
           setBrowseMode(true);
         }
         search.setShowDropdown(false);
@@ -202,7 +208,7 @@ export default function FindSearchInput({
       }
       search.handleKeyDown(e);
     },
-    [search, searchParams, pathname, router, handleSelectSuggestion, handleSelectQuickAction, handleSelectRecent]
+    [search, searchParams, pathname, handleSelectSuggestion, handleSelectQuickAction, handleSelectRecent]
   );
 
   // Handle trending search click (used in no-results fallback in dropdown)
