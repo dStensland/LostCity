@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import FindSearchInput from "@/components/find/FindSearchInput";
 import { BROWSE_LANES, VIEW_LANES, LANE_META, LANE_ICONS } from "@/lib/explore-lane-meta";
 import { buildFindUrl } from "@/lib/find-url";
@@ -66,6 +66,8 @@ export function ExploreHome({
   onRetry,
 }: ExploreHomeProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const shouldFocusSearch = searchParams?.get("focus") === "search";
   const chips = getQuickChips(portalSlug);
 
   return (
@@ -80,6 +82,7 @@ export function ExploreHome({
             portalSlug={portalSlug}
             portalId={portalId}
             placeholder="Search places, events, classes..."
+            autoFocus={shouldFocusSearch}
           />
         </Suspense>
       </div>

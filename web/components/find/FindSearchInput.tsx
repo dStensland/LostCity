@@ -17,6 +17,7 @@ interface FindSearchInputProps {
   portalId?: string;
   findType?: string | null;
   placeholder?: string;
+  autoFocus?: boolean;
   /** Called whenever preSearchData or preSearchLoading changes. Used by parent to render PreSearchState. */
   onPreSearchChange?: (data: PreSearchPayload | null, loading: boolean) => void;
 }
@@ -53,6 +54,7 @@ export default function FindSearchInput({
   portalId,
   findType,
   placeholder = "Search events...",
+  autoFocus,
   onPreSearchChange,
 }: FindSearchInputProps) {
   const router = useRouter();
@@ -295,6 +297,7 @@ export default function FindSearchInput({
         aria-activedescendant={search.selectedIndex >= 0 ? `find-suggestion-${search.selectedIndex}` : undefined}
         aria-autocomplete="list"
         autoComplete="off"
+        autoFocus={autoFocus}
         title={browseMode ? "Click to edit search" : undefined}
       />
       {search.query && (

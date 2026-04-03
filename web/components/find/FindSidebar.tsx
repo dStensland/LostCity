@@ -171,7 +171,7 @@ export const FindSidebar = memo(function FindSidebar({
 
       {/* Search button */}
       <button
-        onClick={() => router.push(`/${portalSlug}?view=find`)}
+        onClick={() => router.push(`/${portalSlug}?view=find&focus=search`)}
         className="flex items-center gap-2 w-full px-3 py-2 rounded-lg
           bg-[var(--void)]/50 border border-[var(--twilight)]/40
           text-[var(--muted)] text-sm hover:border-[var(--twilight)]
