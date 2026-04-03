@@ -2,24 +2,29 @@
  * Normalizes legacy Happening/Places URL parameters to the unified Find view scheme.
  *
  * Handles backwards compatibility for bookmarks and shared links using old URL patterns:
- * - ?view=happening, ?view=places, ?view=events, ?view=spots → ?view=find
+ * - ?view=happening → ?view=find&lane=events (plus sub-cases below)
+ * - ?view=happening&content=regulars → ?view=find&lane=regulars
+ * - ?view=happening&content=showtimes[&vertical=film|music] → ?view=find&lane=shows[&tab=...]
+ * - ?view=happening&display=calendar → ?view=find&lane=calendar
+ * - ?view=happening&display=map → ?view=find&lane=map
+ * - ?view=places → ?view=find&lane=places
+ * - ?view=events, ?view=spots → ?view=find
  * - ?view=map, ?view=calendar → ?view=find&display=map|calendar
  * - ?tab=eat-drink etc. → ?view=find&lane=dining etc.
- * - ?content=showtimes → ?view=find&lane=shows
- * - ?content=regulars → ?view=find&regulars=true
+ * - ?content=showtimes (standalone, no view=happening) → legacy redirect
+ * - ?content=regulars (standalone, no view=happening) → ?view=find&regulars=true
  * - ?type=showtimes etc. → lane mapping when view resolves to find
  * - ?lane=now-showing → ?lane=shows&tab=film
  * - ?lane=live-music → ?lane=shows&tab=music
  * - ?lane=stage → ?lane=shows&tab=theater
- * - ?view=happening&content=showtimes[&vertical=film|music] → ?view=find&lane=shows[&tab=...]
  *
  * Returns a new URLSearchParams (does not mutate the input).
  */
 
 import { SHELL_LANE_SET } from "@/lib/explore-lane-meta";
 
-// "happening" and "places" are NOT normalized — they're standalone backward-compat paths.
-// Only truly dead view aliases (events, spots) get normalized to find.
+// "happening" and "places" are now normalized to the Find shell.
+// Only truly dead view aliases (events, spots) are also in this set for backward compat.
 const LEGACY_FIND_VIEWS = new Set(["events", "spots"]);
 const DISPLAY_VIEWS = new Set(["map", "calendar"]);
 
@@ -61,24 +66,48 @@ export function normalizeFinURLParams(params: URLSearchParams): URLSearchParams 
   const content = result.get("content");
   const type = result.get("type");
 
-  // Regulars (check before content→lane mapping)
+  // ?view=happening → ?view=find&lane=... (retire HappeningView, server-side safety net)
+  if (view === "happening") {
+    result.set("view", "find");
+    const display = result.get("display");
+
+    if (content === "regulars") {
+      result.set("lane", "regulars");
+    } else if (content === "showtimes" || type === "showtimes") {
+      result.set("lane", "shows");
+      const vertical = result.get("vertical");
+      if (vertical && VERTICAL_TO_TAB[vertical]) {
+        result.set("tab", VERTICAL_TO_TAB[vertical]);
+      }
+      result.delete("vertical");
+    } else {
+      result.set("lane", "events");
+    }
+
+    if (display === "calendar") {
+      result.set("lane", "calendar");
+    } else if (display === "map") {
+      result.set("lane", "map");
+    }
+
+    result.delete("content");
+    result.delete("display");
+    result.delete("type");
+    return result;
+  }
+
+  // ?view=places → ?view=find&lane=places
+  if (view === "places") {
+    result.set("view", "find");
+    result.set("lane", "places");
+    return result;
+  }
+
+  // Regulars without view=happening (standalone backward-compat)
   if (content === "regulars") {
     result.set("view", "find");
     result.set("regulars", "true");
     result.delete("content");
-    return result;
-  }
-
-  // ?view=happening&content=showtimes → ?view=find&lane=shows[&tab=film|music]
-  if (view === "happening" && content === "showtimes") {
-    result.set("view", "find");
-    result.set("lane", "shows");
-    result.delete("content");
-    const vertical = result.get("vertical");
-    if (vertical && VERTICAL_TO_TAB[vertical]) {
-      result.set("tab", VERTICAL_TO_TAB[vertical]);
-    }
-    result.delete("vertical");
     return result;
   }
 
@@ -125,8 +154,11 @@ export function normalizeFinURLParams(params: URLSearchParams): URLSearchParams 
     return result;
   }
 
-  // Content → lane mapping (only when view is already "find" — don't override standalone "happening"/"places")
-  if (content && CONTENT_TO_LANE[content] && result.get("view") === "find") {
+  // Content → lane mapping
+  // view=happening and view=places are handled above with early returns, so this
+  // safely fires for any remaining case (standalone content=showtimes, or view=find).
+  if (content && CONTENT_TO_LANE[content]) {
+    result.set("view", "find");
     result.set("lane", CONTENT_TO_LANE[content]);
     result.delete("content");
   }
