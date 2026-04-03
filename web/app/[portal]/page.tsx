@@ -3,16 +3,8 @@ import { headers } from "next/headers";
 import { getCityPhoto } from "@/lib/city-pulse/header-defaults";
 import { getTimeSlot, getDayOfWeek } from "@/lib/city-pulse/time-slots";
 import { getServerFeedData } from "@/lib/city-pulse/server-feed";
-import { getServerRegularsData } from "@/lib/server-regulars";
 import { AmbientBackground } from "@/components/ambient";
-import HappeningView from "@/components/find/HappeningView";
-import type { HappeningContent } from "@/components/find/HappeningView";
-import dynamic from "next/dynamic";
 import FindShellClient from "@/components/find/FindShellClient";
-
-const SpotsFinder = dynamic(() => import("@/components/find/SpotsFinder"), {
-  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading places...</div>,
-});
 import DetailViewRouter from "@/components/views/DetailViewRouter";
 import { DefaultTemplate } from "./_templates/default";
 import { GalleryTemplate } from "./_templates/gallery";
@@ -32,7 +24,6 @@ import { isDogPortal, DOG_PORTAL_VAR_OVERRIDES, DOG_DETAIL_VIEW_CSS } from "@/li
 import { safeJsonLd } from "@/lib/formats";
 import { toAbsoluteUrl, getSiteUrl } from "@/lib/site-url";
 import {
-  hasActiveFindFilters,
   hasAnyActiveFindFilters,
 } from "@/lib/find-filter-schema";
 import {
@@ -114,47 +105,6 @@ function FindShellWithData({
   );
 }
 
-// ExploreShell removed — replaced by FindShellClient (client component)
-// for instant lane switching without server round-trips.
-
-type HappeningViewWithDataProps = {
-  portal: { id: string; slug: string; portal_type: string; parent_portal_id?: string | null };
-  isExclusive: boolean;
-  displayMode: "list" | "map" | "calendar";
-  hasActiveFilters: boolean;
-  vertical: string | null | undefined;
-  happeningContent: HappeningContent;
-};
-
-async function HappeningViewWithData({
-  portal,
-  isExclusive,
-  displayMode,
-  hasActiveFilters,
-  vertical,
-  happeningContent,
-}: HappeningViewWithDataProps) {
-  // Only pre-fetch when the RSC knows we're landing on the regulars sub-view.
-  // All other content types (all, showtimes) keep their existing client-fetch paths.
-  const initialRegularsData =
-    happeningContent === "regulars"
-      ? await getServerRegularsData(portal.slug)
-      : null;
-
-  return (
-    <HappeningView
-      portalId={portal.id}
-      portalSlug={portal.slug}
-      portalExclusive={isExclusive}
-      displayMode={displayMode}
-      hasActiveFilters={hasActiveFilters}
-      vertical={vertical}
-      contentType={happeningContent}
-      initialRegularsData={initialRegularsData}
-    />
-  );
-}
-
 
 export async function generateMetadata({
   params,
@@ -195,8 +145,7 @@ export async function generateMetadata({
   };
 }
 
-type ViewMode = "feed" | "find" | "happening" | "places" | "community";
-type FindDisplay = "list" | "map" | "calendar";
+type ViewMode = "feed" | "find" | "community";
 
 type PortalSearchParams = {
   search?: string;
@@ -393,94 +342,43 @@ export default async function PortalPage({ params, searchParams }: Props) {
   const normalizedParams = normalizeFinURLParams(rawParams);
 
   const viewParam = normalizedParams.get("view") ?? undefined;
-  const fromParam = normalizedParams.get("from") || searchParamsData?.from || "";
-  const findTypeParam = normalizedParams.get("type") ?? undefined;
-  const findDisplayParam = normalizedParams.get("display") ?? undefined;
-  const contentParam = normalizedParams.get("content") ?? undefined;
+
+  // Any find-related signals (type, display, filter params) without an explicit view
+  // should route to the Find shell rather than the feed.
   const hasFindSignals = Boolean(
-    findTypeParam ||
-      findDisplayParam ||
+    normalizedParams.get("type") ||
+      normalizedParams.get("display") ||
       hasAnyActiveFindFilters(searchParamsData)
   );
 
   // ─── View Mode Resolution ───────────────────────────────────────────────
-  // New URL scheme: view=find with lane= param, view=community
-  // Backward compat: view=find maps to happening or places based on type param
+  // Canonical: view=find (with lane= param), view=community, or no view (feed).
+  // The normalizer converts legacy ?view=happening and ?view=places to ?view=find
+  // before we reach this point. The "happening"/"places" cases below are safety nets
+  // in case the normalizer is bypassed.
   let viewMode: ViewMode = "feed";
   if (viewParam === "feed") {
     viewMode = "feed";
   } else if (viewParam === "community") {
     viewMode = "community";
-  } else if (viewParam === "find") {
+  } else if (
+    viewParam === "find" ||
+    viewParam === "happening" ||
+    viewParam === "places" ||
+    viewParam === "events" ||
+    viewParam === "spots" ||
+    viewParam === "map" ||
+    viewParam === "calendar"
+  ) {
     viewMode = "find";
-  } else if (viewParam === "places") {
-    viewMode = "places";
-  } else if (viewParam === "happening") {
-    viewMode = "happening";
-  } else if (viewParam === "events" || viewParam === "spots" || viewParam === "map" || viewParam === "calendar") {
-    // Backward compat: legacy view params route to happening or places based on type
-    const typeP = findTypeParam;
-    if (typeP === "destinations" || typeP === "spots" || viewParam === "spots") {
-      viewMode = "places";
-    } else {
-      viewMode = "happening";
-    }
   } else if (hasFindSignals) {
-    // Filter signals without explicit view → infer from type
-    if (findTypeParam === "destinations" || findTypeParam === "spots") {
-      viewMode = "places";
-    } else {
-      viewMode = "happening";
-    }
+    viewMode = "find";
   }
 
   // ?view=community now lives at /your-people — redirect immediately
   if (viewMode === "community") {
     redirect("/your-people");
   }
-
-  // ─── Happening Content Type ─────────────────────────────────────────────
-  // Maps ?content= param (or legacy ?type= param) to content type
-  let happeningContent: HappeningContent = "all";
-  if (contentParam === "regulars" || findTypeParam === "regulars") {
-    happeningContent = "regulars";
-  } else if (contentParam === "showtimes" || findTypeParam === "showtimes" || findTypeParam === "whats_on") {
-    happeningContent = "showtimes";
-  }
-
-  // Community portals only support events content
-  if (isCommunity) {
-    happeningContent = "all";
-  }
-
-  // ─── Display Mode ──────────────────────────────────────────────────────
-  let findDisplay: FindDisplay = "list";
-  if (findDisplayParam) {
-    findDisplay = findDisplayParam as FindDisplay;
-  } else if (viewParam === "map") {
-    findDisplay = "map";
-  } else if (viewParam === "calendar") {
-    findDisplay = "calendar";
-  }
-
-  // Places defaults to list unless display=map is explicit
-  if (viewMode === "places") {
-    const placesExplicit =
-      viewParam === "places" || viewParam === "spots" ||
-      findTypeParam === "destinations" || findTypeParam === "spots";
-    const mapExplicit = findDisplayParam === "map";
-    if (!(placesExplicit && mapExplicit)) {
-      findDisplay = "list";
-    }
-  }
-
-  // Map the content type to FindType for filter checking
-  const findTypeForFilters = happeningContent === "regulars" ? "regulars" as const
-    : happeningContent === "showtimes" ? "showtimes" as const
-    : "events" as const;
-
-  // Check for active filters
-  const hasActiveFilters = hasActiveFindFilters(searchParamsData, findTypeForFilters);
   const portalPageSchema = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -570,64 +468,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
                       />
                     </Suspense>
                   )}
-
-                  {viewMode === "happening" && (
-                    <div data-skeleton-route="happening-view" className="contents">
-                      {fromParam === "find" && (
-                        <div className="px-4 pt-3 pb-1">
-                          <a href={`/${portal.slug}?view=find`} className="inline-flex items-center gap-1.5 text-sm text-[var(--soft)] hover:text-[var(--cream)] transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"/></svg>
-                            Explore
-                          </a>
-                        </div>
-                      )}
-                      <Suspense fallback={
-                        <div className="py-3 space-y-3">
-                          <div className="flex gap-2">
-                            {[1, 2, 3].map((i) => (
-                              <div key={i} className="h-8 w-20 skeleton-shimmer rounded-full" />
-                            ))}
-                          </div>
-                          <div className="space-y-3">
-                            {[1, 2, 3, 4, 5].map((i) => (
-                              <div key={i} className="h-24 skeleton-shimmer rounded-xl" />
-                            ))}
-                          </div>
-                        </div>
-                      }>
-                        <HappeningViewWithData
-                          portal={portal}
-                          isExclusive={isExclusive}
-                          displayMode={findDisplay}
-                          hasActiveFilters={hasActiveFilters}
-                          vertical={vertical}
-                          happeningContent={happeningContent}
-                        />
-                      </Suspense>
-                    </div>
-                  )}
-
-                  {viewMode === "places" && (
-                    <div data-skeleton-route="places-view" className="contents">
-                      {fromParam === "find" && (
-                        <div className="px-4 pt-3 pb-1">
-                          <a href={`/${portal.slug}?view=find`} className="inline-flex items-center gap-1.5 text-sm text-[var(--soft)] hover:text-[var(--cream)] transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"/></svg>
-                            Explore
-                          </a>
-                        </div>
-                      )}
-                      <Suspense fallback={<div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading places...</div>}>
-                        <SpotsFinder
-                          portalId={portal.id}
-                          portalSlug={portal.slug}
-                          portalExclusive={isExclusive}
-                          displayMode={findDisplay === "calendar" ? "list" : findDisplay as "list" | "map"}
-                        />
-                      </Suspense>
-                    </div>
-                  )}
-
 
                 </>
               );

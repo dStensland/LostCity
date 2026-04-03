@@ -2218,3 +2218,148 @@ END;
 $$ LANGUAGE plpgsql STABLE;
 
 GRANT EXECUTE ON FUNCTION get_right_now_feed TO anon, authenticated;
+
+-- -------------------------------------------------------
+-- Explore Home lane counts (migration 20260401000003)
+-- Single-scan conditional aggregation replacing ~18 REST queries.
+-- -------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION get_explore_home_counts(
+  p_portal_id     UUID     DEFAULT NULL,
+  p_source_ids    INT[]    DEFAULT NULL,
+  p_today         DATE     DEFAULT CURRENT_DATE,
+  p_week_end      DATE     DEFAULT NULL,
+  p_weekend_start DATE     DEFAULT NULL,
+  p_weekend_end   DATE     DEFAULT NULL,
+  p_city_filter   TEXT     DEFAULT 'Atlanta%'
+)
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+AS $$
+  WITH base AS (
+    SELECT
+      category_id,
+      start_date,
+      COALESCE(is_class, false) AS is_class,
+      COALESCE(is_regular_ready, false) AS is_regular_ready,
+      series_id,
+      (COALESCE(is_feed_ready, true) = true) AS is_feed_eligible,
+      place_id
+    FROM events
+    WHERE is_active = true
+      AND canonical_event_id IS NULL
+      AND start_date >= p_today
+      AND start_date <= COALESCE(p_week_end, p_today + 7)
+      AND (
+        CASE
+          WHEN p_portal_id IS NOT NULL AND p_source_ids IS NOT NULL THEN
+            (portal_id = p_portal_id OR source_id = ANY(p_source_ids))
+          WHEN p_portal_id IS NOT NULL THEN
+            portal_id = p_portal_id
+          ELSE
+            portal_id IS NULL
+        END
+      )
+  ),
+  show_cats AS (
+    SELECT ARRAY['film','music','theater','comedy','dance'] AS cats
+  ),
+  exclude_cats AS (
+    SELECT ARRAY['film','theater','education','support','support_group',
+                  'civic','volunteer','religious','community','family','learning'] AS cats
+  ),
+  event_counts AS (
+    SELECT
+      COUNT(*) FILTER (WHERE is_feed_eligible AND NOT is_class
+        AND category_id IS NOT NULL AND category_id <> ALL((SELECT cats FROM show_cats))
+      ) AS events_total,
+      COUNT(*) FILTER (WHERE is_feed_eligible AND NOT is_class
+        AND category_id IS NOT NULL AND category_id <> ALL((SELECT cats FROM show_cats))
+        AND start_date = p_today
+      ) AS events_today,
+      COUNT(*) FILTER (WHERE is_feed_eligible AND NOT is_class
+        AND category_id IS NOT NULL AND category_id <> ALL((SELECT cats FROM show_cats))
+        AND p_weekend_start IS NOT NULL AND start_date >= p_weekend_start AND start_date <= p_weekend_end
+      ) AS events_weekend,
+      COUNT(*) FILTER (WHERE is_feed_eligible AND NOT is_class
+        AND category_id = ANY((SELECT cats FROM show_cats))
+      ) AS shows_total,
+      COUNT(*) FILTER (WHERE is_feed_eligible AND NOT is_class
+        AND category_id = ANY((SELECT cats FROM show_cats)) AND start_date = p_today
+      ) AS shows_today,
+      COUNT(*) FILTER (WHERE is_feed_eligible AND NOT is_class
+        AND category_id = ANY((SELECT cats FROM show_cats))
+        AND p_weekend_start IS NOT NULL AND start_date >= p_weekend_start AND start_date <= p_weekend_end
+      ) AS shows_weekend,
+      COUNT(*) FILTER (WHERE is_feed_eligible AND NOT is_class AND category_id = 'sports') AS gameday_total,
+      COUNT(*) FILTER (WHERE is_feed_eligible AND NOT is_class AND category_id = 'sports' AND start_date = p_today) AS gameday_today,
+      COUNT(*) FILTER (WHERE is_feed_eligible AND NOT is_class AND category_id = 'sports'
+        AND p_weekend_start IS NOT NULL AND start_date >= p_weekend_start AND start_date <= p_weekend_end
+      ) AS gameday_weekend,
+      COUNT(*) FILTER (WHERE is_regular_ready AND NOT is_class AND series_id IS NOT NULL
+        AND category_id IS NOT NULL AND category_id <> ALL((SELECT cats FROM exclude_cats))
+      ) AS regulars_total,
+      COUNT(*) FILTER (WHERE is_regular_ready AND NOT is_class AND series_id IS NOT NULL
+        AND category_id IS NOT NULL AND category_id <> ALL((SELECT cats FROM exclude_cats))
+        AND start_date = p_today
+      ) AS regulars_today,
+      COUNT(*) FILTER (WHERE is_regular_ready AND NOT is_class AND series_id IS NOT NULL
+        AND category_id IS NOT NULL AND category_id <> ALL((SELECT cats FROM exclude_cats))
+        AND p_weekend_start IS NOT NULL AND start_date >= p_weekend_start AND start_date <= p_weekend_end
+      ) AS regulars_weekend,
+      COUNT(*) FILTER (WHERE is_class AND is_feed_eligible) AS classes_total_7d,
+      COUNT(*) FILTER (WHERE is_class AND is_feed_eligible AND start_date = p_today) AS classes_today,
+      COUNT(*) FILTER (WHERE is_class AND is_feed_eligible
+        AND p_weekend_start IS NOT NULL AND start_date >= p_weekend_start AND start_date <= p_weekend_end
+      ) AS classes_weekend,
+      COUNT(*) FILTER (WHERE is_feed_eligible) AS calendar_total,
+      COUNT(*) FILTER (WHERE is_feed_eligible AND place_id IS NOT NULL) AS map_candidates
+    FROM base
+  ),
+  classes_uncapped AS (
+    SELECT COUNT(*) AS total
+    FROM events
+    WHERE is_class = true AND is_active = true
+      AND COALESCE(is_feed_ready, true) = true
+      AND canonical_event_id IS NULL AND start_date >= p_today
+      AND (CASE
+        WHEN p_portal_id IS NOT NULL AND p_source_ids IS NOT NULL THEN
+          (portal_id = p_portal_id OR source_id = ANY(p_source_ids))
+        WHEN p_portal_id IS NOT NULL THEN portal_id = p_portal_id
+        ELSE portal_id IS NULL
+      END)
+  ),
+  map_count AS (
+    SELECT COUNT(*) AS total
+    FROM base b JOIN places p ON p.id = b.place_id
+    WHERE b.is_feed_eligible AND p.lat IS NOT NULL AND p.lng IS NOT NULL
+  ),
+  places_count AS (
+    SELECT COUNT(*) AS total
+    FROM places WHERE COALESCE(is_active, true) != false AND city ILIKE p_city_filter
+  )
+  SELECT jsonb_build_object(
+    'events', jsonb_build_object('count', ec.events_total, 'count_today', ec.events_today,
+      'count_weekend', CASE WHEN p_weekend_start IS NOT NULL THEN ec.events_weekend ELSE NULL END),
+    'shows', jsonb_build_object('count', ec.shows_total, 'count_today', ec.shows_today,
+      'count_weekend', CASE WHEN p_weekend_start IS NOT NULL THEN ec.shows_weekend ELSE NULL END),
+    'game-day', jsonb_build_object('count', ec.gameday_total, 'count_today', ec.gameday_today,
+      'count_weekend', CASE WHEN p_weekend_start IS NOT NULL THEN ec.gameday_weekend ELSE NULL END),
+    'regulars', jsonb_build_object('count', ec.regulars_total, 'count_today', ec.regulars_today,
+      'count_weekend', CASE WHEN p_weekend_start IS NOT NULL THEN ec.regulars_weekend ELSE NULL END),
+    'classes', jsonb_build_object('count', cu.total, 'count_today', ec.classes_today,
+      'count_weekend', CASE WHEN p_weekend_start IS NOT NULL THEN ec.classes_weekend ELSE NULL END),
+    'calendar', jsonb_build_object('count', ec.calendar_total, 'count_today', NULL::bigint, 'count_weekend', NULL::bigint),
+    'map', jsonb_build_object('count', mc.total, 'count_today', NULL::bigint, 'count_weekend', NULL::bigint),
+    'places', jsonb_build_object('count', pc.total, 'count_today', NULL::bigint, 'count_weekend', NULL::bigint)
+  )
+  FROM event_counts ec
+  CROSS JOIN classes_uncapped cu
+  CROSS JOIN map_count mc
+  CROSS JOIN places_count pc
+$$;
+
+COMMENT ON FUNCTION get_explore_home_counts IS
+  'Single-scan conditional aggregation for Explore Home lane counts. '
+  'Replaces ~18 individual Supabase REST queries with one function call.';

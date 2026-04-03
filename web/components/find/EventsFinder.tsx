@@ -128,8 +128,8 @@ function EventsFinderFiltersInner({
 }
 
 /**
- * Re-exported filter block for use in external containers (e.g. HappeningView's
- * sticky control panel). Wraps EventsFinderFiltersInner in a Suspense boundary.
+ * Re-exported filter block for use in external containers.
+ * Wraps EventsFinderFiltersInner in a Suspense boundary.
  */
 export function EventsFinderFilters(props: Omit<EventsFinderProps, "showFilters">) {
   return (
