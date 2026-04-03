@@ -169,7 +169,7 @@ export default function FindShellClient({
   }, [portalSlug, lane, retryKey]);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)]">
+    <div>
       {/* Desktop sidebar — fixed to viewport, ALWAYS mounted */}
       <div className="hidden lg:block fixed top-[73px] left-0 bottom-0 w-[240px] z-30 overflow-y-auto">
         <FindSidebar

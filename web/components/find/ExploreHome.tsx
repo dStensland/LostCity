@@ -39,7 +39,7 @@ export function ExploreHome({
   const shouldFocusSearch = searchParams?.get("focus") === "search";
 
   return (
-    <div className="flex flex-col gap-6 max-w-xl mx-auto px-4 py-8">
+    <div className="flex flex-col gap-6 max-w-xl mx-auto px-4 py-8 min-h-[calc(100vh-5rem)]">
       {/* Search hero */}
       <div className="text-center">
         <p className="text-xs font-mono uppercase tracking-[0.14em] text-[var(--muted)] mb-3">

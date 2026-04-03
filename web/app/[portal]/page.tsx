@@ -407,7 +407,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
   })();
 
   return (
-    <div className="min-h-screen">
+    <div className={viewMode === "find" ? "" : "min-h-screen"}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(portalPageSchema) }}
