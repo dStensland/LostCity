@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useTransition, useCallback, useEffect } from "react";
+import { memo, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
@@ -79,7 +79,6 @@ export const FindSidebar = memo(function FindSidebar({
   onLaneHover,
 }: FindSidebarProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [pendingLane, setPendingLane] = useState<string | null>(null);
 
   // Clear pendingLane once the parent's activeLane catches up
@@ -98,22 +97,18 @@ export const FindSidebar = memo(function FindSidebar({
     (lane: Lane, e: React.MouseEvent) => {
       e.preventDefault();
       setPendingLane(lane.id);
-      startTransition(() => {
-        router.push(`/${portalSlug}${lane.href}`);
-      });
+      router.push(`/${portalSlug}${lane.href}`);
     },
-    [portalSlug, router, startTransition]
+    [portalSlug, router]
   );
 
   const handleExploreClick = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
       setPendingLane(null);
-      startTransition(() => {
-        router.push(`/${portalSlug}?view=find`);
-      });
+      router.push(`/${portalSlug}?view=find`);
     },
-    [portalSlug, router, startTransition]
+    [portalSlug, router]
   );
 
   function renderLane(lane: Lane) {
