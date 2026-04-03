@@ -71,7 +71,7 @@ export function ExploreHome({
   const chips = getQuickChips(portalSlug);
 
   return (
-    <div className="flex flex-col gap-6 max-w-lg mx-auto px-4 py-8">
+    <div className="flex flex-col gap-6 max-w-xl mx-auto px-4 py-8">
       {/* Search hero */}
       <div className="text-center">
         <p className="text-xs font-mono uppercase tracking-[0.14em] text-[var(--muted)] mb-3">
@@ -147,12 +147,12 @@ export function ExploreHome({
               className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
                 isZero
                   ? "opacity-50 border-[var(--twilight)]/20 bg-transparent"
-                  : "border-[var(--twilight)]/30 hover:border-[var(--twilight)]/60"
+                  : "border-[var(--twilight)]/30 hover:border-[var(--twilight)]/80"
               }`}
               style={{
                 background: isZero
                   ? "transparent"
-                  : `color-mix(in srgb, ${meta.accent} 6%, transparent)`,
+                  : `color-mix(in srgb, ${meta.accent} 8%, transparent)`,
               }}
             >
               <Icon
@@ -195,7 +195,7 @@ export function ExploreHome({
                 e.preventDefault();
                 router.push(meta.href);
               }}
-              className="flex items-center gap-1.5 text-sm text-[var(--muted)]
+              className="flex items-center gap-1.5 text-sm text-[var(--soft)]
                 hover:text-[var(--cream)] transition-colors"
             >
               <Icon size={16} weight="duotone" />
