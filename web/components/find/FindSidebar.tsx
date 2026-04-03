@@ -69,12 +69,14 @@ interface FindSidebarProps {
   portalSlug: string;
   activeLane?: string | null;
   laneStates?: Record<string, { state: string; count: number; count_today: number | null }>;
+  onLaneHover?: (laneId: string) => void;
 }
 
 export const FindSidebar = memo(function FindSidebar({
   portalSlug,
   activeLane,
   laneStates,
+  onLaneHover,
 }: FindSidebarProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -123,6 +125,7 @@ export const FindSidebar = memo(function FindSidebar({
         <a
           href={`/${portalSlug}${lane.href}`}
           onClick={(e) => handleLaneClick(lane, e)}
+          onMouseEnter={() => onLaneHover?.(lane.id)}
           className={[
             "flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors cursor-pointer",
             isActive
