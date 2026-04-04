@@ -76,10 +76,13 @@ export function GoblinPlanningView({
   const proposedIds = new Set(proposedMovies.map((m) => m.id));
   const availableToPropose = allMovies.filter((m) => !proposedIds.has(m.id));
 
+  const basePath = typeof window !== "undefined"
+    ? window.location.pathname.replace(/\/$/, "")
+    : "/goblinday";
   const inviteUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}${window.location.pathname}?invite=${inviteCode}`
-      : `?invite=${inviteCode}`;
+      ? `${window.location.origin}${basePath}/s/${inviteCode}`
+      : `${basePath}/s/${inviteCode}`;
 
   const handleCopyInvite = useCallback(async () => {
     try {
