@@ -78,8 +78,8 @@ export function GoblinPlanningView({
 
   const inviteUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/goblinday?invite=${inviteCode}`
-      : `/goblinday?invite=${inviteCode}`;
+      ? `${window.location.origin}${window.location.pathname}?invite=${inviteCode}`
+      : `?invite=${inviteCode}`;
 
   const handleCopyInvite = useCallback(async () => {
     try {

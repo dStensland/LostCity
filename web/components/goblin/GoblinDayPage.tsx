@@ -285,11 +285,12 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
 
   const handleCancelSession = useCallback(async () => {
     if (!activeSession) return;
-    await fetch(`/api/goblinday/sessions/${activeSession.id}`, {
+    const res = await fetch(`/api/goblinday/sessions/${activeSession.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "canceled" }),
     });
+    if (!res.ok) return;
     setActiveSession(null);
     setSessionData(null);
     fetchSessionsList();
