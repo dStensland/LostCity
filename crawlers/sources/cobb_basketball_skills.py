@@ -21,7 +21,6 @@ from db import (
 from dedupe import generate_content_hash
 from pipeline.program_descriptions import build_program_description
 from sources._rec1_base import (
-    _extract_feature,
     _get_checkout_key,
     _get_groups_for_tab,
     _get_sessions_for_group,

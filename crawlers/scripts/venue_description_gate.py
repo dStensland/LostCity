@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """Generate the machine-readable venue-description pilot gate."""
 
 from __future__ import annotations

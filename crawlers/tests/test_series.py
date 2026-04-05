@@ -3,10 +3,9 @@ Tests for series.py — series matching / creation logic.
 All tests use MagicMock to avoid real database calls.
 """
 
-from unittest.mock import MagicMock, call
-import pytest
+from unittest.mock import MagicMock
 
-from series import find_series_by_title, get_or_create_series, slugify, normalize_title
+from series import find_series_by_title, get_or_create_series
 
 
 # ---------------------------------------------------------------------------

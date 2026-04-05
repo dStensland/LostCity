@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """Generate an Atlanta-facing verification snapshot for festival quality."""
 
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from datetime import datetime
 from pathlib import Path

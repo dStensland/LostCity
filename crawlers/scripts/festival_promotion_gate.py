@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """Fail-fast promotion gate for festival quality.
 
 This gate reuses the live festival audit snapshot plus the bounded LLM pilot

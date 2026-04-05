@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """Backfill missing descriptions for parent festival_program series.
 
 This targets the remaining structural case where the parent festival-program

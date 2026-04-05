@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """
 Merge known duplicate venue pairs into canonical venue records.
 

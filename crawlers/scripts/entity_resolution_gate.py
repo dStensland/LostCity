@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """Generate the machine-readable Phase 4 entity-resolution baseline gate."""
 
 from __future__ import annotations

@@ -9,6 +9,8 @@ Module rename history (Task 8 — places refactor):
   destination_details.py -> place_vertical.py
 """
 
+# ruff: noqa: F401
+
 # ===== client.py =====
 from db.client import (
     smart_title_case,

@@ -11,7 +11,6 @@ Uses The Events Calendar WordPress plugin with REST API.
 from __future__ import annotations
 
 import logging
-import re
 from datetime import date, datetime
 from typing import Optional
 

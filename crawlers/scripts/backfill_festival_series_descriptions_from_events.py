@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """Backfill missing festival-linked series descriptions from active event copy."""
 
 from __future__ import annotations

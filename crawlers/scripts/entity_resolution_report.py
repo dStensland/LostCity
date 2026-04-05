@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """Generate the Phase 4 entity-resolution baseline report."""
 
 from __future__ import annotations

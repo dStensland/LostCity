@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """
 Festival Enrichment Pipeline — bulk-enrich all festivals from the festivals table.
 
@@ -949,7 +950,7 @@ def enrich_festivals(
         use_llm=True,  # Enable LLM fallback for description extraction
     )
 
-    logger.info(f"Festival Enrichment Pipeline")
+    logger.info("Festival Enrichment Pipeline")
     logger.info(f"{'=' * 70}")
     logger.info(
         f"Total with website: {len(all_festivals)} | To enrich: {len(festivals)}"
@@ -1132,7 +1133,7 @@ def enrich_festivals(
 
     # Summary
     logger.info(f"\n{'=' * 70}")
-    logger.info(f"RESULTS")
+    logger.info("RESULTS")
     logger.info(f"{'=' * 70}")
     logger.info(f"Processed:  {stats['total']}")
     logger.info(f"Descriptions: {stats['description']}")
@@ -1143,7 +1144,7 @@ def enrich_festivals(
     logger.info(f"Failed:     {stats['failed']}")
     logger.info(f"Skipped:    {stats['skipped']} (already complete)")
     if dry_run:
-        logger.info(f"\nDRY RUN — no changes written to database")
+        logger.info("\nDRY RUN — no changes written to database")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """Delete zero-event festival-linked ghost series.
 
 This is a narrow structural cleanup for the festival quality gate. It only

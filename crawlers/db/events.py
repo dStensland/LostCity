@@ -6,7 +6,7 @@ import re
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field as dc_field
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -33,7 +33,6 @@ from db.validation import (
     _reject_aggregator_source_url,
     normalize_category,
     infer_content_kind,
-    sanitize_text,
 )
 from db.places import get_venue_by_id_cached
 from crawl_context import get_crawl_context
@@ -47,7 +46,6 @@ from db.enrichment import _queue_event_blurhash
 from db.series_linking import _force_update_series_day
 from db.artists import (
     parse_lineup_from_title,
-    sanitize_event_artists,
     upsert_event_artists,
     _NIGHTLIFE_SKIP_GENRES,
 )
@@ -772,7 +770,6 @@ def _step_infer_category(event_data: dict, ctx: InsertContext) -> dict:
 
     # Tighten community: reclassify events with strong specific-category signals
     if event_data.get("category") == "community":
-        title_lower = (event_data.get("title") or "").lower()
         tags = event_data.get("tags") or []
         genres = event_data.get("genres") or []
         all_signals = set(tags + genres)

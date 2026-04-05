@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """Collapse clearly orphaned festival_program series into direct festival events.
 
 Safe cases only:
