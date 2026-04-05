@@ -220,6 +220,17 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
     }
   }, [activeTab, activeSession, fetchSession, fetchSessionsList]);
 
+  // Poll live sessions every 15 seconds for shared matrix sync
+  useEffect(() => {
+    if (activeTab !== "next" || !activeSession || activeSession.status !== "live") return;
+
+    const interval = setInterval(() => {
+      fetchSession(activeSession.id);
+    }, 15_000);
+
+    return () => clearInterval(interval);
+  }, [activeTab, activeSession, fetchSession]);
+
   const handleStartSession = useCallback(async () => {
     if (!requireAuth()) return;
     setSessionLoading(true);
