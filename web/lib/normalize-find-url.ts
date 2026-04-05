@@ -266,6 +266,14 @@ export function toCanonicalExploreUrl(
   return `/${portalSlug}/explore${query ? `?${query}` : ""}`;
 }
 
+/**
+ * Root-path signals that should canonicalize into the Explore surface.
+ *
+ * This includes true legacy view-based URLs, but also plain search queries like
+ * `/{portal}?q=brunch`. Consumer search is modeled as Explore entry, so root
+ * search requests should land on `/{portal}/explore?...` even though they do
+ * not require legacy param normalization once they are already on `/explore`.
+ */
 export function isLegacyExploreRequest(params: URLSearchParams): boolean {
   const view = params.get("view");
 

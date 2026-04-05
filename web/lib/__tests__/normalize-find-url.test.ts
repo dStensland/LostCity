@@ -227,6 +227,12 @@ describe("canonical explore URL helpers", () => {
     ).toBe("/atlanta/explore?display=calendar&lane=events");
   });
 
+  it("treats root q as a canonical explore entry signal", () => {
+    expect(toCanonicalExploreUrl("atlanta", new URLSearchParams("q=brunch"))).toBe(
+      "/atlanta/explore?q=brunch",
+    );
+  });
+
   it("detects legacy explore entry signals", () => {
     expect(isLegacyExploreRequest(new URLSearchParams("view=find&lane=events"))).toBe(true);
     expect(isLegacyExploreRequest(new URLSearchParams("q=brunch"))).toBe(true);

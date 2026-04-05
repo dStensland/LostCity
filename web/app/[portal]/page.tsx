@@ -102,6 +102,8 @@ export default async function PortalPage({ params, searchParams }: Props) {
     redirect("/your-people");
   }
 
+  // Root-path search and legacy view params both canonicalize into Explore.
+  // The feed surface should not own discovery/search URL handling.
   if (isLegacyExploreRequest(rawParams) && !hasLegacyDetailParams(searchParamsData)) {
     redirect(toCanonicalExploreUrl(request.portal.slug, rawParams));
   }
