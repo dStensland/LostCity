@@ -85,12 +85,15 @@ export default function GoblinThemeMatrix({
     setOptimisticToggles(new Map());
   }, [themes]);
 
-  // Scroll new row into view
+  // Scroll new row into view (requestAnimationFrame ensures DOM has rendered)
   useEffect(() => {
-    if (newThemeId && newRowRef.current) {
-      newRowRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (!newThemeId) return;
+    requestAnimationFrame(() => {
+      if (newRowRef.current) {
+        newRowRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
       setNewThemeId(null);
-    }
+    });
   }, [newThemeId, activeThemes]);
 
   /* ---- Toggle a cell ---- */

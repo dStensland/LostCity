@@ -30,11 +30,11 @@ export default async function Page() {
     .select("*")
     .order("release_date", { ascending: true, nullsFirst: false });
 
-  // Check for active session
+  // Check for active session (planning or live)
   const { data: activeSession } = await supabase
     .from("goblin_sessions")
     .select("id")
-    .eq("is_active", true)
+    .in("status", ["planning", "live"])
     .maybeSingle();
 
   return (
