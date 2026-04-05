@@ -4,9 +4,11 @@
 **Status:** Active roadmap  
 **Primary surface:** `both`
 
-This is the execution roadmap for making LostCity's data layer materially richer, more reliable, and more reusable across Atlanta, FORTH, HelpATL, Family, Adventure, Arts, and Sports.
+This is the strategic roadmap for making LostCity's data layer materially richer, more reliable, and more reusable across Atlanta, FORTH, HelpATL, Family, Adventure, Arts, and Sports.
 
 It is intentionally repo-specific. It translates the north star, crawler rules, and current plan docs into a single tracking artifact.
+
+This file is strategy/reference only. Do not use it as the live execution checklist.
 
 ## Why This Exists
 
@@ -34,21 +36,22 @@ This roadmap exists to fix that in the right order:
 - Every new field or enrichment path should preserve provenance and confidence.
 - Consumer quality is the bar. If a real user would notice the defect, it is roadmap-worthy.
 
-## Canonical Execution Docs
+## Canonical Control Docs
 
 - Program board: `docs/superpowers/plans/2026-04-01-rich-data-program-board.md`
-- Phase 1 workstream: `docs/superpowers/plans/2026-03-30-phase1-description-pipeline-workstream.md`
-- Phase 2 workstream: `docs/superpowers/plans/2026-03-30-phase2-crawler-remediation-workstream.md`
-- Remaining roadmap execution workstream: `docs/superpowers/plans/2026-03-31-rich-data-roadmap-continuation-workstream.md`
+- Master execution workstream: `docs/superpowers/plans/2026-03-31-rich-data-roadmap-continuation-workstream.md`
+- Historical phase workstreams remain audit/reference docs unless the board explicitly reopens one.
 
 ## Progress Board
 
+This is a short status snapshot, not a tranche-by-tranche execution log.
+
 | Phase | Status | Goal | Exit Signal |
 |------|--------|------|-------------|
-| 0. Shared Extraction Foundation | Planned | Reusable extraction helpers + provenance contract | 3 crawlers migrated to shared helpers without regression |
+| 0. Shared Extraction Foundation | Completed | Reusable extraction helpers + provenance contract | shared helper families are landed across repeated crawler families and the write-contract audit is closed without schema drift |
 | 1. Description Pipeline Defuse | Completed | Stop synthetic descriptions from being generated or reintroduced | Daily/weekly automation no longer writes synthetic boilerplate |
-| 2. High-Impact Crawler Remediation | In Progress | Replace template/thin descriptions with real source extraction | Production rewrite queue completes and high-noise sources emit grounded descriptions or `NULL` |
-| 3. Bounded LLM Enrichment | Planned | Fill durable high-value gaps with grounded LLM extraction | Festival/venue description pipeline runs safely in dry-run + apply |
+| 2. High-Impact Crawler Remediation | Completed | Replace template/thin descriptions with real source extraction | Production rewrite queue completed and high-noise sources now emit grounded descriptions or `NULL` |
+| 3. Bounded LLM Enrichment | In Progress | Fill durable high-value gaps with grounded LLM extraction | Festival-only task workflow runs safely in prepare -> extract -> dry-run apply |
 | 4. Canonical Entity Resolution | Planned | Improve venue/festival/program/organizer linking | Duplicate rate and unresolved entity rate trend down |
 | 5. Quality Ops and Publishing | Planned | Make data quality measurable and enforceable | Dashboard + promotion gates in regular use |
 
@@ -86,17 +89,82 @@ This roadmap exists to fix that in the right order:
 
 ### Tasks
 
-- [ ] Define a shared description extraction helper that prefers structured fields before body text.
-- [ ] Add content-region extraction that can isolate `main`, `article`, or role-based main content without pulling full-page chrome.
+- [x] Define a shared description extraction helper that prefers structured fields before body text.
+- [x] Add content-region extraction that can isolate `main`, `article`, or role-based main content without pulling full-page chrome.
 - [ ] Standardize output shape for extracted descriptions, images, hours, specials, and programs.
-- [ ] Audit where `field_provenance`, `field_confidence`, `extraction_version`, or `raw_text` are missing and add migration-backed support only where needed.
-- [ ] Migrate at least 3 existing crawlers onto shared helpers to prove the abstraction is actually useful.
+- [x] Audit where `field_provenance`, `field_confidence`, `extraction_version`, or `raw_text` are missing and add migration-backed support only where needed.
+- [x] Migrate at least 3 existing crawlers onto shared helpers to prove the abstraction is actually useful.
 
 ### Verification
 
-- [ ] Shared helper tests added in `crawlers/tests/`
+- [x] Shared helper tests added in `crawlers/tests/`
 - [ ] `python3 -m pytest`
-- [ ] Dry-run 3 migrated crawlers successfully
+- [x] Dry-run 3 migrated crawlers successfully
+
+### Progress update
+
+- Shared extraction is now active and compounding across repeated crawler families instead of one-off migrations.
+- Landed helper families now include:
+  - `crawlers/pipeline/description_extract.py`
+  - `crawlers/pipeline/factual_descriptions.py`
+  - `crawlers/pipeline/recurring_descriptions.py`
+  - `crawlers/pipeline/program_descriptions.py`
+- Provenance/confidence audit status so far:
+  - helper adoption has not required a write-contract change yet
+  - the active migrations are changing description sourcing/normalization, not the persisted shape
+- Structured program-description batches now validated on active sources include:
+  - municipal/family program tranche:
+    - `atlanta_family_programs` (`398 found / 0 new / 398 updated`)
+    - `dekalb_family_programs` (`372 found / 2 new / 370 updated`)
+  - county-rec tranche 1:
+    - `atlanta_adult_swim_lessons` (`52 found / 0 new / 52 updated`)
+    - `cobb_beginner_swimming_lessons` (`12 found / 0 new / 12 updated`)
+    - `gwinnett_active_adult_cardio` (`16 found / 0 new / 16 updated`)
+    - `dekalb_midway_pickleball` (`1 found / 0 new / 1 updated`)
+  - county-rec tranche 2:
+    - `cobb_advanced_beginner_swimming_lessons` (`6 found / 0 new / 6 updated`)
+    - `dekalb_aquatic_fitness` (`1 found / 0 new / 1 updated`)
+    - `gwinnett_yoga_classes` (`20 found / 0 new / 20 updated`)
+    - `cobb_adult_swim_lessons` is code-migrated and test-clean, but inactive in the `sources` table
+  - Gwinnett rec tranche:
+    - `gwinnett_adult_swim_lessons` (`72 found / 0 new / 72 updated`)
+    - `gwinnett_bachata_classes` (`16 found / 0 new / 16 updated`)
+    - `gwinnett_tap_classes` (`6 found / 0 new / 6 updated`)
+    - `gwinnett_waltz_workshop` (`2 found / 0 new / 2 updated`)
+  - county-rec sports tranche:
+    - `cobb_adult_tennis_classes` (`12 found / 0 new / 12 updated`)
+    - `cobb_pickleball_classes` (`78 found / 0 new / 78 updated`)
+    - `gwinnett_pickleball_classes` (`19 found / 0 new / 19 updated`)
+    - `dekalb_line_dance_101` (`0 found / 0 new / 0 updated`)
+  - county-rec aquatics and wellness tranche:
+    - `atlanta_aquatic_fitness` (`109 found / 2 new / 107 updated`)
+    - `gwinnett_aquatic_fitness` (`78 found / 0 new / 78 updated`)
+    - `gwinnett_rnb_tennis` (`13 found / 0 new / 13 updated`)
+    - `gwinnett_basic_meditation` is code-migrated and test-clean, but inactive in the `sources` table
+  - county-rec dance and basketball tranche:
+    - `cobb_belly_dance` (`6 found / 0 new / 6 updated`)
+    - `cobb_line_dancing` (`6 found / 0 new / 6 updated`)
+    - `gwinnett_line_dancing` (`17 found / 0 new / 17 updated`)
+    - `cobb_basketball_skills` (`24 found / 0 new / 24 updated`)
+    - `cobb_basketball_training_rarc` (`13 found / 0 new / 13 updated`)
+  - county-rec correction tranche:
+    - `atlanta_adult_swim_lessons` (`50 found / 0 new / 50 updated`)
+    - `gwinnett_yoga_classes` (`20 found / 0 new / 20 updated`)
+    - `cobb_advanced_beginner_swimming_lessons` (`6 found / 0 new / 6 updated`)
+    - `dekalb_midway_pickleball` (`1 found / 0 new / 1 updated`)
+    - `dekalb_aquatic_fitness` (`1 found / 0 new / 1 updated`)
+    - `cobb_beginner_swimming_lessons` (`12 found / 0 new / 12 updated`)
+    - `cobb_adult_swim_lessons` is code-migrated and test-clean, but inactive in the `sources` table
+    - `dekalb_tobie_grant_pickleball` is code-migrated and test-clean, but dry-run validation is currently blocked by a source-side `502 Server Hangup`
+- Current Phase 0 validation blockers are operational, not helper regressions:
+  - `mjcca_day_camps` is rate-limited by source-side `429 Too Many Requests`
+  - `cobb_adult_swim_lessons` is inactive in the `sources` table
+  - `gwinnett_basic_meditation` is inactive in the `sources` table
+  - `dekalb_tobie_grant_pickleball` is currently blocked by a source-side `502 Server Hangup`
+- Final Phase 0 closeout note:
+  - the shared helper families are pre-write builder layers rather than a new persisted extraction contract
+  - persisted extraction metadata still routes only through the existing `detail_enrich` and `event_extractions` path in `crawlers/db/events.py`
+  - no migration-backed schema expansion was required to land the helper families, so the remaining exceptions are source-state validation issues rather than write-contract drift
 
 ## Phase 1: Description Pipeline Defuse
 

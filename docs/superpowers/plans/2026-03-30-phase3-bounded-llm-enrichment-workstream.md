@@ -1,7 +1,9 @@
 # Phase 3 Workstream — Bounded LLM Enrichment
 
+> **Status marker:** Historical reference doc. This file contains phase-specific implementation notes, but it is not the active control-plane surface unless the program board explicitly reopens it. Use `docs/superpowers/plans/2026-04-01-rich-data-program-board.md` for status and `docs/superpowers/plans/2026-03-31-rich-data-roadmap-continuation-workstream.md` for live execution.
+
 **Date:** 2026-03-30  
-**Status:** Queued  
+**Status:** Historical reference  
 **Surface:** `both`  
 **Roadmap parent:** `docs/superpowers/plans/2026-03-30-rich-data-roadmap.md`
 
@@ -33,6 +35,12 @@ The existing LLM plan is directionally useful but needs narrowing before impleme
 - fix content-region extraction for `role="main"` and similar layouts
 - avoid overloaded CLI semantics that mix festival slug and event targeting
 - tune grounding checks against paraphrase reality so good outputs are not over-rejected
+
+The first hardening slice is now in code:
+
+- `crawlers/enrich_festivals.py` now correctly honors `role="main"` content regions instead of using BeautifulSoup's broken `find("[role='main']")` pattern
+- `.gitignore` now excludes `crawlers/llm-tasks/` and `crawlers/llm-results/`
+- focused regression coverage exists in `crawlers/tests/test_enrich_festivals.py`
 
 ## Scope
 
@@ -108,3 +116,8 @@ The existing LLM plan is directionally useful but needs narrowing before impleme
 - Workstream created from roadmap.
 - Existing LLM plan retained as input, but execution is intentionally narrowed to a festivals-first pilot.
 
+### 2026-04-02
+
+- Phase 3 is now the active execution track after Phase 0 closeout.
+- The first festival-path hardening fix is landed in `crawlers/enrich_festivals.py`, correcting `role="main"` content extraction before task-flow expansion.
+- Task/result artifact directories are now ignored in `.gitignore` so the prepare/extract/apply workflow can be added without polluting git status.

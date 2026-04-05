@@ -1,7 +1,9 @@
 # Phase 2 Workstream — High-Impact Crawler Remediation
 
+> **Status marker:** Historical audit doc. This file is not an active control-plane surface. Use `docs/superpowers/plans/2026-04-01-rich-data-program-board.md` for status and `docs/superpowers/plans/2026-03-31-rich-data-roadmap-continuation-workstream.md` for live execution.
+
 **Date:** 2026-03-30  
-**Status:** In Progress  
+**Status:** Historical  
 **Surface:** `both`  
 **Roadmap parent:** `docs/superpowers/plans/2026-03-30-rich-data-roadmap.md`
 **Program board:** `docs/superpowers/plans/2026-04-01-rich-data-program-board.md`
