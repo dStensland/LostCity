@@ -172,20 +172,33 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
   const [sessionsLoaded, setSessionsLoaded] = useState(false);
   const [sessionLoading, setSessionLoading] = useState(false);
 
-  // Fetch active session detail
+  // Fetch active session detail — deduplicated so concurrent calls don't race
+  const fetchAbort = useRef<AbortController | null>(null);
   const fetchSession = useCallback(async (id: number) => {
-    const res = await fetch(`/api/goblinday/sessions/${id}`);
-    if (res.ok) {
-      const data = await res.json();
-      setSessionData(data);
-      // Sync status from API response
-      if (data.status === "planning" || data.status === "live") {
-        setActiveSession((prev) =>
-          prev
-            ? { ...prev, status: data.status, invite_code: data.invite_code ?? prev.invite_code }
-            : { id, status: data.status, invite_code: data.invite_code ?? "" }
-        );
+    // Abort any prior in-flight fetch so stale responses can't overwrite fresh ones
+    if (fetchAbort.current) fetchAbort.current.abort();
+    const controller = new AbortController();
+    fetchAbort.current = controller;
+    try {
+      const res = await fetch(`/api/goblinday/sessions/${id}`, { signal: controller.signal });
+      if (res.ok) {
+        const data = await res.json();
+        // If this request was superseded, don't apply its result
+        if (controller.signal.aborted) return;
+        setSessionData(data);
+        // Sync status from API response
+        if (data.status === "planning" || data.status === "live") {
+          setActiveSession((prev) =>
+            prev
+              ? { ...prev, status: data.status, invite_code: data.invite_code ?? prev.invite_code }
+              : { id, status: data.status, invite_code: data.invite_code ?? "" }
+          );
+        }
       }
+    } catch (e: unknown) {
+      // Ignore abort errors
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      throw e;
     }
   }, []);
 

@@ -45,8 +45,11 @@ export default function GoblinThemeMatrix({
   const [newThemeId, setNewThemeId] = useState<number | null>(null);
   // Optimistic toggle state: Map<"themeId-movieId", boolean>
   const [optimisticToggles, setOptimisticToggles] = useState<Map<string, boolean>>(new Map());
-  // Track keys with in-flight API calls — polling must not clear these
+  // Track keys with in-flight API calls + pending refresh — polling must not clear these
   const inFlightKeys = useRef<Set<string>>(new Set());
+  // Revision counter: only reconcile when this changes (not on every themes reference change)
+  const [serverRevision, setServerRevision] = useState(0);
+  const prevThemesRef = useRef<string>("");
   const [cancelingThemeId, setCancelingThemeId] = useState<number | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const newRowRef = useRef<HTMLTableRowElement | null>(null);
@@ -82,19 +85,29 @@ export default function GoblinThemeMatrix({
     [checkedSet, optimisticToggles]
   );
 
-  // Reconcile optimistic state when server data arrives — keep in-flight keys
+  // Only bump revision when themes content actually changes (Bug 4 fix)
+  useEffect(() => {
+    const sig = JSON.stringify(
+      themes.map((t) => [t.id, t.status, t.goblin_theme_movies.map((m) => m.movie_id).sort()])
+    );
+    if (sig !== prevThemesRef.current) {
+      prevThemesRef.current = sig;
+      setServerRevision((r) => r + 1);
+    }
+  }, [themes]);
+
+  // Reconcile optimistic state when server data actually changes — keep in-flight keys
   useEffect(() => {
     setOptimisticToggles((prev) => {
       if (prev.size === 0) return prev;
       if (inFlightKeys.current.size === 0) return new Map();
-      // Only keep optimistic entries that are still in-flight
       const kept = new Map<string, boolean>();
       for (const [key, val] of prev) {
         if (inFlightKeys.current.has(key)) kept.set(key, val);
       }
       return kept;
     });
-  }, [themes]);
+  }, [serverRevision]);
 
   // Scroll new row into view (requestAnimationFrame ensures DOM has rendered)
   useEffect(() => {
@@ -111,15 +124,16 @@ export default function GoblinThemeMatrix({
   const handleToggle = useCallback(
     async (themeId: number, movieId: number) => {
       const key = `${themeId}-${movieId}`;
-      const currentState = isChecked(themeId, movieId);
 
-      // Mark in-flight so polling doesn't wipe optimistic state
+      // Mark in-flight so polling doesn't wipe optimistic state.
+      // Key stays in-flight until AFTER the refresh response renders.
       inFlightKeys.current.add(key);
 
-      // Optimistic update
+      // Bug 3 fix: read current state inside the updater to avoid stale closure on double-tap
       setOptimisticToggles((prev) => {
         const next = new Map(prev);
-        next.set(key, !currentState);
+        const currentlyChecked = prev.has(key) ? prev.get(key)! : checkedSet.has(key);
+        next.set(key, !currentlyChecked);
         return next;
       });
 
@@ -132,12 +146,18 @@ export default function GoblinThemeMatrix({
             body: JSON.stringify({ movie_id: movieId }),
           }
         );
-        inFlightKeys.current.delete(key);
         if (res.ok) {
-          // Server confirmed — refresh to get authoritative state
+          // Bug 1 fix: DON'T delete from inFlightKeys yet — keep protected
+          // until the refresh data arrives. The refresh triggers a themes
+          // change which bumps serverRevision, and THEN reconciliation runs.
+          // We schedule the key removal after a short delay to let the
+          // refresh response render first.
           onRefresh();
+          setTimeout(() => {
+            inFlightKeys.current.delete(key);
+          }, 2000);
         } else {
-          // Rollback
+          inFlightKeys.current.delete(key);
           setOptimisticToggles((prev) => {
             const next = new Map(prev);
             next.delete(key);
@@ -146,7 +166,6 @@ export default function GoblinThemeMatrix({
         }
       } catch {
         inFlightKeys.current.delete(key);
-        // Rollback on network error
         setOptimisticToggles((prev) => {
           const next = new Map(prev);
           next.delete(key);
@@ -154,7 +173,7 @@ export default function GoblinThemeMatrix({
         });
       }
     },
-    [sessionId, isChecked, onRefresh]
+    [sessionId, checkedSet, onRefresh]
   );
 
   /* ---- Add theme ---- */
