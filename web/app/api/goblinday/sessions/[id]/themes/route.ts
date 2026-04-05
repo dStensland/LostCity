@@ -34,15 +34,6 @@ export const POST = withAuthAndParams<{ id: string }>(
 
     const t = theme as { id: number; label: string; status: string };
 
-    // Optionally link movies to the theme
-    if (Array.isArray(body.movie_ids) && body.movie_ids.length > 0) {
-      const rows = body.movie_ids.map((mid: number) => ({
-        theme_id: t.id,
-        movie_id: mid,
-      }));
-      await serviceClient.from("goblin_theme_movies").insert(rows as never);
-    }
-
     // Log timeline event with user_id
     await serviceClient
       .from("goblin_timeline")

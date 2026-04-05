@@ -44,7 +44,7 @@ export const GET = withAuthAndParams<{ id: string }>(
     // Fetch themes
     const { data: themes } = await serviceClient
       .from("goblin_themes")
-      .select("id, label, status, created_at, canceled_at, goblin_theme_movies(movie_id)")
+      .select("id, label, status, created_at, canceled_at, goblin_theme_movies(movie_id, checked_by, checked_at)")
       .eq("session_id", s.id)
       .order("created_at");
 
@@ -61,11 +61,17 @@ export const GET = withAuthAndParams<{ id: string }>(
       .select("user_id, role, joined_at")
       .eq("session_id", s.id);
 
+    // Collect checked_by UUIDs from theme_movies
+    const themeCheckerIds = (themes ?? []).flatMap(
+      (t: any) => ((t.goblin_theme_movies as any[]) ?? []).map((tm: any) => tm.checked_by)
+    ).filter(Boolean);
+
     // Collect all user IDs and fetch profiles in one query
     const allUserIds = [...new Set([
       ...(sessionMovies ?? []).map((sm: any) => sm.proposed_by).filter(Boolean),
       ...(timeline ?? []).map((t: any) => t.user_id).filter(Boolean),
       ...(members ?? []).map((m: any) => m.user_id),
+      ...themeCheckerIds,
     ])];
     let profileMap: Record<string, { display_name: string; avatar_url: string | null }> = {};
     if (allUserIds.length > 0) {
